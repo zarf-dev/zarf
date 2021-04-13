@@ -1,0 +1,6 @@
+write-kubeconfig-mode: "0644"
+node-label:
+  - "bigbang=utility"
+disable:
+  - servicelb
+  - traefik

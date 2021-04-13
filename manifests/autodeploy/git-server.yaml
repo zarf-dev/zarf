@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: git-server
+
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: git-server
+  namespace: kube-system
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/git-server-0.0.1.tgz
+  targetNamespace: git-server
+  valuesContent: |-
+    service:
+      type: LoadBalancer
+    persistence:
+      enabled: true
