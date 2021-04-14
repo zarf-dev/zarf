@@ -52,8 +52,11 @@ helm:
   RUN helm repo add twuni https://helm.twun.io && \
       helm fetch twuni/docker-registry -d ./charts
 
-  RUN helm repo add bitnami https://charts.bitnami.com/bitnami && \
-      helm fetch bitnami/metallb -d ./charts
+  # RUN helm repo add bitnami https://charts.bitnami.com/bitnami && \
+      # helm fetch bitnami/metallb -d ./charts
+
+  RUN helm repo add traefik https://helm.traefik.io/traefik && \
+      helm fetch traefik/traefik -d ./charts
 
   # Temporary!!
   GIT CLONE --branch main https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/git-server.git git-server
@@ -72,13 +75,31 @@ images:
   WORKDIR /archive
 
   # Using crane and saving images like this is a _temporary_ solution
-  RUN crane pull registry:2.7.1 plndr/kube-vip:0.3.3 plndr/plndr-cloud-provider:0.1.5 registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 images.tar.gz
+  RUN crane pull registry:2.7.1 registry.tar && \
+      crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
+      crane pull traefik:2.4.8 traefik.tar && \
+      crane pull registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 git-server.tar
 
   SAVE ARTIFACT /archive
 
+k3s:
+  FROM debian:buster-slim
+  WORKDIR /k3s
+
+  RUN apt update -y && apt install -y curl bash zstd unzip
+
+  RUN mkdir -p k3s rancher/k3s/agent/images
+
+  RUN curl -fL https://get.k3s.io -o k3s/init-k3s.sh
+
+  RUN curl -fL https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt} -o "k3s/#1" && \
+      ( cd k3s || exit ; sha256sum -c sha256sum-amd64.txt ) && \
+      mv k3s/k3s-airgap-images-amd64.tar rancher/k3s/agent/images
+
+  SAVE ARTIFACT /k3s
+
 build:
   FROM debian:buster-slim
-  WORKDIR /build
 
   RUN apt update -y && apt install -y curl bash zstd
 
@@ -88,24 +109,21 @@ build:
       mv makeself-2.4.3/makeself.sh /usr/local/bin/makeself && \
       mv makeself-2.4.3/makeself-header.sh /usr/local/bin/
 
-  # package k3s as a single RUN cmd to better leverage layer caching
-  RUN mkdir -p payload/k3s payload/rancher/k3s/agent/images && \
-      curl -fL https://get.k3s.io -o payload/k3s/init-k3s.sh && \
-      curl -fL https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt} -o "payload/k3s/#1" && \
-      ( cd payload/k3s || exit ; sha256sum -c sha256sum-amd64.txt ) && \
-      mv payload/k3s/k3s-airgap-images-amd64.tar payload/rancher/k3s/agent/images
+  WORKDIR /payload
 
   # TODO: k3s-selinux
   # COPY +centos7/deps payload/rpms/centos7
   # COPY +centos8/deps payload/rpms/centos8
-  COPY +helm/charts payload/rancher/k3s/server/static/charts
-  COPY +images/archive payload/rancher/k3s/agent/images
+  COPY +k3s/k3s .
+  COPY +helm/charts rancher/k3s/server/static/charts
+  COPY +images/archive rancher/k3s/agent/images
 
-  COPY k3s-config.yaml payload/k3s-config.yaml
-  COPY manifests/autodeploy payload/rancher/k3s/server/manifests
-  COPY install.sh payload/install.sh
+  COPY k3s-config.yaml k3s-config.yaml
+  COPY manifests/autodeploy/ rancher/k3s/server/manifests
+  COPY install.sh install.sh
 
-  RUN makeself --zstd --sha256 payload bigbang-utility.run.zstd "BigBang Airgap Utility" ./install.sh
+  # Ultimately use gzip even if the compression ratio is worse because it's installed by default on the vast majority of systems
+  RUN makeself --gzip --sha256 . yam.run.tgz "Yet Another Minion (YAM)" ./install.sh
 
-  SAVE ARTIFACT bigbang-utility.run.zstd AS LOCAL bigbang-utility.run.zstd
+  SAVE ARTIFACT yam.run.tgz AS LOCAL yam.run.tgz
 
