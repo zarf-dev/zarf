@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 K3S_DIR="/var/lib/rancher/k3s"
 
@@ -27,10 +27,13 @@ timestamp() {
 setup() {
   info "Moving k3s components..."
   mv rancher/ /var/lib/
+  chmod -R 0755 /var/lib/rancher
+  chmod -R 0700 /var/lib/rancher/k3s/server
 
   # Create default k3s config if doesn't already exist
   if [ ! -f "/etc/rancher/k3s/config.yaml" ]; then
     mkdir -p /etc/rancher/k3s
+    chmod -R 0755 /etc/rancher
     chmod 0644 k3s-config.yaml
     mv k3s-config.yaml /etc/rancher/k3s/config.yaml
   fi
