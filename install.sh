@@ -92,6 +92,8 @@ EOF
         yum install -y k3s-selinux
         ;;
       esac
+    else
+      info "k3s-selinux policies found!"
     fi
   fi
 
