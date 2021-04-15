@@ -1,8 +1,11 @@
 # Earthfile
 
-centos7:
-  FROM centos:7
+centos7-k3s-selinux-rpms:
+  FROM centos:7.9.2009
   WORKDIR /deps
+
+  RUN yum install yum-utils -y
+  WORKDIR /rpms
 
   RUN echo $'\n\
   [rancher-k3s-common-stable]\n\
@@ -13,15 +16,18 @@ centos7:
   gpgkey=https://rpm.rancher.io/public.key'\
   >> /etc/yum.repos.d/rancher-k3s-common.repo
 
-  RUN yum install -y createrepo
-  RUN yum install -y --enablerepo="rancher*" --installroot=/tmp/k3s-selinux --downloadonly --downloaddir $(pwd) --releasever=7 k3s-selinux
-  RUN createrepo -v .
+  RUN yumdownloader --assumeyes --resolve --destdir=/rpms k3s-selinux
 
-  SAVE ARTIFACT /deps
+  WORKDIR /
+  RUN tar -czvf rpms.tar.gz /rpms
 
-centos8:
-  FROM centos:8
-  WORKDIR /deps
+  SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-7.9-k3s-selinux-rpms.tar.gz
+
+centos8-k3s-selinux-rpms:
+  FROM centos:8.3.2011
+
+  RUN yum install yum-utils -y
+  WORKDIR /rpms
 
   RUN echo $'\n\
   [rancher-k3s-common-stable]\n\
@@ -32,11 +38,13 @@ centos8:
   gpgkey=https://rpm.rancher.io/public.key'\
   >> /etc/yum.repos.d/rancher-k3s-common.repo
 
-  RUN yum install -y createrepo
-  RUN yum install -y --enablerepo="rancher*" --installroot=/tmp/k3s-selinux --downloadonly --downloaddir $(pwd) --releasever=8 k3s-selinux
-  RUN createrepo -v .
+  # RUN repoquery --requires --resolve --recursive k3s-selinux | xargs -r yumdownloader
+  RUN yumdownloader --assumeyes --resolve --destdir=/rpms k3s-selinux
 
-  SAVE ARTIFACT /deps
+  WORKDIR /
+  RUN tar -czvf rpms.tar.gz /rpms
+
+  SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-8.3-k3s-selinux-rpms.tar.gz
 
 helm:
   FROM alpine/helm:3.5.3
