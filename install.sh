@@ -24,7 +24,23 @@ timestamp() {
   date "+%Y-%m-%d %H:%M:%S"
 }
 
+vip() {
+  info "Discovering ethernet network interface name"
+  vipi=$(ip -o addr show scope global | awk '/^[0-9]:/{print $2}' | cut -f1 -d '/')
+
+  info "Allocating vip on $vipi"
+  vipa=$(ip addr show |grep -w inet |grep -v 127.0.0.1|awk '{ print $4}')
+
+  info "Telling kube-vip about what we found"
+  find . -type f -name "kube-vip.yaml" -exec sed -i -e 's|$VIP_INTERFACE|'$vipi'|g' -e 's|$VIP_ADDRESS|'$vipa'|g' {} \;
+}
+
 setup() {
+  vip
+
+  info "Ensuring k3s directory is empty..."
+  rm -rf /var/lib/rancher
+
   info "Moving k3s components..."
   mv rancher/ /var/lib/
   chmod -R 0755 /var/lib/rancher
@@ -40,15 +56,19 @@ setup() {
 
   # TODO: k3s supports selinux but this utility packaging script does not (yet)
   if getenforce 2>/dev/null | grep -q "Enforcing"; then
-    info "Identified selinux enforcing, installing k3s-selinux components"
-    warn "Airgapped k3s-selinux is still a work in progress, attempting to install without airgapped components..."
-    warn "If in an airgapped environment, disable selinux enforcing to continue"
-    dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
-    maj_ver=$(echo "$dist_version" | sed -E -e "s/^([0-9]+)\.?[0-9]*$/\1/")
+    info "Identified selinux enforcing, ensure k3s-selinux policies are pre-installed if you are offline, otherwise the policies will be installed for you from the internet."
 
-    case ${maj_ver} in
-    7)
-      cat > /etc/yum.repos.d/rancher-k3s-common.repo <<EOF
+    # SUUUUUUUPER basic check to see if k3s selinux policies are installed or not
+    if ! semanage fcontext -l | grep -i k3s > /dev/null; then
+      warn "No k3s selinux policies found and selinux is set to Enforcing.  To continue, either install the appropriate k3s selinux policies, or set selinux to Permissive"
+
+      warn "No k3s selinux policies found and selinux is set to Enforcing, attempting to download k3s-selinux policies from the internet."
+      warn "This download attempt WILL fail if in an airgapped environment."
+      warn "If in a disconnected environment, install the airgapped k3s-selinux policy rpms first before running YAM."
+
+      case ${maj_ver} in
+      7)
+        cat > /etc/yum.repos.d/rancher-k3s-common.repo <<EOF
 [rancher-k3s-common-stable]
 name=Rancher K3s Common (stable)
 baseurl=https://rpm.rancher.io/k3s/stable/common/centos/7/noarch
@@ -56,12 +76,12 @@ enabled=1
 gpgcheck=1
 gpgkey=https://rpm.rancher.io/public.key
 EOF
-      # yum install -y rpms/centos7/*.rpm
-      yum install -y k3s-selinux
-      ;;
-    8)
-      # yum install -y rpms/centos8/*.rpm
-      cat > /etc/yum.repos.d/rancher-k3s-common.repo <<EOF
+        # yum install -y rpms/centos7/*.rpm
+        yum install -y k3s-selinux
+        ;;
+      8)
+        # yum install -y rpms/centos8/*.rpm
+        cat > /etc/yum.repos.d/rancher-k3s-common.repo <<EOF
 [rancher-k3s-common-stable]
 name=Rancher K3s Common (stable)
 baseurl=https://rpm.rancher.io/k3s/stable/common/centos/8/noarch
@@ -69,9 +89,10 @@ enabled=1
 gpgcheck=1
 gpgkey=https://rpm.rancher.io/public.key
 EOF
-      yum install -y k3s-selinux
-      ;;
-    esac
+        yum install -y k3s-selinux
+        ;;
+      esac
+    fi
   fi
 
   info "Moving k3s executable..."
@@ -83,8 +104,8 @@ EOF
 start() {
   # Start k3s
   INSTALL_K3S_SKIP_DOWNLOAD=true \
-  INSTALL_K3S_SELINUX_WARN="true" \
-  INSTALL_K3S_SKIP_SELINUX_RPM="true" \
+  INSTALL_K3S_SELINUX_WARN=true \
+  INSTALL_K3S_SKIP_SELINUX_RPM=true \
       /usr/local/bin/init-k3s.sh
 
   # Setup kubectl autocompletion
