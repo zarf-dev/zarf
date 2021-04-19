@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bigbang
+
+---
+# Todo, sync with Josh/BB Airgap teams work on git server
+# apiVersion: source.toolkit.fluxcd.io/v1beta1
+# kind: GitRepository
+# metadata:
+#   name: environment-repo
+#   namespace: bigbang
+# spec:
+#   interval: 1m
+#   url: https://repo1.dso.mil/platform-one/hello-world/big-bang-universe.git
+#   ref:
+#     branch: master
+
+# ---
+
+# apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+# kind: Kustomization
+# metadata:
+#   name: environment
+#   namespace: bigbang
+# spec:
+#   interval: 1m
+#   sourceRef:
+#     kind: GitRepository
+#     name: environment-repo
+#   path: ./bigbang
+#   prune: true
