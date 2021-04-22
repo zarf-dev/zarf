@@ -46,6 +46,8 @@ centos8-k3s-selinux-rpms:
 
   SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-8.3-k3s-selinux-rpms.tar.gz
 
+
+
 helm:
   FROM alpine/helm:3.5.3
   WORKDIR /src
@@ -91,42 +93,36 @@ images:
   SAVE ARTIFACT /archive
 
 k3s:
-  FROM debian:buster-slim
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /k3s
 
-  RUN apt update -y && apt install -y curl bash zstd unzip
+  ARG K3S_VERSION="v1.18.17+k3s1"
 
   RUN mkdir -p k3s rancher/k3s/agent/images
 
-  RUN curl -fL https://get.k3s.io -o k3s/init-k3s.sh
+  RUN curl -fL "https://get.k3s.io" -o "k3s/init-k3s.sh"
 
-  RUN curl -fL https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt} -o "k3s/#1" && \
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt}" -o "k3s/#1" && \
       ( cd k3s || exit ; sha256sum -c sha256sum-amd64.txt ) && \
       mv k3s/k3s-airgap-images-amd64.tar rancher/k3s/agent/images
+
+  RUN chmod 755 k3s/{k3s,init-k3s.sh} && chown root:root k3s/*
 
   SAVE ARTIFACT /k3s
 
 build:
-  FROM debian:buster-slim
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
 
-  RUN apt update -y && apt install -y curl bash zstd
-
-  RUN curl -fL -o makeself.run https://github.com/megastep/makeself/releases/download/release-2.4.3/makeself-2.4.3.run && \
-      chmod +x makeself.run && \
-      ./makeself.run && \
-      mv makeself-2.4.3/makeself.sh /usr/local/bin/makeself && \
-      mv makeself-2.4.3/makeself-header.sh /usr/local/bin/
+  RUN rpm --import http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8 && \
+      dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
+      dnf install -y makeself
 
   WORKDIR /payload
 
-  # TODO: k3s-selinux
-  # COPY +centos7/deps payload/rpms/centos7
-  # COPY +centos8/deps payload/rpms/centos8
   COPY +k3s/k3s .
   COPY +helm/charts rancher/k3s/server/static/charts
   COPY +images/archive rancher/k3s/agent/images
 
-  COPY k3s-config.yaml k3s-config.yaml
   COPY manifests/autodeploy/ rancher/k3s/server/manifests
   COPY install.sh install.sh
 
