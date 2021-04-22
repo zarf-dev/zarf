@@ -98,36 +98,39 @@ k3s:
 
   ARG K3S_VERSION="v1.18.17+k3s1"
 
-  RUN mkdir -p k3s rancher/k3s/agent/images
+  RUN mkdir -p k3s
 
   RUN curl -fL "https://get.k3s.io" -o "k3s/init-k3s.sh"
 
   RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt}" -o "k3s/#1" && \
-      ( cd k3s || exit ; sha256sum -c sha256sum-amd64.txt ) && \
-      mv k3s/k3s-airgap-images-amd64.tar rancher/k3s/agent/images
+      ( cd k3s || exit ; sha256sum -c sha256sum-amd64.txt )
 
-  RUN chmod 755 k3s/{k3s,init-k3s.sh} && chown root:root k3s/*
+  RUN rm -f k3s/*.txt
 
   SAVE ARTIFACT /k3s
 
 build:
-  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
-
-  RUN rpm --import http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8 && \
-      dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-      dnf install -y makeself
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
 
   WORKDIR /payload
 
-  COPY +k3s/k3s .
-  COPY +helm/charts rancher/k3s/server/static/charts
-  COPY +images/archive rancher/k3s/agent/images
+  # IB image uses UID 1001 for this image
+  COPY src /payload
 
-  COPY manifests/autodeploy/ rancher/k3s/server/manifests
-  COPY install.sh install.sh
+  COPY +k3s/k3s assets/
+  COPY +helm/charts assets/charts
+  COPY +images/archive assets/images
+  COPY manifests/autodeploy assets/manifests
 
-  # Ultimately use gzip even if the compression ratio is worse because it's installed by default on the vast majority of systems
-  RUN makeself --gzip --sha256 . yam.run.tgz "Yet Another Minion (YAM)" ./install.sh
+  # Move the k3s image into the right location
+  RUN mv assets/k3s/k3s-airgap-images-amd64.tar assets/images/
 
-  SAVE ARTIFACT yam.run.tgz AS LOCAL yam.run.tgz
+  # List the built asset tree 
+  RUN find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
+
+  RUN ls -lah
+  
+  RUN go build -o shift-package main.go
+  
+  SAVE ARTIFACT shift-package AS LOCAL shift-package
 

@@ -2,3 +2,6 @@
 *.tar.gz
 *.tgz
 .vagrant
+assets/
+yam
+shift-package
