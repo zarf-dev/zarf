@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-# Be offline plz
-# /sbin/route del default
-# /sbin/route add default gw 1.1.1.1
-
 # Disable firewalld for k3s
 # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
 if [ -f /etc/redhat-release ]; then
@@ -24,9 +20,6 @@ cp /opt/shift/bin/* /usr/local/bin
 # Add symlink for k3s images
 mkdir -p /var/lib/rancher/k3s/agent/
 ln -s /opt/shift/images /var/lib/rancher/k3s/agent/images
-
-# Extract the git repositories
-tar xzf /opt/shift/repositories.tar.gz -C /opt/shift/ 
 
 # install k3s
 /usr/local/bin/k3s-install --disable=metrics-server --disable=traefik
