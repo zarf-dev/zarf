@@ -96,30 +96,14 @@ k3s:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /downloads
 
-  ARG K3S_VERSION="v1.19.10+k3s1"
+  ARG K3S_VERSION="v1.21.0-rc1+k3s1"
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt}" \
-      -o "#1" && sha256sum -c sha256sum-amd64.txt 
-
-  RUN rm -f *.txt
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-arm64.tar.zst,sha256sum-amd64.txt}" -o "#1" && \
+      sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
 
   SAVE ARTIFACT /downloads
-
-compress: 
-  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
-  
-  WORKDIR /images
-
-  RUN yum install -y zstd
-
-  COPY +k3s/downloads/*.tar .
-  COPY +images/archive .
-
-  RUN zstd -5 --rm k3s-*.tar
-
-  SAVE ARTIFACT /images
 
 build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
@@ -131,9 +115,9 @@ build:
 
   COPY +k3s/downloads assets/bin
   COPY +helm/charts assets/charts
-  COPY +compress/images assets/images
+  COPY +images/archive assets/images
 
-  RUN rm -f assets/bin/k3s-*.tar
+  RUN mv assets/bin/k3s-*.tar.zst assets/images
 
   # List the built asset tree 
   RUN echo "" && find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
