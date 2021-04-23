@@ -23,16 +23,3 @@ setupDependencies() {
   fi
 
 }
-
-installK3s() {
-  # info "Install K3s"
-  K3S_KUBECONFIG_MODE="644" \
-  INSTALL_K3S_SKIP_DOWNLOAD=true \
-      /usr/local/bin/init-k3s.sh --disable=metrics-server --disable=traefik
-
-  # info "Setup kubectl autocompletion"
-  /usr/local/bin/k3s kubectl completion bash >/etc/bash_completion.d/kubectl
-}
-
-setupDependencies
-installK3s

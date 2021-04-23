@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"shift/k3s"
 	"shift/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -18,6 +19,9 @@ func main() {
 	utils.WriteAssets(assets, "assets/charts", "/var/lib/rancher/k3s/server/static/charts")
 	utils.WriteAssets(assets, "assets/images", "/var/lib/rancher/k3s/agent/images")
 	utils.WriteAssets(assets, "assets/manifests", "/var/lib/rancher/k3s/server/manifests")
+
+	k3s.Install()
+	// TODO: vip, chmod k3s bins, add k3s script exec steps
 }
 
 func runPreflightChecks() {
@@ -37,4 +41,3 @@ func runPreflightChecks() {
 		log.Fatal("")
 	}
 }
-

@@ -114,7 +114,6 @@ build:
 
   WORKDIR /payload
 
-  # IB image uses UID 1001 for this image
   COPY src /payload
 
   COPY +k3s/k3s assets/
@@ -128,9 +127,6 @@ build:
   # List the built asset tree 
   RUN find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
 
-  RUN ls -lah
-  
   RUN go build -o shift-package main.go
   
   SAVE ARTIFACT shift-package AS LOCAL shift-package
-
