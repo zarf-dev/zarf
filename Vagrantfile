@@ -6,7 +6,8 @@ Vagrant.configure("2") do |config|
   
   config.vm.network "private_network", ip: "172.16.10.10"
   config.vm.disk :disk, size: "100GB", primary: true
-
+  config.ssh.insert_key = false
+  
   config.vm.provider "virtualbox" do |vb|
     vb.check_guest_additions = false
     vb.cpus = 6

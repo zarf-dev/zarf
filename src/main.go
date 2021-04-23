@@ -15,7 +15,7 @@ func main() {
 
 	runPreflightChecks()
 
-	utils.WriteAssets(assets, "assets/k3s", "/usr/local/bin")
+	utils.WriteAssets(assets, "assets/bin", "/usr/local/bin")
 	utils.WriteAssets(assets, "assets/charts", "/var/lib/rancher/k3s/server/static/charts")
 	utils.WriteAssets(assets, "assets/images", "/var/lib/rancher/k3s/agent/images")
 	utils.WriteAssets(assets, "assets/manifests", "/var/lib/rancher/k3s/server/manifests")
