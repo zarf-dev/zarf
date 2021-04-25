@@ -3,12 +3,14 @@ package k3s
 import (
 	log "github.com/sirupsen/logrus"
 	"os"
-	"shift/utils"
+	"shift/internal/utils"
 )
 
 func Install() {
 
 	log.Info("Installing K3s")
+
+	utils.RunPreflightChecks()
 
 	installer := "/usr/local/bin/init-k3s.sh"
 	k3sBinary := "/usr/local/bin/k3s"
@@ -22,6 +24,6 @@ func Install() {
 		"INSTALL_K3S_SKIP_DOWNLOAD=true",
 	}
 
-	utils.ExecCommand(envVariables, installer, "--disable=metrics-server", "--disable=traefik")
+	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
 	utils.ExecCommand([]string{}, "sh", "-c", k3sBinary+" kubectl completion bash >/etc/bash_completion.d/kubectl")
 }
