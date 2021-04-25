@@ -62,11 +62,8 @@ helm:
   RUN helm repo add twuni https://helm.twun.io && \
       helm fetch twuni/docker-registry -d ./charts
 
-  # RUN helm repo add bitnami https://charts.bitnami.com/bitnami && \
-      # helm fetch bitnami/metallb -d ./charts
-
-  RUN helm repo add traefik https://helm.traefik.io/traefik && \
-      helm fetch traefik/traefik -d ./charts
+  # RUN helm repo add traefik https://helm.traefik.io/traefik && \
+  #     helm fetch traefik/traefik -d ./charts
 
   # Temporary!!
   GIT CLONE --branch main https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/git-server.git git-server
@@ -86,8 +83,8 @@ images:
 
   # Using crane and saving images like this is a _temporary_ solution
   RUN crane pull registry:2.7.1 registry.tar && \
-      crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
-      crane pull traefik:2.4.8 traefik.tar && \
+      # crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
+      # crane pull traefik:2.4.8 traefik.tar && \
       crane pull registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 git-server.tar
 
   SAVE ARTIFACT /archive
@@ -96,11 +93,11 @@ k3s:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /downloads
 
-  ARG K3S_VERSION="v1.21.0-rc1+k3s1"
+  ARG K3S_VERSION="v1.20.6+k3s1"
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-arm64.tar.zst,sha256sum-amd64.txt}" -o "#1" && \
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-arm64.tar,sha256sum-amd64.txt}" -o "#1" && \
       sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
 
   SAVE ARTIFACT /downloads
@@ -110,18 +107,31 @@ build:
 
   WORKDIR /payload
 
+  # Pull in local assets
   COPY src .
   COPY manifests assets/manifests
 
+  # Pull in artifacts from other build stages
   COPY +k3s/downloads assets/bin
   COPY +helm/charts assets/charts
-  COPY +images/archive assets/images
+  COPY +images/archive images
 
-  RUN mv assets/bin/k3s-*.tar.zst assets/images
+  # Create tarball of images
+  RUN mv assets/bin/k3s-*.tar images
+  RUN tar -cf shift-package.tar images
 
-  # List the built asset tree 
-  RUN echo "" && find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
+  # Get the assets to the correct destination
+  RUN mv assets internal/utils/assets
 
-  RUN go build -o shift-package main.go
+  # Cache dep loading
+  RUN go mod tidy 
 
-  SAVE ARTIFACT shift-package AS LOCAL shift-package
+  # Compute a shasum of the package tarball and inject at compile time
+  RUN checksum=$(go run main.go checksum -f shift-package.tar) && \
+      echo "Computed tarball checksum: $checksum" && \
+      go build -o shift-package -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
+
+  # Validate the shasum before final packaging
+  RUN ./shift-package validate
+
+  SAVE ARTIFACT shift-package* AS LOCAL ./build/

@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+//go:embed assets
+var assets embed.FS
+
 // VerifyBinary returns true if binary is available
 func VerifyBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
@@ -30,8 +33,12 @@ func InvalidPath(dir string) bool {
 	return os.IsNotExist(err)
 }
 
+func ReadAsset(path string) ([]byte, error) {
+	return assets.ReadFile(path)
+}
+
 // WriteAssets writes given files to the filesystem from the binary storage
-func WriteAssets(assets embed.FS, source string, destination string) {
+func WriteAssets(source string, destination string) {
 
 	logContext := log.WithFields(log.Fields{
 		"source":      source,
@@ -67,7 +74,7 @@ func WriteAssets(assets embed.FS, source string, destination string) {
 
 			defer file.Close()
 
-			fileData, _ := assets.ReadFile(path)
+			fileData, _ := ReadAsset(path)
 			_, err = file.Write(fileData)
 			if err != nil {
 				fileLogContext.Fatal("Error writing to file")

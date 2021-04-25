@@ -23,3 +23,5 @@ setupDependencies() {
   fi
 
 }
+
+configureVIP
