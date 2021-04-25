@@ -124,7 +124,7 @@ build:
   RUN mv assets internal/utils/assets
 
   # Cache dep loading
-  RUN go mod tidy 
+  RUN go mod download 
 
   # Compute a shasum of the package tarball and inject at compile time
   RUN checksum=$(go run main.go checksum -f shift-package.tar) && \
