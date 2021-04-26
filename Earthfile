@@ -83,8 +83,8 @@ images:
 
   # Using crane and saving images like this is a _temporary_ solution
   RUN crane pull registry:2.7.1 registry.tar && \
-      # crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
-      # crane pull traefik:2.4.8 traefik.tar && \
+      crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
+      crane pull traefik:2.4.8 traefik.tar && \
       crane pull registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 git-server.tar
 
   SAVE ARTIFACT /archive
@@ -93,7 +93,7 @@ k3s:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /downloads
 
-  ARG K3S_VERSION="v1.20.6+k3s1"
+  ARG K3S_VERSION="v1.19.10+k3s1"
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
@@ -102,6 +102,26 @@ k3s:
 
   SAVE ARTIFACT /downloads
 
+compress: 
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
+  
+  WORKDIR /payload
+
+  RUN yum install -y zstd
+
+  COPY manifests manifests
+
+  # Pull in artifacts from other build stages
+  COPY +k3s/downloads bin
+  COPY +helm/charts charts
+  COPY +images/archive images
+
+  # Create tarball of images
+  RUN mv bin/k3s-*.tar images
+  RUN tar -I zstd -cvf /export.tar.zst .
+
+  SAVE ARTIFACT /export.tar.zst
+
 build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
 
@@ -109,25 +129,13 @@ build:
 
   # Pull in local assets
   COPY src .
-  COPY manifests assets/manifests
-
-  # Pull in artifacts from other build stages
-  COPY +k3s/downloads assets/bin
-  COPY +helm/charts assets/charts
-  COPY +images/archive images
-
-  # Create tarball of images
-  RUN mv assets/bin/k3s-*.tar images
-  RUN tar -cf shift-package.tar images
-
-  # Get the assets to the correct destination
-  RUN mv assets internal/utils/assets
+  COPY +compress/export.tar.zst shift-package.tar.zst
 
   # Cache dep loading
   RUN go mod download 
 
   # Compute a shasum of the package tarball and inject at compile time
-  RUN checksum=$(go run main.go checksum -f shift-package.tar) && \
+  RUN checksum=$(go run main.go checksum -f shift-package.tar.zst) && \
       echo "Computed tarball checksum: $checksum" && \
       go build -o shift-package -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
 
