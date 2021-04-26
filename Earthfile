@@ -97,7 +97,7 @@ k3s:
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-arm64.tar,sha256sum-amd64.txt}" -o "#1" && \
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-amd64.tar,sha256sum-amd64.txt}" -o "#1" && \
       sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
 
   SAVE ARTIFACT /downloads
