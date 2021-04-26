@@ -65,7 +65,7 @@ func PlaceAsset(source string, destination string) {
 	})
 
 	logContext.Info("Placing asset")
-	err := CreateDirectory(parentDest, 0755)
+	err := CreateDirectory(parentDest, 0700)
 	if err != nil {
 		logContext.Fatal("Unable to create the required destination path")
 	}
