@@ -84,5 +84,5 @@ func execCommand(showLogs bool, envVariables []string, commandName string, args 
 		}
 	}
 
-	return string(stdoutBuf.Bytes()), nil
+	return stdoutBuf.String(), nil
 }

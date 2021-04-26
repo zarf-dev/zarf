@@ -1,9 +1,10 @@
 package utils
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
 	"runtime"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // injected checksum for the tarball bundled with this binary
@@ -33,23 +34,19 @@ func RunPreflightChecks() {
 	if !IsUserRoot() {
 		log.Fatal("You must run this program as root.")
 	}
-
-	if !InvalidPath("/var/lib/rancher/k3s") {
-		log.Fatal("")
-	}
 }
 
 func RunTarballChecksumValidate() {
 	log.Info("Validating tarball checksum")
 
-	tarballChecksumComputed := GetSha256("shift-package.tar")
+	tarballChecksumComputed := GetSha256("shift-package.tar.zst")
 
 	if tarballChecksumComputed != packageChecksum {
 		log.WithFields(log.Fields{
 			"Computed": tarballChecksumComputed,
 			"Expected": packageChecksum,
-		}).Fatal("❗ Invalid or mismatched tarball checksum")
+		}).Fatal("Invalid or mismatched tarball checksum")
 	}
 
-	log.Info("✅ Tarball checksum validated")
+	log.Info("Tarball checksum validated")
 }
