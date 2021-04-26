@@ -20,9 +20,11 @@ var initializeCmd = &cobra.Command{
 		utils.RunPreflightChecks()
 
 		if !isDryRun {
-			utils.WriteAssets("assets/bin", "/usr/local/bin")
-			utils.WriteAssets("assets/charts", "/var/lib/rancher/k3s/server/static/charts")
-			utils.WriteAssets("assets/manifests", "/var/lib/rancher/k3s/server/manifests")
+			utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
+			utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
+			utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
+			utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
+			utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
 
 			k3s.Install()
 		}
