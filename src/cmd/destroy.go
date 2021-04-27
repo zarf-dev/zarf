@@ -8,10 +8,10 @@ import (
 
 // destroyCmd represents the initialize command
 var destroyCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Quick tarball validation",
+	Use:   "destroy",
+	Short: "Remove the k3s installation",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.RunTarballChecksumValidate()
+		utils.ExecCommand([]string{}, "/usr/local/bin/k3s-uninstall.sh")
 	},
 }
 
