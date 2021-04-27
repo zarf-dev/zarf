@@ -13,7 +13,6 @@ import (
 var tempDestination string
 
 func extractArchive() {
-
 	tmp, err := ioutil.TempDir("", "shift-package")
 	log.WithField("path", tmp).Info("Extracting assets")
 

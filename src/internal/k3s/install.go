@@ -25,6 +25,6 @@ func Install() {
 		"INSTALL_K3S_SKIP_DOWNLOAD=true",
 	}
 
-	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
+	utils.ExecCommand(envVariables, installer, "--disable=metrics-server", "--disable=traefik")
 	utils.ExecCommand([]string{}, "sh", "-c", k3sBinary+" kubectl completion bash >/etc/bash_completion.d/kubectl")
 }
