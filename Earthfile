@@ -1,12 +1,11 @@
 # Earthfile
 
-ARG K3S_VERSION="v1.19.10+k3s1"
+ARG K3S_VERSION="v1.21.0+k3s1"
 
-ARG TRAEFIK_HELM_VERSION="9.18.3"
 ARG REGISTRY_HELM_VERSION="1.10.1"
 ARG GITEA_HELM_VERSION="2.2.5"
 
-ARG TRAEFIK_IMAGE="traefik:2.4.8"
+# Switch to IB images when ready
 ARG REGISTRY_IMAGE="registry:2.7.1"
 ARG GITEA_IMAGE="gitea/gitea:1.13.7"
 
@@ -65,9 +64,6 @@ helm:
 
   RUN mkdir charts
 
-  RUN helm repo add traefik https://helm.traefik.io/traefik && \
-      helm fetch traefik/traefik -d ./charts --version $TRAEFIK_HELM_VERSION
-  
   RUN helm repo add twuni https://helm.twun.io && \
       helm fetch twuni/docker-registry -d ./charts --version $REGISTRY_HELM_VERSION
 
@@ -76,38 +72,30 @@ helm:
 
   SAVE ARTIFACT /src/charts
 
-images:
-  FROM earthly/dind:alpine 
-  WORKDIR /archive
-  
-  # Replace with IB images as they are resized with distroless (too heavy right now based on UBI)
-  WITH DOCKER \
-    --pull $TRAEFIK_IMAGE \
-    --pull $REGISTRY_IMAGE \
-    --pull $GITEA_IMAGE
-    RUN docker save $TRAEFIK_IMAGE -o "traefik.tar" && \
-        docker save $REGISTRY_IMAGE -o "registry.tar" && \
-        docker save $GITEA_IMAGE -o "gitea.tar"
-  END
-
-  RUN ls -lah
-  
-  SAVE ARTIFACT /archive
-
 k3s:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /downloads
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-airgap-images-amd64.tar,sha256sum-amd64.txt}" -o "#1" && \
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,sha256sum-amd64.txt}" -o "#1" && \
       sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
 
   SAVE ARTIFACT /downloads
 
+images:
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
+  GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
+  WORKDIR /go-containerregistry/cmd/crane
+
+  RUN k3s_images=$(curl -fL https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/k3s-images.txt | tr "\n" " ") && \
+      images="$REGISTRY_IMAGE $GITEA_IMAGE $k3s_images" && \
+      go run main.go pull $images /go/images.tar
+
+  SAVE ARTIFACT /go/images.tar
+
 compress: 
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
-  
   WORKDIR /payload
 
   RUN yum install -y zstd
@@ -117,17 +105,15 @@ compress:
   # Pull in artifacts from other build stages
   COPY +k3s/downloads bin
   COPY +helm/charts charts
-  COPY +images/archive images
+  COPY +images/images.tar images/images.tar
 
   # Create tarball of images
-  RUN mv bin/k3s-*.tar images
-  RUN tar -I zstd -cvf /export.tar.zst .
+  RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
 
 build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
-
   WORKDIR /payload
 
   # Pull in local assets
