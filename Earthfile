@@ -1,5 +1,16 @@
 # Earthfile
 
+ARG K3S_VERSION="v1.19.10+k3s1"
+
+ARG TRAEFIK_HELM_VERSION="9.18.3"
+ARG REGISTRY_HELM_VERSION="1.10.1"
+ARG GITEA_HELM_VERSION="2.2.5"
+
+ARG TRAEFIK_IMAGE="traefik:2.4.8"
+ARG REGISTRY_IMAGE="registry:2.7.1"
+ARG GITEA_IMAGE="gitea/gitea:1.13.7"
+
+
 centos7-k3s-selinux-rpms:
   FROM centos:7.9.2009
   WORKDIR /deps
@@ -52,48 +63,40 @@ helm:
   FROM alpine/helm:3.5.3
   WORKDIR /src
 
-  # RUN apk add bash findutils
-
-  # COPY manifests/charts/ .
-  # RUN mkdir charts && bash -c "find . -mindepth 1 -maxdepth 1 -type d -exec helm package "{}" -u -d "./charts/" \;"
   RUN mkdir charts
 
-  # Temporary helm chart hosters
+  RUN helm repo add traefik https://helm.traefik.io/traefik && \
+      helm fetch traefik/traefik -d ./charts --version $TRAEFIK_HELM_VERSION
+  
   RUN helm repo add twuni https://helm.twun.io && \
-      helm fetch twuni/docker-registry -d ./charts
+      helm fetch twuni/docker-registry -d ./charts --version $REGISTRY_HELM_VERSION
 
-  # RUN helm repo add traefik https://helm.traefik.io/traefik && \
-  #     helm fetch traefik/traefik -d ./charts
-
-  # Temporary!!
-  GIT CLONE --branch main https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/git-server.git git-server
-  RUN helm package git-server/chart -d ./charts
+  RUN helm repo add gitea-charts https://dl.gitea.io/charts/ && \
+      helm fetch gitea-charts/gitea -d ./charts --version $GITEA_HELM_VERSION
 
   SAVE ARTIFACT /src/charts
 
 images:
-  FROM golang:1.16.3-buster
-  GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
-
-  WORKDIR /go-containerregistry/cmd/crane
-
-  RUN CGO_ENABLED=0 go build -o /usr/local/bin/crane main.go
-
+  FROM earthly/dind:alpine 
   WORKDIR /archive
+  
+  # Replace with IB images as they are resized with distroless (too heavy right now based on UBI)
+  WITH DOCKER \
+    --pull $TRAEFIK_IMAGE \
+    --pull $REGISTRY_IMAGE \
+    --pull $GITEA_IMAGE
+    RUN docker save $TRAEFIK_IMAGE -o "traefik.tar" && \
+        docker save $REGISTRY_IMAGE -o "registry.tar" && \
+        docker save $GITEA_IMAGE -o "gitea.tar"
+  END
 
-  # Using crane and saving images like this is a _temporary_ solution
-  RUN crane pull registry:2.7.1 registry.tar && \
-      crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
-      crane pull traefik:2.4.8 traefik.tar && \
-      crane pull registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 git-server.tar
-
+  RUN ls -lah
+  
   SAVE ARTIFACT /archive
 
 k3s:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /downloads
-
-  ARG K3S_VERSION="v1.19.10+k3s1"
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
