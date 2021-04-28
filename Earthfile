@@ -76,8 +76,8 @@ k3s:
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,sha256sum-amd64.txt}" -o "#1" && \
-      sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-images.txt,sha256sum-amd64.txt}" -o "#1" && \
+      sha256sum -c --ignore-missing "sha256sum-amd64.txt"
 
   SAVE ARTIFACT /downloads
 
@@ -86,7 +86,9 @@ images:
   GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
   WORKDIR /go-containerregistry/cmd/crane
 
-  RUN k3s_images=$(curl -fL https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/k3s-images.txt | tr "\n" " ") && \
+  COPY +k3s/downloads/k3s-images.txt k3s-images.txt
+
+  RUN k3s_images=$(cat "k3s-images.txt" | tr "\n" " ") && \
       images="$APP_IMAGES $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
       go run main.go pull $images /go/images.tar
@@ -107,6 +109,8 @@ compress:
   COPY +images/images.tar images/images.tar
 
   # Create tarball of images
+  RUN rm -f bin/*.txt 
+
   RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
