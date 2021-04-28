@@ -11,11 +11,8 @@ metadata:
   name: stuart
   namespace: yam
 spec:
-  chart: https://%{KUBERNETES_API}%/static/charts/git-server-0.0.1.tgz
+  chart: https://%{KUBERNETES_API}%/static/charts/gitea-2.2.5.tgz
   targetNamespace: git
-  valuesContent: |-
-    persistence:
-      enabled: true
 
 ---
 apiVersion: traefik.containo.us/v1alpha1

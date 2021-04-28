@@ -2,3 +2,8 @@
 *.tar.gz
 *.tgz
 .vagrant
+assets/
+shift-package
+bin
+build
+src/.idea/

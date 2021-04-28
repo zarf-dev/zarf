@@ -1,5 +1,15 @@
 # Earthfile
 
+ARG K3S_VERSION="v1.21.0+k3s1"
+
+ARG REGISTRY_HELM_VERSION="1.10.1"
+ARG GITEA_HELM_VERSION="2.2.5"
+
+# Switch to IB images when ready
+ARG REGISTRY_IMAGE="registry:2.7.1"
+ARG GITEA_IMAGE="gitea/gitea:1.13.7"
+
+
 centos7-k3s-selinux-rpms:
   FROM centos:7.9.2009
   WORKDIR /deps
@@ -46,92 +56,79 @@ centos8-k3s-selinux-rpms:
 
   SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-8.3-k3s-selinux-rpms.tar.gz
 
+
+
 helm:
   FROM alpine/helm:3.5.3
   WORKDIR /src
 
-  # RUN apk add bash findutils
-
-  # COPY manifests/charts/ .
-  # RUN mkdir charts && bash -c "find . -mindepth 1 -maxdepth 1 -type d -exec helm package "{}" -u -d "./charts/" \;"
   RUN mkdir charts
 
-  # Temporary helm chart hosters
   RUN helm repo add twuni https://helm.twun.io && \
-      helm fetch twuni/docker-registry -d ./charts
+      helm fetch twuni/docker-registry -d ./charts --version $REGISTRY_HELM_VERSION
 
-  # RUN helm repo add bitnami https://charts.bitnami.com/bitnami && \
-      # helm fetch bitnami/metallb -d ./charts
-
-  RUN helm repo add traefik https://helm.traefik.io/traefik && \
-      helm fetch traefik/traefik -d ./charts
-
-  # Temporary!!
-  GIT CLONE --branch main https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/git-server.git git-server
-  RUN helm package git-server/chart -d ./charts
+  RUN helm repo add gitea-charts https://dl.gitea.io/charts/ && \
+      helm fetch gitea-charts/gitea -d ./charts --version $GITEA_HELM_VERSION
 
   SAVE ARTIFACT /src/charts
 
-images:
-  FROM golang:1.16.3-buster
-  GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
+k3s:
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
+  WORKDIR /downloads
 
+  RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
+
+  RUN curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,sha256sum-amd64.txt}" -o "#1" && \
+      sha256sum -c --ignore-missing "sha256sum-amd64.txt" && rm -f *.txt
+
+  SAVE ARTIFACT /downloads
+
+images:
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
+  GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
   WORKDIR /go-containerregistry/cmd/crane
 
-  RUN CGO_ENABLED=0 go build -o /usr/local/bin/crane main.go
+  RUN k3s_images=$(curl -fL https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/k3s-images.txt | tr "\n" " ") && \
+      images="$REGISTRY_IMAGE $GITEA_IMAGE $k3s_images" && \
+      go run main.go pull $images /go/images.tar
 
-  WORKDIR /archive
+  SAVE ARTIFACT /go/images.tar
 
-  # Using crane and saving images like this is a _temporary_ solution
-  RUN crane pull registry:2.7.1 registry.tar && \
-      crane pull plndr/kube-vip:0.3.3 kube-vip.tar && \
-      crane pull traefik:2.4.8 traefik.tar && \
-      crane pull registry.dso.mil/platform-one/big-bang/apps/sandbox/git-server:0.0.1 git-server.tar
-
-  SAVE ARTIFACT /archive
-
-k3s:
-  FROM debian:buster-slim
-  WORKDIR /k3s
-
-  RUN apt update -y && apt install -y curl bash zstd unzip
-
-  RUN mkdir -p k3s rancher/k3s/agent/images
-
-  RUN curl -fL https://get.k3s.io -o k3s/init-k3s.sh
-
-  RUN curl -fL https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/{k3s,k3s-airgap-images-amd64.tar,k3s-images.txt,sha256sum-amd64.txt} -o "k3s/#1" && \
-      ( cd k3s || exit ; sha256sum -c sha256sum-amd64.txt ) && \
-      mv k3s/k3s-airgap-images-amd64.tar rancher/k3s/agent/images
-
-  SAVE ARTIFACT /k3s
-
-build:
-  FROM debian:buster-slim
-
-  RUN apt update -y && apt install -y curl bash zstd
-
-  RUN curl -fL -o makeself.run https://github.com/megastep/makeself/releases/download/release-2.4.3/makeself-2.4.3.run && \
-      chmod +x makeself.run && \
-      ./makeself.run && \
-      mv makeself-2.4.3/makeself.sh /usr/local/bin/makeself && \
-      mv makeself-2.4.3/makeself-header.sh /usr/local/bin/
-
+compress: 
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /payload
 
-  # TODO: k3s-selinux
-  # COPY +centos7/deps payload/rpms/centos7
-  # COPY +centos8/deps payload/rpms/centos8
-  COPY +k3s/k3s .
-  COPY +helm/charts rancher/k3s/server/static/charts
-  COPY +images/archive rancher/k3s/agent/images
+  RUN yum install -y zstd
 
-  COPY k3s-config.yaml k3s-config.yaml
-  COPY manifests/autodeploy/ rancher/k3s/server/manifests
-  COPY install.sh install.sh
+  COPY manifests manifests
 
-  # Ultimately use gzip even if the compression ratio is worse because it's installed by default on the vast majority of systems
-  RUN makeself --gzip --sha256 . yam.run.tgz "Yet Another Minion (YAM)" ./install.sh
+  # Pull in artifacts from other build stages
+  COPY +k3s/downloads bin
+  COPY +helm/charts charts
+  COPY +images/images.tar images/images.tar
 
-  SAVE ARTIFACT yam.run.tgz AS LOCAL yam.run.tgz
+  # Create tarball of images
+  RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
+  SAVE ARTIFACT /export.tar.zst
+
+build:
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
+  WORKDIR /payload
+
+  # Pull in local assets
+  COPY src .
+  COPY +compress/export.tar.zst shift-package.tar.zst
+
+  # Cache dep loading
+  RUN go mod download 
+
+  # Compute a shasum of the package tarball and inject at compile time
+  RUN checksum=$(go run main.go checksum -f shift-package.tar.zst) && \
+      echo "Computed tarball checksum: $checksum" && \
+      go build -o shift-package -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
+
+  # Validate the shasum before final packaging
+  RUN ./shift-package validate
+
+  SAVE ARTIFACT shift-package* AS LOCAL ./build/

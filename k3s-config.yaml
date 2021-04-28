@@ -1,5 +1,0 @@
-write-kubeconfig-mode: "0644"
-node-label:
-  - "minion=bob"
-disable:
-  - traefik
