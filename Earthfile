@@ -6,9 +6,7 @@ ARG REGISTRY_HELM_VERSION="1.10.1"
 ARG GITEA_HELM_VERSION="2.2.5"
 
 # Switch to IB images when ready
-ARG REGISTRY_IMAGE="registry:2.7.1"
-ARG GITEA_IMAGE="gitea/gitea:1.13.7"
-
+ARG APP_IMAGES="registry:2.7.1 gitea/gitea:1.13.7"
 
 centos7-k3s-selinux-rpms:
   FROM centos:7.9.2009
@@ -89,7 +87,8 @@ images:
   WORKDIR /go-containerregistry/cmd/crane
 
   RUN k3s_images=$(curl -fL https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/k3s-images.txt | tr "\n" " ") && \
-      images="$REGISTRY_IMAGE $GITEA_IMAGE $k3s_images" && \
+      images="$APP_IMAGES $k3s_images" && \
+      echo "Cloning: $images" | tr " " "\n " && \
       go run main.go pull $images /go/images.tar
 
   SAVE ARTIFACT /go/images.tar
