@@ -4,6 +4,7 @@ import (
 	"shift/internal/k3s"
 	"shift/internal/utils"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -26,8 +27,15 @@ var initializeCmd = &cobra.Command{
 			utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
 			utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
 
-			// @todo: check for RHEL and install RPMs if available
-			// yum localinstall -y --disablerepo=* --exclude container-selinux-1* TMP_PATH/rpms/*.rpm
+			// Install RHEL RPMs if applicable
+			if utils.IsRHEL() {
+				rpmPath := utils.AssetPath("rpms/*.rpm")
+				log.Info("Setting up RHEL-specific dependenices and configs")
+				// @todo: k3s docs recommend disabling this, but we should look at just tuning it appropriately
+				utils.ExecCommand([]string{}, "systemctl", "disable", "firewalld", "--now")
+				utils.ExecCommand([]string{}, "sh", "-c", "yum localinstall -y --disablerepo=* --exclude container-selinux-1* "+rpmPath)
+			}
+
 			k3s.Install()
 		}
 	},
