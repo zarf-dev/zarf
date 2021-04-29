@@ -4,9 +4,15 @@ This tool creates self-bootstrapping k3s clusters with the requestsed images/man
 
 The result is a _extremely_ portable (< 300MB) yet scalable cluster capable of running [almost anywhere](https://k3s.io/) completely airgapped, and can serve as the foundation for further downstream clusters.
 
+## Prereqs
+Builds are performed using [earthly](https://earthly.dev/) to ensure an easy to use repeatable build environment is used to produce a single build artifact.  You should also have [docker](https://www.docker.com/products/docker-desktop) installed.  The first thing you will need to do is log into the [Iron Bank](https://registry1.dso.mil/) and you may want to [log into Docker Hub](https://docs.docker.com/engine/reference/commandline/login/) as well if you get throttled.
+
+You'll need your CLI Secret from [User Profile]->[CLI secret] in Harbor to continue.
+
+`docker login registry.dso.mil`
+
 ## Usage
 
-Builds are performed using [earthly](https://earthly.dev/) to ensure an easy to use repeatable build environment is used to produce a single build artifact.
 
 To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8).
 
