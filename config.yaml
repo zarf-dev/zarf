@@ -1,0 +1,19 @@
+apiVersion: v1alpha1
+kind: Cluster
+metadata:
+  name: bb-utility-cluster
+  
+k3s:
+  version: v1.21.0+k3s1
+
+images:
+  - registry:2.7.1
+  - gitea/gitea:1.13.7
+
+charts:
+  - name: docker-registry
+    url: https://helm.twun.io 
+    version: 1.10.1
+  - name: gitea
+    url: https://dl.gitea.io/charts
+    version: 2.2.5
