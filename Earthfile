@@ -8,7 +8,6 @@ clean-build:
   RUN rm -fr build
 
 # Used to load the RHEL7 RPMS
-# earthly -s RHEL_USER=*** -s RHEL_PASS=*** +rhel-rpms 
 rhel-rpms:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi$RHEL
   WORKDIR /rpms
