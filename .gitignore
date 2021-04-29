@@ -7,3 +7,4 @@ shift-package
 bin
 build
 src/.idea/
+rpms/
