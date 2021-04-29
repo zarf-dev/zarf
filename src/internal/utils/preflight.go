@@ -22,6 +22,10 @@ func IsLinux() bool {
 	return runtime.GOOS == "linux"
 }
 
+func IsRHEL() bool {
+	return !InvalidPath("/etc/redhat-release")
+}
+
 func RunPreflightChecks() {
 	if !IsLinux() {
 		log.Fatal("This program requires a Linux OS")

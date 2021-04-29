@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/mholt/archiver/v3"
 	log "github.com/sirupsen/logrus"
@@ -28,6 +29,22 @@ func extractArchive() {
 	tempDestination = tmp
 }
 
+func AssetPath(partial string) string {
+	if tempDestination == "" {
+		extractArchive()
+	}
+	return tempDestination + "/" + partial
+}
+
+func AssetList(partial string) []string {
+	path := AssetPath(partial)
+	matches, err := filepath.Glob(path)
+	if err != nil {
+		log.WithField("path", path).Warn("Unable to find matching files")
+	}
+	return matches
+}
+
 // VerifyBinary returns true if binary is available
 func VerifyBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
@@ -44,19 +61,15 @@ func CreateDirectory(path string, mode os.FileMode) error {
 }
 
 // InvalidPath checks if the given path exists
-func InvalidPath(dir string) bool {
-	_, err := os.Stat(dir)
+func InvalidPath(path string) bool {
+	_, err := os.Stat(path)
 	return os.IsNotExist(err)
 }
 
 func PlaceAsset(source string, destination string) {
 
-	if tempDestination == "" {
-		extractArchive()
-	}
-
 	// Prepend the temp dir path
-	sourcePath := tempDestination + "/" + source
+	sourcePath := AssetPath(source)
 	parentDest := path.Dir(destination)
 	logContext := log.WithFields(log.Fields{
 		"Source":      sourcePath,
