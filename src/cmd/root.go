@@ -12,9 +12,8 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "shift-package",
-	Short: "A brief description of your application",
-	Long: ``,
+	Use:   "shift-pack",
+	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 }
 
 func Execute() {
@@ -24,7 +23,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .shift-package.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .shift-pack.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
@@ -35,7 +34,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		viper.AddConfigPath(".")
-		viper.SetConfigName(".shift-package")
+		viper.SetConfigName(".shift-pack")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

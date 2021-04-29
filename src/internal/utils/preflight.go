@@ -43,7 +43,7 @@ func RunPreflightChecks() {
 func RunTarballChecksumValidate() {
 	log.Info("Validating tarball checksum")
 
-	tarballChecksumComputed := GetSha256("shift-package.tar.zst")
+	tarballChecksumComputed := GetSha256("shift-pack.tar.zst")
 
 	if tarballChecksumComputed != packageChecksum {
 		log.WithFields(log.Fields{

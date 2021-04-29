@@ -3,7 +3,7 @@
 *.tgz
 .vagrant
 assets/
-shift-package
+shift-pack
 bin
 build
 src/.idea/
