@@ -1,4 +1,4 @@
-# Shift Package
+# Shift Pack
 
 This tool creates self-bootstrapping k3s clusters with the requestsed images/manifests embedded to deploy into an airgap Debian or RHEL-based linux environment.  
 
@@ -9,7 +9,7 @@ Builds are performed using [earthly](https://earthly.dev/) to ensure an easy to 
 
 You'll need your CLI Secret from [User Profile]->[CLI secret] in Harbor to continue.
 
-`docker login registry.dso.mil`
+`docker login registry1.dso.mil`
 
 ## Usage
 
@@ -27,7 +27,7 @@ You can try out the deployment using vagrant:
 ```bash
 vagrant destroy -f && vagrant up --provision && vagrant ssh
 cd /opt/shift
-sudo ./shift-package initialize
+sudo ./shift-pack initialize
 ```
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
@@ -53,5 +53,5 @@ token: "${cluster-token}"
 server: "${server-url}"
 EOF
 
-sudo ./shift-package initialize
+sudo ./shift-pack initialize
 ```

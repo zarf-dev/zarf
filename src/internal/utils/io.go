@@ -14,16 +14,16 @@ import (
 var tempDestination string
 
 func extractArchive() {
-	tmp, err := ioutil.TempDir("", "shift-package")
+	tmp, err := ioutil.TempDir("", "shift-pack-")
 	log.WithField("path", tmp).Info("Extracting assets")
 
 	if err != nil {
 		log.WithField("path", tmp).Fatal("Unable to create temp directory")
 	}
 
-	err = archiver.Unarchive("shift-package.tar.zst", tmp)
+	err = archiver.Unarchive("shift-pack.tar.zst", tmp)
 	if err != nil {
-		log.Fatal("Unable to extract the shift-package.tar.zst contents")
+		log.Fatal("Unable to extract the shift-pack.tar.zst contents")
 	}
 
 	tempDestination = tmp
