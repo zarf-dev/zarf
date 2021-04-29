@@ -14,4 +14,10 @@ Vagrant.configure("2") do |config|
     vb.cpus = 6
     vb.memory = 8192
   end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    cd /opt/shift
+    ./shift-pack initialize
+  SHELL
+
 end
