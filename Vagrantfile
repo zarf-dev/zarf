@@ -1,6 +1,6 @@
 Vagrant.configure("2") do |config|
-  #  config.vm.box = "generic/rhel7"
-  config.vm.box = "ubuntu/focal64"
+   config.vm.box = "generic/rhel7"
+  # config.vm.box = "ubuntu/focal64"
   
   config.vm.synced_folder '.', '/vagrant', disabled: true
   config.vm.synced_folder 'build', '/opt/shift', SharedFoldersEnableSymlinksCreate: false
@@ -14,6 +14,4 @@ Vagrant.configure("2") do |config|
     vb.cpus = 6
     vb.memory = 8192
   end
-
-  # config.vm.provision "shell", path: "bin/shift-package", privileged: true
 end

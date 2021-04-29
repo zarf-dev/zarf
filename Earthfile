@@ -1,52 +1,29 @@
 # Earthfile
 
 ARG CONFIG="config.yaml"
+ARG RHEL="false"
 
-centos7-k3s-selinux-rpms:
-  FROM centos:7.9.2009
-  WORKDIR /deps
+clean-build:
+  LOCALLY
+  RUN rm -fr build
 
-  RUN yum install yum-utils -y
+# Used to load the RHEL7 RPMS
+# earthly -s RHEL_USER=*** -s RHEL_PASS=*** +rhel-rpms 
+rhel-rpms:
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi$RHEL
   WORKDIR /rpms
 
-  RUN echo $'\n\
-  [rancher-k3s-common-stable]\n\
-  name=Rancher K3s Common (stable)\n\
-  baseurl=https://rpm.rancher.io/k3s/stable/common/centos/7/noarch\n\
-  enabled=1\n\
-  gpgcheck=1\n\
-  gpgkey=https://rpm.rancher.io/public.key'\
-  >> /etc/yum.repos.d/rancher-k3s-common.repo
+  RUN --secret RHEL_USER=+secrets/RHEL_USER --secret RHEL_PASS=+secrets/RHEL_PASS \
+      subscription-manager register --auto-attach --username=$RHEL_USER --password=$RHEL_PASS
+  
+  RUN subscription-manager repos --enable=rhel-$RHEL-server-extras-rpms
 
-  RUN yumdownloader --assumeyes --resolve --destdir=/rpms k3s-selinux
+  RUN yumdownloader --resolve --destdir=/rpms/ container-selinux
 
-  WORKDIR /
-  RUN tar -czvf rpms.tar.gz /rpms
+  # Download the K3S SELinux RPM 
+  RUN curl -L "https://github.com/k3s-io/k3s-selinux/releases/download/v0.3.stable.0/k3s-selinux-0.3-0.el7.noarch.rpm" -o "/rpms/k3s-selinux.rpm"
 
-  SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-7.9-k3s-selinux-rpms.tar.gz
-
-centos8-k3s-selinux-rpms:
-  FROM centos:8.3.2011
-
-  RUN yum install yum-utils -y
-  WORKDIR /rpms
-
-  RUN echo $'\n\
-  [rancher-k3s-common-stable]\n\
-  name=Rancher K3s Common (stable)\n\
-  baseurl=https://rpm.rancher.io/k3s/stable/common/centos/8/noarch\n\
-  enabled=1\n\
-  gpgcheck=1\n\
-  gpgkey=https://rpm.rancher.io/public.key'\
-  >> /etc/yum.repos.d/rancher-k3s-common.repo
-
-  # RUN repoquery --requires --resolve --recursive k3s-selinux | xargs -r yumdownloader
-  RUN yumdownloader --assumeyes --resolve --destdir=/rpms k3s-selinux
-
-  WORKDIR /
-  RUN tar -czvf rpms.tar.gz /rpms
-
-  SAVE ARTIFACT rpms.tar.gz AS LOCAL centos-8.3-k3s-selinux-rpms.tar.gz
+  SAVE ARTIFACT /rpms
 
 helm:
   FROM alpine/helm:3.5.3
@@ -80,11 +57,11 @@ k3s:
   WORKDIR /downloads
 
   COPY +yq/yq /usr/bin
-  COPY $CONFIG .
+  COPY $CONFIG /tmp/config.yaml
 
   RUN curl -fL "https://get.k3s.io" -o "init-k3s.sh"
 
-  RUN K3S_VERSION=$(yq e '.k3s.version' $CONFIG) && \
+  RUN K3S_VERSION=$(yq e '.k3s.version' /tmp/config.yaml) && \
       curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-images.txt,sha256sum-amd64.txt}" -o "#1" && \
       sha256sum -c --ignore-missing "sha256sum-amd64.txt"
 
@@ -120,8 +97,13 @@ compress:
   COPY +charts/charts charts
   COPY +images/images.tar images/images.tar
 
-  # Create tarball of images
-  RUN rm -f bin/*.txt 
+  # Optional include RHEL rpm build step
+  IF [ $RHEL != "false" ]
+    COPY +rhel-rpms/rpms rpms
+  END
+
+  # Quick housekeeping
+  RUN rm -f bin/*.txt && mkdir -p rpms
 
   RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
@@ -146,4 +128,7 @@ build:
   # Validate the shasum before final packaging
   RUN ./shift-package validate
 
+  RUN ls -lah shift-package*
+
+  BUILD +clean-build
   SAVE ARTIFACT shift-package* AS LOCAL ./build/

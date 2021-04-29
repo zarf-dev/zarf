@@ -26,6 +26,8 @@ var initializeCmd = &cobra.Command{
 			utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
 			utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
 
+			// @todo: check for RHEL and install RPMs if available
+			// yum localinstall -y --disablerepo=* --exclude container-selinux-1* TMP_PATH/rpms/*.rpm
 			k3s.Install()
 		}
 	},
