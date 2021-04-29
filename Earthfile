@@ -114,20 +114,20 @@ build:
 
   # Pull in local assets
   COPY src .
-  COPY +compress/export.tar.zst shift-package.tar.zst
+  COPY +compress/export.tar.zst shift-pack.tar.zst
 
   # Cache dep loading
   RUN go mod download 
 
-  # Compute a shasum of the package tarball and inject at compile time
-  RUN checksum=$(go run main.go checksum -f shift-package.tar.zst) && \
+  # Compute a shasum of the pack tarball and inject at compile time
+  RUN checksum=$(go run main.go checksum -f shift-pack.tar.zst) && \
       echo "Computed tarball checksum: $checksum" && \
-      go build -o shift-package -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
+      go build -o shift-pack -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
 
   # Validate the shasum before final packaging
-  RUN ./shift-package validate
+  RUN ./shift-pack validate
 
-  RUN ls -lah shift-package*
+  RUN ls -lah shift-pack*
 
   BUILD +clean-build
-  SAVE ARTIFACT shift-package* AS LOCAL ./build/
+  SAVE ARTIFACT shift-pack* AS LOCAL ./build/
