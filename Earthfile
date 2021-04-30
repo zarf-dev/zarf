@@ -8,6 +8,7 @@ ARG DEV=true
 boilerplate:
   FROM +clone
 
+  ARG WORKDIR
   RUN mkdir out && \
       mv repo/{payload,config.yaml,README.md} out/
 
