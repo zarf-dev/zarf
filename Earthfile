@@ -7,14 +7,13 @@ ARG DEV=true
 # `earthly +boilerplate` to setup the basic file structure
 boilerplate:
   LOCALLY
-  RUN env && ls -lah && pwd
-  RUN uname -a && ls -lah / && ls -lah ..
   RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
       touch payload/bin/.gitkeep && \ 
       touch payload/manifests/.gitkeep && \
       touch payload/misc/.gitkeep && \
       echo "build:\n    LOCALLY\n    RUN whoami" > payload/builder/Earthfile && \
       touch config.yaml
+  RUN ls -lah
     
 clean-build:
   LOCALLY
