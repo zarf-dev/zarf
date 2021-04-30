@@ -9,6 +9,7 @@ boilerplate:
   LOCALLY
 
   RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo && \
+      env && ls -lah && \
       cp -R repo/{payload,config.yaml,README.md} $WORKDIR/
     
 clean-build:
