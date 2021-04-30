@@ -33,7 +33,7 @@ _note: earthly collects anonymous stats by default, this can be disabled using [
 You can try out the deployment using vagrant:
 
 ```bash
-vagrant destroy -f && vagrant up --provision --no-color && vagrant ssh
+vagrant destroy -f && vagrant up --provision --no-color && vagrant ssh [RHEL7|Ubuntu]
 ```
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
