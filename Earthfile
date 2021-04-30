@@ -11,6 +11,7 @@ boilerplate:
   RUN mkdir out && \
       mv repo/{payload,config.yaml,README.md} out/
 
+  RUN env && pwd && ls -lah
   SAVE ARTIFACT out/* AS LOCAL $WORKDIR
     
 clean-build:
