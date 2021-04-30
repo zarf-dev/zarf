@@ -8,14 +8,15 @@ ARG DEV=true
 boilerplate:
   LOCALLY
 
-  WORKDIR $WORKDIR
-  RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
+  # Workaround for remote exec PWD override
+  RUN cd ${WORKDIR:-$PWD} && \
+      mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
       touch payload/bin/.gitkeep && \ 
       touch payload/manifests/.gitkeep && \
       touch payload/misc/.gitkeep && \
       echo "build:\n    LOCALLY\n    RUN whoami" > payload/builder/Earthfile && \
       touch config.yaml
-  RUN ls -lah
+  RUN env 
     
 clean-build:
   LOCALLY
