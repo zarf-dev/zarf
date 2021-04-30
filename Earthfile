@@ -9,14 +9,13 @@ boilerplate:
   LOCALLY
 
   # Workaround for remote exec PWD override
-  RUN cd ${WORKDIR:-$PWD} && \
-      mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
-      touch payload/bin/.gitkeep && \ 
-      touch payload/manifests/.gitkeep && \
-      touch payload/misc/.gitkeep && \
-      echo "build:\n    LOCALLY\n    RUN whoami" > payload/builder/Earthfile && \
-      touch config.yaml
-  RUN env 
+  RUN base=${WORKDIR:-$PWD}/payload && \
+      mkdir -p $base/bin $base/builder $base/manifests $base/misc && \
+      touch $base/bin/.gitkeep && \ 
+      touch $base/manifests/.gitkeep && \
+      touch $base/misc/.gitkeep && \
+      echo "build:\n    LOCALLY\n    RUN whoami" > $base/builder/Earthfile && \
+      touch $base/../config.yaml
     
 clean-build:
   LOCALLY
