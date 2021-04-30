@@ -11,7 +11,7 @@ boilerplate:
   RUN mkdir out && \
       mv repo/{payload,config.yaml,README.md} out/
 
-  SAVE ARTIFACT out/* AS LOCAL ./
+  SAVE ARTIFACT out/* AS LOCAL $WORKDIR
     
 clean-build:
   LOCALLY
