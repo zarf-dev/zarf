@@ -6,14 +6,10 @@ ARG DEV=true
 
 # `WORKDIR=$PWD earthly shift-pak/+boilerplate` to setup the basic file structure
 boilerplate:
-  FROM +clone
+  LOCALLY
 
-  ARG WORKDIR
-  RUN mkdir out && \
-      mv repo/{payload,config.yaml,README.md} out/
-
-  RUN env && pwd && ls -lah
-  SAVE ARTIFACT out/* AS LOCAL $WORKDIR
+  RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo && \
+      cp -R repo/{payload,config.yaml,README.md} $WORKDIR/
     
 clean-build:
   LOCALLY
