@@ -4,22 +4,25 @@ ARG CONFIG="config.yaml"
 ARG RHEL="false"
 ARG DEV=true
 
-# `earthly +boilerplate` to setup the basic file structure
+# `WORKDIR=$PWD earthly shift-pak/+boilerplate` to setup the basic file structure
 boilerplate:
-  LOCALLY
+  FROM +clone
 
-  # Workaround for remote exec PWD override
-  RUN base=${WORKDIR:-$PWD}/payload && \
-      mkdir -p $base/bin $base/builder $base/manifests $base/misc && \
-      touch $base/bin/.gitkeep && \ 
-      touch $base/manifests/.gitkeep && \
-      touch $base/misc/.gitkeep && \
-      echo "build:\n    LOCALLY\n    RUN whoami" > $base/builder/Earthfile && \
-      touch $base/../config.yaml
+  RUN mkdir out && \
+      mv repo/{payload,config.yaml,README.md} out/
+
+  SAVE ARTIFACT out/* AS LOCAL ./
     
 clean-build:
   LOCALLY
-  RUN rm -fr build
+  RUN rm -fr ${WORKDIR:-$PWD}/build
+
+clone:
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
+
+  RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo
+
+  SAVE ARTIFACT repo
 
 # Used to load the RHEL7 RPMS
 rhel-rpms:
@@ -144,8 +147,7 @@ build:
   IF $DEV
     COPY src .
   ELSE
-    RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git . && \
-        mv src/* .
+    COPY +clone/src .
   END
 
   COPY +compress/export.tar.zst shift-pack.tar.zst
