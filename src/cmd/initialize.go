@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"shift/internal/k3s"
-	"shift/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/k3s"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/utils"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
