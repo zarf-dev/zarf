@@ -1,3 +1,4 @@
+# Generate custom builds, the build target must be specified
 build:
     LOCALLY
     RUN whoami
