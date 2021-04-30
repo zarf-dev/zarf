@@ -2,7 +2,18 @@
 
 ARG CONFIG="config.yaml"
 ARG RHEL="false"
+ARG DEV=true
 
+# `earthly +boilerplate` to setup the basic file structure
+boilerplate:
+  LOCALLY
+  RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
+      touch payload/bin/.gitkeep && \ 
+      touch payload/manifests/.gitkeep && \
+      touch payload/misc/.gitkeep && \
+      echo "build:\n    LOCALLY\n    RUN whoami" > payload/builder/Earthfile && \
+      touch config.yaml
+    
 clean-build:
   LOCALLY
   RUN rm -fr build
@@ -87,9 +98,15 @@ compress:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /payload
 
+  # Allow custom build steps to run prior to tarball building
+  BUILD ./payload/builder+build
+
   RUN yum install -y zstd
 
-  COPY manifests manifests
+  # Pull in local resources
+  COPY payload/bin bin
+  COPY payload/manifests manifests
+  COPY payload/misc misc
 
   # Pull in artifacts from other build stages
   COPY +k3s/downloads bin
@@ -104,16 +121,30 @@ compress:
   # Quick housekeeping
   RUN rm -f bin/*.txt && mkdir -p rpms
 
+  # Compress the tarball
   RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
 
+
+  
 build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
   WORKDIR /payload
 
-  # Pull in local assets
-  COPY src .
+  # Fix earthly conditional output for stupid IB permissions....
+  USER 0
+  RUN chown 1001 /run
+  USER 1001
+
+  # If dev mode use local src folder, otherwise go fetch it
+  IF $DEV
+    COPY src .
+  ELSE
+    RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git . && \
+        mv src/* .
+  END
+
   COPY +compress/export.tar.zst shift-pack.tar.zst
 
   # Cache dep loading
@@ -122,11 +153,11 @@ build:
   # Compute a shasum of the pack tarball and inject at compile time
   RUN checksum=$(go run main.go checksum -f shift-pack.tar.zst) && \
       echo "Computed tarball checksum: $checksum" && \
-      go build -o shift-pack -ldflags "-X shift/internal/utils.packageChecksum=$checksum" main.go
+      go build -o shift-pack -ldflags \
+      "-X repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/utils.packageChecksum=$checksum" main.go
 
   # Validate the shasum before final packaging
   RUN ./shift-pack validate
-
   RUN ls -lah shift-pack*
 
   BUILD +clean-build
