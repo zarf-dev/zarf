@@ -8,7 +8,7 @@ ARG DEV=true
 boilerplate:
   LOCALLY
   RUN whoami && ls -lah && pwd
-  RUN uname -A && ls -lah / && ls -lah ..
+  RUN uname -a && ls -lah / && ls -lah ..
   RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
       touch payload/bin/.gitkeep && \ 
       touch payload/manifests/.gitkeep && \
