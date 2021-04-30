@@ -1,4 +1,4 @@
-module shift
+module repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src
 
 go 1.16
 
