@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"shift/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/utils"
 
 	"github.com/spf13/cobra"
 )

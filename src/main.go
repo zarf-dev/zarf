@@ -1,7 +1,7 @@
 package main
 
 import (
-	"shift/cmd"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/cmd"
 )
 
 func main() {
