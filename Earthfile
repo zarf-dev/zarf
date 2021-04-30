@@ -2,23 +2,10 @@
 
 ARG CONFIG="config.yaml"
 ARG RHEL="false"
-ARG DEV=false
 
-# `WORKDIR=$PWD earthly shift-pak/+boilerplate` to setup the basic file structure
-boilerplate:
+clean-build:
   LOCALLY
-  RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo && \
-      cp -R repo/payload $WORKDIR/ && \
-      cp -R repo/config.yaml $WORKDIR/ && \
-      cp -R repo/Earthfile.local $WORKDIR/Earthfile && \
-      cp -R repo/README.md $WORKDIR/
-    
-clone:
-  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
-
-  RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo
-
-  SAVE ARTIFACT repo
+  RUN rm -fr build
 
 # Used to load the RHEL7 RPMS
 rhel-rpms:
@@ -102,6 +89,8 @@ compress:
 
   RUN yum install -y zstd
 
+  BUILD ./payload+custom
+
   # Pull in local resources
   COPY payload/bin bin
   COPY payload/manifests manifests
@@ -129,18 +118,7 @@ build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
   WORKDIR /payload
 
-  # Fix earthly conditional output for stupid IB permissions....
-  USER 0
-  RUN chown 1001 /run
-  USER 1001
-
-  # If dev mode use local src folder, otherwise go fetch it
-  IF $DEV
-    COPY src .
-  ELSE
-    COPY +clone/src .
-  END
-
+  COPY src .
   COPY +compress/export.tar.zst shift-pack.tar.zst
 
   # Cache dep loading
@@ -156,4 +134,5 @@ build:
   RUN ./shift-pack validate
   RUN ls -lah shift-pack*
 
-  SAVE ARTIFACT shift-pack*
+  BUILD +clean-build
+  SAVE ARTIFACT shift-pack* AS LOCAL ./build/
