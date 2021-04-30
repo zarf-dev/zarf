@@ -7,6 +7,8 @@ ARG DEV=true
 # `earthly +boilerplate` to setup the basic file structure
 boilerplate:
   LOCALLY
+  RUN whoami && ls -lah && pwd
+  RUN false
   RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
       touch payload/bin/.gitkeep && \ 
       touch payload/manifests/.gitkeep && \
