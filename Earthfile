@@ -8,7 +8,6 @@ ARG DEV=true
 boilerplate:
   LOCALLY
 
-  ARG WORKDIR=$PWD
   WORKDIR $WORKDIR
   RUN mkdir -p payload/bin payload/builder payload/manifests payload/misc && \
       touch payload/bin/.gitkeep && \ 
