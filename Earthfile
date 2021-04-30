@@ -2,21 +2,17 @@
 
 ARG CONFIG="config.yaml"
 ARG RHEL="false"
-ARG DEV=true
+ARG DEV=false
 
 # `WORKDIR=$PWD earthly shift-pak/+boilerplate` to setup the basic file structure
 boilerplate:
   LOCALLY
-
   RUN git clone --depth 1 --branch master https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli.git repo && \
       cp -R repo/payload $WORKDIR/ && \
       cp -R repo/config.yaml $WORKDIR/ && \
+      cp -R repo/Earthfile.local $WORKDIR/Earthfile && \
       cp -R repo/README.md $WORKDIR/
     
-clean-build:
-  LOCALLY
-  RUN rm -fr ${WORKDIR:-$PWD}/build
-
 clone:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
 
@@ -104,9 +100,6 @@ compress:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /payload
 
-  # Allow custom build steps to run prior to tarball building
-  BUILD ./payload/builder+build
-
   RUN yum install -y zstd
 
   # Pull in local resources
@@ -131,8 +124,6 @@ compress:
   RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
-
-
   
 build:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
@@ -165,5 +156,4 @@ build:
   RUN ./shift-pack validate
   RUN ls -lah shift-pack*
 
-  BUILD +clean-build
-  SAVE ARTIFACT shift-pack* AS LOCAL ./build/
+  SAVE ARTIFACT shift-pack*

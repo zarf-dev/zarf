@@ -1,0 +1,10 @@
+
+clean-build:
+  LOCALLY
+  RUN rm -fr ./build
+
+build:
+  FROM shift-pack/+build
+
+  BUILD +clean-build
+  SAVE ARTIFACT shift-pack* AS LOCAL ./build/
