@@ -1,0 +1,30 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/traefik-9.18.2.tgz
+  targetNamespace: traefik
+  valuesContent: |-
+    additionalArguments:
+      - --entrypoints.registry.address=:5000
+      - --entrypoints.git.address=:9696
+      - --entrypoints.beast-core.address=:80
+    ports:
+      registry:
+        port: 5000
+        expose: true
+        exposedPort: 5000
+        protocol: TCP
+      git:
+        port: 9696
+        expose: true
+        exposedPort: 9696
+        protocol: TCP
+      beast-core:
+        port: 80
+        expose: true
+        exposedPort: 80
+      
+
