@@ -116,15 +116,34 @@ compress:
 
   SAVE ARTIFACT /export.tar.zst
   
-build:
+go-deps: 
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
   WORKDIR /payload
 
-  COPY src .
-  COPY +compress/export.tar.zst shift-pack.tar.zst
+  COPY src/go* .
 
   # Cache dep loading
-  RUN go mod download 
+  RUN go mod download
+
+  # Cache the test suite too
+  RUN go get gotest.tools/gotestsum 
+
+go-test:
+  FROM +go-deps 
+  # Needed to prevent go test from choking
+  ENV CGO_ENABLED 0
+
+  # Add all src files
+  COPY src .
+
+  # Tests
+  RUN gotestsum
+
+build:
+  FROM +go-test
+
+  # Copy the final compressed tarball for shasum / export
+  COPY +compress/export.tar.zst shift-pack.tar.zst
 
   # Compute a shasum of the pack tarball and inject at compile time
   RUN checksum=$(go run main.go checksum -f shift-pack.tar.zst) && \
