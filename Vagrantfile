@@ -1,8 +1,8 @@
 Vagrant.configure("2") do |config|
 
-  config.vm.define "rhel7" do |rhel7|
-    rhel7.vm.box = "generic/rhel7"
-  end
+  # config.vm.define "rhel7" do |rhel7|
+  #   rhel7.vm.box = "generic/rhel7"
+  # end
   
   config.vm.define "ubuntu" do |ubuntu|
     ubuntu.vm.box = "ubuntu/focal64"
