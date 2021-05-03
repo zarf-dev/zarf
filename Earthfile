@@ -75,10 +75,12 @@ images:
   COPY $CONFIG .
   COPY +k3s/downloads/k3s-images.txt k3s-images.txt
 
-  RUN k3s_images=$(cat "k3s-images.txt" | tr "\n" " ") && \
+  RUN --secret IB_USER=+secrets/IB_USER --secret IB_PASS=+secrets/IB_PASS \
+      k3s_images=$(cat "k3s-images.txt" | tr "\n" " ") && \
       app_images=$(yq e '.images | join(" ")' $CONFIG) && \
       images="$app_images $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
+      go run main.go auth login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
       go run main.go pull $images /go/images.tar
 
   SAVE ARTIFACT /go/images.tar
