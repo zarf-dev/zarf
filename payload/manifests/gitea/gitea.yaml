@@ -18,10 +18,6 @@ spec:
     persistence:
       storageClass: local-path
     gitea:
-      admin:
-        username: bigbang-admin
-        password: replaceme
-        email: "bigbang@local.domain"
       cache:
-        buildIn:
+        builtIn:
           enabled: false
