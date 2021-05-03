@@ -80,7 +80,7 @@ func execCommand(showLogs bool, envVariables []string, commandName string, args 
 
 	if showLogs {
 		if errStdout != nil || errStderr != nil {
-			return "", errors.New("Unable to capture stdOut or stdErr")
+			return "", errors.New("unable to capture stdOut or stdErr")
 		}
 	}
 
