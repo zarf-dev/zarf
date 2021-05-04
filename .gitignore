@@ -7,3 +7,4 @@ shift-pack
 build
 src/.idea/
 rpms/
+.env

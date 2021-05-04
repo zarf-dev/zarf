@@ -13,15 +13,13 @@ You'll need your CLI Secret from [User Profile]->[CLI secret] in Harbor to conti
 
 `docker login registry1.dso.mil`
 
+You will also need to configure the .env file, use the command below to generate a template.  _Note that you don't need to set RHEL creds if you aren't using RHEL_
+
+`earthly +envfile`
+
 ## Building
 ---
-
-
-To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8).
-
-`earthly -s RHEL_USER=*** -s RHEL_PASS=*** --build-arg RHEL="7" +build`
-
-If you don't need to support RHEL-based distros, a simpler command will work.
+To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8) in the .env file.  To build the package:
 
 `earthly +build`
 
