@@ -4,34 +4,111 @@ This tool creates self-bootstrapping k3s clusters with the requestsed images/man
 
 The result is a _extremely_ portable (< 300MB) yet scalable cluster capable of running [almost anywhere](https://k3s.io/) completely airgapped, and can serve as the foundation for further downstream clusters.
 
+&nbsp;
 
 ## Prereqs
----
-Builds are performed using [earthly](https://earthly.dev/) to ensure an easy to use repeatable build environment is used to produce a single build artifact.  You should also have [docker](https://www.docker.com/products/docker-desktop) installed.  The first thing you will need to do is log into the [Iron Bank](https://registry1.dso.mil/) and you may want to [log into Docker Hub](https://docs.docker.com/engine/reference/commandline/login/) as well if you get throttled.
 
-You'll need your CLI Secret from [User Profile]->[CLI secret] in Harbor to continue.
+### Software
+To run this tool, you'll need some software pre-installed:
 
-`docker login registry1.dso.mil`
+- [Earthly](https://earthly.dev/) : Ensures a repeatable, easy-to-use build environment to produce your build artifacts.
 
-You will also need to configure the .env file, use the command below to generate a template.  _Note that you don't need to set RHEL creds if you aren't using RHEL_
+- [Docker](https://www.docker.com/products/docker-desktop) : Provides access to secure build images and assists earthly in keeping builds self-contained, isolated, and repeatable.
 
-`earthly +envfile`
+### User Accounts
+This tool utilizes software pulled from multiple sources and _some_ of them require authenticated access.  You will need to make an account at the following sites if you don't already have access:
+
+- [Iron Bank](https://registry1.dso.mil/) : Platform One's authorized, hardened, and approved container repository. ([product](https://p1.dso.mil/#/products/iron-bank/) [pages](https://ironbank.dso.mil/))
+
+- [RedHat Developer](https://developers.redhat.com/) : RedHat's developer access program which allows access to their (normally) for-pay software & services.
+  - Access account creation via: Menu > Login > Create one now.
+  - This project runs perfectly well using a "_Developer Subscription for Individuals_" (which is free!).
+
+  ---
+
+  **NOTE**
+
+  You only need a RedHat Dev account if you plan on building on a RHEL distro!
+
+  ---
+
+&nbsp;
 
 ## Building
----
-To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8) in the .env file.  To build the package:
 
-`earthly +build`
+### Step 1 - Login to the Container Registry
+
+This tool executes containerized builds within _secure containers_ so you'll need to be able to pull hardened images from Iron Bank.  Be sure you've logged Docker into the Iron Bank before attempting a build:
+
+<table>
+<tr valign="top">
+<td>
+<div>
+
+```sh
+docker login registry1.dso.mil -u <YOUR_USERNAME>
+Password: <YOUR_CLI_SECRET>
+```
+
+</div>
+<div>
 
 ---
-_note: earthly collects anonymous stats by default, this can be disabled using [these instructions](https://docs.earthly.dev/docs/misc/data-collection#disabling-analytics)_ 
 
-## Deploying
+**Harbor Login Credentials**
+
+Iron Bank images are currently backed by an instance of the [Harbor](https://goharbor.io) registry.
+
+To authenticate with Harbor via Docker you'll need to navigate to the Iron Bank [Harbor UI](https://registry1.dso.mil/harbor), login, and copy down your `CLI Secret`.
+
+You should pass this `CLI Secret` **_instead of your password_** when invoking docker login!
+
 ---
-You can try out the deployment using vagrant:
+
+</div>
+</td>
+<td width="503" height="415">
+  <img src="images/harbor-credentials.png">
+</td>
+</tr>
+</table>
+
+&nbsp;
+
+### Step 2 - Run a Build
+
+To build the packages needed for RHEL-based distros, you will need to use your RedHat Developer account to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify your credentials along with a RHEL version flag (7 or 8):
+
+```sh
+earthly -s RHEL_USER=*** -s RHEL_PASS=*** --build-arg RHEL="7" +build
+```
+
+If you don't need to support RHEL-based distros, an even simpler command will work:
+
+```sh
+earthly +build
+```
+
+---
+
+***NOTE***
+
+Earthly collects anonymous stats by default but that [can be disabled ](https://docs.earthly.dev/docs/misc/data-collection#disabling-analytics) if you don't like it.
+
+---
+
+&nbsp;
+
+### Step 3 - Test Drive
+
+You can try out your new build with a local [Vagrant](https://www.vagrantup.com/) deployment, like so:
 
 ```bash
+# bring up VM on host & connect into it
 vagrant destroy -f && vagrant up --provision --no-color && vagrant ssh [RHEL7|Ubuntu]
+
+# escalate user once inside VM: vagrant --> root
+sudo su
 ```
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
@@ -43,11 +120,8 @@ The status of the cluster creation can be monitored in several ways:
 journalctl -lf -u k3s
 
 # kubectl
-watch kubectl get no,all -A
+watch /usr/local/bin/kubectl get no,all -A
 ```
-
-## Scaling
----
 If needed, elastically scale the cluster by adding more servers/agents the same way you would with k3s:
 
 ```bash
@@ -58,4 +132,21 @@ server: "${server-url}"
 EOF
 
 sudo ./shift-pack initialize
+```
+
+&nbsp;
+
+### Step 4 - Cleanup
+
+You can tear down the local [Vagrant](https://www.vagrantup.com/) deployment, like so:
+
+```bash
+# to deescalate user: root --> vagrant
+exit
+
+# to exit VM shell
+exit
+
+# tear down the VM
+vagrant destroy -f
 ```
