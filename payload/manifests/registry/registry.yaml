@@ -16,3 +16,5 @@ spec:
   valuesContent: |-
     persistence:
       enabled: true
+    image:
+      pullPolicy: Never
