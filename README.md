@@ -42,13 +42,19 @@ You will also need to configure the .env file, use the command below to generate
 ---
 To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8) in the .env file.  To build the package:
 
-To build the packages needed for RHEL-based distros, you will need to use your RedHat Developer account to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify your credentials along with a RHEL version flag (7 or 8):
+### Step 1b - Configure the `.env` file
 
-```sh
-earthly -s RHEL_USER=*** -s RHEL_PASS=*** --build-arg RHEL="7" +build
-```
+Some secrets also have to be passed to Earthly for your build, these are stored in the `.env` file.  YOu can generate a template to complete with the command below. 
 
-If you don't need to support RHEL-based distros, an even simpler command will work:
+`earthly +envfile`
+
+_To build the packages needed for RHEL-based distros, you will need to use your RedHat Developer account to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify your credentials along with a RHEL version flag (7 or 8) in the `.env` file_
+
+&nbsp;
+
+### Step 2 - Run a Build
+
+Building the package is one command:
 
 ```sh
 earthly +build
