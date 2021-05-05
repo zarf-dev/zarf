@@ -39,7 +39,9 @@ spec:
       pullPolicy: Never
     gitea:
       admin:
-        password: change_me
+        username: "bigbang-admin"
+        password: "change_me"
+        email: "bigbang@localhost"
       cache:
         builtIn:
           enabled: false
