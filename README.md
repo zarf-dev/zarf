@@ -68,7 +68,7 @@ You should pass this `CLI Secret` **_instead of your password_** when invoking d
 </div>
 </td>
 <td width="503" height="415">
-  <img src="images/harbor-credentials.png">
+  <img src=".images/harbor-credentials.png">
 </td>
 </tr>
 </table>
