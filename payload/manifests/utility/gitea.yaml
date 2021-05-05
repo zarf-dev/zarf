@@ -39,7 +39,7 @@ spec:
       pullPolicy: Never
     gitea:
       admin:
-        username: "bigbang-admin"
+        username: "bigbang"
         password: "change_me"
         email: "bigbang@localhost"
       cache:
@@ -51,10 +51,14 @@ spec:
           DISABLE_SSH: true
         database: 
           DB_TYPE: sqlite3
-          ## Note that the intit script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
+          # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
           HOST: google.com:80
         service:
           DISABLE_REGISTRATION: true
+        repository:
+          ENABLE_PUSH_CREATE_USER: true
+          FORCE_PRIVATE: true
+
       database:
         builtIn:
           postgresql:
