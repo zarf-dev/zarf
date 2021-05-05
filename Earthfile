@@ -43,9 +43,24 @@ yq:
   FROM  mikefarah/yq
   SAVE ARTIFACT /usr/bin/yq
 
+get-big-bang:
+  FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
+  WORKDIR /payload
+
+  COPY +yq/yq /usr/bin
+  COPY $CONFIG /tmp/config.yaml
+
+  RUN BB_VERSION=$(yq e '.bigBang.version' /tmp/config.yaml) && \
+      curl -fL https://umbrella-bigbang-releases.s3-us-gov-west-1.amazonaws.com/umbrella/$BB_VERSION/repositories.tar.gz -o "bb.tgz" && \
+      tar -xzf bb.tgz repos
+
+  # Quick hack to the repo remotes
+  RUN for dir in repos/*/; do git -C $dir remote set-url origin http://bigbang:change_me@localhost/bigbang/$(git -C $dir remote get-url origin | grep -o '[^\/]*$') ; done
+
+  SAVE ARTIFACT repos
+
 charts:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
-
   WORKDIR /src 
 
   COPY +yq/yq /usr/bin
@@ -106,6 +121,7 @@ compress:
   COPY +k3s/downloads bin
   COPY +charts/charts charts
   COPY +images/images.tar images/images.tar
+  COPY +get-big-bang/repos repos
 
   # Optional include RHEL rpm build step
   IF [ $RHEL != "false" ]
