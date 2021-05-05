@@ -102,13 +102,6 @@ compress:
 
   RUN yum install -y zstd
 
-  BUILD ./payload+custom
-
-  # Pull in local resources
-  COPY payload/bin bin
-  COPY payload/manifests manifests
-  COPY payload/misc misc
-
   # Pull in artifacts from other build stages
   COPY +k3s/downloads bin
   COPY +charts/charts charts
@@ -121,6 +114,14 @@ compress:
 
   # Quick housekeeping
   RUN rm -f bin/*.txt && mkdir -p rpms
+
+  # Pull in local resources
+  COPY payload/bin bin
+  COPY payload/manifests manifests
+  COPY payload/misc misc
+  
+  # Run any additional custom build stages
+  BUILD ./payload+custom
 
   # Compress the tarball
   RUN tar -cv . | zstd -T0 -16 -f --long=25 - -o /export.tar.zst
