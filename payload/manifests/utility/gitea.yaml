@@ -19,7 +19,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: gitea-http
+                name: stuart-gitea-http
                 port:
                   number: 3000
 
@@ -27,7 +27,7 @@ spec:
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: gitea
+  name: stuart
   namespace: git
 spec:
   chart: https://%{KUBERNETES_API}%/static/charts/gitea-2.2.5.tgz
