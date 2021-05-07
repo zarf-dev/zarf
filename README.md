@@ -28,7 +28,7 @@ This tool utilizes software pulled from multiple sources and _some_ of them requ
 
   **NOTE**
 
-  You only need a RedHat Dev account if you plan on building on a RHEL distro!
+  You only need a RedHat Dev account if you plan on building on a RHEL distro!  Red Hat Dev accounts can only have 16 systems, if for some reasons you see the RPM target error saying no subscriptions available, make sure you remove excess installs via  https://access.redhat.com/management/systems.
 
   ---
 
@@ -109,9 +109,11 @@ Earthly collects anonymous stats by default but that [can be disabled ](https://
 You can try out your new build with a local [Vagrant](https://www.vagrantup.com/) deployment, like so:
 
 ```bash
-# bring up VM on host & connect into it
-vagrant destroy -f && vagrant up --provision --no-color && vagrant ssh [RHEL7|Ubuntu]
+# To test RHEL
+vagrant destroy -f && vagrant up --no-color rhel7 && vagrant ssh rhel7
 
+# To test ubuntu 
+vagrant destroy -f && vagrant up --no-color ubuntu && vagrant ssh ubuntu
 # escalate user once inside VM: vagrant --> root
 sudo su
 ```
