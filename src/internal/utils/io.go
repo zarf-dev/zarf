@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/mholt/archiver/v3"
+	"github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +21,7 @@ func extractArchive() {
 		"source":      ArchivePath,
 		"destination": tmp,
 	})
-	
+
 	logContext.Info("Extracting assets")
 
 	if err != nil {
@@ -89,9 +90,10 @@ func PlaceAsset(source string, destination string) {
 		logContext.Fatal("Unable to create the required destination path")
 	}
 
-	// Move the asset
-	err = os.Rename(sourcePath, destination)
+	// Copy the asset
+	err = copy.Copy(sourcePath, destination)
+
 	if err != nil {
-		logContext.Fatal("Unable to extract a required asset")
+		logContext.Fatal("Unable to copy the contens of the asset")
 	}
 }
