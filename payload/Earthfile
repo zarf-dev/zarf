@@ -1,4 +1,3 @@
-# Add any custom build stages prior to packaging 
 custom:
     LOCALLY
     RUN whoami
