@@ -8,3 +8,5 @@ build
 src/.idea/
 rpms/
 .env
+.image-cache/
+.DS_Store
