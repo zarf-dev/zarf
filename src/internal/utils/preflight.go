@@ -14,7 +14,7 @@ var packageChecksum string
 func IsValidHostName() bool {
 	log.Info("Preflight check: validating hostname")
 	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
-	expression := regexp.MustCompile(`^[a-zA-Z0-9\-\.]`)
+	expression := regexp.MustCompile(`^[a-zA-Z0-9\-\.]+$`)
 	hostname, err := os.Hostname()
 
 	if err != nil {
