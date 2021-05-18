@@ -94,22 +94,23 @@ k3s:
 
 images:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
-  GIT CLONE --branch main https://github.com/google/go-containerregistry.git /go-containerregistry
-  WORKDIR /go-containerregistry/cmd/crane
+  WORKDIR /payload
 
   COPY +yq/yq /usr/bin
   COPY $CONFIG .
   COPY +k3s/downloads/k3s-images.txt k3s-images.txt
+
+  RUN go install github.com/google/go-containerregistry/cmd/crane@v0.5.1
 
   RUN --secret IB_USER=+secrets/IB_USER --secret IB_PASS=+secrets/IB_PASS \
       k3s_images=$(cat "k3s-images.txt" | tr "\n" " ") && \
       app_images=$(yq e '.images | join(" ")' $CONFIG) && \
       images="$app_images $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
-      go run main.go auth login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
-      go run main.go pull $images /go/images.tar
+      crane auth login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
+      crane pull $images images.tar
 
-  SAVE ARTIFACT /go/images.tar
+  SAVE ARTIFACT /payload/images.tar
 
 compress: 
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
