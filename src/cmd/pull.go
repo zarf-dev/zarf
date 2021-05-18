@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
@@ -12,17 +13,39 @@ import (
 var cachePath = ".image-cache"
 var targetPath = "oci-bundle"
 
+var registeryUsername string
+var registeryPassword string
+
 var pullCmd = &cobra.Command{
 	Use:   "pull IMAGE TARBALL",
-	Short: "Pull remote images by reference and store their contents in a tarball",
+	Short: "Pull remote images by reference and store their contents in a OCI bundle",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(_ *cobra.Command, args []string) error {
+		var craneAuthOptions crane.Option
+
+		if registeryUsername != "" && registeryPassword != "" {
+			craneAuthOptions = crane.WithAuth(authn.FromConfig(
+				authn.AuthConfig{
+					Username: registeryUsername,
+					Password: registeryPassword,
+				}),
+			)
+		}
+
 		imageMap := map[string]v1.Image{}
 
 		for _, src := range args {
-			craneOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
+			cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
-			img, err := crane.Pull(src, craneOptions)
+			var img v1.Image
+			var err error
+
+			if craneAuthOptions != nil {
+				img, err = crane.Pull(src, cranePlatformOptions, craneAuthOptions)
+			} else {
+				img, err = crane.Pull(src, cranePlatformOptions)
+			}
+
 			if err != nil {
 				return fmt.Errorf("pulling %s: %v", src, err)
 			}
@@ -41,4 +64,6 @@ var pullCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
+	pullCmd.Flags().StringVarP(&registeryUsername, "username", "u", "", "Registery username")
+	pullCmd.Flags().StringVarP(&registeryPassword, "password", "p", "", "Registery password")
 }
