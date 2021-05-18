@@ -23,12 +23,18 @@ rhel-rpms:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi$RHEL
   WORKDIR /rpms
 
+  # Register this machine Red Hat, note that you can only have 16 machines with a developer account
   RUN --secret RHEL_USER=+secrets/RHEL_USER --secret RHEL_PASS=+secrets/RHEL_PASS \
       subscription-manager register --auto-attach --username=$RHEL_USER --password=$RHEL_PASS
   
+  # Enable the repo needed for container-selinux
   RUN subscription-manager repos --enable=rhel-$RHEL-server-extras-rpms
 
+  # Resolve and save the rpms locally
   RUN yumdownloader --resolve --destdir=/rpms/ container-selinux
+
+  # Pull the rancher gpg public key 
+  RUN curl -fL https://rpm.rancher.io/public.key -o rancher.key
 
   # Download the K3S SELinux RPM 
   RUN curl -L "https://github.com/k3s-io/k3s-selinux/releases/download/v0.3.stable.0/k3s-selinux-0.3-0.el7.noarch.rpm" -o "/rpms/k3s-selinux.rpm"

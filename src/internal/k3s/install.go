@@ -26,6 +26,11 @@ func Install() {
 		"INSTALL_K3S_SKIP_DOWNLOAD=true",
 	}
 
+	// Install RHEL RPMs if applicable
+	if utils.IsRHEL() {
+		ConfigureRHEL()			
+	}
+
 	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
 	utils.ExecCommand([]string{}, "sh", "-c", k3sBinary+" kubectl completion bash >/etc/bash_completion.d/kubectl")
 }
