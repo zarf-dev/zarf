@@ -14,9 +14,25 @@ import (
 
 var TempDestination string
 var ArchivePath = "shift-pack.tar.zst"
+var TempPathPrefix = "shift-pack-"
+
+func eraseTempAssets() {
+	files, _ := filepath.Glob("/tmp/" + TempPathPrefix + "*")
+	for _, path := range files {
+		err := os.RemoveAll(path)
+		logContext := log.WithField("path", path)
+		if err != nil {
+			logContext.Warn("Unable to purge temporary path")
+		} else {
+			logContext.Info("Purging old temp files")
+		}
+	}
+}
 
 func extractArchive() {
-	tmp, err := ioutil.TempDir("", "shift-pack-")
+	eraseTempAssets()
+
+	tmp, err := ioutil.TempDir("", TempPathPrefix)
 	logContext := log.WithFields(log.Fields{
 		"source":      ArchivePath,
 		"destination": tmp,
