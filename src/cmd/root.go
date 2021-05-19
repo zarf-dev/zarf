@@ -6,9 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
-	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/viper"
 )
 
@@ -29,13 +26,6 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .shift-pack.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	cranePlatformOptions := []crane.Option{
-		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"}),
-	}
-	rootCmd.AddCommand(cranecmd.NewCmdAuthLogin())
-	rootCmd.AddCommand(cranecmd.NewCmdPull(&cranePlatformOptions))
-	rootCmd.AddCommand(cranecmd.NewCmdPush(&cranePlatformOptions))
 }
 
 // initConfig reads in config file and ENV variables if set.
