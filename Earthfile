@@ -110,8 +110,8 @@ images:
       app_images=$(yq e '.images | join(" ")' $CONFIG) && \
       images="$app_images $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
-      go run main.go login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
-      go run main.go pull $images images.tar
+      go run main.go registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
+      go run main.go registry pull $images images.tar
 
   SAVE ARTIFACT /payload/images.tar
 
