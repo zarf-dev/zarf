@@ -6,8 +6,8 @@ Vagrant.configure("2") do |config|
   end
   
   config.vm.define "rhel8" do |rhel8|
-    rhel7.vm.box = "generic/rhel8"
-    rhel7.vm.hostname = "rhel"
+    rhel8.vm.box = "generic/rhel8"
+    rhel8.vm.hostname = "rhel"
   end
   
   config.vm.define "ubuntu" do |ubuntu|
