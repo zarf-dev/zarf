@@ -4,7 +4,15 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	log "github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/utils"
 )
+
+func PushAllDirectories(baseUrl string, path string) {
+	paths := utils.ListDirectories(path)
+	for _, entry := range paths {
+		Push(baseUrl, entry)
+	}
+}
 
 func Push(baseUrl string, path string) {
 
@@ -23,7 +31,7 @@ func Push(baseUrl string, path string) {
 		logContext.Fatal("Unable to find the git remote")
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl, targetRepo  := transformURL(baseUrl, remoteUrl)
+	targetUrl, targetRepo := transformURL(baseUrl, remoteUrl)
 
 	_, _ = repo.CreateRemote(&config.RemoteConfig{
 		Name: "utility",
@@ -33,10 +41,14 @@ func Push(baseUrl string, path string) {
 	err = repo.Push(&git.PushOptions{
 		RemoteName: "utility",
 	})
+
+	pushContext := logContext.WithField("target", targetRepo)
 	if err == git.NoErrAlreadyUpToDate {
-		logContext.WithField("target", targetRepo).Info("Repo already up-to-date")
+		pushContext.Info("Repo already up-to-date")
 	} else if err != nil {
-		logContext.WithField("target", targetRepo).Warn("Unable to push repo to the utility cluster")
+		pushContext.Warn("Unable to push repo to the utility cluster")
+	} else {
+		pushContext.Info("Repo updated")
 	}
 
 }

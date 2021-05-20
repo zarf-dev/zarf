@@ -90,6 +90,22 @@ func InvalidPath(path string) bool {
 	return os.IsNotExist(err)
 }
 
+func ListDirectories(directory string) []string {
+	directories := []string{}
+	paths, err := os.ReadDir(directory)
+	if err != nil {
+		log.WithField("path", directory).Fatal("Unable to load the directory")
+	}
+
+	for _, entry := range paths {
+		if entry.IsDir() {
+			directories = append(directories, filepath.Join(directory, entry.Name()))
+		}
+	}
+
+	return directories
+}
+
 func PlaceAsset(source string, destination string) {
 
 	// Prepend the temp dir path
