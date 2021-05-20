@@ -63,6 +63,13 @@ yq:
   FROM  mikefarah/yq
   SAVE ARTIFACT /usr/bin/yq
 
+
+zstd:
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
+  WORKDIR /payload
+
+  RUN yum install -y zstd
+
 get-big-bang:
   FROM registry1.dso.mil/ironbank/google/golang/golang-1.16
   WORKDIR /payload
@@ -126,10 +133,7 @@ images:
   SAVE ARTIFACT /payload/images.tar
 
 compress: 
-  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
-  WORKDIR /payload
-
-  RUN yum install -y zstd
+  FROM +zstd
 
   # Pull in artifacts from other build stages
   COPY +k3s/downloads bin
