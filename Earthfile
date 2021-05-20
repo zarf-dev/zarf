@@ -18,6 +18,20 @@ clean-build:
   LOCALLY
   RUN rm -fr build
 
+test-rhel:
+  LOCALLY
+  RUN vagrant destroy -f && vagrant up --no-color rhel$RHEL && \
+      echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh rhel$RHEL\"\n\n\n"
+
+test-ubuntu:
+  LOCALLY
+  RUN vagrant destroy -f && vagrant up --no-color ubuntu && \
+      echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ubuntu\"\n\n\n"
+
+test-destroy:
+  LOCALLY
+  RUN vagrant destroy -f
+  
 # Used to load the RHEL7 RPMS
 rhel-rpms:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi$RHEL

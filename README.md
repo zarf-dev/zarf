@@ -110,12 +110,14 @@ You can try out your new build with a local [Vagrant](https://www.vagrantup.com/
 
 ```bash
 # To test RHEL
-vagrant destroy -f && vagrant up --no-color rhel7 && vagrant ssh rhel7
+earthly +test-rhel
 
 # To test ubuntu 
-vagrant destroy -f && vagrant up --no-color ubuntu && vagrant ssh ubuntu
+earthly +test-ubuntu
+
 # escalate user once inside VM: vagrant --> root
 sudo su
+cd /opt/shift
 ```
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
@@ -155,5 +157,5 @@ exit
 exit
 
 # tear down the VM
-vagrant destroy -f
+earthly +test-destroy
 ```
