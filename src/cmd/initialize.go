@@ -4,6 +4,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/k3s"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/cli/src/internal/utils"
 
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,14 @@ var initializeCmd = &cobra.Command{
 		utils.RunTarballChecksumValidate()
 		utils.RunPreflightChecks()
 
-		if !isDryRun {
+		prompt := promptui.Prompt{
+			Label:     "Preflight check passed, continue deployment?",
+			IsConfirm: true,
+		}
+
+		result, err := prompt.Run()
+
+		if !isDryRun || err != nil && result == "y" {
 			utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
 			utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
 			utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
@@ -33,5 +41,5 @@ var initializeCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initializeCmd)
-	initializeCmd.Flags().BoolVar(&isDryRun, "dryrun", false, "Only run checksum and preflight steps")
+	initializeCmd.Flags().BoolVar(&isDryRun, "dryrun", true, "Only run checksum and preflight steps")
 }
