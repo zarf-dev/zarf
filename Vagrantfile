@@ -33,7 +33,7 @@ Vagrant.configure("2") do |config|
     cd /opt/shift
     # Airgap images please
     echo "0.0.0.0 registry.dso.mil registry1.dso.mil index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-    ./shift-pack initialize
+    ./shift-pack initialize --dryrun=false
   SHELL
 
 end
