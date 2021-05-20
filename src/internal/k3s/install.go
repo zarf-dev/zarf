@@ -12,7 +12,11 @@ func Install() {
 
 	log.Info("Installing K3s")
 
-	utils.RunPreflightChecks()
+	utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
+	utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
+	utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
+	utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
+	utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
 
 	installer := "/usr/local/bin/init-k3s.sh"
 	k3sBinary := "/usr/local/bin/k3s"
