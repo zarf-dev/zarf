@@ -6,6 +6,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/google/go-containerregistry v0.5.0
+	github.com/manifoldco/promptui v0.8.0
 	github.com/mholt/archiver/v3 v3.5.0
 	github.com/otiai10/copy v1.6.0
 	github.com/sirupsen/logrus v1.8.1
