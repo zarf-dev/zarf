@@ -20,20 +20,18 @@ var initializeCmd = &cobra.Command{
 		utils.RunTarballChecksumValidate()
 		utils.RunPreflightChecks()
 
-		prompt := promptui.Prompt{
-			Label:     "Preflight check passed, continue deployment?",
-			IsConfirm: true,
-		}
+		if isDryRun {
+			prompt := promptui.Prompt{
+				Label:     "Preflight check passed, continue deployment?",
+				IsConfirm: true,
+			}
 
-		result, err := prompt.Run()
+			result, err := prompt.Run()
 
-		if !isDryRun || err != nil && result == "y" {
-			utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
-			utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
-			utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
-			utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
-			utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
-
+			if err != nil && result == "y" {
+				k3s.Install()
+			}
+		} else {
 			k3s.Install()
 		}
 	},
