@@ -6,9 +6,6 @@ metadata:
 k3s:
   version: v1.21.0+k3s1
 
-bigBang:
-  version: 1.6.2
-
 images:
   - registry:2.7.1
   - gitea/gitea:1.13.7
