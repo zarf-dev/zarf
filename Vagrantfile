@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
     # Airgap images please
     echo "0.0.0.0 registry.dso.mil registry1.dso.mil index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
     shasum -c shift-pack.sha256
-    ./shift-pack initialize --dryrun=false
+    ./shift-pack initialize --confirm
   SHELL
 
 end
