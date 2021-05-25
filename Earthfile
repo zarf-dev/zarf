@@ -2,7 +2,7 @@
 
 ARG CONFIG="config.yaml"
 ARG RHEL="false"
-ARG CLI_VERSION="v0.1.1"
+ARG CLI_VERSION="v0.1.2"
 
 # Create the env file template
 envfile:
