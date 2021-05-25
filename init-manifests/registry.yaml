@@ -35,4 +35,5 @@ spec:
     persistence:
       enabled: true
     image:
+      repository: registry1.dso.mil/ironbank/opensource/docker/registry-v2
       pullPolicy: Never
