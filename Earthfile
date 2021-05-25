@@ -15,11 +15,13 @@ RHEL_USER=replace_me \n\
 RHEL_PASS=replace_me \n\
 RHEL=false' > .env
   
+# Test the deployment with vagrant for RHEL
 test-rhel:
   LOCALLY
   RUN vagrant destroy -f && vagrant up --no-color rhel$RHEL && \
       echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh rhel$RHEL\"\n\n\n"
 
+# Test the deployment with vagrant for Ubuntu
 test-ubuntu:
   LOCALLY
   RUN vagrant destroy -f && vagrant up --no-color ubuntu && \
@@ -52,15 +54,18 @@ rhel-rpms:
 
   SAVE ARTIFACT /rpms
 
+# Copy the helm 3 binary
 helm:
   FROM alpine/helm:3.5.3
   SAVE ARTIFACT /usr/bin/helm
 
+# Copy the yq 4 binary
 yq:
   FROM  mikefarah/yq
   SAVE ARTIFACT /usr/bin/yq
 
 
+# The baseline image with common binaries and $CONFIG
 common:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /payload
@@ -71,6 +76,8 @@ common:
   COPY +yq/yq /usr/bin
   COPY $CONFIG .
 
+
+# Fetch the Shift CLI released binary
 cli-binary:
   FROM +common
 
@@ -81,6 +88,7 @@ cli-binary:
 
   SAVE ARTIFACT shift-pack
 
+# Fetch the helm charts specified in $CONFIG 
 charts:
   FROM +common
 
@@ -94,6 +102,7 @@ charts:
 
   SAVE ARTIFACT charts
 
+# Fetch the k3s version specified in $CONFIG
 k3s:
   FROM +common
 
@@ -105,6 +114,7 @@ k3s:
 
   SAVE ARTIFACT *
 
+# Fetch k3s images and images specified in $CONFIG
 images:
   FROM +common
 
@@ -121,6 +131,7 @@ images:
 
   SAVE ARTIFACT images.tar
 
+# Compress all assets in a single tar.zst file
 compress: 
   FROM +common
 
@@ -145,6 +156,7 @@ compress:
 
   SAVE ARTIFACT /export.tar.zst
   
+# Final packaging of the binary/tarball/checksum assets
 build:
   FROM +common
 
@@ -158,3 +170,13 @@ build:
   RUN ls -lah shift-pack*
 
   SAVE ARTIFACT shift-pack* AS LOCAL ./build/
+
+#######################################################
+##    Temporary location for package update targets   #
+#######################################################
+# Package all repos specified in $CONFIG
+update-repos:
+  FROM +common
+# Package all images specified in $CONFIG
+update-images:
+  FROM +common
