@@ -18,7 +18,7 @@ build:
   #     - $CI_COMMIT_TAG
   image: docker:19.03.12
   before_script:
-    - echo $REGISTRY1_USER
+    - echo "robot$$bb-dev-imagepullonly"
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot$$bb-dev-imagepullonly" --password-stdin
   script:
     - docker info
