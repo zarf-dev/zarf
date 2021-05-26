@@ -16,10 +16,10 @@ build:
   # only:
   #   variables: 
   #     - $CI_COMMIT_TAG
-  image: docker:19.03.12
+  image: docker:git
   before_script:
-    - echo "robot\$bb-dev-imagepullonly"
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
   script:
-    - docker info
-    - docker pull registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+    - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
+    - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
+    - pwd && ls -lah
