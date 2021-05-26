@@ -12,12 +12,7 @@ import (
 
 // Change terminal colors
 const colorReset = "\x1b[0m"
-const colorGray = "\x1b[30;1m"
-const colorRed = "\x1b[31;1m"
 const colorGreen = "\x1b[32;1m"
-const colorYellow = "\x1b[33;1m"
-const colorBlue = "\x1b[34;1m"
-const colorPink = "\x1b[35;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
