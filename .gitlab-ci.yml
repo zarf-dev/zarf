@@ -24,4 +24,12 @@ build:
     - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
     - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
   script:
-    - earthly +common
+    - earthly +build
+  after_script:
+    - echo "JOB_ID=$CI_JOB_ID" >> job.env
+  artifacts:
+    paths:
+      - build/
+    expire_in: never
+    reports:
+      dotenv: job.env
