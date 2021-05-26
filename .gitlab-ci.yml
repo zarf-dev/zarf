@@ -19,3 +19,4 @@ build:
   image: docker:19.03.12
   script:
     - docker info
+    - docker pull registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
