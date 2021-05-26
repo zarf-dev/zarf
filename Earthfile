@@ -2,7 +2,6 @@
 
 ARG CONFIG="config.yaml"
 ARG RHEL="false"
-ARG CLI_VERSION="v0.1.2"
 
 # Create the env file template
 envfile:
@@ -64,7 +63,6 @@ yq:
   FROM  mikefarah/yq
   SAVE ARTIFACT /usr/bin/yq
 
-
 # The baseline image with common binaries and $CONFIG
 common:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
@@ -74,19 +72,8 @@ common:
   
   COPY +helm/helm /usr/bin
   COPY +yq/yq /usr/bin
+  COPY ./cli+build/shift-pack /usr/bin
   COPY $CONFIG .
-
-
-# Fetch the Shift CLI released binary
-cli-binary:
-  FROM +common
-
-  RUN BINARY_URL=$(curl -fL "https://repo1.dso.mil/api/v4/projects/6759/releases/$CLI_VERSION" | yq e '.assets.links[0].url' -j - | tr -d \") && \
-      curl -fL $BINARY_URL -o shift-pack && \
-      chmod +x shift-pack && \
-      ./shift-pack 
-
-  SAVE ARTIFACT shift-pack
 
 # Fetch the helm charts specified in $CONFIG 
 charts:
@@ -118,7 +105,6 @@ k3s:
 images:
   FROM +common
 
-  COPY +cli-binary/shift-pack .
   COPY +k3s/k3s-images.txt k3s-images.txt
 
   RUN --secret IB_USER=+secrets/IB_USER --secret IB_PASS=+secrets/IB_PASS \
@@ -126,8 +112,8 @@ images:
       app_images=$(yq e '.images | join(" ")' $CONFIG) && \
       images="$app_images $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
-      ./shift-pack registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
-      ./shift-pack registry pull $images images.tar
+      shift-pack registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
+      shift-pack registry pull $images images.tar
 
   SAVE ARTIFACT images.tar
 
@@ -160,7 +146,7 @@ compress:
 build:
   FROM +common
 
-  COPY +cli-binary/shift-pack .
+  RUN cp /usr/bin/shift-pack .
 
   # Copy the final compressed tarball for shasum / export
   COPY +compress/export.tar.zst shift-pack.tar.zst
