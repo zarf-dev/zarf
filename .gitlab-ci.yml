@@ -14,13 +14,13 @@ build:
     DOCKER_TLS_VERIFY: 1
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
-  rules:
-    - if: $CI_COMMIT_TAG    
   image: docker:git
   before_script:
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
     - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
     - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
+  rules:
+    - if: $CI_COMMIT_TAG    
   script:
     - earthly -s IB_USER="robot\$bb-dev-imagepullonly" -s IB_PASS="$REGISTRY1_PASSWORD" +build
   after_script:
@@ -44,5 +44,5 @@ release-from-tag:
     - echo "Creating a release for $CI_COMMIT_TAG"
     - release-cli create --name "Shift Pack ${CI_COMMIT_TAG}" --tag-name "${CI_COMMIT_TAG}" --description "Shift Pack Utility Cluster" 
         --assets-link "{\"name\":\"shift-pack\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/-/jobs/${JOB_ID}/artifacts/file/build/shift-pack\"}" 
-        --assets-link "{\"name\":\"shift-pack\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/-/jobs/${JOB_ID}/artifacts/file/build/shift-pack-initialize.tar.zst\"}" 
-        --assets-link "{\"name\":\"shift-pack\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/-/jobs/${JOB_ID}/artifacts/file/build/shift-pack.sha256\"}"
+        --assets-link "{\"name\":\"shift-pack-initialize.tar.zst\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/-/jobs/${JOB_ID}/artifacts/file/build/shift-pack-initialize.tar.zst\"}" 
+        --assets-link "{\"name\":\"shift-pack.sha256\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/-/jobs/${JOB_ID}/artifacts/file/build/shift-pack.sha256\"}"
