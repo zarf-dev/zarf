@@ -19,12 +19,10 @@ build:
   image: docker:git
   before_script:
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
-    - export IB_USER="robot\$bb-dev-imagepullonly"
-    - export IB_PASS="$REGISTRY1_PASSWORD"
     - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
     - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
   script:
-    - earthly +build
+    - earthly -s IB_USER="robot\$bb-dev-imagepullonly" -s IB_PASS="$REGISTRY1_PASSWORD" +build
   after_script:
     - echo "JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
