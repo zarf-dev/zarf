@@ -1,0 +1,21 @@
+stages:
+  - package
+
+build:
+  stage: package
+  tags:
+    - bigbang
+    - privileged
+    - packages
+  variables:
+    DOCKER_HOST: tcp://localhost:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+    DOCKER_DRIVER: overlay2
+  # only:
+  #   variables: 
+  #     - $CI_COMMIT_TAG
+  image: docker:19.03.12
+  script:
+    - docker info
