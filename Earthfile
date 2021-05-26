@@ -149,7 +149,7 @@ build:
   RUN cp /usr/bin/shift-pack .
 
   # Copy the final compressed tarball for shasum / export
-  COPY +compress/export.tar.zst shift-pack.tar.zst
+  COPY +compress/export.tar.zst shift-pack-initialize.tar.zst
 
   RUN sha256sum -b shift-pack* > shift-pack.sha256
 
