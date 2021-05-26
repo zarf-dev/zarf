@@ -13,7 +13,7 @@ import (
 )
 
 var TempDestination string
-var ArchivePath = "shift-pack.tar.zst"
+var ArchivePath = "shift-pack-initialize.tar.zst"
 var TempPathPrefix = "shift-pack-"
 
 func eraseTempAssets() {
