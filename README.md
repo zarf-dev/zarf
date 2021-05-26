@@ -4,6 +4,8 @@ This tool creates self-bootstrapping k3s clusters with the requestsed images/man
 
 The result is a _extremely_ portable (< 300MB) yet scalable cluster capable of running [almost anywhere](https://k3s.io/) completely airgapped, and can serve as the foundation for further downstream clusters.
 
+[![asciicast](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC.svg)](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC)
+
 &nbsp;
 
 ## Prereqs
