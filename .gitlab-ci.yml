@@ -19,7 +19,7 @@ build:
   image: docker:19.03.12
   before_script:
     - echo $REGISTRY1_USER
-    # - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username $REGISTRY1_USER --password-stdin
+    - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot$$bb-dev-imagepullonly" --password-stdin
   script:
     - docker info
     - docker pull registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
