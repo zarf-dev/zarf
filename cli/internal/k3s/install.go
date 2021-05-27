@@ -15,6 +15,7 @@ func Install() {
 	log.Info("Installing K3s")
 
 	utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
+	utils.PlaceAsset("bin/k9s", "/usr/local/bin/k9s")
 	utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
 	utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
 	utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
@@ -44,9 +45,9 @@ func Install() {
 	if err != nil {
 		log.Warn("Unable to create the root kube config directory")
 	} else {
-		err := os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
-		if err != nil {
-			log.Warn("Unable to link the root kube config file to k3s")
-		}
+		// Dont log an error for now since re-runs throw an invalid error
+		_ = os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
 	}
+
+	log.Info("Installation complete.  You can run \"k9s\" to monitor the status of the deployment.")
 }

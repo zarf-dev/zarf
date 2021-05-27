@@ -101,6 +101,16 @@ k3s:
 
   SAVE ARTIFACT *
 
+# Fetch the k9s version specified in $CONFIG
+k9s:
+  FROM +common
+
+  RUN K9S_VERSION=$(yq e '.k9s.version' $CONFIG) && \
+      curl -fL "https://github.com/derailed/k9s/releases/download/$K9S_VERSION/k9s_${K9S_VERSION}_Linux_x86_64.tar.gz" | tar xvz
+      # todo: add checksums.txt without making everything sad
+
+  SAVE ARTIFACT *
+
 # Fetch k3s images and images specified in $CONFIG
 images:
   FROM +common
@@ -123,6 +133,7 @@ compress:
 
   # Pull in artifacts from other build stages
   COPY +k3s/* bin/
+  COPY +k9s/k9s bin/
   COPY +charts/charts charts
   COPY +images/images.tar images/images.tar
 
