@@ -38,5 +38,15 @@ func Install() {
 	}
 
 	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
-	
+
+	// Make the k3s kubeconfig available to other standard K8s tools that bind to the default ~/.kube/config
+	err := utils.CreateDirectory("/root/.kube", 0700)
+	if err != nil {
+		log.Warn("Unable to create the root kube config directory")
+	} else {
+		err := os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
+		if err != nil {
+			log.Warn("Unable to link the root kube config file to k3s")
+		}
+	}
 }
