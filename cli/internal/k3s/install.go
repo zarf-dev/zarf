@@ -38,5 +38,5 @@ func Install() {
 	}
 
 	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
-	utils.ExecCommand([]string{}, "sh", "-c", k3sBinary+" kubectl completion bash >/etc/bash_completion.d/kubectl")
+	
 }
