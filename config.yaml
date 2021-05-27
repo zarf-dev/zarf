@@ -6,6 +6,9 @@ metadata:
 k3s:
   version: v1.21.0+k3s1
 
+k9s:
+  version: v0.24.10
+
 images:
   - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
   - gitea/gitea:1.13.7
