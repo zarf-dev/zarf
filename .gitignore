@@ -1,4 +1,4 @@
-*.run.zstd
+*.zst
 *.tar.gz
 *.tgz
 .vagrant
