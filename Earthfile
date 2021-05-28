@@ -68,8 +68,6 @@ common:
   FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
   WORKDIR /payload
 
-  RUN yum install -y zstd
-  
   COPY +helm/helm /usr/bin
   COPY +yq/yq /usr/bin
   COPY ./cli+build/shift-pack /usr/bin
@@ -149,7 +147,7 @@ compress:
   COPY init-manifests manifests
 
   # Compress the tarball
-  RUN tar -cv . | zstd -5 -f - -o /export.tar.zst
+  RUN shift-pack archiver compress . /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
   
