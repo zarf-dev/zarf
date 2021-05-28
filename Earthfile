@@ -60,7 +60,7 @@ helm:
 
 # Copy the yq 4 binary
 yq:
-  FROM  mikefarah/yq
+  FROM mikefarah/yq
   SAVE ARTIFACT /usr/bin/yq
 
 # The baseline image with common binaries and $CONFIG
@@ -167,13 +167,3 @@ build:
   RUN ls -lah shift-pack*
 
   SAVE ARTIFACT shift-pack* AS LOCAL ./build/
-
-#######################################################
-##    Temporary location for package update targets   #
-#######################################################
-# Package all repos specified in $CONFIG
-update-repos:
-  FROM +common
-# Package all images specified in $CONFIG
-update-images:
-  FROM +common
