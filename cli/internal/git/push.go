@@ -7,6 +7,8 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/cli/internal/utils"
 )
 
+const remoteName = "shift-pack-target"
+
 func PushAllDirectories(baseUrl string, path string) {
 	paths := utils.ListDirectories(path)
 	for _, entry := range paths {
@@ -35,13 +37,16 @@ func Push(baseUrl string, path string) {
 	remoteUrl := remote.Config().URLs[0]
 	targetUrl, targetRepo := transformURL(baseUrl, remoteUrl)
 
+	// Silently purge a remote if it already exists
+	_ = repo.DeleteRemote(remoteName)
+
 	_, _ = repo.CreateRemote(&config.RemoteConfig{
-		Name: "utility",
+		Name: remoteName,
 		URLs: []string{targetUrl},
 	})
 
 	err = repo.Push(&git.PushOptions{
-		RemoteName: "utility",
+		RemoteName: remoteName,
 	})
 
 	pushContext := logContext.WithField("target", targetRepo)
@@ -53,4 +58,6 @@ func Push(baseUrl string, path string) {
 		pushContext.Info("Repo updated")
 	}
 
+	// Silently purge the remote on completion
+	_ = repo.DeleteRemote(remoteName)
 }
