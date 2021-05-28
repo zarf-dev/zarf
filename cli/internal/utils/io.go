@@ -44,7 +44,7 @@ func extractArchive() {
 		logContext.Fatal("Unable to create temp directory")
 	}
 
-	err = archiver.Unarchive(ArchivePath, tmp)
+	err = Decompress(ArchivePath, tmp)
 	if err != nil {
 		logContext.Fatal("Unable to extract the arhive contents")
 	}
@@ -104,6 +104,14 @@ func ListDirectories(directory string) []string {
 	}
 
 	return directories
+}
+
+func Compress(sources []string, destination string) error {
+	return archiver.Archive(sources, destination)
+}
+
+func Decompress(source string, destination string) error {
+	return archiver.Unarchive(source, destination)
 }
 
 func PlaceAsset(source string, destination string) {
