@@ -22,4 +22,6 @@ func init() {
 	registryCmd.AddCommand(cranecmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(cranecmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(cranecmd.NewCmdPush(&cranePlatformOptions))
+	registryCmd.AddCommand(cranecmd.NewCmdCopy(&cranePlatformOptions))
+	registryCmd.AddCommand(cranecmd.NewCmdCatalog(&cranePlatformOptions))
 }
