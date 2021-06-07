@@ -10,3 +10,6 @@ rpms/
 .env
 .image-cache/
 .DS_Store
+data/
+*.vbox
+bundle/
