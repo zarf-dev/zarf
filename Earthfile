@@ -70,7 +70,7 @@ common:
 
   COPY +helm/helm /usr/bin
   COPY +yq/yq /usr/bin
-  COPY ./cli+build/shift-pack /usr/bin
+  COPY ./cli+build/zarf /usr/bin
   COPY $CONFIG .
 
 # Fetch the helm charts specified in $CONFIG 
@@ -120,8 +120,8 @@ images:
       app_images=$(yq e '.images | join(" ")' $CONFIG) && \
       images="$app_images $k3s_images" && \
       echo "Cloning: $images" | tr " " "\n " && \
-      shift-pack registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
-      shift-pack registry pull $images images.tar
+      zarf registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
+      zarf registry pull $images images.tar
 
   SAVE ARTIFACT images.tar
 
@@ -147,7 +147,7 @@ compress:
   COPY init-manifests manifests
 
   # Compress the tarball
-  RUN shift-pack archiver compress . /export.tar.zst
+  RUN zarf archiver compress . /export.tar.zst
 
   SAVE ARTIFACT /export.tar.zst
   
@@ -155,13 +155,13 @@ compress:
 build:
   FROM +common
 
-  RUN cp /usr/bin/shift-pack .
+  RUN cp /usr/bin/zarf .
 
   # Copy the final compressed tarball for shasum / export
-  COPY +compress/export.tar.zst shift-pack-initialize.tar.zst
+  COPY +compress/export.tar.zst zarf-initialize.tar.zst
 
-  RUN sha256sum -b shift-pack* > shift-pack.sha256
+  RUN sha256sum -b zarf* > zarf.sha256
 
-  RUN ls -lah shift-pack*
+  RUN ls -lah zarf*
 
-  SAVE ARTIFACT shift-pack* AS LOCAL ./build/
+  SAVE ARTIFACT zarf* AS LOCAL ./build/

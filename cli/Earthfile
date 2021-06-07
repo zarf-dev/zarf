@@ -28,6 +28,6 @@ go-test:
 build:
   FROM +go-test
 
-  RUN go build -o shift-pack main.go
+  RUN go build -o zarf main.go
 
-  SAVE ARTIFACT shift-pack
+  SAVE ARTIFACT zarf

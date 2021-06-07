@@ -4,10 +4,10 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	log "github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/cli/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-const remoteName = "shift-pack-target"
+const remoteName = "zarf-target"
 
 func PushAllDirectories(baseUrl string, path string) {
 	paths := utils.ListDirectories(path)

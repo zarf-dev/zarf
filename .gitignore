@@ -3,7 +3,7 @@
 *.tgz
 .vagrant
 assets/
-shift-pack
+zarf
 build
 src/.idea/
 rpms/

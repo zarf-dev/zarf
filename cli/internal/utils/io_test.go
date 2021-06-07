@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/cli/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 func init() {

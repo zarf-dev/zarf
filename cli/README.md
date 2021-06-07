@@ -1,6 +1,3 @@
-# Shift CLI
-
-This is the source code for the go-cli component of [Shift Pack](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack).  Go there for more details.
 ### Software
 To run this tool, you'll need some software pre-installed:
 
