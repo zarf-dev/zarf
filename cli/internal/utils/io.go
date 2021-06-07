@@ -13,8 +13,8 @@ import (
 )
 
 var TempDestination string
-var ArchivePath = "shift-pack-initialize.tar.zst"
-var TempPathPrefix = "shift-pack-"
+var ArchivePath = "zarf-initialize.tar.zst"
+var TempPathPrefix = "zarf-"
 
 func eraseTempAssets() {
 	files, _ := filepath.Glob("/tmp/" + TempPathPrefix + "*")
