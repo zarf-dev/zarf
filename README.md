@@ -1,12 +1,17 @@
-# Shift Pack
+# Zarf K8s Airgap Thingy
 
 This tool creates self-bootstrapping k3s clusters with the requestsed images/manifests embedded to deploy into an airgap Debian or RHEL-based linux environment.  
 
 The result is a _extremely_ portable (< 300MB) yet scalable cluster capable of running [almost anywhere](https://k3s.io/) completely airgapped, and can serve as the foundation for further downstream clusters.
 
-[![asciicast](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC.svg)](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC)
+## What's with the name?
+### Basically this...
+![zarf definition](.images/zarf-dod.jpg)
 
-&nbsp;
+
+## Quick Demo
+
+[![asciicast](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC.svg)](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC)
 
 ## Prereqs
 
@@ -85,7 +90,7 @@ earthly +test-ubuntu
 
 # escalate user once inside VM: vagrant --> root
 sudo su
-cd /opt/shift
+cd /opt/zarf
 ```
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
@@ -108,7 +113,7 @@ token: "${cluster-token}"
 server: "${server-url}"
 EOF
 
-sudo ./shift-pack initialize
+sudo ./zarf initialize
 ```
 
 &nbsp;
