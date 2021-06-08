@@ -3,7 +3,7 @@ package k3s
 import (
 	"os"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/cli/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 
 	log "github.com/sirupsen/logrus"
 )

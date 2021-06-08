@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/shift/pack/cli/internal/git"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 )
 
 var gitUrlPath string

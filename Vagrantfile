@@ -16,7 +16,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.synced_folder '.', '/vagrant', disabled: true
-  config.vm.synced_folder 'build', '/opt/shift', SharedFoldersEnableSymlinksCreate: false
+  config.vm.synced_folder 'build', '/opt/zarf', SharedFoldersEnableSymlinksCreate: false
   
   config.vm.network "forwarded_port", guest: 80, host: 8080
 
@@ -30,11 +30,11 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-    cd /opt/shift
+    cd /opt/zarf
     # Airgap images please
     echo "0.0.0.0 registry.dso.mil registry1.dso.mil index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-    shasum -c shift-pack.sha256
-    ./shift-pack initialize --confirm
+    shasum -c zarf.sha256
+    ./zarf initialize --confirm
   SHELL
 
 end
