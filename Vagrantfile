@@ -19,6 +19,7 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder 'build', '/opt/zarf', SharedFoldersEnableSymlinksCreate: false
   
   config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 443, host: 8443
 
   config.vm.disk :disk, size: "20GB", primary: true
   config.ssh.insert_key = false
@@ -34,7 +35,7 @@ Vagrant.configure("2") do |config|
     # Airgap images please
     echo "0.0.0.0 registry.dso.mil registry1.dso.mil index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
     shasum -c zarf.sha256
-    ./zarf initialize --confirm
+    ./zarf initialize --confirm --host=localhost
   SHELL
 
 end

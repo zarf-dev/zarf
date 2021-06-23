@@ -7,3 +7,4 @@ build
 .env
 .image-cache/
 .DS_Store
+bundle/
