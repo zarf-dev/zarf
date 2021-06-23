@@ -94,6 +94,14 @@ sudo su
 cd /opt/zarf
 ```
 
+All OS options:
+- rhel7
+- rhel8
+- centos7
+- centos8
+- ubuntu
+- debian 
+
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
 
 The status of the cluster creation can be monitored in several ways:
