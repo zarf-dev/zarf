@@ -3,22 +3,24 @@ package k3s
 import (
 	"os"
 
+	"github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
-
-	log "github.com/sirupsen/logrus"
 )
 
-func Install() {
+const k3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
+
+func Install(host string) {
 
 	utils.RunPreflightChecks()
 
-	log.Info("Installing K3s")
+	logrus.Info("Installing K3s")
 
 	utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
 	utils.PlaceAsset("bin/k9s", "/usr/local/bin/k9s")
 	utils.PlaceAsset("bin/init-k3s.sh", "/usr/local/bin/init-k3s.sh")
 	utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
-	utils.PlaceAsset("manifests", "/var/lib/rancher/k3s/server/manifests")
+	utils.PlaceAsset("manifests", k3sManifestPath)
 	utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
 
 	installer := "/usr/local/bin/init-k3s.sh"
@@ -38,16 +40,31 @@ func Install() {
 		ConfigureRHEL()
 	}
 
-	utils.ExecCommand(envVariables, installer, "--disable=metrics-server")
+	utils.ExecCommand(envVariables, installer, "")
+
+	// Get a random secret for use in the cluster
+	gitSecret := utils.RandomString(28)
+
+	// Get a list of all the k3s manifest files
+	manifests := utils.RecursiveFileList(k3sManifestPath)
+
+	// Iterate through all the manifests and replace any ZARF_SECRET values 
+	for _, manifest := range manifests {
+		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
+	}
+
+	// Add the secret to git-credentials for push to gitea
+	git.CredentialsGenerator(host, "syncuser", gitSecret)
 
 	// Make the k3s kubeconfig available to other standard K8s tools that bind to the default ~/.kube/config
 	err := utils.CreateDirectory("/root/.kube", 0700)
 	if err != nil {
-		log.Warn("Unable to create the root kube config directory")
+		logrus.Warn("Unable to create the root kube config directory")
 	} else {
 		// Dont log an error for now since re-runs throw an invalid error
 		_ = os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
 	}
 
-	log.Info("Installation complete.  You can run \"k9s\" to monitor the status of the deployment.")
+	logrus.Info("Installation complete.  You can run \"/usr/loca/bin/k9s\" to monitor the status of the deployment.")
+	logrus.Info("The login for gitea can be found in ~/.git-credentials")
 }
