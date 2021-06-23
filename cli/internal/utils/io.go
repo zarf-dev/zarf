@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var TempDestination string
@@ -20,7 +21,7 @@ func eraseTempAssets() {
 	files, _ := filepath.Glob("/tmp/" + TempPathPrefix + "*")
 	for _, path := range files {
 		err := os.RemoveAll(path)
-		logContext := log.WithField("path", path)
+		logContext := logrus.WithField("path", path)
 		if err != nil {
 			logContext.Warn("Unable to purge temporary path")
 		} else {
@@ -32,24 +33,25 @@ func eraseTempAssets() {
 func extractArchive() {
 	eraseTempAssets()
 
-	tmp, err := ioutil.TempDir("", TempPathPrefix)
-	logContext := log.WithFields(log.Fields{
-		"source":      ArchivePath,
-		"destination": tmp,
-	})
+	tmp := MakeTempDir()
 
-	logContext.Info("Extracting assets")
+	err := Decompress(ArchivePath, tmp)
+	if err != nil {
+		logrus.WithField("source", ArchivePath).Fatal("Unable to extract the archive contents")
+	}
+
+	TempDestination = tmp
+}
+
+func MakeTempDir() string {
+	tmp, err := ioutil.TempDir("", TempPathPrefix)
+	logContext := logrus.WithField("path", tmp)
+	logContext.Info("Creating temp path")
 
 	if err != nil {
 		logContext.Fatal("Unable to create temp directory")
 	}
-
-	err = Decompress(ArchivePath, tmp)
-	if err != nil {
-		logContext.Fatal("Unable to extract the arhive contents")
-	}
-
-	TempDestination = tmp
+	return tmp
 }
 
 func AssetPath(partial string) string {
@@ -64,7 +66,7 @@ func AssetList(partial string) []string {
 	path := AssetPath(partial)
 	matches, err := filepath.Glob(path)
 	if err != nil {
-		log.WithField("path", path).Warn("Unable to find matching files")
+		logrus.WithField("path", path).Warn("Unable to find matching files")
 	}
 	return matches
 }
@@ -94,7 +96,7 @@ func ListDirectories(directory string) []string {
 	directories := []string{}
 	paths, err := os.ReadDir(directory)
 	if err != nil {
-		log.WithField("path", directory).Fatal("Unable to load the directory")
+		logrus.WithField("path", directory).Fatal("Unable to load the directory")
 	}
 
 	for _, entry := range paths {
@@ -104,6 +106,41 @@ func ListDirectories(directory string) []string {
 	}
 
 	return directories
+}
+
+func ReplaceText(path string, old string, new string) {
+	logContext := logrus.WithField("path", path)
+	input, err := ioutil.ReadFile(path)
+	if err != nil {
+		logContext.Fatal("Unable to load the given file")
+	}
+
+	output := bytes.Replace(input, []byte(old), []byte(new), -1)
+
+	if err = ioutil.WriteFile(path, output, 0600); err != nil {
+		logContext.Fatal("Unable to update the given file")
+	}
+}
+
+func RecursiveFileList(root string) []string {
+	files := []string{}
+
+	err := filepath.Walk(root,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				files = append(files, path)
+			}
+			return nil
+		})
+
+	if err != nil {
+		logrus.WithField("path", root).Fatal("Unable to complete directory walking")
+	}
+
+	return files
 }
 
 func Compress(sources []string, destination string) error {
@@ -119,7 +156,7 @@ func PlaceAsset(source string, destination string) {
 	// Prepend the temp dir path
 	sourcePath := AssetPath(source)
 	parentDest := path.Dir(destination)
-	logContext := log.WithFields(log.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"Source":      sourcePath,
 		"Destination": destination,
 	})

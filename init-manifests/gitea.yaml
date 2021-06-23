@@ -11,6 +11,9 @@ metadata:
   namespace: git
   annotations:
     kubernetes.io/ingress.class: "traefik"
+    ingress.kubernetes.io/ssl-redirect: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   rules:
     - http:
@@ -39,14 +42,14 @@ spec:
       pullPolicy: Never
     gitea:
       admin:
-        username: "bigbang"
-        password: "change_me"
-        email: "bigbang@localhost"
+        username: "syncuser"
+        password: "###ZARF_SECRET###"
+        email: "zarf@localhost"
       cache:
         builtIn:
           enabled: false
       config:
-        APP_NAME: "Big Bang Utility Cluster"
+        APP_NAME: "Zarf Utility Cluster"
         server:
           DISABLE_SSH: true
         database: 

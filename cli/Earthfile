@@ -20,6 +20,7 @@ go-test:
   # Add all src files
   COPY main.go .
   COPY --dir cmd .
+  COPY --dir config .
   COPY --dir internal .
 
   # Tests

@@ -116,11 +116,12 @@ Earthly collects anonymous stats by default but that [can be disabled ](https://
 You can try out your new build with a local [Vagrant](https://www.vagrantup.com/) deployment, like so:
 
 ```bash
-# To test RHEL
-earthly +test-rhel
+# To test RHEL 7 or 8
+OS=rhel7 earthly +test
+OS=rhel8 earthly +test
 
-# To test ubuntu 
-earthly +test-ubuntu
+# To test ubuntu (default)
+earthly +test
 
 # escalate user once inside VM: vagrant --> root
 sudo su
