@@ -1,20 +1,30 @@
 Vagrant.configure("2") do |config|
 
-  config.vm.define "rhel7" do |rhel7|
-    rhel7.vm.box = "generic/rhel7"
-    rhel7.vm.hostname = "rhel"
-  end
-  
-  config.vm.define "rhel8" do |rhel8|
-    rhel8.vm.box = "generic/rhel8"
-    rhel8.vm.hostname = "rhel"
-  end
-  
-  config.vm.define "ubuntu" do |ubuntu|
-    ubuntu.vm.box = "ubuntu/focal64"
-    ubuntu.vm.hostname = "ubuntu"
+  config.vm.define "rhel7" do |target|
+    target.vm.box = "generic/rhel7"
   end
 
+  config.vm.define "rhel8" do |target|
+    target.vm.box = "generic/rhel8"
+  end
+  
+  config.vm.define "centos7" do |target|
+    target.vm.box = "boxomatic/centos-7"
+  end
+
+  config.vm.define "centos8" do |target|
+    target.vm.box = "boxomatic/centos-8"
+  end
+  
+  config.vm.define "ubuntu" do |target|
+    target.vm.box = "boxomatic/ubuntu-20.04"
+  end
+
+  config.vm.define "debian" do |target|
+    target.vm.box = "boxomatic/debian-11"
+  end
+
+  config.vm.hostname = "zarf-test"
   config.vm.synced_folder '.', '/vagrant', disabled: true
   config.vm.synced_folder 'build', '/opt/zarf', SharedFoldersEnableSymlinksCreate: false
   
