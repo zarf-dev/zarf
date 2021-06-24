@@ -10,6 +10,9 @@ build:
     - packages
   variables:
     DOCKER_HOST: tcp://localhost:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
   image: docker:git
   before_script:
@@ -17,10 +20,10 @@ build:
     - docker pull registry1.dso.mil/ironbank/redhat/ubi/ubi8
     - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
     - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
-  rules:
-    - if: $CI_COMMIT_TAG    
+  # rules:
+  #   - if: $CI_COMMIT_TAG    
   script:
-    - earthly -s IB_USER="robot\$bb-dev-imagepullonly" -s IB_PASS="$REGISTRY1_PASSWORD" +build
+    - earthly -s IB_USER="robot\$bb-dev-imagepullonly" -s IB_PASS="$REGISTRY1_PASSWORD" +test-ci
   after_script:
     - echo "JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
