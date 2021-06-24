@@ -2,18 +2,13 @@ stages:
   - package
   - release
 
-image: docker
-
-services:
-  - name: docker:18-dind
-    command: ["--mtu 1400"]
-
 build:
   stage: package
   tags:
     - bigbang
     - privileged
     - packages
+  image: docker:git
   variables:
     DOCKER_HOST: tcp://localhost:2376
     DOCKER_TLS_CERTDIR: "/certs"
@@ -21,6 +16,7 @@ build:
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
   before_script:
+    - echo "{\"mtu\": 1400}" > /etc/docker/daemon.json
     - docker info
     - ip a | grep mtu
     - docker network inspect bridge
