@@ -17,6 +17,7 @@ build:
   image: docker:git
   before_script:
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
+    - docker pull registry1.dso.mil/ironbank/redhat/ubi/ubi8
     - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
     - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
   rules:
