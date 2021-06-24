@@ -21,6 +21,7 @@ build:
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
   before_script:
+    - docker info
     - ip a | grep mtu
     - docker network inspect bridge
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
