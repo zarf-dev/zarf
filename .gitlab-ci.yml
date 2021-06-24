@@ -14,6 +14,7 @@ build:
     DOCKER_TLS_VERIFY: 1
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
+    DOCKER_OPTS: "--mtu=1400"
   image: docker:git
   before_script:
     - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
