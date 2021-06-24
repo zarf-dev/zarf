@@ -16,8 +16,8 @@ build:
     DOCKER_DRIVER: overlay2
   image: docker
   services:
-    - name: docker:dind
-      command: ["--mtu 1000"]
+    - name: docker:git
+      command: ["--mtu 1400"]
   before_script:
     - ip a | grep mtu
     - docker network inspect bridge
