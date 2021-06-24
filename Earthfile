@@ -136,3 +136,7 @@ build:
   RUN ls -lah zarf*
 
   SAVE ARTIFACT zarf* AS LOCAL ./build/
+
+# Test basic image pull for CI
+test-ci:
+  FROM docker.io/rancher/pause:3.1
