@@ -5,7 +5,7 @@ stages:
 image: docker
 
 services:
-  - name: docker:dind
+  - name: docker:18-dind
     command: ["--mtu 1400"]
 
 build:
