@@ -2,6 +2,12 @@ stages:
   - package
   - release
 
+image: docker
+
+services:
+  - name: docker:dind
+    command: ["--mtu 1400"]
+
 build:
   stage: package
   tags:
@@ -10,14 +16,10 @@ build:
     - packages
   variables:
     DOCKER_HOST: tcp://localhost:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: 1
-    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+    # DOCKER_TLS_CERTDIR: "/certs"
+    # DOCKER_TLS_VERIFY: 1
+    # DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
-  image: docker
-  services:
-    - name: docker:git
-      command: ["--mtu 1400"]
   before_script:
     - ip a | grep mtu
     - docker network inspect bridge
