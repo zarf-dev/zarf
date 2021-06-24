@@ -16,9 +16,9 @@ build:
     - packages
   variables:
     DOCKER_HOST: tcp://localhost:2376
-    # DOCKER_TLS_CERTDIR: "/certs"
-    # DOCKER_TLS_VERIFY: 1
-    # DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
   before_script:
     - ip a | grep mtu
