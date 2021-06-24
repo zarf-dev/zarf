@@ -139,4 +139,4 @@ build:
 
 # Test basic image pull for CI
 test-ci:
-  FROM docker.io/rancher/pause:3.1
+  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8
