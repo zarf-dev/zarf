@@ -14,8 +14,10 @@ build:
     DOCKER_TLS_VERIFY: 1
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
-    DOCKER_OPTS: "--mtu=1400"
-  image: docker:git
+  image: docker
+  services:
+    - name: docker:dind
+      command: ["--mtu 1000"]
   before_script:
     - ip a | grep mtu
     - docker network inspect bridge
