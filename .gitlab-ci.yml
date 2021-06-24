@@ -16,7 +16,7 @@ build:
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
     DOCKER_DRIVER: overlay2
   before_script:
-    - echo "{\"mtu\": 1400}" > /etc/docker/daemon.json
+    - echo "{'mtu':1400}" > /etc/docker/daemon.json
     - docker info
     - ip a | grep mtu
     - docker network inspect bridge
