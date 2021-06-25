@@ -63,11 +63,8 @@ k3s:
 
   # Add a version flag to the init-k3s script to ensure we cache-bust when pulling down a version for the installer (this is ignored by the server)
   RUN K3S_VERSION=$(yq e '.k3s.version' $CONFIG) && \
-      curl -fL "https://get.k3s.io?version=$K3S_VERSION" -o "init-k3s.sh" && \
       curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/{k3s,k3s-images.txt,sha256sum-amd64.txt}" -o "#1" && \
       sha256sum -c --ignore-missing "sha256sum-amd64.txt"
-
-  RUN sed -i 's/setup_selinux$/#zarf_disable_selinux/' init-k3s.sh 
 
   SAVE ARTIFACT *
 

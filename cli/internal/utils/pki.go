@@ -68,8 +68,8 @@ func GeneratePKI(host string) {
 	publicKeyPem := string(pem.EncodeToMemory(&publicKeyBlock))
 
 	// Push the certs to the cluster
-	ExecCommand([]string{}, "/usr/local/bin/kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
-	ExecCommand([]string{}, "/usr/local/bin/kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+directory+"/zarf-server.crt", "--key="+directory+"/zarf-server.key")
+	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
+	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+directory+"/zarf-server.crt", "--key="+directory+"/zarf-server.key")
 
 	fmt.Println("Ephemeral CA below and saved to " + caFile + "\n")
 	fmt.Println(publicKeyPem)
