@@ -16,12 +16,6 @@ const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
-// SilentExecCommand
-func SilentExecCommand(envVariables []string, commandName string, args ...string) error {
-	_, err := execCommand(false, envVariables, commandName, args...)
-	return err
-}
-
 // ExecCommand performs a process execution outside of Go
 func ExecCommand(envVariables []string, commandName string, args ...string) (string, error) {
 	return execCommand(true, envVariables, commandName, args...)
@@ -41,7 +35,9 @@ func execCommand(showLogs bool, envVariables []string, commandName string, args 
 
 	cmd := exec.Command(commandName, args...)
 	env := os.Environ()
-	env = append(env, envVariables...)
+	if envVariables != nil {
+		env = append(env, envVariables...)
+	}
 	cmd.Env = env
 
 	var stdoutBuf, stderrBuf bytes.Buffer
