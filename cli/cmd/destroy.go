@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k3s"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +13,7 @@ var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Remove the k3s installation",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.ExecCommand([]string{}, "/usr/local/bin/k3s-uninstall.sh")
+		k3s.RemoveAll()
 	},
 }
 
