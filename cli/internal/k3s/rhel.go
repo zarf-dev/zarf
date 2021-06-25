@@ -6,5 +6,5 @@ import (
 
 func ConfigureRHEL() {
 	// @todo: k3s docs recommend disabling this, but we should look at just tuning it appropriately
-	utils.ExecCommand([]string{}, "systemctl", "disable", "firewalld", "--now")
+	utils.ExecCommand(nil, "systemctl", "disable", "firewalld", "--now")
 }

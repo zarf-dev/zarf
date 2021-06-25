@@ -108,6 +108,28 @@ func ListDirectories(directory string) []string {
 	return directories
 }
 
+func WriteFile(path string, data []byte) {
+
+	logContext := logrus.WithField("path", path)
+
+	f, err := os.Create(path)
+	if err != nil {
+		logContext.Fatal("Unable to create the file to write the contents")
+	}
+
+	_, err = f.Write(data)
+	if err != nil {
+		logContext.Fatal("Unable to write the file contents")
+		f.Close()
+	}
+	
+	err = f.Close()
+	if err != nil {
+		logContext.Fatal("Error saving file")
+	}
+
+}
+
 func ReplaceText(path string, old string, new string) {
 	logContext := logrus.WithField("path", path)
 	input, err := ioutil.ReadFile(path)
