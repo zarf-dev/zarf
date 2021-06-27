@@ -13,10 +13,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var packageRepoList []string
-var packageImageList []string
+type TempPaths struct {
+	base  string
+	image string
+	repos string
+}
 
-const exportName = "zarf-update.tar.zst"
+const updatePackageName = "zarf-update.tar.zst"
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
@@ -28,55 +31,67 @@ var packageCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create an update package to push to the utility server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
-		basePath := utils.MakeTempDir()
+		tempPath := createPaths()
 
 		logrus.Info("Loading git repos")
-		for _, url := range packageRepoList {
+		for _, url := range config.GetRepos() {
 			matches := strings.Split(url, "@")
 			if len(matches) < 2 {
 				logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
 			}
-			git.Pull(matches[0], basePath+"/repos/", matches[1])
+			git.Pull(matches[0], tempPath.repos, matches[1])
 		}
 
-		images.PullAll(packageImageList, basePath+"/images.tar")
+		images.PullAll(config.GetImages(), tempPath.image)
 
 		sourceFiles, destinationArchive := []string{
 			"config.yaml",
-			basePath + "/repos",
-			basePath + "/images.tar",
-		}, exportName
+			tempPath.repos,
+			tempPath.image,
+		}, updatePackageName
 
-		_ = os.RemoveAll(exportName)
+		_ = os.RemoveAll(updatePackageName)
 		utils.Compress(sourceFiles, destinationArchive)
 
-		logrus.Info("Cleaning up temp files")
-		_ = os.RemoveAll(basePath)
+		cleanup(tempPath)
 	},
 }
 
 // packageDeployCmd represents the build command
 var packageDeployCmd = &cobra.Command{
-	Use:   "deploy ARCHIVE",
-	Short: "deploys a zarf-update.tar.zst file (runs offline)",
-	Args:  cobra.ExactArgs(1),
+	Use:   "deploy",
+	Short: "deploys a " + updatePackageName + " file (runs offline)",
 	Run: func(cmd *cobra.Command, args []string) {
-		basePath := utils.MakeTempDir()
-		utils.Decompress(args[0], basePath)
+		tempPath := createPaths()
+		targetUrl := "zarf.localhost"
+		imageList := config.GetImages()
 
-		images.PushAll(basePath+"/images.tar", packageImageList, "localhost:8443")
+		utils.Decompress(updatePackageName, tempPath.base)
 
-		logrus.Info("Cleaning up temp files")
-		_ = os.RemoveAll(basePath)
+		git.PushAllDirectories(tempPath.repos, "https://"+targetUrl)
+
+		images.PushAll(tempPath.image, imageList, targetUrl)
+
+		cleanup(tempPath)
 	},
+}
+
+func createPaths() TempPaths {
+	basePath := utils.MakeTempDir()
+	return TempPaths{
+		base:  basePath,
+		image: basePath + "/images.tar",
+		repos: basePath + "/repos",
+	}
+}
+
+func cleanup(tempPath TempPaths) {
+	logrus.Info("Cleaning up temp files")
+	_ = os.RemoveAll(tempPath.base)
 }
 
 func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
-	packageCreateCmd.Flags().StringSliceVarP(&packageRepoList, "repo", "r", config.GetRepos(), "")
-	packageCreateCmd.Flags().StringSliceVarP(&packageImageList, "images", "i", config.GetImages(), "")
-	packageDeployCmd.Flags().StringSliceVarP(&packageRepoList, "repo", "r", config.GetRepos(), "")
-	packageDeployCmd.Flags().StringSliceVarP(&packageImageList, "images", "i", config.GetImages(), "")
 }
