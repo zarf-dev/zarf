@@ -11,9 +11,7 @@ metadata:
   namespace: registry
   annotations:
     kubernetes.io/ingress.class: "traefik"
-    ingress.kubernetes.io/ssl-redirect: "true"    
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
 spec:
   rules:
     - http:

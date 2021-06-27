@@ -6,3 +6,13 @@ metadata:
 spec:
   defaultCertificate:
     secretName: tls-pem
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ssl-redirect
+  namespace: kube-system
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
