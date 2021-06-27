@@ -19,7 +19,7 @@ var printViperRead bool
 func GetInstance() *singleton {
 	once.Do(func() {
 		instance = &singleton{Viper: *viper.New()}
-		setupViper()
+		setupViper("")
 	})
 
 	return instance
@@ -37,9 +37,18 @@ func GetRepos() []string {
 	return repos
 }
 
-func setupViper() {
-	instance.Viper.AddConfigPath("/etc/zarf/")
-	instance.Viper.AddConfigPath(".")
+func DynamicConfigLoad(path string) {
+	instance = &singleton{Viper: *viper.New()}
+	setupViper(path)
+}
+
+func setupViper(path string) {
+	if path != "" {
+		instance.Viper.AddConfigPath(path)
+	} else {
+		instance.Viper.AddConfigPath("/etc/zarf/")
+		instance.Viper.AddConfigPath(".")
+	}
 
 	instance.Viper.SetConfigName("config")
 

@@ -66,10 +66,16 @@ var packageDeployCmd = &cobra.Command{
 		targetUrl := "zarf.localhost"
 		imageList := config.GetImages()
 
+		// Extract the archive
 		utils.Decompress(updatePackageName, tempPath.base)
 
+		// Load the config from the extracted archive config.yaml
+		config.DynamicConfigLoad(tempPath.base)
+
+		// Push all the repos from the extracted archive
 		git.PushAllDirectories(tempPath.repos, "https://"+targetUrl)
 
+		// Push all images the images.tar file based on the config.yaml list
 		images.PushAll(tempPath.image, imageList, targetUrl)
 
 		cleanup(tempPath)
