@@ -51,7 +51,7 @@ func Install(host string) {
 	// Add the secret to git-credentials for push to gitea
 	git.CredentialsGenerator(host, "syncuser", gitSecret)
 
-	logrus.Info("Installation complete.  You can run \"/usr/loca/bin/k9s\" to monitor the status of the deployment.")
+	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.Info("The login for gitea can be found in ~/.git-credentials")
 }
 
