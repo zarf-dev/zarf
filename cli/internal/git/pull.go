@@ -20,13 +20,13 @@ func Pull(gitUrl string, targetFolder string, tag string) {
 	gitCred := findAuthForHost(gitUrl)
 
 	cloneOptions := &git.CloneOptions{
-		Auth:          &gitCred.auth,
-		URL:           gitUrl,
-		Progress:      os.Stdout,
-		RemoteName:    onlineRemoteName,
+		Auth:       &gitCred.auth,
+		URL:        gitUrl,
+		Progress:   os.Stdout,
+		RemoteName: onlineRemoteName,
 	}
 
-	path := targetFolder + transformURLtoRepoName(gitUrl)
+	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
 
 	// Clone the given repo
 	_, err := git.PlainClone(path, false, cloneOptions)
