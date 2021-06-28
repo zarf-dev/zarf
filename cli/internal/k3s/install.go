@@ -8,7 +8,9 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-const k3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
+const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
+const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
+const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 
 func Install(host string) {
 
@@ -18,9 +20,9 @@ func Install(host string) {
 
 	utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
 	utils.PlaceAsset("bin/k9s", "/usr/local/bin/k9s")
-	utils.PlaceAsset("charts", "/var/lib/rancher/k3s/server/static/charts")
-	utils.PlaceAsset("manifests", k3sManifestPath)
-	utils.PlaceAsset("images", "/var/lib/rancher/k3s/agent/images")
+	utils.PlaceAsset("charts", K3sChartPath)
+	utils.PlaceAsset("manifests", K3sManifestPath)
+	utils.PlaceAsset("images", K3sImagePath)
 
 	k3sBinary := "/usr/local/bin/k3s"
 
@@ -41,7 +43,7 @@ func Install(host string) {
 	gitSecret := utils.RandomString(28)
 
 	// Get a list of all the k3s manifest files
-	manifests := utils.RecursiveFileList(k3sManifestPath)
+	manifests := utils.RecursiveFileList(K3sManifestPath)
 
 	// Iterate through all the manifests and replace any ZARF_SECRET values
 	for _, manifest := range manifests {
