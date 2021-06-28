@@ -85,9 +85,6 @@ compress:
   COPY +charts/charts charts
   COPY +images/images.tar images/images.tar
 
-  # Quick housekeeping
-  RUN rm -f bin/*.txt *.yaml && mkdir -p rpms
-
   # Pull in local resources
   COPY init-manifests manifests
 
@@ -112,7 +109,3 @@ build:
   RUN ls -lah zarf*
 
   SAVE ARTIFACT zarf* AS LOCAL ./build/
-
-# Test basic image pull for CI
-test-ci:
-  FROM registry1.dso.mil/ironbank/redhat/ubi/ubi8

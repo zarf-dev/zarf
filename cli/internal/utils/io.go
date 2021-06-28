@@ -122,7 +122,7 @@ func WriteFile(path string, data []byte) {
 		logContext.Fatal("Unable to write the file contents")
 		f.Close()
 	}
-	
+
 	err = f.Close()
 	if err != nil {
 		logContext.Fatal("Error saving file")
@@ -174,12 +174,14 @@ func Decompress(source string, destination string) error {
 }
 
 func PlaceAsset(source string, destination string) {
-
-	// Prepend the temp dir path
 	sourcePath := AssetPath(source)
+	CreatePathAndCopy(sourcePath, destination)
+}
+
+func CreatePathAndCopy(source string, destination string) {
 	parentDest := path.Dir(destination)
 	logContext := logrus.WithFields(logrus.Fields{
-		"Source":      sourcePath,
+		"Source":      source,
 		"Destination": destination,
 	})
 
@@ -190,7 +192,7 @@ func PlaceAsset(source string, destination string) {
 	}
 
 	// Copy the asset
-	err = copy.Copy(sourcePath, destination)
+	err = copy.Copy(source, destination)
 
 	if err != nil {
 		logContext.Fatal("Unable to copy the contens of the asset")
