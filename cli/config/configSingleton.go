@@ -14,8 +14,6 @@ type singleton struct {
 var instance *singleton
 var once sync.Once
 
-var printViperRead bool
-
 func GetInstance() *singleton {
 	once.Do(func() {
 		instance = &singleton{Viper: *viper.New()}
@@ -25,16 +23,28 @@ func GetInstance() *singleton {
 	return instance
 }
 
-func GetImages() []string {
+func GetLocalImages() []string {
 	var images []string
-	GetInstance().Viper.UnmarshalKey("images", &images)
+	GetInstance().Viper.UnmarshalKey("local.images", &images)
 	return images
 }
 
-func GetRepos() []string {
+func GetRemoteImages() []string {
+	var images []string
+	GetInstance().Viper.UnmarshalKey("remote.images", &images)
+	return images
+}
+
+func GetRemoteRepos() []string {
 	var repos []string
-	GetInstance().Viper.UnmarshalKey("repos", &repos)
+	GetInstance().Viper.UnmarshalKey("remote.repos", &repos)
 	return repos
+}
+
+func GetLocalManifests() string {
+	var manifests string
+	GetInstance().Viper.UnmarshalKey("local.manifestFolder", &manifests)
+	return manifests
 }
 
 func DynamicConfigLoad(path string) {
@@ -46,7 +56,6 @@ func setupViper(path string) {
 	if path != "" {
 		instance.Viper.AddConfigPath(path)
 	} else {
-		instance.Viper.AddConfigPath("/etc/zarf/")
 		instance.Viper.AddConfigPath(".")
 	}
 
@@ -54,9 +63,6 @@ func setupViper(path string) {
 
 	// If a config file is found, read it in.
 	if err := instance.Viper.ReadInConfig(); err == nil {
-		if !printViperRead {
-			logrus.WithField("path", instance.Viper.ConfigFileUsed()).Info("Config file loaded")
-			printViperRead = true
-		}
+		logrus.WithField("path", instance.Viper.ConfigFileUsed()).Info("Config file loaded")
 	}
 }
