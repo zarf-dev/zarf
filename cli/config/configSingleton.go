@@ -31,9 +31,8 @@ var once sync.Once
 func GetInstance() *singleton {
 	once.Do(func() {
 		instance = &singleton{Viper: *viper.New()}
-		setupViper("")
+		setupViper()
 	})
-
 	return instance
 }
 
@@ -74,17 +73,12 @@ func GetRemoteRepos() []string {
 }
 
 func DynamicConfigLoad(path string) {
-	instance = &singleton{Viper: *viper.New()}
-	setupViper(path)
+	GetInstance().Viper.AddConfigPath(path)
+	GetInstance().Viper.MergeInConfig()
 }
 
-func setupViper(path string) {
-	if path != "" {
-		instance.Viper.AddConfigPath(path)
-	} else {
-		instance.Viper.AddConfigPath(".")
-	}
-
+func setupViper() {
+	instance.Viper.AddConfigPath(".")
 	instance.Viper.SetConfigName("config")
 
 	// If a config file is found, read it in.
