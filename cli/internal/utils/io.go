@@ -35,7 +35,7 @@ func extractArchive() {
 
 	tmp := MakeTempDir()
 
-	err := Decompress(ArchivePath, tmp)
+	err := archiver.Unarchive(ArchivePath, tmp)
 	if err != nil {
 		logrus.WithField("source", ArchivePath).Fatal("Unable to extract the archive contents")
 	}
@@ -165,35 +165,31 @@ func RecursiveFileList(root string) []string {
 	return files
 }
 
-func Compress(sources []string, destination string) error {
-	return archiver.Archive(sources, destination)
-}
-
-func Decompress(source string, destination string) error {
-	return archiver.Unarchive(source, destination)
-}
-
 func PlaceAsset(source string, destination string) {
 	sourcePath := AssetPath(source)
 	CreatePathAndCopy(sourcePath, destination)
 }
 
-func CreatePathAndCopy(source string, destination string) {
+func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
+	err := CreateDirectory(parentDest, 0700)
+	if err != nil {
+		logrus.WithField("path", parentDest).Fatal("Unable to create the destination path")
+	}
+}
+
+func CreatePathAndCopy(source string, destination string) {
 	logContext := logrus.WithFields(logrus.Fields{
 		"Source":      source,
 		"Destination": destination,
 	})
-
-	logContext.Info("Placing asset")
-	err := CreateDirectory(parentDest, 0700)
-	if err != nil {
-		logContext.Fatal("Unable to create the required destination path")
-	}
-
+	
+	logContext.Info("Copying file")
+	
+	CreateFilePath(destination)
+	
 	// Copy the asset
-	err = copy.Copy(source, destination)
-
+	err := copy.Copy(source, destination)
 	if err != nil {
 		logContext.Fatal("Unable to copy the contens of the asset")
 	}

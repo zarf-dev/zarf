@@ -2,25 +2,34 @@ kind: ZarfConfig
 
 local:
   manifestFolder: init-manifests
-  images:
-    # # K3s images
-    # - docker.io/rancher/coredns-coredns:1.8.3
-    # - docker.io/rancher/klipper-helm:v0.5.0-build20210505
-    # - docker.io/rancher/klipper-lb:v0.2.0
-    # - docker.io/rancher/library-busybox:1.32.1
-    # - docker.io/rancher/library-traefik:2.4.8
-    # - docker.io/rancher/local-path-provisioner:v0.0.19
-    # - docker.io/rancher/metrics-server:v0.3.6
-    # - docker.io/rancher/pause:3.1
-    # # Zarf images
-    # - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
-    - gitea/gitea:1.13.7
-    # Iron Bank Gitea image unusable in it's current state with the helm chart, tons of permission issues
-    # - registry1.dso.mil/ironbank/opensource/go-gitea/gitea:v1.14.2
+
+  binaries:
+    - name: k3s
+      url: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
+      shasum: 5097d515e220f8e97ab13c56cb9142ee4526b4c9eade5ed098e2906c1db2a163
+    - name: k9s
+      url: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
+      shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
+
+  # images:
+  #   # K3s images
+  #   - docker.io/rancher/coredns-coredns:1.8.3
+  #   - docker.io/rancher/klipper-helm:v0.5.0-build20210505
+  #   - docker.io/rancher/klipper-lb:v0.2.0
+  #   - docker.io/rancher/library-busybox:1.32.1
+  #   - docker.io/rancher/library-traefik:2.4.8
+  #   - docker.io/rancher/local-path-provisioner:v0.0.19
+  #   - docker.io/rancher/metrics-server:v0.3.6
+  #   - docker.io/rancher/pause:3.1
+  #   # Zarf images
+  #   - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+  #   - gitea/gitea:1.13.7
+  #   # Iron Bank Gitea image unusable in it's current state with the helm chart, tons of permission issues
+  #   # - registry1.dso.mil/ironbank/opensource/go-gitea/gitea:v1.14.2
 
 charts:
   - name: docker-registry
-    url: https://helm.twun.io 
+    url: https://helm.twun.io
     version: 1.10.1
   - name: gitea
     url: https://dl.gitea.io/charts
