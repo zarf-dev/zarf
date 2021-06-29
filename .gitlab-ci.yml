@@ -7,7 +7,7 @@ build:
   tags:
     - bigbang
     - packages
-  image: registry1.dso.mil/ironbank/google/golang/golang-1.16
+  image: registry1.dso.mil/ironbank/google/golang/golang-1.16:1.16
   before_script:
     - make build-cli
     - ./build/zarf registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD" 
