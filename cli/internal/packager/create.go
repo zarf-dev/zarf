@@ -23,6 +23,13 @@ func Create(packageName string) {
 	// Bundle all assets into compressed tarball
 	sourceFiles := []string{"config.yaml"}
 
+	// @TODO implement the helm pull functionality directly into the CLI
+	if config.IsZarfInitConfig() {
+		logrus.Info("Loading static helm charts")
+		sourceFiles = append(sourceFiles, tempPath.localCharts)
+		utils.CreatePathAndCopy("charts", tempPath.localCharts)
+	}
+
 	if localBinaries != nil {
 		logrus.Info("Loading binaries for local install")
 		sourceFiles = append(sourceFiles, tempPath.localBin)
