@@ -5,7 +5,7 @@ test:
 	vagrant up --no-color ${OS}
 	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
 
-test-destory:
+test-close:
 	vagrant destroy -f
 
 # Temporary until integration into the cli with <URL>/index.yaml parsing 
