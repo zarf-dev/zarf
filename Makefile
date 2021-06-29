@@ -19,9 +19,11 @@ charts:
 	helm pull docker-registry/docker-registry -d ./charts --version 1.10.1
 	helm pull gitea/gitea -d ./charts --version 2.2.5
 
-release: charts
+build-cli:
 	rm -fr build
 	cd cli && $(MAKE) build
+	
+release: charts build-cli
 	./build/zarf package create
 	mv zarf-initialize.tar.zst build
 	sha256sum -b build/zarf* > build/zarf.sha256	
