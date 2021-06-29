@@ -26,9 +26,9 @@ build-cli:
 build-test: charts build-cli
 	./build/zarf package create
 	mv zarf-initialize.tar.zst build
-	sha256sum -b build/zarf* > build/zarf.sha256	
+	cd build && sha256sum -b zarf* > zarf.sha256	
 
 ci-release: charts
 	./build/zarf package create
 	mv zarf-initialize.tar.zst build
-	sha256sum -b build/zarf* > build/zarf.sha256	
+	cd build && sha256sum -b zarf* > zarf.sha256	
