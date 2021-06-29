@@ -51,42 +51,12 @@ charts:
 
   SAVE ARTIFACT charts
 
-# Fetch the k3s version specified in $CONFIG
-binaries:
-  FROM +common
-
-  # Add a version flag to the init-k3s script to ensure we cache-bust when pulling down a version for the installer (this is ignored by the server)
-  RUN K3S_VERSION="v1.21.2+k3s1" && \
-      curl -fL "https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION/k3s" -o "k3s"
-
-  RUN curl -fL "https://github.com/derailed/k9s/releases/download/v0.24.10/k9s_v0.24.10_Linux_x86_64.tar.gz" | tar xvzf - k9s
-
-  SAVE ARTIFACT *
-
-# Fetch k3s images and images specified in $CONFIG
-images:
-  FROM +common
-
-  COPY +zarf/zarf .
-
-  RUN --secret IB_USER=+secrets/IB_USER --secret IB_PASS=+secrets/IB_PASS \
-      export images=$(yq e '.images | join(" ")' $CONFIG) && \
-      ./zarf registry login registry1.dso.mil -u $IB_USER -p $IB_PASS && \
-      ./zarf registry pull $images images.tar
-
-  SAVE ARTIFACT images.tar
-
 # Compress all assets in a single tar.zst file
 compress: 
   FROM +common
 
   # Pull in artifacts from other build stages
-  COPY +binaries/* bin/
   COPY +charts/charts charts
-  COPY +images/images.tar images/images.tar
-
-  # Pull in local resources
-  COPY init-manifests manifests
 
   COPY +zarf/zarf .
 

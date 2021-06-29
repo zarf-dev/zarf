@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
-
+	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +17,7 @@ var archiverCompressCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
-		utils.Compress(sourceFiles, destinationArchive)
+		archiver.Archive(sourceFiles, destinationArchive)
 
 	},
 }
@@ -29,8 +28,7 @@ var archiverDecompressCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
-		utils.Decompress(sourceArchive, destinationPath)
-
+		archiver.Unarchive(sourceArchive, destinationPath)
 	},
 }
 
