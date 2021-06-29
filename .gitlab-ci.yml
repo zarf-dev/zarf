@@ -6,30 +6,15 @@ build:
   stage: package
   tags:
     - bigbang
-    - privileged
     - packages
-  image: docker:git
-  variables:
-    DOCKER_HOST: tcp://localhost:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: 1
-    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
-    DOCKER_DRIVER: overlay2
+  image: registry1.dso.mil/ironbank/google/golang/golang-1.16
   before_script:
-    # - mkdir -p /etc/docker
-    # - echo "{'mtu':1400}" > /etc/docker/daemon.json
-    # - ifconfig docker0 mtu 1400 up
-    # - docker info
-    # - ip a | grep mtu
-    # - docker network inspect bridge
-    - echo "$REGISTRY1_PASSWORD" | docker login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password-stdin
-    - wget https://github.com/earthly/earthly/releases/download/v0.5.13/earthly-linux-amd64
-    - mv earthly-linux-amd64 /usr/bin/earthly && chmod +x /usr/bin/earthly
-    - earthly config global.cni_mtu 1450
+    - make build-cli
+    - ./build/zarf registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD" 
   # rules:
   #   - if: $CI_COMMIT_TAG    
   script:
-    - earthly -s IB_USER="robot\$bb-dev-imagepullonly" -s IB_PASS="$REGISTRY1_PASSWORD" +test-ci
+    - make release
   after_script:
     - echo "JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
