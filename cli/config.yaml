@@ -1,4 +1,4 @@
-kind: ZarfConfig
+kind: ZarfUpdateConfig
 
 remote: 
   # helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -

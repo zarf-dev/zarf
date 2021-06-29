@@ -1,4 +1,4 @@
-kind: ZarfConfig
+kind: ZarfInitConfig
 
 local:
   manifestFolder: init-manifests

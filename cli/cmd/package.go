@@ -2,10 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
-
-const updatePackageName = "zarf-update.tar.zst"
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
@@ -17,7 +16,11 @@ var packageCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create an update package to push to the utility server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Create(updatePackageName)
+		if config.IsZarfInitConfig() {
+			packager.Create(config.PackageInitName)
+		} else {
+			packager.Create(config.PackageUpdateName)
+		}
 	},
 }
 
@@ -26,7 +29,7 @@ var packageDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploys an update package file (runs offline)",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Deploy(updatePackageName)
+		packager.Deploy(config.PackageUpdateName)
 	},
 }
 

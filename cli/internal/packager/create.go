@@ -46,22 +46,25 @@ func Create(packageName string) {
 		utils.CreatePathAndCopy(localManifestPath, tempPath.localManifests)
 	}
 
-	if remoteImageList != nil {
-		logrus.Info("Loading images for remote install")
-		sourceFiles = append(sourceFiles, tempPath.remoteImage)
-		images.PullAll(remoteImageList, tempPath.remoteImage)
-	}
+	// Init config ignore remote entries
+	if !config.IsZarfInitConfig() {
+		if remoteImageList != nil {
+			logrus.Info("Loading images for remote install")
+			sourceFiles = append(sourceFiles, tempPath.remoteImage)
+			images.PullAll(remoteImageList, tempPath.remoteImage)
+		}
 
-	if remoteRepoList != nil {
-		logrus.Info("loading git repos for remote install")
-		sourceFiles = append(sourceFiles, tempPath.remoteRepos)
-		// Load all specified git repos
-		for _, url := range remoteRepoList {
-			matches := strings.Split(url, "@")
-			if len(matches) < 2 {
-				logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
+		if remoteRepoList != nil {
+			logrus.Info("loading git repos for remote install")
+			sourceFiles = append(sourceFiles, tempPath.remoteRepos)
+			// Load all specified git repos
+			for _, url := range remoteRepoList {
+				matches := strings.Split(url, "@")
+				if len(matches) < 2 {
+					logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
+				}
+				git.Pull(matches[0], tempPath.remoteRepos, matches[1])
 			}
-			git.Pull(matches[0], tempPath.remoteRepos, matches[1])
 		}
 	}
 
