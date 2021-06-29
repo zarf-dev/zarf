@@ -52,16 +52,19 @@ func Deploy(packageName string) {
 		utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
 	}
 
-	if remoteImageList != nil {
-		logrus.Info("Loading images for remote install")
-		// Push all images the images.tar file based on the config.yaml list
-		images.PushAll(tempPath.localImage, remoteImageList, targetUrl)
-	}
+	// Don't process remote for init config packages
+	if !config.IsZarfInitConfig() {
+		if remoteImageList != nil {
+			logrus.Info("Loading images for remote install")
+			// Push all images the images.tar file based on the config.yaml list
+			images.PushAll(tempPath.localImage, remoteImageList, targetUrl)
+		}
 
-	if remoteRepoList != nil {
-		logrus.Info("Loading git repos for remote install")
-		// Push all the repos from the extracted archive
-		git.PushAllDirectories(tempPath.remoteRepos, "https://"+targetUrl)
+		if remoteRepoList != nil {
+			logrus.Info("Loading git repos for remote install")
+			// Push all the repos from the extracted archive
+			git.PushAllDirectories(tempPath.remoteRepos, "https://"+targetUrl)
+		}
 	}
 
 	cleanup(tempPath)

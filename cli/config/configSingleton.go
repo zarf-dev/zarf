@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -21,6 +22,8 @@ type RemoteBin struct {
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
+const PackageInitName = "zarf-initialize.tar.zst"
+const PackageUpdateName = "zarf-update.tar.zst"
 
 var instance *singleton
 var once sync.Once
@@ -32,6 +35,12 @@ func GetInstance() *singleton {
 	})
 
 	return instance
+}
+
+func IsZarfInitConfig() bool {
+	var kind string
+	GetInstance().Viper.UnmarshalKey("kind", &kind)
+	return strings.ToLower(kind) == "zarfinitconfig"
 }
 
 func GetLocalBinaries() []RemoteBin {
