@@ -60,8 +60,7 @@ func createK3sSymlinks() {
 }
 
 func createService() {
-	serviceDefinition := []byte(`
-[Unit]
+	serviceDefinition := []byte(`[Unit]
 Description=Zarf K3s Runner
 Documentation=https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf
 Wants=network-online.target
@@ -88,9 +87,7 @@ RestartSec=5s
 ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service'
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
-ExecStart=/usr/local/bin/k3s \
-	server --write-kubeconfig-mode=700 \
-	'' \
+ExecStart=/usr/local/bin/k3s server --write-kubeconfig-mode=700
 `)
 
 	servicePath := "/etc/systemd/system/k3s.service"
