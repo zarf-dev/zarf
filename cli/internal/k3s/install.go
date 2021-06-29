@@ -4,13 +4,11 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
-
-const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
-const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
-const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 
 func Install(host string) {
 
@@ -18,16 +16,7 @@ func Install(host string) {
 
 	logrus.Info("Installing K3s")
 
-	utils.PlaceAsset("bin/k3s", "/usr/local/bin/k3s")
-	utils.PlaceAsset("bin/k9s", "/usr/local/bin/k9s")
-	utils.PlaceAsset("charts", K3sChartPath)
-	utils.PlaceAsset("manifests", K3sManifestPath)
-	utils.PlaceAsset("images", K3sImagePath)
-
-	k3sBinary := "/usr/local/bin/k3s"
-
-	// Ensure k3s tools are executable / limit to root
-	os.Chmod(k3sBinary, 0700)
+	packager.Deploy("zarf-initialize.tar.zst")
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {
@@ -43,7 +32,7 @@ func Install(host string) {
 	gitSecret := utils.RandomString(28)
 
 	// Get a list of all the k3s manifest files
-	manifests := utils.RecursiveFileList(K3sManifestPath)
+	manifests := utils.RecursiveFileList(config.K3sManifestPath)
 
 	// Iterate through all the manifests and replace any ZARF_SECRET values
 	for _, manifest := range manifests {

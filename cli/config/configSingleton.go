@@ -11,6 +11,17 @@ type singleton struct {
 	Viper viper.Viper
 }
 
+type RemoteBin struct {
+	Name       string
+	Url        string
+	Shasum     string
+	ArchiveExt string
+}
+
+const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
+const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
+const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
+
 var instance *singleton
 var once sync.Once
 
@@ -23,10 +34,22 @@ func GetInstance() *singleton {
 	return instance
 }
 
+func GetLocalBinaries() []RemoteBin {
+	var binaries []RemoteBin
+	GetInstance().Viper.UnmarshalKey("local.binaries", &binaries)
+	return binaries
+}
+
 func GetLocalImages() []string {
 	var images []string
 	GetInstance().Viper.UnmarshalKey("local.images", &images)
 	return images
+}
+
+func GetLocalManifests() string {
+	var manifests string
+	GetInstance().Viper.UnmarshalKey("local.manifestFolder", &manifests)
+	return manifests
 }
 
 func GetRemoteImages() []string {
@@ -39,12 +62,6 @@ func GetRemoteRepos() []string {
 	var repos []string
 	GetInstance().Viper.UnmarshalKey("remote.repos", &repos)
 	return repos
-}
-
-func GetLocalManifests() string {
-	var manifests string
-	GetInstance().Viper.UnmarshalKey("local.manifestFolder", &manifests)
-	return manifests
 }
 
 func DynamicConfigLoad(path string) {
