@@ -9,6 +9,7 @@ build:
     - packages
   image: golang:1.16
   before_script:
+    - curl -fL https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz | tar xz && cp linux-amd64/helm /usr/local/bin/ 
     - make build-cli
     - ./build/zarf registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD" 
   # rules:
