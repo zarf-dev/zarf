@@ -1,6 +1,7 @@
 stages:
   - build
   - package
+  - upload
   - release
 
 compile:
@@ -28,26 +29,28 @@ package:
     - if: $CI_COMMIT_TAG    
   script:
     - make ci-release
-  after_script:
-    - echo "JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
     paths:
       - build/
     expire_in: never
-    reports:
-      dotenv: job.env
+    
+artifact-upload:
+  image: amazon/aws-cli
+  stage: upload
+  needs:
+    - job: package
+      artifacts: true  
+  script:
+    - aws s3 cp build s3://zarf-public/release/$CI_COMMIT_TAG --region us-gov-west-1 --recursive
 
 generate-release:
   image: registry.gitlab.com/gitlab-org/release-cli:v0.8.0
   stage: release
   needs:
-    - job: package
-      artifacts: true
-  rules:
-    - if: $CI_COMMIT_TAG                    
+    - job: artifact-upload          
   script:
     - echo "Creating a release for $CI_COMMIT_TAG"
     - release-cli create --name "Zarf ${CI_COMMIT_TAG}" --tag-name "${CI_COMMIT_TAG}" --description "Zarf Utility Cluster" 
-        --assets-link "{\"name\":\"zarf\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${JOB_ID}/artifacts/file/build/zarf\"}" 
-        --assets-link "{\"name\":\"zarf-initialize.tar.zst\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${JOB_ID}/artifacts/file/build/zarf-initialize.tar.zst\"}" 
-        --assets-link "{\"name\":\"zarf.sha256\",\"url\":\"https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${JOB_ID}/artifacts/file/build/zarf.sha256\"}"
+        --assets-link "{\"name\":\"zarf\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf\"}" 
+        --assets-link "{\"name\":\"zarf-initialize.tar.zst\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-initialize.tar.zst\"}" 
+        --assets-link "{\"name\":\"zarf.sha256\",\"url\":\"hhttps://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf.sha256\"}"
