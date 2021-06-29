@@ -23,7 +23,7 @@ build-cli:
 	rm -fr build
 	cd cli && $(MAKE) build
 
-build-test: charts build-ci
+build-test: charts build-cli
 	./build/zarf package create
 	mv zarf-initialize.tar.zst build
 	sha256sum -b build/zarf* > build/zarf.sha256	
