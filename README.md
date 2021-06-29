@@ -52,7 +52,7 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
 Building the package is one command:
 
 ```sh
-make release
+make build-test
 ```
 
 &nbsp;
