@@ -11,7 +11,7 @@ The result is a portable cluster capable of running [almost anywhere](https://k3
 
 ## Quick Demo
 
-[![asciicast](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC.svg)](https://asciinema.org/a/ua6O4JHCy6LT2eXEy78QvbbfC)
+[![asciicast](https://asciinema.org/a/422834.svg)](https://asciinema.org/a/422834)
 
 ## Prereqs
 
