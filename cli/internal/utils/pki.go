@@ -45,7 +45,7 @@ func RandomString(length int) string {
 
 // GeneratePKI create a CA and signed server keypair
 func GeneratePKI(host string) {
-	directory := AssetPath("certs")
+	directory := "zarf-pki"
 
 	CreateDirectory(directory, 0700)
 	caFile := filepath.Join(directory, "zarf-ca.pem")
