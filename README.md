@@ -75,7 +75,7 @@ You should pass this `CLI Secret` **_instead of your password_** when invoking d
 Building the package is one command:
 
 ```sh
-make release
+make build-test
 ```
 
 &nbsp;
