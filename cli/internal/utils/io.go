@@ -8,40 +8,11 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
 )
 
-var TempDestination string
-var ArchivePath = "zarf-initialize.tar.zst"
 var TempPathPrefix = "zarf-"
-
-func eraseTempAssets() {
-	files, _ := filepath.Glob("/tmp/" + TempPathPrefix + "*")
-	for _, path := range files {
-		err := os.RemoveAll(path)
-		logContext := logrus.WithField("path", path)
-		if err != nil {
-			logContext.Warn("Unable to purge temporary path")
-		} else {
-			logContext.Info("Purging old temp files")
-		}
-	}
-}
-
-func extractArchive() {
-	eraseTempAssets()
-
-	tmp := MakeTempDir()
-
-	err := archiver.Unarchive(ArchivePath, tmp)
-	if err != nil {
-		logrus.WithField("source", ArchivePath).Fatal("Unable to extract the archive contents")
-	}
-
-	TempDestination = tmp
-}
 
 func MakeTempDir() string {
 	tmp, err := ioutil.TempDir("", TempPathPrefix)
@@ -52,23 +23,6 @@ func MakeTempDir() string {
 		logContext.Fatal("Unable to create temp directory")
 	}
 	return tmp
-}
-
-func AssetPath(partial string) string {
-	if TempDestination == "" {
-		extractArchive()
-	}
-	return TempDestination + "/" + partial
-}
-
-// AssetList given a path, return a glob matching all files in the archive
-func AssetList(partial string) []string {
-	path := AssetPath(partial)
-	matches, err := filepath.Glob(path)
-	if err != nil {
-		logrus.WithField("path", path).Warn("Unable to find matching files")
-	}
-	return matches
 }
 
 // VerifyBinary returns true if binary is available
@@ -165,11 +119,6 @@ func RecursiveFileList(root string) []string {
 	return files
 }
 
-func PlaceAsset(source string, destination string) {
-	sourcePath := AssetPath(source)
-	CreatePathAndCopy(sourcePath, destination)
-}
-
 func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
 	err := CreateDirectory(parentDest, 0700)
@@ -183,11 +132,11 @@ func CreatePathAndCopy(source string, destination string) {
 		"Source":      source,
 		"Destination": destination,
 	})
-	
+
 	logContext.Info("Copying file")
-	
+
 	CreateFilePath(destination)
-	
+
 	// Copy the asset
 	err := copy.Copy(source, destination)
 	if err != nil {
