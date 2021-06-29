@@ -16,7 +16,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 
 	for _, src := range buildImageList {
 		logContext := logrus.WithField("image", src)
-		logContext.Info("Updating image")
+		logContext.Info("Fetching image metadata")
 		img, err := crane.Pull(src, cranePlatformOptions)
 		if err != nil {
 			logContext.Warn("Unable to pull the image")
@@ -25,7 +25,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 		imageMap[src] = img
 	}
 
-	logrus.Info("Creating image tarball")
+	logrus.Info("Creating image tarball (this will take a while)")
 	if err := crane.MultiSave(imageMap, imageTarballPath); err != nil {
 		logrus.Fatal("Unable to save the tarball")
 	}
