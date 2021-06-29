@@ -1,12 +1,13 @@
 MAKEFLAGS += --silent
 
-deps:
-	go get gotest.tools/gotestsum 
-	go mod download
+# Tests have been purged for now due to large refactor deleted all tested code
+# deps:
+# 	go get gotest.tools/gotestsum 
+# 	go mod download
 
-test: deps
-	gotestsum
+# test: deps
+# 	gotestsum
 
-build-dev: test
+build:
 	mkdir -p ../build
 	GOOS=linux GOARCH=amd64 go build -o ../build/zarf main.go
