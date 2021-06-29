@@ -41,9 +41,14 @@ func Deploy(packageName string) {
 		}
 	}
 
+	// @TODO implement the helm pull functionality directly into the CLI
+	if config.IsZarfInitConfig() {
+		logrus.Info("Loading helm charts for local install")
+		utils.CreatePathAndCopy(tempPath.localCharts, config.K3sChartPath)
+	}
+
 	if localImageList != nil {
 		logrus.Info("Loading images for local install")
-		git.PushAllDirectories(tempPath.remoteRepos, "https://"+targetUrl)
 		utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images.tar")
 	}
 
