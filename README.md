@@ -8,10 +8,33 @@ The result is a portable cluster capable of running [almost anywhere](https://k3
 ### Basically this...
 ![zarf definition](.images/zarf-dod.jpg)
 
+## Usage
+---
+Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included.  General usage steps:
 
-## Quick Demo
+### 1. Inital setup and config
+- Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
+- Verify the downloads with `shasum -c --ignore-missing zarf.sha256`.
+- In a new folder or git repo, place a ZarfUpdateConfig `config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
 
-[![asciicast](https://asciinema.org/a/422834.svg)](https://asciinema.org/a/422834)
+  [![asciicast](https://asciinema.org/a/422834.svg)](https://asciinema.org/a/422834)
+### 2. Creating the utility cluster
+- Move the `zarf`, `zarf-initialize.tar.zst` files to the system you will install the cluster to.  You can also bring the `zarf.sha256` file with step 1b above if you want to verify the files again when you are in that environment.
+- Login or sudo/su to root.
+- Run `./zarf initialize --confirm --host=HOSTNAME` where `HOSTNAME` is the DNS or IP you want to use to connect to the cluster.
+- After intialization, the CLI will report the location of the Zarf Private CA public cert and credentials for the utility cluster.
+- As the CLI will tell you, you can run `/usr/local/bin/k9s` to leverage [k9s](https://k9scli.io/) to watch the changes.
+
+### 3. Adding resources to the utility cluster 
+- Folling step 1b, make any necessary edits to the `config.yaml` file.
+- Then run `./zarf package create` to produce an `zarf-update.tar.zst` package.
+- Move the `zarf-update.tar.zst` file into the same folder on the running utility cluster as in step 2a.
+- Login or sudo/su to root.
+- Run `./zarf package deploy`, the CLI should automatically place all your packaged resources in the approriate location for immediate use.
+
+&nbsp;
+## Development
+---
 
 ## Prereqs
 
