@@ -22,6 +22,7 @@ charts:
 build-cli:
 	rm -fr build
 	cd cli && $(MAKE) build
+	cd cli && $(MAKE) build-mac
 
 build-test: charts build-cli
 	./build/zarf package create
