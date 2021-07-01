@@ -30,7 +30,7 @@ func Create(packageName string) {
 		utils.CreatePathAndCopy("charts", tempPath.localCharts)
 	}
 
-	if localBinaries != nil {
+	if len(localBinaries) > 0 {
 		logrus.Info("Loading binaries for local install")
 		sourceFiles = append(sourceFiles, tempPath.localBin)
 		_ = utils.CreateDirectory(tempPath.localBin, 0700)
@@ -41,7 +41,7 @@ func Create(packageName string) {
 		}
 	}
 
-	if localImageList != nil {
+	if len(localImageList) > 0 {
 		logrus.Info("Loading images for local install")
 		sourceFiles = append(sourceFiles, tempPath.localImage)
 		images.PullAll(localImageList, tempPath.localImage)
@@ -55,13 +55,13 @@ func Create(packageName string) {
 
 	// Init config ignore remote entries
 	if !config.IsZarfInitConfig() {
-		if remoteImageList != nil {
+		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
 			sourceFiles = append(sourceFiles, tempPath.remoteImage)
 			images.PullAll(remoteImageList, tempPath.remoteImage)
 		}
 
-		if remoteRepoList != nil {
+		if len(remoteRepoList) > 0 {
 			logrus.Info("loading git repos for remote install")
 			sourceFiles = append(sourceFiles, tempPath.remoteRepos)
 			// Load all specified git repos
