@@ -28,7 +28,7 @@ func Deploy(packageName string) {
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 
-	if localBinaries != nil {
+	if len(localBinaries) > 0 {
 		logrus.Info("Loading binaries for local install")
 		for _, binary := range localBinaries {
 			sourceFile := tempPath.localBin + "/" + binary.Name
@@ -47,7 +47,7 @@ func Deploy(packageName string) {
 		utils.CreatePathAndCopy(tempPath.localCharts, config.K3sChartPath)
 	}
 
-	if localImageList != nil {
+	if len(localImageList) > 0 {
 		logrus.Info("Loading images for local install")
 		utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images.tar")
 	}
@@ -59,13 +59,13 @@ func Deploy(packageName string) {
 
 	// Don't process remote for init config packages
 	if !config.IsZarfInitConfig() {
-		if remoteImageList != nil {
+		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
 			// Push all images the images.tar file based on the config.yaml list
-			images.PushAll(tempPath.localImage, remoteImageList, targetUrl)
+			images.PushAll(tempPath.remoteImage, remoteImageList, targetUrl)
 		}
 
-		if remoteRepoList != nil {
+		if len(remoteRepoList) > 0 {
 			logrus.Info("Loading git repos for remote install")
 			// Push all the repos from the extracted archive
 			git.PushAllDirectories(tempPath.remoteRepos, "https://"+targetUrl)
