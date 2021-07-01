@@ -151,7 +151,7 @@ func generateCert(host string, certFile string, keyFile string, ca *x509.Certifi
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
 		// Add localhost to make things cleaner
-		template.DNSNames = append(template.DNSNames, host, "localhost", "*.localhost")
+		template.DNSNames = append(template.DNSNames, host, "localhost", "zarf.localhost")
 		if template.Subject.CommonName == "" {
 			template.Subject.CommonName = host
 		}
