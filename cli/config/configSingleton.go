@@ -73,6 +73,7 @@ func GetRemoteRepos() []string {
 }
 
 func DynamicConfigLoad(path string) {
+	logrus.WithField("path", path).Info("Loading config.yaml")
 	GetInstance().Viper.AddConfigPath(path)
 	GetInstance().Viper.MergeInConfig()
 }
