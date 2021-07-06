@@ -16,6 +16,10 @@ func Deploy(packageName string) {
 	tempPath := createPaths()
 	targetUrl := "zarf.localhost"
 
+	if utils.InvalidPath(packageName) {
+		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
+	}
+
 	// Extract the archive
 	archiver.Unarchive(packageName, tempPath.base)
 
@@ -42,7 +46,7 @@ func Deploy(packageName string) {
 	}
 
 	// @TODO implement the helm pull functionality directly into the CLI
-	if config.IsZarfInitConfig() {
+	if config.IsZarfInitConfig() && !utils.InvalidPath(tempPath.localCharts) {
 		logrus.Info("Loading helm charts for local install")
 		utils.CreatePathAndCopy(tempPath.localCharts, config.K3sChartPath)
 	}
@@ -72,5 +76,5 @@ func Deploy(packageName string) {
 		}
 	}
 
-	cleanup(tempPath)
+	// cleanup(tempPath)
 }
