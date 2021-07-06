@@ -24,7 +24,7 @@ func Create(packageName string) {
 	sourceFiles := []string{"config.yaml"}
 
 	// @TODO implement the helm pull functionality directly into the CLI
-	if config.IsZarfInitConfig() {
+	if config.IsZarfInitConfig() && !utils.InvalidPath("charts") {
 		logrus.Info("Loading static helm charts")
 		sourceFiles = append(sourceFiles, tempPath.localCharts)
 		utils.CreatePathAndCopy("charts", tempPath.localCharts)
