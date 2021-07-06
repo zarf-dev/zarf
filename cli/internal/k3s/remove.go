@@ -97,6 +97,7 @@ rm -rf /run/flannel
 rm -rf /var/lib/rancher/k3s
 rm -rf /var/lib/kubelet
 rm -f /usr/local/bin/k3s
+rm -fr zarf-pki
 `)
 
 	tmpPathKillScript := utils.MakeTempDir() + "/kill-k3s.sh"
