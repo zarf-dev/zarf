@@ -31,6 +31,8 @@ Zarf is a static go binary that runs on various linux distros to deploy an airga
 - Login or sudo/su to root.
 - Run `./zarf package deploy`, the CLI should automatically place all your packaged resources in the approriate location for immediate use.
 
+  [![asciicast](https://asciinema.org/a/423449.svg)](https://asciinema.org/a/423449)
+
 &nbsp;
 ## Development
 
