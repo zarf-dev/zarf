@@ -9,7 +9,7 @@ The result is a portable cluster capable of running [almost anywhere](https://k3
 ![zarf definition](.images/zarf-dod.jpg)
 
 ## Usage
-Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included.  General usage steps:
+Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included.  General usage steps below.  For various ways to use Zarf, see [the examples folder](examples).  Please note that examples READMEs may replace the steps below.
 
 ### 1. Inital setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
