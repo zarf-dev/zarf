@@ -37,6 +37,11 @@ build-test: charts build-cli
 	cd build && sha256sum -b zarf* > zarf.sha256	
 
 ci-release: charts
+	./build/zarf package create --config config-utility.yaml
+	mv zarf-init.tar.zst build
+	cd build && sha256sum -b zarf* > zarf.sha256	
+
+ci-release-appliance:
 	./build/zarf package create
 	mv zarf-init.tar.zst build
 	cd build && sha256sum -b zarf* > zarf.sha256	
