@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// destroyCmd represents the initialize command
+// destroyCmd represents the init command
 var archiverCmd = &cobra.Command{
 	Use:   "archiver",
 	Short: "Compress/Decompress tools",

@@ -18,9 +18,9 @@ Zarf is a static go binary that runs on various linux distros to deploy an airga
 
   [![asciicast](https://asciinema.org/a/422834.svg)](https://asciinema.org/a/422834)
 ### 2. Creating the utility cluster
-- Move the `zarf`, `zarf-initialize.tar.zst` files to the system you will install the cluster to.  You can also bring the `zarf.sha256` file with step 1b above if you want to verify the files again when you are in that environment.
+- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to.  You can also bring the `zarf.sha256` file with step 1b above if you want to verify the files again when you are in that environment.
 - Login or sudo/su to root.
-- Run `./zarf initialize --confirm --host=HOSTNAME` where `HOSTNAME` is the DNS or IP you want to use to connect to the cluster.
+- Run `./zarf init --confirm --host=HOSTNAME` where `HOSTNAME` is the DNS or IP you want to use to connect to the cluster.
 - After intialization, the CLI will report the location of the Zarf Private CA public cert and credentials for the utility cluster.
 - As the CLI will tell you, you can run `/usr/local/bin/k9s` to leverage [k9s](https://k9scli.io/) to watch the changes.
 

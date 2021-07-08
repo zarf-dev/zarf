@@ -16,7 +16,7 @@ func Install(host string) {
 
 	logrus.Info("Installing K3s")
 
-	packager.Deploy("zarf-initialize.tar.zst")
+	packager.Deploy("zarf-init.tar.zst")
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {
