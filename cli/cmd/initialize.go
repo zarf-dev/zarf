@@ -10,9 +10,9 @@ import (
 var confirmInit bool
 var host string
 
-// initializeCmd represents the initialize command
-var initializeCmd = &cobra.Command{
-	Use:   "initialize",
+// initCmd represents the init command
+var initCmd = &cobra.Command{
+	Use:   "init",
 	Short: "Deploys the utility cluster on a clean linux box",
 	Run: func(cmd *cobra.Command, args []string) {
 		k3s.Install(host)
@@ -21,9 +21,9 @@ var initializeCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(initializeCmd)
-	initializeCmd.Flags().BoolVar(&confirmInit, "confirm", false, "Confirm the install action")
-	initializeCmd.Flags().StringVar(&host, "host", "zarf-server", "Specify the host or IP for the utility cluster ingress")
-	initializeCmd.MarkFlagRequired("confirm")
-	initializeCmd.MarkFlagRequired("host")
+	rootCmd.AddCommand(initCmd)
+	initCmd.Flags().BoolVar(&confirmInit, "confirm", false, "Confirm the install action")
+	initCmd.Flags().StringVar(&host, "host", "zarf-server", "Specify the host or IP for the utility cluster ingress")
+	initCmd.MarkFlagRequired("confirm")
+	initCmd.MarkFlagRequired("host")
 }

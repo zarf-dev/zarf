@@ -9,7 +9,7 @@ test:
 # usage: make run-example KIND=game
 run-example: build-cli
 	cd examples/${KIND} ../../build/zarf package create
-	mv examples/${KIND}/zarf-initialize.tar.zst build
+	mv examples/${KIND}/zarf-init.tar.zst build
 	$(MAKE) test OS=ubuntu
 
 test-close:
@@ -33,10 +33,10 @@ build-cli:
 
 build-test: charts build-cli
 	./build/zarf package create
-	mv zarf-initialize.tar.zst build
+	mv zarf-init.tar.zst build
 	cd build && sha256sum -b zarf* > zarf.sha256	
 
 ci-release: charts
 	./build/zarf package create
-	mv zarf-initialize.tar.zst build
+	mv zarf-init.tar.zst build
 	cd build && sha256sum -b zarf* > zarf.sha256	
