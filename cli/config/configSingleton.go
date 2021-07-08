@@ -24,6 +24,7 @@ const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackageUpdateName = "zarf-update.tar.zst"
+const PackageApplianceName = "zarf-appliance-init.tar.zst"
 
 var instance *singleton
 var once sync.Once
@@ -40,6 +41,12 @@ func IsZarfInitConfig() bool {
 	var kind string
 	GetInstance().Viper.UnmarshalKey("kind", &kind)
 	return strings.ToLower(kind) == "zarfinitconfig"
+}
+
+func IsApplianceMode() bool {
+	var mode string
+	GetInstance().Viper.UnmarshalKey("mode", &mode)
+	return strings.ToLower(mode) == "appliance"
 }
 
 func GetLocalBinaries() []RemoteBin {
