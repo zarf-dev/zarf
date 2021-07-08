@@ -12,6 +12,9 @@ This example demonstrates using Zarf to kill time (and evil).  In this mode ther
 5. In the test environment, run `./zarf initialize --confirm --host=localhost`, replace `localhost` with whatever your load balancer or public access IP or DNS entry is
 6. Profit
 
+### Test Locally:
+You can run `make run-example KIND=game` from the root of this repo (if you cloned it) to build and deploy this example using Vagrant on Ubuntu.
+
 ### Credits:
  - https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/
  - https://earthly.dev/blog/dos-gaming-in-docker/

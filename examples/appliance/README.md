@@ -11,3 +11,6 @@ This example demonstrates using Zarf in a very low-resources/singlue-use environ
 4. Take the `zarf` CLI binary and the created `zarf-initialize.tar.zst` and move them to your test environment.  _Note: you can use the `make test OS=ubuntu` target in the root of this repo to test with vagrant if you place these two files in the `build` directory_
 5. In the test environment, run `./zarf initialize --confirm --host=localhost`, replace `localhost` with whatever your load balancer or public access IP or DNS entry is
 6. Profit
+
+### Test Locally:
+You can run `make run-example KIND=appliance` from the root of this repo (if you cloned it) to build and deploy this example using Vagrant on Ubuntu.
