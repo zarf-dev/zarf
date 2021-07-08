@@ -1,4 +1,5 @@
 kind: ZarfInitConfig
+mode: Appliance
 
 local:
   manifestFolder: manifests/common

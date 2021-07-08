@@ -22,7 +22,11 @@ var packageCreateCmd = &cobra.Command{
 			config.DynamicConfigLoad(packageAdditionalConfig)
 		}
 		if config.IsZarfInitConfig() {
-			packager.Create(config.PackageInitName)
+			if config.IsApplianceMode() {
+				packager.Create(config.PackageApplianceName)
+			} else {
+				packager.Create(config.PackageInitName)
+			}
 		} else {
 			packager.Create(config.PackageUpdateName)
 		}
