@@ -6,6 +6,8 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
 
+var packageAdditionalConfig string
+
 var packageCmd = &cobra.Command{
 	Use:   "package",
 	Short: "Pack and unpack updates for the Zarf utility cluster.",
@@ -16,6 +18,9 @@ var packageCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create an update package to push to the utility server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
+		if packageAdditionalConfig != "" {
+			config.DynamicConfigLoad(packageAdditionalConfig)
+		}
 		if config.IsZarfInitConfig() {
 			packager.Create(config.PackageInitName)
 		} else {
@@ -37,4 +42,5 @@ func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
+	packageCreateCmd.Flags().StringVar(&packageAdditionalConfig, "config", "", "Provide an additional config file to merge with the default config")
 }

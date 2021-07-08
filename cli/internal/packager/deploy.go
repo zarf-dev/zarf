@@ -24,7 +24,7 @@ func Deploy(packageName string) {
 	archiver.Unarchive(packageName, tempPath.base)
 
 	// Load the config from the extracted archive config.yaml
-	config.DynamicConfigLoad(tempPath.base)
+	config.DynamicConfigLoad(tempPath.base + "/config.yaml")
 
 	localBinaries := config.GetLocalBinaries()
 	localImageList := config.GetLocalImages()

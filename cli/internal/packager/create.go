@@ -19,9 +19,13 @@ func Create(packageName string) {
 	localManifestPath := config.GetLocalManifests()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
+	configFile := tempPath.base + "/config.yaml"
+
+	// Save the transformed config 
+	config.WriteConfig(configFile)
 
 	// Bundle all assets into compressed tarball
-	sourceFiles := []string{"config.yaml"}
+	sourceFiles := []string{configFile}
 
 	// @TODO implement the helm pull functionality directly into the CLI
 	if config.IsZarfInitConfig() && !utils.InvalidPath("charts") {

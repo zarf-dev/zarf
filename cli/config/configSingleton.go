@@ -73,9 +73,18 @@ func GetRemoteRepos() []string {
 }
 
 func DynamicConfigLoad(path string) {
-	logrus.WithField("path", path).Info("Loading config.yaml")
-	GetInstance().Viper.AddConfigPath(path)
-	GetInstance().Viper.MergeInConfig()
+	logContext := logrus.WithField("path", path)
+	logContext.Info("Loading dynamic config")
+	GetInstance().Viper.SetConfigFile(path)
+	if err := GetInstance().Viper.MergeInConfig(); err != nil {
+		logContext.Warn("Unable to load the config file")
+	}
+}
+
+func WriteConfig(path string) {
+	if err := GetInstance().Viper.WriteConfigAs(path); err != nil {
+		logrus.WithField("path", path).Fatal("Unable to write the config file")
+	}
 }
 
 func setupViper() {
