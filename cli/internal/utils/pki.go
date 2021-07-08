@@ -25,7 +25,7 @@ const org = "Zarf Utility Cluster"
 // 13 months is the max length allowed by browsers
 const validFor = time.Hour * 24 * 375
 
-// Very limited special chars for git / basic auth 
+// Very limited special chars for git / basic auth
 // https://owasp.org/www-community/password-special-characters has complete list of safe chars
 const randomStringChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!~-"
 
@@ -48,7 +48,7 @@ func GeneratePKI(host string) {
 	directory := "zarf-pki"
 
 	CreateDirectory(directory, 0700)
-	caFile := filepath.Join(directory, "zarf-ca.pem")
+	caFile := filepath.Join(directory, "zarf-ca.crt")
 	ca, caKey, err := generateCA(caFile, validFor)
 	if err != nil {
 		logrus.Fatal(err)
@@ -71,8 +71,25 @@ func GeneratePKI(host string) {
 	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
 	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+directory+"/zarf-server.crt", "--key="+directory+"/zarf-server.key")
 
+	addCAToTrustStore(caFile)
+
 	fmt.Println("Ephemeral CA below and saved to " + caFile + "\n")
 	fmt.Println(publicKeyPem)
+}
+
+func addCAToTrustStore(caFilePath string) {
+	logrus.Info("Adding Ephemeral CA to the host root trust store")
+
+	rhelBinary := "update-ca-trust"
+	debianBinary := "update-ca-certificates"
+
+	if VerifyBinary(rhelBinary) {
+		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/"+caFilePath)
+		ExecCommand(nil, rhelBinary, "extract")
+	} else if VerifyBinary(debianBinary) {
+		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/"+caFilePath)
+		ExecCommand(nil, debianBinary)
+	}
 }
 
 // newCertificate creates a new template
