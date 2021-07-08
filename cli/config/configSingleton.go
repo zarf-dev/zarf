@@ -22,7 +22,7 @@ type RemoteBin struct {
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
-const PackageInitName = "zarf-initialize.tar.zst"
+const PackageInitName = "zarf-init.tar.zst"
 const PackageUpdateName = "zarf-update.tar.zst"
 
 var instance *singleton

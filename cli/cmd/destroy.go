@@ -8,7 +8,7 @@ import (
 
 var confirmDestroy bool
 
-// destroyCmd represents the initialize command
+// destroyCmd represents the init command
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Remove the k3s installation",
