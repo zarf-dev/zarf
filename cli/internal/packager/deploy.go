@@ -53,11 +53,15 @@ func Deploy(packageName string) {
 
 	if len(localImageList) > 0 {
 		logrus.Info("Loading images for local install")
-		utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images.tar")
+		if config.IsZarfInitConfig() {
+			utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images.tar")
+		} else {
+			utils.ExecCommand(nil, "/usr/local/bin/k3s", "ctr", "images", "import", tempPath.localImage)
+		}
 	}
 
 	if localManifestPath != "" {
-		logrus.Info("Loading manifests for local install")
+		logrus.Info("Loading manifests for local install, this may take a minute or so to reflect in k3s")
 		utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
 	}
 
