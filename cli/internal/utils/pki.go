@@ -84,10 +84,10 @@ func addCAToTrustStore(caFilePath string) {
 	debianBinary := "update-ca-certificates"
 
 	if VerifyBinary(rhelBinary) {
-		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/"+caFilePath)
+		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
 		ExecCommand(nil, rhelBinary, "extract")
 	} else if VerifyBinary(debianBinary) {
-		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/"+caFilePath)
+		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
 		ExecCommand(nil, debianBinary)
 	}
 }
