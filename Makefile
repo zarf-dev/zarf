@@ -1,16 +1,8 @@
-MAKEFLAGS += --silent
-
 # usage: make test OS=ubuntu
 test:
 	vagrant destroy -f
 	vagrant up --no-color ${OS}
 	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
-
-# usage: make run-example KIND=game
-run-example: build-cli
-	cd examples/${KIND} ../../build/zarf package create
-	mv examples/${KIND}/zarf-init.tar.zst build
-	$(MAKE) test OS=ubuntu
 
 test-close:
 	vagrant destroy -f
