@@ -1,15 +1,13 @@
-# Zarf K8s Airgap Thingy
+# Meet Zarf, K8s Airgap Buddy
 
-This tool creates self-bootstrapping k3s clusters with the requestsed images/manifests embedded to deploy into an airgap Debian or RHEL-based linux environment.  
+Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included. Zarf also included an [Appliance Mode](examples/appliance/README.md) that can be used for single-purpose k3s deployments.
 
-The result is a portable cluster capable of running [almost anywhere](https://k3s.io/) completely airgapped, and can serve as the foundation for further downstream clusters.
+&nbsp;
 
-## What's with the name?
-### Basically this...
-![zarf definition](.images/zarf-dod.jpg)
+![Zarf logo](.images/zarf-logo.png)
 
 ## Usage
-Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included.  General usage steps below.  For various ways to use Zarf, see [the examples folder](examples).  Please note that examples READMEs may replace the steps below.
+General usage steps below.  For various ways to use Zarf, see [the examples folder](examples).  Please note that examples READMEs may replace the steps below.
 
 ### 1. Inital setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
