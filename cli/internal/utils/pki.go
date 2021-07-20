@@ -67,14 +67,20 @@ func GeneratePKI(host string) {
 
 	publicKeyPem := string(pem.EncodeToMemory(&publicKeyBlock))
 
-	// Push the certs to the cluster
-	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
-	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+directory+"/zarf-server.crt", "--key="+directory+"/zarf-server.key")
+	certPath := directory + "/zarf-server.crt"
+	keyPath := directory + "/zarf-server.key"
+	InjectServerCert(certPath, keyPath)
 
 	addCAToTrustStore(caFile)
 
 	fmt.Println("Ephemeral CA below and saved to " + caFile + "\n")
 	fmt.Println(publicKeyPem)
+}
+
+func InjectServerCert(certPath string, keyPath string) {
+	// Push the certs to the cluster
+	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
+	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+certPath, "--key="+keyPath)
 }
 
 func addCAToTrustStore(caFilePath string) {
