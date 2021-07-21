@@ -18,20 +18,19 @@ charts:
 	helm pull docker-registry/docker-registry -d ./charts --version 1.10.1
 	helm pull gitea/gitea -d ./charts --version 2.2.5
 
-build-cli:
-	rm -fr build
-	cd cli && $(MAKE) build
-	cd cli && $(MAKE) build-mac
-
-build-test: charts build-cli
-	./build/zarf package create --config config-utility.yaml
-	mv zarf-init.tar.zst build
-	cd build && sha256sum -b zarf* > zarf.sha256	
-
-ci-release: charts
+package: charts
 	./build/zarf package create --config config-utility.yaml
 
 	./build/zarf package create
 	mv zarf*.tar.zst build
 
 	cd build && sha256sum -b zarf* > zarf.sha256	
+
+build-cli:
+	rm -fr build
+	cd cli && $(MAKE) build
+	cd cli && $(MAKE) build-mac
+
+build-test: build-cli package
+
+ci-release: package
