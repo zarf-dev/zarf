@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: logging
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: loki-grafana
+                port:
+                  number: 80
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: loki
+  namespace: logging
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/loki-stack-2.4.1.tgz
+  targetNamespace: logging
+  valuesContent: |-
+    grafana:
+      enabled: true
+      grafana.ini:
+        server:
+          root_url: "%(protocol)s://%(domain)s/grafana"
+          serve_from_sub_path: true
+    promtail:
+      extraScrapeConfigs:
+        - job_name: journal
+          journal:
+            max_age: 12h
+            labels:
+              job: systemd-journal
+          relabel_configs:
+            - source_labels: ['__journal__systemd_unit']
+              target_label: 'unit'
+            - source_labels: ['__journal__hostname']
+              target_label: 'hostname'
+
+      # Mount journal directory into promtail pods
+      extraVolumes:
+        - name: journal
+          hostPath:
+            path: /var/log/journal
+
+      extraVolumeMounts:
+        - name: journal
+          mountPath: /var/log/journal
+          readOnly: true      
+    image:
+      pullPolicy: Never
