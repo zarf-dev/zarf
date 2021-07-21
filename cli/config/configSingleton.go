@@ -12,11 +12,11 @@ type singleton struct {
 	Viper viper.Viper
 }
 
-type RemoteBin struct {
-	Name       string
+type ZarfFile struct {
 	Url        string
 	Shasum     string
-	ArchiveExt string
+	Target     string
+	Executable bool
 }
 
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
@@ -49,10 +49,10 @@ func IsApplianceMode() bool {
 	return strings.ToLower(mode) == "appliance"
 }
 
-func GetLocalBinaries() []RemoteBin {
-	var binaries []RemoteBin
-	GetInstance().Viper.UnmarshalKey("local.binaries", &binaries)
-	return binaries
+func GetLocalFiles() []ZarfFile {
+	var files []ZarfFile
+	GetInstance().Viper.UnmarshalKey("local.files", &files)
+	return files
 }
 
 func GetLocalImages() []string {

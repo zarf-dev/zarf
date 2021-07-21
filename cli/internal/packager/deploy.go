@@ -1,7 +1,7 @@
 package packager
 
 import (
-	"os"
+	"strconv"
 
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
@@ -26,22 +26,20 @@ func Deploy(packageName string) {
 	// Load the config from the extracted archive config.yaml
 	config.DynamicConfigLoad(tempPath.base + "/config.yaml")
 
-	localBinaries := config.GetLocalBinaries()
+	localFiles := config.GetLocalFiles()
 	localImageList := config.GetLocalImages()
 	localManifestPath := config.GetLocalManifests()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 
-	if len(localBinaries) > 0 {
-		logrus.Info("Loading binaries for local install")
-		for _, binary := range localBinaries {
-			sourceFile := tempPath.localBin + "/" + binary.Name
-			destinationFile := "/usr/local/bin/" + binary.Name
-			err := copy.Copy(sourceFile, destinationFile)
+	if len(localFiles) > 0 {
+		logrus.Info("Loading files for local install")
+		for index, file := range localFiles {
+			sourceFile := tempPath.localFiles + "/" + strconv.Itoa(index)
+			err := copy.Copy(sourceFile, file.Target)
 			if err != nil {
-				logrus.WithField("binary", binary.Name).Fatal("Unable to copy the contens of the asset")
+				logrus.WithField("file", file.Target).Fatal("Unable to copy the contens of the asset")
 			}
-			_ = os.Chmod(destinationFile, 0700)
 		}
 	}
 
