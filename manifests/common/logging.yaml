@@ -16,7 +16,7 @@ spec:
   rules:
     - http:
         paths:
-          - path: /grafana
+          - path: /monitor
             pathType: Prefix
             backend:
               service:
@@ -37,7 +37,7 @@ spec:
       enabled: true
       grafana.ini:
         server:
-          root_url: "%(protocol)s://%(domain)s/grafana"
+          root_url: "%(protocol)s://%(domain)s/monitor"
           serve_from_sub_path: true
     promtail:
       extraScrapeConfigs:
