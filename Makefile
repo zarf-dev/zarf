@@ -11,12 +11,14 @@ test-close:
 charts:
 	helm repo add docker-registry https://helm.twun.io
 	helm repo add gitea https://dl.gitea.io/charts
+	helm repo add grafana https://grafana.github.io/helm-charts
 
 	rm -fr charts
 	mkdir -p charts
 	
 	helm pull docker-registry/docker-registry -d ./charts --version 1.10.1
 	helm pull gitea/gitea -d ./charts --version 2.2.5
+	helm pull grafana/loki-stack -d ./charts --version 2.4.1
 
 package: charts
 	./build/zarf package create --config config-utility.yaml
@@ -25,6 +27,7 @@ package: charts
 	mv zarf*.tar.zst build
 
 	cd build && sha256sum -b zarf* > zarf.sha256	
+	ls -lh build
 
 build-cli:
 	rm -fr build
