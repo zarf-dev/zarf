@@ -2,6 +2,7 @@ package packager
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/mholt/archiver/v3"
@@ -14,14 +15,14 @@ import (
 
 func Create(packageName string) {
 	tempPath := createPaths()
-	localBinaries := config.GetLocalBinaries()
+	localFiles := config.GetLocalFiles()
 	localImageList := config.GetLocalImages()
 	localManifestPath := config.GetLocalManifests()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 	configFile := tempPath.base + "/config.yaml"
 
-	// Save the transformed config 
+	// Save the transformed config
 	config.WriteConfig(configFile)
 
 	// Bundle all assets into compressed tarball
@@ -34,14 +35,18 @@ func Create(packageName string) {
 		utils.CreatePathAndCopy("charts", tempPath.localCharts)
 	}
 
-	if len(localBinaries) > 0 {
-		logrus.Info("Loading binaries for local install")
-		sourceFiles = append(sourceFiles, tempPath.localBin)
-		_ = utils.CreateDirectory(tempPath.localBin, 0700)
-		for _, binary := range localBinaries {
-			destinationFile := tempPath.localBin + "/" + binary.Name
-			utils.DownloadFile(binary.Url, destinationFile)
-			_ = os.Chmod(destinationFile, 0700)
+	if len(localFiles) > 0 {
+		logrus.Info("Downloading files for local install")
+		sourceFiles = append(sourceFiles, tempPath.localFiles)
+		_ = utils.CreateDirectory(tempPath.localFiles, 0700)
+		for index, file := range localFiles {
+			destinationFile := tempPath.localFiles + "/" + strconv.Itoa(index)
+			utils.DownloadFile(file.Url, destinationFile)
+			if file.Executable {
+				_ = os.Chmod(destinationFile, 0700)
+			} else {
+				_ = os.Chmod(destinationFile, 0600)
+			}
 		}
 	}
 

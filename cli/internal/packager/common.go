@@ -9,7 +9,7 @@ import (
 
 type tempPaths struct {
 	base           string
-	localBin       string
+	localFiles     string
 	localCharts    string
 	localImage     string
 	localManifests string
@@ -21,7 +21,7 @@ func createPaths() tempPaths {
 	basePath := utils.MakeTempDir()
 	return tempPaths{
 		base:           basePath,
-		localBin:       basePath + "/bin",
+		localFiles:     basePath + "/files",
 		localCharts:    basePath + "/charts",
 		localImage:     basePath + "/images-local.tar",
 		localManifests: basePath + "/manifests",
