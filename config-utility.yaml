@@ -15,6 +15,13 @@ local:
     - docker.io/rancher/metrics-server:v0.3.6
     - docker.io/rancher/pause:3.1
 
+     # Logging images
+    - grafana/loki:2.2.0
+    - grafana/promtail:2.1.0
+
+    - grafana/grafana:7.5.0
+    - kiwigrid/k8s-sidecar:0.1.209
+
     # Zarf images
     - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
     - gitea/gitea:1.13.7
