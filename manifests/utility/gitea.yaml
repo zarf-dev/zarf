@@ -11,7 +11,7 @@ metadata:
   namespace: git
   annotations:
     kubernetes.io/ingress.class: "traefik"
-    # traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
 spec:
   rules:
     - http:
