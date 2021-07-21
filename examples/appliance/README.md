@@ -11,6 +11,3 @@ This example demonstrates using Zarf in a very low-resources/singlue-use environ
 4. Move the three `zarf` files to your test environment. 
 5. In the test environment, run `./zarf init --appliance-mode --confirm --host=localhost`, replace `localhost` with whatever your load balancer or public access IP or DNS entry is
 6. Once step 5 is complete, run `./zarf package deploy` to add the remaining cluster components.  You can rerun this step along wit 3 and 4 to make updates to the cluster
-
-### Test Locally:
-You can run `make run-example KIND=appliance` from the root of this repo (if you cloned it) to build and deploy this example using Vagrant on Ubuntu.
