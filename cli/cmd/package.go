@@ -42,9 +42,18 @@ var packageDeployCmd = &cobra.Command{
 	},
 }
 
+var packageInspectCmd = &cobra.Command{
+	Use:   "inspect",
+	Short: "lists the paylod of an update package file (runs offline)",
+	Run: func(cmd *cobra.Command, args []string) {
+		packager.Inspect(config.PackageUpdateName)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
+	packageCmd.AddCommand(packageInspectCmd)
 	packageCreateCmd.Flags().StringVar(&packageAdditionalConfig, "config", "", "Provide an additional config file to merge with the default config")
 }
