@@ -78,5 +78,5 @@ func Deploy(packageName string) {
 		}
 	}
 
-	// cleanup(tempPath)
+	cleanup(tempPath)
 }
