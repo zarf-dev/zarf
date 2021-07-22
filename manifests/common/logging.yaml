@@ -35,6 +35,8 @@ spec:
   valuesContent: |-
     grafana:
       enabled: true
+      adminUser: "zarf-admin"
+      adminPassword: "###ZARF_SECRET###"
       grafana.ini:
         server:
           root_url: "%(protocol)s://%(domain)s/monitor"
