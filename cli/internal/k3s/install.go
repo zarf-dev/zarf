@@ -10,7 +10,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Install(host string, applianceMode bool) {
+func Install(host string, applianceMode bool, certPublicPath string, certPrivatePath string) {
 
 	utils.RunPreflightChecks()
 
@@ -46,8 +46,22 @@ func Install(host string, applianceMode bool) {
 	// Add the secret to git-credentials for push to gitea
 	git.CredentialsGenerator(host, "syncuser", gitSecret)
 
+	if certPublicPath != "" && certPrivatePath != "" {
+		logrus.WithFields(logrus.Fields{
+			"public":  certPublicPath,
+			"private": certPrivatePath,
+		}).Info("Injecting user-provided keypair for ingress TLS")
+		utils.InjectServerCert(certPublicPath, certPrivatePath)
+	} else {
+		utils.GeneratePKI(host)
+	}
+
 	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
-	logrus.Info("The login for gitea can be found in ~/.git-credentials")
+	logrus.WithFields(logrus.Fields{
+		"Gitea Username":   "syncuser",
+		"Grafana Username": "zarf-admin",
+		"Password (all)":   gitSecret,
+	}).Warn("Credentials stored in ~/.git-credentials")
 }
 
 func createK3sSymlinks() {
