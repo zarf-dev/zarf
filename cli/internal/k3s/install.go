@@ -61,6 +61,11 @@ func createK3sSymlinks() {
 		// Dont log an error for now since re-runs throw an invalid error
 		_ = os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
 	}
+
+	// Add aliases for k3s
+	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/kubectl")
+	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/ctr")
+	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/crictl")
 }
 
 func createService() {
