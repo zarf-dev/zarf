@@ -7,10 +7,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// registryCmd represents the registry command
 var registryCmd = &cobra.Command{
 	Use:   "registry",
-	Short: "Collection of registry commands",
+	Short: "Collection of registry commands provided by Crane",
 }
 
 func init() {

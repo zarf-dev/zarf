@@ -97,6 +97,10 @@ rm -rf /run/flannel
 rm -rf /var/lib/rancher/k3s
 rm -rf /var/lib/kubelet
 rm -f /usr/local/bin/k3s
+rm -f /usr/local/bin/ctr
+rm -f /usr/local/bin/crictl
+rm -f /usr/local/bin/kubectl
+rm -f /usr/local/bin/k9s
 rm -fr zarf-pki
 `)
 
