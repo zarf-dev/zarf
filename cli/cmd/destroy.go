@@ -8,10 +8,9 @@ import (
 
 var confirmDestroy bool
 
-// destroyCmd represents the init command
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
-	Short: "Remove the k3s installation",
+	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
 		k3s.RemoveAll()
 	},
@@ -19,6 +18,7 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
+
 	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "Confirm the destroy action")
 	destroyCmd.MarkFlagRequired("confirm")
 }

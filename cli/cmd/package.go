@@ -14,7 +14,6 @@ var packageCmd = &cobra.Command{
 	Short: "Pack and unpack updates for the Zarf utility cluster.",
 }
 
-// packageCreateCmd represents the build command
 var packageCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create an update package to push to the utility server (runs online)",
@@ -34,7 +33,6 @@ var packageCreateCmd = &cobra.Command{
 	},
 }
 
-// packageDeployCmd represents the build command
 var packageDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploys an update package file (runs offline)",
@@ -56,7 +54,7 @@ func init() {
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
+
 	packageCreateCmd.Flags().StringVar(&packageAdditionalConfig, "config", "", "Provide an additional config file to merge with the default config")
 	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
-
 }
