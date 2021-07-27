@@ -7,6 +7,7 @@ import (
 )
 
 var packageAdditionalConfig string
+var confirmDeploy bool
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
@@ -38,7 +39,7 @@ var packageDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploys an update package file (runs offline)",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Deploy(config.PackageUpdateName)
+		packager.Deploy(config.PackageUpdateName, confirmDeploy)
 	},
 }
 
@@ -56,4 +57,6 @@ func init() {
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCreateCmd.Flags().StringVar(&packageAdditionalConfig, "config", "", "Provide an additional config file to merge with the default config")
+	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
+
 }
