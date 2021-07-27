@@ -46,15 +46,12 @@ func Install(host string, applianceMode bool, certPublicPath string, certPrivate
 	// Add the secret to git-credentials for push to gitea
 	git.CredentialsGenerator(host, "syncuser", gitSecret)
 
-	if certPublicPath != "" && certPrivatePath != "" {
-		logrus.WithFields(logrus.Fields{
-			"public":  certPublicPath,
-			"private": certPrivatePath,
-		}).Info("Injecting user-provided keypair for ingress TLS")
-		utils.InjectServerCert(certPublicPath, certPrivatePath)
-	} else {
-		utils.GeneratePKI(host)
+	pkiConfig := utils.PKIConfig{
+		CertPublicPath:  certPublicPath,
+		CertPrivatePath: certPrivatePath,
+		Host:            host,
 	}
+	utils.HandlePKI(pkiConfig)
 
 	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
