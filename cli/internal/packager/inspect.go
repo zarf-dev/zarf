@@ -1,9 +1,7 @@
 package packager
 
 import (
-	"fmt"
 	"io/ioutil"
-	"log"
 
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
@@ -23,12 +21,13 @@ func Inspect(packageName string) {
 
 	content, err := ioutil.ReadFile(tempPath.base + "/config.yaml")
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	// Convert []byte to string and print to screen
 	text := string(content)
-	fmt.Println(text)
+
+	utils.ColorPrintYAML(text)
 
 	cleanup(tempPath)
 }

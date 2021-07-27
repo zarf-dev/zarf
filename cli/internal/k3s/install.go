@@ -10,16 +10,16 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Install(host string, applianceMode bool, certPublicPath string, certPrivatePath string) {
+func Install(host string, applianceMode bool, certPublicPath string, certPrivatePath string, confirm bool) {
 
 	utils.RunPreflightChecks()
 
 	logrus.Info("Installing K3s")
 
 	if applianceMode {
-		packager.Deploy(config.PackageApplianceName)
+		packager.Deploy(config.PackageApplianceName, confirm)
 	} else {
-		packager.Deploy(config.PackageInitName)
+		packager.Deploy(config.PackageInitName, confirm)
 	}
 
 	// Install RHEL RPMs if applicable
