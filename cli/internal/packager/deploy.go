@@ -1,8 +1,11 @@
 package packager
 
 import (
+	"io/ioutil"
+	"os"
 	"strconv"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
@@ -12,13 +15,20 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Deploy(packageName string) {
+func Deploy(packageName string, confirm bool) {
 	tempPath := createPaths()
 	targetUrl := "zarf.localhost"
 
 	if utils.InvalidPath(packageName) {
 		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
 	}
+
+	// Don't continue unless the user says so
+	if !confirm && !confirmDeployment(packageName, tempPath) {
+		os.Exit(0)
+	}
+
+	logrus.Info("Extracting the package, this may take a few moments")
 
 	// Extract the archive
 	archiver.Unarchive(packageName, tempPath.base)
@@ -38,7 +48,7 @@ func Deploy(packageName string) {
 			sourceFile := tempPath.localFiles + "/" + strconv.Itoa(index)
 			err := copy.Copy(sourceFile, file.Target)
 			if err != nil {
-				logrus.WithField("file", file.Target).Fatal("Unable to copy the contens of the asset")
+				logrus.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
 			}
 		}
 	}
@@ -79,4 +89,30 @@ func Deploy(packageName string) {
 	}
 
 	cleanup(tempPath)
+}
+
+func confirmDeployment(packageName string, tempPath tempPaths) bool {
+	// Extract the config file
+	archiver.Extract(packageName, "config.yaml", tempPath.base)
+
+	configPath := tempPath.base + "/config.yaml"
+
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	// Convert []byte to string and print to screen
+	text := string(content)
+
+	utils.ColorPrintYAML(text)
+
+	confirm := false
+	prompt := &survey.Confirm{
+		Message: "Deploy this Zarf package?",
+	}
+	survey.AskOne(prompt, &confirm)
+
+	_ = os.Remove(configPath)
+	return confirm
 }
