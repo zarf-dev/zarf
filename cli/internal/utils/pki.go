@@ -16,6 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type PKIConfig struct {
+	CertPublicPath  string
+	CertPrivatePath string
+	Host            string
+}
+
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
 
 // Use 2048 because we are aiming for low-resource / max-compatability
@@ -43,8 +49,20 @@ func RandomString(length int) string {
 	return string(bytes)
 }
 
+func HandlePKI(config PKIConfig) {
+	if config.CertPublicPath != "" && config.CertPrivatePath != "" {
+		logrus.WithFields(logrus.Fields{
+			"public":  config.CertPublicPath,
+			"private": config.CertPrivatePath,
+		}).Info("Injecting user-provided keypair for ingress TLS")
+		InjectServerCert(config)
+	} else {
+		GeneratePKI(config)
+	}
+}
+
 // GeneratePKI create a CA and signed server keypair
-func GeneratePKI(host string) {
+func GeneratePKI(config PKIConfig) {
 	directory := "zarf-pki"
 
 	CreateDirectory(directory, 0700)
@@ -56,7 +74,7 @@ func GeneratePKI(host string) {
 
 	hostCert := filepath.Join(directory, "zarf-server.crt")
 	hostKey := filepath.Join(directory, "zarf-server.key")
-	if err := generateCert(host, hostCert, hostKey, ca, caKey, validFor); err != nil {
+	if err := generateCert(config.Host, hostCert, hostKey, ca, caKey, validFor); err != nil {
 		logrus.Fatal(err)
 	}
 
@@ -67,9 +85,9 @@ func GeneratePKI(host string) {
 
 	publicKeyPem := string(pem.EncodeToMemory(&publicKeyBlock))
 
-	certPath := directory + "/zarf-server.crt"
-	keyPath := directory + "/zarf-server.key"
-	InjectServerCert(certPath, keyPath)
+	config.CertPublicPath = directory + "/zarf-server.crt"
+	config.CertPrivatePath = directory + "/zarf-server.key"
+	InjectServerCert(config)
 
 	addCAToTrustStore(caFile)
 
@@ -77,10 +95,10 @@ func GeneratePKI(host string) {
 	fmt.Println(publicKeyPem)
 }
 
-func InjectServerCert(certPath string, keyPath string) {
+func InjectServerCert(config PKIConfig) {
 	// Push the certs to the cluster
 	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
-	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+certPath, "--key="+keyPath)
+	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+config.CertPublicPath, "--key="+config.CertPrivatePath)
 }
 
 func addCAToTrustStore(caFilePath string) {
