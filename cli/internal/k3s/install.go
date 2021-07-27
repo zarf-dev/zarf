@@ -10,16 +10,22 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Install(host string, applianceMode bool, certPublicPath string, certPrivatePath string, confirm bool) {
+type InstallOptions struct {
+	PKI           utils.PKIConfig
+	ApplianceMode bool
+	Confirmed     bool
+}
+
+func Install(options InstallOptions) {
 
 	utils.RunPreflightChecks()
 
 	logrus.Info("Installing K3s")
 
-	if applianceMode {
-		packager.Deploy(config.PackageApplianceName, confirm)
+	if options.ApplianceMode {
+		packager.Deploy(config.PackageApplianceName, options.Confirmed)
 	} else {
-		packager.Deploy(config.PackageInitName, confirm)
+		packager.Deploy(config.PackageInitName, options.Confirmed)
 	}
 
 	// Install RHEL RPMs if applicable
@@ -44,16 +50,11 @@ func Install(host string, applianceMode bool, certPublicPath string, certPrivate
 	}
 
 	// Add the secret to git-credentials for push to gitea
-	git.CredentialsGenerator(host, "syncuser", gitSecret)
+	git.CredentialsGenerator(options.PKI.Host, "syncuser", gitSecret)
 
-	pkiConfig := utils.PKIConfig{
-		CertPublicPath:  certPublicPath,
-		CertPrivatePath: certPrivatePath,
-		Host:            host,
-	}
-	utils.HandlePKI(pkiConfig)
+	utils.HandlePKI(options.PKI)
 
-	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
+	logrus.Info("Installation complete.  You fcan run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
 		"Gitea Username":   "syncuser",
 		"Grafana Username": "zarf-admin",
