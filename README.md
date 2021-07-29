@@ -126,6 +126,7 @@ All OS options:
 - centos8
 - ubuntu
 - debian 
+- rocky
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
 
