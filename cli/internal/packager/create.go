@@ -13,7 +13,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Create(packageName string) {
+func Create(packageName string, confirm bool) {
 	tempPath := createPaths()
 	localFiles := config.GetLocalFiles()
 	localImageList := config.GetLocalImages()
@@ -24,6 +24,12 @@ func Create(packageName string) {
 
 	// Save the transformed config
 	config.WriteConfig(configFile)
+
+	confirm = confirmAction(configFile, confirm, "Create")
+
+	if !confirm {
+		os.Exit(0)
+	}
 
 	// Bundle all assets into compressed tarball
 	sourceFiles := []string{configFile}

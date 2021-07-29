@@ -7,6 +7,7 @@ import (
 )
 
 var packageAdditionalConfig string
+var confirmCreate bool
 var confirmDeploy bool
 
 var packageCmd = &cobra.Command{
@@ -23,12 +24,12 @@ var packageCreateCmd = &cobra.Command{
 		}
 		if config.IsZarfInitConfig() {
 			if config.IsApplianceMode() {
-				packager.Create(config.PackageApplianceName)
+				packager.Create(config.PackageApplianceName, confirmCreate)
 			} else {
-				packager.Create(config.PackageInitName)
+				packager.Create(config.PackageInitName, confirmCreate)
 			}
 		} else {
-			packager.Create(config.PackageUpdateName)
+			packager.Create(config.PackageUpdateName, confirmCreate)
 		}
 	},
 }
@@ -56,5 +57,6 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 
 	packageCreateCmd.Flags().StringVar(&packageAdditionalConfig, "config", "", "Provide an additional config file to merge with the default config")
+	packageCreateCmd.Flags().BoolVar(&confirmCreate, "confirm", false, "Confirm package creation without prompting")
 	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
 }
