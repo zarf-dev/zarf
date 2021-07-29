@@ -59,8 +59,6 @@ spec:
         repository:
           ENABLE_PUSH_CREATE_USER: true
           FORCE_PRIVATE: true
-        ui:
-          DEFAULT_THEME: "arc-green"
 
       database:
         builtIn:

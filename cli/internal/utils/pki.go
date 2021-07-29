@@ -26,7 +26,7 @@ type PKIConfig struct {
 
 // Use 2048 because we are aiming for low-resource / max-compatability
 const rsaBits = 2048
-const org = "Zarf Utility Cluster"
+const org = "Zarf Cluster"
 
 // 13 months is the max length allowed by browsers
 const validFor = time.Hour * 24 * 375
