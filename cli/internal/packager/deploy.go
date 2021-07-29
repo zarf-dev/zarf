@@ -24,7 +24,7 @@ func Deploy(packageName string, confirm bool) {
 	}
 
 	// Don't continue unless the user says so
-	if !confirm && !confirmDeployment(packageName, tempPath) {
+	if !confirmDeployment(packageName, tempPath, confirm) {
 		os.Exit(0)
 	}
 
@@ -91,7 +91,7 @@ func Deploy(packageName string, confirm bool) {
 	cleanup(tempPath)
 }
 
-func confirmDeployment(packageName string, tempPath tempPaths) bool {
+func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) bool {
 	// Extract the config file
 	archiver.Extract(packageName, "config.yaml", tempPath.base)
 
@@ -107,11 +107,15 @@ func confirmDeployment(packageName string, tempPath tempPaths) bool {
 
 	utils.ColorPrintYAML(text)
 
-	confirm := false
-	prompt := &survey.Confirm{
-		Message: "Deploy this Zarf package?",
+	// Display prompt if not auto-confirmed
+	if confirm {
+		logrus.Info("Auto-deploying Zarf package")
+	} else {
+		prompt := &survey.Confirm{
+			Message: "Deploy this Zarf package?",
+		}
+		survey.AskOne(prompt, &confirm)
 	}
-	survey.AskOne(prompt, &confirm)
 
 	_ = os.Remove(configPath)
 	return confirm
