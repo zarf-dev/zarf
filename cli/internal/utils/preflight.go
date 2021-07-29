@@ -8,17 +8,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func CheckHostName(hostname string) bool {
+	expression := regexp.MustCompile(`^[a-zA-Z0-9\-\.]+$`)
+	return expression.MatchString(hostname)
+}
+
 func IsValidHostName() bool {
 	logrus.Info("Preflight check: validating hostname")
 	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
-	expression := regexp.MustCompile(`^[a-zA-Z0-9\-\.]+$`)
 	hostname, err := os.Hostname()
 
 	if err != nil {
 		return false
 	}
 
-	return expression.MatchString(hostname)
+	return CheckHostName(hostname)
 }
 
 func IsUserRoot() bool {
