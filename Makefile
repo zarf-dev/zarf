@@ -21,7 +21,7 @@ charts:
 	helm pull grafana/loki-stack -d ./charts --version 2.4.1
 
 package: charts
-	./build/zarf package create --confirm --config config-utility.yaml
+	./build/zarf package create --confirm --config config-standard.yaml
 
 	./build/zarf package create --confirm
 	mv zarf*.tar.zst build
