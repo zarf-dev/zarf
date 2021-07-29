@@ -1,11 +1,9 @@
 package packager
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
@@ -94,29 +92,8 @@ func Deploy(packageName string, confirm bool) {
 func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) bool {
 	// Extract the config file
 	archiver.Extract(packageName, "config.yaml", tempPath.base)
-
 	configPath := tempPath.base + "/config.yaml"
-
-	content, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	// Convert []byte to string and print to screen
-	text := string(content)
-
-	utils.ColorPrintYAML(text)
-
-	// Display prompt if not auto-confirmed
-	if confirm {
-		logrus.Info("Auto-deploying Zarf package")
-	} else {
-		prompt := &survey.Confirm{
-			Message: "Deploy this Zarf package?",
-		}
-		survey.AskOne(prompt, &confirm)
-	}
-
+	confirm = confirmAction(configPath, confirm, "Deploy")
 	_ = os.Remove(configPath)
 	return confirm
 }
