@@ -1,8 +1,11 @@
 package config
 
 import (
+	"os"
+	"os/user"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -89,6 +92,21 @@ func DynamicConfigLoad(path string) {
 }
 
 func WriteConfig(path string) {
+	now := time.Now()
+	user, userErr := user.Current()
+	hostname, hostErr := os.Hostname()
+
+	// Record the time of package creation
+	GetInstance().Viper.Set("package.timestamp", now.Format(time.RFC1123Z))
+	if hostErr == nil {
+		// Record the hostname of the package creation terminal
+		GetInstance().Viper.Set("package.terminal", hostname)
+	}
+	if userErr == nil {
+		// Record the name of the user creating the package
+		GetInstance().Viper.Set("package.user", user.Name)
+	}
+	// Save the parsed output to the config path given
 	if err := GetInstance().Viper.WriteConfigAs(path); err != nil {
 		logrus.WithField("path", path).Fatal("Unable to write the config file")
 	}
