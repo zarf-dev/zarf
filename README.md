@@ -14,13 +14,14 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 - Verify the downloads with `shasum -c --ignore-missing zarf.sha256`.
 - In a new folder or git repo, place a ZarfUpdateConfig `config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
 
-  [![asciicast](https://asciinema.org/a/422834.svg)](https://asciinema.org/a/422834)
+  [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
 ### 2. Creating the utility cluster
 - Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to.  You can also bring the `zarf.sha256` file with step 1b above if you want to verify the files again when you are in that environment.
 - Login or sudo/su to root.
 - Run `./zarf init --confirm --host=HOSTNAME` where `HOSTNAME` is the DNS or IP you want to use to connect to the cluster.
 - After intialization, the CLI will report the location of the Zarf Private CA public cert and credentials for the utility cluster.
 - As the CLI will tell you, you can run `/usr/local/bin/k9s` to leverage [k9s](https://k9scli.io/) to watch the changes.
+  [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
 
 ### 3. Adding resources to the utility cluster 
 - Folling step 1b, make any necessary edits to the `config.yaml` file.
