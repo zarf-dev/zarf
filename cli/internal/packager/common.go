@@ -1,8 +1,10 @@
 package packager
 
 import (
+	"io/ioutil"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
@@ -33,4 +35,28 @@ func createPaths() tempPaths {
 func cleanup(tempPath tempPaths) {
 	logrus.Info("Cleaning up temp files")
 	_ = os.RemoveAll(tempPath.base)
+}
+
+func confirmAction(configPath string, confirm bool, message string) bool {
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	// Convert []byte to string and print to screen
+	text := string(content)
+
+	utils.ColorPrintYAML(text)
+
+	// Display prompt if not auto-confirmed
+	if confirm {
+		logrus.Info(message + "ing Zarf package")
+	} else {
+		prompt := &survey.Confirm{
+			Message: message + " this Zarf package?",
+		}
+		survey.AskOne(prompt, &confirm)
+	}
+
+	return confirm
 }
