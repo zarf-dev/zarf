@@ -24,6 +24,10 @@ Vagrant.configure("2") do |config|
     target.vm.box = "boxomatic/debian-11"
   end
 
+  config.vm.define "rocky" do |target|
+    target.vm.box = "boxomatic/rocky-8.4"
+  end
+
   config.vm.hostname = "zarf-test"
   config.vm.synced_folder '.', '/vagrant', disabled: true
   config.vm.synced_folder 'build', '/opt/zarf', SharedFoldersEnableSymlinksCreate: false
