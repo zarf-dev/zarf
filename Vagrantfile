@@ -48,7 +48,7 @@ Vagrant.configure("2") do |config|
     cd /opt/zarf
     # Airgap images please
     echo "0.0.0.0 registry.dso.mil registry1.dso.mil index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-    ./zarf init --confirm --host=localhost
+    ./zarf init --confirm --host=localhost --mode=appliance
   SHELL
 
 end
