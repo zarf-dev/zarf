@@ -2,7 +2,6 @@ package git
 
 import (
 	"bufio"
-	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -97,7 +96,20 @@ func CredentialsGenerator(host string, username string, password string) {
 	}
 	defer credentialsFile.Close()
 
-	credentialsText := fmt.Sprintf("https://%s:%s@%s\n", username, password, host)
+	// This allows the git cli access to gitea as root
+	customUrl := url.URL{
+		Scheme: "https",
+		User:   url.UserPassword(username, password),
+		Host:   host,
+	}
+	// Needed by zarf to do repo pushes 
+	zarfUrl := url.URL{
+		Scheme: "https",
+		User:   url.UserPassword(username, password),
+		Host:   "zarf.localhost",
+	}
+
+	credentialsText := customUrl.String() + "\n" + zarfUrl.String()  + "\n"
 
 	// Write the entry to the file
 	_, err = credentialsFile.WriteString(credentialsText)
