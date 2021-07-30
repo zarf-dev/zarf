@@ -50,10 +50,13 @@ spec:
         APP_NAME: "Zarf Utility Cluster"
         server:
           DISABLE_SSH: true
+          OFFLINE_MODE: true
         database: 
           DB_TYPE: sqlite3
           # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
           HOST: kevin-docker-registry.registry.svc.cluster.local:5000
+        security:
+          INSTALL_LOCK: true
         service:
           DISABLE_REGISTRATION: true
         repository:
