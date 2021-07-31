@@ -40,7 +40,7 @@ spec:
       pullPolicy: Never
     gitea:
       admin:
-        username: "syncuser"
+        username: "zarf-git-user"
         password: "###ZARF_SECRET###"
         email: "zarf@localhost"
       cache:
