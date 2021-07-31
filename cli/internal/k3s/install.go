@@ -50,13 +50,13 @@ func Install(options InstallOptions) {
 	}
 
 	// Add the secret to git-credentials for push to gitea
-	git.CredentialsGenerator(options.PKI.Host, "syncuser", gitSecret)
+	git.CredentialsGenerator(options.PKI.Host, "zarf-git-user", gitSecret)
 
 	utils.HandlePKI(options.PKI)
 
 	logrus.Info("Installation complete.  You fcan run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
-		"Gitea Username":   "syncuser",
+		"Gitea Username":   "zarf-git-user",
 		"Grafana Username": "zarf-admin",
 		"Password (all)":   gitSecret,
 	}).Warn("Credentials stored in ~/.git-credentials")

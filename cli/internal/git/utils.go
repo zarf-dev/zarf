@@ -18,13 +18,18 @@ type GitCredential struct {
 }
 
 func transformURLtoRepoName(url string) string {
-	replaceRegex := regexp.MustCompile(`^[^@]+@|^https:\/\/|[^\w\-\.]+`)
+	replaceRegex := regexp.MustCompile(`(https?:\/\/|[^\w\-\.])+`)
 	return "mirror" + replaceRegex.ReplaceAllString(url, "__")
 }
 
 func transformURL(baseUrl string, url string) string {
 	replaced := transformURLtoRepoName(url)
-	return baseUrl + "/syncuser/" + replaced
+	output := baseUrl + "/zarf-git-user/" + replaced
+	logrus.WithFields(logrus.Fields{
+		"Old": url,
+		"New": output,
+	}).Info("Transformed Git URL")
+	return output
 }
 
 func credentialFilePath() string {
