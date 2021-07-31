@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 )
 
 type GitCredential struct {
@@ -102,14 +103,14 @@ func CredentialsGenerator(host string, username string, password string) {
 		User:   url.UserPassword(username, password),
 		Host:   host,
 	}
-	// Needed by zarf to do repo pushes 
+	// Needed by zarf to do repo pushes
 	zarfUrl := url.URL{
 		Scheme: "https",
 		User:   url.UserPassword(username, password),
-		Host:   "zarf.localhost",
+		Host:   config.ZarfLocal,
 	}
 
-	credentialsText := customUrl.String() + "\n" + zarfUrl.String()  + "\n"
+	credentialsText := customUrl.String() + "\n" + zarfUrl.String() + "\n"
 
 	// Write the entry to the file
 	_, err = credentialsFile.WriteString(credentialsText)

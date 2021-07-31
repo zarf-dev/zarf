@@ -2,21 +2,22 @@ package git
 
 import (
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
+	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 const offlineRemoteName = "offline-downstream"
 
-func PushAllDirectories(localPath string, targetUrl string) {
+func PushAllDirectories(localPath string) {
 	paths := utils.ListDirectories(localPath)
 	for _, path := range paths {
-		Push(path, targetUrl)
+		Push(path)
 	}
 }
 
-func Push(localPath string, targetBaseUrl string) {
+func Push(localPath string) {
 
 	logContext := logrus.WithField("repo", localPath)
 	logContext.Info("Processing git repo")
@@ -35,21 +36,21 @@ func Push(localPath string, targetBaseUrl string) {
 		return
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL(targetBaseUrl, remoteUrl)
+	targetUrl := transformURL("https://"+config.ZarfLocal, remoteUrl)
 
-	_, _ = repo.CreateRemote(&config.RemoteConfig{
+	_, _ = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetUrl},
 	})
 
-	gitCred := findAuthForHost(targetBaseUrl)
+	gitCred := findAuthForHost(config.ZarfLocal)
 
 	err = repo.Push(&git.PushOptions{
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred.auth,
-		RefSpecs: []config.RefSpec{
-			config.RefSpec("refs/heads/*:refs/heads/*"),
-			config.RefSpec("refs/tags/*:refs/tags/*"),
+		RefSpecs: []goConfig.RefSpec{
+			goConfig.RefSpec("refs/heads/*:refs/heads/*"),
+			goConfig.RefSpec("refs/tags/*:refs/tags/*"),
 		},
 	})
 

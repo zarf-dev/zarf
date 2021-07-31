@@ -15,7 +15,6 @@ import (
 
 func Deploy(packageName string, confirm bool) {
 	tempPath := createPaths()
-	targetUrl := "zarf.localhost"
 
 	if utils.InvalidPath(packageName) {
 		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
@@ -76,13 +75,13 @@ func Deploy(packageName string, confirm bool) {
 		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
 			// Push all images the images.tar file based on the config.yaml list
-			images.PushAll(tempPath.remoteImage, remoteImageList, targetUrl)
+			images.PushAll(tempPath.remoteImage, remoteImageList, config.ZarfLocal)
 		}
 
 		if len(remoteRepoList) > 0 {
 			logrus.Info("Loading git repos for remote install")
 			// Push all the repos from the extracted archive
-			git.PushAllDirectories(tempPath.remoteRepos, "https://"+targetUrl)
+			git.PushAllDirectories(tempPath.remoteRepos)
 		}
 	}
 
