@@ -42,7 +42,7 @@ func handleModeChoice() {
 		modePrompt := &survey.Select{
 			Message: "What mode will Zarf be initalizing in?",
 			Options: []string{
-				"Appliance Mode (singfle-node system or custom config)",
+				"Appliance Mode (single-node system or custom config)",
 				"Standard Mode (utility cluster with gitea and image registry)",
 			},
 		}
