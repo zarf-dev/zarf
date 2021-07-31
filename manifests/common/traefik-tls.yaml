@@ -13,6 +13,7 @@ metadata:
   name: ssl-redirect
   namespace: kube-system
 spec:
-  redirectScheme:
-    scheme: https
+  redirectRegex:
+    regex: ^http://(.*)
+    replacement: https://${1}
     permanent: true
