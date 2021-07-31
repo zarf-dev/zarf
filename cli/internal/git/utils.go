@@ -17,6 +17,18 @@ type GitCredential struct {
 	auth http.BasicAuth
 }
 
+func MutateGitUrlsInText(host string, text string) string {
+	extractPathRegex := regexp.MustCompilePOSIX(`https?:\/\/[^\/]+\/(.*\.git)`)
+	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
+		if strings.Contains(match, "/zarf-git-user/") {
+			logrus.WithField("Match", match).Warn("This url seems to have been previously patched.")
+			return match
+		}
+		return transformURL(host, match)
+	})
+	return output
+}
+
 func transformURLtoRepoName(url string) string {
 	replaceRegex := regexp.MustCompile(`(https?:\/\/|[^\w\-\.])+`)
 	return "mirror" + replaceRegex.ReplaceAllString(url, "__")
