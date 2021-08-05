@@ -12,7 +12,7 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 ### 1. Inital setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
 - Verify the downloads with `shasum -c --ignore-missing zarf.sha256`.
-- In a new folder or git repo, place a ZarfUpdateConfig `config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
+- In a new folder or git repo, place a ZarfPackageConfig `config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
 
   [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
 ### 2. Creating the utility cluster
