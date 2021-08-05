@@ -20,5 +20,5 @@ func init() {
 	rootCmd.AddCommand(destroyCmd)
 
 	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "Confirm the destroy action")
-	destroyCmd.MarkFlagRequired("confirm")
+	_ = destroyCmd.MarkFlagRequired("confirm")
 }

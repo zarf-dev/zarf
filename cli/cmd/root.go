@@ -12,7 +12,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	zarfLogo := GetLogo()
+	zarfLogo := getLogo()
 	fmt.Print(zarfLogo)
 	cobra.CheckErr(rootCmd.Execute())
 }

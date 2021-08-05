@@ -34,7 +34,7 @@ func init() {
 	pkiCmd.AddCommand(pkiImport)
 
 	pkiRegenerate.Flags().StringVar(&pkiOptions.Host, "host", "zarf-server", "Specify the host or IP for the utility cluster ingress")
-	pkiRegenerate.MarkFlagRequired("host")
+	_ = pkiRegenerate.MarkFlagRequired("host")
 
 	pkiImport.Flags().StringVar(&pkiOptions.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")
 	pkiImport.Flags().StringVar(&pkiOptions.CertPrivatePath, "server-key", "", "Path to the server private key if not generating unique PKI")

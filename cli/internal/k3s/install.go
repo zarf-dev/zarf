@@ -30,7 +30,7 @@ func Install(options InstallOptions) {
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {
-		ConfigureRHEL()
+		configureRHEL()
 	}
 
 	// Create the K3s systemd service
@@ -117,6 +117,13 @@ ExecStart=/usr/local/bin/k3s server --write-kubeconfig-mode=700
 
 	_ = os.Symlink(servicePath, "/etc/systemd/system/multi-user.target.wants/k3s.service")
 
-	utils.ExecCommand(nil, "systemctl", "daemon-reload")
-	utils.ExecCommand(nil, "systemctl", "enable", "--now", "k3s")
+	_, err := utils.ExecCommand(nil, "systemctl", "daemon-reload")
+	if err != nil {
+		logrus.Warn("Unable to reload systemd")
+	}
+
+	_, err = utils.ExecCommand(nil, "systemctl", "enable", "--now", "k3s")
+	if err != nil {
+		logrus.Warn("Unable to enable or start k3s via systemd")
+	}
 }

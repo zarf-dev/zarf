@@ -47,7 +47,7 @@ func InvalidPath(path string) bool {
 }
 
 func ListDirectories(directory string) []string {
-	directories := []string{}
+	var directories []string
 	paths, err := os.ReadDir(directory)
 	if err != nil {
 		logrus.WithField("path", directory).Fatal("Unable to load the directory")
@@ -74,7 +74,7 @@ func WriteFile(path string, data []byte) {
 	_, err = f.Write(data)
 	if err != nil {
 		logContext.Fatal("Unable to write the file contents")
-		f.Close()
+		_ = f.Close()
 	}
 
 	err = f.Close()
@@ -99,7 +99,7 @@ func ReplaceText(path string, old string, new string) {
 }
 
 func RecursiveFileList(root string) []string {
-	files := []string{}
+	var files []string
 
 	err := filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
@@ -140,6 +140,6 @@ func CreatePathAndCopy(source string, destination string) {
 	// Copy the asset
 	err := copy.Copy(source, destination)
 	if err != nil {
-		logContext.Fatal("Unable to copy the contens of the asset")
+		logContext.Fatal("Unable to copy the contents of the asset")
 	}
 }

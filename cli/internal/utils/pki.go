@@ -25,7 +25,7 @@ type PKIConfig struct {
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
 
-// Use 2048 because we are aiming for low-resource / max-compatability
+// Use 2048 because we are aiming for low-resource / max-compatibility
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
@@ -66,7 +66,7 @@ func HandlePKI(config PKIConfig) {
 func GeneratePKI(config PKIConfig) {
 	directory := "zarf-pki"
 
-	CreateDirectory(directory, 0700)
+	_ = CreateDirectory(directory, 0700)
 	caFile := filepath.Join(directory, "zarf-ca.crt")
 	ca, caKey, err := generateCA(caFile, validFor)
 	if err != nil {
@@ -98,8 +98,14 @@ func GeneratePKI(config PKIConfig) {
 
 func InjectServerCert(config PKIConfig) {
 	// Push the certs to the cluster
-	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
-	ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+config.CertPublicPath, "--key="+config.CertPrivatePath)
+	_, err := ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
+	if err != nil {
+		logrus.Warn("Error deleting tls-pem secret")
+	}
+	_, err = ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+config.CertPublicPath, "--key="+config.CertPrivatePath)
+	if err != nil {
+		logrus.Warn("Error creating the tls-pem secret")
+	}
 }
 
 func addCAToTrustStore(caFilePath string) {
@@ -110,10 +116,16 @@ func addCAToTrustStore(caFilePath string) {
 
 	if VerifyBinary(rhelBinary) {
 		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
-		ExecCommand(nil, rhelBinary, "extract")
+		_, err := ExecCommand(nil, rhelBinary, "extract")
+		if err != nil {
+			logrus.Warn("Error adding the ephemeral CA to the RHEL root trust")
+		}
 	} else if VerifyBinary(debianBinary) {
 		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
-		ExecCommand(nil, debianBinary)
+		_, err := ExecCommand(nil, debianBinary)
+		if err != nil {
+			logrus.Warn("Error adding the ephemeral CA to the trust store")
+		}
 	}
 }
 
@@ -199,12 +211,12 @@ func generateCert(host string, certFile string, keyFile string, ca *x509.Certifi
 		}
 	}
 
-	priv, err := newPrivateKey()
+	privateKey, err := newPrivateKey()
 	if err != nil {
 		return err
 	}
 
-	return generateFromTemplate(certFile, keyFile, template, ca, priv, caKey)
+	return generateFromTemplate(certFile, keyFile, template, ca, privateKey, caKey)
 }
 
 // generateFromTemplate generates a certificate from the given template and signed by

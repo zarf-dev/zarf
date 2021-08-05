@@ -46,7 +46,7 @@ func handleModeChoice() {
 				"Standard Mode (utility cluster with gitea and image registry)",
 			},
 		}
-		survey.AskOne(modePrompt, &mode)
+		_ = survey.AskOne(modePrompt, &mode)
 	}
 
 	initOptions.ApplianceMode = mode == Appliance
@@ -57,10 +57,7 @@ func handleTLSOptions() {
 	// Check to see if the certpaths or host entries are set as flags first
 	if initOptions.PKI.CertPublicPath == "" && initOptions.PKI.Host == "" {
 
-		const (
-			Generate int = iota
-			Import
-		)
+		const Generate = 0
 
 		var tlsMode int
 
@@ -72,14 +69,14 @@ func handleTLSOptions() {
 				"Import user-provided cert keypair",
 			},
 		}
-		survey.AskOne(modePrompt, &tlsMode)
+		_ = survey.AskOne(modePrompt, &tlsMode)
 
 		if tlsMode == Generate {
 			// Generate mode requires a host entry
 			prompt := &survey.Input{
 				Message: "Enter a host DNS entry or IP Address for the cluster ingress",
 			}
-			survey.AskOne(prompt, &initOptions.PKI.Host, survey.WithValidator(survey.Required))
+			_ = survey.AskOne(prompt, &initOptions.PKI.Host, survey.WithValidator(survey.Required))
 		} else {
 			// Import mode requires the public and private key paths
 			prompt := &survey.Input{
@@ -90,10 +87,10 @@ func handleTLSOptions() {
 					return files
 				},
 			}
-			survey.AskOne(prompt, &initOptions.PKI.CertPublicPath, survey.WithValidator(survey.Required))
+			_ = survey.AskOne(prompt, &initOptions.PKI.CertPublicPath, survey.WithValidator(survey.Required))
 
 			prompt.Message = "Enter a file path to the ingress private key"
-			survey.AskOne(prompt, &initOptions.PKI.CertPrivatePath, survey.WithValidator(survey.Required))
+			_ = survey.AskOne(prompt, &initOptions.PKI.CertPrivatePath, survey.WithValidator(survey.Required))
 		}
 	}
 }

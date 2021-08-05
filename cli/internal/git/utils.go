@@ -12,13 +12,13 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 )
 
-type GitCredential struct {
+type credential struct {
 	path string
 	auth http.BasicAuth
 }
 
 func MutateGitUrlsInText(host string, text string) string {
-	extractPathRegex := regexp.MustCompilePOSIX(`https?:\/\/[^\/]+\/(.*\.git)`)
+	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
 		if strings.Contains(match, "/zarf-git-user/") {
 			logrus.WithField("Match", match).Warn("This url seems to have been previously patched.")
@@ -30,7 +30,7 @@ func MutateGitUrlsInText(host string, text string) string {
 }
 
 func transformURLtoRepoName(url string) string {
-	replaceRegex := regexp.MustCompile(`(https?:\/\/|[^\w\-\.])+`)
+	replaceRegex := regexp.MustCompile(`(https?://|[^\w\-.])+`)
 	return "mirror" + replaceRegex.ReplaceAllString(url, "__")
 }
 
@@ -49,9 +49,9 @@ func credentialFilePath() string {
 	return homePath + "/.git-credentials"
 }
 
-func credentialParser() []GitCredential {
+func credentialParser() []credential {
 	credentialsPath := credentialFilePath()
-	credentials := []GitCredential{}
+	var credentials []credential
 
 	credentialsFile, err := os.Open(credentialsPath)
 	if err != nil {
@@ -66,7 +66,7 @@ func credentialParser() []GitCredential {
 		if err != nil {
 			continue
 		}
-		credential := GitCredential{
+		credential := credential{
 			path: gitUrl.Host,
 			auth: http.BasicAuth{
 				Username: gitUrl.User.Username(),
@@ -83,12 +83,12 @@ func credentialParser() []GitCredential {
 	return credentials
 }
 
-func findAuthForHost(baseUrl string) GitCredential {
+func findAuthForHost(baseUrl string) credential {
 	// Read the ~/.git-credentials file
 	gitCreds := credentialParser()
 
 	// Will be nil unless a match is found
-	var matchedCred GitCredential
+	var matchedCred credential
 
 	// Look for a match for the given host path in the creds file
 	for _, gitCred := range gitCreds {

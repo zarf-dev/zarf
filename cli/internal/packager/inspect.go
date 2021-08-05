@@ -17,7 +17,7 @@ func Inspect(packageName string) {
 	}
 
 	// Extract the archive
-	archiver.Extract(packageName, "config.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, "config.yaml", tempPath.base)
 
 	content, err := ioutil.ReadFile(tempPath.base + "/config.yaml")
 	if err != nil {
