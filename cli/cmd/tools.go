@@ -1,55 +1,70 @@
 package cmd
 
 import (
-	"io/ioutil"
-
-	"github.com/AlecAivazis/survey/v2"
+	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 )
 
 var toolsCmd = &cobra.Command{
 	Use:   "tools",
-	Short: "Various utilities shipped with Zarf",
+	Short: "Collection of additional tools to make airgap easier",
 }
 
-var toolsTransformGitLinks = &cobra.Command{
-	Use:   "patch-git-urls HOST FILE",
-	Short: "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		host, fileName := args[0], args[1]
+// destroyCmd represents the init command
+var archiverCmd = &cobra.Command{
+	Use:   "archiver",
+	Short: "Compress/Decompress tools",
+}
 
-		// Read the contents of the given file
-		content, err := ioutil.ReadFile(fileName)
+var archiverCompressCmd = &cobra.Command{
+	Use:   "compress SOURCES ARCHIVE",
+	Short: "Compress a collection of sources based off of the destination file extension",
+	Args:  cobra.MinimumNArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
+		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
 			logrus.Fatal(err)
 		}
-
-		// Perform git url transformation via regex
-		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text)
-
-		// Ask the user before this destructive action
-		confirm := false
-		prompt := &survey.Confirm{
-			Message: "Overwrite the file " + fileName + " with these changes?",
-		}
-		_ = survey.AskOne(prompt, &confirm)
-
-		if confirm {
-			// Overwrite the file
-			err = ioutil.WriteFile(fileName, []byte(processedText), 0640)
-			if err != nil {
-				logrus.Fatal("Unable to write the changes back to the file")
-			}
-		}
-
 	},
+}
+
+var archiverDecompressCmd = &cobra.Command{
+	Use:   "decompress ARCHIVE DESTINATION",
+	Short: "Decompress an archive to a specified location.",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		sourceArchive, destinationPath := args[0], args[1]
+		err := archiver.Unarchive(sourceArchive, destinationPath)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	},
+}
+
+var registryCmd = &cobra.Command{
+	Use:   "registry",
+	Short: "Collection of registry commands provided by Crane",
 }
 
 func init() {
 	rootCmd.AddCommand(toolsCmd)
-	toolsCmd.AddCommand(toolsTransformGitLinks)
+
+	toolsCmd.AddCommand(archiverCmd)
+	archiverCmd.AddCommand(archiverCompressCmd)
+	archiverCmd.AddCommand(archiverDecompressCmd)
+
+	toolsCmd.AddCommand(registryCmd)
+	cranePlatformOptions := []crane.Option{
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"}),
+	}
+	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
+	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
 }
