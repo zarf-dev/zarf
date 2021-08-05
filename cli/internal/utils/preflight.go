@@ -9,7 +9,7 @@ import (
 )
 
 func CheckHostName(hostname string) bool {
-	expression := regexp.MustCompile(`^[a-zA-Z0-9\-\.]+$`)
+	expression := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
 	return expression.MatchString(hostname)
 }
 

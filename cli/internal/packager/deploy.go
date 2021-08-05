@@ -28,7 +28,10 @@ func Deploy(packageName string, confirm bool) {
 	logrus.Info("Extracting the package, this may take a few moments")
 
 	// Extract the archive
-	archiver.Unarchive(packageName, tempPath.base)
+	err := archiver.Unarchive(packageName, tempPath.base)
+	if err != nil {
+		logrus.Fatal("Unable to extract the package contents")
+	}
 
 	// Load the config from the extracted archive config.yaml
 	config.DynamicConfigLoad(tempPath.base + "/config.yaml")
@@ -61,7 +64,10 @@ func Deploy(packageName string, confirm bool) {
 		if config.IsZarfInitConfig() {
 			utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images.tar")
 		} else {
-			utils.ExecCommand(nil, "/usr/local/bin/k3s", "ctr", "images", "import", tempPath.localImage)
+			_ , err := utils.ExecCommand(nil, "/usr/local/bin/k3s", "ctr", "images", "import", tempPath.localImage)
+			if err != nil {
+				logrus.Fatal("Unable to import the images into containerd")
+			}
 		}
 	}
 
@@ -90,7 +96,7 @@ func Deploy(packageName string, confirm bool) {
 
 func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) bool {
 	// Extract the config file
-	archiver.Extract(packageName, "config.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, "config.yaml", tempPath.base)
 	configPath := tempPath.base + "/config.yaml"
 	confirm = confirmAction(configPath, confirm, "Deploy")
 	_ = os.Remove(configPath)
