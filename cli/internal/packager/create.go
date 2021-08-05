@@ -91,7 +91,10 @@ func Create(packageName string, confirm bool) {
 	}
 
 	_ = os.RemoveAll(packageName)
-	archiver.Archive(sourceFiles, packageName)
+	err := archiver.Archive(sourceFiles, packageName)
+	if err != nil {
+		logrus.Fatal("Unable to create the package archive")
+	}
 
 	cleanup(tempPath)
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/mholt/archiver/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -17,8 +18,10 @@ var archiverCompressCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
-		archiver.Archive(sourceFiles, destinationArchive)
-
+		err := archiver.Archive(sourceFiles, destinationArchive)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	},
 }
 
@@ -28,7 +31,10 @@ var archiverDecompressCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
-		archiver.Unarchive(sourceArchive, destinationPath)
+		err := archiver.Unarchive(sourceArchive, destinationPath)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	},
 }
 

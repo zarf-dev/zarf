@@ -13,11 +13,11 @@ const offlineRemoteName = "offline-downstream"
 func PushAllDirectories(localPath string) {
 	paths := utils.ListDirectories(localPath)
 	for _, path := range paths {
-		Push(path)
+		push(path)
 	}
 }
 
-func Push(localPath string) {
+func push(localPath string) {
 
 	logContext := logrus.WithField("repo", localPath)
 	logContext.Info("Processing git repo")
@@ -49,8 +49,8 @@ func Push(localPath string) {
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred.auth,
 		RefSpecs: []goConfig.RefSpec{
-			goConfig.RefSpec("refs/heads/*:refs/heads/*"),
-			goConfig.RefSpec("refs/tags/*:refs/tags/*"),
+			"refs/heads/*:refs/heads/*",
+			"refs/tags/*:refs/tags/*",
 		},
 	})
 

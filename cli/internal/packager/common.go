@@ -55,7 +55,7 @@ func confirmAction(configPath string, confirm bool, message string) bool {
 		prompt := &survey.Confirm{
 			Message: message + " this Zarf package?",
 		}
-		survey.AskOne(prompt, &confirm)
+		_ = survey.AskOne(prompt, &confirm)
 	}
 
 	return confirm

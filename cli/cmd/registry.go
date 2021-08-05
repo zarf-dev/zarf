@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
+	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
@@ -18,9 +18,9 @@ func init() {
 	cranePlatformOptions := []crane.Option{
 		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"}),
 	}
-	registryCmd.AddCommand(cranecmd.NewCmdAuthLogin())
-	registryCmd.AddCommand(cranecmd.NewCmdPull(&cranePlatformOptions))
-	registryCmd.AddCommand(cranecmd.NewCmdPush(&cranePlatformOptions))
-	registryCmd.AddCommand(cranecmd.NewCmdCopy(&cranePlatformOptions))
-	registryCmd.AddCommand(cranecmd.NewCmdCatalog(&cranePlatformOptions))	
+	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
+	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
 }

@@ -6,6 +6,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
+//goland:noinspection ALL
 func RemoveAll() {
 
 	killScript := []byte(`

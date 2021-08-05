@@ -36,7 +36,7 @@ var toolsTransformGitLinks = &cobra.Command{
 		prompt := &survey.Confirm{
 			Message: "Overwrite the file " + fileName + " with these changes?",
 		}
-		survey.AskOne(prompt, &confirm)
+		_ = survey.AskOne(prompt, &confirm)
 
 		if confirm {
 			// Overwrite the file
