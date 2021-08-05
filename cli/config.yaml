@@ -1,4 +1,7 @@
-kind: ZarfUpdateConfig
+kind: ZarfPackageConfig
+metadata:
+  name: cli-test
+  description: "Test package for zarf"
 
 remote:
   # helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -

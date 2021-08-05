@@ -1,4 +1,7 @@
-kind: ZarfUpdateConfig
+kind: ZarfPackageConfig
+metadata:
+  name: appliance-demo-pod-info
+  description: "Demo Zarf appliance mode with pod info"
 
 local:
   manifestFolder: manifests
