@@ -96,5 +96,7 @@ func Create(packageName string, confirm bool) {
 		logrus.Fatal("Unable to create the package archive")
 	}
 
+	logrus.WithField("name", packageName).Info("Package creation complete")
+
 	cleanup(tempPath)
 }

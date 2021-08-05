@@ -22,11 +22,16 @@ type ZarfFile struct {
 	Executable bool
 }
 
+type ZarfMetatdata struct {
+	Name        string
+	Description string
+	Version     string
+}
+
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
-const PackageUpdateName = "zarf-update.tar.zst"
 const PackageApplianceName = "zarf-appliance-init.tar.zst"
 const ZarfLocal = "zarf.localhost"
 
@@ -51,6 +56,18 @@ func IsApplianceMode() bool {
 	var mode string
 	getInstance().Viper.UnmarshalKey("mode", &mode)
 	return strings.ToLower(mode) == "appliance"
+}
+
+func GetPackageName() string {
+	return "zarf-package-" + GetMetaData().Name + ".tar.zst"
+}
+
+func GetMetaData() ZarfMetatdata {
+	var metatdata ZarfMetatdata
+	getInstance().Viper.UnmarshalKey("metadata.name", &metatdata.Name)
+	getInstance().Viper.UnmarshalKey("metatdata.description", &metatdata.Description)
+	getInstance().Viper.UnmarshalKey("metatdata.version", &metatdata.Version)
+	return metatdata
 }
 
 func GetLocalFiles() []ZarfFile {

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"path/filepath"
+
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
@@ -29,25 +32,46 @@ var packageCreateCmd = &cobra.Command{
 				packager.Create(config.PackageInitName, confirmCreate)
 			}
 		} else {
-			packager.Create(config.PackageUpdateName, confirmCreate)
+			packageName := config.GetPackageName()
+			packager.Create(packageName, confirmCreate)
 		}
 	},
 }
 
 var packageDeployCmd = &cobra.Command{
-	Use:   "deploy",
+	Use:   "deploy PACKAGE",
 	Short: "deploys an update package file (runs offline)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Deploy(config.PackageUpdateName, confirmDeploy)
+		packageName := choosePackage(args)
+		packager.Deploy(packageName, confirmDeploy)
 	},
 }
 
 var packageInspectCmd = &cobra.Command{
-	Use:   "inspect",
+	Use:   "inspect PACKAGE",
 	Short: "lists the paylod of an update package file (runs offline)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Inspect(config.PackageUpdateName)
+		packageName := choosePackage(args)
+		packager.Inspect(packageName)
 	},
+}
+
+func choosePackage(args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+	var path string
+	prompt := &survey.Input{
+		Message: "Choose or type the package file",
+		Suggest: func(toComplete string) []string {
+			files, _ := filepath.Glob("zarf-package-" + toComplete + "*.tar.zst")
+			return files
+		},
+	}
+	_ = survey.AskOne(prompt, &path, survey.WithValidator(survey.Required))
+	return path
 }
 
 func init() {
