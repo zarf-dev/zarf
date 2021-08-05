@@ -1,19 +1,20 @@
 kind: ZarfUpdateConfig
 
-remote: 
+remote:
   # helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
+  # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.12.0
   repos:
-    - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.1.9-bb.0
-    - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.3.0-bb.0
-    - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.8.4-bb.2
-    - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.8.4-bb.1
-    - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.19.1-bb.4
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.32.0-bb.1
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.4.0-bb.2
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.11-bb.0
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.15.8-bb.1
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@11.0.0-bb.20
-    # - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.4-bb.0
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.2
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.4.0-bb.13
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.8.4-bb.5
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.8.4-bb.2
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.21.4-bb.2
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.36.0-bb.1
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.0
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.16-bb.0
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.15.14-bb.1
+    - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@11.0.0-bb.27
+    - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.6-bb.0
 
   images:
     - registry.dso.mil/platform-one/big-bang/apps/core/cluster-auditor/opa-collector:0.3.0-ib
