@@ -4,7 +4,7 @@ metadata:
   description: "Demo Zarf appliance mode with doom game"
 
 local:
-  manifestFolder: manifests
+  manifests: manifests
 
   images:
     - registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom

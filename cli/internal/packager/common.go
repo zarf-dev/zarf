@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sirupsen/logrus"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
@@ -17,6 +18,7 @@ type tempPaths struct {
 	localManifests string
 	remoteImage    string
 	remoteRepos    string
+	features       string
 }
 
 func createPaths() tempPaths {
@@ -29,6 +31,19 @@ func createPaths() tempPaths {
 		localManifests: basePath + "/manifests",
 		remoteImage:    basePath + "/images-remote.tar",
 		remoteRepos:    basePath + "/repos",
+		features:       basePath + "/features",
+	}
+}
+
+func createFeaturePaths(basePath string, feature config.ZarfFeature) tempPaths {
+	basePath = basePath + "/" + feature.Name
+	_ = utils.CreateDirectory(basePath, 0700)
+	return tempPaths{
+		base:           basePath,
+		localFiles:     basePath + "/files",
+		localCharts:    basePath + "/charts",
+		localImage:     basePath + "/images-local-feature-" + feature.Name + ".tar",
+		localManifests: basePath + "/manifests",
 	}
 }
 
