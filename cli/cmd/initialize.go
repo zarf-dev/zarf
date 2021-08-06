@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initModeSelect string
 var initOptions = k3s.InstallOptions{}
 
 // initCmd represents the init command
@@ -18,38 +17,9 @@ var initCmd = &cobra.Command{
 	Short: "Deploys the utility cluster or appliance cluster on a clean linux box",
 	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
-		handleModeChoice()
 		handleTLSOptions()
 		k3s.Install(initOptions)
 	},
-}
-
-func handleModeChoice() {
-	const (
-		Appliance int = iota
-		Standard
-	)
-
-	modes := map[string]int{
-		"appliance": Appliance,
-		"standard":  Standard,
-	}
-
-	mode, validMode := modes[initModeSelect]
-
-	// Only allow a valid mode, otherwise prompt the user
-	if !validMode {
-		modePrompt := &survey.Select{
-			Message: "What mode will Zarf be initalizing in?",
-			Options: []string{
-				"Appliance Mode (single-node system or custom config)",
-				"Standard Mode (utility cluster with gitea and image registry)",
-			},
-		}
-		_ = survey.AskOne(modePrompt, &mode)
-	}
-
-	initOptions.ApplianceMode = mode == Appliance
 }
 
 func handleTLSOptions() {
@@ -99,7 +69,6 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().BoolVar(&initOptions.Confirmed, "confirm", false, "Confirm the install without prompting")
 	initCmd.Flags().StringVar(&initOptions.PKI.Host, "host", "", "Specify the host or IP for the utility cluster ingress.  E.g. host=10.10.10.5 or host=utility.domain.com")
-	initCmd.Flags().StringVar(&initModeSelect, "mode", "", "Configure the type of cluster Zarf will initialize.  Valid options are [appliance] or [standard], e.g. mode=standard")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPrivatePath, "server-key", "", "Path to the server private key if not generating unique PKI")
 }
