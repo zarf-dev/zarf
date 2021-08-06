@@ -22,6 +22,15 @@ type ZarfFile struct {
 	Executable bool
 }
 
+type ZarfFeature struct {
+	Name        string
+	Description string
+	Default     bool
+	Manifests   string
+	Images      []string
+	Files       []ZarfFile
+}
+
 type ZarfMetatdata struct {
 	Name        string
 	Description string
@@ -32,7 +41,6 @@ const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
-const PackageApplianceName = "zarf-appliance-init.tar.zst"
 const ZarfLocal = "zarf.localhost"
 
 var instance *singleton
@@ -50,12 +58,6 @@ func IsZarfInitConfig() bool {
 	var kind string
 	getInstance().Viper.UnmarshalKey("kind", &kind)
 	return strings.ToLower(kind) == "zarfinitconfig"
-}
-
-func IsApplianceMode() bool {
-	var mode string
-	getInstance().Viper.UnmarshalKey("mode", &mode)
-	return strings.ToLower(mode) == "appliance"
 }
 
 func GetPackageName() string {
@@ -84,8 +86,14 @@ func GetLocalImages() []string {
 
 func GetLocalManifests() string {
 	var manifests string
-	getInstance().Viper.UnmarshalKey("local.manifestFolder", &manifests)
+	getInstance().Viper.UnmarshalKey("local.manifests", &manifests)
 	return manifests
+}
+
+func GetInitFeatures() []ZarfFeature {
+	var features []ZarfFeature
+	getInstance().Viper.UnmarshalKey("features", &features)
+	return features
 }
 
 func GetRemoteImages() []string {

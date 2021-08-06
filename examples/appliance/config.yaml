@@ -4,7 +4,7 @@ metadata:
   description: "Demo Zarf appliance mode with pod info"
 
 local:
-  manifestFolder: manifests
+  manifests: manifests
   
   images:
     - ghcr.io/stefanprodan/podinfo:6.0.0
