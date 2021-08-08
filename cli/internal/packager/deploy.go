@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
@@ -68,8 +69,17 @@ func Deploy(packageName string, confirm bool) {
 	} else {
 		features := config.GetInitFeatures()
 		for _, feature := range features {
-			featurePath := createFeaturePaths(tempPath.features, feature)
-			deployLocalAssets(featurePath, feature)
+			var confirmFeature bool
+			prompt := &survey.Confirm{
+				Message: "Deploy the " + feature.Name + " feature?",
+				Default: feature.Default,
+				Help:    feature.Description,
+			}
+			_ = survey.AskOne(prompt, &confirmFeature)
+			if confirmFeature {
+				featurePath := createFeaturePaths(tempPath.features, feature)
+				deployLocalAssets(featurePath, feature)
+			}
 		}
 	}
 
@@ -86,6 +96,7 @@ func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) boo
 }
 
 func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
+	logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
 	if len(assets.Files) > 0 {
 		logrus.Info("Loading files for local install")
 		for index, file := range assets.Files {

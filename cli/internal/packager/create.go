@@ -1,10 +1,12 @@
 package packager
 
 import (
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
@@ -36,12 +38,14 @@ func Create(packageName string, confirm bool) {
 	}
 
 	addLocalAssets(tempPath, config.ZarfFeature{
+		Charts:    config.GetLocalCharts(),
 		Files:     config.GetLocalFiles(),
 		Images:    config.GetLocalImages(),
 		Manifests: config.GetLocalManifests(),
 	})
 
 	for _, feature := range features {
+		logrus.WithField("feature", feature.Name).Info("Loading feature assets")
 		featurePath := createFeaturePaths(tempPath.features, feature)
 		addLocalAssets(featurePath, feature)
 	}
@@ -77,12 +81,50 @@ func Create(packageName string, confirm bool) {
 }
 
 func addLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
+	if len(assets.Charts) > 0 {
+		logrus.Info("Loading static helm charts")
+		utils.CreateDirectory(tempPath.localCharts, 0700)
+		for _, chart := range assets.Charts {
+			chartTarballName := tempPath.localCharts + "/" + chart.Name + ".tgz"
+			chartYaml := string(utils.Download(chart.Url + "/index.yaml"))
+			yamlPath, _ := yaml.PathString("$.entries." + chart.Name + "[*]")
+
+			var chartTarballUrl string
+			var chartData []struct {
+				Name    string   `yaml:"name"`
+				Urls    []string `yaml:"urls"`
+				Version string   `yaml:"version"`
+			}
+
+			if err := yamlPath.Read(strings.NewReader(chartYaml), &chartData); err != nil {
+				logrus.WithField("chart", chart.Name).Fatal("Unable to process the chart data")
+			}
+
+			for _, match := range chartData {
+				if match.Version == chart.Version {
+					parsedUrl, err := url.Parse(match.Urls[0])
+					if err != nil {
+						logrus.Warn("Invalid chart URL detected")
+					}
+					if !parsedUrl.IsAbs() {
+						patchUrl, _ := url.Parse(chart.Url)
+						parsedUrl.Host = patchUrl.Host
+						parsedUrl.Scheme = patchUrl.Scheme
+					}
+					chartTarballUrl = parsedUrl.String()
+					break
+				}
+			}
+			utils.DownloadToFile(chartTarballUrl, chartTarballName)
+		}
+	}
+
 	if len(assets.Files) > 0 {
 		logrus.Info("Downloading files for local install")
 		_ = utils.CreateDirectory(tempPath.localFiles, 0700)
 		for index, file := range assets.Files {
 			destinationFile := tempPath.localFiles + "/" + strconv.Itoa(index)
-			utils.DownloadFile(file.Url, destinationFile)
+			utils.DownloadToFile(file.Url, destinationFile)
 			if file.Executable {
 				_ = os.Chmod(destinationFile, 0700)
 			} else {

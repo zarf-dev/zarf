@@ -42,6 +42,10 @@ features:
       - grafana/promtail:2.1.0
       - grafana/grafana:7.5.0
       - kiwigrid/k8s-sidecar:0.1.209
+    charts:
+      - name: loki-stack
+        url: https://grafana.github.io/helm-charts
+        version: 2.4.1
 
   - name: utility-cluster
     description: "Add Gitea and an image registry for serving gitops-based clusters in an airgap"
@@ -49,3 +53,10 @@ features:
     images:
       - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
       - gitea/gitea:1.13.7
+    charts:
+      - name: docker-registry
+        url: https://helm.twun.io
+        version: 1.10.1
+      - name: gitea
+        url: https://dl.gitea.io/charts
+        version: 2.2.5
