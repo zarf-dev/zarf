@@ -7,20 +7,7 @@ test:
 test-close:
 	vagrant destroy -f
 
-# Temporary until integration into the cli with <URL>/index.yaml parsing 
-charts:
-	helm repo add docker-registry https://helm.twun.io
-	helm repo add gitea https://dl.gitea.io/charts
-	helm repo add grafana https://grafana.github.io/helm-charts
-
-	rm -fr charts
-	mkdir -p charts
-	
-	helm pull docker-registry/docker-registry -d ./charts --version 1.10.1
-	helm pull gitea/gitea -d ./charts --version 2.2.5
-	helm pull grafana/loki-stack -d ./charts --version 2.4.1
-
-package: charts
+package:
 	./build/zarf package create --confirm
 	mv zarf*.tar.zst build
 
