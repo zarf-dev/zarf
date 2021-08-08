@@ -22,6 +22,12 @@ type ZarfFile struct {
 	Executable bool
 }
 
+type ZarfChart struct {
+	Name    string
+	Url     string
+	Version string
+}
+
 type ZarfFeature struct {
 	Name        string
 	Description string
@@ -29,6 +35,7 @@ type ZarfFeature struct {
 	Manifests   string
 	Images      []string
 	Files       []ZarfFile
+	Charts      []ZarfChart
 }
 
 type ZarfMetatdata struct {
@@ -70,6 +77,12 @@ func GetMetaData() ZarfMetatdata {
 	getInstance().Viper.UnmarshalKey("metatdata.description", &metatdata.Description)
 	getInstance().Viper.UnmarshalKey("metatdata.version", &metatdata.Version)
 	return metatdata
+}
+
+func GetLocalCharts() []ZarfChart {
+	var charts []ZarfChart
+	getInstance().Viper.UnmarshalKey("local.charts", &charts)
+	return charts
 }
 
 func GetLocalFiles() []ZarfFile {

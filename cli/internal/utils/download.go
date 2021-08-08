@@ -2,13 +2,39 @@ package utils
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
-func DownloadFile(url string, target string) {
+func Download(url string) []byte {
+	logContext := logrus.WithFields(logrus.Fields{
+		"url": url,
+	})
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		logContext.Fatal("Unable to download the file", err)
+	}
+	defer resp.Body.Close()
+
+	// Check server response
+	if resp.StatusCode != http.StatusOK {
+		logContext.Fatalf("Bad HTTP status: %s", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.Warn(err)
+		logrus.WithField("Url", url).Fatal("Unable to load the remote text", err)
+	}
+	return body
+}
+
+func DownloadToFile(url string, target string) {
 
 	logContext := logrus.WithFields(logrus.Fields{
 		"url":         url,
@@ -39,6 +65,6 @@ func DownloadFile(url string, target string) {
 	// Writer the body to file
 	_, err = io.Copy(destinationFile, resp.Body)
 	if err != nil {
-		logContext.Fatal("Unable to download the file", err)
+		logContext.Fatal("Unable to save the file", err)
 	}
 }
