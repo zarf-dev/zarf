@@ -36,7 +36,7 @@ var packageDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Deploy(packageName, confirmDeploy)
+		packager.Deploy(packageName, confirmDeploy, "")
 	},
 }
 
