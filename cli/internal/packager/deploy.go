@@ -47,7 +47,6 @@ func Deploy(packageName string, confirm bool) {
 	}
 
 	deployLocalAssets(tempPath, config.ZarfFeature{
-		Name:      "core",
 		Files:     config.GetLocalFiles(),
 		Images:    config.GetLocalImages(),
 		Manifests: config.GetLocalManifests(),
@@ -96,7 +95,10 @@ func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) boo
 }
 
 func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
-	logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+	if assets.Name != "" {
+		// Only log this for named features
+		logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+	}
 	if len(assets.Files) > 0 {
 		logrus.Info("Loading files for local install")
 		for index, file := range assets.Files {
