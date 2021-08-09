@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: kafka-strimzi-demo
+  description: "Demo tiny Zarf Kafka deployment"
+
+local:
+  manifests: manifests
+
+  charts:
+    - name: strimzi-kafka-operator
+      url: https://strimzi.io/charts/
+      version: 0.24.0
+
+  images:
+    - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
+    - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
