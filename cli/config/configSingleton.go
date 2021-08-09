@@ -153,7 +153,7 @@ func WriteConfig(path string) {
 
 func setupViper() {
 	instance.Viper.AddConfigPath(".")
-	instance.Viper.SetConfigName("config")
+	instance.Viper.SetConfigName("zarf-config")
 
 	// If a config file is found, read it in.
 	if err := instance.Viper.ReadInConfig(); err == nil {

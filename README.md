@@ -12,7 +12,7 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 ### 1. Inital setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
 - Verify the downloads with `shasum -c --ignore-missing zarf.sha256`.
-- In a new folder or git repo, place a ZarfPackageConfig `config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
+- In a new folder or git repo, place a ZarfPackageConfig `zarf-config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
 
   [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
 ### 2. Creating the utility cluster
@@ -24,7 +24,7 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
   [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
 
 ### 3. Adding resources to the utility cluster 
-- Folling step 1b, make any necessary edits to the `config.yaml` file.
+- Folling step 1b, make any necessary edits to the `zarf-config.yaml` file.
 - Then run `./zarf package create` to produce an `zarf-update.tar.zst` package.
 - Move the `zarf-update.tar.zst` file into the same folder on the running utility cluster as in step 2a.
 - Login or sudo/su to root.
