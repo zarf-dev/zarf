@@ -1,0 +1,10 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: cool-topic
+  namespace: kafka-demo
+  labels:
+    strimzi.io/cluster: "demo"
+spec:
+  partitions: 2
+  replicas: 2
