@@ -71,4 +71,5 @@ func init() {
 	initCmd.Flags().StringVar(&initOptions.PKI.Host, "host", "", "Specify the host or IP for the utility cluster ingress.  E.g. host=10.10.10.5 or host=utility.domain.com")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPrivatePath, "server-key", "", "Path to the server private key if not generating unique PKI")
+	initCmd.Flags().StringVar(&initOptions.Features, "features", "", "Comma-separated list of features to install.  Add this flag will also skip the init promps for which features to install")
 }

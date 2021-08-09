@@ -3,6 +3,7 @@ package packager
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mholt/archiver/v3"
@@ -14,7 +15,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Deploy(packageName string, confirm bool) {
+func Deploy(packageName string, confirm bool, featureRequest string) {
 	tempPath := createPaths()
 
 	if utils.InvalidPath(packageName) {
@@ -69,12 +70,18 @@ func Deploy(packageName string, confirm bool) {
 		features := config.GetInitFeatures()
 		for _, feature := range features {
 			var confirmFeature bool
-			prompt := &survey.Confirm{
-				Message: "Deploy the " + feature.Name + " feature?",
-				Default: feature.Default,
-				Help:    feature.Description,
+			// Only run the prompt if no features were passed in
+			if featureRequest == "" {
+				prompt := &survey.Confirm{
+					Message: "Deploy the " + feature.Name + " feature?",
+					Default: feature.Default,
+					Help:    feature.Description,
+				}
+				_ = survey.AskOne(prompt, &confirmFeature)
+			} else {
+				// This is probably sufficient for now, we could change to a slice and match exact if it's needed
+				confirmFeature = strings.Contains(strings.ToLower(featureRequest), feature.Name)
 			}
-			_ = survey.AskOne(prompt, &confirmFeature)
 			if confirmFeature {
 				featurePath := createFeaturePaths(tempPath.features, feature)
 				deployLocalAssets(featurePath, feature)
