@@ -31,12 +31,6 @@ func Create(packageName string, confirm bool) {
 		os.Exit(0)
 	}
 
-	// @TODO implement the helm pull functionality directly into the CLI
-	if !utils.InvalidPath("charts") {
-		logrus.Info("Loading static helm charts")
-		utils.CreatePathAndCopy("charts", tempPath.localCharts)
-	}
-
 	addLocalAssets(tempPath, config.ZarfFeature{
 		Charts:    config.GetLocalCharts(),
 		Files:     config.GetLocalFiles(),
@@ -85,7 +79,7 @@ func addLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		logrus.Info("Loading static helm charts")
 		utils.CreateDirectory(tempPath.localCharts, 0700)
 		for _, chart := range assets.Charts {
-			chartTarballName := tempPath.localCharts + "/" + chart.Name + ".tgz"
+			chartTarballName := tempPath.localCharts + "/" + chart.Name + "-" + chart.Version + ".tgz"
 			chartYaml := string(utils.Download(chart.Url + "/index.yaml"))
 			yamlPath, _ := yaml.PathString("$.entries." + chart.Name + "[*]")
 

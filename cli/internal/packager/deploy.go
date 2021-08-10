@@ -41,13 +41,8 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 
-	// @TODO implement the helm pull functionality directly into the CLI
-	if !utils.InvalidPath(tempPath.localCharts) {
-		logrus.Info("Loading helm charts for local install")
-		utils.CreatePathAndCopy(tempPath.localCharts, config.K3sChartPath)
-	}
-
 	deployLocalAssets(tempPath, config.ZarfFeature{
+		Charts:    config.GetLocalCharts(),
 		Files:     config.GetLocalFiles(),
 		Images:    config.GetLocalImages(),
 		Manifests: config.GetLocalManifests(),
@@ -105,6 +100,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Name != "" {
 		// Only log this for named features
 		logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+		assets.Name = "core"
 	}
 	if len(assets.Files) > 0 {
 		logrus.Info("Loading files for local install")
@@ -114,6 +110,14 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			if err != nil {
 				logrus.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
 			}
+		}
+	}
+
+	if len(assets.Charts) > 0 {
+		logrus.Info("Loading charts for local install")
+		for _, chart := range assets.Charts {
+			target := "/" + chart.Name + "-" + chart.Version + ".tgz"
+			utils.CreatePathAndCopy(tempPath.localCharts+target, config.K3sChartPath+target)
 		}
 	}
 
