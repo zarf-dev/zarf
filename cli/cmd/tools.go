@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"fmt"
+
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 )
 
 var toolsCmd = &cobra.Command{
@@ -51,10 +55,20 @@ var registryCmd = &cobra.Command{
 	Short: "Collection of registry commands provided by Crane",
 }
 
+var readCredsCmd = &cobra.Command{
+	Use:   "get-admin-password",
+	Short: "Returns the Zarf admin password read from ~/.git-credentials",
+	Run: func(cmd *cobra.Command, args []string) {
+		authInfo := git.FindAuthForHost(config.ZarfLocal)
+		fmt.Println(authInfo.Auth.Password)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 
 	toolsCmd.AddCommand(archiverCmd)
+	toolsCmd.AddCommand(readCredsCmd)
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
