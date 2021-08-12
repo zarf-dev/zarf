@@ -12,9 +12,9 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 )
 
-type credential struct {
-	path string
-	auth http.BasicAuth
+type Credential struct {
+	Path string
+	Auth http.BasicAuth
 }
 
 func MutateGitUrlsInText(host string, text string) string {
@@ -49,9 +49,9 @@ func credentialFilePath() string {
 	return homePath + "/.git-credentials"
 }
 
-func credentialParser() []credential {
+func credentialParser() []Credential {
 	credentialsPath := credentialFilePath()
-	var credentials []credential
+	var credentials []Credential
 
 	credentialsFile, err := os.Open(credentialsPath)
 	if err != nil {
@@ -66,9 +66,9 @@ func credentialParser() []credential {
 		if err != nil {
 			continue
 		}
-		credential := credential{
-			path: gitUrl.Host,
-			auth: http.BasicAuth{
+		credential := Credential{
+			Path: gitUrl.Host,
+			Auth: http.BasicAuth{
 				Username: gitUrl.User.Username(),
 				Password: password,
 			},
@@ -83,16 +83,16 @@ func credentialParser() []credential {
 	return credentials
 }
 
-func findAuthForHost(baseUrl string) credential {
+func FindAuthForHost(baseUrl string) Credential {
 	// Read the ~/.git-credentials file
 	gitCreds := credentialParser()
 
 	// Will be nil unless a match is found
-	var matchedCred credential
+	var matchedCred Credential
 
 	// Look for a match for the given host path in the creds file
 	for _, gitCred := range gitCreds {
-		hasPath := strings.Contains(baseUrl, gitCred.path)
+		hasPath := strings.Contains(baseUrl, gitCred.Path)
 		if hasPath {
 			matchedCred = gitCred
 			break
