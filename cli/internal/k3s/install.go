@@ -50,7 +50,7 @@ func Install(options InstallOptions) {
 
 	utils.HandlePKI(options.PKI)
 
-	logrus.Info("Installation complete.  You fcan run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
+	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
 		"Gitea Username":   "zarf-git-user",
 		"Grafana Username": "zarf-admin",
