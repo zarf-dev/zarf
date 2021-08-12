@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +14,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	zarfLogo := getLogo()
-	fmt.Print(zarfLogo)
+	fmt.Fprintln(os.Stderr, zarfLogo)
 	cobra.CheckErr(rootCmd.Execute())
 }
 
