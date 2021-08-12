@@ -17,10 +17,10 @@ func Pull(gitUrl string, targetFolder string, tag string) {
 	})
 	logContext.Info("Processing git repo")
 
-	gitCred := findAuthForHost(gitUrl)
+	gitCred := FindAuthForHost(gitUrl)
 
 	cloneOptions := &git.CloneOptions{
-		Auth:       &gitCred.auth,
+		Auth:       &gitCred.Auth,
 		URL:        gitUrl,
 		Progress:   os.Stdout,
 		RemoteName: onlineRemoteName,

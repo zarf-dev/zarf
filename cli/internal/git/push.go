@@ -43,11 +43,11 @@ func push(localPath string) {
 		URLs: []string{targetUrl},
 	})
 
-	gitCred := findAuthForHost(config.ZarfLocal)
+	gitCred := FindAuthForHost(config.ZarfLocal)
 
 	err = repo.Push(&git.PushOptions{
 		RemoteName: offlineRemoteName,
-		Auth:       &gitCred.auth,
+		Auth:       &gitCred.Auth,
 		RefSpecs: []goConfig.RefSpec{
 			"refs/heads/*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
