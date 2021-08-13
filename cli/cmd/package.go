@@ -58,7 +58,7 @@ func choosePackage(args []string) string {
 	prompt := &survey.Input{
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob("zarf-package-" + toComplete + "*.tar.zst")
+			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar*")
 			return files
 		},
 	}
