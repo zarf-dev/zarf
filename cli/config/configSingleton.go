@@ -39,15 +39,17 @@ type ZarfFeature struct {
 }
 
 type ZarfMetatdata struct {
-	Name        string
-	Description string
-	Version     string
+	Name         string
+	Description  string
+	Version      string
+	Uncompressed bool
 }
 
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
+const PackagePrefix = "zarf-package-"
 const ZarfLocal = "zarf.localhost"
 
 var instance *singleton
@@ -68,7 +70,12 @@ func IsZarfInitConfig() bool {
 }
 
 func GetPackageName() string {
-	return "zarf-package-" + GetMetaData().Name + ".tar.zst"
+	metadata := GetMetaData()
+	if metadata.Uncompressed {
+		return PackagePrefix + metadata.Name + ".tar"
+	} else {
+		return PackagePrefix + metadata.Name + ".tar.zst"
+	}
 }
 
 func GetMetaData() ZarfMetatdata {
@@ -76,6 +83,7 @@ func GetMetaData() ZarfMetatdata {
 	getInstance().Viper.UnmarshalKey("metadata.name", &metatdata.Name)
 	getInstance().Viper.UnmarshalKey("metatdata.description", &metatdata.Description)
 	getInstance().Viper.UnmarshalKey("metatdata.version", &metatdata.Version)
+	getInstance().Viper.UnmarshalKey("metadata.uncompressed", &metatdata.Uncompressed)
 	return metatdata
 }
 
