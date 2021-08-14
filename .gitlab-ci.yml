@@ -1,7 +1,7 @@
 stages:
   - build
-  # - package
-  # - e2e
+  - package
+  - e2e
   # - upload
   # - release
 
@@ -15,47 +15,47 @@ compile:
     paths:
       - build/
 
-# package:
-#   stage: package
-#   needs:
-#     - job: compile
-#       artifacts: true
-#   tags:
-#     - bigbang
-#     - packages
-#   image: golang:1.16
-#   before_script:
-#     - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
-#   script:
-#     # - make ci-release
-#     - mkdir -p build
-#   after_script:
-#     - echo "PACKAGE_JOB_ID=$CI_JOB_ID" >> job.env
-#   artifacts:
-#     reports:
-#       dotenv: job.env    
-#     paths:
-#       - build/
+package:
+  stage: package
+  needs:
+    - job: compile
+      artifacts: true
+  tags:
+    - bigbang
+    - packages
+  image: golang:1.16
+  # before_script:
+  #   - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
+  script:
+    # - make ci-release
+    - mkdir -p build
+  after_script:
+    - echo "PACKAGE_JOB_ID=$CI_JOB_ID" >> job.env
+  artifacts:
+    reports:
+      dotenv: job.env    
+    paths:
+      - build/
 
-# e2e:
-#   stage: e2e
-#   needs:
-#     - job: package
-#       artifacts: true
-#   before_script:
+e2e:
+  stage: e2e
+  needs:
+    - job: package
+      artifacts: true
+  before_script:
 
-#     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
-#     - eval $(ssh-agent -s)
-#     - echo "$ZARF_PIPELINE_KEY" | tr -d '\r' | ssh-add -
-#     - mkdir -p ~/.ssh
-#     - chmod 700 ~/.ssh
-#     - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
-#   script:
-#     - ./e2e.sh
-#   resource_group: e2e
-#   artifacts:
-#     paths:
-#       - build/    
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$ZARF_PIPELINE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
+  script:
+    - ./e2e.sh
+  resource_group: e2e
+  artifacts:
+    paths:
+      - build/    
 
 # artifact-upload:
 #   image: amazon/aws-cli
