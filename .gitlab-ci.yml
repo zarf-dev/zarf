@@ -44,7 +44,7 @@ e2e:
       artifacts: true
   before_script:
 
-    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - 'command -v ssh-agent >/dev/null || ( yum update -y && yum install openssh-client -y )'
     - eval $(ssh-agent -s)
     - echo "$ZARF_PIPELINE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
