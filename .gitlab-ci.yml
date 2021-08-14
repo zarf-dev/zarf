@@ -5,6 +5,12 @@ stages:
   - upload
   - release
 
+.only-default: &only-default
+  only:
+    - master
+    - merge_requests
+    - tags  
+
 compile:
   stage: build
   image: golang:1.16
@@ -15,6 +21,7 @@ compile:
       - build/
 
 package:
+  <<: *only-default
   stage: package
   needs:
     - job: compile
@@ -36,6 +43,7 @@ package:
       - build/
 
 e2e:
+  <<: *only-default
   stage: e2e
   needs:
     - job: package
