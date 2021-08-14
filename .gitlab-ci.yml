@@ -43,8 +43,7 @@ e2e:
     - job: package
       artifacts: true
   before_script:
-
-    - 'command -v ssh-agent >/dev/null || ( yum update -y && yum install openssh-client -y )'
+    - yum install openssh-clients -y
     - eval $(ssh-agent -s)
     - echo "$ZARF_PIPELINE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
