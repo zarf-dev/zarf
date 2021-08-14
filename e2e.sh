@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# @todo: Temporary during testing
-CI_JOB_ID=5606564
-
 NOCOLOR='\033[0m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -18,7 +15,7 @@ _run() {
     >&2 echo
     >&2 echo -e "🟢 ${GREEN}TEST RUN: ${YELLOW} $1 ${NOCOLOR}"
     # @todo: update for gitlab sec env variable injection
-    ssh -i ~/.ssh/repo1-gitlab-user.cer ec2-user@pipeline.zarf.dev "$1"
+    ssh ec2-user@pipeline.zarf.dev "$1"
 }
 
 _curl() {
@@ -33,7 +30,7 @@ beforeAll() {
     _run "rm -fr \*"
 
     # Download the job artifacts
-    _run "curl -fL https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${CI_JOB_ID}/artifacts/download -o artifact.zip && unzip -jo artifact.zip"
+    _run "curl -fL https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${PACKAGE_JOB_ID}/artifacts/download -o artifact.zip && unzip -jo artifact.zip"
     
     # List the downloaded files
     _run "ls -lah"
