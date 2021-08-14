@@ -45,7 +45,7 @@ e2e:
   before_script:
     - yum install openssh-clients -y
     - eval $(ssh-agent -s)
-    - echo "$ZARF_PIPELINE_KEY" | tr -d '\r' | ssh-add -
+    - echo "$ZARF_PIPELINE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
