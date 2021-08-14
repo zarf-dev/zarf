@@ -12,6 +12,10 @@ stages:
     - tags  
 
 compile:
+  only: 
+    - branches
+    - merge_requests
+    - tags
   stage: build
   image: golang:1.16
   script:
