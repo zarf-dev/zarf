@@ -1,10 +1,21 @@
 stages:
   - build
   - package
+  - e2e
   - upload
   - release
 
+.only-default: &only-default
+  only:
+    - master
+    - merge_requests
+    - tags  
+
 compile:
+  only: 
+    - branches
+    - merge_requests
+    - tags
   stage: build
   image: golang:1.16
   script:
@@ -14,6 +25,7 @@ compile:
       - build/
 
 package:
+  <<: *only-default
   stage: package
   needs:
     - job: compile
@@ -23,22 +35,42 @@ package:
     - packages
   image: golang:1.16
   before_script:
-    - curl -fL https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz | tar xz && cp linux-amd64/helm /usr/local/bin/
     - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
-  rules:
-    - if: $CI_COMMIT_TAG
   script:
     - make ci-release
+  after_script:
+    - echo "PACKAGE_JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
+    reports:
+      dotenv: job.env    
     paths:
       - build/
-    expire_in: never
+
+e2e:
+  <<: *only-default
+  stage: e2e
+  needs:
+    - job: package
+      artifacts: true
+  before_script:
+    - yum install openssh-clients -y
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$ZARF_PIPELINE_KEY")
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
+  script:
+    - ./e2e.sh
+  resource_group: e2e
+  artifacts:
+    paths:
+      - build/    
 
 artifact-upload:
   image: amazon/aws-cli
   stage: upload
   needs:
-    - job: package
+    - job: e2e
       artifacts: true
   rules:
     - if: $CI_COMMIT_TAG
