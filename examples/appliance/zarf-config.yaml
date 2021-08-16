@@ -5,6 +5,11 @@ metadata:
 
 local:
   manifests: manifests
+
+  charts:
+    - name: podinfo
+      url: https://stefanprodan.github.io/podinfo
+      version: 6.0.0
   
   images:
     - ghcr.io/stefanprodan/podinfo:6.0.0
