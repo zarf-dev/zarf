@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-injection
+  namespace: demo
+  labels:
+    app: data-injection
+spec:
+  containers:
+    - name: data-injection
+      image: registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
+      imagePullPolicy: Never
+      command: ["/bin/sh", "-ec", "mkdir -p /test && while :; do ls -lah /test; sleep 5 ; done"]
