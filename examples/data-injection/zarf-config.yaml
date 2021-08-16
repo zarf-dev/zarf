@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: data-injection-demo
+  description: "Demo Zarf local data injection into a pod"
+
+local:
+  manifests: manifests
+
+  images:
+    - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
