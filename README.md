@@ -11,24 +11,22 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 
 ### 1. Inital setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
-- Verify the downloads with `shasum -c --ignore-missing zarf.sha256`.
+- (optional) Verify the downloads with `shasum -c zarf.sha256`.
 - In a new folder or git repo, place a ZarfPackageConfig `zarf-config.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
 
   [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
-### 2. Creating the utility cluster
-- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to.  You can also bring the `zarf.sha256` file with step 1b above if you want to verify the files again when you are in that environment.
+### 2. Create the zarf cluster
+- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to. 
 - Login or sudo/su to root.
-- Run `./zarf init --confirm --host=HOSTNAME` where `HOSTNAME` is the DNS or IP you want to use to connect to the cluster.
-- After intialization, the CLI will report the location of the Zarf Private CA public cert and credentials for the utility cluster.
-- As the CLI will tell you, you can run `/usr/local/bin/k9s` to leverage [k9s](https://k9scli.io/) to watch the changes.
+- Run `./zarf init` and follow the wizard.
   [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
 
-### 3. Adding resources to the utility cluster 
+### 3. Add resources to the zarf cluster 
 - Folling step 1b, make any necessary edits to the `zarf-config.yaml` file.
-- Then run `./zarf package create` to produce an `zarf-update.tar.zst` package.
-- Move the `zarf-update.tar.zst` file into the same folder on the running utility cluster as in step 2a.
+- Then run `./zarf package create` to produce an `zarf-package-*.tar.zst` package.
+- Move the `zarf-package` into the same folder on the running zarf cluster as in step 2a.
 - Login or sudo/su to root.
-- Run `./zarf package deploy`, the CLI should automatically place all your packaged resources in the approriate location for immediate use.
+- Run `./zarf package deploy` and follow the wizard.
 
   [![asciicast](https://asciinema.org/a/423449.svg)](https://asciinema.org/a/423449)
 
