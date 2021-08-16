@@ -45,6 +45,15 @@ type ZarfMetatdata struct {
 	Uncompressed bool
 }
 
+type ZarfData struct {
+	Source string
+	Target struct {
+		Namespace string
+		Selector  string
+		Path      string
+	}
+}
+
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
@@ -76,6 +85,12 @@ func GetPackageName() string {
 	} else {
 		return PackagePrefix + metadata.Name + ".tar.zst"
 	}
+}
+
+func GetDataInjections() []ZarfData {
+	var data []ZarfData
+	getInstance().Viper.UnmarshalKey("data", &data)
+	return data
 }
 
 func GetMetaData() ZarfMetatdata {
