@@ -2,6 +2,8 @@ kind: ZarfPackageConfig
 metadata:
   name: data-injection-demo
   description: "Demo Zarf local data injection into a pod"
+  # (optional) Some large datasets may already be compressed making zarf compression less efficient
+  uncompressed: true
 
 data:
   # Injection in a subdirectory
