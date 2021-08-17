@@ -13,6 +13,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/images"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k8s"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
@@ -56,16 +57,15 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 			logrus.Info("Loading data injections")
 			for _, data := range dataInjectionList {
 				sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-				podName, err := utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "get", "pod", "--selector="+data.Target.Selector, "-o", "jsonpath={.items[0].metadata.name}")
-				if err != nil {
-					logrus.Warn("Error selecting the pod for data injection")
-				} else {
+				pods := k8s.WaitForPods(data.Target.Namespace, data.Target.Selector)
+
+				for _, pod := range pods {
 					destination := data.Target.Path
 					if destination == "/"+filepath.Base(destination) {
 						// Handle top-level directory targets
 						destination = "/"
 					}
-					_, err = utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "cp", sourceFile, podName+":"+destination)
+					_, err = utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "cp", sourceFile, pod+":"+destination)
 					if err != nil {
 						logrus.Warn("Error copying data into the pod")
 					}
