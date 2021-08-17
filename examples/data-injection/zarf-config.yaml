@@ -3,6 +3,20 @@ metadata:
   name: data-injection-demo
   description: "Demo Zarf local data injection into a pod"
 
+data:
+  # Injection in a subdirectory
+  - source: sample-data
+    target:
+      namespace: demo
+      selector: app=data-injection
+      path: /test/subdirectory-test
+  # Injection at the root
+  - source: sample-data
+    target:
+      namespace: demo
+      selector: app=data-injection
+      path: /test
+
 local:
   manifests: manifests
 
