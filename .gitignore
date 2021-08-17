@@ -1,5 +1,6 @@
 *.zst
 *.tar.gz
+*.tar
 *.tgz
 .vagrant
 assets/

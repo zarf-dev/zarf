@@ -1,0 +1,1 @@
+This is a sample file to be injected into the cluster.  Normal flow would keep this data gitignored as it would likely be large.

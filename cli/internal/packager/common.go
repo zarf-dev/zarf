@@ -12,6 +12,7 @@ import (
 
 type tempPaths struct {
 	base           string
+	dataInjections string
 	localFiles     string
 	localCharts    string
 	localImage     string
@@ -25,6 +26,7 @@ func createPaths() tempPaths {
 	basePath := utils.MakeTempDir()
 	return tempPaths{
 		base:           basePath,
+		dataInjections: basePath + "/data",
 		localFiles:     basePath + "/files",
 		localCharts:    basePath + "/charts",
 		localImage:     basePath + "/images-local.tar",
@@ -65,7 +67,7 @@ func confirmAction(configPath string, confirm bool, message string) bool {
 
 	// Display prompt if not auto-confirmed
 	if confirm {
-		logrus.Info(message + "ing Zarf package")
+		logrus.Info(message + " Zarf package confirmed")
 	} else {
 		prompt := &survey.Confirm{
 			Message: message + " this Zarf package?",

@@ -15,6 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k8s"
 )
 
 type PKIConfig struct {
@@ -96,16 +97,8 @@ func GeneratePKI(config PKIConfig) {
 	fmt.Println(publicKeyPem)
 }
 
-func InjectServerCert(config PKIConfig) {
-	// Push the certs to the cluster
-	_, err := ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
-	if err != nil {
-		logrus.Warn("Error deleting tls-pem secret")
-	}
-	_, err = ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+config.CertPublicPath, "--key="+config.CertPrivatePath)
-	if err != nil {
-		logrus.Warn("Error creating the tls-pem secret")
-	}
+func InjectServerCert(pkiConfig PKIConfig) {
+	k8s.ReplaceTLSSecret("kube-system", "tls-pem", pkiConfig.CertPublicPath, pkiConfig.CertPrivatePath)
 }
 
 func addCAToTrustStore(caFilePath string) {
