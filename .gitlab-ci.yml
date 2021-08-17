@@ -44,6 +44,7 @@ package:
     reports:
       dotenv: job.env    
     paths:
+      - /root/.docker/config.json
       - build/
 
 e2e:
@@ -64,7 +65,7 @@ e2e:
   resource_group: e2e
   artifacts:
     paths:
-      - build/    
+      - build/
 
 artifact-upload:
   image: amazon/aws-cli
