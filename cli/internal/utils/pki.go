@@ -96,13 +96,13 @@ func GeneratePKI(config PKIConfig) {
 	fmt.Println(publicKeyPem)
 }
 
-func InjectServerCert(config PKIConfig) {
+func InjectServerCert(pkiConfig PKIConfig) {
 	// Push the certs to the cluster
-	_, err := ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
+	_, err := ExecCommand(nil, config.K3sBinary, "kubectl", "-n", "kube-system", "delete", "secret", "tls-pem", "--ignore-not-found")
 	if err != nil {
 		logrus.Warn("Error deleting tls-pem secret")
 	}
-	_, err = ExecCommand(nil, "/usr/local/bin/k3s", "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+config.CertPublicPath, "--key="+config.CertPrivatePath)
+	_, err = ExecCommand(nil, config.K3sBinary, "kubectl", "-n", "kube-system", "create", "secret", "tls", "tls-pem", "--cert="+pkiConfig.CertPublicPath, "--key="+pkiConfig.CertPrivatePath)
 	if err != nil {
 		logrus.Warn("Error creating the tls-pem secret")
 	}

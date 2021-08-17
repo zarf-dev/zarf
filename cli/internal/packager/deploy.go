@@ -126,7 +126,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		if config.IsZarfInitConfig() {
 			utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images-"+assets.Name+".tar")
 		} else {
-			_, err := utils.ExecCommand(nil, "/usr/local/bin/k3s", "ctr", "images", "import", tempPath.localImage)
+			_, err := utils.ExecCommand(nil, config.K3sBinary, "ctr", "images", "import", tempPath.localImage)
 			if err != nil {
 				logrus.Fatal("Unable to import the images into containerd")
 			}

@@ -71,9 +71,9 @@ func createK3sSymlinks() {
 	}
 
 	// Add aliases for k3s
-	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/kubectl")
-	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/ctr")
-	_ = os.Symlink("/usr/local/bin/k3s", "/usr/local/bin/crictl")
+	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/kubectl")
+	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/ctr")
+	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/crictl")
 }
 
 func createService() {
