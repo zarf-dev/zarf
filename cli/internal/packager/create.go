@@ -3,6 +3,7 @@ package packager
 import (
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 func Create(packageName string, confirm bool) {
 	tempPath := createPaths()
+	dataInjections := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 	features := config.GetInitFeatures()
@@ -46,6 +48,14 @@ func Create(packageName string, confirm bool) {
 
 	// Init config ignore remote entries
 	if !config.IsZarfInitConfig() {
+		if len(dataInjections) > 0 {
+			logrus.Info("Loading data injections")
+			for _, data := range dataInjections {
+				destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+				utils.CreatePathAndCopy(data.Source, destinationFile)
+			}
+		}
+
 		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
 			images.PullAll(remoteImageList, tempPath.remoteImage)

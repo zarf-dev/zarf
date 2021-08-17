@@ -12,6 +12,7 @@ import (
 
 type tempPaths struct {
 	base           string
+	dataInjections string
 	localFiles     string
 	localCharts    string
 	localImage     string
@@ -25,6 +26,7 @@ func createPaths() tempPaths {
 	basePath := utils.MakeTempDir()
 	return tempPaths{
 		base:           basePath,
+		dataInjections: basePath + "/data",
 		localFiles:     basePath + "/files",
 		localCharts:    basePath + "/charts",
 		localImage:     basePath + "/images-local.tar",
