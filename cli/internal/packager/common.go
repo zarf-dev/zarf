@@ -67,7 +67,7 @@ func confirmAction(configPath string, confirm bool, message string) bool {
 
 	// Display prompt if not auto-confirmed
 	if confirm {
-		logrus.Info(message + "ing Zarf package")
+		logrus.Info(message + " Zarf package confirmed")
 	} else {
 		prompt := &survey.Confirm{
 			Message: message + " this Zarf package?",
