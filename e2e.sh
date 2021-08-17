@@ -18,6 +18,13 @@ _run() {
     ssh ec2-user@pipeline.zarf.dev "$1"
 }
 
+_send() {
+    >&2 echo
+    >&2 echo
+    >&2 echo -e "💿 ${ORANGE}COPY PACKAGE: ${YELLOW} $1 ${NOCOLOR}"
+    scp "$1" ec2-user@pipeline.zarf.dev:/opt/zarf/$1
+}
+
 _curl() {
     >&2 echo
     >&2 echo
@@ -64,6 +71,19 @@ testAPIEndpoints() {
     _curl "https://zarf-admin:${ZARF_PWD}@pipeline.zarf.dev/monitor/api/org"
 }
 
+testDataInjection() {
+    pushd examples/data-injection
+    PACKAGE="zarf-package-data-injection-demo.tar"
+    ../../build/zarf package create --confirm
+    _send $PACKAGE
+    _run "sudo zarf package deploy $PACKAGE --confirm"
+    # Test to confirm the root file was placed
+    _run "sudo kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
+    # Test to confirm the subdirectory file was placed
+    _run "sudo kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
+    popd
+}
+
 beforeAll
 
 # Get the admin credentials 
@@ -84,3 +104,6 @@ sleep 30
 
 # Re-validate API endpoints with new PKI chain
 testAPIEndpoints
+
+# Run the data injection test
+testDataInjection
