@@ -2,6 +2,7 @@ package packager
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,7 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	// Load the config from the extracted archive zarf-config.yaml
 	config.DynamicConfigLoad(tempPath.base + "/zarf-config.yaml")
 
+	dataInjectionList := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 
@@ -50,6 +52,27 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 
 	// Don't process remote for init config packages
 	if !config.IsZarfInitConfig() {
+		if len(dataInjectionList) > 0 {
+			logrus.Info("Loading data injections")
+			for _, data := range dataInjectionList {
+				sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+				podName, err := utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "get", "pod", "--selector="+data.Target.Selector, "-o", "jsonpath={.items[0].metadata.name}")
+				if err != nil {
+					logrus.Warn("Error selecting the pod for data injection")
+				} else {
+					destination := data.Target.Path
+					if destination == "/"+filepath.Base(destination) {
+						// Handle top-level directory targets
+						destination = "/"
+					}
+					_, err = utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "cp", sourceFile, podName+":"+destination)
+					if err != nil {
+						logrus.Warn("Error copying data into the pod")
+					}
+				}
+			}
+		}
+
 		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
 			// Push all images the images.tar file based on the zarf-config.yaml list
