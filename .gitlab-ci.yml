@@ -44,7 +44,6 @@ package:
     reports:
       dotenv: job.env    
     paths:
-      - /root/.docker/config.json
       - build/
 
 e2e:
@@ -53,6 +52,9 @@ e2e:
   needs:
     - job: package
       artifacts: true
+  tags:
+    - bigbang
+    - packages      
   before_script:
     - yum install openssh-clients -y
     - eval $(ssh-agent -s)
@@ -60,6 +62,7 @@ e2e:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
+    - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
   script:
     - ./e2e.sh
   resource_group: e2e
