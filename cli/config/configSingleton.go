@@ -54,6 +54,7 @@ type ZarfData struct {
 	}
 }
 
+const K3sBinary = "/usr/local/bin/k3s"
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
 const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
