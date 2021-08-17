@@ -1,17 +1,17 @@
 package packager
 
 import (
-	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/helm"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/images"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
@@ -89,37 +89,12 @@ func addLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		logrus.Info("Loading static helm charts")
 		utils.CreateDirectory(tempPath.localCharts, 0700)
 		for _, chart := range assets.Charts {
-			chartTarballName := tempPath.localCharts + "/" + chart.Name + "-" + chart.Version + ".tgz"
-			chartYaml := string(utils.Download(chart.Url + "/index.yaml"))
-			yamlPath, _ := yaml.PathString("$.entries." + chart.Name + "[*]")
-
-			var chartTarballUrl string
-			var chartData []struct {
-				Name    string   `yaml:"name"`
-				Urls    []string `yaml:"urls"`
-				Version string   `yaml:"version"`
+			isGitURL, _ := regexp.MatchString("\\.git$", chart.Url)
+			if isGitURL {
+				helm.DownloadChartFromGit(chart, tempPath.localCharts)
+			} else {
+				helm.DownloadPublishedChart(chart, tempPath.localCharts)
 			}
-
-			if err := yamlPath.Read(strings.NewReader(chartYaml), &chartData); err != nil {
-				logrus.WithField("chart", chart.Name).Fatal("Unable to process the chart data")
-			}
-
-			for _, match := range chartData {
-				if match.Version == chart.Version {
-					parsedUrl, err := url.Parse(match.Urls[0])
-					if err != nil {
-						logrus.Warn("Invalid chart URL detected")
-					}
-					if !parsedUrl.IsAbs() {
-						patchUrl, _ := url.Parse(chart.Url)
-						parsedUrl.Host = patchUrl.Host
-						parsedUrl.Scheme = patchUrl.Scheme
-					}
-					chartTarballUrl = parsedUrl.String()
-					break
-				}
-			}
-			utils.DownloadToFile(chartTarballUrl, chartTarballName)
 		}
 	}
 
