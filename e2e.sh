@@ -52,6 +52,14 @@ beforeAll() {
     _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging,utility-cluster"
 }
 
+afterAll() {
+    # Erase any prior cluster
+    _run "sudo zarf destroy --confirm"
+
+    # Clean the working directory
+    _run "rm -fr \*"
+}
+
 loadZarfCA() {
     # Get the ca file for curl to trust 
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
@@ -78,9 +86,9 @@ testDataInjection() {
     _send $PACKAGE
     _run "sudo zarf package deploy $PACKAGE --confirm"
     # Test to confirm the root file was placed
-    _run "sudo kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
+    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
     # Test to confirm the subdirectory file was placed
-    _run "sudo kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
+    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
     popd
 }
 
@@ -107,3 +115,6 @@ testAPIEndpoints
 
 # Run the data injection test
 testDataInjection
+
+# Perform final cleanup
+afterAll
