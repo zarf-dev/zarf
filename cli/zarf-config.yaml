@@ -4,6 +4,15 @@ metadata:
   description: "Test package for zarf"
   uncompressed: true
 
+local:
+  charts:
+    - name: docker-registry
+      url: https://helm.twun.io
+      version: 1.10.1
+    - name: gatekeeper
+      url: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
+      version: 3.5.1-bb.10
+
 remote:
   # helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
   # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.12.0
