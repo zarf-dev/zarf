@@ -3,7 +3,7 @@ module repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.15 // indirect
+	github.com/AlecAivazis/survey/v2 v2.2.15
 	github.com/containerd/containerd v1.5.2
 	github.com/fatih/color v1.12.0
 	github.com/go-git/go-git/v5 v5.3.0
@@ -15,5 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
+	k8s.io/api v0.21.2
+	k8s.io/apimachinery v0.21.2
+	k8s.io/client-go v0.21.2
 )
