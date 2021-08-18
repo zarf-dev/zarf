@@ -10,21 +10,20 @@ import (
 
 const onlineRemoteName = "online-upstream"
 
-func DownloadRepoToTemp(gitUrl string, tag string) string {
+func DownloadRepoToTemp(gitUrl string) string {
 	path := utils.MakeTempDir()
-	pull(gitUrl, tag, path)
+	pull(gitUrl, path)
 	return path
 }
 
-func Pull(gitUrl string, targetFolder string, tag string) {
+func Pull(gitUrl string, targetFolder string) {
 	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
-	pull(gitUrl, tag, path)
+	pull(gitUrl, path)
 }
 
-func pull(gitUrl string, tag string, targetFolder string) {
+func pull(gitUrl string, targetFolder string) {
 	logContext := logrus.WithFields(logrus.Fields{
 		"Remote": gitUrl,
-		"Tag":    tag,
 	})
 	logContext.Info("Processing git repo")
 
