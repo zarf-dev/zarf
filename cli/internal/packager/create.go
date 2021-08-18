@@ -69,7 +69,7 @@ func Create(packageName string, confirm bool) {
 				if len(matches) < 2 {
 					logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
 				}
-				git.Pull(matches[0], tempPath.remoteRepos, matches[1])
+				git.Pull(matches[0], tempPath.remoteRepos)
 			}
 		}
 	}
