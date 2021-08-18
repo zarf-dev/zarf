@@ -16,8 +16,9 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Create(packageName string, confirm bool) {
+func Create(confirm bool) {
 	tempPath := createPaths()
+	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
@@ -46,8 +47,11 @@ func Create(packageName string, confirm bool) {
 		addLocalAssets(featurePath, feature)
 	}
 
-	// Init config ignore remote entries
-	if !config.IsZarfInitConfig() {
+	if config.IsZarfInitConfig() {
+		// Override the package name for init packages
+		packageName = config.PackageInitName
+	} else {
+		// Init config ignore remote entries
 		if len(dataInjections) > 0 {
 			logrus.Info("Loading data injections")
 			for _, data := range dataInjections {
