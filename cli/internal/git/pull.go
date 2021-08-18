@@ -12,12 +12,8 @@ const onlineRemoteName = "online-upstream"
 
 func DownloadRepoToTemp(gitUrl string, tag string) string {
 	path := utils.MakeTempDir()
-	success := pull(gitUrl, tag, path)
-	if success {
-		return path
-	} else {
-		return ""
-	}
+	pull(gitUrl, tag, path)
+	return path
 }
 
 func Pull(gitUrl string, targetFolder string, tag string) {
@@ -25,7 +21,7 @@ func Pull(gitUrl string, targetFolder string, tag string) {
 	pull(gitUrl, tag, path)
 }
 
-func pull(gitUrl string, tag string, targetFolder string) bool {
+func pull(gitUrl string, tag string, targetFolder string) {
 	logContext := logrus.WithFields(logrus.Fields{
 		"Remote": gitUrl,
 		"Tag":    tag,
@@ -47,10 +43,8 @@ func pull(gitUrl string, tag string, targetFolder string) bool {
 	if err == git.ErrRepositoryAlreadyExists {
 		logContext.Info("Repo already cloned")
 	} else if err != nil {
-		logContext.Warn("Not a valid git repo or unable to clone")
-		return false
+		logContext.Fatal("Not a valid git repo or unable to clone")
 	}
 
 	logContext.Info("Git repo synced")
-	return true
 }
