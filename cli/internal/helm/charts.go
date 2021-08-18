@@ -19,8 +19,14 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 
 	logContext.Info("Processing git-based helm chart")
 	client := action.NewPackage()
-	tempPath := git.DownloadRepoToTemp(chart.Url, chart.Version)
 
+	// Get the git repo
+	tempPath := git.DownloadRepoToTemp(chart.Url)
+
+	// Switch to the correct tag
+	git.CheckoutTag(tempPath, chart.Version)
+
+	// Tell helm where to save the archive and create the package
 	client.Destination = destination
 	client.Run(tempPath+"/chart", nil)
 
