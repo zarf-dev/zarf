@@ -127,7 +127,7 @@ _run "sudo /usr/local/bin/k9s info"
 testAPIEndpoints
 
 # Remove the top-level ingress, hack until we parallize these tests
-_run "sudo /usr/local/bin/kubectl kubectl -n git delete ingress git-ingress"
+_run "sudo /usr/local/bin/kubectl -n git delete ingress git-ingress"
 
 #Test Zarf PKI Regenerate
 _run "sudo zarf pki regenerate --host=pipeline.zarf.dev"
