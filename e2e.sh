@@ -92,6 +92,16 @@ testDataInjection() {
     popd
 }
 
+testGitBasedHelmChart() {
+    pushd examples/single-big-bang-package
+    PACKAGE="zarf-package-big-bang-single-package-demo.tar.zst"
+    _send $PACKAGE
+    _run "sudo zarf package deploy $PACKAGE --confirm"
+    # Test to confirm the Twistlock Console was deployed
+    _curl "https://pipeline.zarf.dev/api/v1/settings/initialized?project=Central+Console"
+    popd
+}
+
 beforeAll
 
 # Get the admin credentials 
@@ -115,6 +125,9 @@ testAPIEndpoints
 
 # Run the data injection test
 testDataInjection
+
+# Run the helm chart tests for git-based charts (Big Bang)
+testGitBasedHelmChart
 
 # Perform final cleanup
 afterAll
