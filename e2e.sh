@@ -32,6 +32,11 @@ _curl() {
     curl -sfSL --cacert zarf-ca.crt --retry 15 --retry-connrefused --retry-delay 10 "$1"
 }
 
+_sleep() {
+    echo -e "${ORANGE}Sleeping for $1 seconds${NOCOLOR}"
+    sleep $1
+}
+
 beforeAll() {
     # Clean the working directory
     _run "rm -fr \*"
@@ -49,10 +54,7 @@ beforeAll() {
     _run "sudo zarf destroy --confirm"
 
     # Launch the utility cluster with logging and management
-    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging,utility-cluster"
-
-    # Add a delay here since we don't have a reliable way to wait for everything and curl can throw an error on a 404
-    sleep 15
+    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging"
 }
 
 afterAll() {
@@ -66,6 +68,7 @@ afterAll() {
 loadZarfCA() {
     # Get the ca file for curl to trust 
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
+    _sleep 15
 }
 
 testAPIEndpoints() {
@@ -83,27 +86,32 @@ testAPIEndpoints() {
 }
 
 testDataInjection() {
+    # Create the package
     pushd examples/data-injection
     PACKAGE="zarf-package-data-injection-demo.tar"
     ../../build/zarf package create --confirm
     _send $PACKAGE
+    popd
+    # Deploy the package
     _run "sudo zarf package deploy $PACKAGE --confirm"
     # Test to confirm the root file was placed
     _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
     # Test to confirm the subdirectory file was placed
     _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
-    popd
 }
 
 testGitBasedHelmChart() {
+    # Create the package
     pushd examples/single-big-bang-package
     PACKAGE="zarf-package-big-bang-single-package-demo.tar.zst"
     ../../build/zarf package create --confirm
     _send $PACKAGE
+    popd
+    # Deploy the package
     _run "sudo zarf package deploy $PACKAGE --confirm"
+    _sleep 30
     # Test to confirm the Twistlock Console was deployed
     _curl "https://pipeline.zarf.dev/api/v1/settings/initialized?project=Central+Console"
-    popd
 }
 
 beforeAll
@@ -117,15 +125,14 @@ _run "sudo /usr/local/bin/k9s info"
 # Test utility cluster and monitoring components are wup
 testAPIEndpoints
 
+# Remove the top-level ingress, hack until we parallize these tests
+_run "sudo /usr/local/bin/kubectl kubectl -n git delete ingress git-ingress"
+
 #Test Zarf PKI Regenerate
 _run "sudo zarf pki regenerate --host=pipeline.zarf.dev"
 
-# Little janky, but rolling certs in traefik takes a bit to load
-echo -e "${ORANGE}Sleeping for 30 seconds to wait for traefik TLS rollover${NOCOLOR}"
-sleep 30
-
-# Re-validate API endpoints with new PKI chain
-testAPIEndpoints
+# Update the CA first
+loadZarfCA
 
 # Run the data injection test
 testDataInjection
