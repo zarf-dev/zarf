@@ -30,10 +30,14 @@ func pull(gitUrl string, targetFolder string) {
 	gitCred := FindAuthForHost(gitUrl)
 
 	cloneOptions := &git.CloneOptions{
-		Auth:       &gitCred.Auth,
 		URL:        gitUrl,
 		Progress:   os.Stdout,
 		RemoteName: onlineRemoteName,
+	}
+
+	// Gracefully handle no git creds on the system (like our CI/CD)
+	if gitCred.Auth.Username != "" {
+		cloneOptions.Auth = &gitCred.Auth
 	}
 
 	// Clone the given repo
