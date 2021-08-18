@@ -68,7 +68,7 @@ afterAll() {
 loadZarfCA() {
     # Get the ca file for curl to trust 
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
-    _sleep 15
+    _sleep 30
 }
 
 testAPIEndpoints() {
