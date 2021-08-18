@@ -54,7 +54,9 @@ beforeAll() {
     _run "sudo zarf destroy --confirm"
 
     # Launch the utility cluster with logging and management
-    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging"
+    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging,utility-cluster"
+
+    _sleep 30
 }
 
 afterAll() {
@@ -68,7 +70,6 @@ afterAll() {
 loadZarfCA() {
     # Get the ca file for curl to trust 
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
-    _sleep 30
 }
 
 testAPIEndpoints() {
