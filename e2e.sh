@@ -129,7 +129,7 @@ testAPIEndpoints
 # Remove the top-level ingress, hack until we parallize these tests
 _run "sudo /usr/local/bin/kubectl -n git delete ingress git-ingress"
 
-#Test Zarf PKI Regenerate
+# Test Zarf PKI Regenerate, final testing doesn't occur until after loadZarfCA and testGitBasedHelmChart
 _run "sudo zarf pki regenerate --host=pipeline.zarf.dev"
 
 # Update the CA first
