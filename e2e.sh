@@ -50,6 +50,9 @@ beforeAll() {
 
     # Launch the utility cluster with logging and management
     _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging,utility-cluster"
+
+    # Add a delay here since we don't have a reliable way to wait for everything and curl can throw an error on a 404
+    sleep 15
 }
 
 afterAll() {
