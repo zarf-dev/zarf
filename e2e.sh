@@ -98,6 +98,7 @@ testDataInjection() {
 testGitBasedHelmChart() {
     pushd examples/single-big-bang-package
     PACKAGE="zarf-package-big-bang-single-package-demo.tar.zst"
+    ../../build/zarf package create --confirm
     _send $PACKAGE
     _run "sudo zarf package deploy $PACKAGE --confirm"
     # Test to confirm the Twistlock Console was deployed
