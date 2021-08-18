@@ -19,6 +19,8 @@ compile:
   stage: build
   image: golang:1.16
   script:
+    # Need to see what options we have
+    - curl --help 
     - make build-cli
   artifacts:
     paths:
