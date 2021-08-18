@@ -21,12 +21,7 @@ var packageCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create an update package to push to the utility server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
-		if config.IsZarfInitConfig() {
-			packager.Create(config.PackageInitName, confirmCreate)
-		} else {
-			packageName := config.GetPackageName()
-			packager.Create(packageName, confirmCreate)
-		}
+		packager.Create(confirmCreate)
 	},
 }
 
