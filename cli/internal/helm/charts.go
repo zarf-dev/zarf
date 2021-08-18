@@ -1,19 +1,23 @@
 package helm
 
 import (
-	"net/url"
 	"os"
-	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 func DownloadChartFromGit(chart config.ZarfChart, destination string) {
+	logContext := logrus.WithFields(logrus.Fields{
+		"Chart":   chart.Name,
+		"URL":     chart.Url,
+		"Version": chart.Version,
+	})
+
+	logContext.Info("Processing git-based helm chart")
 	client := action.NewPackage()
 	tempPath := git.DownloadRepoToTemp(chart.Url, chart.Version)
 
@@ -24,35 +28,20 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 }
 
 func DownloadPublishedChart(chart config.ZarfChart, destination string) {
-	chartTarballName := destination + "/" + chart.Name + "-" + chart.Version + ".tgz"
-	chartYaml := string(utils.Download(chart.Url + "/index.yaml"))
-	yamlPath, _ := yaml.PathString("$.entries." + chart.Name + "[*]")
+	logContext := logrus.WithFields(logrus.Fields{
+		"Chart":   chart.Name,
+		"URL":     chart.Url,
+		"Version": chart.Version,
+	})
 
-	var chartTarballUrl string
-	var chartData []struct {
-		Name    string   `yaml:"name"`
-		Urls    []string `yaml:"urls"`
-		Version string   `yaml:"version"`
+	logContext.Info("Processing published helm chart")
+	client := action.NewPull()
+	client.Settings = cli.New()
+	client.DestDir = destination
+	client.Version = chart.Version
+	client.RepoURL = chart.Url
+	_, err := client.Run(chart.Name)
+	if err != nil {
+		logContext.Fatal("Unable to load the helm chart")
 	}
-
-	if err := yamlPath.Read(strings.NewReader(chartYaml), &chartData); err != nil {
-		logrus.WithField("chart", chart.Name).Fatal("Unable to process the chart data")
-	}
-
-	for _, match := range chartData {
-		if match.Version == chart.Version {
-			parsedUrl, err := url.Parse(match.Urls[0])
-			if err != nil {
-				logrus.Warn("Invalid chart URL detected")
-			}
-			if !parsedUrl.IsAbs() {
-				patchUrl, _ := url.Parse(chart.Url)
-				parsedUrl.Host = patchUrl.Host
-				parsedUrl.Scheme = patchUrl.Scheme
-			}
-			chartTarballUrl = parsedUrl.String()
-			break
-		}
-	}
-	utils.DownloadToFile(chartTarballUrl, chartTarballName)
 }
