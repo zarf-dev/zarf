@@ -18,15 +18,12 @@ import (
 )
 
 func Deploy(packageName string, confirm bool, featureRequest string) {
+	// Prevent disk pressure on smaller systems due to leaking temp files
+	_ = os.RemoveAll("/tmp/zarf*")
 	tempPath := createPaths()
 
 	if utils.InvalidPath(packageName) {
 		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
-	}
-
-	// Don't continue unless the user says so
-	if !confirmDeployment(packageName, tempPath, confirm) {
-		os.Exit(0)
 	}
 
 	logrus.Info("Extracting the package, this may take a few moments")
@@ -35,6 +32,15 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	err := archiver.Unarchive(packageName, tempPath.base)
 	if err != nil {
 		logrus.Fatal("Unable to extract the package contents")
+	}
+
+	configPath := tempPath.base + "/zarf-config.yaml"
+	confirm = confirmAction(configPath, confirm, "Deploy")
+
+	// Don't continue unless the user says so
+	if !confirm {
+		cleanup(tempPath)
+		os.Exit(0)
 	}
 
 	// Load the config from the extracted archive zarf-config.yaml
@@ -70,6 +76,9 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 						logrus.Warn("Error copying data into the pod")
 					}
 				}
+				}
+				// Cleanup now to reduce disk pressure
+				_ = os.RemoveAll(sourceFile)
 			}
 		}
 
@@ -77,6 +86,8 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 			logrus.Info("Loading images for remote install")
 			// Push all images the images.tar file based on the zarf-config.yaml list
 			images.PushAll(tempPath.remoteImage, remoteImageList, config.ZarfLocal)
+			// Cleanup now to reduce disk pressure
+			_ = os.RemoveAll(tempPath.remoteImage)
 		}
 
 		if len(remoteRepoList) > 0 {
@@ -110,15 +121,6 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	cleanup(tempPath)
 }
 
-func confirmDeployment(packageName string, tempPath tempPaths, confirm bool) bool {
-	// Extract the config file
-	_ = archiver.Extract(packageName, "zarf-config.yaml", tempPath.base)
-	configPath := tempPath.base + "/zarf-config.yaml"
-	confirm = confirmAction(configPath, confirm, "Deploy")
-	_ = os.Remove(configPath)
-	return confirm
-}
-
 func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Name != "" {
 		// Only log this for named features
@@ -133,6 +135,8 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			if err != nil {
 				logrus.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
 			}
+			// Cleanup now to reduce disk pressure
+			_ = os.RemoveAll(sourceFile)
 		}
 	}
 
@@ -150,6 +154,8 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images-"+assets.Name+".tar")
 		} else {
 			_, err := utils.ExecCommand(nil, config.K3sBinary, "ctr", "images", "import", tempPath.localImage)
+			// Cleanup now to reduce disk pressure
+			_ = os.RemoveAll(tempPath.localImage)
 			if err != nil {
 				logrus.Fatal("Unable to import the images into containerd")
 			}
