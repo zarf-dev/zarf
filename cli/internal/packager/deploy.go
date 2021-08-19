@@ -61,9 +61,11 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	if !config.IsZarfInitConfig() {
 		if len(dataInjectionList) > 0 {
 			logrus.Info("Loading data injections")
+			injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
+			utils.WriteFile(injectionCompletionMarker, []byte("🦄"))
 			for _, data := range dataInjectionList {
 				sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-				pods := k8s.WaitForPods(data.Target.Namespace, data.Target.Selector)
+				pods := k8s.WaitForPodsAndContainers(data.Target)
 
 				for _, pod := range pods {
 					destination := data.Target.Path
@@ -71,11 +73,25 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 						// Handle top-level directory targets
 						destination = "/"
 					}
-					_, err = utils.ExecCommand(nil, config.K3sBinary, "kubectl", "-n", data.Target.Namespace, "cp", sourceFile, pod+":"+destination)
+					cpPodExecArgs := []string{"kubectl", "-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
+
+					if data.Target.Container != "" {
+						// Append the container args if they are specified
+						cpPodExecArgs = append(cpPodExecArgs, "-c", data.Target.Container)
+					}
+
+					_, err = utils.ExecCommand(nil, config.K3sBinary, cpPodExecArgs...)
 					if err != nil {
 						logrus.Warn("Error copying data into the pod")
+					} else {
+						// Leave a marker in the target container for pods to track the sync action
+						cpPodExecArgs[4] = injectionCompletionMarker
+						cpPodExecArgs[5] = pod + ":" + data.Target.Path
+						_, err = utils.ExecCommand(nil, config.K3sBinary, cpPodExecArgs...)
+						if err != nil {
+							logrus.Warn("Error saving the zarf sync completion file")
+						}
 					}
-				}
 				}
 				// Cleanup now to reduce disk pressure
 				_ = os.RemoveAll(sourceFile)
