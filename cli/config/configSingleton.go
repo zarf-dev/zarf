@@ -45,13 +45,15 @@ type ZarfMetatdata struct {
 	Uncompressed bool
 }
 
+type ZarfContainerTarget struct {
+	Namespace string
+	Selector  string
+	Container string
+	Path      string
+}
 type ZarfData struct {
 	Source string
-	Target struct {
-		Namespace string
-		Selector  string
-		Path      string
-	}
+	Target ZarfContainerTarget
 }
 
 const K3sBinary = "/usr/local/bin/k3s"
