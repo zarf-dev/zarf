@@ -1,3 +1,7 @@
+# remove all zarf pacakges recursively
+remove-packages:
+	find . -type f -name 'zarf-package*' -delete
+
 # usage: make test OS=ubuntu
 test:
 	vagrant destroy -f
