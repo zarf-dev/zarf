@@ -10,6 +10,7 @@ import (
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/images"
@@ -141,6 +142,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Name != "" {
 		// Only log this for named features
 		logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+	} else {
 		assets.Name = "core"
 	}
 	if len(assets.Files) > 0 {
@@ -158,9 +160,9 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 
 	if len(assets.Charts) > 0 {
 		logrus.Info("Loading charts for local install")
-		for _, chart := range assets.Charts {
-			target := "/" + chart.Name + "-" + chart.Version + ".tgz"
-			utils.CreatePathAndCopy(tempPath.localCharts+target, config.K3sChartPath+target)
+		for _, chart := range utils.RecursiveFileList(tempPath.localCharts) {
+			target := filepath.Base(chart)
+			utils.CreatePathAndCopy(chart, config.K3sChartPath+"/"+target)
 		}
 	}
 
@@ -181,17 +183,32 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Manifests != "" {
 		logrus.Info("Loading manifests for local install, this may take a minute or so to reflect in k3s")
 
-		gitSecret := git.GetOrCreateZarfSecret("unknown-host.localhost")
+		gitSecret := git.GetOrCreateZarfSecret()
 
 		// Get a list of all the k3s manifest files
 		manifests := utils.RecursiveFileList(tempPath.localManifests)
+		manifestMap := make(map[string]string)
 
 		// Iterate through all the manifests and replace any ZARF_SECRET values
 		for _, manifest := range manifests {
 			logrus.WithField("path", manifest).Info("Processing manifest file")
 			utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
+			contents, _ := k8s.ReadFile(manifest)
+			manifestMap[manifest] = string(contents)
 		}
 
-		utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
+		if config.IsZarfInitConfig() {
+			// Init config will still require seeding into k3s before boto for now
+			utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
+		} else {
+			// Not an init config, so use helm to deploy manifests
+			_, sortedManifests, err := releaseutil.SortManifests(manifestMap, nil, releaseutil.InstallOrder)
+			if err != nil {
+				logrus.Fatal("Problem encountered sorting K8s manifests")
+			}
+			for _, manifest := range sortedManifests {
+				k8s.ApplyManifest(manifest.Name)
+			}
+		}
 	}
 }

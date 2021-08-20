@@ -14,7 +14,7 @@ const waitLimit = 30
 
 func WaitForPodsAndContainers(target config.ZarfContainerTarget) []string {
 
-	clientSet := connect()
+	clientSet, _ := connect()
 	logContext := logrus.WithFields(logrus.Fields{
 		"Namespace": target.Namespace,
 		"Selector":  target.Selector,

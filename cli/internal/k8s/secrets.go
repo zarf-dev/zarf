@@ -12,7 +12,7 @@ import (
 
 func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
 
-	clientSet := connect()
+	clientSet, _ := connect()
 	logContext := logrus.WithFields(logrus.Fields{
 		"Namespace": namespace,
 		"Name":      name,
@@ -27,11 +27,11 @@ func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath st
 		logContext.Warn("Error deleting the secret")
 	}
 
-	tlsCert, err := readFile(certPath)
+	tlsCert, err := ReadFile(certPath)
 	if err != nil {
 		logContext.Fatal("Unable to read the TLS public certificate")
 	}
-	tlsKey, err := readFile(keyPath)
+	tlsKey, err := ReadFile(keyPath)
 	if err != nil {
 		logContext.Fatal("Unable to read the TLS private key")
 	}

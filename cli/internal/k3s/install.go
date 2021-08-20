@@ -20,9 +20,9 @@ func Install(options InstallOptions) {
 
 	utils.RunPreflightChecks()
 
-	logrus.Info("Installing K3s")
-
 	packager.Deploy(config.PackageInitName, options.Confirmed, options.Features)
+	
+	logrus.Info("Installing K3s")
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {

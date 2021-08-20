@@ -5,30 +5,35 @@ import (
 	"io/ioutil"
 
 	"github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/kube"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
-func connect() *kubernetes.Clientset {
-	kubeconfig := "/root/.kube/config"
+func connect() (*kubernetes.Clientset, kube.Interface) {
+	actionConfig := new(action.Configuration)
+	settings := cli.New()
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		logrus.Fatal("Unable to connect to the K8s cluster", err.Error())
+	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), "", debug); err != nil {
+		logrus.Fatal("Unable to initialize the K8s client")
 	}
 
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	conf, err := actionConfig.RESTClientGetter.ToRESTConfig()
 	if err != nil {
-		logrus.Fatal("Unable to connect to the K8s cluster", err.Error())
+		logrus.Fatal("Unable to generate K8s client config")
 	}
 
-	return clientset
+	clientset, err := kubernetes.NewForConfig(conf)
+	if err != nil {
+		logrus.Fatal("Unable to generate the K8s client connection")
+	}
+
+	return clientset, actionConfig.KubeClient
 }
 
-// readFile just reads a file into a byte array.
-func readFile(file string) ([]byte, error) {
+// ReadFile just reads a file into a byte array.
+func ReadFile(file string) ([]byte, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return []byte{}, fmt.Errorf("cannot read file %v, %v", file, err)
