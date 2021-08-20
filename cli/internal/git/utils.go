@@ -10,6 +10,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 type Credential struct {
@@ -53,10 +54,7 @@ func credentialParser() []Credential {
 	credentialsPath := credentialFilePath()
 	var credentials []Credential
 
-	credentialsFile, err := os.Open(credentialsPath)
-	if err != nil {
-		logrus.Info(credentialsPath + " file not found")
-	}
+	credentialsFile, _ := os.Open(credentialsPath)
 	defer credentialsFile.Close()
 
 	scanner := bufio.NewScanner(credentialsFile)
@@ -74,10 +72,6 @@ func credentialParser() []Credential {
 			},
 		}
 		credentials = append(credentials, credential)
-	}
-
-	if err := scanner.Err(); err != nil {
-		logrus.Warn("Error parsing git credentials file")
 	}
 
 	return credentials
@@ -102,7 +96,24 @@ func FindAuthForHost(baseUrl string) Credential {
 	return matchedCred
 }
 
-func CredentialsGenerator(host string, username string, password string) {
+func GetOrCreateZarfSecret() string {
+	var gitSecret string
+
+	credentials := FindAuthForHost(config.ZarfLocal)
+
+	if (credentials == Credential{}) {
+		gitSecret = CredentialsGenerator()
+	} else {
+		gitSecret = credentials.Auth.Password
+	}
+
+	return gitSecret
+}
+
+func CredentialsGenerator() string {
+
+	// Get a random secret for use in the cluster
+	gitSecret := utils.RandomString(28)
 	credentialsPath := credentialFilePath()
 
 	// Prevent duplicates by purging the git creds file~
@@ -114,20 +125,14 @@ func CredentialsGenerator(host string, username string, password string) {
 	}
 	defer credentialsFile.Close()
 
-	// This allows the git cli access to gitea as root
-	customUrl := url.URL{
-		Scheme: "https",
-		User:   url.UserPassword(username, password),
-		Host:   host,
-	}
 	// Needed by zarf to do repo pushes
 	zarfUrl := url.URL{
 		Scheme: "https",
-		User:   url.UserPassword(username, password),
+		User:   url.UserPassword(config.ZarfGitUser, gitSecret),
 		Host:   config.ZarfLocal,
 	}
 
-	credentialsText := customUrl.String() + "\n" + zarfUrl.String() + "\n"
+	credentialsText := zarfUrl.String() + "\n"
 
 	// Write the entry to the file
 	_, err = credentialsFile.WriteString(credentialsText)
@@ -140,4 +145,6 @@ func CredentialsGenerator(host string, username string, password string) {
 	if err != nil {
 		logrus.Fatal("Unable to update the git credentials file")
 	}
+
+	return gitSecret
 }

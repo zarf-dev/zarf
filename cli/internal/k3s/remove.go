@@ -11,6 +11,9 @@ func RemoveAll() {
 
 	killScript := []byte(`
 #!/bin/sh
+
+echo -e '\033[0;31m'
+
 for bin in /var/lib/rancher/k3s/data/**/bin/; do
 	[ -d $bin ] && export PATH=$PATH:$bin:$bin/aux
 done
@@ -103,6 +106,8 @@ rm -f /usr/local/bin/crictl
 rm -f /usr/local/bin/kubectl
 rm -f /usr/local/bin/k9s
 rm -fr zarf-pki
+
+echo -e '\033[0m'
 `)
 
 	tmpPathKillScript := utils.MakeTempDir() + "/kill-k3s.sh"
