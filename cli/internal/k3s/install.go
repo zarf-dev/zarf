@@ -34,27 +34,15 @@ func Install(options InstallOptions) {
 
 	createK3sSymlinks()
 
-	// Get a random secret for use in the cluster
-	gitSecret := utils.RandomString(28)
-
-	// Get a list of all the k3s manifest files
-	manifests := utils.RecursiveFileList(config.K3sManifestPath)
-
-	// Iterate through all the manifests and replace any ZARF_SECRET values
-	for _, manifest := range manifests {
-		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
-	}
-
-	// Add the secret to git-credentials for push to gitea
-	git.CredentialsGenerator(options.PKI.Host, "zarf-git-user", gitSecret)
-
 	utils.HandlePKI(options.PKI)
+
+	gitSecret := git.GetOrCreateZarfSecret()
 
 	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
-		"Gitea Username":   "zarf-git-user",
-		"Grafana Username": "zarf-admin",
-		"Password (all)":   gitSecret,
+		"Gitea Username (if installed)": config.ZarfGitUser,
+		"Grafana Username":              "zarf-admin",
+		"Password (all)":                gitSecret,
 	}).Warn("Credentials stored in ~/.git-credentials")
 }
 

@@ -63,6 +63,7 @@ const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
 const ZarfLocal = "zarf.localhost"
+const ZarfGitUser = "zarf-git-user"
 
 var instance *singleton
 var once sync.Once
