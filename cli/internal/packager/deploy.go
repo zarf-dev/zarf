@@ -181,7 +181,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Manifests != "" {
 		logrus.Info("Loading manifests for local install, this may take a minute or so to reflect in k3s")
 
-		gitSecret := git.GetOrCreateZarfSecret("unknown-host.localhost")
+		gitSecret := git.GetOrCreateZarfSecret()
 
 		// Get a list of all the k3s manifest files
 		manifests := utils.RecursiveFileList(tempPath.localManifests)
