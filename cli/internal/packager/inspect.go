@@ -17,9 +17,9 @@ func Inspect(packageName string) {
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, "zarf-config.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, "zarf.yaml", tempPath.base)
 
-	content, err := ioutil.ReadFile(tempPath.base + "/zarf-config.yaml")
+	content, err := ioutil.ReadFile(tempPath.base + "/zarf.yaml")
 	if err != nil {
 		logrus.Fatal(err)
 	}
