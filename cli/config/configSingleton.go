@@ -16,7 +16,7 @@ type singleton struct {
 }
 
 type ZarfFile struct {
-	Url        string
+	Source     string
 	Shasum     string
 	Target     string
 	Executable bool
