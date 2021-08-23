@@ -40,7 +40,7 @@ features:
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     default: true
-    manifests: manifests/logging
+    manifests: assets/manifests/logging
     images:
       - grafana/loki:2.2.0
       - grafana/promtail:2.1.0
@@ -53,7 +53,7 @@ features:
 
   - name: utility-cluster
     description: "Add Gitea and an image registry for serving gitops-based clusters in an airgap"
-    manifests: manifests/utility
+    manifests: assets/manifests/utility
     images:
       - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
       - gitea/gitea:1.13.7

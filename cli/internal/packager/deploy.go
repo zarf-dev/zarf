@@ -141,6 +141,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if assets.Name != "" {
 		// Only log this for named features
 		logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+	} else {
 		assets.Name = "core"
 	}
 	if len(assets.Files) > 0 {
