@@ -3,7 +3,6 @@
 *.tar
 *.tgz
 .vagrant
-assets/
 zarf
 build
 src/.idea/
