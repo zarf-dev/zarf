@@ -107,7 +107,11 @@ func addLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		_ = utils.CreateDirectory(tempPath.localFiles, 0700)
 		for index, file := range assets.Files {
 			destinationFile := tempPath.localFiles + "/" + strconv.Itoa(index)
-			utils.DownloadToFile(file.Url, destinationFile)
+			if utils.IsUrl(file.Source) {
+				utils.DownloadToFile(file.Source, destinationFile)
+			} else {
+				utils.CreatePathAndCopy(file.Source, destinationFile)
+			}
 			if file.Executable {
 				_ = os.Chmod(destinationFile, 0700)
 			} else {
