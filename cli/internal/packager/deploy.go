@@ -34,7 +34,7 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 		logrus.Fatal("Unable to extract the package contents")
 	}
 
-	configPath := tempPath.base + "/zarf-config.yaml"
+	configPath := tempPath.base + "/zarf.yaml"
 	confirm = confirmAction(configPath, confirm, "Deploy")
 
 	// Don't continue unless the user says so
@@ -43,8 +43,8 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 		os.Exit(0)
 	}
 
-	// Load the config from the extracted archive zarf-config.yaml
-	config.DynamicConfigLoad(tempPath.base + "/zarf-config.yaml")
+	// Load the config from the extracted archive zarf.yaml
+	config.DynamicConfigLoad(tempPath.base + "/zarf.yaml")
 
 	dataInjectionList := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
@@ -100,7 +100,7 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 
 		if len(remoteImageList) > 0 {
 			logrus.Info("Loading images for remote install")
-			// Push all images the images.tar file based on the zarf-config.yaml list
+			// Push all images the images.tar file based on the zarf.yaml list
 			images.PushAll(tempPath.remoteImage, remoteImageList, config.ZarfLocal)
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(tempPath.remoteImage)
