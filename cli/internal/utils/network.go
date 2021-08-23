@@ -4,10 +4,16 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/sirupsen/logrus"
 )
+
+func IsUrl(source string) bool {
+	parsedUrl, err := url.Parse(source)
+	return err == nil && parsedUrl.Scheme != "" && parsedUrl.Host != ""
+}
 
 func Download(url string) []byte {
 	logContext := logrus.WithFields(logrus.Fields{
