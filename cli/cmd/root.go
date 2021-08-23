@@ -10,7 +10,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-CONFIG",
+	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -19,7 +19,7 @@ var rootCmd = &cobra.Command{
 				packager.Deploy(args[0], confirmDeploy, "")
 				return
 			}
-			if args[0] == "zarf-config.yaml" {
+			if args[0] == "zarf.yaml" {
 				packager.Create(confirmCreate)
 				return
 			}

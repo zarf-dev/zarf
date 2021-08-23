@@ -23,7 +23,7 @@ func Create(confirm bool) {
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
 	features := config.GetInitFeatures()
-	configFile := tempPath.base + "/zarf-config.yaml"
+	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
 	config.WriteConfig(configFile)
