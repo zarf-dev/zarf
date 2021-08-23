@@ -1,13 +1,18 @@
 kind: ZarfInitConfig
 
 local:
-  manifests: manifests/common
+  manifests: assets/manifests/common
 
   files:
-    - url: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
       shasum: 5097d515e220f8e97ab13c56cb9142ee4526b4c9eade5ed098e2906c1db2a163
       target: "/usr/local/bin/k3s"
       executable: true
+    - source: assets/scripts/k3s-remove.sh
+      target: "/usr/local/bin/k3s-remove.sh"
+      executable: true
+    - source: assets/scripts/k3s.service
+      target: "/etc/systemd/system/k3s.service"
 
   images:
     # K3s images
@@ -25,12 +30,11 @@ features:
     description: "Add the K9s terminal-based K8s UI for cluster management"
     default: true
     files:
-      - url: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
         shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
         target: "/usr/local/bin/k9s"
         executable: true
-      - url: https://raw.githubusercontent.com/derailed/k9s/v0.24.14/skins/dracula.yml
-        shasum: c661b522166a659ccd1befcba4ad7357fd501dab9afd49ff6f3d906764660c5f
+      - source: assets/misc/k9s-theme.yaml
         target: "/root/.k9s/skin.yml"
 
   - name: logging
