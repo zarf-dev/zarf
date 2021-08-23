@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k3s"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -15,7 +15,7 @@ var destroyCmd = &cobra.Command{
 	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
 		burn()
-		k3s.RemoveAll()
+		_, _ = utils.ExecCommand(nil, "/usr/local/bin/k3s-remove.sh")
 		burn()
 	},
 }
