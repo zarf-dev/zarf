@@ -1,15 +1,3 @@
-package k3s
-
-import (
-	"os"
-
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
-)
-
-//goland:noinspection ALL
-func RemoveAll() {
-
-	killScript := []byte(`
 #!/bin/sh
 
 echo -e '\033[0;31m'
@@ -105,18 +93,7 @@ rm -f /usr/local/bin/ctr
 rm -f /usr/local/bin/crictl
 rm -f /usr/local/bin/kubectl
 rm -f /usr/local/bin/k9s
+rm -f /usr/local/bin/k3s-remove.sh
 rm -fr zarf-pki
 
 echo -e '\033[0m'
-`)
-
-	tmpPathKillScript := utils.MakeTempDir() + "/kill-k3s.sh"
-
-	utils.WriteFile(tmpPathKillScript, killScript)
-
-	os.Chmod(tmpPathKillScript, 0700)
-
-	utils.ExecCommand(nil, "sh", tmpPathKillScript)
-
-	_ = os.RemoveAll(tmpPathKillScript)
-}
