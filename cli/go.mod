@@ -6,9 +6,9 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.2.15
 	github.com/containerd/containerd v1.5.4
 	github.com/fatih/color v1.12.0
-	github.com/go-git/go-git/v5 v5.3.0
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/goccy/go-yaml v1.9.2
-	github.com/google/go-containerregistry v0.5.0
+	github.com/google/go-containerregistry v0.6.0
 	github.com/mattn/go-colorable v0.1.8
 	github.com/mholt/archiver/v3 v3.5.0
 	github.com/otiai10/copy v1.6.0
