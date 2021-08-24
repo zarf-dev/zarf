@@ -15,7 +15,14 @@ package:
 	./build/zarf package create --confirm
 	mv zarf*.tar.zst build
 
-	cd build && sha256sum -b zarf* > zarf.sha256	
+	cd build && sha256sum -b zarf* > zarf.sha256
+	ls -lh build
+
+package-mac:
+	./build/zarf-mac-intel package create --confirm
+	mv zarf*.tar.zst build
+
+	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 
 build-cli:

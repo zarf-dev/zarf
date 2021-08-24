@@ -3,11 +3,34 @@
 version: "3"
 
 tasks:
+  compile:
+    desc: Compile the app
+    cmds:
+      - make build-cli
+
+  login:registry1:
+    desc: Login to registry1.dso.mil
+    vars:
+      REGISTRY1_USERNAME: '{{ coalesce .REGISTRY1_USERNAME "<no value>" }}'
+      REGISTRY1_PASSWORD: '{{ coalesce .REGISTRY1_PASSWORD "<no value>" }}'
+    preconditions:
+      - sh: test "{{.REGISTRY1_USERNAME}}" != "<no value>"
+        msg: Required variable 'REGISTRY1_USERNAME' not set
+      - sh: test "{{.REGISTRY1_PASSWORD}}" != "<no value>"
+        msg: Required variable 'REGISTRY1_PASSWORD' not set
+    cmds:
+      - ./build/zarf-mac-intel tools registry login registry1.dso.mil --username {{.REGISTRY1_USERNAME}} --password {{.REGISTRY1_PASSWORD}}
+
+  package:
+    desc: Make the deploy package
+    cmds:
+      - make ci-release
+
   test:e2e:
     desc: Run E2E tests
     dir: test/e2e
     cmds:
-      - go test ./... -v
+      - go test ./... -v -timeout 1200s
 
   ssh:
     desc: SSH into the box
