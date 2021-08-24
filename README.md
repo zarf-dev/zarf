@@ -37,11 +37,6 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 
 ## Prereqs
 
-### Software
-To run this tool, you'll need some software pre-installed:
-
-- [Docker](https://www.docker.com/products/docker-desktop) : Provides access to secure build images and assists earthly in keeping builds self-contained, isolated, and repeatable.
-
 ### User Accounts
 This tool utilizes software pulled from multiple sources and _some_ of them require authenticated access.  You will need to make an account at the following sites if you don't already have access:
 
@@ -55,7 +50,7 @@ This tool utilizes software pulled from multiple sources and _some_ of them requ
 
 ### Step 1 - Login to the Container Registry
 
-This tool executes containerized builds within _secure containers_ so you'll need to be able to pull hardened images from Iron Bank.  Be sure you've logged Docker into the Iron Bank before attempting a build:
+This tool executes containerized builds within _secure containers_ so you'll need to be able to pull hardened images from Iron Bank.  Be sure you've logged into the Iron Bank before attempting a build:
 
 <table>
 <tr valign="top">
@@ -63,7 +58,7 @@ This tool executes containerized builds within _secure containers_ so you'll nee
 <div>
 
 ```sh
-docker login registry1.dso.mil -u <YOUR_USERNAME>
+zarf tools registry login registry1.dso.mil -u <YOUR_USERNAME>
 Password: <YOUR_CLI_SECRET>
 ```
 
@@ -76,9 +71,9 @@ Password: <YOUR_CLI_SECRET>
 
 Iron Bank images are currently backed by an instance of the [Harbor](https://goharbor.io) registry.
 
-To authenticate with Harbor via Docker you'll need to navigate to the Iron Bank [Harbor UI](https://registry1.dso.mil/harbor), login, and copy down your `CLI Secret`.
+To authenticate with Harbor via zarf you'll need to navigate to the Iron Bank [Harbor UI](https://registry1.dso.mil/harbor), login, and copy down your `CLI Secret`.
 
-You should pass this `CLI Secret` **_instead of your password_** when invoking docker login!
+You should pass this `CLI Secret` **_instead of your password_** when invoking zarf tools container login!
 
 ---
 
