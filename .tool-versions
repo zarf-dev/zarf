@@ -1,0 +1,7 @@
+terraform 0.13.7
+terraform-docs 0.13.0
+tflint 0.31.0
+tfsec 0.58.1
+nodejs 14.17.5
+python 3.9.6
+golang 1.16.7

@@ -1,0 +1,18 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  test:e2e:
+    desc: Run E2E tests
+    dir: test/e2e
+    cmds:
+      - go test ./... -v
+
+  ssh:
+    desc: SSH into the box
+    cmds:
+      - rm -f tmp.id_rsa
+      - cat test/tf/public-ec2-instance/.test-data/Ec2KeyPair.json | jq -r .PrivateKey > tmp.id_rsa
+      - chmod 0400 tmp.id_rsa
+      - ssh -i ./tmp.id_rsa ubuntu@$(cat test/tf/public-ec2-instance/terraform.tfstate | jq -r .outputs.public_instance_ip.value)

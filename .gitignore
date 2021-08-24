@@ -15,3 +15,8 @@ data/
 bundle/
 charts/
 .idea/
+tmp.id_rsa
+**/.test-data/
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
