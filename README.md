@@ -37,11 +37,6 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 
 ## Prereqs
 
-### Software
-To run this tool, you'll need some software pre-installed:
-
-- [Docker](https://www.docker.com/products/docker-desktop) : Provides access to secure build images and assists earthly in keeping builds self-contained, isolated, and repeatable.
-
 ### User Accounts
 This tool utilizes software pulled from multiple sources and _some_ of them require authenticated access.  You will need to make an account at the following sites if you don't already have access:
 
