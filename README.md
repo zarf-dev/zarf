@@ -1,6 +1,6 @@
 # Meet Zarf, K8s Airgap Buddy
 
-Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included. Zarf also included an [Appliance Mode](examples/appliance/README.md) that can be used for single-purpose k3s deployments.
+Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included. Zarf also includes an [Appliance Mode](examples/appliance/README.md) that can be used for single-purpose k3s deployments.
 
 > _This is a mirror of a government repo hosted on [Repo1](https://repo1.dso.mil/) by [DoD Platform One](http://p1.dso.mil/).  Please direct all code changes, issues and comments to https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf_
 
@@ -11,7 +11,7 @@ Zarf is a static go binary that runs on various linux distros to deploy an airga
 ## Usage
 General usage steps below.  For various ways to use Zarf, see [the examples folder](examples).  Please note that examples READMEs may replace the steps below.
 
-### 1. Inital setup and config
+### 1. Initial setup and config
 - Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
 - (optional) Verify the downloads with `shasum -c zarf.sha256`.
 - In a new folder or git repo, place a ZarfPackageConfig `zarf.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
@@ -24,7 +24,7 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
   [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
 
 ### 3. Add resources to the zarf cluster 
-- Folling step 1b, make any necessary edits to the `zarf.yaml` file.
+- Following step 1b, make any necessary edits to the `zarf.yaml` file.
 - Then run `./zarf package create` to produce an `zarf-package-*.tar.zst` package.
 - Move the `zarf-package` into the same folder on the running zarf cluster as in step 2a.
 - Login or sudo/su to root.
@@ -35,20 +35,26 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 &nbsp;
 ## Development
 
-## Prereqs
+### Prereqs
 
-### User Accounts
+#### User Accounts
 This tool utilizes software pulled from multiple sources and _some_ of them require authenticated access.  You will need to make an account at the following sites if you don't already have access:
 
-- [Iron Bank](https://registry1.dso.mil/) : Platform One's authorized, hardened, and approved container repository. ([product](https://p1.dso.mil/#/products/iron-bank/) [pages](https://ironbank.dso.mil/))
+- [Iron Bank](https://registry1.dso.mil/) : Platform One's authorized, hardened, and approved container repository. ([product](https://p1.dso.mil/#/products/iron-bank/) | [pages](https://ironbank.dso.mil/) | [register](https://login.dso.mil/register))
+
+#### Local Environment
+- MacOS or Linux Operating System 
+- [`make`](https://www.gnu.org/software/make/) : We use Makefiles for build automation
+- [`vagrant`](https://www.vagrantup.com/) : Easy creation and management of clean dev/test environments
+- [`go`](https://golang.org/) : The programming language. Right now we are using v1.16.x 
 
   ---
 
 &nbsp;
 
-## Building
+### Building
 
-### Step 1 - Login to the Container Registry
+#### Step 1 - Login to the Container Registry
 
 This tool executes containerized builds within _secure containers_ so you'll need to be able to pull hardened images from Iron Bank.  Be sure you've logged into the Iron Bank before attempting a build:
 
@@ -80,16 +86,16 @@ You should pass this `CLI Secret` **_instead of your password_** when invoking z
 </div>
 </td>
 <td width="503" height="415">
-  <img src=".images/harbor-credentials.png">
+  <img alt="harbor-credentials" src=".images/harbor-credentials.png">
 </td>
 </tr>
 </table>
 
 &nbsp;
 
-### Step 2 - Run a Build
+#### Step 2 - Run a Build
 
-Building the package is one command:
+Building the `zarf` binary and `zarf-init.tar.zst` is one command:
 
 ```sh
 make build-test
@@ -97,7 +103,7 @@ make build-test
 
 &nbsp;
 
-### Step 3 - Test Drive
+#### Step 3 - Test Drive
 
 You can try out your new build with a local [Vagrant](https://www.vagrantup.com/) deployment, like so:
 
@@ -123,13 +129,13 @@ All OS options:
 - debian 
 - rocky
 
-In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy mutliple other downstream clusters.
+In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy multiple other downstream clusters.
 
 The status of the cluster creation can be monitored with `/usr/local/bin/k9s`
 
 &nbsp;
 
-### Step 4 - Cleanup
+#### Step 4 - Cleanup
 
 You can tear down the local [Vagrant](https://www.vagrantup.com/) deployment, like so:
 

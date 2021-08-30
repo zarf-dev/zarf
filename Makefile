@@ -1,4 +1,20 @@
-# remove all zarf pacakges recursively
+# Figure out which Zarf binary we should use based on the operating system we are on
+ZARF_BIN := ./build/zarf
+UNAME_S := $(shell uname -s)
+UNAME_P := $(shell uname -p)
+ifneq ($(UNAME_S),Linux)
+	ifeq ($(UNAME_S),Darwin)
+		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+	endif
+	ifeq ($(UNAME_P),i386)
+		ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+	endif
+	ifeq ($(UNAME_P),arm64)
+		ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+	endif
+endif
+
+# remove all zarf packages recursively
 remove-packages:
 	find . -type f -name 'zarf-package*' -delete
 
@@ -12,7 +28,7 @@ test-close:
 	vagrant destroy -f
 
 package:
-	./build/zarf package create --confirm
+	$(ZARF_BIN) package create --confirm
 	mv zarf*.tar.zst build
 
 	cd build && sha256sum -b zarf* > zarf.sha256	
