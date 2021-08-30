@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
 
@@ -31,6 +32,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	zarfLogo := getLogo()
 	fmt.Fprintln(os.Stderr, zarfLogo)
+	config.Initialize()
 	cobra.CheckErr(rootCmd.Execute())
 }
 
