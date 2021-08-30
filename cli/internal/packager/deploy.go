@@ -45,7 +45,7 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	config.DynamicConfigLoad(tempPath.base + "/zarf.yaml")
+	config.Load(tempPath.base + "/zarf.yaml")
 
 	dataInjectionList := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
@@ -113,7 +113,7 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 			git.PushAllDirectories(tempPath.remoteRepos)
 		}
 	} else {
-		features := config.GetInitFeatures()
+		features := config.GetFeatures()
 		for _, feature := range features {
 			var confirmFeature bool
 			// Only run the prompt if no features were passed in

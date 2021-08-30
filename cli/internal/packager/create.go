@@ -17,12 +17,13 @@ import (
 )
 
 func Create(confirm bool) {
+	config.Load("zarf.yaml")
 	tempPath := createPaths()
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
 	remoteImageList := config.GetRemoteImages()
 	remoteRepoList := config.GetRemoteRepos()
-	features := config.GetInitFeatures()
+	features := config.GetFeatures()
 	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
