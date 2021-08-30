@@ -3,41 +3,54 @@ package k8s
 import (
 	"fmt"
 	"log"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const applyTimeout = time.Minute * 2
+const waitInterval = 10 * time.Second
 
-func ApplyManifest(path string) {
-	logContext := logrus.WithField("path", path)
+func ApplyManifest(manifest releaseutil.Manifest) {
+	logContext := logrus.WithFields(logrus.Fields{
+		"path": manifest.Name,
+		"kind": manifest.Head.Kind,
+		"name": manifest.Head.Metadata.Name,
+	})
+
+	logContext.Info("Applying K8s resource")
 
 	_, kubeClient := connect()
 
-	file, err := os.Open(path)
-	if err != nil {
-		logContext.Fatal("Unable to read the manifest file")
-	}
-	defer file.Close()
+	manifestContent := strings.NewReader(manifest.Content)
 
-	resources, err := kubeClient.Build(file, true)
-	if err != nil {
-		logContext.Info("Could not parse the manifest, sleeping before retrying")
-		time.Sleep(30 * time.Second)
-		ApplyManifest(path)
-		return
-	}
+	stopChannel := make(chan struct{})
 
-	if err := kubeClient.Wait(resources, applyTimeout); err != nil {
-		logContext.Warn("Timeout occured waiting for resource, continuing...")
-	}
+	wait.Until(func() {
 
-	_, err = kubeClient.Update(resources, resources, true)
-	if err != nil {
-		logContext.Warn("Unable to apply the manifest file")
-	}
+		resources, err := kubeClient.Build(manifestContent, true)
+		if err != nil {
+			return
+		}
+
+		_, err = kubeClient.Update(resources, resources, true)
+		if err != nil {
+			logContext.Warn("Unable to apply the manifest file")
+			return
+		}
+
+		if waitErr := kubeClient.Wait(resources, applyTimeout); waitErr != nil {
+			logContext.Warn(waitErr)
+			return
+		}
+
+		close(stopChannel)
+
+	}, waitInterval, stopChannel)
+
 }
 
 func debug(format string, v ...interface{}) {

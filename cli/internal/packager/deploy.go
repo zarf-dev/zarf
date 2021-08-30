@@ -191,7 +191,6 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 
 		// Iterate through all the manifests and replace any ZARF_SECRET values
 		for _, manifest := range manifests {
-			logrus.WithField("path", manifest).Info("Processing manifest file")
 			utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
 			contents, _ := k8s.ReadFile(manifest)
 			manifestMap[manifest] = string(contents)
@@ -201,13 +200,16 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			// Init config will still require seeding into k3s before boto for now
 			utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
 		} else {
+			// Make sure the HelmChart kind is applied in the right order (temporary)
+			manifestOrderByKind := append([]string{releaseutil.InstallOrder[0]}, releaseutil.InstallOrder...)
+			manifestOrderByKind[1] = "HelmChart"
 			// Not an init config, so use helm to deploy manifests
-			_, sortedManifests, err := releaseutil.SortManifests(manifestMap, nil, releaseutil.InstallOrder)
+			_, sortedManifests, err := releaseutil.SortManifests(manifestMap, nil, manifestOrderByKind)
 			if err != nil {
 				logrus.Fatal("Problem encountered sorting K8s manifests")
 			}
 			for _, manifest := range sortedManifests {
-				k8s.ApplyManifest(manifest.Name)
+				k8s.ApplyManifest(manifest)
 			}
 		}
 	}
