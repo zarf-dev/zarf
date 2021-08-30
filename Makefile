@@ -3,6 +3,7 @@ remove-packages:
 	find . -type f -name 'zarf-package*' -delete
 
 # usage: make test OS=ubuntu
+.PHONY: test
 test:
 	vagrant destroy -f
 	vagrant up --no-color ${OS}
