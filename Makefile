@@ -42,3 +42,7 @@ build-cli:
 build-test: build-cli package
 
 ci-release: package
+
+# automatically package all example directories and add the tarballs to the build directory
+package-examples:
+	cd examples && $(MAKE) package-examples
