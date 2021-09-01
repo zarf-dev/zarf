@@ -1,0 +1,22 @@
+bases:
+  - git::https://repo1.dso.mil/platform-one/big-bang/bigbang.git/base?ref=1.14.1
+
+configMapGenerator:
+  - name: common
+    namespace: bigbang
+    behavior: merge
+    files:
+      - values.yaml
+
+patchesStrategicMerge:
+- |-
+  apiVersion: source.toolkit.fluxcd.io/v1beta1
+  kind: GitRepository
+  metadata:
+    name: bigbang
+    namespace: bigbang
+  spec:
+    url: utility-cluster.zarf/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__bigbang.git
+    ref:
+      $patch: replace
+      semver: "1.12.0"

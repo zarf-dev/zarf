@@ -1,0 +1,289 @@
+hostname: bigbang.run
+
+# -- Single set of registry credentials used to pull all images deployed by BigBang.
+# registryCredentials:
+#   registry: registry1.dso.mil
+#   username: ""
+#   password: ""
+
+git:
+  existingSecret: "zarf-git-secret"
+
+flux:
+  interval: 1m
+  rollback:
+    cleanupOnFail: false
+
+networkPolicies:
+  controlPlaneCidr: 172.16.0.0/12
+
+logging:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git
+  values:
+    elasticsearch:
+      master:
+        count: 1
+        persistence:
+          size: 5Gi
+        resources:
+          requests:
+            cpu: 100m
+          limits: {}
+      data:
+        count: 1
+        persistence:
+          size: 5Gi
+        resources:
+          requests:
+            cpu: 100m
+          limits: {}
+    kibana:
+      count: 1
+
+fluentbit:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git
+  values:
+    securityContext:
+      privileged: true
+
+istio:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git
+  values:
+    kiali:
+      dashboard:
+        auth:
+          strategy: "anonymous"
+  gateways:
+    public:
+      tls:
+        key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQD1ahjVSH4A+inh
+          YyeVfOMQJhzrtt7OXpcGbSeepDY0lz+opc29BWafqcwZKef12aYMU7CzoyPJCL13
+          gOjn6FbU3h8FNkDZQ0kiZfGWQxHGYoJLB8MdXKyYgcynDCczMFNR/mc7YwF0IMVp
+          iApW/XYg2sv4ouuaBAZI/F7jQVYl1SB18gkk180YxZK9mzetie8V9dCEMkodH1tq
+          +BRzCYbrh3oSX/dL/CXYq/x29nFYTZmMctMc7T9ligS7n/JCBVTsLLGL/BL7E/Ba
+          8g54qDGR78FEW1kgr0dsWVcOWJQdb8JpwCRUUFXYHL5liFGS1IozD+bpFfUvUxNH
+          1sjPo18JAgMBAAECggEBAJRaQ5LC1LDAiQqfhvE94oEDmR4AmOWFlqQi3f1vZPkb
+          qTbIq/skxamk2iUoCPm8TT1MZhfheaNwLiCMg76U29CoSXY8Gq17mD08BPOBrcAQ
+          EpVKpu8b85XpeQ5OMXAnOWbqc/sZWWqa2Nt3ilCVvZAU05KE4gljf20lajLUb0BE
+          S+EOHgiPgbL9Upgb2HvsYjaBkgy6dMIJhH9ybyQqRJPaLceEbu53Krrv4iuZjzLD
+          CIdePYRge9DfvIff0UBlAFPVgahrwJNzZoqhEv9KlvSshE51tfaNv7zzMpoEnq7z
+          XqbisXXq/Pn6MaWiyF/6sYxYZDrAIHI5exmoJAYs4tECgYEA/V9eNpdh70Vzv19l
+          TkpjEklaAgDzSda68TSb5hYLtINI3m3+vVN+rlth5gZN7n8hKjxIBuUI8yERMY8B
+          is5g+qgIqK1jDeRHUJTKo7x+fRgM2vCTcYQgxCC4x2czkG86AifsNaGZ6j2P9y2v
+          lpaozs+ONkADpGwnOu0lsCBxbVUCgYEA9/WaPrhOO/ImKlyFbXnXHZsoRXKuWVKm
+          DRcs7z8LZmPH7n3ikiMZW7CUbKHB3mreL6Xv5gQ/nait2tjYRPT2OfBA+WTQi/kO
+          MwHyuq92J1965WCld3hzGYeJHtB12rVjheRQ3TBeBCFFu3pgEVsgqnVV1gqceBL7
+          edXnu85KSuUCgYEAxbhURvmfPR7PknmZDp1R7oU7LfEb6XUd8PiC5+wwOi9w/9KK
+          RagQZXN+VAh7bC/c656a/nZgo4ocZrYYF/+xAil6iFa1w7NuS12xPFDtzCSmc3vl
+          M2JOR37ZcxH/1ShW9jO9SqTO/VIJNHR8X2E2Xhzt9zvBG+AiRQOms2i92vkCgYEA
+          pZ2AiZXWg0mIXlDvuaBgouCoNEKV2wlN6X5qP94PAjNxLYUdWNhirpAxgqFD+QfO
+          IWsm4a5Cw04P2RVu1hf7gdVLwIeql2MhLcaGVlStiTzHu/8iZbqovgt99Xvsy8jN
+          kXde323XzdBfYAorskv4dIHsdAsgWT7sgoLxxcnSa1UCgYEAh0SDR9xTdNnCRTL8
+          Fz+YyN8EWm4XaiYv4fDu7mBEiAYJFQjfez/ZammSASwfv+sFcE4rCEMED2InlLin
+          73hJO8bDRMI7BEtaYKyEFcCgdNXOyDRfYhLtJllaIiJNbC8m4dW8H7Hq4Av2pTc0
+          dbfd2CfWKgXWqJNl2RCGWIoqDIU=
+          -----END PRIVATE KEY-----
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          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
+          9xxT5njjSqfC0xOqknR0hhhn5Pbu
+          -----END CERTIFICATE-----
+          -----BEGIN CERTIFICATE-----
+          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
+          nLRbwHOoq7hHwg==
+          -----END CERTIFICATE-----
+          -----BEGIN CERTIFICATE-----
+          MIIFYDCCBEigAwIBAgIQQAF3ITfU6UK47naqPGQKtzANBgkqhkiG9w0BAQsFADA/
+          MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT
+          DkRTVCBSb290IENBIFgzMB4XDTIxMDEyMDE5MTQwM1oXDTI0MDkzMDE4MTQwM1ow
+          TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
+          cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwggIiMA0GCSqGSIb3DQEB
+          AQUAA4ICDwAwggIKAoICAQCt6CRz9BQ385ueK1coHIe+3LffOJCMbjzmV6B493XC
+          ov71am72AE8o295ohmxEk7axY/0UEmu/H9LqMZshftEzPLpI9d1537O4/xLxIZpL
+          wYqGcWlKZmZsj348cL+tKSIG8+TA5oCu4kuPt5l+lAOf00eXfJlII1PoOK5PCm+D
+          LtFJV4yAdLbaL9A4jXsDcCEbdfIwPPqPrt3aY6vrFk/CjhFLfs8L6P+1dy70sntK
+          4EwSJQxwjQMpoOFTJOwT2e4ZvxCzSow/iaNhUd6shweU9GNx7C7ib1uYgeGJXDR5
+          bHbvO5BieebbpJovJsXQEOEO3tkQjhb7t/eo98flAgeYjzYIlefiN5YNNnWe+w5y
+          sR2bvAP5SQXYgd0FtCrWQemsAXaVCg/Y39W9Eh81LygXbNKYwagJZHduRze6zqxZ
+          Xmidf3LWicUGQSk+WT7dJvUkyRGnWqNMQB9GoZm1pzpRboY7nn1ypxIFeFntPlF4
+          FQsDj43QLwWyPntKHEtzBRL8xurgUBN8Q5N0s8p0544fAQjQMNRbcTa0B7rBMDBc
+          SLeCO5imfWCKoqMpgsy6vYMEG6KDA0Gh1gXxG8K28Kh8hjtGqEgqiNx2mna/H2ql
+          PRmP6zjzZN7IKw0KKP/32+IVQtQi0Cdd4Xn+GOdwiK1O5tmLOsbdJ1Fu/7xk9TND
+          TwIDAQABo4IBRjCCAUIwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYw
+          SwYIKwYBBQUHAQEEPzA9MDsGCCsGAQUFBzAChi9odHRwOi8vYXBwcy5pZGVudHJ1
+          c3QuY29tL3Jvb3RzL2RzdHJvb3RjYXgzLnA3YzAfBgNVHSMEGDAWgBTEp7Gkeyxx
+          +tvhS5B1/8QVYIWJEDBUBgNVHSAETTBLMAgGBmeBDAECATA/BgsrBgEEAYLfEwEB
+          ATAwMC4GCCsGAQUFBwIBFiJodHRwOi8vY3BzLnJvb3QteDEubGV0c2VuY3J5cHQu
+          b3JnMDwGA1UdHwQ1MDMwMaAvoC2GK2h0dHA6Ly9jcmwuaWRlbnRydXN0LmNvbS9E
+          U1RST09UQ0FYM0NSTC5jcmwwHQYDVR0OBBYEFHm0WeZ7tuXkAXOACIjIGlj26Ztu
+          MA0GCSqGSIb3DQEBCwUAA4IBAQAKcwBslm7/DlLQrt2M51oGrS+o44+/yQoDFVDC
+          5WxCu2+b9LRPwkSICHXM6webFGJueN7sJ7o5XPWioW5WlHAQU7G75K/QosMrAdSW
+          9MUgNTP52GE24HGNtLi1qoJFlcDyqSMo59ahy2cI2qBDLKobkx/J3vWraV0T9VuG
+          WCLKTVXkcGdtwlfFRjlBz4pYg1htmf5X6DYO8A4jqv2Il9DjXA6USbW1FzXSLr9O
+          he8Y4IWS6wY7bCkjCWDcRQJMEhg76fsO3txE+FiYruq9RUWhiF1myv4Q6W+CyBFC
+          Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
+          -----END CERTIFICATE-----
+
+clusterAuditor:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git
+  values:
+    resources:
+      requests:
+        cpu: 100m
+        memory: .5Gi
+      limits: {}
+
+monitoring:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git
+  values:
+    alertmanager:
+      alertmanagerSpec:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits: {}
+    prometheusOperator:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 400Mi
+        limits: {}
+    prometheus:
+      prometheusSpec:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits: {}
+    grafana:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits: {}
+    kubeStateMetrics:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits: {}
+    nodeExporter:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 30Mi
+        limits: {}
+
+gatekeeper:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
+  values:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits: {}
+
+twistlock:
+  enabled: true
+  git:
+    repo: https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git
+  values:
+    console:
+      persistence:
+        size: 5Gi
+
+addons:
+  argocd:
+    enabled: false
+  authservice:
+    enabled: false
+  gitlab:
+    enabled: false
+  gitlabRunner:
+    enabled: false
+  anchore:
+    enabled: false
+  sonarqube:
+    enabled: false
+  minioOperator:
+    enabled: false
+  minio:
+    enabled: false
+  mattermostoperator:
+    enabled: false
+  mattermost:
+    enabled: false
+  nexus:
+    enabled: false
+  velero:
+    enabled: false
+  keycloak:
+    enabled: false
