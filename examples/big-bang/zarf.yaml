@@ -3,8 +3,8 @@ metadata:
   name: big-bang-core-demo
   description: "Demo Zarf basic deployment of Big Bang core"
 
-#local:
-#  manifestFolder: manifests
+local:
+  manifests: manifests
 
   images:
     # Flux images
