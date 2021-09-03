@@ -3,8 +3,8 @@ metadata:
   name: big-bang-core-demo
   description: "Demo Zarf basic deployment of Big Bang core"
 
-local:
-  manifestFolder: manifests
+#local:
+#  manifestFolder: manifests
 
   images:
     # Flux images
@@ -30,32 +30,35 @@ remote:
     - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.6-bb.1
 
   images:
-    # Big Bang Images
+    # TODO: Figure out a better way to derive this list.
+    # 1. Deploy Big Bang Core using some other method like https://repo1.dso.mil/platform-one/quick-start/big-bang
+    # 2. kubectl get pods --all-namespaces -o json | jq '.items[].spec.containers[].image' | jq -s 'unique' | yq e -P
+    # 3. Move all 'registry1.dso.mil/ironbank/fluxcd' images to the 'local.images' section
+    # 4. Add 'docker.io/' to any images that aren't fully qualified (example: rancher/metrics-server -> docker.io/rancher/metrics-server
+    - docker.io/rancher/coredns-coredns:1.8.3
+    - docker.io/rancher/klipper-lb:v0.2.0
+    - docker.io/rancher/local-path-provisioner:v0.0.19
+    - docker.io/rancher/metrics-server:v0.3.6
     - registry1.dso.mil/ironbank/cluster-auditor/opa-collector:0.3.2
     - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
-    - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.12.0
+    - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.13.4
     - registry1.dso.mil/ironbank/elastic/kibana/kibana:7.12.0
-    - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.9.0
-    - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.9.3
-    - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.12.0
-    - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.9.1
-    - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.3.0
-    - registry1.dso.mil/ironbank/opensource/coreos/kube-state-metrics:v1.9.7
-    - registry1.dso.mil/ironbank/opensource/coreos/prometheus-config-reloader:v0.42.1
-    - registry1.dso.mil/ironbank/opensource/coreos/prometheus-operator:v0.42.1
-    - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.7.8
-    - registry1.dso.mil/ironbank/opensource/grafana/grafana:7.1.3-1
+    - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.10.6
+    - registry1.dso.mil/ironbank/opensource/coreos/kube-state-metrics:v1.9.8
+    - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.8.1
+    - registry1.dso.mil/ironbank/opensource/grafana/grafana:7.5.2
     - registry1.dso.mil/ironbank/opensource/istio-1.8/operator:1.8.4
     - registry1.dso.mil/ironbank/opensource/istio-1.8/pilot:1.8.4
     - registry1.dso.mil/ironbank/opensource/istio-1.8/proxyv2:1.8.4
-    - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.23.0
-    - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.23.0
-    - registry1.dso.mil/ironbank/opensource/jet/kube-webhook-certgen:v1.5.1
-    - registry1.dso.mil/ironbank/opensource/jimmidyson/configmap-reload:v0.4.0
-    - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.36.0
-    - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.36.0
-    - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.4.0
+    - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.24.0
+    - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
+    - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.37.0
+    - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.37.0
+    - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.1
+    - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.46.0
+    - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.46.0
     - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.21.0
-    - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.0.1
-    - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.22.0
+    - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.25.0
     - registry1.dso.mil/ironbank/twistlock/console/console:21.04.412
+
+

@@ -17,6 +17,3 @@ patchesStrategicMerge:
     namespace: bigbang
   spec:
     url: utility-cluster.zarf/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__bigbang.git
-    ref:
-      $patch: replace
-      semver: "1.12.0"

@@ -1,4 +1,4 @@
-hostname: bigbang.run
+hostname: bigbang.dev
 
 # -- Single set of registry credentials used to pull all images deployed by BigBang.
 # registryCredentials:
