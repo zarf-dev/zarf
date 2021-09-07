@@ -20,7 +20,7 @@ networkPolicies:
 logging:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
   values:
     elasticsearch:
       master:
@@ -42,18 +42,28 @@ logging:
     kibana:
       count: 1
 
+eckoperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
+
 fluentbit:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
   values:
     securityContext:
       privileged: true
 
+istiooperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
+
 istio:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
   values:
     kiali:
       dashboard:
@@ -187,7 +197,7 @@ istio:
 clusterAuditor:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__cluster-auditor.git
   values:
     resources:
       requests:
@@ -198,7 +208,7 @@ clusterAuditor:
 monitoring:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__monitoring.git
   values:
     alertmanager:
       alertmanagerSpec:
@@ -242,7 +252,7 @@ monitoring:
 gatekeeper:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
     replicas: 1
     resources:
@@ -254,11 +264,21 @@ gatekeeper:
 twistlock:
   enabled: true
   git:
-    repo: https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
   values:
     console:
       persistence:
         size: 5Gi
+
+jaeger:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
+
+kiali:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
 
 addons:
   argocd:

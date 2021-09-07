@@ -44,11 +44,19 @@ Vagrant.configure("2") do |config|
     vb.memory = 28672
   end
 
-  config.vm.provision "shell", inline: <<-SHELL
-    cd /opt/zarf
-    # Airgap images please
-    echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-    # ./zarf init --confirm --host=localhost
-  SHELL
+  config.vm.provision "shell", inline: <<SHELL
+cd /opt/zarf
 
+# Airgap images please
+echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
+
+# Set up the registry mirror
+mkdir -p /etc/rancher/k3s
+cat <<EOT > /etc/rancher/k3s/registries.yaml
+mirrors:
+  registry1.dso.mil:
+    endpoint:
+      - "http://zarf.localhost"
+EOT
+SHELL
 end
