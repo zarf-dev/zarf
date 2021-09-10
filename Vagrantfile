@@ -32,10 +32,12 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder '.', '/vagrant', disabled: true
   config.vm.synced_folder 'build', '/opt/zarf', SharedFoldersEnableSymlinksCreate: false
   
-  config.vm.network "forwarded_port", guest: 80, host: 8080
-  config.vm.network "forwarded_port", guest: 443, host: 8443
+  config.vm.network "forwarded_port", guest: 80, host: 80
+  config.vm.network "forwarded_port", guest: 443, host: 443
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+    config.vm.network "forwarded_port", guest: 8443, host: 8443
 
-  config.vm.disk :disk, size: "20GB", primary: true
+  config.vm.disk :disk, size: "30GB", primary: true
   config.ssh.insert_key = false
   
   config.vm.provider "virtualbox" do |vb|
@@ -44,19 +46,12 @@ Vagrant.configure("2") do |config|
     vb.memory = 28672
   end
 
-  config.vm.provision "shell", inline: <<SHELL
-cd /opt/zarf
+  config.vm.provision "shell", inline: <<-SHELL
+    # Airgap images please
+    echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
 
-# Airgap images please
-echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
+    # EFK needs this
+    sysctl -w vm.max_map_count=262144
 
-# Set up the registry mirror
-mkdir -p /etc/rancher/k3s
-cat <<EOT > /etc/rancher/k3s/registries.yaml
-mirrors:
-  registry1.dso.mil:
-    endpoint:
-      - "http://zarf.localhost"
-EOT
-SHELL
+    SHELL
 end

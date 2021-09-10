@@ -1,0 +1,4 @@
+mirrors:
+  registry1.dso.mil:
+    endpoint:
+      - "http://zarf.localhost"

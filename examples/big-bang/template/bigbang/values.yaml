@@ -69,6 +69,31 @@ istio:
       dashboard:
         auth:
           strategy: "anonymous"
+    ingressGateways:
+      public-ingressgateway:
+        k8s:
+          service:
+            ports:
+              - name: status-port
+                nodePort: 31027
+                port: 15021
+                protocol: TCP
+                targetPort: 15021
+              - name: http2
+                nodePort: 30635
+                port: 8080
+                protocol: TCP
+                targetPort: 8080
+              - name: https
+                nodePort: 31821
+                port: 8443
+                protocol: TCP
+                targetPort: 8443
+              - name: tls
+                nodePort: 30889
+                port: 15443
+                protocol: TCP
+                targetPort: 15443
   gateways:
     public:
       tls:
@@ -250,7 +275,7 @@ monitoring:
         limits: {}
 
 gatekeeper:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
