@@ -21,7 +21,7 @@ remove-packages:
 # usage: make test OS=ubuntu
 test:
 	vagrant destroy -f
-	VAGRANT_EXPERIMENTAL="disks" vagrant up --no-color ${OS}
+	vagrant up --no-color ${OS}
 	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
 
 test-close:

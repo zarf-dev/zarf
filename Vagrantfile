@@ -1,5 +1,11 @@
 Vagrant.configure("2") do |config|
 
+  config.vm.provider "virtualbox" do |vb|
+      vb.check_guest_additions = false
+      vb.cpus = 6
+      vb.memory = 8192
+    end
+
   config.vm.define "rhel7" do |target|
     target.vm.box = "generic/rhel7"
   end
@@ -17,7 +23,24 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "ubuntu" do |target|
+      target.vm.box = "boxomatic/ubuntu-20.04"
+    end
+
+  config.vm.define "bigbangdemo" do |target|
+    # Install vagrant-disksize to allow resizing the vagrant box disk.
+    unless Vagrant.has_plugin?("vagrant-disksize")
+        raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin is missing. Please install it using 'vagrant plugin install vagrant-disksize' and rerun 'vagrant up'"
+    end
+    config.vm.provider "virtualbox" do |vb|
+      vb.check_guest_additions = false
+      vb.cpus = 8
+      vb.memory = 28672
+    end
+    config.disksize.size = "100GB"
     target.vm.box = "boxomatic/ubuntu-20.04"
+    config.vm.provision "shell", inline: <<-SHELL
+      growpart /dev/sda 1 && resize2fs /dev/sda1
+      SHELL
   end
 
   config.vm.define "debian" do |target|
@@ -37,14 +60,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 8080, host: 8080
   config.vm.network "forwarded_port", guest: 8443, host: 8443
 
-  config.vm.disk :disk, size: "100GB", primary: true
   config.ssh.insert_key = false
-
-  config.vm.provider "virtualbox" do |vb|
-    vb.check_guest_additions = false
-    vb.cpus = 8
-    vb.memory = 28672
-  end
 
   config.vm.provision "shell", inline: <<-SHELL
     # Airgap images please
