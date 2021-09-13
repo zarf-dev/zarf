@@ -1,11 +1,5 @@
 hostname: bigbang.dev
 
-# -- Single set of registry credentials used to pull all images deployed by BigBang.
-# registryCredentials:
-#   registry: registry1.dso.mil
-#   username: ""
-#   password: ""
-
 git:
   existingSecret: "zarf-git-secret"
 
@@ -15,7 +9,8 @@ flux:
     cleanupOnFail: false
 
 networkPolicies:
-  controlPlaneCidr: 172.16.0.0/12
+  enabled: false
+#  controlPlaneCidr: 10.43.0.0/16
 
 logging:
   enabled: true
@@ -30,7 +25,12 @@ logging:
         resources:
           requests:
             cpu: 100m
-          limits: {}
+            memory: 2Gi
+            # ephemeral-storage: "5Gi"
+          limits:
+            cpu: 1
+            memory: 2Gi
+            # ephemeral-storage: "5Gi"
       data:
         count: 1
         persistence:
@@ -38,9 +38,23 @@ logging:
         resources:
           requests:
             cpu: 100m
-          limits: {}
+            memory: 2Gi
+            # ephemeral-storage: "5Gi"
+          limits:
+            cpu: 1
+            memory: 2Gi
+            # ephemeral-storage: "5Gi"
     kibana:
       count: 1
+      resources:
+        requests:
+          memory: 1Gi
+          cpu: 100m
+          # ephemeral-storage: "5Gi"
+        limits:
+          memory: 1Gi
+          cpu: 1
+          # ephemeral-storage: "5Gi"
 
 eckoperator:
   enabled: true
@@ -54,17 +68,41 @@ fluentbit:
   values:
     securityContext:
       privileged: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 1
+        memory: 128Mi
 
 istiooperator:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
+  values:
+    operator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 1
+          memory: 256Mi
 
 istio:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
   values:
+    istiod:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 1Gi
+        limits:
+          cpu: 1
+          memory: 1Gi
     kiali:
       dashboard:
         auth:
@@ -72,6 +110,13 @@ istio:
     ingressGateways:
       public-ingressgateway:
         k8s:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
           service:
             ports:
               - name: status-port
@@ -227,8 +272,10 @@ clusterAuditor:
     resources:
       requests:
         cpu: 100m
-        memory: .5Gi
-      limits: {}
+        memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 512Mi
 
 monitoring:
   enabled: true
@@ -240,42 +287,54 @@ monitoring:
         resources:
           requests:
             cpu: 100m
-            memory: 200Mi
-          limits: {}
+            memory: 256Mi
+          limits:
+            cpu: 1
+            memory: 256Mi
     prometheusOperator:
       resources:
         requests:
-          cpu: 250m
-          memory: 400Mi
-        limits: {}
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 512Mi
     prometheus:
       prometheusSpec:
         resources:
           requests:
             cpu: 100m
-            memory: 200Mi
-          limits: {}
+            memory: 256Mi
+          limits:
+            cpu: 1
+            memory: 256Mi
     grafana:
       resources:
         requests:
           cpu: 100m
           memory: 128Mi
-        limits: {}
+        limits:
+          cpu: 1
+          memory: 128Mi
     kubeStateMetrics:
       resources:
         requests:
           cpu: 10m
-          memory: 32Mi
-        limits: {}
+          memory: 128Mi
+        limits:
+          cpu: 1
+          memory: 128Mi
     nodeExporter:
       resources:
         requests:
           cpu: 100m
-          memory: 30Mi
-        limits: {}
+          memory: 128Mi
+        limits:
+          cpu: 1
+          memory: 128Mi
 
 gatekeeper:
-  enabled: false
+  enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
@@ -284,7 +343,9 @@ gatekeeper:
       requests:
         cpu: 100m
         memory: 256Mi
-      limits: {}
+      limits:
+        cpu: 1
+        memory: 256Mi
 
 twistlock:
   enabled: true
@@ -294,16 +355,77 @@ twistlock:
     console:
       persistence:
         size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 256Mi
 
 jaeger:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
+  values:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        # ephemeral-storage: "5Gi"
+      limits:
+        cpu: 1
+        memory: 128Mi
+        # ephemeral-storage: "5Gi"
+    jaeger:
+      spec:
+        allInOne:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              # ephemeral-storage: "5Gi"
+            limits:
+              cpu: 1
+              memory: 128Mi
+              # ephemeral-storage: "5Gi"
+        collector:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              # ephemeral-storage: "5Gi"
+            limits:
+              cpu: 1
+              memory: 128Mi
+              # ephemeral-storage: "5Gi"
 
 kiali:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
+  values:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        # ephemeral-storage: "5Gi"
+      limits:
+        cpu: 100m
+        memory: 256Mi
+        # ephemeral-storage: "5Gi"
+    cr:
+      spec:
+        deployment:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 368Mi
+              # ephemeral-storage: "5Gi"
+            limits:
+              cpu: 1
+              memory: 368Mi
+              # ephemeral-storage: "5Gi"
 
 addons:
   argocd:

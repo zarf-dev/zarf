@@ -21,7 +21,7 @@ remove-packages:
 # usage: make test OS=ubuntu
 test:
 	vagrant destroy -f
-	vagrant up --no-color ${OS}
+	VAGRANT_EXPERIMENTAL="disks" vagrant up --no-color ${OS}
 	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
 
 test-close:
@@ -31,7 +31,7 @@ package:
 	$(ZARF_BIN) package create --confirm
 	mv zarf*.tar.zst build
 
-	cd build && sha256sum -b zarf* > zarf.sha256	
+	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 
 build-cli:
