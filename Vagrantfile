@@ -6,6 +6,8 @@ Vagrant.configure("2") do |config|
       vb.memory = 8192
     end
 
+  config.vm.disk :disk, size: "20GB", primary: true
+
   config.vm.define "rhel7" do |target|
     target.vm.box = "generic/rhel7"
   end
@@ -37,6 +39,7 @@ Vagrant.configure("2") do |config|
       vb.memory = 28672
     end
     config.disksize.size = "100GB"
+    config.vm.disk :disk, size: "100GB", primary: true
     target.vm.box = "boxomatic/ubuntu-20.04"
     config.vm.provision "shell", inline: <<-SHELL
       growpart /dev/sda 1 && resize2fs /dev/sda1

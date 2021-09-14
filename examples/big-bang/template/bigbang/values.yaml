@@ -21,15 +21,15 @@ logging:
       master:
         count: 1
         persistence:
-          size: 5Gi
+          size: "5Gi"
         resources:
           requests:
-            cpu: 100m
-            memory: 2Gi
+            cpu: "100m"
+            memory: "2Gi"
             # ephemeral-storage: "5Gi"
           limits:
-            cpu: 1
-            memory: 2Gi
+            cpu: "1"
+            memory: "2Gi"
             # ephemeral-storage: "5Gi"
       data:
         count: 1
@@ -37,23 +37,23 @@ logging:
           size: 5Gi
         resources:
           requests:
-            cpu: 100m
-            memory: 2Gi
+            cpu: "100m"
+            memory: "2Gi"
             # ephemeral-storage: "5Gi"
           limits:
-            cpu: 1
-            memory: 2Gi
+            cpu: "1"
+            memory: "2Gi"
             # ephemeral-storage: "5Gi"
     kibana:
       count: 1
       resources:
         requests:
-          memory: 1Gi
-          cpu: 100m
+          memory: "1Gi"
+          cpu: "100m"
           # ephemeral-storage: "5Gi"
         limits:
-          memory: 1Gi
-          cpu: 1
+          memory: "1Gi"
+          cpu: "1"
           # ephemeral-storage: "5Gi"
 
 eckoperator:
@@ -70,11 +70,11 @@ fluentbit:
       privileged: true
     resources:
       requests:
-        cpu: 100m
-        memory: 128Mi
+        cpu: "100m"
+        memory: "128Mi"
       limits:
-        cpu: 1
-        memory: 128Mi
+        cpu: "1"
+        memory: "128Mi"
 
 istiooperator:
   enabled: true
@@ -84,11 +84,11 @@ istiooperator:
     operator:
       resources:
         requests:
-          cpu: 100m
-          memory: 256Mi
+          cpu: "100m"
+          memory: "256Mi"
         limits:
-          cpu: 1
-          memory: 256Mi
+          cpu: "1"
+          memory: "256Mi"
 
 istio:
   enabled: true
@@ -98,47 +98,48 @@ istio:
     istiod:
       resources:
         requests:
-          cpu: 100m
-          memory: 1Gi
+          cpu: "100m"
+          memory: "1Gi"
         limits:
-          cpu: 1
-          memory: 1Gi
+          cpu: "1"
+          memory: "1Gi"
     kiali:
       dashboard:
         auth:
           strategy: "anonymous"
-    ingressGateways:
-      public-ingressgateway:
-        k8s:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512Mi
-            limits:
-              cpu: 1
-              memory: 512Mi
-          service:
-            ports:
-              - name: status-port
-                nodePort: 31027
-                port: 15021
-                protocol: TCP
-                targetPort: 15021
-              - name: http2
-                nodePort: 30635
-                port: 8080
-                protocol: TCP
-                targetPort: 8080
-              - name: https
-                nodePort: 31821
-                port: 8443
-                protocol: TCP
-                targetPort: 8443
-              - name: tls
-                nodePort: 30889
-                port: 15443
-                protocol: TCP
-                targetPort: 15443
+  ingressGateways:
+    public-ingressgateway:
+      type: "LoadBalancer"
+      kubernetesResourceSpec:
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+        service:
+          ports:
+            - name: status-port
+              nodePort: 31027
+              port: 15021
+              protocol: TCP
+              targetPort: 15021
+            - name: http2
+              nodePort: 30635
+              port: 8080
+              protocol: TCP
+              targetPort: 8080
+            - name: https
+              nodePort: 31821
+              port: 8443
+              protocol: TCP
+              targetPort: 8443
+            - name: tls
+              nodePort: 30889
+              port: 15443
+              protocol: TCP
+              targetPort: 15443
   gateways:
     public:
       tls:
@@ -271,11 +272,11 @@ clusterAuditor:
   values:
     resources:
       requests:
-        cpu: 100m
-        memory: 512Mi
+        cpu: "100m"
+        memory: "512Mi"
       limits:
-        cpu: 1
-        memory: 512Mi
+        cpu: "1"
+        memory: "512Mi"
 
 monitoring:
   enabled: true
@@ -286,52 +287,52 @@ monitoring:
       alertmanagerSpec:
         resources:
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: "100m"
+            memory: "256Mi"
           limits:
-            cpu: 1
-            memory: 256Mi
+            cpu: "1"
+            memory: "256Mi"
     prometheusOperator:
       resources:
         requests:
-          cpu: 100m
-          memory: 512Mi
+          cpu: "100m"
+          memory: "512Mi"
         limits:
-          cpu: 1
-          memory: 512Mi
+          cpu: "1"
+          memory: "512Mi"
     prometheus:
       prometheusSpec:
         resources:
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: "100m"
+            memory: "256Mi"
           limits:
-            cpu: 1
-            memory: 256Mi
+            cpu: "1"
+            memory: "256Mi"
     grafana:
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: "100m"
+          memory: "128Mi"
         limits:
-          cpu: 1
-          memory: 128Mi
+          cpu: "1"
+          memory: "128Mi"
     kubeStateMetrics:
       resources:
         requests:
-          cpu: 10m
-          memory: 128Mi
+          cpu: "10m"
+          memory: "128Mi"
         limits:
-          cpu: 1
-          memory: 128Mi
+          cpu: "1"
+          memory: "128Mi"
     nodeExporter:
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: "100m"
+          memory: "128Mi"
         limits:
-          cpu: 1
-          memory: 128Mi
+          cpu: "1"
+          memory: "128Mi"
 
 gatekeeper:
   enabled: true
@@ -341,11 +342,11 @@ gatekeeper:
     replicas: 1
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: "100m"
+        memory: "256Mi"
       limits:
-        cpu: 1
-        memory: 256Mi
+        cpu: "1"
+        memory: "256Mi"
 
 twistlock:
   enabled: true
@@ -357,11 +358,11 @@ twistlock:
         size: 5Gi
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: "100m"
+        memory: "256Mi"
       limits:
-        cpu: 1
-        memory: 256Mi
+        cpu: "1"
+        memory: "256Mi"
 
 jaeger:
   enabled: true
@@ -370,34 +371,34 @@ jaeger:
   values:
     resources:
       requests:
-        cpu: 100m
-        memory: 128Mi
+        cpu: "100m"
+        memory: "128Mi"
         # ephemeral-storage: "5Gi"
       limits:
-        cpu: 1
-        memory: 128Mi
+        cpu: "1"
+        memory: "128Mi"
         # ephemeral-storage: "5Gi"
     jaeger:
       spec:
         allInOne:
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: "100m"
+              memory: "128Mi"
               # ephemeral-storage: "5Gi"
             limits:
-              cpu: 1
-              memory: 128Mi
+              cpu: "1"
+              memory: "128Mi"
               # ephemeral-storage: "5Gi"
         collector:
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: "100m"
+              memory: "128Mi"
               # ephemeral-storage: "5Gi"
             limits:
-              cpu: 1
-              memory: 128Mi
+              cpu: "1"
+              memory: "128Mi"
               # ephemeral-storage: "5Gi"
 
 kiali:
@@ -407,24 +408,24 @@ kiali:
   values:
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: "100m"
+        memory: "256Mi"
         # ephemeral-storage: "5Gi"
       limits:
-        cpu: 100m
-        memory: 256Mi
+        cpu: "100m"
+        memory: "256Mi"
         # ephemeral-storage: "5Gi"
     cr:
       spec:
         deployment:
           resources:
             requests:
-              cpu: 100m
-              memory: 368Mi
+              cpu: "100m"
+              memory: "368Mi"
               # ephemeral-storage: "5Gi"
             limits:
-              cpu: 1
-              memory: 368Mi
+              cpu: "1"
+              memory: "368Mi"
               # ephemeral-storage: "5Gi"
 
 addons:

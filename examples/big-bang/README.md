@@ -22,3 +22,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 9. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core
 10. Wait several minutes. Run `k9s` to watch progress
+
+## To-Do
+
+1. Re-enable the NetworkPolicies - They got disabled to resolve an issue connecting to the k8s cluster API server, which is fine for a demo but unacceptable in production
