@@ -16,7 +16,7 @@ endif
 
 # remove all zarf packages recursively
 remove-packages:
-	find . -type f -name 'zarf-package*' -delete
+	find . -type f -name 'zarf-package-*' -delete
 
 # usage: make test OS=ubuntu
 test:
@@ -27,9 +27,9 @@ test:
 test-close:
 	vagrant destroy -f
 
-package:
+init-package:
 	$(ZARF_BIN) package create --confirm
-	mv zarf*.tar.zst build
+	mv zarf-init.tar.zst build
 
 	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
@@ -39,9 +39,9 @@ build-cli:
 	cd cli && $(MAKE) build
 	cd cli && $(MAKE) build-mac
 
-build-test: build-cli package
+build-test: build-cli init-package
 
-ci-release: package
+ci-release: init-package
 
 # automatically package all example directories and add the tarballs to the build directory
 package-examples:
