@@ -2,7 +2,7 @@
 
 Zarf is a static go binary that runs on various linux distros to deploy an airgap utility cluster including a docker registry and gitea server, batteries included. Zarf also includes an [Appliance Mode](examples/appliance/README.md) that can be used for single-purpose k3s deployments.
 
-> _This is a mirror of a government repo hosted on [Repo1](https://repo1.dso.mil/) by [DoD Platform One](http://p1.dso.mil/).  Please direct all code changes, issues and comments to https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf_
+> _This repo is in transition from [Repo1](https://repo1.dso.mil/) by [DoD Platform One](http://p1.dso.mil/) to [Github](https://github.com/defenseunicorns/zarf).  See [the announcments post](https://github.com/defenseunicorns/zarf/discussions/1#discussion-3560306) for the latest URLs for this project during this transition._
 
 &nbsp;
 
