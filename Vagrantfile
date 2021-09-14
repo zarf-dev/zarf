@@ -42,7 +42,11 @@ Vagrant.configure("2") do |config|
     config.vm.disk :disk, size: "100GB", primary: true
     target.vm.box = "boxomatic/ubuntu-20.04"
     config.vm.provision "shell", inline: <<-SHELL
+      # The partition is 100GB but the filesystem isn't yet
       growpart /dev/sda 1 && resize2fs /dev/sda1
+
+      # Elasticsearch needs this
+      sysctl -w vm.max_map_count=262144
       SHELL
   end
 
@@ -68,9 +72,5 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     # Airgap images please
     echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-
-    # EFK needs this
-    sysctl -w vm.max_map_count=262144
-
     SHELL
 end

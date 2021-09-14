@@ -16,8 +16,8 @@ endif
 
 package-examples:
 	cd big-bang                && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
-#	cd appliance               && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
-#	cd data-injection          && $(ZARF_BIN) package create --confirm && mv zarf*.tar     ../../build
-#	cd game                    && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
-#	cd single-big-bang-package && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
-#	cd tiny-kafka              && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd appliance               && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd data-injection          && $(ZARF_BIN) package create --confirm && mv zarf*.tar     ../../build
+	cd game                    && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd single-big-bang-package && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd tiny-kafka              && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build

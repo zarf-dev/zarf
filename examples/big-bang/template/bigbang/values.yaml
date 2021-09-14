@@ -26,11 +26,9 @@ logging:
           requests:
             cpu: "100m"
             memory: "2Gi"
-            # ephemeral-storage: "5Gi"
           limits:
             cpu: "1"
             memory: "2Gi"
-            # ephemeral-storage: "5Gi"
       data:
         count: 1
         persistence:
@@ -39,22 +37,18 @@ logging:
           requests:
             cpu: "100m"
             memory: "2Gi"
-            # ephemeral-storage: "5Gi"
           limits:
             cpu: "1"
             memory: "2Gi"
-            # ephemeral-storage: "5Gi"
     kibana:
       count: 1
       resources:
         requests:
           memory: "1Gi"
           cpu: "100m"
-          # ephemeral-storage: "5Gi"
         limits:
           memory: "1Gi"
           cpu: "1"
-          # ephemeral-storage: "5Gi"
 
 eckoperator:
   enabled: true
@@ -373,11 +367,9 @@ jaeger:
       requests:
         cpu: "100m"
         memory: "128Mi"
-        # ephemeral-storage: "5Gi"
       limits:
         cpu: "1"
         memory: "128Mi"
-        # ephemeral-storage: "5Gi"
     jaeger:
       spec:
         allInOne:
@@ -385,21 +377,17 @@ jaeger:
             requests:
               cpu: "100m"
               memory: "128Mi"
-              # ephemeral-storage: "5Gi"
             limits:
               cpu: "1"
               memory: "128Mi"
-              # ephemeral-storage: "5Gi"
         collector:
           resources:
             requests:
               cpu: "100m"
               memory: "128Mi"
-              # ephemeral-storage: "5Gi"
             limits:
               cpu: "1"
               memory: "128Mi"
-              # ephemeral-storage: "5Gi"
 
 kiali:
   enabled: true
@@ -410,11 +398,9 @@ kiali:
       requests:
         cpu: "100m"
         memory: "256Mi"
-        # ephemeral-storage: "5Gi"
       limits:
         cpu: "100m"
         memory: "256Mi"
-        # ephemeral-storage: "5Gi"
     cr:
       spec:
         deployment:
@@ -422,11 +408,9 @@ kiali:
             requests:
               cpu: "100m"
               memory: "368Mi"
-              # ephemeral-storage: "5Gi"
             limits:
               cpu: "1"
               memory: "368Mi"
-              # ephemeral-storage: "5Gi"
 
 addons:
   argocd:
