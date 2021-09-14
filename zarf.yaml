@@ -13,6 +13,8 @@ local:
       executable: true
     - source: assets/scripts/k3s.service
       target: "/etc/systemd/system/k3s.service"
+    - source: assets/misc/registries.yaml
+      target: "/etc/rancher/k3s/registries.yaml"
 
   images:
     # K3s images
