@@ -1,10 +1,13 @@
 mirrors:
+  registry.dso.mil:
+    endpoint:
+      - "https://zarf.localhost"
   registry1.dso.mil:
     endpoint:
-      - "http://zarf.localhost"
+      - "https://zarf.localhost"
   docker.io:
     endpoint:
-      - "http://zarf.localhost"
+      - "https://zarf.localhost"
   registry-1.docker.io:
     endpoint:
-      - "http://zarf.localhost"
+      - "https://zarf.localhost"
