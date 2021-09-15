@@ -12,8 +12,6 @@ local:
     - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
     - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
     - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
-    - docker.io/rancher/pause:3.1
-    - registry-1.docker.io/rancher/pause:3.1
 
 remote:
   # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
@@ -39,12 +37,6 @@ remote:
     # 2. kubectl get pods --all-namespaces -o json | jq '.items[].spec.containers[].image' | jq -s 'unique' | yq e -P
     # 3. Move all 'registry1.dso.mil/ironbank/fluxcd' images to the 'local.images' section
     # 4. Add 'docker.io/' to any images that aren't fully qualified (example: rancher/metrics-server -> docker.io/rancher/metrics-server
-    - docker.io/rancher/coredns-coredns:1.8.3
-    - docker.io/rancher/klipper-lb:v0.2.0
-    - docker.io/rancher/local-path-provisioner:v0.0.19
-    - docker.io/rancher/metrics-server:v0.3.6
-    - docker.io/rancher/pause:3.1
-    - registry-1.docker.io/rancher/pause:3.1
     - registry1.dso.mil/ironbank/cluster-auditor/opa-collector:0.3.2
     - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
     - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.13.4

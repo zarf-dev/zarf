@@ -27,7 +27,7 @@ logging:
             cpu: "100m"
             memory: "2Gi"
           limits:
-            cpu: "1"
+            cpu: "500m"
             memory: "2Gi"
       data:
         count: 1
@@ -38,7 +38,7 @@ logging:
             cpu: "100m"
             memory: "2Gi"
           limits:
-            cpu: "1"
+            cpu: "500m"
             memory: "2Gi"
     kibana:
       count: 1
@@ -48,7 +48,7 @@ logging:
           cpu: "100m"
         limits:
           memory: "1Gi"
-          cpu: "1"
+          cpu: "500m"
 
 eckoperator:
   enabled: true
@@ -67,7 +67,7 @@ fluentbit:
         cpu: "100m"
         memory: "128Mi"
       limits:
-        cpu: "1"
+        cpu: "500m"
         memory: "128Mi"
 
 istiooperator:
@@ -81,7 +81,7 @@ istiooperator:
           cpu: "100m"
           memory: "256Mi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "256Mi"
 
 istio:
@@ -95,7 +95,7 @@ istio:
           cpu: "100m"
           memory: "1Gi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "1Gi"
     kiali:
       dashboard:
@@ -110,7 +110,7 @@ istio:
             cpu: "100m"
             memory: "512Mi"
           limits:
-            cpu: "1"
+            cpu: "500m"
             memory: "512Mi"
         service:
           ports:
@@ -269,7 +269,7 @@ clusterAuditor:
         cpu: "100m"
         memory: "512Mi"
       limits:
-        cpu: "1"
+        cpu: "500m"
         memory: "512Mi"
 
 monitoring:
@@ -284,7 +284,7 @@ monitoring:
             cpu: "100m"
             memory: "256Mi"
           limits:
-            cpu: "1"
+            cpu: "500m"
             memory: "256Mi"
     prometheusOperator:
       resources:
@@ -292,7 +292,7 @@ monitoring:
           cpu: "100m"
           memory: "512Mi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "512Mi"
     prometheus:
       prometheusSpec:
@@ -301,7 +301,7 @@ monitoring:
             cpu: "100m"
             memory: "256Mi"
           limits:
-            cpu: "1"
+            cpu: "500m"
             memory: "256Mi"
     grafana:
       resources:
@@ -309,7 +309,7 @@ monitoring:
           cpu: "100m"
           memory: "128Mi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "128Mi"
     kubeStateMetrics:
       resources:
@@ -317,7 +317,7 @@ monitoring:
           cpu: "10m"
           memory: "128Mi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "128Mi"
     nodeExporter:
       resources:
@@ -325,7 +325,7 @@ monitoring:
           cpu: "100m"
           memory: "128Mi"
         limits:
-          cpu: "1"
+          cpu: "500m"
           memory: "128Mi"
 
 gatekeeper:
@@ -339,7 +339,7 @@ gatekeeper:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "1"
+        cpu: "500m"
         memory: "256Mi"
 
 twistlock:
@@ -355,7 +355,7 @@ twistlock:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "1"
+        cpu: "500m"
         memory: "256Mi"
 
 jaeger:
@@ -368,7 +368,7 @@ jaeger:
         cpu: "100m"
         memory: "128Mi"
       limits:
-        cpu: "1"
+        cpu: "500m"
         memory: "128Mi"
     jaeger:
       spec:
@@ -378,7 +378,7 @@ jaeger:
               cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "1"
+              cpu: "500m"
               memory: "128Mi"
         collector:
           resources:
@@ -386,7 +386,7 @@ jaeger:
               cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "1"
+              cpu: "500m"
               memory: "128Mi"
 
 kiali:
@@ -399,7 +399,7 @@ kiali:
         cpu: "100m"
         memory: "256Mi"
       limits:
-        cpu: "100m"
+        cpu: "500m"
         memory: "256Mi"
     cr:
       spec:
@@ -409,7 +409,7 @@ kiali:
               cpu: "100m"
               memory: "368Mi"
             limits:
-              cpu: "1"
+              cpu: "500m"
               memory: "368Mi"
 
 addons:

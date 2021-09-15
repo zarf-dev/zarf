@@ -55,10 +55,28 @@ vm-destroy:
 
 # Create zarf packages from all examples
 .PHONY: package-examples
-package-examples:
-	cd big-bang                && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-	cd appliance               && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-	cd data-injection          && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-	cd game                    && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka
+
+.PHONY: package-example-big-bang
+package-example-big-bang:
+	cd big-bang && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-appliance
+package-example-appliance:
+	cd appliance && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-data-injection
+package-example-data-injection:
+	cd data-injection && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-game
+package-example-game:
+	cd game && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-single-big-bang-package
+package-example-single-big-bang-package:
 	cd single-big-bang-package && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-	cd tiny-kafka              && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-tiny-kafka
+package-example-tiny-kafka:
+	cd tiny-kafka && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
