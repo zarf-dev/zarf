@@ -20,7 +20,7 @@ local:
 
   #  charts:
   #    - name: strimzi-kafka-operator
-  #      url: https://github.com/strimzi/strimzi-kafka-operator.git@helm-charts/helm3/strimzi-kafka-operator
+  #      url: https://strimzi.io/charts/
   #      version: 0.24.0
 
   images:
