@@ -25,8 +25,8 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "ubuntu" do |target|
-      target.vm.box = "boxomatic/ubuntu-20.04"
-    end
+    target.vm.box = "boxomatic/ubuntu-20.04"
+  end
 
   config.vm.define "debian" do |target|
     target.vm.box = "boxomatic/debian-11"
