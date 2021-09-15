@@ -11,11 +11,17 @@ local:
     - source: https://ftp.wayne.edu/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
       shasum: 3fa380ae5d1385111ee9c83b0d1806172924ffec2e29399fd1a42671a97492c6
       target: /opt/kafka.tgz
+    # This is a helm chart, and it should go in the 'charts:' section, but Strimzi has published the tgz file as
+    # strimzi-kafka-operator-helm-3-chart-0.24.0.tgz and Zarf expects the format to be <ChartName>-<Version>.tgz, so it
+    # throws an error when trying to copy the file. This works, but it's just a bandaid fix.
+    - source: https://github.com/strimzi/strimzi-kafka-operator/releases/download/0.24.0/strimzi-kafka-operator-helm-3-chart-0.24.0.tgz
+      shasum: 8cffe0909f14470331efddfef83291cc117d2c5ce9b48e9f32df720c23cc1d23
+      target: /var/lib/rancher/k3s/server/static/charts/strimzi-kafka-operator-0.24.0.tgz
 
-  charts:
-    - name: strimzi-kafka-operator
-      url: https://strimzi.io/charts/
-      version: 0.24.0
+  #  charts:
+  #    - name: strimzi-kafka-operator
+  #      url: https://github.com/strimzi/strimzi-kafka-operator.git@helm-charts/helm3/strimzi-kafka-operator
+  #      version: 0.24.0
 
   images:
     - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
