@@ -1,22 +1,34 @@
-## Zarf Game Mode Example
+# Zarf Postgres Operator Example
 
-This example demonstrates using Zarf with a postgres database in a kubernetes cluster.
+This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
 
-### Choosing a Kubernetes Postgres Operator
-#### Choices
-1) CrunchyData Postgres Operator (https://github.com/CrunchyData/postgres-operator)
-2) Zolando Postgres Operator (https://github.com/zalando/postgres-operator)
-3) KubeDB (https://github.com/kubedb/operator)
+## Tool Choice
 
-#### Decision With Reasons
-Zolano Postgres Operator
-1) Pods in CruncyData are created as Deployments, instead of StatefulSets which can cause some odd behavior (see Credits #1)
-2) KubeDB has an enterprise version, which is concerning since some features may be paywalled
+After looking at several alternatives, Zalando's postgres operator felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).
 
-### Steps to use:
+## Instructions
+
 1. Create a Zarf cluster as outlined in the main [README](../../README.md#2-create-the-zarf-cluster)
-2. Follow [step 3](../../README.md#3-add-resources-to-the-zarf-cluster) using this config in this folder
+2. Follow [step 3](../../README.md#3-add-resources-to-the-zarf-cluster) using the `zarf.yaml` config in this folder
+3. The Postgres Operator UI will be available at [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) and PGAdmin will be available at [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443).
+4. Set up a server in PGAdmin:
+    - General // Name: `acid-zarf-test`
+    - General // Server group: `Servers`
+    - Connection // Host: (the URL in the table below)
+    - Connection // Port: `5432`
+    - Connection // Maintenance database: `postgres`
+    - Connection // Username: `zarf`
+    - Connection // Password: (run the command in the table below)
+    - SSL // SSL mode: `Require`
 
-### Credits:
--- https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/
--- https://blog.flant.com/our-experience-with-postgres-operator-for-kubernetes-by-zalando/
+## Logins
+
+| Service                   | URL                                                                                        | Username             | Password                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres Operator UI      | [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) | N/A                  | N/A                                                                                                                                                        |
+| PGAdmin                   | [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443)                           | `zarf@example.local` | Run: `zarf tools get-admin-password`                                                                                                                       |
+| Example Postgres Database | `acid-zarf-test.postgres-operator.svc.cluster.local`                                       | `zarf`               | Run: `echo $(kubectl get secret zarf.acid-zarf-test.credentials.postgresql.acid.zalan.do -n postgres-operator --template={{.data.password}} \| base64 -d)` |
+
+## References
+- https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/
+- https://blog.flant.com/our-experience-with-postgres-operator-for-kubernetes-by-zalando/

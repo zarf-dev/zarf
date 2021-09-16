@@ -10,9 +10,17 @@ local:
     - name: postgres-operator
       url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
       version: 1.7.0
+    - name: postgres-operator-ui
+      url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
+      version: 1.7.0
+    - name: pgadmin4
+      url: https://helm.runix.net
+      version: 1.7.2
 
   images:
     - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
     - registry.opensource.zalan.do/acid/spilo-13:2.1-p1
     - registry.opensource.zalan.do/acid/logical-backup:v1.7.0
     - registry.opensource.zalan.do/acid/pgbouncer:master-18
+    - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
+    - docker.io/dpage/pgadmin4:5.5
