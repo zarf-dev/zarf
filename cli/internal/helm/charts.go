@@ -57,7 +57,7 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 	// Setup the chart downloader
 	downloader := downloader.ChartDownloader{
 		Out:              &out,
-		Verify:           downloader.VerifyIfPossible,
+		Verify:           downloader.VerifyNever,
 		Getters:          getter.All(pull.Settings),
 	}
 
