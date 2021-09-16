@@ -6,17 +6,13 @@ metadata:
 local:
   manifests: manifests
 
-#  files:
-#    # Official mirror loaded from https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz
-#    - source: https://ftp.wayne.edu/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
-#      shasum: 3fa380ae5d1385111ee9c83b0d1806172924ffec2e29399fd1a42671a97492c6
-#      target: /opt/kafka.tgz
-
   charts:
     - name: postgres-operator
       url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
       version: 1.7.0
 
-#  images:
-#    - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
-#    - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
+  images:
+    - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
+    - registry.opensource.zalan.do/acid/spilo-13:2.1-p1
+    - registry.opensource.zalan.do/acid/logical-backup:v1.7.0
+    - registry.opensource.zalan.do/acid/pgbouncer:master-18
