@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres-operator
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: postgres-operator
+  namespace: postgres-operator
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/postgres-operator-1.7.0.tgz
+  targetNamespace: postgres-operator
+#  valuesContent: |-
+#    imageRegistryOverride: registry1.dso.mil
+#    imageRepositoryOverride: ironbank/opensource/strimzi
+#    image:
+#      pullPolicy: Never
+#    watchNamespaces:
+#      - kafka-demo
