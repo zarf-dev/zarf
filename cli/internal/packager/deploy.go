@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/helm"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/images"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k8s"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
@@ -160,8 +161,9 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if len(assets.Charts) > 0 {
 		logrus.Info("Loading charts for local install")
 		for _, chart := range assets.Charts {
-			target := "/" + chart.Name + "-" + chart.Version + ".tgz"
-			utils.CreatePathAndCopy(tempPath.localCharts+target, config.K3sChartPath+target)
+			sourceTarball := helm.StandardName(tempPath.localCharts, chart)
+			destinationTarball := helm.StandardName(config.K3sChartPath, chart)
+			utils.CreatePathAndCopy(sourceTarball, destinationTarball)
 		}
 	}
 
