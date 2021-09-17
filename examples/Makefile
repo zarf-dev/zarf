@@ -20,3 +20,4 @@ package-examples:
 	cd game                    && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
 	cd single-big-bang-package && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
 	cd tiny-kafka              && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd postgres-operator       && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
