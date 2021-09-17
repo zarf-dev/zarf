@@ -16,7 +16,7 @@ local:
     - name: pgadmin4
       url: https://helm.runix.net
       version: 1.7.2
-    - name: twistlock
+    - name: minio-operator
       url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git
       version: 4.2.3-bb.1
 
