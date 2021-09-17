@@ -4,7 +4,7 @@ metadata:
   name: minio-operator
   namespace: minio-operator
 spec:
-chart: https://%{KUBERNETES_API}%/static/charts/minio-operator-2.0.9-bb.3.tgz
+  chart: https://%{KUBERNETES_API}%/static/charts/minio-operator-4.2.3-bb.1.tgz
   targetNamespace: minio-operator
   # https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator/-/blob/2.0.9-bb.3/chart/values.yaml
   valuesContent: |-
