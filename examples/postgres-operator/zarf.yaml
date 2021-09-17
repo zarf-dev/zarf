@@ -16,7 +16,9 @@ local:
     - name: pgadmin4
       url: https://helm.runix.net
       version: 1.7.2
-    # add minio-operator and minio from big bang
+    - name: twistlock
+      url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git
+      version: 4.2.3-bb.1
 
   images:
     - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
@@ -25,3 +27,5 @@ local:
     - registry.opensource.zalan.do/acid/pgbouncer:master-18
     - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
     - docker.io/dpage/pgadmin4:5.5
+    - registry1.dso.mil/ironbank/opensource/minio/operator:v4.2.3
+    - minio/console:v0.6.3
