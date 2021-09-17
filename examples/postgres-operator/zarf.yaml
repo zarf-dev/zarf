@@ -16,6 +16,7 @@ local:
     - name: pgadmin4
       url: https://helm.runix.net
       version: 1.7.2
+    # add minio-operator and minio from big bang
 
   images:
     - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
