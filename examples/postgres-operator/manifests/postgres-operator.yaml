@@ -22,12 +22,18 @@ spec:
       default_memory_limit: "500Mi"
       min_cpu_limit: "250m"
       min_memory_limit: "250Mi"
-    # configLogicalBackup:
+    configAwsOrGcp:
+      wal_s3_bucket: "postgres-operator-backups"
+    configLogicalBackup:
       # logical_backup_docker_image: "registry1.dso.mil/.../logical-backup:v1.7.0"
-      # logical_backup_s3_endpoint: ""
-      # logical_backup_s3_access_key_id: ""
-      # logical_backup_s3_secret_access_key : ""
-      # logical_backup_schedule: "30 00 * * *"
+      logical_backup_s3_endpoint: "http://minio.minio-operator.svc.cluster.local"
+      logical_backup_s3_access_key_id: "minio"
+      logical_backup_s3_bucket: "postgres-operator-backups"
+      logical_backup_s3_secret_access_key : "minio123"
+      logical_backup_s3_sse: ""
+      logical_backup_schedule: "*/2 * * * *"
+    configKubernetes:
+      pod_environment_configmap: "postgres-operator/postgres-pod-config"
     configConnectionPooler:
       # connection_pooler_image: "registry1.dso.mil/.../pgbouncer:master-18"
       connection_pooler_default_cpu_request: "100m"
@@ -46,3 +52,19 @@ spec:
       runAsNonRoot: true
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-pod-config
+  namespace: postgres-operator
+data:
+  AWS_ENDPOINT: http://minio.minio-operator.svc.cluster.local
+  AWS_ACCESS_KEY_ID: minio
+  AWS_SECRET_ACCESS_KEY: minio123
+  BACKUP_NUM_TO_RETAIN: "3"
+  BACKUP_SCHEDULE: "*/2 * * * *"
+  USE_WALG_BACKUP: "true"
+  WALG_DISABLE_S3_SSE: "true"
+  USE_WALG_RESTORE: "false"
+  AWS_S3_FORCE_PATH_STYLE: "true"

@@ -20,6 +20,11 @@ After looking at several alternatives, Zalando's postgres operator felt like the
     - Connection // Username: `zarf`
     - Connection // Password: (run the command in the table below)
     - SSL // SSL mode: `Require`
+5. Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
+   1. Navigate to [https://minio-console.localhost:8443](https://minio-console.localhost:8443)
+   2. Log in - Username: `minio` - Password: `minio123`
+   3. Buckets -> Create Bucket
+      - Bucket Name: `postgres-operator-backups`
 
 ## Logins
 
@@ -28,6 +33,7 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 | Postgres Operator UI      | [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) | N/A                  | N/A                                                                                                                                                        |
 | PGAdmin                   | [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443)                           | `zarf@example.local` | Run: `zarf tools get-admin-password`                                                                                                                       |
 | Example Postgres Database | `acid-zarf-test.postgres-operator.svc.cluster.local`                                       | `zarf`               | Run: `echo $(kubectl get secret zarf.acid-zarf-test.credentials.postgresql.acid.zalan.do -n postgres-operator --template={{.data.password}} \| base64 -d)` |
+| Minio Console             | [https://minio-console.localhost:8443](https://minio-console.localhost:8443)               | `minio`              | `minio123`                                                                                                                                                 |
 
 ## References
 - https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/

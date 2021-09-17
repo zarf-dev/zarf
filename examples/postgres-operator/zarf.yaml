@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: postgres-operator-demo
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
+#  uncompressed: true
 
 local:
   manifests: manifests
@@ -16,6 +17,12 @@ local:
     - name: pgadmin4
       url: https://helm.runix.net
       version: 1.7.2
+    - name: minio-operator
+      url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git
+      version: 4.2.3-bb.1
+    - name: minio-instance
+      url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git
+      version: 4.2.3-bb.1
 
   images:
     - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
@@ -24,3 +31,5 @@ local:
     - registry.opensource.zalan.do/acid/pgbouncer:master-18
     - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
     - docker.io/dpage/pgadmin4:5.5
+    - registry1.dso.mil/ironbank/opensource/minio/operator:v4.2.3
+    - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z
