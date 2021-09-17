@@ -17,6 +17,8 @@ spec:
     zarf: []
   databases:
     zarf: zarf
+  enableLogicalBackup: true
+  logicalBackupSchedule: "*/2 * * * *"
   resources:
     requests:
       cpu: 100m
