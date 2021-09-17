@@ -80,3 +80,7 @@ package-example-single-big-bang-package:
 .PHONY: package-example-tiny-kafka
 package-example-tiny-kafka:
 	cd tiny-kafka && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-postgres-operator
+package-example-postgres-operator:
+	cd postgres-operator       && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
