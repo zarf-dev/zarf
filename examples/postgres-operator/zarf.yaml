@@ -32,5 +32,4 @@ local:
     - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
     - docker.io/dpage/pgadmin4:5.5
     - registry1.dso.mil/ironbank/opensource/minio/operator:v4.2.3
-    - minio/console:v0.7.4
     - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z

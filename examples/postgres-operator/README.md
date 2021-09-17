@@ -20,6 +20,11 @@ After looking at several alternatives, Zalando's postgres operator felt like the
     - Connection // Username: `zarf`
     - Connection // Password: (run the command in the table below)
     - SSL // SSL mode: `Require`
+5. Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
+   1. Navigate to [https://minio-console.localhost:8443](https://minio-console.localhost:8443)
+   2. Log in - Username: `minio` - Password: `minio123`
+   3. Buckets -> Create Bucket
+      - Bucket Name: `postgres-operator-backups`
 
 ## Logins
 

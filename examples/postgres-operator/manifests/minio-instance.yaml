@@ -1,7 +1,7 @@
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: minio
+  name: minio-instance
   namespace: minio-operator
 spec:
   chart: https://%{KUBERNETES_API}%/static/charts/minio-instance-4.2.3-bb.1.tgz
@@ -47,17 +47,18 @@ spec:
             fsGroup: 1001
     console:
       enabled: true
-      image:
-        repository: minio/console
-        tag: v0.7.4
-        pullPolicy: IfNotPresent
-      replicaCount: 1
-      secrets:
-        enabled: true
-        name: console-secret
-        passphrase: SECRET
-        salt: SECRET
-        accessKey: YOURCONSOLEACCESS
-        secretKey: YOURCONSOLESECRET
-
-
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: minio-console-ingressroute
+  namespace: minio-operator
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`minio-console.localhost`)
+      kind: Rule
+      services:
+        - name: minio-instance-console
+          port: 9090
