@@ -55,7 +55,7 @@ vm-destroy:
 
 # Create zarf packages from all examples
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka
+package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator
 
 .PHONY: package-example-big-bang
 package-example-big-bang:
@@ -83,4 +83,4 @@ package-example-tiny-kafka:
 
 .PHONY: package-example-postgres-operator
 package-example-postgres-operator:
-	cd postgres-operator       && $(ZARF_BIN) package create --confirm && mv zarf*.tar.zst ../../build
+	cd postgres-operator && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
