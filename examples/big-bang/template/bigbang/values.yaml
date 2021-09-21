@@ -9,7 +9,8 @@ flux:
     cleanupOnFail: false
 
 networkPolicies:
-  enabled: false
+  enabled: true
+  controlPlaneCidr: 0.0.0.0/0
 #  controlPlaneCidr: 10.43.0.0/16
 
 logging:
