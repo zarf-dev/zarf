@@ -7,8 +7,8 @@ local:
   manifests: manifests
 
   files:
-    # Official mirror loaded from https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz
-    - source: https://ftp.wayne.edu/apache/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+    # Helper tools for working with kafka
+    - source: https://archive.apache.org/dist/kafka/2.8.0/kafka_2.13-2.8.0.tgz
       shasum: 3fa380ae5d1385111ee9c83b0d1806172924ffec2e29399fd1a42671a97492c6
       target: /opt/kafka.tgz
 
