@@ -9,8 +9,9 @@ flux:
     cleanupOnFail: false
 
 networkPolicies:
-  enabled: false
-#  controlPlaneCidr: 10.43.0.0/16
+  enabled: true
+  # TODO: Fix this insecure CIDR
+  controlPlaneCidr: 0.0.0.0/0
 
 logging:
   enabled: true
@@ -304,6 +305,14 @@ monitoring:
             cpu: "500m"
             memory: "256Mi"
     grafana:
+      sidecar:
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+          limits:
+            cpu: "500m"
+            memory: "100Mi"
       resources:
         requests:
           cpu: "100m"
@@ -311,7 +320,7 @@ monitoring:
         limits:
           cpu: "500m"
           memory: "128Mi"
-    kubeStateMetrics:
+    kube-state-metrics:
       resources:
         requests:
           cpu: "10m"
@@ -319,7 +328,7 @@ monitoring:
         limits:
           cpu: "500m"
           memory: "128Mi"
-    nodeExporter:
+    prometheus-node-exporter:
       resources:
         requests:
           cpu: "100m"
