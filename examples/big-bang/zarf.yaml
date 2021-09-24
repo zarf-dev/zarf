@@ -61,5 +61,4 @@ remote:
     - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.0.1
     - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.25.0
     - registry1.dso.mil/ironbank/twistlock/console/console:21.04.412
-
-
+    - registry1.dso.mil/ironbank/big-bang/base:8.4
