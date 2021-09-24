@@ -29,7 +29,7 @@ local:
 
 features:
   - name: management
-    description: "Add terminal-based K8s tools for cluster management"
+    description: "Add the K9s terminal-based K8s UI for cluster management"
     default: true
     files:
       - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
@@ -38,13 +38,6 @@ features:
         executable: true
       - source: assets/misc/k9s-theme.yaml
         target: "/root/.k9s/skin.yml"
-      - source: https://github.com/armosec/kubescape/releases/download/v1.0.81/kubescape-ubuntu-latest
-        shasum: a1caf4805f6a0e1e4bf0c0549fea7e822f2b7f8999913f8cfdbcb5316843a443
-        target: "/usr/local/bin/kubescape"
-        executable: true
-      - source: https://github.com/armosec/regolibrary/releases/download/v1.0.11/nsa
-        shasum: 52299bd5a2df28b6a6ff9926e09abd0fa5e6c1094f5bb75b036a0452cfc00dfa
-        target: "/usr/local/bin/kubescape-framework-nsa.json"
 
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
