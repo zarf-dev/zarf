@@ -38,3 +38,10 @@ spec:
     image:
       repository: registry1.dso.mil/ironbank/opensource/docker/registry-v2
       pullPolicy: Never
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
