@@ -6,6 +6,15 @@ metadata:
 local:
   manifests: manifests
 
+  files:
+    - source: https://github.com/armosec/kubescape/releases/download/v1.0.81/kubescape-ubuntu-latest
+      shasum: a1caf4805f6a0e1e4bf0c0549fea7e822f2b7f8999913f8cfdbcb5316843a443
+      target: "/usr/local/bin/kubescape"
+      executable: true
+    - source: https://github.com/armosec/regolibrary/releases/download/v1.0.11/nsa
+      shasum: 52299bd5a2df28b6a6ff9926e09abd0fa5e6c1094f5bb75b036a0452cfc00dfa
+      target: "/usr/local/bin/kubescape-framework-nsa.json"
+
   images:
     # Flux images
     - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0

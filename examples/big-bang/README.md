@@ -21,6 +21,14 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 11. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 12. When you're done, run `make vm-destroy` to bring everything down
 
+## Kubescape scan
+
+This example adds the `kubescape` binary, which can scan clusters for compliance with the NSA/CISA Kubernetes Hardening Guide
+
+```shell
+kubescape scan framework nsa --use-from /usr/local/bin/kubescape-framework-nsa.json
+```
+
 ## To-Do
 
 1. Re-enable the NetworkPolicies - They got disabled to resolve an issue connecting to the k8s cluster API server, which is fine for a demo but unacceptable in production
