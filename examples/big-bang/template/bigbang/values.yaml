@@ -1,4 +1,4 @@
-hostname: bigbang.dev
+domain: bigbang.dev
 
 git:
   existingSecret: "zarf-git-secret"
@@ -10,98 +10,13 @@ flux:
 
 networkPolicies:
   enabled: true
-  # TODO: Fix this insecure CIDR
-  controlPlaneCidr: 0.0.0.0/0
-
-logging:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
-  values:
-    elasticsearch:
-      master:
-        count: 1
-        persistence:
-          size: "5Gi"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "2Gi"
-          limits:
-            cpu: "500m"
-            memory: "2Gi"
-      data:
-        count: 1
-        persistence:
-          size: 5Gi
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "2Gi"
-          limits:
-            cpu: "500m"
-            memory: "2Gi"
-    kibana:
-      count: 1
-      resources:
-        requests:
-          memory: "1Gi"
-          cpu: "100m"
-        limits:
-          memory: "1Gi"
-          cpu: "500m"
-
-eckoperator:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
-
-fluentbit:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
-  values:
-    securityContext:
-      privileged: true
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-      limits:
-        cpu: "500m"
-        memory: "128Mi"
-
-istiooperator:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
-  values:
-    operator:
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "256Mi"
-        limits:
-          cpu: "500m"
-          memory: "256Mi"
+  controlPlaneCidr: "10.0.2.15/32"
+  nodeCidr: "10.0.2.15/32"
 
 istio:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
-  values:
-    istiod:
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "1Gi"
-        limits:
-          cpu: "500m"
-          memory: "1Gi"
-    kiali:
-      dashboard:
-        auth:
-          strategy: "anonymous"
   ingressGateways:
     public-ingressgateway:
       type: "LoadBalancer"
@@ -259,6 +174,90 @@ istio:
           he8Y4IWS6wY7bCkjCWDcRQJMEhg76fsO3txE+FiYruq9RUWhiF1myv4Q6W+CyBFC
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
+  values:
+    istiod:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "1Gi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+    kiali:
+      dashboard:
+        auth:
+          strategy: "anonymous"
+
+istiooperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
+  values:
+    operator:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+
+jaeger:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
+  values:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "128Mi"
+    jaeger:
+      spec:
+        allInOne:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+        collector:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+        ingester:
+          # TODO: Remove this once the upstream bug is fixed (https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger/-/issues/15)
+          image: registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
+
+kiali:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
+  values:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+    cr:
+      spec:
+        deployment:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "368Mi"
+            limits:
+              cpu: "500m"
+              memory: "368Mi"
 
 clusterAuditor:
   enabled: true
@@ -272,6 +271,87 @@ clusterAuditor:
       limits:
         cpu: "500m"
         memory: "512Mi"
+
+gatekeeper:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
+  values:
+    replicas: 1
+    controllerManager:
+      resources:
+        requests:
+          cpu: "175m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+    audit:
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "768Mi"
+        limits:
+          cpu: "1.2"
+          memory: "2Gi"
+
+logging:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
+  values:
+    elasticsearch:
+      master:
+        count: 1
+        persistence:
+          size: "5Gi"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "3Gi"
+          limits:
+            cpu: "500m"
+            memory: "3Gi"
+      data:
+        count: 1
+        persistence:
+          size: 5Gi
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "3Gi"
+          limits:
+            cpu: "500m"
+            memory: "3Gi"
+    kibana:
+      count: 1
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "100m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+eckoperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
+
+fluentbit:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
+  values:
+    securityContext:
+      privileged: true
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "128Mi"
 
 monitoring:
   enabled: true
@@ -337,20 +417,6 @@ monitoring:
           cpu: "500m"
           memory: "128Mi"
 
-gatekeeper:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
-  values:
-    replicas: 1
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "256Mi"
-
 twistlock:
   enabled: true
   git:
@@ -366,60 +432,6 @@ twistlock:
       limits:
         cpu: "500m"
         memory: "256Mi"
-
-jaeger:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
-  values:
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-      limits:
-        cpu: "500m"
-        memory: "128Mi"
-    jaeger:
-      spec:
-        allInOne:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "128Mi"
-        collector:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "128Mi"
-
-kiali:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
-  values:
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "256Mi"
-    cr:
-      spec:
-        deployment:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "368Mi"
-            limits:
-              cpu: "500m"
-              memory: "368Mi"
 
 addons:
   argocd:
