@@ -112,6 +112,12 @@ func addLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			} else {
 				utils.CreatePathAndCopy(file.Source, destinationFile)
 			}
+
+			// Abort packaging on invalid shasum (if one is specified)
+			if file.Shasum != "" {
+				utils.ValidateSha256Sum(file.Shasum, destinationFile)
+			}
+
 			if file.Executable {
 				_ = os.Chmod(destinationFile, 0700)
 			} else {
