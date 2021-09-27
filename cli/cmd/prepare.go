@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
+	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 var prepareCmd = &cobra.Command{
@@ -49,7 +51,23 @@ var prepareTransformGitLinks = &cobra.Command{
 	},
 }
 
+var prepareComputeFileSha256sum = &cobra.Command{
+	Use:   "sha256sum FILE",
+	Short: "Generate a SHA256SUM for the given file",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fileName := args[0]
+		hash, err := utils.GetSha256Sum(fileName)
+		if err != nil {
+			logrus.Fatal("Unable to compute the hash")
+		} else {
+			fmt.Println(hash)
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
+	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 }
