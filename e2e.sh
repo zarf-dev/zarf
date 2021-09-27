@@ -72,6 +72,17 @@ loadZarfCA() {
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
 }
 
+testPrepareCommands() {
+    # Validate working SHASUM computation
+    EXPECTED_SHASUM="61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109"
+    _run "echo 'random test data 🦄' > shasum-test-file"
+    ZARF_SHASUM=$(_run "zarf prepare sha256sum shasum-test-file")
+    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+        echo -e "${RED}zarf prepare sha256sum failed${NOCOLOR}"
+        exit 1
+    fi
+}
+
 testAPIEndpoints() {
     # Update the CA first
     loadZarfCA
@@ -116,6 +127,8 @@ testGitBasedHelmChart() {
 }
 
 beforeAll
+
+testPrepareCommands
 
 # Get the admin credentials 
 ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
