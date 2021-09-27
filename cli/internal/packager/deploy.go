@@ -149,6 +149,10 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		logrus.Info("Loading files for local install")
 		for index, file := range assets.Files {
 			sourceFile := tempPath.localFiles + "/" + strconv.Itoa(index)
+			// If a shasum is specified check it again on deployment as well
+			if file.Shasum != "" {
+				utils.ValidateSha256Sum(file.Shasum, sourceFile)
+			}
 			err := copy.Copy(sourceFile, file.Target)
 			if err != nil {
 				logrus.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
