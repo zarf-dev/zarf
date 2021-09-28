@@ -1,4 +1,5 @@
 domain: bigbang.dev
+hostname: bigbang.dev
 
 git:
   existingSecret: "zarf-git-secret"
@@ -10,8 +11,10 @@ flux:
 
 networkPolicies:
   enabled: true
-  controlPlaneCidr: "10.0.2.15/32"
-  nodeCidr: "10.0.2.15/32"
+  controlPlaneCidr: "0.0.0.0/0"
+  nodeCidr: "0.0.0.0/0"
+#  controlPlaneCidr: "10.0.2.15/32"
+#  nodeCidr: "10.0.2.15/32"
 
 istio:
   enabled: true
@@ -31,27 +34,31 @@ istio:
         service:
           ports:
             - name: status-port
-              nodePort: 31027
+#              nodePort: 31027
               port: 15021
               protocol: TCP
               targetPort: 15021
             - name: http2
-              nodePort: 30635
-              port: 8080
+#              nodePort: 30635
+              port: 9080
               protocol: TCP
-              targetPort: 8080
+              targetPort: 9080
             - name: https
-              nodePort: 31821
-              port: 8443
+#              nodePort: 31821
+              port: 9443
               protocol: TCP
-              targetPort: 8443
+              targetPort: 9443
             - name: tls
-              nodePort: 30889
+#              nodePort: 30889
               port: 15443
               protocol: TCP
               targetPort: 15443
   gateways:
     public:
+      port:
+        name: https
+        number: 9443
+        protocol: HTTPS
       tls:
         key: |
           -----BEGIN PRIVATE KEY-----
@@ -273,7 +280,7 @@ clusterAuditor:
         memory: "512Mi"
 
 gatekeeper:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
@@ -294,6 +301,38 @@ gatekeeper:
         limits:
           cpu: "1.2"
           memory: "2Gi"
+    violations:
+      allowedDockerRegistries:
+        parameters:
+          excludedResources:
+            # K3s kube-system stuff, better than excluding the whole namespace
+            - "kube-system/coredns-.*"
+            - "kube-system/local-path-provisioner-.*"
+            - "kube-system/metrics-server-.*"
+            - "kube-system/svclb-.*"
+            - "kube-system/traefik-.*"
+            # K3s needs these due to how it creates services of type "LoadBalancer"
+            - "istio-system/lb-port-.*"
+            - "istio-system/svclb-.*"
+            # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
+            - ".*/helm-install-.*"
+            - ".*/helm"
+            # TODO: Get Gitea in Iron Bank
+            - "git/stuart-gitea-.*"
+            - "git/gitea"
+            - "git/init"
+      hostNetworking:
+        parameters:
+          excludedResources:
+            # K3s needs these due to how it creates services of type "LoadBalancer"
+            - "istio-system/svclb-.*"
+            - "istio-system/lb-port-.*"
+      httpsOnly:
+        parameters:
+          excludedResources:
+            # TODO: Fix these ingresses
+            - "git/git-ingress"
+            - "registry/registry-ingress"
 
 logging:
   enabled: true
