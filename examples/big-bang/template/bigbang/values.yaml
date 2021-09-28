@@ -42,12 +42,12 @@ istio:
 #              nodePort: 30635
               port: 9080
               protocol: TCP
-              targetPort: 9080
+              targetPort: 8080
             - name: https
 #              nodePort: 31821
               port: 9443
               protocol: TCP
-              targetPort: 9443
+              targetPort: 8443
             - name: tls
 #              nodePort: 30889
               port: 15443
@@ -55,10 +55,6 @@ istio:
               targetPort: 15443
   gateways:
     public:
-      port:
-        name: https
-        number: 9443
-        protocol: HTTPS
       tls:
         key: |
           -----BEGIN PRIVATE KEY-----
