@@ -13,8 +13,6 @@ networkPolicies:
   enabled: true
   controlPlaneCidr: "0.0.0.0/0"
   nodeCidr: "0.0.0.0/0"
-#  controlPlaneCidr: "10.0.2.15/32"
-#  nodeCidr: "10.0.2.15/32"
 
 istio:
   enabled: true
@@ -34,22 +32,18 @@ istio:
         service:
           ports:
             - name: status-port
-#              nodePort: 31027
               port: 15021
               protocol: TCP
               targetPort: 15021
             - name: http2
-#              nodePort: 30635
               port: 9080
               protocol: TCP
               targetPort: 8080
             - name: https
-#              nodePort: 31821
               port: 9443
               protocol: TCP
               targetPort: 8443
             - name: tls
-#              nodePort: 30889
               port: 15443
               protocol: TCP
               targetPort: 15443
