@@ -78,7 +78,14 @@ testPrepareCommands() {
     _run "echo 'random test data 🦄' > shasum-test-file"
     ZARF_SHASUM=$(_run "zarf prepare sha256sum shasum-test-file")
     if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
-        echo -e "${RED}zarf prepare sha256sum failed${NOCOLOR}"
+        echo -e "${RED}zarf prepare sha256sum failed for local file${NOCOLOR}"
+        exit 1
+    fi    
+    # Validate working SHASUM for remote asset
+    EXPECTED_SHASUM="c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617"
+    ZARF_SHASUM=$(_run "zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
+    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+        echo -e "${RED}zarf prepare sha256sum failed for remote file${NOCOLOR}"
         exit 1
     fi
 }

@@ -52,7 +52,7 @@ var prepareTransformGitLinks = &cobra.Command{
 }
 
 var prepareComputeFileSha256sum = &cobra.Command{
-	Use:   "sha256sum FILE",
+	Use:   "sha256sum FILE|URL",
 	Short: "Generate a SHA256SUM for the given file",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
