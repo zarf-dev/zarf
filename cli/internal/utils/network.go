@@ -15,7 +15,7 @@ func IsUrl(source string) bool {
 	return err == nil && parsedUrl.Scheme != "" && parsedUrl.Host != ""
 }
 
-func Download(url string) []byte {
+func Fetch(url string) io.ReadCloser {
 	logContext := logrus.WithFields(logrus.Fields{
 		"url": url,
 	})
@@ -25,17 +25,27 @@ func Download(url string) []byte {
 	if err != nil {
 		logContext.Fatal("Unable to download the file", err)
 	}
-	defer resp.Body.Close()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		logContext.Fatalf("Bad HTTP status: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	return resp.Body
+}
+
+func Download(url string) []byte {
+	logContext := logrus.WithFields(logrus.Fields{
+		"url": url,
+	})
+
+	data := Fetch(url)
+
+	defer data.Close()
+
+	body, err := ioutil.ReadAll(data)
 	if err != nil {
-		logrus.Warn(err)
-		logrus.WithField("Url", url).Fatal("Unable to load the remote text", err)
+		logContext.Fatal("Unable to download the remote file", err)
 	}
 	return body
 }

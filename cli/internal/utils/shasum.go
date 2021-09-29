@@ -22,14 +22,25 @@ func ValidateSha256Sum(expectedChecksum string, path string) {
 
 // GetSha256Sum returns the computed SHA256 Sum of a given file
 func GetSha256Sum(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
+	var data io.ReadCloser
+	var err error
+
+	if IsUrl(path) {
+		// Handle download from URL
+		logrus.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
+		data = Fetch(path)
+	} else {
+		// Handle local file
+		data, err = os.Open(path)
+		if err != nil {
+			return "", err
+		}
 	}
-	defer file.Close()
+
+	defer data.Close()
 
 	hash := sha256.New()
-	_, err = io.Copy(hash, file)
+	_, err = io.Copy(hash, data)
 
 	if err != nil {
 		return "", err
