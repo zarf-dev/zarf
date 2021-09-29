@@ -18,8 +18,9 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 9. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core
 10. Wait several minutes. Run `k9s` to watch progress
-11. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-12. When you're done, run `make vm-destroy` to bring everything down
+11. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
+12. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
+13. When you're done, run `make vm-destroy` to bring everything down
 
 ## Kubescape scan
 
