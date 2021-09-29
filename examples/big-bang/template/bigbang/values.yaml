@@ -1,4 +1,4 @@
-hostname: bigbang.dev
+domain: bigbang.dev
 
 git:
   existingSecret: "zarf-git-secret"
@@ -10,98 +10,13 @@ flux:
 
 networkPolicies:
   enabled: true
-  # TODO: Fix this insecure CIDR
-  controlPlaneCidr: 0.0.0.0/0
-
-logging:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
-  values:
-    elasticsearch:
-      master:
-        count: 1
-        persistence:
-          size: "5Gi"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "2Gi"
-          limits:
-            cpu: "500m"
-            memory: "2Gi"
-      data:
-        count: 1
-        persistence:
-          size: 5Gi
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "2Gi"
-          limits:
-            cpu: "500m"
-            memory: "2Gi"
-    kibana:
-      count: 1
-      resources:
-        requests:
-          memory: "1Gi"
-          cpu: "100m"
-        limits:
-          memory: "1Gi"
-          cpu: "500m"
-
-eckoperator:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
-
-fluentbit:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
-  values:
-    securityContext:
-      privileged: true
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-      limits:
-        cpu: "500m"
-        memory: "128Mi"
-
-istiooperator:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
-  values:
-    operator:
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "256Mi"
-        limits:
-          cpu: "500m"
-          memory: "256Mi"
+  controlPlaneCidr: "10.0.2.15/32"
+  nodeCidr: "10.0.2.15/32"
 
 istio:
   enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
-  values:
-    istiod:
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "1Gi"
-        limits:
-          cpu: "500m"
-          memory: "1Gi"
-    kiali:
-      dashboard:
-        auth:
-          strategy: "anonymous"
   ingressGateways:
     public-ingressgateway:
       type: "LoadBalancer"
@@ -116,22 +31,18 @@ istio:
         service:
           ports:
             - name: status-port
-              nodePort: 31027
               port: 15021
               protocol: TCP
               targetPort: 15021
             - name: http2
-              nodePort: 30635
-              port: 8080
+              port: 9080
               protocol: TCP
               targetPort: 8080
             - name: https
-              nodePort: 31821
-              port: 8443
+              port: 9443
               protocol: TCP
               targetPort: 8443
             - name: tls
-              nodePort: 30889
               port: 15443
               protocol: TCP
               targetPort: 15443
@@ -140,63 +51,63 @@ istio:
       tls:
         key: |
           -----BEGIN PRIVATE KEY-----
-          MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQD1ahjVSH4A+inh
-          YyeVfOMQJhzrtt7OXpcGbSeepDY0lz+opc29BWafqcwZKef12aYMU7CzoyPJCL13
-          gOjn6FbU3h8FNkDZQ0kiZfGWQxHGYoJLB8MdXKyYgcynDCczMFNR/mc7YwF0IMVp
-          iApW/XYg2sv4ouuaBAZI/F7jQVYl1SB18gkk180YxZK9mzetie8V9dCEMkodH1tq
-          +BRzCYbrh3oSX/dL/CXYq/x29nFYTZmMctMc7T9ligS7n/JCBVTsLLGL/BL7E/Ba
-          8g54qDGR78FEW1kgr0dsWVcOWJQdb8JpwCRUUFXYHL5liFGS1IozD+bpFfUvUxNH
-          1sjPo18JAgMBAAECggEBAJRaQ5LC1LDAiQqfhvE94oEDmR4AmOWFlqQi3f1vZPkb
-          qTbIq/skxamk2iUoCPm8TT1MZhfheaNwLiCMg76U29CoSXY8Gq17mD08BPOBrcAQ
-          EpVKpu8b85XpeQ5OMXAnOWbqc/sZWWqa2Nt3ilCVvZAU05KE4gljf20lajLUb0BE
-          S+EOHgiPgbL9Upgb2HvsYjaBkgy6dMIJhH9ybyQqRJPaLceEbu53Krrv4iuZjzLD
-          CIdePYRge9DfvIff0UBlAFPVgahrwJNzZoqhEv9KlvSshE51tfaNv7zzMpoEnq7z
-          XqbisXXq/Pn6MaWiyF/6sYxYZDrAIHI5exmoJAYs4tECgYEA/V9eNpdh70Vzv19l
-          TkpjEklaAgDzSda68TSb5hYLtINI3m3+vVN+rlth5gZN7n8hKjxIBuUI8yERMY8B
-          is5g+qgIqK1jDeRHUJTKo7x+fRgM2vCTcYQgxCC4x2czkG86AifsNaGZ6j2P9y2v
-          lpaozs+ONkADpGwnOu0lsCBxbVUCgYEA9/WaPrhOO/ImKlyFbXnXHZsoRXKuWVKm
-          DRcs7z8LZmPH7n3ikiMZW7CUbKHB3mreL6Xv5gQ/nait2tjYRPT2OfBA+WTQi/kO
-          MwHyuq92J1965WCld3hzGYeJHtB12rVjheRQ3TBeBCFFu3pgEVsgqnVV1gqceBL7
-          edXnu85KSuUCgYEAxbhURvmfPR7PknmZDp1R7oU7LfEb6XUd8PiC5+wwOi9w/9KK
-          RagQZXN+VAh7bC/c656a/nZgo4ocZrYYF/+xAil6iFa1w7NuS12xPFDtzCSmc3vl
-          M2JOR37ZcxH/1ShW9jO9SqTO/VIJNHR8X2E2Xhzt9zvBG+AiRQOms2i92vkCgYEA
-          pZ2AiZXWg0mIXlDvuaBgouCoNEKV2wlN6X5qP94PAjNxLYUdWNhirpAxgqFD+QfO
-          IWsm4a5Cw04P2RVu1hf7gdVLwIeql2MhLcaGVlStiTzHu/8iZbqovgt99Xvsy8jN
-          kXde323XzdBfYAorskv4dIHsdAsgWT7sgoLxxcnSa1UCgYEAh0SDR9xTdNnCRTL8
-          Fz+YyN8EWm4XaiYv4fDu7mBEiAYJFQjfez/ZammSASwfv+sFcE4rCEMED2InlLin
-          73hJO8bDRMI7BEtaYKyEFcCgdNXOyDRfYhLtJllaIiJNbC8m4dW8H7Hq4Av2pTc0
-          dbfd2CfWKgXWqJNl2RCGWIoqDIU=
+          MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDbaLWaC86eG74Z
+          D5JxLJ0X4DpOTZgGeP3oY+oS5S1pE+nZq30LrC6YMQeBLSvJDWpBtvV5x9F88gMz
+          yhU94HgrWH26LBUQIBti+ip6IbS0sAKc6bicw6NBtR2F4BnLGw+mrUniVT8WNrRL
+          C1NkN5shexmTE6XAY9Ak6UpApHVmTiB8xz6hypr4JwqnqQfxDO0+AfaGSHheKo5h
+          xTSgUYULhyA9UaImHU+S/SekwGLRLX1KfcTpnz1+TZiQqShG9vqUB4dAge+imwAs
+          ZTCnI9H3tmz6jWekXQYRUraJUwjEaqqLoSQT5VQmEl518ueeRKKNB/8mi1pylWqN
+          UjedV4A5AgMBAAECggEBAM56xORaljBO9WAKOotNK+1rNBO6jAYTWQeY95CeolSP
+          y/PvobcZa6QICAL16o3DlSqQroTTmf7WllLnq4PWueA43+ETWSMaxAsqWE0laTTd
+          qyfV/8lvhzTv5/+z/TIZnmoCDFT2Wm9iPdudpfXbKp+ghFnYFJVwmVITRbB91InX
+          38LaEvLWFnJ3/DPYursaXerwwrm50d0PCdpa/ceqBCVHlpT3Zc0lT0rYpDVtc9BG
+          3gjbvKwhVUQBDfD3FGEobxhbc5eEH6JEf0PUWKnsU5F0qRKjQnfM19XKbczP+9gY
+          71BDL1sALSZxxJXW865+7GeXKCtxObkcCwYbf8UrS30CgYEA+HSH4ZpuHZ8IKIbs
+          vFaAjsEMkRfZPao8b/g4/JCg4TuOpAdFZUTSPWmdUq3i/J8o9b+e8/bznn9HLHIT
+          qyreSyiRUQRtcniSL1ZUHSzzW9QefYKzPghGYHXQLIBAWt50PDaMfPQ6Sj1NaEPH
+          h3hq4YNYNMQP/QVmfFdiT4xVA6cCgYEA4hJgSc17hh/u84uYAKhg2zSlFG5LlYKc
+          Yb2aFQJhFz2QqGxMeOXyIVDFD6btGcOLtPt4RdsBuCLZZzFBDUlWL7rY9qlL+/+P
+          ERStyHE9gFBDa0KWfvQxHSXIuxN2mkokktiVfaTisi8SWEKRJYp+B8HCa5lSDBti
+          eXcGBK3hWR8CgYBJ+aBPmsR4i1ZJgsrP1M2YM4CDXt9uzdYK3JRTFtjf1vTEf+m4
+          mkIiyORvrphr8ROn//La3sdwhKLzZ8/VYgEnzZ9eyPuxXpbgA0suGKkoyUJ+ykCG
+          Er6pj8p4xYLjy2I+X1t7BNiqLBB1H+Ezw7XHCW1k4I+GHWqDUR1TZAwX9wKBgFhy
+          KAm3wqPuymWuL4HSXlJkflFH9XpA5z22GBowHBwjkfzSofiKvfgayX4eKJTz1Cyy
+          VZO+4yVPPQ8KThEMqBN0Xn3iLkAg87ATDwpkg1M4E6hbHNX+Y1ir96R5MOWcLELn
+          SVUmtSpREDRHltHBJR2TyKSgD2F9NUGgN1KNVKSxAoGARyx7VceWlpdmnr+i26UH
+          B4h6/rL/nY7M2oWgUaj7FeygcfemtO6cV+R1Bl876Q9Dx797hZ4ddGAgxmDFsv8J
+          f6SSzTJBB6IGxt+1ZcxD4uFXUrOVFv00br/Re14bsXQcMwi9kEJF2idbR5E7O2qc
+          qbLlPssjuZS5pDnRa05bEIQ=
           -----END PRIVATE KEY-----
         cert: |
           -----BEGIN CERTIFICATE-----
-          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
+          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
-          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
+          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
-          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
+          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
-          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
-          9xxT5njjSqfC0xOqknR0hhhn5Pbu
+          cnlwdC5vcmcwggEDBgorBgEEAdZ5AgQCBIH0BIHxAO8AdQBElGUusO7Or8RAB9io
+          /ijA2uaCvtjLMbU/0zOWtbaBqAAAAXwn948JAAAEAwBGMEQCIBkkdKr6WRtmZYO8
+          kuchAYDxGPaCnU9FYU3BZBpsbJvLAiButEYn4AvTFiZMILymyuuqct/eFjIR9MEE
+          pNotyaD+bQB2AH0+8viP/4hVaCTCwMqeUol5K8UOeAl/LmqXaJl+IvDXAAABfCf3
+          kGUAAAQDAEcwRQIhAOOOX0qpI8xjqARUfU4ErGe8icHORlNHHzP/a6b3XE4ZAiBp
+          fMNh3oihXS1e6EM9Xs8m+9nuCi7rqLNSkCNuwisK7zANBgkqhkiG9w0BAQsFAAOC
+          AQEABMjkLKKxYyL4ZT6BPuOyqC4hnczDYUmZdCCysLu7psCjrZIAlSRxLIWXdWir
+          ogi/Vf+wdPKk38NDar0T9+rfAehuvQjQKCzIKVzr+MGauW0Wytwt63EgLIl2znvX
+          jWEIUwDQkqeFzPMbov8BK8hdLibBSz9nLrT0Zyw9mgRIzslemsi62+AjSNERTCTv
+          qyhinnBHLd3dGLOAXexwXu7ic2ZwCgnSgcli+MWC30QOh6ePJJqgw6OpwvOC9DAV
+          fkvGYFXlgYXnhQeLr0/4tzw3koclRWe/qgjAdAjB03yp1e53b+j9NoOfyobo1MFe
+          nMqEgcgAiA2VuE62Q4HE0Rs5wA==
           -----END CERTIFICATE-----
           -----BEGIN CERTIFICATE-----
           MIIFFjCCAv6gAwIBAgIRAJErCErPDBinU/bWLiWnX1owDQYJKoZIhvcNAQELBQAw
@@ -260,6 +171,94 @@ istio:
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
 
+  values:
+    istiod:
+      hpaSpec:
+        maxReplicas: 1
+        minReplicas: 1
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "1Gi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+    kiali:
+      dashboard:
+        auth:
+          strategy: "anonymous"
+
+istiooperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
+  values:
+    operator:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+
+jaeger:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
+  values:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "128Mi"
+    jaeger:
+      spec:
+        allInOne:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+        collector:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+        ingester:
+          # TODO: Remove this once the upstream bug is fixed (https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger/-/issues/15)
+          image: registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
+
+kiali:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
+  values:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+    cr:
+      spec:
+        deployment:
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "368Mi"
+            limits:
+              cpu: "500m"
+              memory: "368Mi"
+
 clusterAuditor:
   enabled: true
   git:
@@ -272,6 +271,119 @@ clusterAuditor:
       limits:
         cpu: "500m"
         memory: "512Mi"
+
+gatekeeper:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
+  values:
+    replicas: 1
+    controllerManager:
+      resources:
+        requests:
+          cpu: "175m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+    audit:
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "768Mi"
+        limits:
+          cpu: "1.2"
+          memory: "2Gi"
+    violations:
+      allowedDockerRegistries:
+        parameters:
+          excludedResources:
+            # K3s kube-system stuff, better than excluding the whole namespace
+            - "kube-system/coredns-.*"
+            - "kube-system/local-path-provisioner-.*"
+            - "kube-system/metrics-server-.*"
+            - "kube-system/svclb-.*"
+            - "kube-system/traefik-.*"
+            # K3s needs these due to how it creates services of type "LoadBalancer"
+            - "istio-system/lb-port-.*"
+            - "istio-system/svclb-.*"
+            # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
+            - ".*/helm-install-.*"
+            - ".*/helm"
+            # TODO: Get Gitea in Iron Bank
+            - "git/stuart-gitea-.*"
+            - "git/gitea"
+            - "git/init"
+      hostNetworking:
+        parameters:
+          excludedResources:
+            # K3s needs these due to how it creates services of type "LoadBalancer"
+            - "istio-system/svclb-.*"
+            - "istio-system/lb-port-.*"
+      httpsOnly:
+        parameters:
+          excludedResources:
+            # TODO: Fix these ingresses so they don't need to be excluded
+            - "git/git-ingress"
+            - "registry/registry-ingress"
+
+logging:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
+  values:
+    elasticsearch:
+      master:
+        count: 1
+        persistence:
+          size: "5Gi"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "3Gi"
+          limits:
+            cpu: "500m"
+            memory: "3Gi"
+      data:
+        count: 1
+        persistence:
+          size: 5Gi
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "3Gi"
+          limits:
+            cpu: "500m"
+            memory: "3Gi"
+    kibana:
+      count: 1
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "100m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+eckoperator:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
+
+fluentbit:
+  enabled: true
+  git:
+    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
+  values:
+    securityContext:
+      privileged: true
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "128Mi"
 
 monitoring:
   enabled: true
@@ -300,10 +412,10 @@ monitoring:
         resources:
           requests:
             cpu: "100m"
-            memory: "256Mi"
+            memory: "512Mi"
           limits:
             cpu: "500m"
-            memory: "256Mi"
+            memory: "2Gi"
     grafana:
       sidecar:
         resources:
@@ -337,20 +449,6 @@ monitoring:
           cpu: "500m"
           memory: "128Mi"
 
-gatekeeper:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
-  values:
-    replicas: 1
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "256Mi"
-
 twistlock:
   enabled: true
   git:
@@ -366,60 +464,6 @@ twistlock:
       limits:
         cpu: "500m"
         memory: "256Mi"
-
-jaeger:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
-  values:
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-      limits:
-        cpu: "500m"
-        memory: "128Mi"
-    jaeger:
-      spec:
-        allInOne:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "128Mi"
-        collector:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "128Mi"
-
-kiali:
-  enabled: true
-  git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
-  values:
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "256Mi"
-    cr:
-      spec:
-        deployment:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "368Mi"
-            limits:
-              cpu: "500m"
-              memory: "368Mi"
 
 addons:
   argocd:

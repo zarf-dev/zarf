@@ -18,8 +18,9 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 9. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core
 10. Wait several minutes. Run `k9s` to watch progress
-11. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-12. When you're done, run `make vm-destroy` to bring everything down
+11. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
+12. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
+13. When you're done, run `make vm-destroy` to bring everything down
 
 ## Kubescape scan
 
@@ -29,6 +30,14 @@ This example adds the `kubescape` binary, which can scan clusters for compliance
 kubescape scan framework nsa --use-from /usr/local/bin/kubescape-framework-nsa.json
 ```
 
-## To-Do
+## Services
 
-1. Re-enable the NetworkPolicies - They got disabled to resolve an issue connecting to the k8s cluster API server, which is fine for a demo but unacceptable in production
+| URL                                                   | Username  | Password                                                                                                                                                                                   | Notes                                                               |
+| ----------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [AlertManager](https://alertmanager.bigbang.dev:9443) | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
+| [Grafana](https://grafana.bigbang.dev:9443)           | `admin`   | `prom-operator`                                                                                                                                                                            |                                                                     |
+| [Kiali](https://kiali.bigbang.dev:9443)               | n/a       | `kubectl get secret -n kiali -o=json \| jq -r '.items[] \| select(.metadata.annotations."kubernetes.io/service-account.name"=="kiali-service-account") \| .data.token' \| base64 -d; echo` |                                                                     |
+| [Kibana](https://kibana.bigbang.dev:9443)             | `elastic` | `kubectl get secret -n logging logging-ek-es-elastic-user -o=jsonpath='{.data.elastic}' \| base64 -d; echo`                                                                                |                                                                     |
+| [Prometheus](https://prometheus.bigbang.dev:9443)     | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
+| [Jaeger](https://tracing.bigbang.dev:9443)            | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
+| [Twistlock](https://twistlock.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | Twistlock has you create an admin account the first time you log in |
