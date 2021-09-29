@@ -1,5 +1,4 @@
 bases:
-#  - git::https://repo1.dso.mil/platform-one/big-bang/bigbang.git/base?ref=1.14.1
   - git::https://repo1.dso.mil/platform-one/big-bang/bigbang.git/base?ref=1.17.0
 
 configMapGenerator:
