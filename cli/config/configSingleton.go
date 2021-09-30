@@ -1,60 +1,15 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
-
-type singleton struct {
-	Viper viper.Viper
-}
-
-type ZarfFile struct {
-	Source     string
-	Shasum     string
-	Target     string
-	Executable bool
-}
-
-type ZarfChart struct {
-	Name    string
-	Url     string
-	Version string
-}
-
-type ZarfFeature struct {
-	Name        string
-	Description string
-	Default     bool
-	Manifests   string
-	Images      []string
-	Files       []ZarfFile
-	Charts      []ZarfChart
-}
-
-type ZarfMetatdata struct {
-	Name         string
-	Description  string
-	Version      string
-	Uncompressed bool
-}
-
-type ZarfContainerTarget struct {
-	Namespace string
-	Selector  string
-	Container string
-	Path      string
-}
-type ZarfData struct {
-	Source string
-	Target ZarfContainerTarget
-}
 
 const K3sBinary = "/usr/local/bin/k3s"
 const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
@@ -65,21 +20,10 @@ const PackagePrefix = "zarf-package-"
 const ZarfLocal = "zarf.localhost"
 const ZarfGitUser = "zarf-git-user"
 
-var instance *singleton
-var once sync.Once
-
-func getInstance() *singleton {
-	once.Do(func() {
-		instance = &singleton{Viper: *viper.New()}
-		setupViper()
-	})
-	return instance
-}
+var config ZarfConfig
 
 func IsZarfInitConfig() bool {
-	var kind string
-	getInstance().Viper.UnmarshalKey("kind", &kind)
-	return strings.ToLower(kind) == "zarfinitconfig"
+	return strings.ToLower(config.Kind) == "zarfinitconfig"
 }
 
 func GetPackageName() string {
@@ -92,98 +36,67 @@ func GetPackageName() string {
 }
 
 func GetDataInjections() []ZarfData {
-	var data []ZarfData
-	getInstance().Viper.UnmarshalKey("data", &data)
-	return data
+	return config.Data
 }
 
 func GetMetaData() ZarfMetatdata {
-	var metatdata ZarfMetatdata
-	getInstance().Viper.UnmarshalKey("metadata.name", &metatdata.Name)
-	getInstance().Viper.UnmarshalKey("metatdata.description", &metatdata.Description)
-	getInstance().Viper.UnmarshalKey("metatdata.version", &metatdata.Version)
-	getInstance().Viper.UnmarshalKey("metadata.uncompressed", &metatdata.Uncompressed)
-	return metatdata
+	return config.Metadata
 }
 
-func GetLocalCharts() []ZarfChart {
-	var charts []ZarfChart
-	getInstance().Viper.UnmarshalKey("local.charts", &charts)
-	return charts
+func GetComponents() []ZarfComponent {
+	return config.Components
 }
 
-func GetLocalFiles() []ZarfFile {
-	var files []ZarfFile
-	getInstance().Viper.UnmarshalKey("local.files", &files)
-	return files
+func GetUtilityClusterImages() []string {
+	return config.UtilityCluster.Images
 }
 
-func GetLocalImages() []string {
-	var images []string
-	getInstance().Viper.UnmarshalKey("local.images", &images)
-	return images
+func GetUtilityClusterRepos() []string {
+	return config.UtilityCluster.Repos
 }
 
-func GetLocalManifests() string {
-	var manifests string
-	getInstance().Viper.UnmarshalKey("local.manifests", &manifests)
-	return manifests
-}
-
-func GetInitFeatures() []ZarfFeature {
-	var features []ZarfFeature
-	getInstance().Viper.UnmarshalKey("features", &features)
-	return features
-}
-
-func GetRemoteImages() []string {
-	var images []string
-	getInstance().Viper.UnmarshalKey("remote.images", &images)
-	return images
-}
-
-func GetRemoteRepos() []string {
-	var repos []string
-	getInstance().Viper.UnmarshalKey("remote.repos", &repos)
-	return repos
-}
-
-func DynamicConfigLoad(path string) {
+func Load(path string) {
 	logContext := logrus.WithField("path", path)
 	logContext.Info("Loading dynamic config")
-	getInstance().Viper.SetConfigFile(path)
-	if err := getInstance().Viper.MergeInConfig(); err != nil {
-		logContext.Warn("Unable to load the config file")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		logContext.Fatal("Unable to load the config file")
+	}
+
+	err = yaml.Unmarshal(file, &config)
+	if err != nil {
+		logContext.Fatal("Unable to parse the config file")
 	}
 }
 
 func WriteConfig(path string) {
+	logContext := logrus.WithField("path", path)
 	now := time.Now()
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
 
 	// Record the time of package creation
-	getInstance().Viper.Set("package.timestamp", now.Format(time.RFC1123Z))
+	config.Package.Timestamp = now.Format(time.RFC1123Z)
+
 	if hostErr == nil {
 		// Record the hostname of the package creation terminal
-		getInstance().Viper.Set("package.terminal", hostname)
+		config.Package.Terminal = hostname
 	}
+
 	if userErr == nil {
 		// Record the name of the user creating the package
-		getInstance().Viper.Set("package.user", currentUser.Name)
+		config.Package.User = currentUser.Username
 	}
+
 	// Save the parsed output to the config path given
-	if err := getInstance().Viper.WriteConfigAs(path); err != nil {
-		logrus.WithField("path", path).Fatal("Unable to write the config file")
+	content, err := yaml.Marshal(config)
+	if err != nil {
+		logContext.Fatal("Unable to process the config data")
 	}
-}
 
-func setupViper() {
-	instance.Viper.AddConfigPath(".")
-	instance.Viper.SetConfigName("zarf")
-
-	// If a config file is found, read it in.
-	if err := instance.Viper.ReadInConfig(); err == nil {
-		logrus.WithField("path", instance.Viper.ConfigFileUsed()).Info("Config file loaded")
+	err = ioutil.WriteFile(path, content, 0400)
+	if err != nil {
+		logContext.Fatal("Unable to write the config file")
 	}
 }

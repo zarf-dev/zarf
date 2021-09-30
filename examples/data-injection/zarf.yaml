@@ -19,8 +19,9 @@ data:
       selector: app=data-injection
       path: /test
 
-local:
-  manifests: manifests
-
-  images:
-    - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
+components:
+  - name: baseline
+    required: true
+    manifests: manifests
+    images:
+      - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
