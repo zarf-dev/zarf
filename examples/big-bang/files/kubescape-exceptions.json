@@ -1,0 +1,93 @@
+[
+  {
+    "name": "ignore-allowed-hostpath",
+    "policyType": "postureExceptionPolicy",
+    "actions": [
+      "alertOnly"
+    ],
+    "resources": [
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "DaemonSet",
+          "name": "logging-fluent-bit"
+        }
+      }
+    ],
+    "posturePolicies": [
+      {
+        "frameworkName": "NSA",
+        "ruleName": "alert-rw-hostpath"
+      }
+    ]
+  },
+  {
+    "name": "ignore-applications-credentials-in-configuration-files",
+    "policyType": "postureExceptionPolicy",
+    "actions": [
+      "alertOnly"
+    ],
+    "resources": [
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "ConfigMap",
+          "name": "istio-ca-root-cert"
+        }
+      },
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "ConfigMap",
+          "name": "kube-root-ca.crt"
+        }
+      },
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "Deployment",
+          "name": "istiod"
+        }
+      },
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "Deployment",
+          "name": "public-ingressgateway"
+        }
+      },
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "StatefulSet",
+          "name": "logging-ek-es-data"
+        }
+      },
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "StatefulSet",
+          "name": "logging-ek-es-master"
+        }
+      },
+      // This one doesn't work yet
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "kind": "ConfigMap",
+          "name": "common-.*"
+        }
+      }
+    ],
+    "posturePolicies": [
+      {
+        "frameworkName": "NSA",
+        "ruleName": "rule-credentials-configmap"
+      },
+      {
+        "frameworkName": "NSA",
+        "ruleName": "rule-credentials-in-env-var"
+      }
+    ]
+  }
+]

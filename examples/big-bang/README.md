@@ -27,7 +27,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 This example adds the `kubescape` binary, which can scan clusters for compliance with the NSA/CISA Kubernetes Hardening Guide
 
 ```shell
-kubescape scan framework nsa --use-from /usr/local/bin/kubescape-framework-nsa.json
+kubescape scan framework nsa --use-from=/usr/local/bin/kubescape-framework-nsa.json --exceptions=/usr/local/bin/kubescape-exceptions.json --results-locally=true
 ```
 
 ## Services
