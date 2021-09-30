@@ -13,7 +13,7 @@ import (
 type InstallOptions struct {
 	PKI       utils.PKIConfig
 	Confirmed bool
-	Features  string
+	Components  string
 }
 
 func Install(options InstallOptions) {
@@ -22,7 +22,7 @@ func Install(options InstallOptions) {
 
 	logrus.Info("Installing K3s")
 
-	packager.Deploy(config.PackageInitName, options.Confirmed, options.Features)
+	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {

@@ -18,7 +18,7 @@ import (
 	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
-func Deploy(packageName string, confirm bool, featureRequest string) {
+func Deploy(packageName string, confirm bool, componentRequest string) {
 	// Prevent disk pressure on smaller systems due to leaking temp files
 	_ = os.RemoveAll("/tmp/zarf*")
 	tempPath := createPaths()
@@ -45,20 +45,39 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	config.DynamicConfigLoad(tempPath.base + "/zarf.yaml")
+	config.Load(tempPath.base + "/zarf.yaml")
 
 	dataInjectionList := config.GetDataInjections()
-	remoteImageList := config.GetRemoteImages()
-	remoteRepoList := config.GetRemoteRepos()
+	utilityClusterImageList := config.GetUtilityClusterImages()
+	utilityClusterRepoList := config.GetUtilityClusterRepos()
 
-	deployLocalAssets(tempPath, config.ZarfFeature{
-		Charts:    config.GetLocalCharts(),
-		Files:     config.GetLocalFiles(),
-		Images:    config.GetLocalImages(),
-		Manifests: config.GetLocalManifests(),
-	})
+	components := config.GetComponents()
+	for _, component := range components {
+		confirmComponent := component.Required
 
-	// Don't process remote for init config packages
+		// Only run for optional components
+		if !confirmComponent {
+			// Only run the prompt if no components were passed in
+			if componentRequest == "" {
+				prompt := &survey.Confirm{
+					Message: "Deploy the " + component.Name + " component?",
+					Default: component.Default,
+					Help:    component.Description,
+				}
+				_ = survey.AskOne(prompt, &confirmComponent)
+			} else {
+				// This is probably sufficient for now, we could change to a slice and match exact if it's needed
+				confirmComponent = strings.Contains(strings.ToLower(componentRequest), component.Name)
+			}
+		}
+
+		if confirmComponent {
+			componentPath := createComponentPaths(tempPath.components, component)
+			deployComponents(componentPath, component)
+		}
+	}
+
+	// Don't process utility-cluster for init config packages
 	if !config.IsZarfInitConfig() {
 		if len(dataInjectionList) > 0 {
 			logrus.Info("Loading data injections")
@@ -99,56 +118,35 @@ func Deploy(packageName string, confirm bool, featureRequest string) {
 			}
 		}
 
-		if len(remoteImageList) > 0 {
-			logrus.Info("Loading images for remote install")
+		if len(utilityClusterImageList) > 0 {
+			logrus.Info("Loading images for utility cluster transfer")
 			// Push all images the images.tar file based on the zarf.yaml list
-			images.PushAll(tempPath.remoteImage, remoteImageList, config.ZarfLocal)
+			images.PushAll(tempPath.utilityClusterImages, utilityClusterImageList, config.ZarfLocal)
 			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(tempPath.remoteImage)
+			_ = os.RemoveAll(tempPath.utilityClusterImages)
 		}
 
-		if len(remoteRepoList) > 0 {
-			logrus.Info("Loading git repos for remote install")
+		if len(utilityClusterRepoList) > 0 {
+			logrus.Info("Loading git repos for utility cluster transfer")
 			// Push all the repos from the extracted archive
-			git.PushAllDirectories(tempPath.remoteRepos)
-		}
-	} else {
-		features := config.GetInitFeatures()
-		for _, feature := range features {
-			var confirmFeature bool
-			// Only run the prompt if no features were passed in
-			if featureRequest == "" {
-				prompt := &survey.Confirm{
-					Message: "Deploy the " + feature.Name + " feature?",
-					Default: feature.Default,
-					Help:    feature.Description,
-				}
-				_ = survey.AskOne(prompt, &confirmFeature)
-			} else {
-				// This is probably sufficient for now, we could change to a slice and match exact if it's needed
-				confirmFeature = strings.Contains(strings.ToLower(featureRequest), feature.Name)
-			}
-			if confirmFeature {
-				featurePath := createFeaturePaths(tempPath.features, feature)
-				deployLocalAssets(featurePath, feature)
-			}
+			git.PushAllDirectories(tempPath.utilityClusterRepos)
 		}
 	}
 
 	cleanup(tempPath)
 }
 
-func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
+func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	if assets.Name != "" {
-		// Only log this for named features
-		logrus.WithField("feature", assets.Name).Info("Deploying Zarf feature")
+		// Only log this for named components
+		logrus.WithField("name", assets.Name).Info("Deploying Zarf component")
 	} else {
 		assets.Name = "core"
 	}
 	if len(assets.Files) > 0 {
 		logrus.Info("Loading files for local install")
 		for index, file := range assets.Files {
-			sourceFile := tempPath.localFiles + "/" + strconv.Itoa(index)
+			sourceFile := tempPath.files + "/" + strconv.Itoa(index)
 			// If a shasum is specified check it again on deployment as well
 			if file.Shasum != "" {
 				utils.ValidateSha256Sum(file.Shasum, sourceFile)
@@ -165,7 +163,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if len(assets.Charts) > 0 {
 		logrus.Info("Loading charts for local install")
 		for _, chart := range assets.Charts {
-			sourceTarball := helm.StandardName(tempPath.localCharts, chart)
+			sourceTarball := helm.StandardName(tempPath.charts, chart)
 			destinationTarball := helm.StandardName(config.K3sChartPath, chart)
 			utils.CreatePathAndCopy(sourceTarball, destinationTarball)
 		}
@@ -174,11 +172,11 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 	if len(assets.Images) > 0 {
 		logrus.Info("Loading images for local install")
 		if config.IsZarfInitConfig() {
-			utils.CreatePathAndCopy(tempPath.localImage, config.K3sImagePath+"/images-"+assets.Name+".tar")
+			utils.CreatePathAndCopy(tempPath.images, config.K3sImagePath+"/images-"+assets.Name+".tar")
 		} else {
-			_, err := utils.ExecCommand(nil, config.K3sBinary, "ctr", "images", "import", tempPath.localImage)
+			_, err := utils.ExecCommand(nil, config.K3sBinary, "ctr", "images", "import", tempPath.images)
 			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(tempPath.localImage)
+			_ = os.RemoveAll(tempPath.images)
 			if err != nil {
 				logrus.Fatal("Unable to import the images into containerd")
 			}
@@ -191,7 +189,7 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 		gitSecret := git.GetOrCreateZarfSecret()
 
 		// Get a list of all the k3s manifest files
-		manifests := utils.RecursiveFileList(tempPath.localManifests)
+		manifests := utils.RecursiveFileList(tempPath.manifests)
 
 		// Iterate through all the manifests and replace any ZARF_SECRET values
 		for _, manifest := range manifests {
@@ -199,6 +197,6 @@ func deployLocalAssets(tempPath tempPaths, assets config.ZarfFeature) {
 			utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
 		}
 
-		utils.CreatePathAndCopy(tempPath.localManifests, config.K3sManifestPath)
+		utils.CreatePathAndCopy(tempPath.manifests, config.K3sManifestPath)
 	}
 }
