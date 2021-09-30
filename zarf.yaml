@@ -1,33 +1,33 @@
 kind: ZarfInitConfig
 
-local:
-  manifests: assets/manifests/common
+components:
+  - name: k3s
+    description: "Install K3s"
+    required: true
+    manifests: assets/manifests/common
+    files:
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
+        shasum: 5097d515e220f8e97ab13c56cb9142ee4526b4c9eade5ed098e2906c1db2a163
+        target: "/usr/local/bin/k3s"
+        executable: true
+      - source: assets/scripts/k3s-remove.sh
+        target: "/usr/local/bin/k3s-remove.sh"
+        executable: true
+      - source: assets/scripts/k3s.service
+        target: "/etc/systemd/system/k3s.service"
+      - source: assets/misc/registries.yaml
+        target: "/etc/rancher/k3s/registries.yaml"
+    images:
+      # K3s images
+      - docker.io/rancher/coredns-coredns:1.8.3
+      - docker.io/rancher/klipper-helm:v0.5.0-build20210505
+      - docker.io/rancher/klipper-lb:v0.2.0
+      - docker.io/rancher/library-busybox:1.32.1
+      - docker.io/rancher/library-traefik:2.4.8
+      - docker.io/rancher/local-path-provisioner:v0.0.19
+      - docker.io/rancher/metrics-server:v0.3.6
+      - docker.io/rancher/pause:3.1
 
-  files:
-    - source: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
-      shasum: 5097d515e220f8e97ab13c56cb9142ee4526b4c9eade5ed098e2906c1db2a163
-      target: "/usr/local/bin/k3s"
-      executable: true
-    - source: assets/scripts/k3s-remove.sh
-      target: "/usr/local/bin/k3s-remove.sh"
-      executable: true
-    - source: assets/scripts/k3s.service
-      target: "/etc/systemd/system/k3s.service"
-    - source: assets/misc/registries.yaml
-      target: "/etc/rancher/k3s/registries.yaml"
-
-  images:
-    # K3s images
-    - docker.io/rancher/coredns-coredns:1.8.3
-    - docker.io/rancher/klipper-helm:v0.5.0-build20210505
-    - docker.io/rancher/klipper-lb:v0.2.0
-    - docker.io/rancher/library-busybox:1.32.1
-    - docker.io/rancher/library-traefik:2.4.8
-    - docker.io/rancher/local-path-provisioner:v0.0.19
-    - docker.io/rancher/metrics-server:v0.3.6
-    - docker.io/rancher/pause:3.1
-
-features:
   - name: management
     description: "Add the K9s terminal-based K8s UI for cluster management"
     default: true
