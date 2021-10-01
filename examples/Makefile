@@ -14,73 +14,73 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
-# Download zarf, build all packages and launch a basic VM with the assets
+.DEFAULT_GOAL := help
+
+
+.PHONY: help
+help: ## Show a list of all targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	| sed -n 's/^\(.*\): \(.*\)##\(.*\)/\1:\3/p' \
+	| column -t -s ":"
+
 .PHONY: all
-all: clean fetch-release package-examples vm-init
+all: clean fetch-release package-examples vm-init ## Download zarf, build all packages and launch a basic VM with the assets
 
-# Same as target 'all', but build the binaries using the current codebase rather than downloading the latest version from the internet
 .PHONY: all-dev
-all-dev: clean build-release package-examples vm-init
+all-dev: clean build-release package-examples vm-init ## Same as target 'all', but build the binaries using the current codebase rather than downloading the latest version from the internet
 
-# Clean the sync dir
 .PHONY: clean
-clean:
+clean: ## Clean the sync dir
 	@rm -fr sync && mkdir -p sync
 
-# Grab the latest release as an alternative to needing to build the binaries
 .PHONY: fetch-release
-fetch-release:
+fetch-release: ## Grab the latest release as an alternative to needing to build the binaries
 	@# This probably isn't the cleanest way to get a release, but since we're moving to github, not worth adding the code until post-migration
 	@curl -fL "https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$$(git describe --tags --abbrev=0)/{zarf,zarf-mac-intel,zarf-mac-apple,zarf-init.tar.zst}" -o "sync/#1"
 	@chmod +x sync/*
 
-# Build the binaries as an alternative to downloading the latest release
 .PHONY: build-release
-build-release:
+build-release: ## Build the binaries as an alternative to downloading the latest release
 	@cd .. && $(MAKE) build-test
 	@cp -R ../build/* sync
 
-# Stripped-down vagrant box to reduce friction for basic user testing
-# Note the need to perform disk resizing for some examples
 .PHONY: vm-init
-vm-init: vm-destroy
+vm-init: vm-destroy ## Stripped-down vagrant box to reduce friction for basic user testing. Note the need to perform disk resizing for some examples
 	@VAGRANT_EXPERIMENTAL="disks" vagrant up --no-color
 	@echo -e "\n\n\n\033[1;93m  ✅ VM READY.  Logging in now, run \"sudo su\" once the prompt appears.\n\n\n\033[0m"
 	@vagrant ssh
 
-# Cleanup plz
 .PHONY: vm-destroy
-vm-destroy:
+vm-destroy: ## Cleanup plz
 	@vagrant destroy -f
 
-# Create zarf packages from all examples
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator
+package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
 
 .PHONY: package-example-big-bang
-package-example-big-bang:
+package-example-big-bang: ## Create the Big Bang Core example
 	cd big-bang && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-appliance
-package-example-appliance:
+package-example-appliance: ## Create the Podinfo example
 	cd appliance && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-data-injection
-package-example-data-injection:
+package-example-data-injection: ## Create the Data Injection example
 	cd data-injection && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-game
-package-example-game:
+package-example-game: ## Create the Doom example
 	cd game && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-single-big-bang-package
-package-example-single-big-bang-package:
+package-example-single-big-bang-package: ## Create the Single Big Bang Package example
 	cd single-big-bang-package && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-tiny-kafka
-package-example-tiny-kafka:
+package-example-tiny-kafka: ## Create the Tiny Kafka example
 	cd tiny-kafka && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-postgres-operator
-package-example-postgres-operator:
+package-example-postgres-operator: ## Create the Postgres Operator example
 	cd postgres-operator && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
