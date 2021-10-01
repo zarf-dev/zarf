@@ -11,8 +11,8 @@ local:
       shasum: 2754848328ce4ca288c8d03bb66a04ada08e326f6621195d28af903ae9d15884
       target: "/usr/local/bin/kubescape"
       executable: true
-    - source: https://github.com/armosec/regolibrary/releases/download/v1.0.21/nsa
-      shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
+    - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/kubescape-nsa
+      shasum: 25b6dda6ce2ad36bf6a4ea8d1e0ef0c6bda73f9111f4c0d71f260c36a16c6498
       target: "/usr/local/bin/kubescape-framework-nsa.json"
     - source: files/kubescape-exceptions.json
       target: "/usr/local/bin/kubescape-exceptions.json"
