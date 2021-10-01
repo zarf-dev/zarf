@@ -17,12 +17,12 @@ components:
   - name: kubescape
     default: true
     files:
-      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/kubescape
-        shasum: 2754848328ce4ca288c8d03bb66a04ada08e326f6621195d28af903ae9d15884
+      - source: https://github.com/armosec/kubescape/releases/download/v1.0.88/kubescape-ubuntu-latest
+        shasum: 615c8ea98e0b87bf54dd027b413248565d60d0ff21b6b158acc600739140851b
         target: "/usr/local/bin/kubescape"
         executable: true
-      - source: https://github.com/armosec/regolibrary/releases/download/v1.0.11/nsa
-        shasum: 52299bd5a2df28b6a6ff9926e09abd0fa5e6c1094f5bb75b036a0452cfc00dfa
+      - source: https://github.com/armosec/regolibrary/releases/download/v1.0.21/nsa
+        shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
         target: "/usr/local/bin/kubescape-framework-nsa.json"
 
 utility-cluster:
