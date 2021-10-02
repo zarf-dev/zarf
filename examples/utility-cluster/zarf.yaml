@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: utility-cluster-data
+  description: "Demo Zarf loading resources into a utility cluster"
+
+utilityCluster:
+  images:
+    - ghcr.io/stefanprodan/podinfo:6.0.0
+
+  repos:
+    - https://github.com/stefanprodan/podinfo.git@6.0.0
