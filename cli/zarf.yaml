@@ -15,7 +15,7 @@ components:
         url: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
         version: 3.5.1-bb.10
 
-utility-cluster:
+utilityCluster:
   repos:
     - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.2
 

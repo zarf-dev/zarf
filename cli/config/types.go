@@ -1,60 +1,64 @@
 package config
 
 type ZarfFile struct {
-	Source     string
-	Shasum     string
-	Target     string
-	Executable bool
+	Source     string `yaml:"source"`
+	Shasum     string `yaml:"shasum"`
+	Target     string `yaml:"target"`
+	Executable bool   `yaml:"executable"`
 }
 
 type ZarfChart struct {
-	Name    string
-	Url     string
-	Version string
+	Name    string `yaml:"name"`
+	Url     string `yaml:"url"`
+	Version string `yaml:"version"`
 }
 
 type ZarfComponent struct {
-	Name        string
-	Description string
-	Default     bool
-	Required    bool
-	Manifests   string
-	Images      []string
-	Files       []ZarfFile
-	Charts      []ZarfChart
+	Name        string      `yaml:"name"`
+	Description string      `yaml:"description"`
+	Default     bool        `yaml:"default"`
+	Required    bool        `yaml:"required"`
+	Manifests   string      `yaml:"manifests"`
+	Images      []string    `yaml:"images"`
+	Files       []ZarfFile  `yaml:"files"`
+	Charts      []ZarfChart `yaml:"charts"`
 }
 
 type ZarfMetatdata struct {
-	Name         string
-	Description  string
-	Version      string
-	Uncompressed bool
+	Name         string `yaml:"name"`
+	Description  string `yaml:"description"`
+	Version      string `yaml:"version"`
+	Uncompressed bool   `yaml:"uncompressed"`
 }
 
 type ZarfContainerTarget struct {
-	Namespace string
-	Selector  string
-	Container string
-	Path      string
+	Namespace string `yaml:"namespace"`
+	Selector  string `yaml:"selector"`
+	Container string `yaml:"container"`
+	Path      string `yaml:"path"`
 }
 
 type ZarfData struct {
-	Source string
-	Target ZarfContainerTarget
+	Source string              `yaml:"source"`
+	Target ZarfContainerTarget `yaml:"target"`
+}
+
+type ZarfBuildData struct {
+	Terminal  string `yaml:"terminal"`
+	User      string `yaml:"user"`
+	Timestamp string `yaml:"timestamp"`
+}
+
+type ZarfUtilityCluster struct {
+	Images []string `yaml:"images"`
+	Repos  []string `yaml:"repos"`
 }
 
 type ZarfConfig struct {
-	Kind     string
-	Metadata ZarfMetatdata
-	Package  struct {
-		Terminal  string
-		User      string
-		Timestamp string
-	}
-	Components     []ZarfComponent
-	Data           []ZarfData
-	UtilityCluster struct {
-		Images []string
-		Repos  []string
-	}
+	Kind           string             `yaml:"kind"`
+	Metadata       ZarfMetatdata      `yaml:"metadata"`
+	Package        ZarfBuildData      `yaml:"package"`
+	Data           []ZarfData         `yaml:"data"`
+	Components     []ZarfComponent    `yaml:"components"`
+	UtilityCluster ZarfUtilityCluster `yaml:"utilityCluster"`
 }
