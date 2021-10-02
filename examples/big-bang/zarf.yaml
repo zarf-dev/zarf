@@ -25,7 +25,7 @@ components:
         shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
         target: "/usr/local/bin/kubescape-framework-nsa.json"
 
-utility-cluster:
+utilityCluster:
   # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
   # 2. Add the actual bigbang repo as well
   # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
