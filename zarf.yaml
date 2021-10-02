@@ -28,6 +28,16 @@ components:
       - docker.io/rancher/metrics-server:v0.3.6
       - docker.io/rancher/pause:3.1
 
+  - name: container-registry
+    required: true
+    manifests: assets/manifests/registry
+    images:
+      - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+    charts:
+      - name: docker-registry
+        url: https://helm.twun.io
+        version: 1.10.1
+
   - name: management
     description: "Add the K9s terminal-based K8s UI for cluster management"
     default: true
@@ -53,16 +63,12 @@ components:
         url: https://grafana.github.io/helm-charts
         version: 2.4.1
 
-  - name: utility-cluster
-    description: "Add Gitea and an image registry for serving gitops-based clusters in an airgap"
-    manifests: assets/manifests/utility
+  - name: gitops-service
+    description: "Add Gitea for serving gitops-based clusters in an airgap"
+    manifests: assets/manifests/gitops
     images:
-      - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
       - gitea/gitea:1.13.7
     charts:
-      - name: docker-registry
-        url: https://helm.twun.io
-        version: 1.10.1
       - name: gitea
         url: https://dl.gitea.io/charts
         version: 2.2.5
