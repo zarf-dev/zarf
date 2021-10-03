@@ -22,7 +22,7 @@ components:
         target: "/usr/local/bin/kubescape"
         executable: true
       - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/kubescape-nsa
-        shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
+        shasum: 25b6dda6ce2ad36bf6a4ea8d1e0ef0c6bda73f9111f4c0d71f260c36a16c6498
         target: "/usr/local/bin/kubescape-framework-nsa.json"
 
 utilityCluster:
