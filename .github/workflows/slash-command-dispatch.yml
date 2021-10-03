@@ -10,5 +10,6 @@ jobs:
         uses: peter-evans/slash-command-dispatch@v2
         with:
           token: ${{ secrets.PAT }}
-          commands: example
-          repository: defenseunicorns/zarf
+          commands: test
+          permission: write
+          issue-type: pull-request
