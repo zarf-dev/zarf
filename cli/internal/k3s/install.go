@@ -11,13 +11,12 @@ import (
 )
 
 type InstallOptions struct {
-	PKI       utils.PKIConfig
-	Confirmed bool
-	Components  string
+	PKI        utils.PKIConfig
+	Confirmed  bool
+	Components string
 }
 
 func Install(options InstallOptions) {
-
 	utils.RunPreflightChecks()
 
 	logrus.Info("Installing K3s")
@@ -65,7 +64,6 @@ func createK3sSymlinks() {
 }
 
 func createService() {
-	
 	servicePath := "/etc/systemd/system/k3s.service"
 
 	_ = os.Symlink(servicePath, "/etc/systemd/system/multi-user.target.wants/k3s.service")
