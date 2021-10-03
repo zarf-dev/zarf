@@ -4,16 +4,18 @@ metadata:
   description: "Test package for zarf"
   uncompressed: true
 
-local:
-  charts:
-    - name: docker-registry
-      url: https://helm.twun.io
-      version: 1.10.1
-    - name: gatekeeper
-      url: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
-      version: 3.5.1-bb.10
+components:
+  - name: baseline
+    required: true
+    charts:
+      - name: docker-registry
+        url: https://helm.twun.io
+        version: 1.10.1
+      - name: gatekeeper
+        url: https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git
+        version: 3.5.1-bb.10
 
-remote:
+utilityCluster:
   repos:
     - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.2
 

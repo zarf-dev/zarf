@@ -3,20 +3,23 @@ metadata:
   name: kafka-strimzi-demo
   description: "Demo tiny Zarf Kafka deployment"
 
-local:
-  manifests: manifests
+components:
+  - name: baseline
+    required: true
+    manifests: manifests
 
-  files:
-    # Helper tools for working with kafka
-    - source: https://archive.apache.org/dist/kafka/2.8.0/kafka_2.13-2.8.0.tgz
-      shasum: 3fa380ae5d1385111ee9c83b0d1806172924ffec2e29399fd1a42671a97492c6
-      target: /opt/kafka.tgz
+    charts:
+      - name: strimzi-kafka-operator
+        url: https://strimzi.io/charts/
+        version: 0.24.0
 
-  charts:
-    - name: strimzi-kafka-operator
-      url: https://strimzi.io/charts/
-      version: 0.24.0
+    images:
+      - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
+      - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
 
-  images:
-    - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
-    - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
+  - name: kafka-tools
+    description: Helper tools for working with kafka
+    files:
+      - source: https://archive.apache.org/dist/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+        shasum: 3fa380ae5d1385111ee9c83b0d1806172924ffec2e29399fd1a42671a97492c6
+        target: /opt/kafka.tgz

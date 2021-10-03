@@ -3,26 +3,29 @@ metadata:
   name: big-bang-core-demo
   description: "Demo Zarf basic deployment of Big Bang core"
 
-local:
-  manifests: manifests
+components:
+  - name: baseline
+    required: true
+    manifests: manifests
+    images:
+      # Flux images
+      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
+      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
+      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
+      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
 
-  files:
-    - source: https://github.com/armosec/kubescape/releases/download/v1.0.88/kubescape-ubuntu-latest
-      shasum: 615c8ea98e0b87bf54dd027b413248565d60d0ff21b6b158acc600739140851b
-      target: "/usr/local/bin/kubescape"
-      executable: true
-    - source: https://github.com/armosec/regolibrary/releases/download/v1.0.21/nsa
-      shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
-      target: "/usr/local/bin/kubescape-framework-nsa.json"
+  - name: kubescape
+    default: true
+    files:
+      - source: https://github.com/armosec/kubescape/releases/download/v1.0.88/kubescape-ubuntu-latest
+        shasum: 615c8ea98e0b87bf54dd027b413248565d60d0ff21b6b158acc600739140851b
+        target: "/usr/local/bin/kubescape"
+        executable: true
+      - source: https://github.com/armosec/regolibrary/releases/download/v1.0.21/nsa
+        shasum: 306292a51a377e33eff448f654bdf5aa9881fecf74f671746106796f569dee44
+        target: "/usr/local/bin/kubescape-framework-nsa.json"
 
-  images:
-    # Flux images
-    - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
-    - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
-    - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
-    - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
-
-remote:
+utilityCluster:
   # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
   # 2. Add the actual bigbang repo as well
   # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
