@@ -11,6 +11,7 @@ import (
 
 var confirmCreate bool
 var confirmDeploy bool
+var deployComponents string
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
@@ -31,7 +32,7 @@ var packageDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Deploy(packageName, confirmDeploy, "")
+		packager.Deploy(packageName, confirmDeploy, deployComponents)
 	},
 }
 
@@ -69,4 +70,5 @@ func init() {
 
 	packageCreateCmd.Flags().BoolVar(&confirmCreate, "confirm", false, "Confirm package creation without prompting")
 	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
+	packageDeployCmd.Flags().StringVar(&deployComponents, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 }
