@@ -47,14 +47,6 @@ func GetComponents() []ZarfComponent {
 	return config.Components
 }
 
-func GetUtilityClusterImages() []string {
-	return config.UtilityCluster.Images
-}
-
-func GetUtilityClusterRepos() []string {
-	return config.UtilityCluster.Repos
-}
-
 func Load(path string) {
 	logContext := logrus.WithField("path", path)
 	logContext.Info("Loading dynamic config")

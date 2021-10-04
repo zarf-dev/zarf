@@ -53,8 +53,8 @@ beforeAll() {
     # Erase any prior cluster
     _run "sudo zarf destroy --confirm"
 
-    # Launch the utility cluster with logging and management
-    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --components=management,logging,utility-cluster"
+    # Launch the gitops service with logging and management
+    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --components=management,logging,gitops-service"
 
     _sleep 30
 }
@@ -143,7 +143,7 @@ ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
 # Test that k9s is happy
 _run "sudo /usr/local/bin/k9s info"
 
-# Test utility cluster and monitoring components are wup
+# Test gitops service and monitoring components are up
 testAPIEndpoints
 
 # Remove the top-level ingress, hack until we parallize these tests

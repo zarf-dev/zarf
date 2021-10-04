@@ -48,8 +48,6 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 	config.Load(tempPath.base + "/zarf.yaml")
 
 	dataInjectionList := config.GetDataInjections()
-	utilityClusterImageList := config.GetUtilityClusterImages()
-	utilityClusterRepoList := config.GetUtilityClusterRepos()
 
 	components := config.GetComponents()
 	for _, component := range components {
@@ -77,7 +75,6 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 		}
 	}
 
-	// Don't process utility-cluster for init config packages
 	if !config.IsZarfInitConfig() {
 		if len(dataInjectionList) > 0 {
 			logrus.Info("Loading data injections")
@@ -118,19 +115,6 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 			}
 		}
 
-		if len(utilityClusterImageList) > 0 {
-			logrus.Info("Loading images for utility cluster transfer")
-			// Push all images the images.tar file based on the zarf.yaml list
-			images.PushAll(tempPath.utilityClusterImages, utilityClusterImageList, config.ZarfLocal)
-			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(tempPath.utilityClusterImages)
-		}
-
-		if len(utilityClusterRepoList) > 0 {
-			logrus.Info("Loading git repos for utility cluster transfer")
-			// Push all the repos from the extracted archive
-			git.PushAllDirectories(tempPath.utilityClusterRepos)
-		}
 	}
 
 	cleanup(tempPath)
@@ -174,12 +158,11 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		if config.IsZarfInitConfig() {
 			utils.CreatePathAndCopy(tempPath.images, config.K3sImagePath+"/images-"+assets.Name+".tar")
 		} else {
-			_, err := utils.ExecCommand(nil, config.K3sBinary, "ctr", "images", "import", tempPath.images)
+			logrus.Info("Loading images for gitops service transfer")
+			// Push all images the images.tar file based on the zarf.yaml list
+			images.PushAll(tempPath.images, assets.Images, config.ZarfLocal)
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(tempPath.images)
-			if err != nil {
-				logrus.Fatal("Unable to import the images into containerd")
-			}
 		}
 	}
 
@@ -198,5 +181,11 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		}
 
 		utils.CreatePathAndCopy(tempPath.manifests, config.K3sManifestPath)
+	}
+
+	if len(assets.Repos) > 0 {
+		logrus.Info("Loading git repos for gitops service transfer")
+		// Push all the repos from the extracted archive
+		git.PushAllDirectories(tempPath.repos)
 	}
 }

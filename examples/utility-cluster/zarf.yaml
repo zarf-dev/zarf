@@ -1,11 +1,12 @@
 kind: ZarfPackageConfig
 metadata:
-  name: utility-cluster-data
-  description: "Demo Zarf loading resources into a utility cluster"
+  name: gitops-service-data
+  description: "Demo Zarf loading resources into a gitops service"
 
-utilityCluster:
-  images:
-    - ghcr.io/stefanprodan/podinfo:6.0.0
-
-  repos:
-    - https://github.com/stefanprodan/podinfo.git@6.0.0
+components:
+  - name: baseline
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.0.0
+    repos:
+      - https://github.com/stefanprodan/podinfo.git@6.0.0
