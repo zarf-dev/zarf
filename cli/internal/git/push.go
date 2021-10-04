@@ -58,7 +58,7 @@ func push(localPath string) {
 	if err == git.NoErrAlreadyUpToDate {
 		pushContext.Info("Repo already up-to-date")
 	} else if err != nil {
-		pushContext.Warn("Unable to push repo to the utility cluster")
+		pushContext.Warn("Unable to push repo to the gitops service")
 	} else {
 		pushContext.Info("Repo updated")
 	}

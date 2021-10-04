@@ -89,7 +89,7 @@ generate-release:
   needs:
     - job: artifact-upload
   script:
-    - release-cli create --name "Zarf ${CI_COMMIT_TAG}" --tag-name "${CI_COMMIT_TAG}" --description "Zarf Utility Cluster"
+    - release-cli create --name "Zarf ${CI_COMMIT_TAG}" --tag-name "${CI_COMMIT_TAG}" --description "Zarf K8s Airgap Buddy
       --assets-link "{\"name\":\"zarf\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf\"}"
       --assets-link "{\"name\":\"zarf-mac-apple\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-mac-apple\"}"
       --assets-link "{\"name\":\"zarf-mac-intel\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-mac-intel\"}"
