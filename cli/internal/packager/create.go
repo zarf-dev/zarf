@@ -23,8 +23,6 @@ func Create(confirm bool) {
 	tempPath := createPaths()
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
-	utilityClusterImageList := config.GetUtilityClusterImages()
-	utilityClusterRepoList := config.GetUtilityClusterRepos()
 	components := config.GetComponents()
 	configFile := tempPath.base + "/zarf.yaml"
 
@@ -53,23 +51,6 @@ func Create(confirm bool) {
 			for _, data := range dataInjections {
 				destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
 				utils.CreatePathAndCopy(data.Source, destinationFile)
-			}
-		}
-
-		if len(utilityClusterImageList) > 0 {
-			logrus.Info("Loading images for utility cluster transfer")
-			images.PullAll(utilityClusterImageList, tempPath.utilityClusterImages)
-		}
-
-		if len(utilityClusterRepoList) > 0 {
-			logrus.Info("loading git repos for utility cluster transfer")
-			// Load all specified git repos
-			for _, url := range utilityClusterRepoList {
-				matches := strings.Split(url, "@")
-				if len(matches) < 2 {
-					logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
-				}
-				git.Pull(matches[0], tempPath.utilityClusterRepos)
 			}
 		}
 	}
@@ -123,12 +104,24 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Images) > 0 {
-		logrus.Info("Loading images for local install")
+		logrus.Info("Loading container images")
 		images.PullAll(assets.Images, tempPath.images)
 	}
 
 	if assets.Manifests != "" {
 		logrus.WithField("path", assets.Manifests).Info("Loading manifests for local install")
 		utils.CreatePathAndCopy(assets.Manifests, tempPath.manifests)
+	}
+
+	if len(assets.Repos) > 0 {
+		logrus.Info("loading git repos for gitops service transfer")
+		// Load all specified git repos
+		for _, url := range assets.Repos {
+			matches := strings.Split(url, "@")
+			if len(matches) < 2 {
+				logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
+			}
+			git.Pull(matches[0], tempPath.repos)
+		}
 	}
 }

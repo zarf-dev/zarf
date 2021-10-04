@@ -20,8 +20,9 @@ type ZarfComponent struct {
 	Required    bool        `yaml:"required"`
 	Manifests   string      `yaml:"manifests"`
 	Images      []string    `yaml:"images"`
-	Files       []ZarfFile  `yaml:"files"`
+	Repos       []string    `yaml:"repos"`
 	Charts      []ZarfChart `yaml:"charts"`
+	Files       []ZarfFile  `yaml:"files"`
 }
 
 type ZarfMetatdata struct {
@@ -49,16 +50,10 @@ type ZarfBuildData struct {
 	Timestamp string `yaml:"timestamp"`
 }
 
-type ZarfUtilityCluster struct {
-	Images []string `yaml:"images"`
-	Repos  []string `yaml:"repos"`
-}
-
 type ZarfConfig struct {
-	Kind           string             `yaml:"kind"`
-	Metadata       ZarfMetatdata      `yaml:"metadata"`
-	Package        ZarfBuildData      `yaml:"package"`
-	Data           []ZarfData         `yaml:"data"`
-	Components     []ZarfComponent    `yaml:"components"`
-	UtilityCluster ZarfUtilityCluster `yaml:"utilityCluster"`
+	Kind       string          `yaml:"kind"`
+	Metadata   ZarfMetatdata   `yaml:"metadata"`
+	Package    ZarfBuildData   `yaml:"package"`
+	Data       []ZarfData      `yaml:"data"`
+	Components []ZarfComponent `yaml:"components"`
 }

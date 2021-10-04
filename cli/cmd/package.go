@@ -15,12 +15,12 @@ var deployComponents string
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
-	Short: "Pack and unpack updates for the Zarf utility cluster.",
+	Short: "Pack and unpack updates for the Zarf gitops service.",
 }
 
 var packageCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create an update package to push to the utility server (runs online)",
+	Short: "Create an update package to push to the gitops server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
 		packager.Create(confirmCreate)
 	},

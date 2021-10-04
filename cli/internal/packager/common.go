@@ -15,24 +15,21 @@ type componentPaths struct {
 	files     string
 	charts    string
 	images    string
+	repos     string
 	manifests string
 }
 type tempPaths struct {
-	base                 string
-	dataInjections       string
-	utilityClusterImages string
-	utilityClusterRepos  string
-	components           string
+	base           string
+	dataInjections string
+	components     string
 }
 
 func createPaths() tempPaths {
 	basePath := utils.MakeTempDir()
 	return tempPaths{
-		base:                 basePath,
-		dataInjections:       basePath + "/data",
-		utilityClusterImages: basePath + "/images-utility-cluster.tar",
-		utilityClusterRepos:  basePath + "/repos",
-		components:           basePath + "/components",
+		base:           basePath,
+		dataInjections: basePath + "/data",
+		components:     basePath + "/components",
 	}
 }
 
@@ -44,6 +41,7 @@ func createComponentPaths(basePath string, component config.ZarfComponent) compo
 		files:     basePath + "/files",
 		charts:    basePath + "/charts",
 		images:    basePath + "/images-component-" + component.Name + ".tar",
+		repos:     basePath + "/repos",
 		manifests: basePath + "/manifests",
 	}
 }
