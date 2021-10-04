@@ -160,7 +160,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		} else {
 			logrus.Info("Loading images for gitops service transfer")
 			// Push all images the images.tar file based on the zarf.yaml list
-			images.PushAll(tempPath.images, assets.Images, config.ZarfLocal)
+			images.PushAll(tempPath.images, assets.Images)
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(tempPath.images)
 		}

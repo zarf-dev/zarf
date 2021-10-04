@@ -1,13 +1,13 @@
 mirrors:
   registry.dso.mil:
     endpoint:
-      - "https://localhost"
+      - "https://127.0.0.1"
   registry1.dso.mil:
     endpoint:
-      - "https://localhost"
+      - "https://127.0.0.1"
   docker.io:
     endpoint:
-      - "https://localhost"
+      - "https://127.0.0.1"
   registry-1.docker.io:
     endpoint:
-      - "https://localhost"
+      - "https://127.0.0.1"
