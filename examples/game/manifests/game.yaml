@@ -33,7 +33,6 @@ spec:
       containers:
       - name: game
         image: registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom
-        imagePullPolicy: Never
         ports:
         - name: http
           containerPort: 8000
