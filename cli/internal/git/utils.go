@@ -99,7 +99,7 @@ func FindAuthForHost(baseUrl string) Credential {
 func GetOrCreateZarfSecret() string {
 	var gitSecret string
 
-	credentials := FindAuthForHost(config.ZarfLocal)
+	credentials := FindAuthForHost(config.ZarfLocalIP)
 
 	if (credentials == Credential{}) {
 		gitSecret = CredentialsGenerator()
@@ -129,7 +129,7 @@ func CredentialsGenerator() string {
 	zarfUrl := url.URL{
 		Scheme: "https",
 		User:   url.UserPassword(config.ZarfGitUser, gitSecret),
-		Host:   config.ZarfLocal,
+		Host:   config.ZarfLocalIP,
 	}
 
 	credentialsText := zarfUrl.String() + "\n"

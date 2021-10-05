@@ -59,7 +59,7 @@ var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
 	Short: "Returns the Zarf admin password read from ~/.git-credentials",
 	Run: func(cmd *cobra.Command, args []string) {
-		authInfo := git.FindAuthForHost(config.ZarfLocal)
+		authInfo := git.FindAuthForHost(config.ZarfLocalIP)
 		fmt.Println(authInfo.Auth.Password)
 	},
 }
