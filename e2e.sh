@@ -128,7 +128,7 @@ testGitBasedHelmChart() {
     popd
     # Deploy the package
     _run "sudo zarf package deploy $PACKAGE --confirm"
-    _sleep 30
+    _sleep 60
     # Test to confirm the Twistlock Console was deployed
     _curl "https://pipeline.zarf.dev/api/v1/settings/initialized?project=Central+Console"
 }
