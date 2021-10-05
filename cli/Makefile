@@ -1,6 +1,6 @@
 # Tests have been purged for now due to large refactor deleted all tested code
 # deps:
-# 	go get gotest.tools/gotestsum 
+# 	go get gotest.tools/gotestsum
 # 	go mod download
 
 # test: deps
