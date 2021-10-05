@@ -4,7 +4,6 @@ import (
   "bufio"
   "encoding/base64"
   "fmt"
-  "github.com/gruntwork-io/terratest/modules/logger"
   "github.com/gruntwork-io/terratest/modules/random"
   "github.com/stretchr/testify/require"
   "io/ioutil"
@@ -45,17 +44,20 @@ func TestTerraformSshExample(t *testing.T) {
 
     // This will run `terraform init` and `terraform apply` and fail the test if there are any errors
     terraform.InitAndApply(t, terraformOptions)
+
+    // This will upload the Zarf binary, init package, and other necessary files to the server so we can use them for
+    // tests
+    syncFilesToRemoteServer(t, terraformOptions, keyPair)
   })
 
   // Make sure we can SSH to the public Instance directly from the public Internet
-  teststructure.RunTestStage(t, "validate", func() {
+  teststructure.RunTestStage(t, "test", func() {
     terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
-    uploadFilesToPublicHost(t, terraformOptions, keyPair)
-    testZarfE2EOnPublicHost(t, terraformOptions, keyPair)
+    // Finally run the actual test
+    test(t, terraformOptions, keyPair)
   })
-
 }
 
 func configureTerraformOptions(t *testing.T, tmpFolder string) (*terraform.Options, *aws.Ec2Keypair, error) {
@@ -73,7 +75,7 @@ func configureTerraformOptions(t *testing.T, tmpFolder string) (*terraform.Optio
   }
 
   // Some AWS regions are missing certain instance types, so pick an available type based on the region we picked
-  instanceType := aws.GetRecommendedInstanceType(t, awsRegion, []string{"t3.medium", "t2.medium"})
+  instanceType := aws.GetRecommendedInstanceType(t, awsRegion, []string{"t3a.large", "t3.large", "t2.large"})
 
   // Create an EC2 KeyPair that we can use for SSH access
   keyPairName := fmt.Sprintf("%s-%s-%s", namespace, stage, name)
@@ -99,7 +101,7 @@ func configureTerraformOptions(t *testing.T, tmpFolder string) (*terraform.Optio
   return terraformOptions, keyPair, nil
 }
 
-func uploadFilesToPublicHost(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+func syncFilesToRemoteServer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
   // Run `terraform output` to get the value of an output variable
   publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
@@ -112,9 +114,11 @@ func uploadFilesToPublicHost(t *testing.T, terraformOptions *terraform.Options, 
   }
 
   // It can take a minute or so for the Instance to boot up, so retry a few times
-  maxRetries := 30
+  maxRetries := 15
   timeBetweenRetries := 5 * time.Second
-  description := fmt.Sprintf("SSH to public host %s", publicInstanceIP)
+
+  // Wait for the instance to be ready
+  output, err := ssh.CheckSshCommandWithRetryE(t, publicHost, "whoami", maxRetries, timeBetweenRetries, nil)
 
   // Upload the compiled Zarf binary to the server. The ssh lib only supports sending strings so we'll base64encode it
   // first
@@ -125,13 +129,13 @@ func uploadFilesToPublicHost(t *testing.T, terraformOptions *terraform.Options, 
   require.NoError(t, err)
   encodedZarfBinary := base64.StdEncoding.EncodeToString(content)
   retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
-    err := ssh.ScpFileToE(t, publicHost, 0644, "$HOME/zarf.b64", encodedZarfBinary)
+    err := ssh.ScpFileToE(t, publicHost, 0644, "/usr/local/bin/zarf.b64", encodedZarfBinary)
     if err != nil {
       return "", err
     }
     return "", nil
   })
-  output, err := ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'base64 -d $HOME/zarf.b64 > /usr/local/bin/zarf && chmod 0777 /usr/local/bin/zarf'")
+  output, err := ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'base64 -d /root/zarf.b64 > /usr/local/bin/zarf && chmod 0777 /usr/local/bin/zarf'")
   require.NoError(t, err, output)
 
   // Upload zarf-init.tar.zst
@@ -141,21 +145,21 @@ func uploadFilesToPublicHost(t *testing.T, terraformOptions *terraform.Options, 
   content, err = ioutil.ReadAll(reader)
   require.NoError(t, err)
   encodedZarfInit := base64.StdEncoding.EncodeToString(content)
-  err = ssh.ScpFileToE(t, publicHost, 0644, "$HOME/zarf-init.tar.zst.b64", encodedZarfInit)
+  err = ssh.ScpFileToE(t, publicHost, 0644, "/root/zarf-init.tar.zst.b64", encodedZarfInit)
   require.NoError(t, err)
-  output, err = ssh.CheckSshCommandE(t, publicHost, "base64 -d $HOME/zarf-init.tar.zst.b64 > $HOME/zarf-init.tar.zst")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "base64 -d /root/zarf-init.tar.zst.b64 > /root/zarf-init.tar.zst")
   require.NoError(t, err, output)
 
-  // Upload scripts/e2e.sh
-  e2eSshScriptContents, err := ioutil.ReadFile("../scripts/e2e.sh")
-  require.NoError(t, err)
-  err = ssh.ScpFileToE(t, publicHost, 0777, "$HOME/e2e.sh", string(e2eSshScriptContents))
-  require.NoError(t, err)
-  output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'cp $HOME/e2e.sh /usr/local/bin/e2e.sh'")
-  require.NoError(t, err, output)
+  //// Upload scripts/e2e.sh
+  //e2eSshScriptContents, err := ioutil.ReadFile("../scripts/e2e.sh")
+  //require.NoError(t, err)
+  //err = ssh.ScpFileToE(t, publicHost, 0777, "$HOME/e2e.sh", string(e2eSshScriptContents))
+  //require.NoError(t, err)
+  //output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'cp $HOME/e2e.sh /usr/local/bin/e2e.sh'")
+  //require.NoError(t, err, output)
 }
 
-func testZarfE2EOnPublicHost(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+func test(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
   // Run `terraform output` to get the value of an output variable
   publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
@@ -167,45 +171,12 @@ func testZarfE2EOnPublicHost(t *testing.T, terraformOptions *terraform.Options, 
     SshUserName: "ubuntu",
   }
 
-  // It can take some time for Docker to be ready from the instance userdata
-  maxRetries := 30
-  timeBetweenRetries := 5 * time.Second
-  description := fmt.Sprintf("SSH to public host %s", publicInstanceIP)
-
-  // Make sure Docker works before proceeding
-  retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
-    // Make sure `docker info` works
-    output, err := ssh.CheckSshCommandE(t, publicHost, "docker info")
-    if err != nil {
-      logger.Default.Logf(t, output)
-      return "", err
-    }
-
-    // Make sure `docker run --rm hello-world` works
-    output, err = ssh.CheckSshCommandE(t, publicHost, "docker run --rm hello-world")
-    if err != nil {
-      logger.Default.Logf(t, output)
-      return "", err
-    }
-    return "", nil
-  })
-
   // Make sure `zarf --help` doesn't error
   output, err := ssh.CheckSshCommandE(t, publicHost, "zarf --help")
   require.NoError(t, err, output)
 
-  // Get the username and password for registry1.dso.mil. We'll need it in a bit
-  username, password, err := getRegistry1Creds()
-  require.NoError(t, err)
-
-  // Log into registry1.dso.mil - Need to do it in a hacky way so it doesn't log secrets to stdout
-  err = ssh.ScpFileToE(t, publicHost, 0600, "$HOME/registry1creds.env", fmt.Sprintf( "export REGISTRY1_USERNAME=%s; export REGISTRY1_PASSWORD=%s", username, password))
-  require.NoError(t, err)
-  output, err = ssh.CheckSshCommandE(t, publicHost, "source $HOME/registry1creds.env && zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password $REGISTRY1_PASSWORD")
-  require.NoError(t, err, output)
-
-  // Make sure e2e.sh runs and doesn't error
-  output, err = ssh.CheckSshCommandE(t, publicHost, "sudo e2e.sh")
+  // Test `zarf init`
+  output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'cd /root && zarf init --confirm --components management,logging,utility-cluster --host localhost'")
   require.NoError(t, err, output)
 }
 
@@ -221,19 +192,4 @@ func getAwsRegion() (string, error) {
   } else {
     return val, nil
   }
-}
-
-// getRegistry1Creds returns the username and password from environment variables, or an error if they aren't found
-func getRegistry1Creds() (string, string, error) {
-  usernameEnvVarName := "REGISTRY1_USERNAME"
-  passwordEnvVarName := "REGISTRY1_PASSWORD"
-  username, present := os.LookupEnv(usernameEnvVarName)
-  if !present {
-    return "", "", fmt.Errorf("expected env var %s not found", usernameEnvVarName)
-  }
-  password, present := os.LookupEnv(passwordEnvVarName)
-  if !present {
-    return "", "", fmt.Errorf("expected env var %s not found", passwordEnvVarName)
-  }
-  return username, password, nil
 }
