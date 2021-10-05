@@ -36,14 +36,14 @@ func push(localPath string) {
 		return
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL("https://"+config.ZarfLocal, remoteUrl)
+	targetUrl := transformURL("https://"+config.ZarfLocalIP, remoteUrl)
 
 	_, _ = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetUrl},
 	})
 
-	gitCred := FindAuthForHost(config.ZarfLocal)
+	gitCred := FindAuthForHost(config.ZarfLocalIP)
 
 	err = repo.Push(&git.PushOptions{
 		RemoteName: offlineRemoteName,

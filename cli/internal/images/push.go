@@ -30,7 +30,7 @@ func PushAll(imageTarballPath string, buildImageList []string) {
 			return
 		}
 
-		offlineName := strings.Replace(src, docker.Domain(onlineName), config.ZarfLocal, 1)
+		offlineName := strings.Replace(src, docker.Domain(onlineName), config.ZarfLocalIP, 1)
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {
