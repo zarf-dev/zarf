@@ -33,8 +33,12 @@ vm-init: ## usage -> make vm-init OS=ubuntu
 vm-destroy: ## Destroy the VM
 	vagrant destroy -f
 
-test-e2e: build-cli init-package ## Run E2E tests. Requires access to an AWS account. Costs money.
+test-e2e: ## Run E2E tests. Requires access to an AWS account. Costs money.
 	cd test/e2e && go test ./... -v -timeout 1200s
+
+test-ssh: ## Run this if you have set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
+	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
+	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip)
 
 build-cli: ## Build the CLI
 	rm -fr build
