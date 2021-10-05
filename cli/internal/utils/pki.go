@@ -195,7 +195,7 @@ func generateCert(host string, certFile string, keyFile string, ca *x509.Certifi
 	template := newCertificate(validFor)
 
 	// Always add the Zarf local IP address to the cert
-	template.IPAddresses = append(template.IPAddresses, net.IP(config.ZarfLocalIP))
+	template.IPAddresses = []net.IP{net.ParseIP(config.ZarfLocalIP)}
 
 	if ip := net.ParseIP(host); ip != nil {
 		template.IPAddresses = append(template.IPAddresses, ip)
