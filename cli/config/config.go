@@ -17,7 +17,7 @@ const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
-const ZarfLocal = "127.0.0.1"
+const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
 var config ZarfConfig
