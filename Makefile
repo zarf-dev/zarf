@@ -33,7 +33,7 @@ vm-init: ## usage -> make vm-init OS=ubuntu
 vm-destroy: ## Destroy the VM
 	vagrant destroy -f
 
-test-e2e: ## Run E2E tests. Requires access to an AWS account. Costs money.
+test-e2e: ## Run E2E tests. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -v -timeout 1200s
 
 e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
