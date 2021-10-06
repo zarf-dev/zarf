@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 type Credential struct {

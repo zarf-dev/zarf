@@ -1,7 +1,7 @@
 package main
 
 import (
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/cmd"
+	"github.com/defenseunicorns/zarf/cli/cmd"
 )
 
 func main() {

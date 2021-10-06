@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 var pkiOptions = utils.PKIConfig{}

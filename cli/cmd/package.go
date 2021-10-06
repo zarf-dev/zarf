@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
 
 var confirmCreate bool
