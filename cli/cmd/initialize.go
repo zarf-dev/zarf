@@ -3,7 +3,7 @@ package cmd
 import (
 	"path/filepath"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k3s"
+	"github.com/defenseunicorns/zarf/cli/internal/k3s"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
