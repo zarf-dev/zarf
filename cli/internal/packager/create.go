@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/helm"
+	"github.com/defenseunicorns/zarf/cli/internal/images"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/helm"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/images"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 func Create(confirm bool) {

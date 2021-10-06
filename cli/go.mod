@@ -1,4 +1,4 @@
-module repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli
+module github.com/defenseunicorns/zarf/cli
 
 go 1.16
 
