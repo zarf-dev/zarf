@@ -17,7 +17,7 @@ const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
-const ZarfLocal = "zarf.localhost"
+const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
 var config ZarfConfig
@@ -45,14 +45,6 @@ func GetMetaData() ZarfMetatdata {
 
 func GetComponents() []ZarfComponent {
 	return config.Components
-}
-
-func GetUtilityClusterImages() []string {
-	return config.UtilityCluster.Images
-}
-
-func GetUtilityClusterRepos() []string {
-	return config.UtilityCluster.Repos
 }
 
 func Load(path string) {

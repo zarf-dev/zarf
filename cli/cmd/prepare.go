@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 var prepareCmd = &cobra.Command{

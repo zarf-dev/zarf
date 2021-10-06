@@ -14,7 +14,5 @@ spec:
   valuesContent: |-
     imageRegistryOverride: registry1.dso.mil
     imageRepositoryOverride: ironbank/opensource/strimzi
-    image:
-      pullPolicy: Never
     watchNamespaces: 
       - kafka-demo

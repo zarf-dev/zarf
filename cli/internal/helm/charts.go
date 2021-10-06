@@ -3,11 +3,11 @@ package helm
 import (
 	"os"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
 
 	"strings"
 
@@ -56,12 +56,12 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 
 	// Setup the chart downloader
 	downloader := downloader.ChartDownloader{
-		Out:              &out,
-		Verify:           downloader.VerifyNever,
-		Getters:          getter.All(pull.Settings),
+		Out:     &out,
+		Verify:  downloader.VerifyNever,
+		Getters: getter.All(pull.Settings),
 	}
 
-	// @todo: process OCI-based charts 
+	// @todo: process OCI-based charts
 
 	// Perform simple chart download
 	chartURL, err := repo.FindChartInRepoURL(chart.Url, chart.Name, chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))

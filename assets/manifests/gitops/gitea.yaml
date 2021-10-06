@@ -46,7 +46,7 @@ spec:
         builtIn:
           enabled: false
       config:
-        APP_NAME: "Zarf Utility Cluster"
+        APP_NAME: "Zarf Gitops Service"
         server:
           DISABLE_SSH: true
           OFFLINE_MODE: true

@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 type componentPaths struct {
@@ -15,24 +15,21 @@ type componentPaths struct {
 	files     string
 	charts    string
 	images    string
+	repos     string
 	manifests string
 }
 type tempPaths struct {
-	base                 string
-	dataInjections       string
-	utilityClusterImages string
-	utilityClusterRepos  string
-	components           string
+	base           string
+	dataInjections string
+	components     string
 }
 
 func createPaths() tempPaths {
 	basePath := utils.MakeTempDir()
 	return tempPaths{
-		base:                 basePath,
-		dataInjections:       basePath + "/data",
-		utilityClusterImages: basePath + "/images-utility-cluster.tar",
-		utilityClusterRepos:  basePath + "/repos",
-		components:           basePath + "/components",
+		base:           basePath,
+		dataInjections: basePath + "/data",
+		components:     basePath + "/components",
 	}
 }
 
@@ -44,6 +41,7 @@ func createComponentPaths(basePath string, component config.ZarfComponent) compo
 		files:     basePath + "/files",
 		charts:    basePath + "/charts",
 		images:    basePath + "/images-component-" + component.Name + ".tar",
+		repos:     basePath + "/repos",
 		manifests: basePath + "/manifests",
 	}
 }

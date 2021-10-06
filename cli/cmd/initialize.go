@@ -3,7 +3,7 @@ package cmd
 import (
 	"path/filepath"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/k3s"
+	"github.com/defenseunicorns/zarf/cli/internal/k3s"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -14,7 +14,7 @@ var initOptions = k3s.InstallOptions{}
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Deploys the utility cluster or appliance cluster on a clean linux box",
+	Short: "Deploys the gitops service or appliance cluster on a clean linux box",
 	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
 		handleTLSOptions()
@@ -68,7 +68,7 @@ func handleTLSOptions() {
 func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().BoolVar(&initOptions.Confirmed, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&initOptions.PKI.Host, "host", "", "Specify the host or IP for the utility cluster ingress.  E.g. host=10.10.10.5 or host=utility.domain.com")
+	initCmd.Flags().StringVar(&initOptions.PKI.Host, "host", "", "Specify the host or IP for the gitops service ingress.  E.g. host=10.10.10.5 or host=gitops.domain.com")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")
 	initCmd.Flags().StringVar(&initOptions.PKI.CertPrivatePath, "server-key", "", "Path to the server private key if not generating unique PKI")
 	initCmd.Flags().StringVar(&initOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")

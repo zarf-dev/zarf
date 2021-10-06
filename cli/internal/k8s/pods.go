@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
 )
 
 const waitLimit = 30

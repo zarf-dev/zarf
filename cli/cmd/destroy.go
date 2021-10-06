@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
 	"github.com/spf13/cobra"
 )

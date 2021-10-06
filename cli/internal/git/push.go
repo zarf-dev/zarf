@@ -1,11 +1,11 @@
 package git
 
 import (
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 const offlineRemoteName = "offline-downstream"
@@ -36,14 +36,14 @@ func push(localPath string) {
 		return
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL("https://"+config.ZarfLocal, remoteUrl)
+	targetUrl := transformURL("https://"+config.ZarfLocalIP, remoteUrl)
 
 	_, _ = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetUrl},
 	})
 
-	gitCred := FindAuthForHost(config.ZarfLocal)
+	gitCred := FindAuthForHost(config.ZarfLocalIP)
 
 	err = repo.Push(&git.PushOptions{
 		RemoteName: offlineRemoteName,
@@ -58,7 +58,7 @@ func push(localPath string) {
 	if err == git.NoErrAlreadyUpToDate {
 		pushContext.Info("Repo already up-to-date")
 	} else if err != nil {
-		pushContext.Warn("Unable to push repo to the utility cluster")
+		pushContext.Warn("Unable to push repo to the gitops service")
 	} else {
 		pushContext.Info("Repo updated")
 	}
