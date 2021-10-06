@@ -5,6 +5,7 @@ import (
   "encoding/base64"
   "fmt"
   "github.com/gruntwork-io/terratest/modules/random"
+  "github.com/gruntwork-io/terratest/modules/retry"
   "github.com/stretchr/testify/require"
   "io/ioutil"
   "os"
@@ -12,7 +13,6 @@ import (
   "time"
 
   "github.com/gruntwork-io/terratest/modules/aws"
-  "github.com/gruntwork-io/terratest/modules/retry"
   "github.com/gruntwork-io/terratest/modules/ssh"
   "github.com/gruntwork-io/terratest/modules/terraform"
   teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
@@ -25,7 +25,7 @@ func TestTerraformSshExample(t *testing.T) {
   tmpFolder := teststructure.CopyTerraformFolderToTemp(t, "..", "tf/public-ec2-instance")
 
   // At the end of the test, run `terraform destroy` to clean up any resources that were created
-  defer teststructure.RunTestStage(t, "teardown", func() {
+  defer teststructure.RunTestStage(t, "TEARDOWN", func() {
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
     aws.DeleteEC2KeyPair(t, keyPair)
 
@@ -34,7 +34,7 @@ func TestTerraformSshExample(t *testing.T) {
   })
 
   // Deploy the terraform infra
-  teststructure.RunTestStage(t, "setup", func() {
+  teststructure.RunTestStage(t, "SETUP", func() {
     terraformOptions, keyPair, err := configureTerraformOptions(t, tmpFolder)
     require.NoError(t, err)
 
@@ -44,6 +44,12 @@ func TestTerraformSshExample(t *testing.T) {
 
     // This will run `terraform init` and `terraform apply` and fail the test if there are any errors
     terraform.InitAndApply(t, terraformOptions)
+  })
+
+  // Upload the Zarf artifacts
+  teststructure.RunTestStage(t, "UPLOAD", func() {
+    terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
+    keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
     // This will upload the Zarf binary, init package, and other necessary files to the server so we can use them for
     // tests
@@ -51,7 +57,7 @@ func TestTerraformSshExample(t *testing.T) {
   })
 
   // Make sure we can SSH to the public Instance directly from the public Internet
-  teststructure.RunTestStage(t, "test", func() {
+  teststructure.RunTestStage(t, "TEST", func() {
     terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
@@ -115,10 +121,18 @@ func syncFilesToRemoteServer(t *testing.T, terraformOptions *terraform.Options, 
 
   // It can take a minute or so for the Instance to boot up, so retry a few times
   maxRetries := 15
-  timeBetweenRetries := 5 * time.Second
+  timeBetweenRetries, err := time.ParseDuration("5s")
+  require.NoError(t, err)
 
   // Wait for the instance to be ready
-  output, err := ssh.CheckSshCommandWithRetryE(t, publicHost, "whoami", maxRetries, timeBetweenRetries, nil)
+  _, err = retry.DoWithRetryE(t, "Wait for the instance to be ready", maxRetries, timeBetweenRetries, func() (string, error){
+    _, err := ssh.CheckSshCommandE(t, publicHost, "whoami")
+    if err != nil {
+      return "", err
+    }
+    return "", nil
+  })
+  require.NoError(t, err)
 
   // Upload the compiled Zarf binary to the server. The ssh lib only supports sending strings so we'll base64encode it
   // first
@@ -128,14 +142,9 @@ func syncFilesToRemoteServer(t *testing.T, terraformOptions *terraform.Options, 
   content, err := ioutil.ReadAll(reader)
   require.NoError(t, err)
   encodedZarfBinary := base64.StdEncoding.EncodeToString(content)
-  retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
-    err := ssh.ScpFileToE(t, publicHost, 0644, "/usr/local/bin/zarf.b64", encodedZarfBinary)
-    if err != nil {
-      return "", err
-    }
-    return "", nil
-  })
-  output, err := ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'base64 -d /root/zarf.b64 > /usr/local/bin/zarf && chmod 0777 /usr/local/bin/zarf'")
+  err = ssh.ScpFileToE(t, publicHost, 0644, "$HOME/zarf.b64", encodedZarfBinary)
+  require.NoError(t, err)
+  output, err := ssh.CheckSshCommandE(t, publicHost, "cd $HOME && sudo bash -c 'base64 -d zarf.b64 > /usr/local/bin/zarf && chmod 0777 /usr/local/bin/zarf'")
   require.NoError(t, err, output)
 
   // Upload zarf-init.tar.zst
@@ -145,18 +154,10 @@ func syncFilesToRemoteServer(t *testing.T, terraformOptions *terraform.Options, 
   content, err = ioutil.ReadAll(reader)
   require.NoError(t, err)
   encodedZarfInit := base64.StdEncoding.EncodeToString(content)
-  err = ssh.ScpFileToE(t, publicHost, 0644, "/root/zarf-init.tar.zst.b64", encodedZarfInit)
+  err = ssh.ScpFileToE(t, publicHost, 0644, "$HOME/zarf-init.tar.zst.b64", encodedZarfInit)
   require.NoError(t, err)
-  output, err = ssh.CheckSshCommandE(t, publicHost, "base64 -d /root/zarf-init.tar.zst.b64 > /root/zarf-init.tar.zst")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "cd $HOME && base64 -d zarf-init.tar.zst.b64 > zarf-init.tar.zst")
   require.NoError(t, err, output)
-
-  //// Upload scripts/e2e.sh
-  //e2eSshScriptContents, err := ioutil.ReadFile("../scripts/e2e.sh")
-  //require.NoError(t, err)
-  //err = ssh.ScpFileToE(t, publicHost, 0777, "$HOME/e2e.sh", string(e2eSshScriptContents))
-  //require.NoError(t, err)
-  //output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'cp $HOME/e2e.sh /usr/local/bin/e2e.sh'")
-  //require.NoError(t, err, output)
 }
 
 func test(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
@@ -175,8 +176,8 @@ func test(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Key
   output, err := ssh.CheckSshCommandE(t, publicHost, "zarf --help")
   require.NoError(t, err, output)
 
-  // Test `zarf init`
-  output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'cd /root && zarf init --confirm --components management,logging,utility-cluster --host localhost'")
+  // Test `zarf init just to make sure it returns a zero exit code.`
+  output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c 'zarf init --confirm --components management,logging,gitops-service --host localhost'")
   require.NoError(t, err, output)
 }
 
