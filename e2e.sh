@@ -53,8 +53,8 @@ beforeAll() {
     # Erase any prior cluster
     _run "sudo zarf destroy --confirm"
 
-    # Launch the utility cluster with logging and management
-    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --features=management,logging,utility-cluster"
+    # Launch the gitops service with logging and management
+    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --components=management,logging,gitops-service"
 
     _sleep 30
 }
@@ -70,6 +70,24 @@ afterAll() {
 loadZarfCA() {
     # Get the ca file for curl to trust 
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
+}
+
+testPrepareCommands() {
+    # Validate working SHASUM computation
+    EXPECTED_SHASUM="61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109"
+    _run "echo 'random test data 🦄' > shasum-test-file"
+    ZARF_SHASUM=$(_run "zarf prepare sha256sum shasum-test-file")
+    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+        echo -e "${RED}zarf prepare sha256sum failed for local file${NOCOLOR}"
+        exit 1
+    fi    
+    # Validate working SHASUM for remote asset
+    EXPECTED_SHASUM="c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617"
+    ZARF_SHASUM=$(_run "zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
+    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+        echo -e "${RED}zarf prepare sha256sum failed for remote file${NOCOLOR}"
+        exit 1
+    fi
 }
 
 testAPIEndpoints() {
@@ -110,12 +128,14 @@ testGitBasedHelmChart() {
     popd
     # Deploy the package
     _run "sudo zarf package deploy $PACKAGE --confirm"
-    _sleep 30
+    _sleep 60
     # Test to confirm the Twistlock Console was deployed
     _curl "https://pipeline.zarf.dev/api/v1/settings/initialized?project=Central+Console"
 }
 
 beforeAll
+
+testPrepareCommands
 
 # Get the admin credentials 
 ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
@@ -123,7 +143,7 @@ ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
 # Test that k9s is happy
 _run "sudo /usr/local/bin/k9s info"
 
-# Test utility cluster and monitoring components are wup
+# Test gitops service and monitoring components are up
 testAPIEndpoints
 
 # Remove the top-level ingress, hack until we parallize these tests

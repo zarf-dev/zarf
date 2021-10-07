@@ -3,26 +3,25 @@ package k3s
 import (
 	"os"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/git"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 type InstallOptions struct {
-	PKI       utils.PKIConfig
-	Confirmed bool
-	Features  string
+	PKI        utils.PKIConfig
+	Confirmed  bool
+	Components string
 }
 
 func Install(options InstallOptions) {
-
 	utils.RunPreflightChecks()
 
-	packager.Deploy(config.PackageInitName, options.Confirmed, options.Features)
-	
 	logrus.Info("Installing K3s")
+
+	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
 
 	// Install RHEL RPMs if applicable
 	if utils.IsRHEL() {
@@ -65,7 +64,6 @@ func createK3sSymlinks() {
 }
 
 func createService() {
-	
 	servicePath := "/etc/systemd/system/k3s.service"
 
 	_ = os.Symlink(servicePath, "/etc/systemd/system/multi-user.target.wants/k3s.service")

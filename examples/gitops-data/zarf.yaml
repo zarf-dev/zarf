@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: gitops-service-data
+  description: "Demo Zarf loading resources into a gitops service"
+
+components:
+  - name: baseline
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.0.0
+    repos:
+      - https://github.com/stefanprodan/podinfo.git@6.0.0

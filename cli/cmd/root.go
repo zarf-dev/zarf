@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
 
 var rootCmd = &cobra.Command{

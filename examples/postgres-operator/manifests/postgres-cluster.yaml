@@ -1,0 +1,28 @@
+apiVersion: "acid.zalan.do/v1"
+kind: "postgresql"
+metadata:
+  name: "acid-zarf-test"
+  namespace: "postgres-operator"
+  labels:
+    team: acid
+spec:
+  teamId: "acid"
+  postgresql:
+    version: "13"
+  numberOfInstances: 3
+  enableConnectionPooler: true
+  volume:
+    size: "2Gi"
+  users:
+    zarf: []
+  databases:
+    zarf: zarf
+  enableLogicalBackup: true
+  logicalBackupSchedule: "*/2 * * * *"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi

@@ -3,13 +3,15 @@ metadata:
   name: appliance-demo-pod-info
   description: "Demo Zarf appliance mode with pod info"
 
-local:
-  manifests: manifests
+components:
+  - name: baseline
+    required: true
+    manifests: manifests
 
-  charts:
-    - name: podinfo
-      url: https://stefanprodan.github.io/podinfo
-      version: 6.0.0
-  
-  images:
-    - ghcr.io/stefanprodan/podinfo:6.0.0
+    charts:
+      - name: podinfo
+        url: https://stefanprodan.github.io/podinfo
+        version: 6.0.0
+
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.0.0

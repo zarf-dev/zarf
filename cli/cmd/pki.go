@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
 var pkiOptions = utils.PKIConfig{}
@@ -33,7 +33,7 @@ func init() {
 	pkiCmd.AddCommand(pkiRegenerate)
 	pkiCmd.AddCommand(pkiImport)
 
-	pkiRegenerate.Flags().StringVar(&pkiOptions.Host, "host", "zarf-server", "Specify the host or IP for the utility cluster ingress")
+	pkiRegenerate.Flags().StringVar(&pkiOptions.Host, "host", "zarf-server", "Specify the host or IP for the gitops service ingress")
 	_ = pkiRegenerate.MarkFlagRequired("host")
 
 	pkiImport.Flags().StringVar(&pkiOptions.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")

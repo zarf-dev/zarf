@@ -1,6 +1,6 @@
 ## Zarf Game Mode Example
 
-This example demonstrates using Zarf to kill time (and evil).  In this mode there is no utility cluster and Zarf is simple a standard means of wrapping airgap concerns for K3s.  Game mode is identical to [Appliance Mode](../appliance/README.md), but more fun. 
+This example demonstrates using Zarf to kill time (and evil).  In this mode there is no gitops service and Zarf is simply a standard means of wrapping airgap concerns for K3s.  Game mode is identical to [Appliance Mode](../appliance/README.md), but more fun. 
 
 ### Steps to use:
 1. Create a Zarf cluster as outlined in the main [README](../../README.md#2-create-the-zarf-cluster)

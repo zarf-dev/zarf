@@ -17,7 +17,7 @@ const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
-const ZarfLocal = "zarf.localhost"
+const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
 var config ZarfConfig
@@ -43,32 +43,8 @@ func GetMetaData() ZarfMetatdata {
 	return config.Metadata
 }
 
-func GetLocalCharts() []ZarfChart {
-	return config.Local.Charts
-}
-
-func GetLocalFiles() []ZarfFile {
-	return config.Local.Files
-}
-
-func GetLocalImages() []string {
-	return config.Local.Images
-}
-
-func GetLocalManifests() string {
-	return config.Local.Manifests
-}
-
-func GetFeatures() []ZarfFeature {
-	return config.Features
-}
-
-func GetRemoteImages() []string {
-	return config.Remote.Images
-}
-
-func GetRemoteRepos() []string {
-	return config.Remote.Repos
+func GetComponents() []ZarfComponent {
+	return config.Components
 }
 
 func Load(path string) {
@@ -87,7 +63,6 @@ func Load(path string) {
 }
 
 func WriteConfig(path string) {
-
 	logContext := logrus.WithField("path", path)
 	now := time.Now()
 	currentUser, userErr := user.Current()

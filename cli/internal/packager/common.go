@@ -5,21 +5,23 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/utils"
 )
 
+type componentPaths struct {
+	base      string
+	files     string
+	charts    string
+	images    string
+	repos     string
+	manifests string
+}
 type tempPaths struct {
 	base           string
 	dataInjections string
-	localFiles     string
-	localCharts    string
-	localImage     string
-	localManifests string
-	remoteImage    string
-	remoteRepos    string
-	features       string
+	components     string
 }
 
 func createPaths() tempPaths {
@@ -27,25 +29,20 @@ func createPaths() tempPaths {
 	return tempPaths{
 		base:           basePath,
 		dataInjections: basePath + "/data",
-		localFiles:     basePath + "/files",
-		localCharts:    basePath + "/charts",
-		localImage:     basePath + "/images-local.tar",
-		localManifests: basePath + "/manifests",
-		remoteImage:    basePath + "/images-remote.tar",
-		remoteRepos:    basePath + "/repos",
-		features:       basePath + "/features",
+		components:     basePath + "/components",
 	}
 }
 
-func createFeaturePaths(basePath string, feature config.ZarfFeature) tempPaths {
-	basePath = basePath + "/" + feature.Name
+func createComponentPaths(basePath string, component config.ZarfComponent) componentPaths {
+	basePath = basePath + "/" + component.Name
 	_ = utils.CreateDirectory(basePath, 0700)
-	return tempPaths{
-		base:           basePath,
-		localFiles:     basePath + "/files",
-		localCharts:    basePath + "/charts",
-		localImage:     basePath + "/images-local-feature-" + feature.Name + ".tar",
-		localManifests: basePath + "/manifests",
+	return componentPaths{
+		base:      basePath,
+		files:     basePath + "/files",
+		charts:    basePath + "/charts",
+		images:    basePath + "/images-component-" + component.Name + ".tar",
+		repos:     basePath + "/repos",
+		manifests: basePath + "/manifests",
 	}
 }
 

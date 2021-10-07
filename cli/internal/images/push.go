@@ -4,12 +4,13 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/reference/docker"
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
 )
 
-func PushAll(imageTarballPath string, buildImageList []string, host string) {
+func PushAll(imageTarballPath string, buildImageList []string) {
 	logrus.Info("Loading images")
 	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
@@ -29,7 +30,7 @@ func PushAll(imageTarballPath string, buildImageList []string, host string) {
 			return
 		}
 
-		offlineName := strings.Replace(src, docker.Domain(onlineName), host, 1)
+		offlineName := strings.Replace(src, docker.Domain(onlineName), config.ZarfLocalIP, 1)
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {

@@ -4,22 +4,23 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"github.com/spf13/cobra"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/config"
-	"repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/cli/internal/packager"
 )
 
 var confirmCreate bool
 var confirmDeploy bool
+var deployComponents string
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
-	Short: "Pack and unpack updates for the Zarf utility cluster.",
+	Short: "Pack and unpack updates for the Zarf gitops service.",
 }
 
 var packageCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create an update package to push to the utility server (runs online)",
+	Short: "Create an update package to push to the gitops server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
 		packager.Create(confirmCreate)
 	},
@@ -31,7 +32,7 @@ var packageDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Deploy(packageName, confirmDeploy, "")
+		packager.Deploy(packageName, confirmDeploy, deployComponents)
 	},
 }
 
@@ -69,4 +70,5 @@ func init() {
 
 	packageCreateCmd.Flags().BoolVar(&confirmCreate, "confirm", false, "Confirm package creation without prompting")
 	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
+	packageDeployCmd.Flags().StringVar(&deployComponents, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 }

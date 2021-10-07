@@ -1,65 +1,59 @@
 package config
 
 type ZarfFile struct {
-	Source     string
-	Shasum     string
-	Target     string
-	Executable bool
+	Source     string `yaml:"source"`
+	Shasum     string `yaml:"shasum"`
+	Target     string `yaml:"target"`
+	Executable bool   `yaml:"executable"`
 }
 
 type ZarfChart struct {
-	Name    string
-	Url     string
-	Version string
+	Name    string `yaml:"name"`
+	Url     string `yaml:"url"`
+	Version string `yaml:"version"`
 }
 
-type ZarfFeature struct {
-	Name        string
-	Description string
-	Default     bool
-	Manifests   string
-	Images      []string
-	Files       []ZarfFile
-	Charts      []ZarfChart
+type ZarfComponent struct {
+	Name        string      `yaml:"name"`
+	Description string      `yaml:"description"`
+	Default     bool        `yaml:"default"`
+	Required    bool        `yaml:"required"`
+	Manifests   string      `yaml:"manifests"`
+	Images      []string    `yaml:"images"`
+	Repos       []string    `yaml:"repos"`
+	Charts      []ZarfChart `yaml:"charts"`
+	Files       []ZarfFile  `yaml:"files"`
 }
 
 type ZarfMetatdata struct {
-	Name         string
-	Description  string
-	Version      string
-	Uncompressed bool
+	Name         string `yaml:"name"`
+	Description  string `yaml:"description"`
+	Version      string `yaml:"version"`
+	Uncompressed bool   `yaml:"uncompressed"`
 }
 
 type ZarfContainerTarget struct {
-	Namespace string
-	Selector  string
-	Container string
-	Path      string
+	Namespace string `yaml:"namespace"`
+	Selector  string `yaml:"selector"`
+	Container string `yaml:"container"`
+	Path      string `yaml:"path"`
 }
 
 type ZarfData struct {
-	Source string
-	Target ZarfContainerTarget
+	Source string              `yaml:"source"`
+	Target ZarfContainerTarget `yaml:"target"`
+}
+
+type ZarfBuildData struct {
+	Terminal  string `yaml:"terminal"`
+	User      string `yaml:"user"`
+	Timestamp string `yaml:"timestamp"`
 }
 
 type ZarfConfig struct {
-	Kind     string
-	Metadata ZarfMetatdata
-	Features []ZarfFeature
-	Data     []ZarfData
-	Local    struct {
-		Manifests string
-		Images    []string
-		Files     []ZarfFile
-		Charts    []ZarfChart
-	}
-	Remote struct {
-		Images []string
-		Repos  []string
-	}
-	Package struct {
-		Terminal   string
-		User       string
-		Timestamp string
-	}
+	Kind       string          `yaml:"kind"`
+	Metadata   ZarfMetatdata   `yaml:"metadata"`
+	Package    ZarfBuildData   `yaml:"package"`
+	Data       []ZarfData      `yaml:"data"`
+	Components []ZarfComponent `yaml:"components"`
 }
