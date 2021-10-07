@@ -40,15 +40,20 @@ e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-r
 	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
 	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip)
 
-build-cli: ## Build the CLI
-	rm -fr build
+clean: ## Clean the build dir
+	rm -rf build
+
+build-cli-linux: ## Build the Linux CLI
 	cd cli && $(MAKE) build
+
+build-cli-mac: ## Build the Mac CLI
 	cd cli && $(MAKE) build-mac
+
+build-cli: clean build-cli-linux build-cli-mac ## Build the CLI
 
 init-package: ## Create the zarf init package
 	$(ZARF_BIN) package create --confirm
 	mv zarf-init.tar.zst build
-
 	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 
