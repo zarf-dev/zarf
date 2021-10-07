@@ -9,7 +9,7 @@ metadata:
   name: strimzi
   namespace: kafka-operator
 spec:
-  chart: https://%{KUBERNETES_API}%/static/charts/strimzi-kafka-operator-helm-3-chart-0.24.0.tgz
+  chart: https://%{KUBERNETES_API}%/static/charts/strimzi-kafka-operator-0.24.0.tgz
   targetNamespace: kafka-operator
   valuesContent: |-
     imageRegistryOverride: registry1.dso.mil
