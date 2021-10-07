@@ -1,0 +1,179 @@
+# Attribution for a bunch of this goes to CloudPosse
+# https://github.com/cloudposse/actions/blob/master/.github/workflows/test-command.yml
+
+name: test
+on:
+  repository_dispatch:
+    types: [test-command]
+
+defaults:
+  run:
+    # We need -e -o pipefail for consistency with GitHub Actions's default behavior
+    shell: bash -e -o pipefail {0}
+
+jobs:
+  # Parse the command so we can decide which tests to run. Examples: "/test all", "/test validate", "/test e2e"
+  # We can do as many of these as we want to get as granular as we want.
+  parse:
+    runs-on: ubuntu-latest
+    outputs:
+      run-ping: ${{ steps.parse.outputs.ping }}
+      run-hello: ${{ steps.parse.outputs.hello }}
+      run-quote: ${{ steps.parse.outputs.quote }}
+    steps:
+      - name: Parse Args
+        id: parse
+        env:
+          DEBUG: ${{ toJSON(github.event.client_payload.slash_command) }}
+          ARGS_V1: ${{ github.event.client_payload.slash_command.arg1 }}
+          ARGS_V2: ${{ github.event.client_payload.slash_command.args.unnamed.all }}
+        shell: bash
+        run: |
+          ARGS="${ARGS_V1}${ARGS_V2}"
+          printf "Args are %s\n" "$ARGS"
+          printf "\n\nslash_command is %s\n\n" "$DEBUG"
+          COMMANDS=(PING HELLO QUOTE)
+          if printf "%s" "${ARGS^^}" | grep -qE '\bALL\b'; then
+            # "all" explicitly does not include "ping"
+            for cmd in "${COMMANDS[@]}"; do
+              [[ $cmd == "PING" ]] && ! { printf "%s" "${ARGS^^}" | grep -qE '\bPING\b'; } && continue
+              printf -v "$cmd" "true"
+            done
+          else
+            for cmd in "${COMMANDS[@]}"; do
+              if printf "%s" "${ARGS^^}" | grep -qE "\b${cmd}\b"; then
+                printf -v "$cmd" "true"
+              fi
+            done
+          fi
+          for out in "${COMMANDS[@]}"; do
+            printf "::set-output name=%s::%s\n" "${out,,}" "${!out:-false}"
+            printf "%s=%s\n" "${out,,}" "${!out:-false}"
+          done
+
+  # Do a simple ping/pong status update to validate things are working
+  ping:
+    runs-on: ubuntu-latest
+    needs: parse
+    if: needs.parse.outputs.run-ping == 'true'
+    steps:
+      # Update GitHub status for dispatch events
+      - name: "Update GitHub Status for this ref"
+        uses: "docker://cloudposse/github-status-updater"
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: success
+          GITHUB_CONTEXT: "/test ping"
+          GITHUB_DESCRIPTION: "pong"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+  # Do a "hello world" example pipeline run
+  hello:
+    runs-on: ubuntu-latest
+    needs: parse
+    if: needs.parse.outputs.run-hello == 'true'
+    steps:
+      # Update GitHub status for pending pipeline run
+      - name: "Update GitHub Status for pending"
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: pending
+          GITHUB_CONTEXT: "/test hello"
+          GITHUB_DESCRIPTION: "started by @${{ github.event.client_payload.github.actor }}"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Checkout the code from GitHub Pull Request
+      - name: "Checkout the code"
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT }}
+          repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.client_payload.pull_request.head.ref }}
+
+      # Echo "Hello world!"
+      - name: "Echo something"
+        run: |
+          echo "Hello world!"
+
+      # # Throw a failure to test fail conditions
+      # - name: "Fail"
+      #   run: |
+      #     exit 1
+
+      # # Wait a long time to give the dev time to test cancel conditions
+      # - name: "Wait"
+      #   run: |
+      #     sleep 600
+
+      # Update GitHub status for failing pipeline run
+      - name: "Update GitHub Status for failure"
+        if: ${{ failure() }}
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: failure
+          GITHUB_CONTEXT: "/test hello"
+          GITHUB_DESCRIPTION: "run failed"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Update GitHub status for successful pipeline run
+      - name: "Update GitHub Status for success"
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: success
+          GITHUB_CONTEXT: "/test hello"
+          GITHUB_DESCRIPTION: "run passed"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Update GitHub status for cancelled pipeline run
+      - name: "Update GitHub Status for cancelled"
+        if: ${{ cancelled() }}
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: error
+          GITHUB_CONTEXT: "/test hello"
+          GITHUB_DESCRIPTION: "run cancelled"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+  # Add a quote to the status section
+  quote:
+    runs-on: ubuntu-latest
+    needs: parse
+    if: needs.parse.outputs.run-quote == 'true'
+    steps:
+      # Update GitHub status
+      - name: "Update GitHub Status for successful pipeline run"
+        uses: "docker://cloudposse/github-status-updater"
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: success
+          GITHUB_CONTEXT: "/test quote"
+          GITHUB_DESCRIPTION: "Insanity is doing the same thing over and over and expecting different results."
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
