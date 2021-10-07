@@ -47,7 +47,6 @@ build-release: ## Build the binaries as an alternative to downloading the latest
 .PHONY: vm-init
 vm-init: vm-destroy ## Stripped-down vagrant box to reduce friction for basic user testing. Note the need to perform disk resizing for some examples
 	@VAGRANT_EXPERIMENTAL="disks" vagrant up --no-color
-	@echo -e "\n\n\n\033[1;93m  ✅ VM READY.  Logging in now, run \"sudo su\" once the prompt appears.\n\n\n\033[0m"
 	@vagrant ssh
 
 .PHONY: vm-destroy

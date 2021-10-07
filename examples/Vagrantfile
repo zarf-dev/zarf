@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.hostname = "zarf-examples"
   config.vm.synced_folder '.', '/vagrant', disabled: true
-  config.vm.synced_folder './sync/', '/home/vagrant/zarf-examples', SharedFoldersEnableSymlinksCreate: false
+  config.vm.synced_folder './sync/', '/examples', SharedFoldersEnableSymlinksCreate: false
 
   config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.network "forwarded_port", guest: 443, host: 8443
@@ -20,6 +20,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 9443, host: 9443
 
   config.ssh.insert_key = false
+  config.ssh.extra_args = [ "-t", "cd /examples; sudo su" ]
 
   config.vm.provision "shell", inline: <<-SHELL
     # The partition is 100GB but the filesystem isn't yet
@@ -30,5 +31,5 @@ Vagrant.configure("2") do |config|
 
     # Airgap images please
     echo "0.0.0.0 registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
-    SHELL
+  SHELL
 end
