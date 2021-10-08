@@ -27,7 +27,7 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 1. :key: Create a branch off the trunk, or a fork if you don't have the right permissions to push a branch.
 1. Create a Draft Pull Request as soon as you are able to, even if it is just 5 minutes after you started working on it. Around here we aren't afraid to show unfinished work. It helps us get feedback more quickly.
 1. :key: Create a Pull Request (or mark it Ready for Review if you've been working in a Draft PR).
-1. :key: Run all automated tests by adding `/test all` as a comment in the PR. If you want to re-run certain tests you can also run them individually. Example: `/test e2e` just runs the end-to-end tests. You can chain different tests together like `/test foo bar baz`
+1. :key: Run all automated tests by adding `/test all` as a comment in the PR. If you want to re-run certain tests you can also run them individually. Example: `/test e2e` just runs the end-to-end tests. You can chain different tests together like `/test foo bar baz`. You need `write` permission to the repo to trigger the tests.
 1. Clearly announce any breaking changes that have been made.
 1. :key: Get at least 1 peer-review approval.
 1. :key: Merge the PR into the trunk. We tend to prefer "Squash and Merge" but if your commits are on-point and you want to preserve them in the Git history of the trunk that's fine too.
