@@ -32,3 +32,22 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 1. :key: Get at least 1 peer-review approval.
 1. :key: Merge the PR into the trunk. We tend to prefer "Squash and Merge" but if your commits are on-point and you want to preserve them in the Git history of the trunk that's fine too.
 1. Delete the branch
+1. Close the issue if it got fully resolved by your PR. *Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged.*
+
+## Testing
+
+This section dives deeper into how we test Zarf
+
+### End2End Testing
+
+Our E2E tests utilize [Terratest](https://terratest.gruntwork.io/). They create real infrastructure in AWS that the tests get run on. By doing this we are able to make the test environments ephemeral and allow them to be run in parallel so that we can do more testing more quickly.
+
+The Terratest E2E tests can be found in the `/test` folder.
+
+We're still working on building out the test suite. If you want to help check out these issues:
+
+- #97: Make our own test harness container
+- #99: Writing additional tests
+- #100: Each test should be runnable locally
+- #101: Run E2E tests on multiple distros
+- #102: Make the E2E tests more efficient
