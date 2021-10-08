@@ -19,6 +19,8 @@ Specifically:
 
 Here's what a typical "day in the life" of a Zarf developer might look like. Keep in mind that other than things that are required through automation these aren't hard-and-fast rules. When in doubt, the process outlined here works for us.
 
+:key: == Required by automation
+
 1. Pick an outstanding issue to work on, set yourself as the assignee, and move it to "Now" in the [Roadmap](https://github.com/defenseunicorns/zarf/projects/1). The "Next" and "Later" columns are mostly prioritized according to feedback from our users and other inputs, but don't feel like you have to pick from the top of the pile if something else is jumping out at you.
 1. Write up a rough outline of what you plan to do in the issue so you can get early feedback. Clearly announce any breaking changes you think need to be made.
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
