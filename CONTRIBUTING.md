@@ -46,8 +46,8 @@ The Terratest E2E tests can be found in the `/test` folder.
 
 We're still working on building out the test suite. If you want to help check out these issues:
 
-- #97: Make our own test harness container
-- #99: Writing additional tests
-- #100: Each test should be runnable locally
-- #101: Run E2E tests on multiple distros
-- #102: Make the E2E tests more efficient
+- [#97](https://github.com/defenseunicorns/zarf/issues/97): Make our own test harness container
+- [#99](https://github.com/defenseunicorns/zarf/issues/99): Writing additional tests
+- [#100](https://github.com/defenseunicorns/zarf/issues/100): Each test should be runnable locally
+- [#101](https://github.com/defenseunicorns/zarf/issues/101): Run E2E tests on multiple distros
+- [#102](https://github.com/defenseunicorns/zarf/issues/102): Make the E2E tests more efficient
