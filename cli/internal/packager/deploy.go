@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/helm"
@@ -50,30 +49,18 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 
 	dataInjectionList := config.GetDataInjections()
 
+	// Verify the components requested all exist
 	components := config.GetComponents()
-	for _, component := range components {
-		confirmComponent := component.Required
+	requestedComponents := []string{}
+	if componentRequest != "" {
+		requestedComponents = strings.Split(componentRequest, ",")
+	}
+	componentsToDeploy := utils.GetValidComponents(components, requestedComponents)
 
-		// Only run for optional components
-		if !confirmComponent {
-			// Only run the prompt if no components were passed in
-			if componentRequest == "" {
-				prompt := &survey.Confirm{
-					Message: "Deploy the " + component.Name + " component?",
-					Default: component.Default,
-					Help:    component.Description,
-				}
-				_ = survey.AskOne(prompt, &confirmComponent)
-			} else {
-				// This is probably sufficient for now, we could change to a slice and match exact if it's needed
-				confirmComponent = strings.Contains(strings.ToLower(componentRequest), component.Name)
-			}
-		}
-
-		if confirmComponent {
-			componentPath := createComponentPaths(tempPath.components, component)
-			deployComponents(componentPath, component)
-		}
+	// Deploy all of the components
+	for _, component := range componentsToDeploy {
+		componentPath := createComponentPaths(tempPath.components, component)
+		deployComponents(componentPath, component)
 	}
 
 	if !config.IsZarfInitConfig() {
