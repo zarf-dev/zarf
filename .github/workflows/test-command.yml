@@ -8,7 +8,7 @@ on:
 
 defaults:
   run:
-    # We need -e -o pipefail for consistency with GitHub Actions's default behavior
+    # We need -e -o pipefail for consistency with GitHub Actions' default behavior
     shell: bash -e -o pipefail {0}
 
 jobs:
@@ -168,8 +168,8 @@ jobs:
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
           GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
 
-  # Run E2E tests
-  e2e:
+  # Run the Game E2E test
+  e2e-game:
     runs-on: ubuntu-latest
     needs: [parse, build]
     if: needs.parse.outputs.run-e2e == 'true'
@@ -183,7 +183,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           GITHUB_STATE: pending
-          GITHUB_CONTEXT: "/test e2e"
+          GITHUB_CONTEXT: "/test e2e - Game Example"
           GITHUB_DESCRIPTION: "started by @${{ github.event.client_payload.github.actor }}"
           GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
@@ -217,7 +217,8 @@ jobs:
           asdf global golang 1.16.7
           export GOPATH="$HOME/go"
           export PATH="$PATH:$GOPATH/bin"
-          make test-e2e
+          chmod +x build/zarf
+          make package-example-game test-cloud-e2e-example-game
 
       # Update GitHub status for failing pipeline run
       - name: "Update GitHub Status for failure"
@@ -228,7 +229,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           GITHUB_STATE: failure
-          GITHUB_CONTEXT: "/test e2e"
+          GITHUB_CONTEXT: "/test e2e - Game Example"
           GITHUB_DESCRIPTION: "run failed"
           GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
@@ -242,7 +243,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           GITHUB_STATE: success
-          GITHUB_CONTEXT: "/test e2e"
+          GITHUB_CONTEXT: "/test e2e - Game Example"
           GITHUB_DESCRIPTION: "run passed"
           GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
@@ -257,7 +258,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           GITHUB_STATE: error
-          GITHUB_CONTEXT: "/test e2e"
+          GITHUB_CONTEXT: "/test e2e - Game Example"
           GITHUB_DESCRIPTION: "run cancelled"
           GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
