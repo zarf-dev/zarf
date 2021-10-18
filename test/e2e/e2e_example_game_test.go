@@ -69,7 +69,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // Wait until the Docker registry is ready
-  output, err = ssh.CheckSshCommandE(t, publicHost, "curl -sfSL --retry 15 --retry-connrefused --retry-delay 10 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\"")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 60 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\")\" != \"200\" ]]; do sleep 1; done' || false")
   require.NoError(t, err, output)
 
   // Deploy the game
