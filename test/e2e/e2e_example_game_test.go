@@ -65,7 +65,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // run `zarf init`
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo /home/%s/build/zarf init --confirm --components management --host localhost", username))
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management --host localhost'", username))
   require.NoError(t, err, output)
 
   // Wait until the Docker registry is ready
@@ -73,7 +73,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // Deploy the game
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo /home/%s/build/zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm", username))
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
   require.NoError(t, err, output)
 
   // Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
@@ -81,6 +81,6 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // Run `zarf destroy` to make sure that works correctly
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo /home/%s/build/zarf destroy --confirm", username))
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf destroy --confirm'", username))
   require.NoError(t, err, output)
 }
