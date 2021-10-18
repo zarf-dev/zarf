@@ -43,7 +43,7 @@ beforeAll() {
 
     # Download the job artifacts
     _run "curl -fL https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/jobs/${PACKAGE_JOB_ID}/artifacts/download -o artifact.zip && unzip -jo artifact.zip"
-    
+
     # List the downloaded files
     _run "ls -lah"
 
@@ -68,7 +68,7 @@ afterAll() {
 }
 
 loadZarfCA() {
-    # Get the ca file for curl to trust 
+    # Get the ca file for curl to trust
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
 }
 
@@ -80,7 +80,7 @@ testPrepareCommands() {
     if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
         echo -e "${RED}zarf prepare sha256sum failed for local file${NOCOLOR}"
         exit 1
-    fi    
+    fi
     # Validate working SHASUM for remote asset
     EXPECTED_SHASUM="c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617"
     ZARF_SHASUM=$(_run "zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
@@ -137,7 +137,7 @@ beforeAll
 
 testPrepareCommands
 
-# Get the admin credentials 
+# Get the admin credentials
 ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
 
 # Test that k9s is happy

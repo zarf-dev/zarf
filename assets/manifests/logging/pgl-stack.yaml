@@ -63,6 +63,6 @@ spec:
       extraVolumeMounts:
         - name: journal
           mountPath: /var/log/journal
-          readOnly: true      
+          readOnly: true
     image:
       pullPolicy: Never
