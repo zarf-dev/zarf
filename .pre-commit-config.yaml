@@ -21,3 +21,13 @@ repos:
     rev: v0.4.0
     hooks:
       - id: go-fmt
+# Commenting this one out for now since it fails
+#  - repo: local
+#    hooks:
+#      - id: golangci-lint
+#        name: golangci-lint
+#        entry: hooks/run-golangci-lint.sh
+#        types: [ go ]
+#        language: script
+#        pass_filenames: false
+#        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
