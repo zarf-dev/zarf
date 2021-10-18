@@ -69,7 +69,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // Wait until the Docker registry is ready
-  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 60 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\")\" != \"200\" ]]; do sleep 1; done' || false")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\")\" != \"200\" ]]; do sleep 1; done' || false")
   require.NoError(t, err, output)
 
   // Deploy the game
@@ -77,7 +77,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
   require.NoError(t, err, output)
 
   // Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
-  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 60 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost\")\" != \"200\" ]]; do sleep 1; done' || false")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost\")\" != \"200\" ]]; do sleep 1; done' || false")
   require.NoError(t, err, output)
 
   // Run `zarf destroy` to make sure that works correctly
