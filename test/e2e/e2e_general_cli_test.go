@@ -6,11 +6,12 @@ import (
   "github.com/gruntwork-io/terratest/modules/ssh"
   "github.com/gruntwork-io/terratest/modules/terraform"
   teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
+  "github.com/stretchr/testify/assert"
   "github.com/stretchr/testify/require"
   "testing"
 )
 
-func TestE2eExampleGame(t *testing.T) {
+func TestGeneralCli(t *testing.T) {
   t.Parallel()
 
   // Our SSH username, will change based on which AMI we use
@@ -35,8 +36,6 @@ func TestE2eExampleGame(t *testing.T) {
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
     syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", username), "0700")
-    syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", username), "0600")
-    syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-appliance-demo-doom.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-appliance-demo-doom.tar.zst", username), "0600")
   })
 
   teststructure.RunTestStage(t, "TEST", func() {
@@ -44,11 +43,11 @@ func TestE2eExampleGame(t *testing.T) {
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
     // Finally run the actual test
-    testGameExample(t, terraformOptions, keyPair,username)
+    testGeneralCliStuff(t, terraformOptions, keyPair,username)
   })
 }
 
-func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
+func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
   // Run `terraform output` to get the value of an output variable
   publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
@@ -60,27 +59,17 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
     SshUserName: username,
   }
 
-  // Make sure `zarf --help` doesn't error
-  output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo /home/%s/build/zarf --help", username))
+  // Test `zarf prepare sha256sum` for a local asset
+  expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
+  output,err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && echo 'random test data 🦄' > shasum-test-file", username))
   require.NoError(t, err, output)
+  output,err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf prepare sha256sum shasum-test-file 2> /dev/null", username))
+  require.NoError(t, err, output)
+  assert.Equal(t, expectedShasum, output, "The expected SHASUM should equal the actual SHASUM")
 
-  // run `zarf init`
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && sudo ./zarf init --confirm --components management --host localhost", username))
+  // Test `zarf prepare sha256sum` for a remote asset
+  expectedShasum = "c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617\n"
+  output,err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt 2> /dev/null", username))
   require.NoError(t, err, output)
-
-  // Wait until the Docker registry is ready
-  output, err = ssh.CheckSshCommandE(t, publicHost, "curl -sfSL --retry 15 --retry-connrefused --retry-delay 10 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\"")
-  require.NoError(t, err, output)
-
-  // Deploy the game
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && sudo ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm", username))
-  require.NoError(t, err, output)
-
-  // Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
-  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 60 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost\")\" != \"200\" ]]; do sleep 1; done' || false")
-  require.NoError(t, err, output)
-
-  // Run `zarf destroy` to make sure that works correctly
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && sudo ./zarf destroy --confirm", username))
-  require.NoError(t, err, output)
+  assert.Equal(t, expectedShasum, output, "The expected SHASUM should equal the actual SHASUM")
 }

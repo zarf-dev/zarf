@@ -66,5 +66,9 @@ package-example-game: ## Create the Doom example
 test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
 	cd test/e2e && go test ./... -run TestE2eExampleGame -v -timeout 1200s
 
+.PHONY: test-cloud-e2e-general-cli
+test-cloud-e2e-general-cli: ## Runs tests of the CLI that don't need a cluster
+	cd test/e2e && go test ./... -run TestGeneralCli -v -timeout 1200s
+
 .PHONY: test-e2e
 test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be replaced by individual e2e test targets
