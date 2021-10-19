@@ -44,11 +44,11 @@ func TestE2eExampleGame(t *testing.T) {
     keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
     // Finally run the actual test
-    test(t, terraformOptions, keyPair,username)
+    testGameExample(t, terraformOptions, keyPair,username)
   })
 }
 
-func test(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
+func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
   // Run `terraform output` to get the value of an output variable
   publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
@@ -65,18 +65,22 @@ func test(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Key
   require.NoError(t, err, output)
 
   // run `zarf init`
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && sudo ./zarf init --confirm --components management --host localhost", username))
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management --host localhost'", username))
   require.NoError(t, err, output)
 
   // Wait until the Docker registry is ready
-  output, err = ssh.CheckSshCommandE(t, publicHost, "curl -sfSL --retry 15 --retry-connrefused --retry-delay 10 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\"")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost/v2/\")\" != \"200\" ]]; do sleep 1; done' || false")
   require.NoError(t, err, output)
 
   // Deploy the game
-  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && sudo ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm", username))
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
   require.NoError(t, err, output)
 
   // Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
-  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 60 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost\")\" != \"200\" ]]; do sleep 1; done' || false")
+  output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://localhost\")\" != \"200\" ]]; do sleep 1; done' || false")
+  require.NoError(t, err, output)
+
+  // Run `zarf destroy` to make sure that works correctly
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf destroy --confirm'", username))
   require.NoError(t, err, output)
 }
