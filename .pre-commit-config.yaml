@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: go-fmt
 # Commenting this one out for now since it fails
-# Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
+## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
 #  - repo: local
 #    hooks:
 #      - id: golangci-lint
