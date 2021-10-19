@@ -1,0 +1,112 @@
+#!/usr/bin/expect -f
+
+# Assumptions:
+# - run as root (required to run zarf)
+# - invocation working dir is <root>/build (where zarf binary is)
+
+# Refs:
+# - https://linux.die.net/man/1/expect
+# - https://www.tcl.tk/man/tcl8.6/TclCmd/contents.html
+
+
+# variables
+set env(PATH) "$::env(PATH):[file normalize .]" ; # add zarf to path
+set title [
+  file tail [ file rootname [lindex $argv0] ]
+]
+set recording [lindex $argv 0]
+set log [lindex $argv 1]
+#set down_key "\033\[B"
+
+
+# config
+log_file $log
+set send_human {.1 .2 10 .05 1}   ; # "human-like" typing speeds on 'send -h'
+set env(PS1) "user@host:/zarf# "  ; # shorten terminal input prompt
+   
+match_max 25000
+set expect_out(buffer) {}
+
+# proc defs
+proc wait_input {} {
+  expect -re ".*$::env(PS1)$"
+}
+
+proc input_wait { {seconds 1} } {
+  wait_input ; sleep $seconds
+}
+
+proc comment { {text " "} } {
+  send "# --> " ; send -h "$text \n\n" ;  input_wait 1
+}
+
+proc do { {cmd "\n"} } {
+  send -h "$cmd" ; sleep 1 ; send "\n\n" ; input_wait 2
+}
+
+
+# start recording & wait for input prompt
+spawn asciinema rec \
+  --command "/bin/bash --norc" \
+  --title "$title" \
+  --overwrite \
+  $recording
+expect -re {asciinema: .* done} ; wait_input
+
+if { 0 } {
+
+comment "Elevated permissions?"
+do "whoami"
+
+comment "Project cloned?"
+do "git remote -v"
+
+comment "Release downloaded?"
+do "ls -l ."
+
+comment "'zarf' on the path?"
+do "which zarf"
+}
+
+#comment "Let's create a cluster!"
+send "zarf init" ; sleep 1 ; send "\n" ;
+
+expect -re {.*Generate .* CA.*}
+send "gen" ; sleep 1 ; send "\n" ;
+
+expect -re {.*Enter a host .* ingress.*}
+system "echo '\u001b\[16;202R' > /dev/pts/2"
+expect -re {.*202R.*}
+
+send "localhost\n"
+expect "localhost"
+sleep 2
+
+system "echo 'asdf' > /dev/pts/2"
+expect "asdf"
+
+#send "localhost" ; sleep 1 ; send "\n"
+#sleep 1
+
+#expect -timeout 10 -re {\[a-zA-Z\]*}
+
+
+if { 0 } {
+#expect "^\[\[16;202R"
+
+expect -re {.*Deploy .* package? \(y/N\).*}
+send "y" ; sleep 1 ; send "\n"
+
+expect -re {.*Deploy .* management component?}
+send "n" ; sleep 1 ; send "\n"
+
+expect -re {.*Deploy .* logging component?}
+send "n" ; sleep 1 ; send "\n"
+
+expect -re {.*Deploy .* gitops-service component?}
+send "n" ; sleep 1 ; send "\n"
+
+expect -re {.* Installation complete .*}
+
+comment "Done!"
+}

@@ -1,0 +1,143 @@
+Refs:
+- man   - https://man7.org/linux/man-pages/man4/console_codes.4.html
+- wiki  - https://en.wikipedia.org/wiki/ANSI_escape_code
+- xtrem - https://www.xfree86.org/current/ctlseqs.html
+
+\u001b8           # restore cursor state (wiki - Fp Escape - ESC 8)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1;92m      # bold green text (wiki - SGR Colors 3-bit and 4-bit)
+? 
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[1;99m      # bold (99=white??) text (wiki - SGR Colors 3-bit and 4-bit)
+Will Zarf be generating a TLS chain or importing an existing ingress cert?
+ g
+\u001b[0m         # display reset (wiki - SGR - 0)  
+\u001b[36m        # cyan text (wiki - SGR Colors 3-bit and 4-bit)
+[Use arrows to move, type to filter]
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b[1;36m
+> Generate TLS chain with an ephemeral CA
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b7           # save cursor state (wiki - Fp Escape - ESC 7)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b8           # restore cursor state (wiki - Fp Escape - ESC 8)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1;92m      # bold green text (wiki - SGR Colors 3-bit and 4-bit)
+? 
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[1;99m      # bold (99=white??) text (wiki - SGR Colors 3-bit and 4-bit)
+Will Zarf be generating a TLS chain or importing an existing ingress cert?
+ ge
+\u001b[0m         # display reset (wiki - SGR - 0)  
+\u001b[36m        # cyan text (wiki - SGR Colors 3-bit and 4-bit)
+[Use arrows to move, type to filter]
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b[1;36m
+> Generate TLS chain with an ephemeral CA
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b7           # save cursor state (wiki - Fp Escape - ESC 7)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b8           # restore cursor state (wiki - Fp Escape - ESC 8)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1;92m      # bold green text (wiki - SGR Colors 3-bit and 4-bit)
+? 
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[1;99m      # bold (99=white??) text (wiki - SGR Colors 3-bit and 4-bit)
+Will Zarf be generating a TLS chain or importing an existing ingress cert?
+ gen
+\u001b[0m         # display reset (wiki - SGR - 0)  
+\u001b[36m        # cyan text (wiki - SGR Colors 3-bit and 4-bit)
+[Use arrows to move, type to filter]
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b[1;36m
+> Generate TLS chain with an ephemeral CA
+#
+#
+# ----- working here! ----- #
+#
+#
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b7           # save cursor state (wiki - Fp Escape - ESC 7)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b8           # restore cursor state (wiki - Fp Escape - ESC 8)
+\u001b[?25h       # show cursor (wiki - CSI - CSI ? 25 h)
+\u001b8           # restore cursor state (wiki - Fp Escape - ESC 8)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1A         # move cursor "up 1" (wiki - CSI - CSI n A)
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1;92m      # bold green text (wiki - SGR Colors 3-bit and 4-bit)
+?
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[1;99m      # bold (99=white??) text (wiki - SGR Colors 3-bit and 4-bit)
+Will Zarf be generating a TLS chain or importing an existing ingress cert?
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[36m        # cyan text (wiki - SGR Colors 3-bit and 4-bit)
+Generate TLS chain with an ephemeral CA
+\u001b[0m         # display reset (wiki - SGR - 0)
+\r\n
+\u001b[0G         # move cursor "col 0" (wiki - CSI - CSI n G)
+\u001b[2K         # clear line (wiki - CSI - CSI n K)
+\u001b[1;92m      # bold green text (wiki - SGR Colors 3-bit and 4-bit)
+? 
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[1;99m      # bold (99=white??) text (wiki - SGR Colors 3-bit and 4-bit)
+Enter a host DNS entry or IP Address for the cluster ingress 
+\u001b[0m         # display reset (wiki - SGR - 0)
+\u001b[?25l       # hide cursor (wiki - CSI - CSI ? 25 l)
+\u001b[?25l       # hide cursor (wiki - CSI - CSI ? 25 l)
+\u001b7           # save cursor state (wiki - Fp Escape - ESC 7)
+\u001b[999;999f   # move cursor to row 999, col 999 (wiki - CSI - CSI n ; m f)
+\u001b[6n         # report cursor position as "ESC[row;colR"  (man - ECMA-48 Status Report Commands - ESC [ 6 n)
+^[[16;202R        # result of above : "^["=ESC, "^[["=CSI, 16=row,202=col
+
+...and for some reason the cursor pos isn't captured & the output freezes..?
