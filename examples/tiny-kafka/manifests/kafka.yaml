@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kafka-demo
----  
+---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:

@@ -38,6 +38,19 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 
 This section dives deeper into how we test Zarf
 
+### Pre-Commit Hooks and Linting
+
+In this repo we use [pre-commit](https://pre-commit.com/) hooks for automated validation and linting. The CI pipeline will validate that all of the hooks pass so we strongly recommend that you install the hooks locally or you'll be spending a lot of time manually fixing issues that could be fixed automatically very quickly.
+
+#### Pre-Commit Prerequisites
+
+1. Install [pre-commit](https://pre-commit.com/)
+1. Install [go](https://golang.org/)
+1. Install [golangci-lint](https://github.com/golangci/golangci-lint)
+1. Run `pre-commit install` in the repo to install the pre-commit hooks. This will make the hooks run automatically each time you `git commit`. If you want to skip the hooks for any reason you can run `git commit --no-verify` to skip them.
+
+> **HINT:** *Consider [automatically enabling the hooks in every Git repository](https://pre-commit.com/#automatically-enabling-pre-commit-on-repositories)*
+
 ### End2End Testing
 
 Our E2E tests utilize [Terratest](https://terratest.gruntwork.io/). They create real infrastructure in AWS that the tests get run on. By doing this we are able to make the test environments ephemeral and allow them to be run in parallel so that we can do more testing more quickly.
