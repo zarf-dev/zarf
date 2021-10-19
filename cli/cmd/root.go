@@ -23,6 +23,10 @@ var rootCmd = &cobra.Command{
 				packager.Create(confirmCreate)
 				return
 			}
+			if args[0] == "testing" {
+				fmt.Println("Hello jonathan!!")
+				return
+			}
 		}
 		cmd.Help()
 	},
