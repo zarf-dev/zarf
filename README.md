@@ -1,56 +1,68 @@
-# Meet Zarf, K8s Airgap Buddy
+# Zarf - Kubernetes Airgap Buddy
 
-Zarf is a static go binary that runs on various linux distros to deploy an airgap gitops service including a docker registry and gitea server, batteries included. Zarf also includes an [Appliance Mode](examples/appliance/README.md) that can be used for single-purpose k3s deployments.
+<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
+
+Zarf massively simplifies the setup & administration of kubernetes clusters "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))".
+
+It provides a static go binary CLI that can pull, package, and install all the things your clusters need to run.  It caches downloads (for speed), hashes packages (for security), and can even _install the kubernetes cluster itself_ if you want it to.
+
+Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters".
+
+&nbsp;
 
 > _This repo is in transition from [Repo1](https://repo1.dso.mil/) by [DoD Platform One](http://p1.dso.mil/) to [Github](https://github.com/defenseunicorns/zarf).  See [the announcments post](https://github.com/defenseunicorns/zarf/discussions/1#discussion-3560306) for the latest URLs for this project during this transition._
 
 &nbsp;
 
-![Zarf logo](.images/zarf-logo.png)
-
-## Usage
-General usage steps below.  For various ways to use Zarf, see [the examples folder](examples).  Please note that examples READMEs may replace the steps below.
-
-### 1. Initial setup and config
-- Download the files from the [Zarf Releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
-- (optional) Verify the downloads with `shasum -c zarf.sha256`.
-- In a new folder or git repo, place a ZarfPackageConfig `zarf.yaml` with any changes you need to make, (see [the examples folder](examples) for more info).
-
-  [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
-### 2. Create the zarf cluster
-- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to.
-- Login or sudo/su to root.
-- Run `./zarf init` and follow the wizard.
-  [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
-
-### 3. Add resources to the zarf cluster
-- Following step 1b, make any necessary edits to the `zarf.yaml` file.
-- Then run `./zarf package create` to produce an `zarf-package-*.tar.zst` package.
-- Move the `zarf-package` into the same folder on the running zarf cluster as in step 2a.
-- Login or sudo/su to root.
-- Run `./zarf package deploy` and follow the wizard.
-
-  [![asciicast](https://asciinema.org/a/423449.svg)](https://asciinema.org/a/423449)
-
 &nbsp;
-## Development
 
-### Prereqs
+<!--
+##########
+# This block is about LEARNING TO USE Zarf
+##########
+-->
+## If you're *just getting into Zarf*, you should...
 
-#### User Accounts
-This tool utilizes software pulled from multiple sources and _some_ of them require authenticated access.  You will need to make an account at the following sites if you don't already have access:
+<table>
+<tbody>
 
-- [Iron Bank](https://registry1.dso.mil/) : Platform One's authorized, hardened, and approved container repository. ([product](https://p1.dso.mil/#/products/iron-bank/) | [pages](https://ironbank.dso.mil/) | [register](https://login.dso.mil/register))
+<!-- row start: cuz markdown hates html indention -->
+  <tr valign="top">
+  <td width="150">
 
-#### Local Environment
-- MacOS or Linux Operating System
-- [`make`](https://www.gnu.org/software/make/) : We use Makefiles for build automation
-- [`vagrant`](https://www.vagrantup.com/) : Easy creation and management of clean dev/test environments
-- [`go`](https://golang.org/) : The programming language. Right now we are using v1.16.x
+  **Get Started**
+  
+  _Using Zarf_
 
-  ---
+  </td>
+  <td>
 
-&nbsp;
+  Experience just how easy it is to go from _**zero** to **chainsaw wielding hero** (of the Kubernetes cluster)_ using Zarf!
+  
+  </td>
+  <td>
+
+  Coming Soon!
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+  
+  **Add Logging**
+
+  _Zarf components_
+  
+  </td>
+  <td>
+
+  Sometimes running your app in-cluster is enough&mdash;usually, it's not. Find out how to inject commonly-required, uber-useful functionality through the use of Zarf components.
+
+  </td>
+  <td>
 
 You will also need to configure the .env file, use the command below to generate a template.  _Note that you don't need to set RHEL creds if you aren't using RHEL_
 
@@ -68,61 +80,214 @@ Some secrets also have to be passed to Earthly for your build, these are stored 
 
 _To build the packages needed for RHEL-based distros, you will need to use your RedHat Developer account to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify your credentials along with a RHEL version flag (7 or 8) in the `.env` file_
 
-&nbsp;
+  Coming Soon!
 
-#### Step 2 - Run a Build
+  </td>
+  </tr>
+<!-- row end -->
 
-Building the `zarf` binary and `zarf-init.tar.zst` is one command:
+<!-- row start -->
+  <tr valign="top">
+  <td>
+  
+  **Disconnected GitOps**
 
-```sh
-make build-test
-```
+  _The Utility Cluster_
+  
+  </td>
+  <td>
 
-&nbsp;
+  Zarf overcomes the "the Air Gap problem" using a Kubernetes cluster (and k8s-native tooling) for the care & feeding of _other k8s clusters_.
+  
+  Here's how it works and what ops/support looks like.
 
-#### Step 3 - Test Drive
+  </td>
+  <td>
 
-You can try out your new build with a local [Vagrant](https://www.vagrantup.com/) deployment, like so:
+  Coming Soon!
 
-```bash
-# To test RHEL 7 or 8
-make test OS=rhel7
-make test OS=rhel8
+  </td>
+  </tr>
+<!-- row end -->
 
-# To test ubuntu
-make test OS=ubuntu
-
-# escalate user once inside VM: vagrant --> root
-sudo su
-cd /opt/zarf
-```
-
-All OS options:
-- rhel7
-- rhel8
-- centos7
-- centos8
-- ubuntu
-- debian
-- rocky
-
-In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy multiple other downstream clusters.
-
-The status of the cluster creation can be monitored with `/usr/local/bin/k9s`
+</tbody>
+</table>
 
 &nbsp;
 
-#### Step 4 - Cleanup
 
-You can tear down the local [Vagrant](https://www.vagrantup.com/) deployment, like so:
+<!--
+##########
+# This block is about DEVELOPING Zarf
+##########
+-->
+## If you'd rather *help develop Zarf*, you should read...
 
-```bash
-# to deescalate user: root --> vagrant
-exit
+<table>
+<tbody>
 
-# to exit VM shell
-exit
+<!-- row start: cuz markdown hates html indention -->
+  <tr valign="top">
+  <td width="150">
 
-# tear down the VM
-make test-close
-```
+  **Workstation Setup**
+  
+  </td>
+  <td>
+  
+  Thinking about hacking on the Zarf binary itself? Or, perhaps you want to run the examples in an isolated environment (the same way we do)? Get your machine setup _just right_ using these instructions!
+
+  </td>
+  <td>
+
+  [Read](./docs/workstation.md)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+  
+  **Build Your First Zarf**
+  
+  </td>
+  <td>
+  
+  You've got a development workstation setup, so... now what?  Why not _build your own Zarf_? Step-by-step instructions, here.
+
+  </td>
+  <td>
+
+  [Read](./docs/first-time-build.md)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+  
+  **Contribution Guide**
+  
+  </td>
+  <td>
+  
+  As with most collaborative efforts there are guidelines for contributing to the project. Find out what they are & how to make them work, here.
+
+  </td>
+  <td>
+
+  [Read](./CONTRIBUTING.md)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+</tbody>
+</table>
+
+&nbsp;
+
+
+<!--
+##########
+# This block is about the MINUTIA & UNDERSTANDING WHY Zarf is the way it is
+##########
+-->
+## Or, for *details & design decisions*, check out...
+
+<table>
+<tbody>
+
+<!-- row start: cuz markdown hates html indention -->
+  <tr valign="top">
+  <td width="150">
+
+  **Supported OSes**
+  
+  </td>
+  <td>
+  
+  Zarf is intended to run on a variety of Operating Systems&mdash;you can find out which _and_ discover how to take Zarf for a test-drive (in a VM of your favorite flavor) by clicking the link!
+  
+  </td>
+  <td>
+
+  [Read](./docs/supported-oses.md)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+
+  **Zarf Components**
+  
+  </td>
+  <td>
+  
+  Need to understand what's happening in your cluster? Zarf can give you visibility by injecting a _Logging_ component.  Looking for some additional CLI tooling? Install the _Management_ component.
+  
+  Find out all the other stuff Zarf offers, here.
+  
+  </td>
+  <td>
+
+  Coming Soon!
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+
+  **Usage Examples**
+  
+  </td>
+  <td>
+  
+  There are a bunch of interesting ways to use Zarf beyond "space-marine-ing" your way through _the_ pixel demon invasion. Browse our examples directory to find out what other neat things are available.
+  
+  </td>
+  <td>
+
+  [Read](./examples)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+  
+  **Iron Bank** <br/>
+
+  _Hardened image registry_
+  
+  </td>
+  <td>
+
+  Zarf can build deployment packages using images pulled from pretty much anywhere... but for gov't-approved & "[hardened](https://en.wikipedia.org/wiki/Hardening_(computing))" container images check out Platform One's [Iron Bank](https://p1.dso.mil/#/products/iron-bank/).
+  
+  </td>
+  <td>
+
+  [Read](./docs/ironbank.md)
+
+  </td>
+  </tr>
+<!-- row end -->
+
+</tbody>
+</table>
+
+
+&nbsp;
