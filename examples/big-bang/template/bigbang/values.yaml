@@ -10,8 +10,9 @@ flux:
 
 networkPolicies:
   enabled: true
-  controlPlaneCidr: "10.0.2.15/32"
-  nodeCidr: "10.0.2.15/32"
+  # When in prod use a real CIDR. Don't do this, it isn't secure. This is done here since it is a demo and the CIDR changes based on which Linux distro you are running on.
+  controlPlaneCidr: "0.0.0.0/0"
+  nodeCidr: "0.0.0.0/0"
 
 istio:
   enabled: true

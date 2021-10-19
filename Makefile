@@ -33,9 +33,6 @@ vm-init: ## usage -> make vm-init OS=ubuntu
 vm-destroy: ## Destroy the VM
 	vagrant destroy -f
 
-test-e2e: ## Run E2E tests. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
-	cd test/e2e && go test ./... -v -timeout 1200s
-
 e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
 	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
 	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip)
@@ -61,5 +58,17 @@ build-test: build-cli init-package ## Build the CLI and create the init package
 
 ci-release: init-package ## Create the init package
 
-package-examples: ## automatically package all example directories and add the tarballs to the examples/sync directory
-	cd examples && $(MAKE) package-examples
+.PHONY: package-example-game
+package-example-game: ## Create the Doom example
+	cd examples/game && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
+.PHONY: test-cloud-e2e-example-game
+test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
+	cd test/e2e && go test ./... -run TestE2eExampleGame -v -timeout 1200s
+
+.PHONY: test-cloud-e2e-general-cli
+test-cloud-e2e-general-cli: ## Runs tests of the CLI that don't need a cluster
+	cd test/e2e && go test ./... -run TestGeneralCli -v -timeout 1200s
+
+.PHONY: test-e2e
+test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be replaced by individual e2e test targets

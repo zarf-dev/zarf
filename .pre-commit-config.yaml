@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-aws-credentials
+        args:
+          - "--allow-missing-credentials"
+      - id: detect-private-key
+        exclude: "^examples/big-bang/template/bigbang/values.yaml$"
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+  - repo: https://github.com/sirosen/fix-smartquotes
+    rev: 0.2.0
+    hooks:
+      - id: fix-smartquotes
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.4.0
+    hooks:
+      - id: go-fmt
+# Commenting this one out for now since it fails
+## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
+#  - repo: local
+#    hooks:
+#      - id: golangci-lint
+#        name: golangci-lint
+#        entry: hooks/run-golangci-lint.sh
+#        types: [ go ]
+#        language: script
+#        pass_filenames: false
+#        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
