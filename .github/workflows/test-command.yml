@@ -263,3 +263,99 @@ jobs:
           GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
           GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+  # Run the Game E2E test
+  e2e-general-cli:
+    runs-on: ubuntu-latest
+    needs: [ parse, build ]
+    if: needs.parse.outputs.run-e2e == 'true'
+    container: cloudposse/test-harness:latest
+    steps:
+      # Update GitHub status for pending pipeline run
+      - name: "Update GitHub Status for pending"
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: pending
+          GITHUB_CONTEXT: "/test e2e - General CLI"
+          GITHUB_DESCRIPTION: "started by @${{ github.event.client_payload.github.actor }}"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Checkout the code from GitHub Pull Request
+      - name: "Checkout the code"
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT }}
+          repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.client_payload.pull_request.head.ref }}
+
+      # Download the built artifacts
+      - name: "Download the built artifacts"
+        uses: actions/download-artifact@v2
+
+      - name: "Run E2E tests"
+        shell: bash -x -e -o pipefail {0}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_DEFENSEUNICORNS_COMMERCIAL_SA_ZARF }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEFENSEUNICORNS_COMMERCIAL_SA_ZARF }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          # cloudposse/test-harness has golang 1.15, we need 1.16. This is the easiest way I know to do it. This should definitely be revisited and cleaned up.
+          git clone --branch v0.8.0 --depth 1 https://github.com/asdf-vm/asdf.git $HOME/.asdf
+          source ~/.asdf/asdf.sh
+          export PATH="$HOME/.asdf/bin:$PATH"
+          asdf plugin-add golang https://github.com/kennyp/asdf-golang.git
+          asdf install golang 1.16.7
+          asdf global golang 1.16.7
+          export GOPATH="$HOME/go"
+          export PATH="$PATH:$GOPATH/bin"
+          chmod +x build/zarf
+          make test-cloud-e2e-general-cli
+
+      # Update GitHub status for failing pipeline run
+      - name: "Update GitHub Status for failure"
+        if: ${{ failure() }}
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: failure
+          GITHUB_CONTEXT: "/test e2e - General CLI"
+          GITHUB_DESCRIPTION: "run failed"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Update GitHub status for successful pipeline run
+      - name: "Update GitHub Status for success"
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: success
+          GITHUB_CONTEXT: "/test e2e - General CLI"
+          GITHUB_DESCRIPTION: "run passed"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+
+      # Update GitHub status for cancelled pipeline run
+      - name: "Update GitHub Status for cancelled"
+        if: ${{ cancelled() }}
+        uses: docker://cloudposse/github-status-updater
+        with:
+          args: "-action update_state -ref ${{ github.event.client_payload.pull_request.head.sha }} -repo ${{ github.event.client_payload.github.payload.repository.name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_STATE: error
+          GITHUB_CONTEXT: "/test e2e - General CLI"
+          GITHUB_DESCRIPTION: "run cancelled"
+          GITHUB_TARGET_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
+          GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
