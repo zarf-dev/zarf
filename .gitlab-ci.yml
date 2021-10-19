@@ -9,10 +9,10 @@ stages:
   only:
     - master
     - merge_requests
-    - tags  
+    - tags
 
 compile:
-  only: 
+  only:
     - branches
     - merge_requests
     - tags
@@ -42,7 +42,7 @@ package:
     - echo "PACKAGE_JOB_ID=$CI_JOB_ID" >> job.env
   artifacts:
     reports:
-      dotenv: job.env    
+      dotenv: job.env
     paths:
       - build/
 
@@ -54,7 +54,7 @@ e2e:
       artifacts: true
   tags:
     - bigbang
-    - packages      
+    - packages
   before_script:
     - yum install openssh-clients -y
     - eval $(ssh-agent -s)
