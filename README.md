@@ -18,12 +18,12 @@ General usage steps below.  For various ways to use Zarf, see [the examples fold
 
   [![asciicast](https://asciinema.org/a/427846.svg)](https://asciinema.org/a/427846)
 ### 2. Create the zarf cluster
-- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to. 
+- Move the `zarf`, `zarf-init.tar.zst` files to the system you will install the cluster to.
 - Login or sudo/su to root.
 - Run `./zarf init` and follow the wizard.
   [![asciicast](https://asciinema.org/a/427721.svg)](https://asciinema.org/a/427721)
 
-### 3. Add resources to the zarf cluster 
+### 3. Add resources to the zarf cluster
 - Following step 1b, make any necessary edits to the `zarf.yaml` file.
 - Then run `./zarf package create` to produce an `zarf-package-*.tar.zst` package.
 - Move the `zarf-package` into the same folder on the running zarf cluster as in step 2a.
@@ -43,10 +43,10 @@ This tool utilizes software pulled from multiple sources and _some_ of them requ
 - [Iron Bank](https://registry1.dso.mil/) : Platform One's authorized, hardened, and approved container repository. ([product](https://p1.dso.mil/#/products/iron-bank/) | [pages](https://ironbank.dso.mil/) | [register](https://login.dso.mil/register))
 
 #### Local Environment
-- MacOS or Linux Operating System 
+- MacOS or Linux Operating System
 - [`make`](https://www.gnu.org/software/make/) : We use Makefiles for build automation
 - [`vagrant`](https://www.vagrantup.com/) : Easy creation and management of clean dev/test environments
-- [`go`](https://golang.org/) : The programming language. Right now we are using v1.16.x 
+- [`go`](https://golang.org/) : The programming language. Right now we are using v1.16.x
 
   ---
 
@@ -126,7 +126,7 @@ All OS options:
 - centos7
 - centos8
 - ubuntu
-- debian 
+- debian
 - rocky
 
 In less than a minute, you'll have a kubernetes cluster running all the pre-requisites needed to host and deploy multiple other downstream clusters.
