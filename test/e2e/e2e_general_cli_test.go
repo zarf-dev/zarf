@@ -2,6 +2,7 @@ package test
 
 import (
   "fmt"
+  "os/exec"
   "github.com/gruntwork-io/terratest/modules/aws"
   "github.com/gruntwork-io/terratest/modules/ssh"
   "github.com/gruntwork-io/terratest/modules/terraform"
@@ -72,4 +73,13 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
   output,err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt 2> /dev/null", username))
   require.NoError(t, err, output)
   assert.Equal(t, expectedShasum, output, "The expected SHASUM should equal the actual SHASUM")
+
+  // Test `zarf version`
+  //expectedVersion, err := exec.Command("git", "describe").Output()
+  //require.NoError(t, err, output)
+  output, err := ssh.CheckSshCommand(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf version", username))
+  require.NoError(t, err, output)
+  assert.NotNil(t, output)
+  assert.NotEqual(t, len(output), 0, "Zarf version should not be an empty string")
+  //assert.Equal(t, expectedVersion, output, "The expected Zarf version should equal the actual Zarf version")
 }
