@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var CLIVersion = "unset"
+
 var rootCmd = &cobra.Command{
 	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
@@ -21,10 +23,6 @@ var rootCmd = &cobra.Command{
 			}
 			if args[0] == "zarf.yaml" {
 				packager.Create(confirmCreate)
-				return
-			}
-			if args[0] == "testing" {
-				fmt.Println("Hello jonathan!!")
 				return
 			}
 		}
