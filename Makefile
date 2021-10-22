@@ -9,7 +9,7 @@ ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_P),i386)
 		ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
 	endif
-	ifeq ($(UNAME_P),arm64)
+	ifeq ($(UNAME_P),arm)
 		ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
 	endif
 endif
