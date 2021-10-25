@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var CLIVersion = "unset"
+var CLIVersion = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
