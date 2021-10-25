@@ -48,6 +48,7 @@ type ZarfBuildData struct {
 	Terminal  string `yaml:"terminal"`
 	User      string `yaml:"user"`
 	Timestamp string `yaml:"timestamp"`
+	Version   string `yaml:"string"`
 }
 
 type ZarfConfig struct {
