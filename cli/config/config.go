@@ -21,6 +21,7 @@ const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
 var config ZarfConfig
+var CLIVersion = "unset"
 
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
@@ -70,6 +71,9 @@ func WriteConfig(path string) {
 
 	// Record the time of package creation
 	config.Package.Timestamp = now.Format(time.RFC1123Z)
+
+	// Record the Zarf Version the CLI was built with
+	config.Package.Version = CLIVersion
 
 	if hostErr == nil {
 		// Record the hostname of the package creation terminal

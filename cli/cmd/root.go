@@ -9,8 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var CLIVersion = ""
-
 var rootCmd = &cobra.Command{
 	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
