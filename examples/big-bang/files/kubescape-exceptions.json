@@ -70,7 +70,6 @@
           "name": "logging-ek-es-master"
         }
       },
-      // This one doesn't work yet
       {
         "designatorType": "Attributes",
         "attributes": {
