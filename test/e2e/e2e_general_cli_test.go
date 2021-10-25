@@ -75,11 +75,9 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
   assert.Equal(t, expectedShasum, output, "The expected SHASUM should equal the actual SHASUM")
 
   // Test `zarf version`
-  //expectedVersion, err := exec.Command("git", "describe").Output()
-  //require.NoError(t, err, output)
   output, err := ssh.CheckSshCommand(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf version", username))
   require.NoError(t, err, output)
   assert.NotNil(t, output)
   assert.NotEqual(t, len(output), 0, "Zarf version should not be an empty string")
-  //assert.Equal(t, expectedVersion, output, "The expected Zarf version should equal the actual Zarf version")
+  assert.NotEqual(t, string(output), "Unknown Version", "Zarf version should not be the default value")
 }

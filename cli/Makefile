@@ -6,7 +6,7 @@
 # test: deps
 # 	gotestsum
 
-CLI_VERSION := $(shell git describe)
+CLI_VERSION := $(if $(shell git describe), $(shell git describe), "UnknownVersion")
 
 build:
 	mkdir -p ../build
