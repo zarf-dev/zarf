@@ -19,8 +19,15 @@ function help() {
   echo ""
   echo "Usage: $ME <run|pub|see|sub|zap> [args...]"
   echo ""
+  echo "  run - run a scripted scenario & record terminal session"
+  echo "  pub - publish recording to asciinema.org"
+  echo "  see - show outdated project asciinema.org links"
+  echo "  sub - substitute newly-uploaded asciinema.org links in project source"
+  echo "  zap - remove all but the MOST CURRENT recordings from asciinema.org"
+  echo ""
 }
 
+# executes (and records) a given scenario file's terminal session 
 function run() {
   local fname="${1##*/}"
   local fpath="$SCENARIOS/$fname"
@@ -48,6 +55,7 @@ function run() {
   stty cols "$cols" rows "$rows"
 }
 
+# finds scenarios and "run"s them all
 function run_all() {
   local scenarios=$(find "$SCENARIOS" -name '*.exp' -type f)
 
@@ -59,6 +67,7 @@ function run_all() {
   done
 }
 
+# uploads a given recording file to asciinema.org
 function pub() {
   local fname="${1##*/}"
   local fpath="$RECORDINGS/$fname"
@@ -82,6 +91,7 @@ function pub() {
     > "$upath"
 }
 
+# finds new recordings and "pub"s them all
 function pub_all() {
   local recordings=$(find "$RECORDINGS" -name '*.rec' -type f)
 
@@ -90,6 +100,9 @@ function pub_all() {
   done
 }
 
+# finds, parses, and outputs locations of all asciinema.org links in project
+# - helps creator of new recordings know what needs update
+# - intput to "automatic link update" function (sub) below
 function see() {
   local found="$(
     find "$ROOTDIR" -type f -name '*.md' -print0 \
@@ -147,6 +160,7 @@ function see() {
   done
 }
 
+# substitutes newly-published asciinema.org URLs for old values
 function sub() {
   local lines="$( printf '%.0s- ' {1..12} )"
   local found="$( cat - | paste -d '\t' $lines )" # <-- reads stdin!
@@ -166,6 +180,7 @@ function sub() {
   done
 }
 
+# removes any "outdated" links from asciinema.org
 function zap() {
   # Web scraping, eeewww!
   local account="$( cat "$HERE/asciinema-org" )"
