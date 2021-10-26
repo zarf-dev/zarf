@@ -11,18 +11,6 @@ Best of all, because it provides for both of those functions through its CLI, we
 &nbsp;
 
 
-## Prerequisites
-
-Here's what you'll need to generate the project "asciinemas":
-
-- [asciinema](https://asciinema.org/docs/installation) &mdash; A lightweight, purely text-based approach to terminal recording.
-
-- [expect](https://en.wikipedia.org/wiki/Expect) &mdash; A tool for automating interactive, text-based applications (like `asciinema` and `zarf`!) according to a script. Installation instructions are available for lots of OSes (like [ubuntu](https://ubuntu.pkgs.org/20.04/ubuntu-universe-amd64/expect_5.45.4-2build1_amd64.deb.html#download) and [mac](https://stackoverflow.com/a/48880853)).
-
-- [curl](https://curl.se/download.html) &mdash; A command line tool for transferring data with URLs&mdash;think: command line "web browser". Installation instructions are available for most OSes (like [ubuntu](https://linuxize.com/post/how-to-install-and-use-curl-on-ubuntu-20-04/) and [mac](https://formulae.brew.sh/formula/curl)).
-
-&nbsp;
-
 ## The Flow
 
 1. [Setup Your Environment](#setup-your-environment)
@@ -42,9 +30,9 @@ Here's what you'll need to generate the project "asciinemas":
 
 1. Log Zarf into Iron Bank&mdash;instructions [here](../ironbank.md#2-configure-zarf-the-use-em).
 
-1. Install the [prereqs](#prerequisites) on your system (or just use the [./Vagrantfile](./Vagrantfile) if you already have [the stuff for that](../workstation.md#i-want-a-demoexample-sandbox) installed).
+1. Install the things necessary to run our [./Vagrantfile](./Vagrantfile)&mdash;instructions [here](../workstation.md#i-want-a-demoexample-sandbox).
 
-1. Configure your "asciinema<area>.org install id" such that `asciinema` uploads are tied to Zarf's collection of recordings. Follow [these instructions](#setup---zarf-install-id) then come back & continue on.
+1. Configure your "asciinema<area>.org install id" such that `asciinema` uploads are tied to Zarf's collection of recordings. Follow [these instructions](#setup---zarf-install-id) then come back & continue.
 
 
 &nbsp;
