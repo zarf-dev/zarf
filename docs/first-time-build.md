@@ -35,7 +35,7 @@ To use your new Zarf binaries to authenticate with Iron Bank:
     cd ./build
     ```
 
-2. Follow the instructions you find here: [Zarf Login](./docs/ironbank#zarf-login).
+2. Follow the instructions you find here: [Zarf Login](./ironbank.md#zarf-login).
 
     > _**Take note**_
     >
@@ -90,5 +90,4 @@ This will use the credentials you established [above](#2-log-into-iron-bank) to 
 
 ## Next steps
 
-Now that you can build _your own_ Zarf, it's a great time to try using it to run our [Get Started - game](#) example!
-<!-- update link once Get Started page is written! -->
+Now that you can build _your own_ Zarf, it's a great time to try using it to run our [Get Started - game](../examples/game/) example!
