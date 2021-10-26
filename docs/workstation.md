@@ -91,7 +91,7 @@ You'll need to install _these_ tools to run the examples:
 
 ### Try it out
 
-Once you've got everything installed you're ready to run some examples! We recommend giving the [Get Started - game](#) example a try!
+Once you've got everything installed you're ready to run some examples! We recommend giving the [Get Started - game](../examples/game/) example a try!
 <!-- update link once Get Started page is written! -->
 
 &nbsp;
