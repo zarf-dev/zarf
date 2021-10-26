@@ -3,6 +3,9 @@
 # Assumptions:
 # - run as root (for proper zarf permissions)
 
+# Usage:
+# - described in ./README.md
+
 # env
 ME="$( basename "${BASH_SOURCE[0]}" )"
 HERE="$( cd "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
