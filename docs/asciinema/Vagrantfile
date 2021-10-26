@@ -1,0 +1,31 @@
+Vagrant.configure("2") do |config|
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.check_guest_additions = false
+    vb.cpus = 4
+    vb.memory = 4096
+  end
+
+  config.vm.box = "boxomatic/ubuntu-20.04"
+  config.vm.network "forwarded_port", guest: 80, host: 50080
+  config.vm.network "forwarded_port", guest: 443, host: 50443
+
+  config.vm.hostname = "asciinema"
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.synced_folder '../..', '/zarf', SharedFoldersEnableSymlinksCreate: false
+  config.vm.synced_folder'./.config/asciinema', '/root/.config/asciinema',
+    SharedFoldersEnableSymlinksCreate: false, 
+    owner: 'root', group: 'root'
+  config.vm.synced_folder'~/.docker', '/root/.docker',
+    SharedFoldersEnableSymlinksCreate: false, 
+    owner: 'root', group: 'root'
+
+  config.ssh.insert_key = false
+  config.ssh.extra_args = [ "-t", "cd /zarf/docs/asciinema; sudo su" ]
+
+  config.vm.provision "shell", inline: <<-'SCRIPT'
+    # https://serverfault.com/questions/500764/dpkg-reconfigure-unable-to-re-open-stdin-no-file-or-directory
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get --yes install asciinema expect
+  SCRIPT
+end
