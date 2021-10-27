@@ -15,9 +15,8 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
 	github.com/ulikunitz/xz v0.5.8 // indirect; CVE-2020-16845
-	helm.sh/helm/v3 v3.6.1-0.20210719095234-663c5698878c
-	k8s.io/api v0.21.5
-	k8s.io/apimachinery v0.21.5
-	k8s.io/client-go v0.21.5
-	rsc.io/letsencrypt v0.0.3 // indirect
+	helm.sh/helm/v3 v3.7.0
+	k8s.io/api v0.22.1
+	k8s.io/apimachinery v0.22.1
+	k8s.io/client-go v0.22.1
 )
