@@ -1,0 +1,58 @@
+#!/usr/bin/expect -f
+
+# Assumptions:
+# - run as root (required to run zarf)
+
+# Refs:
+# - https://linux.die.net/man/1/expect
+# - https://www.tcl.tk/man/tcl8.6/TclCmd/contents.html
+
+
+# variables
+set title [
+  file tail [ file rootname [lindex $argv0] ]
+]
+set recording [lindex $argv 0]
+set log [lindex $argv 1]
+
+
+# config
+log_file $log
+set send_human {.1 .2 10 .05 1}   ; # "human-like" typing speeds on 'send -h'
+set env(PS1) "user@host:/zarf# "  ; # shorten terminal input prompt
+
+
+# proc defs
+proc wait_input {} {
+  expect -re ".*$::env(PS1)$"
+}
+
+proc input_wait { {seconds 1} } {
+  wait_input ; sleep $seconds
+}
+
+proc comment { {text " "} } {
+  send "# --> " ; send -h "$text \n\n" ;  input_wait
+}
+
+proc do { {cmd "\n"} } {
+  send -h "$cmd" ; sleep 1 ; send "\n\n" ; input_wait 2
+}
+
+
+# start recording & wait for input prompt
+spawn asciinema rec \
+  --command "/bin/bash --norc" \
+  --title "$title" \
+  --overwrite \
+  $recording
+expect -re {asciinema: .* done} ; wait_input
+
+comment "Is Zarf around?"
+do "ls -la"
+
+comment "Great. Let's say hi."
+do "./zarf help"
+
+comment "Perfect!"
+
