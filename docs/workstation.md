@@ -17,17 +17,17 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
 1. Download:
 
-    1. The appropriate zarf binary for your system (choose _one_):
+    - The zarf cluster initialization package: `zarf-init.tar.zst`.
+    
+    - The appropriate zarf binary for your system (choose _one_):
 
         | system          | binary            |
         | ---             | ---               | 
         | Linux (64bit)   | `zarf`            |
         | Intel-based Mac | `zarf-mac-intel`  |
         | [Apple-based Mac](https://support.apple.com/en-us/HT211814) | `zarf-mac-apple`  |
-
-    1. The zarf cluster initialization package: `zarf-init.tar.zst`.
     
-    1. (optional) The checksum file: `zarf.sha256`.
+    - (optional) The checksum file: `zarf.sha256`.
 
 1. (optional) Verify integrity of the downloaded files by validating their hashes&mdash;more about that ( [here](https://en.wikipedia.org/wiki/Checksum) / [here](https://help.ubuntu.com/community/HowToSHA256SUM) ) if you're interested. From _the directory holding your files_, run:
 
