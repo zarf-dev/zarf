@@ -4,8 +4,10 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k3s"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +25,6 @@ var initCmd = &cobra.Command{
 }
 
 func handleTLSOptions() {
-
 	// Check to see if the certpaths or host entries are set as flags first
 	if initOptions.PKI.CertPublicPath == "" && initOptions.PKI.Host == "" {
 
@@ -62,6 +63,9 @@ func handleTLSOptions() {
 			prompt.Message = "Enter a file path to the ingress private key"
 			_ = survey.AskOne(prompt, &initOptions.PKI.CertPrivatePath, survey.WithValidator(survey.Required))
 		}
+	}
+	if !utils.CheckHostName(initOptions.PKI.Host) {
+		logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters.\n", initOptions.PKI.Host)
 	}
 }
 
