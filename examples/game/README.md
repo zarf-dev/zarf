@@ -61,7 +61,7 @@ Before the magic can happen you have to do a few things:
 <img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
 </a>
 
-You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster". Kick that off by _moving into the directory holding your init package_ and running this command:
+You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster". Kick that off by _moving into the directory holding your init package_ and run this command:
 
 ```sh
 cd <same dir as zarf-init.tar.zst>
