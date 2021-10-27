@@ -4,7 +4,10 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,6 +45,53 @@ func IsLinux() bool {
 
 func IsRHEL() bool {
 	return !InvalidPath("/etc/redhat-release")
+}
+
+func GetValidComponents(allComponents []config.ZarfComponent, requestedComponentNames []string) []config.ZarfComponent {
+	validComponentsList := []config.ZarfComponent{}
+	confirmedCompoonents := make([]bool, len(requestedComponentNames))
+	for _, component := range allComponents {
+		confirmComponent := component.Required
+
+		// If the component is not required check if the user wants it deployed
+		if !confirmComponent {
+			// Check if this is one of the components that has been requested
+			if len(requestedComponentNames) > 0 {
+				for index, requestedComponent := range requestedComponentNames {
+					if strings.ToLower(requestedComponent) == component.Name {
+						confirmComponent = true
+						confirmedCompoonents[index] = true
+					}
+				}
+			} else {
+				// Since no requested components were provided, prompt the user
+				prompt := &survey.Confirm{
+					Message: "Deploy the " + component.Name + " component?",
+					Default: component.Default,
+					Help:    component.Description,
+				}
+				_ = survey.AskOne(prompt, &confirmComponent)
+			}
+		}
+
+		if confirmComponent {
+			validComponentsList = append(validComponentsList, component)
+		}
+	}
+
+	// Verify that we were able to successfully identify all of the requested components
+	nonMatchedComponents := []string{}
+	for requestedComponentIndex, componentMatched := range confirmedCompoonents {
+		if componentMatched == false {
+			nonMatchedComponents = append(nonMatchedComponents, requestedComponentNames[requestedComponentIndex])
+		}
+	}
+
+	if len(nonMatchedComponents) > 0 {
+		logrus.Fatalf("Unable to find these components to deploy: %v.", nonMatchedComponents)
+	}
+
+	return validComponentsList
 }
 
 func RunPreflightChecks() {
