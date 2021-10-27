@@ -82,7 +82,7 @@ Congratulations!  Your machine is now a single node k8s cluster!
 > ```sh
 > FATA[0004] The package archive seems to be missing or unreadable.  archive=zarf-init.tar.zst
 > ```
-> It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory it's sitting in.
+> It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
 
 &nbsp;
 
