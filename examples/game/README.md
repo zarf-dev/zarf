@@ -2,7 +2,7 @@
 
 This example demonstrates using Zarf to kill time (and evil).
 
-More specifically, you'll be running a copy of the 1993, mega-hit video game _**Doom**_ in a Zarf-installed Kubernetes cluster&mdash;_right on your local machine_.
+More specifically, you'll be running a copy of the 1993, mega-hit video game _**Doom**_ in a Zarf-installed Kubernetes (k8s) cluster&mdash;_right on your local machine_.
 
 > _**Note**_
 >
@@ -46,9 +46,9 @@ Before the magic can happen you have to do a few things:
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
-1. Download a Zarf release &mdash; link & instructions [here](../../docs/workstation.md#just-gimmie-zarf).
+1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
 
-1. Log `zarf` into [Iron Bank](../../docs/ironbank.md#2-configure-zarf-the-use-em)&mdash;if you haven't already.
+1. Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em).
 
 1. Put `zarf` on your path &mdash; _technically_ optional but makes running commands simpler.
 
@@ -61,19 +61,30 @@ Before the magic can happen you have to do a few things:
 <img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
 </a>
 
-You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster". Kick that off by running this command:
+You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster".
+
+Kick that off by _moving into the directory with your init package_ and running this command:
 
 ```sh
+cd <same dir as zarf-init.tar.zst>
 zarf init
 ```
 
 Answer the follow-on prompts as appropriate for your machine configuration & give it a few seconds to run.
 
-Congratulations!  Your machine is now "a cluster".
+Congratulations!  Your machine is now a single node k8s cluster!
  
  > _**Note**_
  >
  > Zarf supports fire-and-forget installs too! Give `zarf init --help` a call for more details on that.
+
+> _**Error &mdash; missing or unreadable package**_
+>
+> The zarf binary needs an init package to know how to setup your cluster! So, if `zarf init` returns an error like this:
+> ```sh
+> FATA[0004] The package archive seems to be missing or unreadable.  archive=zarf-init.tar.zst
+> ```
+> It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
 
 &nbsp;
 
@@ -84,7 +95,7 @@ Congratulations!  Your machine is now "a cluster".
 <img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
 </a>
 
-Zarf is (at heart) a tool for making it easy to get software from _where you have it_ to _**where you need it**_&mdash;specifically, across an airgap. Since moving bits is so core to Zarf, this idea of a "ready-to-move group of software" has a specific name: the _package_.
+Zarf is (at heart) a tool for making it easy to get software from _where you have it_ to _**where you need it**_&mdash;specifically, across an airgap. Since moving bits is so core to Zarf the idea of a "ready-to-move group of software" has a specific name&mdash;the _package_.
 
 All of the software a Zarf cluster runs is installed via package&mdash;for many reasons like versioning, auditability, etc&mdash;which means that if you want to run _**Doom**_ in your cluster you're going to have to build a package for it.
 
@@ -110,7 +121,7 @@ It's time to feed the package you built into your cluster.
 
 > _**Note**_
 >
-> If you were an evil genius trying to get _**Doom**_ to run in your internet-isolated, evil underground super-base _this_ is where you would burn the zarf binary + game package to removable media for shipment "across the airgap"... probably via evil FedEx.
+> If you were an evil genius trying to get _**Doom**_ to run in your internet-isolated, evil underground super-base _this_ is where you would burn the zarf release + game package to removable media for shipment "across the airgap"... probably via evil FedEx.
 
 Since you're running a Zarf cluster directly on your local machine&mdash;where the game package & `zarf` binary _already are_&mdash;deploying the game is very simple:
 
