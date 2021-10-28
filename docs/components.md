@@ -6,12 +6,12 @@ Think of components as something like named capabilities.
 
 They're intended to fill in the space _around_ your apps; to do things that must be done but which aren't your core concern&mdash;things like running application logging & monitoring services, or installing (pre-configured) cluster management tooling.
 
-
-
 &nbsp;
 
 
 ## Available components
+
+Here's the list of components that Zarf currently supports along with the "magic strings" you pass through `zarf init --components` in order to use them:
 
 |--components       |Description|
 |---                |---|
@@ -27,4 +27,4 @@ They're intended to fill in the space _around_ your apps; to do things that must
 
 For more detail&mdash;like which components are required vs. those which are merely on by default&mdash;there's no better place to check that the source!
 
-Check it out in the project root: [zarf.yaml](../zarf.yaml).
+It lives here, in the project root: [zarf.yaml](../zarf.yaml).
