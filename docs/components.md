@@ -11,7 +11,7 @@ Backed by tooling you already know (and love) & structured to fill the gaps you 
 &nbsp;
 
 
-## "Always on" components
+## Mandatory components
 
 Due to the nature of Zarf's work there are some components that are "always on" (a.k.a. required & cannot be disabled). Those are:
 
@@ -23,7 +23,7 @@ Due to the nature of Zarf's work there are some components that are "always on" 
 &nbsp;
 
 
-## Mandatory components
+## Additional components
 
 In addition to those that are always installed, Zarf's optional components provide additional functionality and can be enabled as & when you need them.
 
