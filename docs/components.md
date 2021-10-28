@@ -1,6 +1,6 @@
 # Zarf Components
 
-Zarf is pretty unopinionated regarding what runs in your cluster but it _does_ have some opinion about how to help you fill in some common functionality gaps. We call these opinions **components**.
+Zarf is pretty unopinionated regarding what runs in your cluster but it _does_ have am opinion about how to help you fill in some common functionality gaps. We call these opinions **components**.
 
 Think of components as something like named "capabilities".
 
