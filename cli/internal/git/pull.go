@@ -3,6 +3,7 @@ package git
 import (
 	"os"
 
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/sirupsen/logrus"
@@ -22,7 +23,7 @@ func Pull(gitUrl string, targetFolder string) {
 }
 
 func pull(gitUrl string, targetFolder string) {
-	logContext := logrus.WithFields(logrus.Fields{
+	logContext := log.Logger.WithFields(logrus.Fields{
 		"Remote": gitUrl,
 	})
 	logContext.Info("Processing git repo")

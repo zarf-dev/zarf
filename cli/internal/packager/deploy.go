@@ -11,10 +11,10 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/helm"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
-	"github.com/sirupsen/logrus"
 )
 
 func Deploy(packageName string, confirm bool, componentRequest string) {
@@ -23,15 +23,15 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 	tempPath := createPaths()
 
 	if utils.InvalidPath(packageName) {
-		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
+		log.Logger.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
 	}
 
-	logrus.Info("Extracting the package, this may take a few moments")
+	log.Logger.Info("Extracting the package, this may take a few moments")
 
 	// Extract the archive
 	err := archiver.Unarchive(packageName, tempPath.base)
 	if err != nil {
-		logrus.Fatal("Unable to extract the package contents")
+		log.Logger.Fatal("Unable to extract the package contents")
 	}
 
 	configPath := tempPath.base + "/zarf.yaml"
@@ -64,7 +64,7 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 
 	if !config.IsZarfInitConfig() {
 		if len(dataInjectionList) > 0 {
-			logrus.Info("Loading data injections")
+			log.Logger.Info("Loading data injections")
 			injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
 			utils.WriteFile(injectionCompletionMarker, []byte("🦄"))
 			for _, data := range dataInjectionList {
@@ -86,14 +86,14 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 
 					_, err = utils.ExecCommand(nil, config.K3sBinary, cpPodExecArgs...)
 					if err != nil {
-						logrus.Warn("Error copying data into the pod")
+						log.Logger.Warn("Error copying data into the pod")
 					} else {
 						// Leave a marker in the target container for pods to track the sync action
 						cpPodExecArgs[4] = injectionCompletionMarker
 						cpPodExecArgs[5] = pod + ":" + data.Target.Path
 						_, err = utils.ExecCommand(nil, config.K3sBinary, cpPodExecArgs...)
 						if err != nil {
-							logrus.Warn("Error saving the zarf sync completion file")
+							log.Logger.Warn("Error saving the zarf sync completion file")
 						}
 					}
 				}
@@ -110,12 +110,12 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	if assets.Name != "" {
 		// Only log this for named components
-		logrus.WithField("name", assets.Name).Info("Deploying Zarf component")
+		log.Logger.WithField("name", assets.Name).Info("Deploying Zarf component")
 	} else {
 		assets.Name = "core"
 	}
 	if len(assets.Files) > 0 {
-		logrus.Info("Loading files for local install")
+		log.Logger.Info("Loading files for local install")
 		for index, file := range assets.Files {
 			sourceFile := tempPath.files + "/" + strconv.Itoa(index)
 			// If a shasum is specified check it again on deployment as well
@@ -124,7 +124,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 			}
 			err := copy.Copy(sourceFile, file.Target)
 			if err != nil {
-				logrus.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
+				log.Logger.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
 			}
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(sourceFile)
@@ -132,7 +132,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Charts) > 0 {
-		logrus.Info("Loading charts for local install")
+		log.Logger.Info("Loading charts for local install")
 		for _, chart := range assets.Charts {
 			sourceTarball := helm.StandardName(tempPath.charts, chart)
 			destinationTarball := helm.StandardName(config.K3sChartPath, chart)
@@ -141,11 +141,11 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Images) > 0 {
-		logrus.Info("Loading images for local install")
+		log.Logger.Info("Loading images for local install")
 		if config.IsZarfInitConfig() {
 			utils.CreatePathAndCopy(tempPath.images, config.K3sImagePath+"/images-"+assets.Name+".tar")
 		} else {
-			logrus.Info("Loading images for gitops service transfer")
+			log.Logger.Info("Loading images for gitops service transfer")
 			// Push all images the images.tar file based on the zarf.yaml list
 			images.PushAll(tempPath.images, assets.Images)
 			// Cleanup now to reduce disk pressure
@@ -154,7 +154,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if assets.Manifests != "" {
-		logrus.Info("Loading manifests for local install, this may take a minute or so to reflect in k3s")
+		log.Logger.Info("Loading manifests for local install, this may take a minute or so to reflect in k3s")
 
 		gitSecret := git.GetOrCreateZarfSecret()
 
@@ -163,7 +163,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 
 		// Iterate through all the manifests and replace any ZARF_SECRET values
 		for _, manifest := range manifests {
-			logrus.WithField("path", manifest).Info("Processing manifest file")
+			log.Logger.WithField("path", manifest).Info("Processing manifest file")
 			utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
 		}
 
@@ -171,7 +171,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Repos) > 0 {
-		logrus.Info("Loading git repos for gitops service transfer")
+		log.Logger.Info("Loading git repos for gitops service transfer")
 		// Push all the repos from the extracted archive
 		git.PushAllDirectories(tempPath.repos)
 	}

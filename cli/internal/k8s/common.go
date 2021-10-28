@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/sirupsen/logrus"
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -15,13 +15,13 @@ func connect() *kubernetes.Clientset {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
-		logrus.Fatal("Unable to connect to the K8s cluster", err.Error())
+		log.Logger.Fatal("Unable to connect to the K8s cluster", err.Error())
 	}
 
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logrus.Fatal("Unable to connect to the K8s cluster", err.Error())
+		log.Logger.Fatal("Unable to connect to the K8s cluster", err.Error())
 	}
 
 	return clientset

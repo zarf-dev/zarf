@@ -1,6 +1,7 @@
 package git
 
 import (
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/sirupsen/logrus"
@@ -8,7 +9,7 @@ import (
 
 func CheckoutTag(path string, tag string) {
 
-	logContext := logrus.WithFields(logrus.Fields{
+	logContext := log.Logger.WithFields(logrus.Fields{
 		"Path": path,
 		"Tag":  tag,
 	})

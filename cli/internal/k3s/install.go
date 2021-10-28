@@ -5,6 +5,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,7 @@ type InstallOptions struct {
 func Install(options InstallOptions) {
 	utils.RunPreflightChecks()
 
-	logrus.Info("Installing K3s")
+	log.Logger.Info("Installing K3s")
 
 	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
 
@@ -37,8 +38,8 @@ func Install(options InstallOptions) {
 
 	gitSecret := git.GetOrCreateZarfSecret()
 
-	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
-	logrus.WithFields(logrus.Fields{
+	log.Logger.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
+	log.Logger.WithFields(logrus.Fields{
 		"Gitea Username (if installed)": config.ZarfGitUser,
 		"Grafana Username":              "zarf-admin",
 		"Password (all)":                gitSecret,
@@ -46,12 +47,12 @@ func Install(options InstallOptions) {
 }
 
 func createK3sSymlinks() {
-	logrus.Info("Creating kube config symlink")
+	log.Logger.Info("Creating kube config symlink")
 
 	// Make the k3s kubeconfig available to other standard K8s tools that bind to the default ~/.kube/config
 	err := utils.CreateDirectory("/root/.kube", 0700)
 	if err != nil {
-		logrus.Warn("Unable to create the root kube config directory")
+		log.Logger.Warn("Unable to create the root kube config directory")
 	} else {
 		// Dont log an error for now since re-runs throw an invalid error
 		_ = os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
@@ -70,11 +71,11 @@ func createService() {
 
 	_, err := utils.ExecCommand(nil, "systemctl", "daemon-reload")
 	if err != nil {
-		logrus.Warn("Unable to reload systemd")
+		log.Logger.Warn("Unable to reload systemd")
 	}
 
 	_, err = utils.ExecCommand(nil, "systemctl", "enable", "--now", "k3s")
 	if err != nil {
-		logrus.Warn("Unable to enable or start k3s via systemd")
+		log.Logger.Warn("Unable to enable or start k3s via systemd")
 	}
 }

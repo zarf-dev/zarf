@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/goccy/go-yaml"
-	"github.com/sirupsen/logrus"
 )
 
 const K3sBinary = "/usr/local/bin/k3s"
@@ -49,7 +49,7 @@ func GetComponents() []ZarfComponent {
 }
 
 func Load(path string) {
-	logContext := logrus.WithField("path", path)
+	logContext := log.Logger.WithField("path", path)
 	logContext.Info("Loading dynamic config")
 	file, err := ioutil.ReadFile(path)
 
@@ -64,7 +64,7 @@ func Load(path string) {
 }
 
 func WriteConfig(path string) {
-	logContext := logrus.WithField("path", path)
+	logContext := log.Logger.WithField("path", path)
 	now := time.Now()
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()

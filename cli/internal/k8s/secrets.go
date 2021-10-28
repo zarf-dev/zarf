@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +14,7 @@ import (
 func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
 
 	clientSet := connect()
-	logContext := logrus.WithFields(logrus.Fields{
+	logContext := log.Logger.WithFields(logrus.Fields{
 		"Namespace": namespace,
 		"Name":      name,
 		"Cert":      certPath,

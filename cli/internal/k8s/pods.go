@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,7 @@ const waitLimit = 30
 func WaitForPodsAndContainers(target config.ZarfContainerTarget) []string {
 
 	clientSet := connect()
-	logContext := logrus.WithFields(logrus.Fields{
+	logContext := log.Logger.WithFields(logrus.Fields{
 		"Namespace": target.Namespace,
 		"Selector":  target.Selector,
 		"Container": target.Container,

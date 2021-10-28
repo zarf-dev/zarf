@@ -4,7 +4,8 @@ package utils
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
+
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml/lexer"
@@ -62,6 +63,6 @@ func ColorPrintYAML(text string) {
 	writer := colorable.NewColorableStdout()
 	_, err := writer.Write([]byte("\n\n" + p.PrintTokens(tokens) + "\n\n\n"))
 	if err != nil {
-		logrus.Warn("Unable to print the config yaml contents")
+		log.Logger.Warn("Unable to print the config yaml contents")
 	}
 }

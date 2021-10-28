@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
 )
@@ -16,7 +17,7 @@ var TempPathPrefix = "zarf-"
 
 func MakeTempDir() string {
 	tmp, err := ioutil.TempDir("", TempPathPrefix)
-	logContext := logrus.WithField("path", tmp)
+	logContext := log.Logger.WithField("path", tmp)
 	logContext.Info("Creating temp path")
 
 	if err != nil {
@@ -50,7 +51,7 @@ func ListDirectories(directory string) []string {
 	var directories []string
 	paths, err := os.ReadDir(directory)
 	if err != nil {
-		logrus.WithField("path", directory).Fatal("Unable to load the directory")
+		log.Logger.WithField("path", directory).Fatal("Unable to load the directory")
 	}
 
 	for _, entry := range paths {
@@ -64,7 +65,7 @@ func ListDirectories(directory string) []string {
 
 func WriteFile(path string, data []byte) {
 
-	logContext := logrus.WithField("path", path)
+	logContext := log.Logger.WithField("path", path)
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -85,7 +86,7 @@ func WriteFile(path string, data []byte) {
 }
 
 func ReplaceText(path string, old string, new string) {
-	logContext := logrus.WithField("path", path)
+	logContext := log.Logger.WithField("path", path)
 	input, err := ioutil.ReadFile(path)
 	if err != nil {
 		logContext.Fatal("Unable to load the given file")
@@ -113,7 +114,7 @@ func RecursiveFileList(root string) []string {
 		})
 
 	if err != nil {
-		logrus.WithField("path", root).Fatal("Unable to complete directory walking")
+		log.Logger.WithField("path", root).Fatal("Unable to complete directory walking")
 	}
 
 	return files
@@ -123,12 +124,12 @@ func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
 	err := CreateDirectory(parentDest, 0700)
 	if err != nil {
-		logrus.WithField("path", parentDest).Fatal("Unable to create the destination path")
+		log.Logger.WithField("path", parentDest).Fatal("Unable to create the destination path")
 	}
 }
 
 func CreatePathAndCopy(source string, destination string) {
-	logContext := logrus.WithFields(logrus.Fields{
+	logContext := log.Logger.WithFields(logrus.Fields{
 		"Source":      source,
 		"Destination": destination,
 	})
