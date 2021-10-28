@@ -1,13 +1,12 @@
 # Zarf Components
 
-Zarf is pretty unopinionated regarding what runs in your cluster but it _does_ have an opinion about how to help you fill in some common functionality gaps. We call these opinions **components**.
+While Zarf is fairly unopinionated regarding what runs in your cluster, that is not to say that it's completely indifferent. It has _definite_ opinions, for example, about how to meet many common production application functionality needs&mdash;we call these opinions **components**.
 
-Think of components as something like named capabilities.
+Think of a component as something like a named capability.
 
 They're intended to fill in the space _around_ your apps; to do things that must be done but which aren't your core concern&mdash;things like running application logging & monitoring services, or installing (pre-configured) cluster management tooling.
 
 &nbsp;
-
 
 ## Available components
 
