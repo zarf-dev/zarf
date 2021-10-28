@@ -15,7 +15,7 @@ Backed by tooling you already know (and love) & structured to fill the gaps you 
 
 Due to the nature of Zarf's work there are some components that are "always on" (a.k.a. required & cannot be disabled). Those are:
 
-|name               |Description|
+|                   |Description|
 |---                |---|
 |k3s                |Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.|
 |container-registry |Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster.|
