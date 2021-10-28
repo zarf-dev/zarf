@@ -13,7 +13,7 @@ Backed by tooling you already know (and love) & structured to fill the gaps you 
 
 ## Mandatory components
 
-Due to the nature of Zarf's work there are some components that are "always on" (a.k.a. required & cannot be disabled). Those are:
+Zarf's work necessitates that some components are "always on" (a.k.a. required & cannot be disabled). Those include:
 
 |                   |Description|
 |---                |---|
