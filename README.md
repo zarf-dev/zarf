@@ -103,7 +103,7 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
 # This block is about expected USECASES & ADMIN of Zarf (in production)
 ##########
 -->
-## For *setup & usage instructions*, have a look at...
+## To understand *the different modes of use*, have a look at...
 
 <table>
 <tbody>
@@ -282,7 +282,7 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
   </td>
   <td>
 
-  Coming Soon!
+  [Read](./docs/components.md)
 
   </td>
   </tr>
