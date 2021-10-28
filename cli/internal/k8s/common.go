@@ -31,6 +31,7 @@ func connect() *kubernetes.Clientset {
 func readFile(file string) ([]byte, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
+		log.Logger.Debug(err)
 		return []byte{}, fmt.Errorf("cannot read file %v, %v", file, err)
 	}
 	return b, nil

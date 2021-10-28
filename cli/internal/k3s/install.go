@@ -52,6 +52,7 @@ func createK3sSymlinks() {
 	// Make the k3s kubeconfig available to other standard K8s tools that bind to the default ~/.kube/config
 	err := utils.CreateDirectory("/root/.kube", 0700)
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Warn("Unable to create the root kube config directory")
 	} else {
 		// Dont log an error for now since re-runs throw an invalid error
@@ -71,11 +72,13 @@ func createService() {
 
 	_, err := utils.ExecCommand(nil, "systemctl", "daemon-reload")
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Warn("Unable to reload systemd")
 	}
 
 	_, err = utils.ExecCommand(nil, "systemctl", "enable", "--now", "k3s")
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Warn("Unable to enable or start k3s via systemd")
 	}
 }

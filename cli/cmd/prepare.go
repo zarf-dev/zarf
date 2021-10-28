@@ -44,6 +44,7 @@ var prepareTransformGitLinks = &cobra.Command{
 			// Overwrite the file
 			err = ioutil.WriteFile(fileName, []byte(processedText), 0640)
 			if err != nil {
+				log.Logger.Debug(err)
 				log.Logger.Fatal("Unable to write the changes back to the file")
 			}
 		}
@@ -59,6 +60,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 		fileName := args[0]
 		hash, err := utils.GetSha256Sum(fileName)
 		if err != nil {
+			log.Logger.Debug(err)
 			log.Logger.Fatal("Unable to compute the hash")
 		} else {
 			fmt.Println(hash)

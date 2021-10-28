@@ -54,11 +54,13 @@ func Load(path string) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to load the config file")
 	}
 
 	err = yaml.Unmarshal(file, &config)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to parse the config file")
 	}
 }
@@ -88,11 +90,13 @@ func WriteConfig(path string) {
 	// Save the parsed output to the config path given
 	content, err := yaml.Marshal(config)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to process the config data")
 	}
 
 	err = ioutil.WriteFile(path, content, 0400)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to write the config file")
 	}
 }

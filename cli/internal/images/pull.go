@@ -27,6 +27,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 
 	log.Logger.Info("Creating image tarball (this will take a while)")
 	if err := crane.MultiSave(imageMap, imageTarballPath); err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Fatal("Unable to save the tarball")
 	}
 }

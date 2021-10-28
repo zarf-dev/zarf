@@ -31,6 +31,7 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 	// Extract the archive
 	err := archiver.Unarchive(packageName, tempPath.base)
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Fatal("Unable to extract the package contents")
 	}
 
@@ -124,6 +125,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 			}
 			err := copy.Copy(sourceFile, file.Target)
 			if err != nil {
+				log.Logger.Debug(err)
 				log.Logger.WithField("file", file.Target).Fatal("Unable to copy the contents of the asset")
 			}
 			// Cleanup now to reduce disk pressure

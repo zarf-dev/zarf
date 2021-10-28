@@ -42,6 +42,7 @@ func RandomString(length int) string {
 	bytes := make([]byte, length)
 
 	if _, err := rand.Read(bytes); err != nil {
+		log.Logger.Debug(err)
 		log.Logger.Fatal("unable to generate a random secret")
 	}
 
@@ -112,12 +113,14 @@ func addCAToTrustStore(caFilePath string) {
 		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
 		_, err := ExecCommand(nil, rhelBinary, "extract")
 		if err != nil {
+			log.Logger.Debug(err)
 			log.Logger.Warn("Error adding the ephemeral CA to the RHEL root trust")
 		}
 	} else if VerifyBinary(debianBinary) {
 		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
 		_, err := ExecCommand(nil, debianBinary)
 		if err != nil {
+			log.Logger.Debug(err)
 			log.Logger.Warn("Error adding the ephemeral CA to the trust store")
 		}
 	}

@@ -21,6 +21,7 @@ func MakeTempDir() string {
 	logContext.Info("Creating temp path")
 
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to create temp directory")
 	}
 	return tmp
@@ -51,6 +52,7 @@ func ListDirectories(directory string) []string {
 	var directories []string
 	paths, err := os.ReadDir(directory)
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.WithField("path", directory).Fatal("Unable to load the directory")
 	}
 
@@ -69,17 +71,20 @@ func WriteFile(path string, data []byte) {
 
 	f, err := os.Create(path)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to create the file to write the contents")
 	}
 
 	_, err = f.Write(data)
 	if err != nil {
-		logContext.Fatal("Unable to write the file contents")
 		_ = f.Close()
+		logContext.Debug(err)
+		logContext.Fatal("Unable to write the file contents")
 	}
 
 	err = f.Close()
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Error saving file")
 	}
 
@@ -89,12 +94,14 @@ func ReplaceText(path string, old string, new string) {
 	logContext := log.Logger.WithField("path", path)
 	input, err := ioutil.ReadFile(path)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to load the given file")
 	}
 
 	output := bytes.Replace(input, []byte(old), []byte(new), -1)
 
 	if err = ioutil.WriteFile(path, output, 0600); err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to update the given file")
 	}
 }
@@ -114,6 +121,7 @@ func RecursiveFileList(root string) []string {
 		})
 
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.WithField("path", root).Fatal("Unable to complete directory walking")
 	}
 
@@ -124,6 +132,7 @@ func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
 	err := CreateDirectory(parentDest, 0700)
 	if err != nil {
+		log.Logger.Debug(err)
 		log.Logger.WithField("path", parentDest).Fatal("Unable to create the destination path")
 	}
 }
@@ -141,6 +150,7 @@ func CreatePathAndCopy(source string, destination string) {
 	// Copy the asset
 	err := copy.Copy(source, destination)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to copy the contents of the asset")
 	}
 }

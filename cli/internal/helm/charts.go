@@ -67,12 +67,14 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 	// Perform simple chart download
 	chartURL, err := repo.FindChartInRepoURL(chart.Url, chart.Name, chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to pull the helm chart")
 	}
 
 	// Download the file (we don't control what name helm creates here)
 	saved, _, err := downloader.DownloadTo(chartURL, pull.Version, destination)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to download the helm chart")
 	}
 
