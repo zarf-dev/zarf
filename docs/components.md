@@ -27,7 +27,7 @@ Due to the nature of Zarf's work there are some components that are "always on" 
 
 In addition to those that are always installed, Zarf's optional components provide additional functionality and can be enabled as & when you need them.
 
-These optional components are listed below along with the "magic strings" you can pass to `zarf init --components` to pull them in:
+These optional components are listed below along with the "magic strings" you pass to `zarf init --components` to pull them in:
 
 |--components       |Description|
 |---                |---|
