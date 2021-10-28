@@ -10,15 +10,28 @@ Backed by tooling you already know (and love) & structured to fill the gaps you 
 
 &nbsp;
 
-## Available components
 
-This is the list of components that Zarf currently supports along with the "magic strings" you can pass through `zarf init --components` in order to use them:
+## "Always on" components
+
+Due to the nature of Zarf's work there are some components that are "always on" (a.k.a. required & cannot be disabled). Those are:
+
+|name               |Description|
+|---                |---|
+|k3s                |Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.|
+|container-registry |Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster.|
+
+&nbsp;
+
+
+## Mandatory components
+
+In addition to those that are always installed, Zarf's optional components provide additional functionality and can be enabled as & when you need them.
+
+These optional components are listed below along with the "magic strings" you can pass to `zarf init --components` to pull them in:
 
 |--components       |Description|
 |---                |---|
-|k3s                |Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.|
 |management         |Installs tools for managing the Zarf cluster from the local host, including: [k9s](https://k9scli.io/).|
-|container-registry |Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster.|
 |logging            |Adds a log monitoring stack&mdash;[promtail / loki / graphana (a.k.a. PLG)](https://github.com/grafana/loki)&mdash;into the cluster.|
 |gitops-service     |Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster.|
 
@@ -26,4 +39,4 @@ This is the list of components that Zarf currently supports along with the "magi
 
 ## Further reading
 
-For more detail&mdash;like which components are required vs. those which are merely on by default&mdash;there's no better place to check than the source: [zarf.yaml](../zarf.yaml).
+For more detail&mdash;like which components are on/off by default&mdash;there's no better place to check than the source: [zarf.yaml](../zarf.yaml).
