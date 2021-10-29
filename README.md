@@ -238,7 +238,7 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
   </td>
   <td>
 
-  Coming Soon!
+  [Read](./docs/components.md)
 
   </td>
   </tr>
