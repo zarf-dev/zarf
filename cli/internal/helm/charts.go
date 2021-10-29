@@ -5,7 +5,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -18,7 +17,7 @@ import (
 )
 
 func DownloadChartFromGit(chart config.ZarfChart, destination string) {
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"Chart":   chart.Name,
 		"URL":     chart.Url,
 		"Version": chart.Version,
@@ -41,7 +40,7 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 }
 
 func DownloadPublishedChart(chart config.ZarfChart, destination string) {
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"Chart":   chart.Name,
 		"URL":     chart.Url,
 		"Version": chart.Version,

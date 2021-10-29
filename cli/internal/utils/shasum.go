@@ -6,14 +6,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/sirupsen/logrus"
 )
 
 func ValidateSha256Sum(expectedChecksum string, path string) {
 	actualChecksum, _ := GetSha256Sum(path)
 	if expectedChecksum != actualChecksum {
-		log.Logger.WithFields(logrus.Fields{
+		logrus.WithFields(logrus.Fields{
 			"Source":   path,
 			"Expected": expectedChecksum,
 			"Actual":   actualChecksum,
@@ -28,7 +27,7 @@ func GetSha256Sum(path string) (string, error) {
 
 	if IsUrl(path) {
 		// Handle download from URL
-		log.Logger.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
+		logrus.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
 		data = Fetch(path)
 	} else {
 		// Handle local file

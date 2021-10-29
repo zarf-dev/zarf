@@ -6,8 +6,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type componentPaths struct {
@@ -47,14 +47,14 @@ func createComponentPaths(basePath string, component config.ZarfComponent) compo
 }
 
 func cleanup(tempPath tempPaths) {
-	log.Logger.Info("Cleaning up temp files")
+	logrus.Info("Cleaning up temp files")
 	_ = os.RemoveAll(tempPath.base)
 }
 
 func confirmAction(configPath string, confirm bool, message string) bool {
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Logger.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	// Convert []byte to string and print to screen
@@ -64,7 +64,7 @@ func confirmAction(configPath string, confirm bool, message string) bool {
 
 	// Display prompt if not auto-confirmed
 	if confirm {
-		log.Logger.Info(message + " Zarf package confirmed")
+		logrus.Info(message + " Zarf package confirmed")
 	} else {
 		prompt := &survey.Confirm{
 			Message: message + " this Zarf package?",

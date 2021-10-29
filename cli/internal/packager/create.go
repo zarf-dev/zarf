@@ -11,9 +11,9 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/helm"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
+	"github.com/sirupsen/logrus"
 )
 
 func Create(confirm bool) {
@@ -36,7 +36,7 @@ func Create(confirm bool) {
 	}
 
 	for _, component := range components {
-		log.Logger.WithField("component", component.Name).Info("Loading component assets")
+		logrus.WithField("component", component.Name).Info("Loading component assets")
 		componentPath := createComponentPaths(tempPath.components, component)
 		addLocalAssets(componentPath, component)
 	}
@@ -47,7 +47,7 @@ func Create(confirm bool) {
 	} else {
 		// Init packages do not use data or utilityCluster keys
 		if len(dataInjections) > 0 {
-			log.Logger.Info("Loading data injections")
+			logrus.Info("Loading data injections")
 			for _, data := range dataInjections {
 				destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
 				utils.CreatePathAndCopy(data.Source, destinationFile)
@@ -57,18 +57,18 @@ func Create(confirm bool) {
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.Fatal("Unable to create the package archive")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to create the package archive")
 	}
 
-	log.Logger.WithField("name", packageName).Info("Package creation complete")
+	logrus.WithField("name", packageName).Info("Package creation complete")
 
 	cleanup(tempPath)
 }
 
 func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 	if len(assets.Charts) > 0 {
-		log.Logger.Info("Loading static helm charts")
+		logrus.Info("Loading static helm charts")
 		utils.CreateDirectory(tempPath.charts, 0700)
 		for _, chart := range assets.Charts {
 			isGitURL, _ := regexp.MatchString("\\.git$", chart.Url)
@@ -81,7 +81,7 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Files) > 0 {
-		log.Logger.Info("Downloading files for local install")
+		logrus.Info("Downloading files for local install")
 		_ = utils.CreateDirectory(tempPath.files, 0700)
 		for index, file := range assets.Files {
 			destinationFile := tempPath.files + "/" + strconv.Itoa(index)
@@ -105,22 +105,22 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 
 	if len(assets.Images) > 0 {
-		log.Logger.Info("Loading container images")
+		logrus.Info("Loading container images")
 		images.PullAll(assets.Images, tempPath.images)
 	}
 
 	if assets.Manifests != "" {
-		log.Logger.WithField("path", assets.Manifests).Info("Loading manifests for local install")
+		logrus.WithField("path", assets.Manifests).Info("Loading manifests for local install")
 		utils.CreatePathAndCopy(assets.Manifests, tempPath.manifests)
 	}
 
 	if len(assets.Repos) > 0 {
-		log.Logger.Info("loading git repos for gitops service transfer")
+		logrus.Info("loading git repos for gitops service transfer")
 		// Load all specified git repos
 		for _, url := range assets.Repos {
 			matches := strings.Split(url, "@")
 			if len(matches) < 2 {
-				log.Logger.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
+				logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
 			}
 			git.Pull(matches[0], tempPath.repos)
 		}

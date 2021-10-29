@@ -2,10 +2,10 @@ package git
 
 import (
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
+	"github.com/sirupsen/logrus"
 )
 
 const offlineRemoteName = "offline-downstream"
@@ -19,7 +19,7 @@ func PushAllDirectories(localPath string) {
 
 func push(localPath string) {
 
-	logContext := log.Logger.WithField("repo", localPath)
+	logContext := logrus.WithField("repo", localPath)
 	logContext.Info("Processing git repo")
 
 	// Open the given repo

@@ -5,11 +5,11 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ var archiverCompressCmd = &cobra.Command{
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
-			log.Logger.Fatal(err)
+			logrus.Fatal(err)
 		}
 	},
 }
@@ -45,7 +45,7 @@ var archiverDecompressCmd = &cobra.Command{
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
-			log.Logger.Fatal(err)
+			logrus.Fatal(err)
 		}
 	},
 }

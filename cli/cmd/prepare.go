@@ -6,8 +6,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +26,7 @@ var prepareTransformGitLinks = &cobra.Command{
 		// Read the contents of the given file
 		content, err := ioutil.ReadFile(fileName)
 		if err != nil {
-			log.Logger.Fatal(err)
+			logrus.Fatal(err)
 		}
 
 		// Perform git url transformation via regex
@@ -44,8 +44,8 @@ var prepareTransformGitLinks = &cobra.Command{
 			// Overwrite the file
 			err = ioutil.WriteFile(fileName, []byte(processedText), 0640)
 			if err != nil {
-				log.Logger.Debug(err)
-				log.Logger.Fatal("Unable to write the changes back to the file")
+				logrus.Debug(err)
+				logrus.Fatal("Unable to write the changes back to the file")
 			}
 		}
 
@@ -60,8 +60,8 @@ var prepareComputeFileSha256sum = &cobra.Command{
 		fileName := args[0]
 		hash, err := utils.GetSha256Sum(fileName)
 		if err != nil {
-			log.Logger.Debug(err)
-			log.Logger.Fatal("Unable to compute the hash")
+			logrus.Debug(err)
+			logrus.Fatal("Unable to compute the hash")
 		} else {
 			fmt.Println(hash)
 		}

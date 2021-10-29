@@ -5,12 +5,11 @@ package utils
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/cli/internal/log"
-
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/mattn/go-colorable"
+	"github.com/sirupsen/logrus"
 )
 
 const yamlEscape = "\x1b"
@@ -63,6 +62,6 @@ func ColorPrintYAML(text string) {
 	writer := colorable.NewColorableStdout()
 	_, err := writer.Write([]byte("\n\n" + p.PrintTokens(tokens) + "\n\n\n"))
 	if err != nil {
-		log.Logger.Warn("Unable to print the config yaml contents")
+		logrus.Warn("Unable to print the config yaml contents")
 	}
 }

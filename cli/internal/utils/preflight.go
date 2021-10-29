@@ -8,7 +8,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
+	"github.com/sirupsen/logrus"
 )
 
 func CheckHostName(hostname string) bool {
@@ -17,7 +17,7 @@ func CheckHostName(hostname string) bool {
 }
 
 func IsValidHostName() bool {
-	log.Logger.Info("Preflight check: validating hostname")
+	logrus.Info("Preflight check: validating hostname")
 	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
 	hostname, err := os.Hostname()
 
@@ -29,17 +29,17 @@ func IsValidHostName() bool {
 }
 
 func IsUserRoot() bool {
-	log.Logger.Info("Preflight check: validating user is root")
+	logrus.Info("Preflight check: validating user is root")
 	return os.Getuid() == 0
 }
 
 func IsAMD64() bool {
-	log.Logger.Info("Preflight check: validating AMD64 arch")
+	logrus.Info("Preflight check: validating AMD64 arch")
 	return runtime.GOARCH == "amd64"
 }
 
 func IsLinux() bool {
-	log.Logger.Info("Preflight check: validating os type")
+	logrus.Info("Preflight check: validating os type")
 	return runtime.GOOS == "linux"
 }
 
@@ -88,7 +88,7 @@ func GetValidComponents(allComponents []config.ZarfComponent, requestedComponent
 	}
 
 	if len(nonMatchedComponents) > 0 {
-		log.Logger.Fatalf("Unable to find these components to deploy: %v.", nonMatchedComponents)
+		logrus.Fatalf("Unable to find these components to deploy: %v.", nonMatchedComponents)
 	}
 
 	return validComponentsList
@@ -96,18 +96,18 @@ func GetValidComponents(allComponents []config.ZarfComponent, requestedComponent
 
 func RunPreflightChecks() {
 	if !IsLinux() {
-		log.Logger.Fatal("This program requires a Linux OS")
+		logrus.Fatal("This program requires a Linux OS")
 	}
 
 	if !IsAMD64() {
-		log.Logger.Fatal("This program currently only runs on AMD64 architectures")
+		logrus.Fatal("This program currently only runs on AMD64 architectures")
 	}
 
 	if !IsUserRoot() {
-		log.Logger.Fatal("You must run this program as root.")
+		logrus.Fatal("You must run this program as root.")
 	}
 
 	if !IsValidHostName() {
-		log.Logger.Fatal("Please ensure this hostname is valid according to https://www.ietf.org/rfc/rfc1123.txt.")
+		logrus.Fatal("Please ensure this hostname is valid according to https://www.ietf.org/rfc/rfc1123.txt.")
 	}
 }

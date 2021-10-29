@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,7 +16,7 @@ func IsUrl(source string) bool {
 }
 
 func Fetch(url string) io.ReadCloser {
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"url": url,
 	})
 
@@ -36,7 +35,7 @@ func Fetch(url string) io.ReadCloser {
 }
 
 func Download(url string) []byte {
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"url": url,
 	})
 
@@ -53,7 +52,7 @@ func Download(url string) []byte {
 
 func DownloadToFile(url string, target string) {
 
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"url":         url,
 		"destination": target,
 	})

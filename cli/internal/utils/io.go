@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
 )
@@ -17,7 +16,7 @@ var TempPathPrefix = "zarf-"
 
 func MakeTempDir() string {
 	tmp, err := ioutil.TempDir("", TempPathPrefix)
-	logContext := log.Logger.WithField("path", tmp)
+	logContext := logrus.WithField("path", tmp)
 	logContext.Info("Creating temp path")
 
 	if err != nil {
@@ -52,8 +51,8 @@ func ListDirectories(directory string) []string {
 	var directories []string
 	paths, err := os.ReadDir(directory)
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.WithField("path", directory).Fatal("Unable to load the directory")
+		logrus.Debug(err)
+		logrus.WithField("path", directory).Fatal("Unable to load the directory")
 	}
 
 	for _, entry := range paths {
@@ -67,7 +66,7 @@ func ListDirectories(directory string) []string {
 
 func WriteFile(path string, data []byte) {
 
-	logContext := log.Logger.WithField("path", path)
+	logContext := logrus.WithField("path", path)
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -91,7 +90,7 @@ func WriteFile(path string, data []byte) {
 }
 
 func ReplaceText(path string, old string, new string) {
-	logContext := log.Logger.WithField("path", path)
+	logContext := logrus.WithField("path", path)
 	input, err := ioutil.ReadFile(path)
 	if err != nil {
 		logContext.Debug(err)
@@ -121,8 +120,8 @@ func RecursiveFileList(root string) []string {
 		})
 
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.WithField("path", root).Fatal("Unable to complete directory walking")
+		logrus.Debug(err)
+		logrus.WithField("path", root).Fatal("Unable to complete directory walking")
 	}
 
 	return files
@@ -132,13 +131,13 @@ func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
 	err := CreateDirectory(parentDest, 0700)
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.WithField("path", parentDest).Fatal("Unable to create the destination path")
+		logrus.Debug(err)
+		logrus.WithField("path", parentDest).Fatal("Unable to create the destination path")
 	}
 }
 
 func CreatePathAndCopy(source string, destination string) {
-	logContext := log.Logger.WithFields(logrus.Fields{
+	logContext := logrus.WithFields(logrus.Fields{
 		"Source":      source,
 		"Destination": destination,
 	})

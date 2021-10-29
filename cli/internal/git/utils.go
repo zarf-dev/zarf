@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/sirupsen/logrus"
@@ -23,7 +22,7 @@ func MutateGitUrlsInText(host string, text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
 		if strings.Contains(match, "/zarf-git-user/") {
-			log.Logger.WithField("Match", match).Warn("This url seems to have been previously patched.")
+			logrus.WithField("Match", match).Warn("This url seems to have been previously patched.")
 			return match
 		}
 		return transformURL(host, match)
@@ -39,7 +38,7 @@ func transformURLtoRepoName(url string) string {
 func transformURL(baseUrl string, url string) string {
 	replaced := transformURLtoRepoName(url)
 	output := baseUrl + "/zarf-git-user/" + replaced
-	log.Logger.WithFields(logrus.Fields{
+	logrus.WithFields(logrus.Fields{
 		"Old": url,
 		"New": output,
 	}).Info("Transformed Git URL")
@@ -122,8 +121,8 @@ func CredentialsGenerator() string {
 
 	credentialsFile, err := os.OpenFile(credentialsPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.Fatal("Unable to access the git credentials file")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to access the git credentials file")
 	}
 	defer credentialsFile.Close()
 
@@ -139,15 +138,15 @@ func CredentialsGenerator() string {
 	// Write the entry to the file
 	_, err = credentialsFile.WriteString(credentialsText)
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.Fatal("Unable to update the git credentials file")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to update the git credentials file")
 	}
 
 	// Save the change
 	err = credentialsFile.Sync()
 	if err != nil {
-		log.Logger.Debug(err)
-		log.Logger.Fatal("Unable to update the git credentials file")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to update the git credentials file")
 	}
 
 	return gitSecret
