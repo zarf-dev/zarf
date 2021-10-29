@@ -2,13 +2,14 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGeneralCli(t *testing.T) {
@@ -91,4 +92,7 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 	require.Error(t, err, output)
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", username))
 	require.Error(t, err, output)
+
+	// Test that `zarf package deploy` doesn't die when given a URL
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
 }

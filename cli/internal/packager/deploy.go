@@ -1,6 +1,9 @@
 package packager
 
 import (
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,12 +25,43 @@ func Deploy(packageName string, confirm bool, componentRequest string) {
 	_ = os.RemoveAll("/tmp/zarf*")
 	tempPath := createPaths()
 
+	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(packageName) {
-		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
+		logrus.WithField("packageName", packageName).Debug("Was not able to find the package on the local system. Trying to process as a URL now.")
+
+		// Check if the user gave us a remote package
+		providedURL, err := url.Parse(packageName)
+		if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
+			logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
+		}
+
+		// TODO @JPERRY Do we want to do any other verification checks before download? (in addition to the extension check)
+		// Check the extension on the package is what we expect
+		if !isValidFileExtension(providedURL.Path) {
+			logrus.Fatal("The URL provided had an unrecognized file extension.")
+		}
+
+		// Download the package
+		// TODO @JPERRY Should we handle potential credentials to access the package?
+		resp, err := http.Get(packageName)
+		if err != nil {
+			logrus.Fatal("Unable to download the package: ", err)
+		}
+		defer resp.Body.Close()
+
+		// Write the package to a local file
+		packageName = providedURL.Path[1:] // Remove the leading slash
+		logrus.Debug("Creating local package with the name: ", packageName)
+		outfile, _ := os.Create(packageName)
+		defer os.Remove(outfile.Name()) // TODO @JPERRY removes after successful deploy but not if you say 'no' to the prompt or if logrus.Fatal() is called
+		_, err = io.Copy(outfile, resp.Body)
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Fatal("Unable to copy the contents of the provided URL into a local file.")
+		}
 	}
 
 	logrus.Info("Extracting the package, this may take a few moments")
-
 	// Extract the archive
 	err := archiver.Unarchive(packageName, tempPath.base)
 	if err != nil {
@@ -177,4 +211,18 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		// Push all the repos from the extracted archive
 		git.PushAllDirectories(tempPath.repos)
 	}
+}
+
+func isValidFileExtension(filename string) bool {
+	// TODO @JPERRY What other extensions do we want to allow?
+	validExtensions := []string{".tar.zst", ".tar", "zip"}
+
+	for _, extension := range validExtensions {
+		if strings.HasSuffix(filename, extension) {
+			logrus.WithField("packageName", filename).Warn("Package extension is valid.")
+			return true
+		}
+	}
+
+	return false
 }
