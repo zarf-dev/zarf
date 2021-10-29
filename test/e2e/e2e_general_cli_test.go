@@ -89,4 +89,6 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
   require.Error(t, err, output)
   output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host zarf@server", username))
   require.Error(t, err, output)
+  output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", username))
+  require.Error(t, err, output)
 }
