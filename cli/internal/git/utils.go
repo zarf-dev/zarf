@@ -121,6 +121,7 @@ func CredentialsGenerator() string {
 
 	credentialsFile, err := os.OpenFile(credentialsPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to access the git credentials file")
 	}
 	defer credentialsFile.Close()
@@ -137,12 +138,14 @@ func CredentialsGenerator() string {
 	// Write the entry to the file
 	_, err = credentialsFile.WriteString(credentialsText)
 	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to update the git credentials file")
 	}
 
 	// Save the change
 	err = credentialsFile.Sync()
 	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to update the git credentials file")
 	}
 

@@ -57,6 +57,7 @@ func Create(confirm bool) {
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to create the package archive")
 	}
 

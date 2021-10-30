@@ -5,12 +5,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/packager"
+
 	"github.com/spf13/cobra"
 )
 
+var zarfLogLevel = ""
+
 var rootCmd = &cobra.Command{
-	Use:   "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
+	Use: "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.SetLogLevel(zarfLogLevel)
+	},
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -36,4 +43,5 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "info", "Log level when runnning Zarf. Valid options are: debug, info, warn, error, fatal")
 }
