@@ -16,6 +16,7 @@ func CheckoutTag(path string, tag string) {
 	// Open the given repo
 	repo, err := git.PlainOpen(path)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Not a valid git repo or unable to open")
 		return
 	}
@@ -23,6 +24,7 @@ func CheckoutTag(path string, tag string) {
 	// Get the working tree so we can change refs
 	tree, err := repo.Worktree()
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to load the git repo")
 	}
 
@@ -31,6 +33,7 @@ func CheckoutTag(path string, tag string) {
 		Branch: plumbing.ReferenceName("refs/tags/" + tag),
 	})
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to checkout the given tag")
 	}
 }

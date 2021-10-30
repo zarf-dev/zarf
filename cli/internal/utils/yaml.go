@@ -4,12 +4,12 @@ package utils
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/mattn/go-colorable"
+	"github.com/sirupsen/logrus"
 )
 
 const yamlEscape = "\x1b"
