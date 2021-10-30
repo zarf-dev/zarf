@@ -27,6 +27,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 
 	logrus.Info("Creating image tarball (this will take a while)")
 	if err := crane.MultiSave(imageMap, imageTarballPath); err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to save the tarball")
 	}
 }
