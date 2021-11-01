@@ -31,14 +31,14 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
   <td width="150">
 
   **Get Started**
-  
+
   _Using Zarf_
 
   </td>
   <td>
 
   Experience just how easy it is to go from _**zero** to **chainsaw wielding hero** (of the Kubernetes cluster)_ using Zarf!
-  
+
   </td>
   <td>
 
@@ -51,11 +51,11 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
 <!-- row start -->
   <tr valign="top">
   <td>
-  
+
   **Add Logging**
 
   _Zarf components_
-  
+
   </td>
   <td>
 
@@ -89,16 +89,16 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
 <!-- row start -->
   <tr valign="top">
   <td>
-  
+
   **Disconnected GitOps**
 
   _The Utility Cluster_
-  
+
   </td>
   <td>
 
   Zarf overcomes the "the Air Gap problem" using a Kubernetes cluster (and k8s-native tooling) for the care & feeding of _other k8s clusters_.
-  
+
   Here's how it works and what ops/support looks like.
 
   </td>
@@ -131,10 +131,10 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
   <td width="150">
 
   **Workstation Setup**
-  
+
   </td>
   <td>
-  
+
   Thinking about hacking on the Zarf binary itself? Or, perhaps you want to run the examples in an isolated environment (the same way we do)? Get your machine setup _just right_ using these instructions!
 
   </td>
@@ -149,12 +149,12 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
 <!-- row start -->
   <tr valign="top">
   <td>
-  
+
   **Build Your First Zarf**
-  
+
   </td>
   <td>
-  
+
   You've got a development workstation setup, so... now what?  Why not _build your own Zarf_? Step-by-step instructions, here.
 
   </td>
@@ -169,12 +169,12 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
 <!-- row start -->
   <tr valign="top">
   <td>
-  
+
   **Contribution Guide**
-  
+
   </td>
   <td>
-  
+
   As with most collaborative efforts there are guidelines for contributing to the project. Find out what they are & how to make them work, here.
 
   </td>
@@ -207,12 +207,12 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
   <td width="150">
 
   **Supported OSes**
-  
+
   </td>
   <td>
-  
+
   Zarf is intended to run on a variety of Operating Systems&mdash;you can find out which _and_ discover how to take Zarf for a test-drive (in a VM of your favorite flavor) by clicking the link!
-  
+
   </td>
   <td>
 
@@ -227,14 +227,14 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
   <td>
 
   **Zarf Components**
-  
+
   </td>
   <td>
-  
+
   Need to understand what's happening in your cluster? Zarf can give you visibility by injecting a _Logging_ component.  Looking for some additional CLI tooling? Install the _Management_ component.
-  
+
   Find out all the other stuff Zarf offers, here.
-  
+
   </td>
   <td>
 
@@ -249,12 +249,12 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
   <td>
 
   **Usage Examples**
-  
+
   </td>
   <td>
-  
+
   There are a bunch of interesting ways to use Zarf beyond "space-marine-ing" your way through _the_ pixel demon invasion. Browse our examples directory to find out what other neat things are available.
-  
+
   </td>
   <td>
 
@@ -267,16 +267,16 @@ _To build the packages needed for RHEL-based distros, you will need to use your 
 <!-- row start -->
   <tr valign="top">
   <td>
-  
+
   **Iron Bank** <br/>
 
   _Hardened image registry_
-  
+
   </td>
   <td>
 
   Zarf can build deployment packages using images pulled from pretty much anywhere... but for gov't-approved & "[hardened](https://en.wikipedia.org/wiki/Hardening_(computing))" container images check out Platform One's [Iron Bank](https://p1.dso.mil/#/products/iron-bank/).
-  
+
   </td>
   <td>
 

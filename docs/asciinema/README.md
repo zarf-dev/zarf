@@ -78,7 +78,7 @@ When you run `asciinema` commands, if you do not already have an `install-id` fi
 If you need recordings to stick around and be listed in a specific group, however&mdash;and in this case you do&mdash;then you'll need access to an install id that has been registered with Zarf's account on asciinema.org.
 
 > _**Dig in!**_
-> 
+>
 > Go ahead and have a look at the asciinema [usage page](https://asciinema.org/docs/usage) (under the "auth" heading) if you're interested in more detail / background on this topic.
 
 &nbsp;
