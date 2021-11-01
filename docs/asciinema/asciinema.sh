@@ -27,7 +27,7 @@ function help() {
   echo ""
 }
 
-# executes (and records) a given scenario file's terminal session 
+# executes (and records) a given scenario file's terminal session
 function run() {
   local fname="${1##*/}"
   local fpath="$SCENARIOS/$fname"
@@ -165,7 +165,7 @@ function sub() {
   local lines="$( printf '%.0s- ' {1..12} )"
   local found="$( cat - | paste -d '\t' $lines )" # <-- reads stdin!
   local clean="$( echo "$found" | tr -s ' ' | sed -E 's/: \t/: -\t/g' )"
-  
+
   echo "$clean" | while IFS= read -r c ; do
     local  sub="$( echo "$c" | grep -Po 'sub : \K[^\t]*' )"
     if [ "$sub" = "no" ] ; then continue ; fi
@@ -238,7 +238,7 @@ function zap() {
     plan="$plan$r"$'\t'"$verdict"$'\n'
   done <<< "$recordings"
   plan="${plan::-1}"
-  
+
   # act on the plan?
   echo ""
   echo "$plan"
@@ -259,7 +259,7 @@ function zap() {
 
   echo "$plan" | grep -P 'delete$' | while IFS= read -r p ; do
     local path="$( echo "$p" | awk -F $'\t' '{print $2}' )"
-    
+
     # secure a csrf token via "get" request
     local get="$( cat "$HERE/get.tmpl.curl" \
       | sed 's|{{path}}|'"$path"'|g' \
@@ -300,7 +300,7 @@ case "$cmd" in
   "run")
     if [ "$#" -lt 1 ] || [ "$1" = "all" ] ; then run_all ; else run "$@" ; fi
     ;;
-  
+
   "pub")
     if [ "$#" -lt 1 ] || [ "$1" = "all" ] ; then pub_all ; else pub "$@" ; fi
     ;;
