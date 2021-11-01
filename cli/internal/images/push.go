@@ -19,13 +19,14 @@ func PushAll(imageTarballPath string, buildImageList []string) {
 		logContext.Info("Updating image")
 		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformOptions)
 		if err != nil {
-			logContext.Error(err)
+			logContext.Debug(err)
 			logContext.Warn("Unable to load the image from the update package")
 			return
 		}
 
 		onlineName, err := docker.ParseNormalizedNamed(src)
 		if err != nil {
+			logContext.Debug(err)
 			logContext.Warn("Unable to parse the image domain")
 			return
 		}
@@ -34,7 +35,7 @@ func PushAll(imageTarballPath string, buildImageList []string) {
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {
-			logContext.Error(err)
+			logContext.Debug(err)
 			logContext.Warn("Unable to push the image to the registry")
 		}
 	}

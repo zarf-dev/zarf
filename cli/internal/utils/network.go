@@ -62,6 +62,7 @@ func DownloadToFile(url string, target string) {
 	// Create the file
 	destinationFile, err := os.Create(target)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to create the destination file")
 	}
 	defer destinationFile.Close()
@@ -69,6 +70,7 @@ func DownloadToFile(url string, target string) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to download the file", err)
 	}
 	defer resp.Body.Close()
@@ -81,6 +83,7 @@ func DownloadToFile(url string, target string) {
 	// Writer the body to file
 	_, err = io.Copy(destinationFile, resp.Body)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to save the file", err)
 	}
 }

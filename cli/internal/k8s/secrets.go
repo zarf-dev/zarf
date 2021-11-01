@@ -24,18 +24,22 @@ func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath st
 
 	err := namespaceSecrets.Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
+		logContext.Debug(err)
 		logContext.Warn("Error deleting the secret")
 	}
 
 	tlsCert, err := readFile(certPath)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to read the TLS public certificate")
 	}
 	tlsKey, err := readFile(keyPath)
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to read the TLS private key")
 	}
 	if _, err := tls.X509KeyPair(tlsCert, tlsKey); err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to create the TLS keypair")
 	}
 
@@ -57,6 +61,7 @@ func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath st
 
 	_, err = namespaceSecrets.Create(context.TODO(), secretTLS, metav1.CreateOptions{})
 	if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Unable to create the secret", err)
 	}
 }

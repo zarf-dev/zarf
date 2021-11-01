@@ -46,6 +46,7 @@ func pull(gitUrl string, targetFolder string) {
 	if err == git.ErrRepositoryAlreadyExists {
 		logContext.Info("Repo already cloned")
 	} else if err != nil {
+		logContext.Debug(err)
 		logContext.Fatal("Not a valid git repo or unable to clone")
 	}
 
