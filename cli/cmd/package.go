@@ -28,7 +28,7 @@ var packageCreateCmd = &cobra.Command{
 
 var packageDeployCmd = &cobra.Command{
 	Use:   "deploy PACKAGE",
-	Short: "deploys an update package file (runs offline)",
+	Short: "Deploys an update package from a local file or URL (runs offline)",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
