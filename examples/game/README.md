@@ -73,7 +73,7 @@ zarf init
 Answer the follow-on prompts as appropriate for your machine configuration & give it a few seconds to run.
 
 Congratulations!  Your machine is now a single node k8s cluster!
- 
+
  > _**Note**_
  >
  > Zarf supports fire-and-forget installs too! Give `zarf init --help` a call for more details on that.
