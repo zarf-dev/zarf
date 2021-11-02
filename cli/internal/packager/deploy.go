@@ -1,6 +1,8 @@
 package packager
 
 import (
+	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -173,6 +175,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 				logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
 			}
 			utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", htpasswd)
+			utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", config.ZarfGitUser, gitSecret))))
 		}
 
 		utils.CreatePathAndCopy(tempPath.manifests, config.K3sManifestPath)
