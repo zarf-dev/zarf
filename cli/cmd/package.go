@@ -12,6 +12,8 @@ import (
 var confirmCreate bool
 var confirmDeploy bool
 var deployComponents string
+var insecureDeploy bool
+var shasum string
 
 var packageCmd = &cobra.Command{
 	Use:   "package",
@@ -32,7 +34,8 @@ var packageDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Deploy(packageName, confirmDeploy, deployComponents)
+		localPackagePath := packager.HandleIfURL(packageName, shasum, insecureDeploy)
+		packager.Deploy(localPackagePath, confirmDeploy, deployComponents)
 	},
 }
 
@@ -71,4 +74,6 @@ func init() {
 	packageCreateCmd.Flags().BoolVar(&confirmCreate, "confirm", false, "Confirm package creation without prompting")
 	packageDeployCmd.Flags().BoolVar(&confirmDeploy, "confirm", false, "Confirm package deployment without prompting")
 	packageDeployCmd.Flags().StringVar(&deployComponents, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
+	packageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", false, "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
+	packageDeployCmd.Flags().StringVar(&shasum, "shasum", "", "Shasum of the package to deploy. Required if deployinga remote package and `--insecure` is not provided")
 }
