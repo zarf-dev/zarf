@@ -41,7 +41,7 @@ In order to figure out what your personal "CLI secret" is you first need to log 
 Then, pop open your "User Profile" and copy down your `Username` and `CLI secret`.
 
 > _**Take note**_
-> 
+>
 > You need your **Username** specifically&mdash;trying to log Zarf into Iron Bank using Email will not work!
 
 &nbsp;

@@ -18,15 +18,15 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 1. Download:
 
     - The zarf cluster initialization package: `zarf-init.tar.zst`.
-    
+
     - The appropriate zarf binary for your system (choose _one_):
 
         | system          | binary            |
-        | ---             | ---               | 
+        | ---             | ---               |
         | Linux (64bit)   | `zarf`            |
         | Intel-based Mac | `zarf-mac-intel`  |
         | [Apple-based Mac](https://support.apple.com/en-us/HT211814) | `zarf-mac-apple`  |
-    
+
     - (optional) The checksum file: `zarf.sha256`.
 
 1. (optional) Verify integrity of the downloaded files by validating their hashes&mdash;more about that ( [here](https://en.wikipedia.org/wiki/Checksum) / [here](https://help.ubuntu.com/community/HowToSHA256SUM) ) if you're interested. From _the directory holding your files_, run:
@@ -53,7 +53,7 @@ chmod +x ./zarf && ./zarf help
 ```
 
 > _**Take note**_
-> 
+>
 > Commands run this way _will_ make changes to your current system / environment!
 >
 >This is the expected usage pattern for production but for demonstration / development & test there are better, **virtual machine**-isolated ways to run Zarf. Keep reading to find out how to get setup for those!
