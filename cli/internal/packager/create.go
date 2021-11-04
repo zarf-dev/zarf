@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
@@ -118,11 +117,8 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 		logrus.Info("loading git repos for gitops service transfer")
 		// Load all specified git repos
 		for _, url := range assets.Repos {
-			matches := strings.Split(url, "@")
-			if len(matches) < 2 {
-				logrus.WithField("remote", url).Fatal("Unable to parse git url. Ensure you use the format url.git@tag")
-			}
-			git.Pull(matches[0], tempPath.repos)
+			// Pull all of the references if there is no `@` in the string
+			git.Pull(url, tempPath.repos)
 		}
 	}
 }
