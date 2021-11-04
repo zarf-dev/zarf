@@ -1,0 +1,164 @@
+#!/usr/bin/expect -f
+
+# Assumptions:
+# - run as root (required to run zarf)
+# - invocation working dir is <root>/build (where zarf binary is)
+
+# Refs:
+# - https://linux.die.net/man/1/expect
+# - https://www.tcl.tk/man/tcl8.6/TclCmd/contents.html
+
+
+# variables / config
+set env(PATH) "$::env(PATH):[file normalize .]" ; # add zarf to path
+set gamedir "[file normalize ../examples/game]"
+set rcfile "/tmp/asciinema-rcfile"
+set title [
+  file tail [ file rootname [lindex $argv0] ]
+]
+set recording [lindex $argv 0]
+set log [lindex $argv 1]
+log_file $log
+set send_human {.1 .2 10 .05 1}   ; # "human-like" typing speeds on 'send -h'
+set env(PS1) {\[\033[01;32m\]root@host\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# } ; # custom terminal input prompt
+set prompt ".*root@host.*:.*# $"
+#match_max 25000
+#set expect_out(buffer) {}
+#set down_key "\033\[B"
+
+
+# proc defs
+proc wait_input { {timeout 10} } {
+  global prompt
+  expect -timeout $timeout -re $prompt
+}
+
+proc input_wait { {seconds 1} } {
+  wait_input ; sleep $seconds
+}
+
+proc comment { {text " "} } {
+  send "# --> " ; send -h "$text \r\r" ;  input_wait 1
+}
+
+proc do { {cmd "\r"} {timeout 2} } {
+  send -h "$cmd" ; sleep 1 ; send "\r\r" ; input_wait $timeout
+}
+
+proc wait_for { {predicate "1 = 1"} {timeout 120} } {
+  set template {
+    START="$SECONDS"
+    until [ ||predicate|| ] ; do
+      sleep 2
+      if [ "$(( $SECONDS - $START ))" -gt "||timeout||" ] ; then
+        echo -e "\nwait_for::timeout!\n" > /dev/tty ; exit 1
+      fi
+    done
+  }
+  set script [ string map [ list \
+    ||predicate|| $predicate \
+    ||timeout|| $timeout \
+  ] $template ]
+  set result [ system "/bin/bash -c '$script'" ]
+}
+
+proc clean {} {
+  global gamedir
+  global rcfile
+
+  spawn bash --norc
+  send "rm -f $gamedir/*.tar.zst $rcfile\r"
+  send "zarf destroy --confirm\r"
+  send "exit\r"
+  expect eof
+}
+
+proc setup {} {
+  global rcfile
+
+  spawn bash --norc
+  send "echo 'alias ls=\"ls --color=auto\"' > $rcfile\r" ; expect *
+  send "echo 'alias grep=\"grep --color=auto\"' >> $rcfile\r" ; expect *
+  send "echo 'export PS1=\"$::env(PS1)\"' >> $rcfile\r" ; expect *
+  send "echo 'export GREP_COLOR=\"01;97;100\"' >> $rcfile\r" ; expect *
+  send "exit\r"
+  expect eof
+}
+
+
+# filesystem to ready state
+clean
+setup
+
+
+# prep cluster
+spawn bash --norc
+
+send -h "zarf init --host=localhost --components=management --confirm\r"
+expect -timeout 120 -re {.*Grafana Username[^=]*=([^\s]*)}
+set grafana_user $expect_out(1,string)
+expect -re {.*Password \(all\)[^=]*="([^"]*)"}
+set grafana_pass $expect_out(1,string)
+expect -re $prompt
+
+send -h "cd $gamedir\r" ; wait_input
+send -h "zarf package create --confirm\r" ; wait_input 120
+
+wait_for {$( curl -o /dev/null -s -w '%{http_code}' https://localhost/v2 ) == '404'}
+send -h "zarf package deploy zarf-\t --confirm\r" ; wait_input 120
+
+wait_for {$( curl -o /dev/null -s -w '%{http_code}' https://localhost ) == '200'}
+send -h "exit\r"
+expect eof
+
+
+# start recording & wait for input prompt
+spawn asciinema rec \
+  --command "/bin/bash --rcfile $rcfile" \
+  --title "$title" \
+  --idle-time-limit 3 \
+  --overwrite \
+  $recording
+expect -re {asciinema: .* done} ; wait_input
+
+comment "cluster up?"
+do "kubectl cluster-info" ; wait_input
+
+comment "game running?"
+do "kubectl get pod -l app=game"; wait_input
+
+comment "install logging component"
+send -h "zarf init --host=localhost --components=logging --confirm\r\r"
+wait_input 120
+
+comment "PLG stack up?"
+wait_for {$( curl -o /dev/null -sL -w '%{http_code}' https://localhost/monitor ) == '200'}
+system {kubectl wait -n logging pods --all --for=condition=Ready --selector=release=loki --timeout=120s}
+do "kubectl get pods -n logging" ; wait_input
+
+comment "call game to generate logs"
+do "curl -sL https://localhost | grep -e '^' -e 'main(.*$'"
+
+# wait for logs to propagate to grafana
+sleep 60
+
+comment "pod logs available to grafana (via loki)?"
+send -h "curl -sL -u '"
+send "$grafana_user:$grafana_pass"
+send -h "' \\\r"
+send {  'https://localhost/monitor/api/datasources/proxy/1/loki/api/v1/query_range?direction=BACKWARD&limit=1&query=%7Bapp%3D"game"%7D'}
+send -h "\\\r"
+send -h "  | jq '.data.result' \\\r"
+send -h {  | grep -e '^' -e '".*stdout.*$'}
+send -h "\r\r"
+wait_input 60
+
+comment "and finally, to cleanup"
+send -h "zarf destroy --confirm\r\r"
+wait_input 60
+
+comment "its gone!"
+do "kubectl cluster-info"
+
+comment "success!"
+do "exit"
