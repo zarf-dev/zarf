@@ -20,8 +20,10 @@ const PackagePrefix = "zarf-package-"
 const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
-var config ZarfConfig
 var CLIVersion = "unset"
+var ValidPackageExtensions = [...]string{".tar.zst", ".tar", ".zip"}
+
+var config ZarfConfig
 
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"

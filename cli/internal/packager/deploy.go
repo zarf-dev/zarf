@@ -22,8 +22,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var validExtensions = []string{".tar.zst", ".tar", ".zip"}
-
 func Deploy(packagePath string, confirm bool, componentRequest string) {
 	// Prevent disk pressure on smaller systems due to leaking temp files
 	_ = os.RemoveAll("/tmp/zarf*")
@@ -186,7 +184,7 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 	}
 }
 
-// If privded package is a URL download it to a temp directory
+// If provided package is a URL download it to a temp directory
 func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
@@ -201,7 +199,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 
 	// Check the extension on the package is what we expect
 	if !isValidFileExtension(providedURL.Path) {
-		logrus.Fatalf("The URL provided (%s) had an unrecognized file extension.\n", providedURL.String())
+		logrus.Fatalf("Only %s file extensions are permitted.\n", config.ValidPackageExtensions)
 	}
 
 	// Download the package
@@ -242,7 +240,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 }
 
 func isValidFileExtension(filename string) bool {
-	for _, extension := range validExtensions {
+	for _, extension := range config.ValidPackageExtensions {
 		if strings.HasSuffix(filename, extension) {
 			logrus.WithField("packagePath", filename).Warn("Package extension is valid.")
 			return true
