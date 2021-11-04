@@ -64,7 +64,7 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
   </td>
   <td>
 
-  Coming Soon!
+  [Read](./examples/game/add-logging.md)
 
   </td>
   </tr>
