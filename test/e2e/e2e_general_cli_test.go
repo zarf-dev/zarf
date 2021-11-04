@@ -2,13 +2,14 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGeneralCli(t *testing.T) {
@@ -90,5 +91,15 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host zarf@server", username))
 	require.Error(t, err, output)
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", username))
+	require.Error(t, err, output)
+
+	// Test that `zarf package deploy` doesn't die when given a URL
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom.tar.zst --confirm --insecure'", username))
+	require.NoError(t, err, output)
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom.tar.zst --confirm --shasum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'", username))
+	require.NoError(t, err, output)
+
+	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
 	require.Error(t, err, output)
 }

@@ -1,8 +1,13 @@
 package packager
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,19 +24,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Deploy(packageName string, confirm bool, componentRequest string) {
+func Deploy(packagePath string, confirm bool, componentRequest string) {
 	// Prevent disk pressure on smaller systems due to leaking temp files
 	_ = os.RemoveAll("/tmp/zarf*")
 	tempPath := createPaths()
 
-	if utils.InvalidPath(packageName) {
-		logrus.WithField("archive", packageName).Fatal("The package archive seems to be missing or unreadable.")
+	// Make sure the user gave us a package we can work with
+	if utils.InvalidPath(packagePath) {
+		logrus.WithField("localPackagePath", packagePath).Fatal("Was not able to find the package on the local system")
 	}
 
-	logrus.Info("Extracting the package, this may take a few moments")
-
 	// Extract the archive
-	err := archiver.Unarchive(packageName, tempPath.base)
+	logrus.Info("Extracting the package, this may take a few moments")
+	err := archiver.Unarchive(packagePath, tempPath.base)
 	if err != nil {
 		logrus.Debug(err)
 		logrus.Fatal("Unable to extract the package contents")
@@ -186,4 +191,70 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		// Push all the repos from the extracted archive
 		git.PushAllDirectories(tempPath.repos)
 	}
+}
+
+// If provided package is a URL download it to a temp directory
+func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
+	// Check if the user gave us a remote package
+	providedURL, err := url.Parse(packagePath)
+	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
+		logrus.WithField("archive", packagePath).Debug("The package provided is not a remote package.")
+		return packagePath
+	}
+
+	if !insecureDeploy && shasum == "" {
+		logrus.Fatal("When deploying a remote package you must provide either a `--shasum` or the `--insecure` flag. Neither were provided.")
+	}
+
+	// Check the extension on the package is what we expect
+	if !isValidFileExtension(providedURL.Path) {
+		logrus.Fatalf("Only %s file extensions are permitted.\n", config.GetValidPackageExtensions)
+	}
+
+	// Download the package
+	resp, err := http.Get(packagePath)
+	if err != nil {
+		logrus.Fatal("Unable to download the package: ", err)
+	}
+	defer resp.Body.Close()
+
+	// Write the package to a local file
+	tempPath := createPaths()
+	localPackagePath := tempPath.base + providedURL.Path
+	logrus.Debug("Creating local package with the path: ", localPackagePath)
+	packageFile, _ := os.Create(localPackagePath)
+	_, err = io.Copy(packageFile, resp.Body)
+	if err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to copy the contents of the provided URL into a local file.")
+	}
+
+	// Check the shasum if necessary
+	if !insecureDeploy {
+		hasher := sha256.New()
+		_, err = io.Copy(hasher, packageFile)
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Fatal("Unable to calculate the sha256 of the provided remote package.")
+		}
+
+		value := hex.EncodeToString(hasher.Sum(nil))
+		if value != shasum {
+			os.Remove(localPackagePath)
+			logrus.Fatalf("Provided shasum (%s) of the package did not match what was downloaded (%s)\n", shasum, value)
+		}
+	}
+
+	return localPackagePath
+}
+
+func isValidFileExtension(filename string) bool {
+	for _, extension := range config.GetValidPackageExtensions() {
+		if strings.HasSuffix(filename, extension) {
+			logrus.WithField("packagePath", filename).Warn("Package extension is valid.")
+			return true
+		}
+	}
+
+	return false
 }
