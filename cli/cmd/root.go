@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/cli/internal/log"
 	"github.com/defenseunicorns/zarf/cli/internal/packager"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 )
@@ -16,7 +16,10 @@ var zarfLogLevel = ""
 var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		log.SetLogLevel(zarfLogLevel)
+		setLogLevel(zarfLogLevel)
+		if logrus.GetLevel() != logrus.InfoLevel {
+			fmt.Printf("The log level has been changed to: %s\n", logrus.GetLevel())
+		}
 	},
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 	Args:  cobra.MaximumNArgs(1),
@@ -43,5 +46,24 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "info", "Log level when runnning Zarf. Valid options are: debug, info, warn, error, fatal")
+	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "info", "Log level when running Zarf. Valid options are: debug, info, warn, error, fatal")
+}
+
+func setLogLevel(logLevel string) {
+	switch logLevel {
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	default:
+		logrus.Fatal("Unrecognized log level entry: %s", logLevel)
+	}
 }
