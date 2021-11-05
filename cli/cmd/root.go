@@ -17,6 +17,9 @@ var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setLogLevel(zarfLogLevel)
+		if logrus.GetLevel() != logrus.InfoLevel {
+			fmt.Printf("The log level has been changed to: %s\n", logrus.GetLevel())
+		}
 	},
 	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 	Args:  cobra.MaximumNArgs(1),
