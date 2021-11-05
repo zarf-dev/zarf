@@ -54,15 +54,11 @@ vm-destroy: ## Cleanup plz
 	@vagrant destroy -f
 
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
+package-examples: package-example-big-bang package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
 
 .PHONY: package-example-big-bang
 package-example-big-bang: ## Create the Big Bang Core example
 	cd big-bang && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-
-.PHONY: package-example-appliance
-package-example-appliance: ## Create the Podinfo example
-	cd appliance && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## Create the Data Injection example
@@ -71,6 +67,10 @@ package-example-data-injection: ## Create the Data Injection example
 .PHONY: package-example-game
 package-example-game: ## Create the Doom example
 	cd game && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-gitops-data
+package-example-gitops-data: ## Create the gitops-data example
+	cd gitops-data && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-single-big-bang-package
 package-example-single-big-bang-package: ## Create the Single Big Bang Package example

@@ -11,3 +11,9 @@ mirrors:
   registry-1.docker.io:
     endpoint:
       - "https://127.0.0.1"
+  ghcr.io:
+    endpoint:
+      - "https://127.0.0.1"
+  registry.opensource.zalan.do:
+    endpoint:
+      - "https://127.0.0.1"
