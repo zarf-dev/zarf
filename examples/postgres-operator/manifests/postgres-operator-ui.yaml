@@ -12,6 +12,8 @@ spec:
       # registry: registry1.dso.mil
       # repository: ??
       # tag: ??
+    imagePullSecrets:
+      - name: private-registry
     resources:
       requests:
         cpu: "100m"

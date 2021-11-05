@@ -2,7 +2,9 @@ package packager
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -168,10 +170,17 @@ func deployComponents(tempPath componentPaths, assets config.ZarfComponent) {
 		// Get a list of all the k3s manifest files
 		manifests := utils.RecursiveFileList(tempPath.manifests)
 
-		// Iterate through all the manifests and replace any ZARF_SECRET values
+		// Iterate through all the manifests and replace any ZARF_SECRET, ZARF_HTPASSWD, or ZARF_DOCKERAUTH values
 		for _, manifest := range manifests {
 			logrus.WithField("path", manifest).Info("Processing manifest file")
 			utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
+			htpasswd, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
+			if err != nil {
+				logrus.Debug(err)
+				logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
+			}
+			utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", htpasswd)
+			utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", config.ZarfGitUser, gitSecret))))
 		}
 
 		utils.CreatePathAndCopy(tempPath.manifests, config.K3sManifestPath)

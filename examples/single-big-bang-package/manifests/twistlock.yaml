@@ -12,6 +12,9 @@ metadata:
 spec:
   chart: https://%{KUBERNETES_API}%/static/charts/twistlock-0.0.6-bb.1.tgz
   targetNamespace: twistlock
+  valuesContent: |-
+    imagePullSecrets:
+      - name: private-registry
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
