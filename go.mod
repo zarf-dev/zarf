@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/containerd/containerd v1.5.7
+	github.com/docker/cli v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/goccy/go-yaml v1.9.3
@@ -17,6 +18,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/ulikunitz/xz v0.5.8 // indirect; CVE-2020-16845
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	helm.sh/helm/v3 v3.7.0
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1
