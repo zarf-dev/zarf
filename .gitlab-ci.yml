@@ -35,7 +35,7 @@ package:
     - packages
   image: golang:1.16
   before_script:
-    - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
+    - ./build/zarf tools registry login registry1.dso.mil --username "$REGISTRY1_USERNAME_ZARF_ROBOT" --password "$REGISTRY1_PASSWORD_ZARF_ROBOT"
   script:
     - make ci-release
   after_script:
