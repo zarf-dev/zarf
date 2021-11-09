@@ -51,7 +51,7 @@ Then, pop open your "User Profile" and copy down your `Username` and `CLI secret
 Once you've pulled your credentials from the Harbor UI, Zarf can be granted access (in your name!) with a command like this:
 
 ```sh
-./zarf tools registry login registry1.dso.mil -u <YOUR_USERNAME> -p Password: <YOUR_CLI_SECRET>
+./zarf tools registry login registry1.dso.mil -u <YOUR_USERNAME> -p <YOUR_CLI_SECRET>
 ```
 
 Zarf will dump an auth file into your user home directory&mdash;`$HOME/.docker/config.json`&mdash;in a format that will be familiar to you if you've ever used [docker login](https://docs.docker.com/engine/reference/commandline/login/) before.
