@@ -46,8 +46,12 @@ package:
     paths:
       - build/
 
+# Don't run the legacy E2E tests on tags, since GitHub Actions is replacing them and they shouldn't be in the critical
+# path to cutting a release.
 e2e:
-  <<: *only-default
+  only:
+    - master
+    - merge_requests
   stage: e2e
   needs:
     - job: package
