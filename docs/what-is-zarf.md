@@ -2,9 +2,9 @@
 
 <img align="right" alt="zarf logo" src="../.images/zarf-logo.png" width="160" />
 
-Zarf was created to _**support the declarative creation & distribution of software "packages" into remote / constrained / independent Kubernetes (k8s) systems**_.
+Zarf was created to _**support the declarative creation & distribution of software "packages" into remote / constrained / independent Kubernetes systems**_.
 
-> "Zarf is a tool to help deploy modern stacks into airgap environments; it's all about moving the bits." &mdash; Jeff
+> "Zarf is a tool to help deploy modern stacks into air gapped environments; it's all about moving the bits." &mdash; Jeff
 
 \* Check out our [term list](#what-we-mean-by) below for clarity on all those fancy words.
 
@@ -12,13 +12,13 @@ Zarf was created to _**support the declarative creation & distribution of softwa
 
 ## What it does
 
-Zarf helps you get software to systems that need it _without_ dictating what that software is / how it's used. To accomplish that Zarf provides support for a few idependent-but-related activities:
+Zarf helps you get software to systems that need it _without_ dictating what that software is / how it's used. To accomplish that Zarf provides support for a few independent-but-related activities:
 
 1. rolling multiple types of software into a single distributable package,
 
 1. unrolling package contents "into place" for use on production systems, and
 
-1. running a lightweight k8s cluster&mdash;called "the Zarf cluster"&mdash;to host services necessary for exposing package contents to downstream consumers (e.g. container images, or git repositories).
+1. running a lightweight k8s cluster&mdash;called "the Zarf cluster"&mdash;to host services necessary for exposing package contents to downstream consumers (e.g. container images, git repositories).
 
 &nbsp;
 
@@ -35,7 +35,7 @@ Zarf is intended for use in a software deployment process that looks something l
 
 Zarf wants to go out into the world to pull & package application software, so 1) the world has to exist, and 2) you need to make sure Zarf can reach the required resources within it (i.e. has a connection to the internet).
 
-That should probably go without saying, but... it's the "little things" that trip us up, right?
+That should probably go without saying, but... it's always the "little things" that trip you up, right?
 
 ### (1) - Zarf builds you a package
 
@@ -45,7 +45,7 @@ Find out more about what that looks like in the "[Building a package](#building-
 
 ### (2) - You ship the package
 
-When it comes to remote / constrained / independent / air gapped systems, everyone's unique. Zarf doesn't have an opinion as to _how_ packages move just so long as you can them into your downstream environment.
+When it comes to remote / constrained / independent / air gapped systems, everyone's unique. Zarf doesn't have an opinion as to _how_ packages move just so long as you can get them into your downstream environment.
 
 Find out more about what that _might_ look like in the "[Shipping a package](#shipping-a-package)" section.
 
