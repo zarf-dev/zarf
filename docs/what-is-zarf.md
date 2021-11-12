@@ -10,15 +10,19 @@ Zarf was created to _**support the declarative creation & distribution of softwa
 
 &nbsp;
 
-## What it does
+## How it helps
 
-Zarf helps you get software to systems that need it _without_ dictating what that software is / how it's used. To accomplish that Zarf provides support for a few independent-but-related activities:
+Zarf supercharges the way you deliver complex, k8s-native applications to remote systems by reducing update preparation & installation to a few simple terminal commands. This support comes in two parts:
 
-1. rolling multiple types of software into a single distributable package,
+A precompiled `zarf` binary, which:
 
-1. unrolling package contents "into place" for use on production systems, and
+- rolls numerous software types / updates into a single distributable package (while on an internet-accessible network), and
 
-1. running a lightweight k8s cluster&mdash;called "the Zarf cluster"&mdash;to host services necessary for exposing package contents to downstream consumers (e.g. container images, git repositories).
+- unrolls package contents "into place" for use on production systems (while on an internet-isolated network).
+
+As well as a lightweight, long-running k8s cluster&mdash;called "**the Zarf cluster**"&mdash;which:
+
+- hosts the services necessary for exposing package contents to your isolated, downstream consumers.
 
 &nbsp;
 
@@ -39,7 +43,7 @@ That should probably go without saying, but... it's always the "little things" t
 
 ### (1) - Zarf builds you a package
 
-You feed Zarf a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
+You feed the `zarf` binary a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
 
 Find out more about what that looks like in the "[Building a package](#building-a-package)" section.
 
