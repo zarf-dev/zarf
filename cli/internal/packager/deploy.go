@@ -307,6 +307,15 @@ func loopScriptUntilSuccess(script string) {
 	var output string
 	var err error
 
+	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
+	binaryPath, err := os.Executable()
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Warn("Unable to determine the current zarf binary path")
+	} else {
+		script = strings.ReplaceAll(script, "./zarf ", binaryPath)
+	}
+
 	// 2 minutes per script (60 * 2 second waits)
 	tries := 60
 	for {
