@@ -1,48 +1,61 @@
 package k3s
 
 import (
-	"os"
-
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/packager"
+	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 )
 
 type InstallOptions struct {
-	PKI        utils.PKIConfig
+	PKI        pki.PKIConfig
 	Confirmed  bool
 	Components string
 }
 
-func Install(options InstallOptions) {
+func Install(options *InstallOptions) {
 	utils.RunPreflightChecks()
 
-	logrus.Info("Installing K3s")
+	logrus.Info("Initializing a new zarf cluster")
 
-	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
-
-	// Install RHEL RPMs if applicable
-	if utils.IsRHEL() {
-		configureRHEL()
-	}
-
-	// Create the K3s systemd service
-	createService()
-
-	createK3sSymlinks()
-
-	utils.HandlePKI(options.PKI)
-
+	// Genereate or create the zarf secret
 	gitSecret := git.GetOrCreateZarfSecret()
 
-	// Now that we have what the password will be, we should add the login entry to the system's registry config
-	err := utils.Login(config.ZarfLocalIP, config.ZarfGitUser, gitSecret)
+	// Convert to htpassword for the embedded registry
+	zarfHtPassword, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
 	if err != nil {
 		logrus.Debug(err)
-		logrus.Fatal("Unable to add login credentials for the utility registry")
+		logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
 	}
+
+	// Write the htpassword to the embedded registry target file
+	utils.WriteFile("/etc/zarf-registry-htpasswd", []byte(zarfHtPassword))
+
+	// Now that we have what the password will be, we should add the login entry to the system's registry config
+	err1 := utils.Login(config.ZarfLocalIP+":45000", config.ZarfGitUser, gitSecret)
+	err2 := utils.Login(config.ZarfLocalIP, config.ZarfGitUser, gitSecret)
+	if err1 != nil || err2 != nil {
+		logrus.Debug(err1)
+		logrus.Debug(err2)
+		logrus.Fatal("Unable to add login credentials for the gitops registry")
+	}
+
+	// We really need to make sure this is still necessary....
+	if utils.IsRHEL() {
+		// @todo: k3s docs recommend disabling this, but we should look at just tuning it appropriately
+		_, err := utils.ExecCommand(true, nil, "systemctl", "disable", "firewalld", "--now")
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Warn("Unable to disable the firewall")
+		}
+	}
+
+	// Continue running package deploy for all components like any other package
+	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
+
+	pki.InjectServerCert(options.PKI)
 
 	logrus.Info("Installation complete.  You can run \"/usr/local/bin/k9s\" to monitor the status of the deployment.")
 	logrus.WithFields(logrus.Fields{
@@ -50,41 +63,4 @@ func Install(options InstallOptions) {
 		"Grafana Username":              "zarf-admin",
 		"Password (all)":                gitSecret,
 	}).Warn("Credentials stored in ~/.git-credentials")
-}
-
-func createK3sSymlinks() {
-	logrus.Info("Creating kube config symlink")
-
-	// Make the k3s kubeconfig available to other standard K8s tools that bind to the default ~/.kube/config
-	err := utils.CreateDirectory("/root/.kube", 0700)
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Warn("Unable to create the root kube config directory")
-	} else {
-		// Dont log an error for now since re-runs throw an invalid error
-		_ = os.Symlink("/etc/rancher/k3s/k3s.yaml", "/root/.kube/config")
-	}
-
-	// Add aliases for k3s
-	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/kubectl")
-	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/ctr")
-	_ = os.Symlink(config.K3sBinary, "/usr/local/bin/crictl")
-}
-
-func createService() {
-	servicePath := "/etc/systemd/system/k3s.service"
-
-	_ = os.Symlink(servicePath, "/etc/systemd/system/multi-user.target.wants/k3s.service")
-
-	_, err := utils.ExecCommand(nil, "systemctl", "daemon-reload")
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Warn("Unable to reload systemd")
-	}
-
-	_, err = utils.ExecCommand(nil, "systemctl", "enable", "--now", "k3s")
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Warn("Unable to enable or start k3s via systemd")
-	}
 }

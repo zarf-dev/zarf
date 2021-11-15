@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
@@ -64,11 +66,26 @@ var readCredsCmd = &cobra.Command{
 	},
 }
 
+var configSchemaCmd = &cobra.Command{
+	Use:   "config-schema",
+	Short: "Generates a JSON schema for the zarf.yaml configuration",
+	Run: func(cmd *cobra.Command, args []string) {
+		schema := jsonschema.Reflect(&config.ZarfConfig{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Fatal("Unable to generate the zarf config schema")
+		}
+		fmt.Print(string(output))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
+	toolsCmd.AddCommand(configSchemaCmd)
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 

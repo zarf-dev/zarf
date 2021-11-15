@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k3s"
+	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -20,7 +21,8 @@ var initCmd = &cobra.Command{
 	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
 		handleTLSOptions()
-		k3s.Install(initOptions)
+		pki.HandlePKI(&initOptions.PKI)
+		k3s.Install(&initOptions)
 	},
 }
 

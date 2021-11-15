@@ -48,7 +48,6 @@ metadata:
   name: game
   namespace: default
 spec:
-  type: ClusterIP
   selector:
     app: game
   ports:

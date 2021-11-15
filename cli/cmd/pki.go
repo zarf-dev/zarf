@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var pkiOptions = utils.PKIConfig{}
+var pkiOptions = pki.PKIConfig{}
 
 var pkiCmd = &cobra.Command{
 	Use:   "pki",
@@ -31,7 +32,7 @@ var pkiRegenerate = &cobra.Command{
 			logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters.\n", pkiOptions.Host)
 		}
 
-		utils.GeneratePKI(pkiOptions)
+		pki.GeneratePKI(&pkiOptions)
 	},
 }
 
@@ -39,7 +40,7 @@ var pkiImport = &cobra.Command{
 	Use:   "import",
 	Short: "Import an existing key pair for the cluster ingress",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.HandlePKI(pkiOptions)
+		pki.HandlePKI(&pkiOptions)
 	},
 }
 

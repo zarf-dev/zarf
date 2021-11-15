@@ -66,15 +66,20 @@ func Create(confirm bool) {
 }
 
 func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
-	if len(assets.Charts) > 0 {
+	if len(assets.Appliance.Charts) > 0 {
 		logrus.Info("Loading static helm charts")
 		utils.CreateDirectory(tempPath.charts, 0700)
-		for _, chart := range assets.Charts {
+		utils.CreateDirectory(tempPath.values, 0700)
+		for _, chart := range assets.Appliance.Charts {
 			isGitURL, _ := regexp.MatchString("\\.git$", chart.Url)
 			if isGitURL {
 				helm.DownloadChartFromGit(chart, tempPath.charts)
 			} else {
 				helm.DownloadPublishedChart(chart, tempPath.charts)
+			}
+			if chart.ValuesFile != "" {
+				chartValueName := helm.StandardName(tempPath.values, chart)
+				utils.CreatePathAndCopy(chart.ValuesFile, chartValueName)
 			}
 		}
 	}
@@ -103,20 +108,25 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 		}
 	}
 
-	if len(assets.Images) > 0 {
-		logrus.Info("Loading container images")
-		images.PullAll(assets.Images, tempPath.images)
+	if len(assets.Appliance.Images) > 0 {
+		logrus.Info("Loading appliance container images")
+		images.PullAll(assets.Appliance.Images, tempPath.imagesAppliance)
 	}
 
-	if assets.Manifests != "" {
-		logrus.WithField("path", assets.Manifests).Info("Loading manifests for local install")
-		utils.CreatePathAndCopy(assets.Manifests, tempPath.manifests)
+	if len(assets.Gitops.Images) > 0 {
+		logrus.Info("Loading gitops container images")
+		images.PullAll(assets.Gitops.Images, tempPath.imagesGitops)
 	}
 
-	if len(assets.Repos) > 0 {
+	if assets.Appliance.ManifestsPath != "" {
+		logrus.WithField("path", assets.Appliance.ManifestsPath).Info("Loading manifests for local install")
+		utils.CreatePathAndCopy(assets.Appliance.ManifestsPath, tempPath.manifests)
+	}
+
+	if len(assets.Gitops.Repos) > 0 {
 		logrus.Info("loading git repos for gitops service transfer")
 		// Load all specified git repos
-		for _, url := range assets.Repos {
+		for _, url := range assets.Gitops.Repos {
 			// Pull all of the references if there is no `@` in the string
 			git.Pull(url, tempPath.repos)
 		}

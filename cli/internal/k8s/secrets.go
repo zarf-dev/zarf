@@ -12,7 +12,7 @@ import (
 
 func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
 
-	clientSet := connect()
+	clientSet := getClientset()
 	logContext := logrus.WithFields(logrus.Fields{
 		"Namespace": namespace,
 		"Name":      name,

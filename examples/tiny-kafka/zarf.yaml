@@ -6,16 +6,17 @@ metadata:
 components:
   - name: baseline
     required: true
-    manifests: manifests
-
-    charts:
-      - name: strimzi-kafka-operator
-        url: https://strimzi.io/charts/
-        version: 0.24.0
-
-    images:
-      - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
-      - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
+    appliance:
+      manifests: manifests
+      charts:
+        - name: strimzi-kafka-operator
+          url: https://strimzi.io/charts/
+          version: 0.24.0
+          namespace: kafka-demo
+          valuesFile: charts/strimzi-values.yaml
+      images:
+        - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
+        - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
 
   - name: kafka-tools
     description: Helper tools for working with kafka

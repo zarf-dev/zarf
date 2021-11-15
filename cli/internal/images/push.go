@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func PushAll(imageTarballPath string, buildImageList []string) {
+func PushAll(imageTarballPath string, buildImageList []string, targetHost string) {
 	logrus.Info("Loading images")
 	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
@@ -30,8 +30,11 @@ func PushAll(imageTarballPath string, buildImageList []string) {
 			logContext.Warn("Unable to parse the image domain")
 			return
 		}
-
-		offlineName := strings.Replace(src, docker.Domain(onlineName), config.ZarfLocalIP, 1)
+		// Allow overriding target registry
+		if targetHost == "" {
+			targetHost = config.ZarfLocalIP
+		}
+		offlineName := strings.Replace(src, docker.Domain(onlineName), targetHost, 1)
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {

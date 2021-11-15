@@ -5,6 +5,7 @@ mirrors:
   registry1.dso.mil:
     endpoint:
       - "https://127.0.0.1"
+      - "http://127.0.0.1:45000"
   docker.io:
     endpoint:
       - "https://127.0.0.1"

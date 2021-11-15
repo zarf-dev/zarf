@@ -1,0 +1,38 @@
+# image:
+  # registry: registry1.dso.mil
+  # repository: ??
+  # tag: ??
+imagePullSecrets:
+  - name: private-registry
+resources:
+  requests:
+    cpu: "100m"
+    memory: "100Mi"
+  limits:
+    cpu: "200m"
+    memory: "200Mi"
+envs:
+  # IMPORTANT: While operator chart and UI chart are idendependent, this is the interface between
+  # UI and operator API. Insert the service name of the operator API here!
+  operatorApiUrl: "http://postgres-operator:8080"
+  operatorClusterNameLabel: "cluster-name"
+  resourcesVisible: "False"
+  targetNamespace: "postgres-operator"
+  teams:
+    - "acid"
+extraEnvs:
+  - name: WALE_S3_ENDPOINT
+    value: "http+path://minio.minio-operator.svc.cluster.local:80"
+  - name: AWS_ENDPOINT
+    value: "http://minio.minio-operator.svc.cluster.local"
+  - name: SPILO_S3_BACKUP_PREFIX
+    value: "spilo/"
+  - name: AWS_ACCESS_KEY_ID
+    value: "minio"
+  - name: AWS_SECRET_ACCESS_KEY
+    value: "minio123"
+  - name: SPILO_S3_BACKUP_BUCKET
+    value: "postgres-operator-backups"
+# We are defining our own Ingress manifest
+ingress:
+  enabled: false

@@ -1,0 +1,6 @@
+image:
+  imagePullSecrets: private-registry
+imageRegistryOverride: registry1.dso.mil
+imageRepositoryOverride: ironbank/opensource/strimzi
+watchNamespaces:
+  - kafka-demo

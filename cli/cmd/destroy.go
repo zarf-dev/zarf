@@ -15,7 +15,7 @@ var destroyCmd = &cobra.Command{
 	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
 		burn()
-		_, _ = utils.ExecCommand(nil, "/usr/local/bin/k3s-remove.sh")
+		_, _ = utils.ExecCommand(true, nil, "/usr/local/bin/k3s-remove.sh")
 		burn()
 	},
 }

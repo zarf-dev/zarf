@@ -1,0 +1,13 @@
+[Unit]
+Description=Zarf Embedded Registry
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/usr/local/bin/zarf-registry serve /etc/zarf-registry.conf
+
+[Install]
+WantedBy=multi-user.target

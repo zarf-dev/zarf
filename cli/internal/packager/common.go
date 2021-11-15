@@ -11,12 +11,14 @@ import (
 )
 
 type componentPaths struct {
-	base      string
-	files     string
-	charts    string
-	images    string
-	repos     string
-	manifests string
+	base            string
+	files           string
+	charts          string
+	values          string
+	imagesAppliance string
+	imagesGitops    string
+	repos           string
+	manifests       string
 }
 type tempPaths struct {
 	base           string
@@ -37,12 +39,14 @@ func createComponentPaths(basePath string, component config.ZarfComponent) compo
 	basePath = basePath + "/" + component.Name
 	_ = utils.CreateDirectory(basePath, 0700)
 	return componentPaths{
-		base:      basePath,
-		files:     basePath + "/files",
-		charts:    basePath + "/charts",
-		images:    basePath + "/images-component-" + component.Name + ".tar",
-		repos:     basePath + "/repos",
-		manifests: basePath + "/manifests",
+		base:            basePath,
+		files:           basePath + "/files",
+		charts:          basePath + "/charts",
+		imagesAppliance: basePath + "/images-component-appliance-" + component.Name + ".tar",
+		imagesGitops:    basePath + "/images-component-gitops-" + component.Name + ".tar",
+		repos:           basePath + "/repos",
+		manifests:       basePath + "/manifests",
+		values:          basePath + "/values",
 	}
 }
 

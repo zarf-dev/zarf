@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: git-ingress
-  namespace: git
+  name: registry-ingress
+  namespace: registry
   annotations:
     kubernetes.io/ingress.class: "traefik"
     traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
@@ -10,10 +10,10 @@ spec:
   rules:
     - http:
         paths:
-          - path: /
+          - path: /v2/
             pathType: Prefix
             backend:
               service:
-                name: stuart-gitea-http
+                name: docker-registry
                 port:
-                  number: 3000
+                  number: 5000

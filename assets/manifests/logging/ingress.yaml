@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: git-ingress
-  namespace: git
+  name: grafana-ingress
+  namespace: logging
   annotations:
     kubernetes.io/ingress.class: "traefik"
     traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
@@ -10,10 +10,10 @@ spec:
   rules:
     - http:
         paths:
-          - path: /
+          - path: /monitor
             pathType: Prefix
             backend:
               service:
-                name: stuart-gitea-http
+                name: loki-grafana
                 port:
-                  number: 3000
+                  number: 80

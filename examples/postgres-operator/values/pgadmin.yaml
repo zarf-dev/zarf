@@ -1,0 +1,20 @@
+# image:
+  # registry: registry1.dso.mil
+  # repository: ??
+  # tag: ??
+imagePullSecrets:
+  - name: private-registry
+serviceAccount:
+  create: true
+persistentVolume:
+  size: 2Gi
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+env:
+  email: "zarf@example.local"
+  password: "###ZARF_SECRET###"

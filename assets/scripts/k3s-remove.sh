@@ -2,6 +2,10 @@
 
 echo -e '\033[0;31m'
 
+systemctl stop zarf-registry
+rm -f /usr/local/bin/registry
+rm -f /etc/systemd/system/zarf-registry.service
+
 for bin in /var/lib/rancher/k3s/data/**/bin/; do
 	[ -d $bin ] && export PATH=$PATH:$bin:$bin/aux
 done

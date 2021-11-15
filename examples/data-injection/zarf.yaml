@@ -22,6 +22,7 @@ data:
 components:
   - name: baseline
     required: true
-    manifests: manifests
-    images:
-      - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
+    appliance:
+      manifests: manifests
+      images:
+        - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4

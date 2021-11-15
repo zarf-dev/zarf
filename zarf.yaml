@@ -1,42 +1,65 @@
 kind: ZarfInitConfig
 
 components:
+  - name: embedded-registry
+    description: "Use to hold bootstrap images only"
+    required: true
+    scripts:
+      after:
+        - "systemctl daemon-reload"
+        - "systemctl enable --now zarf-registry"
+        - "./zarf tools registry catalog 127.0.0.1:45000"
+    files:
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/registry-2
+        shasum: 520ee67f4b91ba91b2a9c922fa40a5cd1301dc4b2955d3cd270b82c96f583455
+        target: /usr/local/bin/zarf-registry
+        executable: true
+      - source: assets/scripts/registry.service
+        target: /etc/systemd/system/zarf-registry.service
+      - source: assets/scripts/registry.conf
+        target: /etc/zarf-registry.conf
+
   - name: k3s
     description: "Install K3s"
     required: true
-    manifests: assets/manifests/common
+    scripts:
+      after:
+        - "systemctl daemon-reload"
+        - "systemctl enable --now k3s"
+        - "/usr/local/bin/kubectl get nodes"
+        - "/usr/local/bin/kubectl get middleware"
     files:
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.2+k3s1/k3s
-        shasum: 5097d515e220f8e97ab13c56cb9142ee4526b4c9eade5ed098e2906c1db2a163
-        target: "/usr/local/bin/k3s"
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
+        shasum: 89eb5f3d12524d0a9d5b56ba3e2707b106e1731dd0e6d2e7b898ac585f4959df
+        target: /usr/local/bin/k3s
         executable: true
+        symlinks:
+          - /usr/local/bin/kubectl
+          - /usr/local/bin/ctr
+          - /usr/local/bin/crictl
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: 772ae839f8c7718e2022d103076df53452d4f09d2a22afdf4b5796cf0cbce62c
+        target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       - source: assets/scripts/k3s-remove.sh
-        target: "/usr/local/bin/k3s-remove.sh"
+        target: /usr/local/bin/k3s-remove.sh
         executable: true
       - source: assets/scripts/k3s.service
-        target: "/etc/systemd/system/k3s.service"
+        target: /etc/systemd/system/k3s.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/k3s.service
       - source: assets/misc/registries.yaml
-        target: "/etc/rancher/k3s/registries.yaml"
-    images:
-      # K3s images
-      - docker.io/rancher/coredns-coredns:1.8.3
-      - docker.io/rancher/klipper-helm:v0.5.0-build20210505
-      - docker.io/rancher/klipper-lb:v0.2.0
-      - docker.io/rancher/library-busybox:1.32.1
-      - docker.io/rancher/library-traefik:2.4.8
-      - docker.io/rancher/local-path-provisioner:v0.0.19
-      - docker.io/rancher/metrics-server:v0.3.6
-      - docker.io/rancher/pause:3.1
+        target: /etc/rancher/k3s/registries.yaml
+        # Mock file for creating the kube config symlink
+      - source: assets/misc/empty-file
+        target: /etc/rancher/k3s/k3s.yaml
+        symlinks:
+          - /root/.kube/config
 
-  - name: container-registry
+  - name: traefik-ingress
+    description: "Install the Traefik ingress (usually needed for appliance mode)"
     required: true
-    manifests: assets/manifests/registry
-    images:
-      - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
-    charts:
-      - name: docker-registry
-        url: https://helm.twun.io
-        version: 1.10.1
+    appliance:
+      manifests: assets/manifests/traefik
 
   - name: management
     description: "Add the K9s terminal-based K8s UI for cluster management"
@@ -44,31 +67,47 @@ components:
     files:
       - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
         shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
-        target: "/usr/local/bin/k9s"
+        target: /usr/local/bin/k9s
         executable: true
       - source: assets/misc/k9s-theme.yaml
-        target: "/root/.k9s/skin.yml"
+        target: /root/.k9s/skin.yml
 
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     default: true
-    manifests: assets/manifests/logging
-    images:
-      - grafana/loki:2.2.0
-      - grafana/promtail:2.1.0
-      - grafana/grafana:7.5.0
-      - kiwigrid/k8s-sidecar:0.1.209
-    charts:
-      - name: loki-stack
-        url: https://grafana.github.io/helm-charts
-        version: 2.4.1
+    appliance:
+      manifests: assets/manifests/logging
+      images:
+        - grafana/loki:2.2.0
+        - grafana/promtail:2.1.0
+        - grafana/grafana:7.5.0
+        - kiwigrid/k8s-sidecar:0.1.209
+      charts:
+        - name: loki-stack
+          url: https://grafana.github.io/helm-charts
+          version: 2.4.1
+          namespace: logging
+          valuesFile: assets/charts/pgl-values.yaml
 
   - name: gitops-service
-    description: "Add Gitea for serving gitops-based clusters in an airgap"
-    manifests: assets/manifests/gitops
-    images:
-      - gitea/gitea:1.13.7
-    charts:
-      - name: gitea
-        url: https://dl.gitea.io/charts
-        version: 2.2.5
+    description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
+    scripts:
+      after:
+        # Zarf catalog will return 0 when the registry is operational
+        - "./zarf tools registry catalog 127.0.0.1"
+    appliance:
+      manifests: assets/manifests/gitops
+      images:
+        - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+        - gitea/gitea:1.13.7
+      charts:
+        - name: docker-registry
+          url: https://helm.twun.io
+          version: 1.10.1
+          namespace: registry
+          valuesFile: assets/charts/registry-values.yaml
+        - name: gitea
+          url: https://dl.gitea.io/charts
+          version: 2.2.5
+          namespace: git
+          valuesFile: assets/charts/registry-values.yaml
