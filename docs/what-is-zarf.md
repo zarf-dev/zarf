@@ -12,7 +12,7 @@ Zarf was created to _**support the declarative creation & distribution of softwa
 
 ## How it helps
 
-Zarf supercharges the way you deliver complex, k8s-native applications to remote systems by reducing update preparation & installation to a few simple terminal commands. This support comes in two parts:
+Zarf supercharges the way you deliver complex, k8s-native applications to remote systems by reducing tens / hundreds of individual software updates, movements, and manual installations to a few simple terminal commands. Its support comes in two parts:
 
 A precompiled `zarf` binary, which:
 
@@ -55,15 +55,15 @@ Find out more about what that _might_ look like in the "[Shipping a package](#sh
 
 ### (3) - Zarf publishes your package
 
-Once your package has landed, depending on what you've built into it, there are a couple of ways for Zarf to expose package contents.
+Once your package has landed, depending on what you've built into it, there are a couple of ways for the Zarf cluster to expose package contents:
 
-In the first scenario, your package consists of a single application (plus dependencies) and you configure the Zarf cluster to _serve your application directly to end users_. This mode of operation is called "Appliance Mode"&mdash; because it's small & self-contained like a kitchen appliance&mdash;and it is intended for use in environments where you want to run k8s-native tooling but need to keep a small footprint (i.e. single-purpose / constrained / "edge" environments).
+In the simplest usage scenario, your package consists of a single application (plus dependencies) and you configure the Zarf cluster to _serve your application directly to end users_. This mode of operation is called "Appliance Mode"&mdash; because it's small & self-contained like a kitchen appliance&mdash;and it is intended for use in environments where you want to run k8s-native tooling but need to keep a small footprint (i.e. single-purpose / constrained / "edge" environments).
 
 Find out more about what direct user service looks like in the "[Appliance Mode](#appliance-mode)" section.
 
-In the second scenario, your package consists of updates for many apps / systems and you configure the Zarf cluster to _propagate updates to downstream systems_ rather than to serve users directly. This mode of operation is called "Utility Cluster Mode"&mdash;as it's main job is to _add utility_ to other clusters&mdash;and it is intended for use in places where you want to run independent, full-service production environments (your own [Big Bang](https://github.com/DoD-Platform-One/big-bang) cluster, perhaps?) but you need help tracking, caching & disseminating system / dependency updates.
+In the standard, more complex usage scenario, your package consists of updates for many apps / systems and you configure the Zarf cluster to _propagate updates to downstream systems_ rather than to serve users directly. This mode of operation is called "Utility Mode"&mdash;as it's main job is to _add utility_ to other clusters&mdash;and it is intended for use in places where you want to run independent, full-service production environments (your own [Big Bang](https://github.com/DoD-Platform-One/big-bang) cluster, perhaps?) but you need help tracking, caching & disseminating system / dependency updates.
 
-Find out more about what downstream cluster service looks like in the "[Utility Cluster Mode](#utility-cluster-mode)" section.
+Find out more about what downstream cluster service looks like in the "[Utility Mode](#utility-mode)" section.
 
 &nbsp;
 
@@ -147,10 +147,10 @@ Connect directly to the Zarf cluster to access your newly unpackaged application
 &nbsp;
 
 
-### Utility Cluster Mode
+### Utility Mode
 
-<a href="../.images/what-is-zarf/utility-cluster-mode.png">
-  <img alt="how it works" src="../.images/what-is-zarf/utility-cluster-mode.png" height="283" />
+<a href="../.images/what-is-zarf/utility-mode.png">
+  <img alt="how it works" src="../.images/what-is-zarf/utility-mode.png" height="283" />
 </a>
 
 #### (0) - Package
