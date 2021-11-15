@@ -28,16 +28,17 @@ type ChartOptions struct {
 func TemplateChart(options ChartOptions) string {
 
 	logContext := logrus.WithFields(logrus.Fields{
-		"Namespace": options.Chart.Namespace,
-		"Chart":     options.Chart.Name,
-		"URL":       options.Chart.Url,
-		"Version":   options.Chart.Version,
+		"Namespace":  options.Chart.Namespace,
+		"Chart":      options.Chart.Name,
+		"URL":        options.Chart.Url,
+		"ValuesFile": options.Chart.ValuesFile,
+		"Version":    options.Chart.Version,
 	})
 
-	logContext.Info("Processing helm chart")
+	logContext.Info("Processing helm loadedChart")
 
 	// OMG THIS IS SOOOO GROSS PPL... https://github.com/helm/helm/issues/8780
-	os.Setenv("HELM_NAMESPACE", options.Chart.Namespace)
+	_ = os.Setenv("HELM_NAMESPACE", options.Chart.Namespace)
 
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
@@ -57,22 +58,23 @@ func TemplateChart(options ChartOptions) string {
 	client.ClientOnly = true
 	client.IncludeCRDs = true
 
-	// Must be unique per-namespace and < 53 characters. @todo: restrict helm chart name to this
+	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this
 	client.ReleaseName = options.Chart.Name
 
 	// Namespace must be specified
 	client.Namespace = options.Chart.Namespace
 
-	chart := loadChartFromTarball(options, logContext)
+	loadedChart := loadChartFromTarball(options, logContext)
 	chartValues := parseChartValues(options, logContext)
 
-	// Perform the chart installation
-	templatedChart, err := client.Run(chart, chartValues)
+	// Perform the loadedChart installation
+	templatedChart, err := client.Run(loadedChart, chartValues)
 
-	logContext.Debug(templatedChart.Manifest)
 	if err != nil {
 		logContext.Debug(err)
-		logContext.Fatal("Unable to install the helm chart")
+		logContext.Fatal("Unable to install the helm loadedChart")
+	} else {
+		logContext.Debug(templatedChart.Manifest)
 	}
 
 	return templatedChart.Manifest
@@ -97,7 +99,11 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	client.Run(tempPath+"/chart", nil)
+	_, err := client.Run(tempPath+"/chart", nil)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to generate the helm template")
+	}
 
 	_ = os.RemoveAll(tempPath)
 }
@@ -117,8 +123,8 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 	pull := action.NewPull()
 	pull.Settings = cli.New()
 
-	// Setup the chart downloader
-	downloader := downloader.ChartDownloader{
+	// Setup the chart chartDownloader
+	chartDownloader := downloader.ChartDownloader{
 		Out:     &out,
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
@@ -134,7 +140,7 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 	}
 
 	// Download the file (we don't control what name helm creates here)
-	saved, _, err := downloader.DownloadTo(chartURL, pull.Version, destination)
+	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
 	if err != nil {
 		logContext.Debug(err)
 		logContext.Fatal("Unable to download the helm chart")
@@ -142,7 +148,10 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(destination, chart) + ".tgz"
-	os.Rename(saved, destinationTarball)
+	err = os.Rename(saved, destinationTarball)
+	if err != nil {
+		logContext.Fatal("Unable to save the chart tarball")
+	}
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf
@@ -155,19 +164,19 @@ func loadChartFromTarball(options ChartOptions, logContext *logrus.Entry) *chart
 	// Get the path the temporary helmchart tarball
 	sourceTarball := StandardName(options.BasePath+"/charts", options.Chart) + ".tgz"
 
-	// Load the chart tarball
-	chart, err := loader.Load(sourceTarball)
+	// Load the loadedChart tarball
+	loadedChart, err := loader.Load(sourceTarball)
 	if err != nil {
 		logContext.Debug(err)
-		logContext.Fatal("Unable to load the helm chart")
+		logContext.Fatal("Unable to load the helm loadedChart")
 	}
 
-	if err = chart.Validate(); err != nil {
+	if err = loadedChart.Validate(); err != nil {
 		logContext.Debug(err)
-		logContext.Warn("Error validating the chart")
+		logContext.Warn("Error validating the loadedChart")
 	}
 
-	return chart
+	return loadedChart
 }
 
 func parseChartValues(options ChartOptions, logContext *logrus.Entry) map[string]interface{} {
