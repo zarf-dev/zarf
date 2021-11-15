@@ -34,7 +34,7 @@ var rootCmd = &cobra.Command{
 				return
 			}
 		}
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
