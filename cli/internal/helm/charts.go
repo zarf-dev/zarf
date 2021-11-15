@@ -33,8 +33,10 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 	git.CheckoutTag(tempPath, chart.Version)
 
 	// Tell helm where to save the archive and create the package
-	client.Destination = destination
-	client.Run(tempPath+"/chart", nil)
+	if client != nil {
+		client.Destination = destination
+		client.Run(tempPath+"/chart", nil)
+	}
 
 	_ = os.RemoveAll(tempPath)
 }
