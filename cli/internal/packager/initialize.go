@@ -1,9 +1,8 @@
-package k3s
+package packager
 
 import (
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
-	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
@@ -20,7 +19,7 @@ func Install(options *InstallOptions) {
 
 	logrus.Info("Initializing a new zarf cluster")
 
-	// Genereate or create the zarf secret
+	// Generate or create the zarf secret
 	gitSecret := git.GetOrCreateZarfSecret()
 
 	// Convert to htpassword for the embedded registry
@@ -53,7 +52,7 @@ func Install(options *InstallOptions) {
 	}
 
 	// Continue running package deploy for all components like any other package
-	packager.Deploy(config.PackageInitName, options.Confirmed, options.Components)
+	Deploy(config.PackageInitName, options.Confirmed, options.Components)
 
 	pki.InjectServerCert(options.PKI)
 

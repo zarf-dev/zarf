@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/cli/internal/k3s"
 	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initOptions = k3s.InstallOptions{}
+var initOptions = packager.InstallOptions{}
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -22,7 +22,7 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		handleTLSOptions()
 		pki.HandlePKI(&initOptions.PKI)
-		k3s.Install(&initOptions)
+		packager.Install(&initOptions)
 	},
 }
 

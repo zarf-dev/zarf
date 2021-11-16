@@ -48,8 +48,8 @@ func IsRHEL() bool {
 }
 
 func GetValidComponents(allComponents []config.ZarfComponent, requestedComponentNames []string) []config.ZarfComponent {
-	validComponentsList := []config.ZarfComponent{}
-	confirmedCompoonents := make([]bool, len(requestedComponentNames))
+	var validComponentsList []config.ZarfComponent
+	confirmedComponents := make([]bool, len(requestedComponentNames))
 	for _, component := range allComponents {
 		confirmComponent := component.Required
 
@@ -60,7 +60,7 @@ func GetValidComponents(allComponents []config.ZarfComponent, requestedComponent
 				for index, requestedComponent := range requestedComponentNames {
 					if strings.ToLower(requestedComponent) == component.Name {
 						confirmComponent = true
-						confirmedCompoonents[index] = true
+						confirmedComponents[index] = true
 					}
 				}
 			} else {
@@ -80,8 +80,8 @@ func GetValidComponents(allComponents []config.ZarfComponent, requestedComponent
 	}
 
 	// Verify that we were able to successfully identify all of the requested components
-	nonMatchedComponents := []string{}
-	for requestedComponentIndex, componentMatched := range confirmedCompoonents {
+	var nonMatchedComponents []string
+	for requestedComponentIndex, componentMatched := range confirmedComponents {
 		if componentMatched == false {
 			nonMatchedComponents = append(nonMatchedComponents, requestedComponentNames[requestedComponentIndex])
 		}
