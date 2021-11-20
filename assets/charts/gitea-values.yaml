@@ -1,7 +1,7 @@
 persistence:
   storageClass: local-path
 image:
-  pullPolicy: Never
+  repository: "###ZARF_REGISTRY###/gitea"
 gitea:
   admin:
     username: "zarf-git-user"

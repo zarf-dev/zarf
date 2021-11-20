@@ -6,8 +6,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/engine"
 	"github.com/argoproj/gitops-engine/pkg/sync"
 	"github.com/argoproj/gitops-engine/pkg/utils/kube"
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,36 +46,76 @@ func (syncSettings *settings) getGCMark(key kube.ResourceKey) string {
 }
 
 func (syncSettings *settings) parseManifests() ([]*unstructured.Unstructured, error) {
-	var res []*unstructured.Unstructured
+	var k8sResources []*unstructured.Unstructured
+	namespaces := make(map[string]bool)
 
-	manifests := utils.RecursiveFileList(syncSettings.path)
+	registryEndpoint := config.GetEmbeddedRegistryEndpoint()
+
+	gitSecret := git.GetOrCreateZarfSecret()
+
+	zarfHtPassword, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
+	if err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
+	}
+	zarfDockerAuth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", config.ZarfGitUser, gitSecret)))
+
+	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
+	manifests := utils.RecursiveFileList(syncSettings.path, pattern)
 
 	for _, manifest := range manifests {
-		if ext := strings.ToLower(filepath.Ext(manifest)); ext == ".yml" || ext == ".yaml" {
-			// Load the file contents
-			data, err := ioutil.ReadFile(manifest)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			// Split the k8s resources
-			items, err := kube.SplitYAML(data)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			res = append(res, items...)
+		logrus.WithField("path", manifest).Info("Processing manifest file")
+		utils.ReplaceText(manifest, "###ZARF_REGISTRY###", registryEndpoint)
+		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
+		utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", zarfHtPassword)
+		utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", zarfDockerAuth)
 
+		// Load the file contents
+		data, err := ioutil.ReadFile(manifest)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		// Split the k8s resources
+		items, err := kube.SplitYAML(data)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		// Append resources to the list
+		k8sResources = append(k8sResources, items...)
+	}
+
+	// Iterate first to capture all namespaces
+	for _, resource := range k8sResources {
+		// Add the namespace to the map if it does not exist
+		namespace := resource.GetNamespace()
+		if !namespaces[namespace] {
+			namespaces[namespace] = true
 		}
 	}
 
-	for i := range res {
-		annotations := res[i].GetAnnotations()
+	// Iterate over each namespace to generate image pull creds
+	for namespace := range namespaces {
+		generatedSecret := GenerateRegistryPullCreds(namespace)
+		// Convert to unstructured to match the expected type
+		convertedResource, err := kube.ToUnstructured(generatedSecret)
+		if err != nil {
+			logrus.WithField("namespace", namespace).Fatal("Unable to generate a registry secret for the namespace")
+		}
+		// Push the list of K8s resources for gitops engine to manage
+		k8sResources = append(k8sResources, convertedResource)
+	}
+
+	// Track annotations to help Gitops Engine know what's already managed by it
+	for _, resource := range k8sResources {
+		annotations := resource.GetAnnotations()
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
-		annotations[annotationGCMark] = syncSettings.getGCMark(kube.GetResourceKey(res[i]))
-		res[i].SetAnnotations(annotations)
+		annotations[annotationGCMark] = syncSettings.getGCMark(kube.GetResourceKey(resource))
+		resource.SetAnnotations(annotations)
 	}
-	return res, nil
+
+	return k8sResources, nil
 }
 
 func GitopsProcess(path string, revision string, namespace string) {

@@ -57,6 +57,10 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
+func GetEmbeddedRegistryEndpoint() string {
+	return "127.0.0.1:45000"
+}
+
 func Load(path string) {
 	logContext := logrus.WithField("path", path)
 	logContext.Info("Loading dynamic config")

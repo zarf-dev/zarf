@@ -3,12 +3,75 @@ package k8s
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type DockerConfig struct {
+	Auths DockerConfigEntry
+}
+
+type DockerConfigEntry map[string]DockerConfigEntryWithAuth
+
+type DockerConfigEntryWithAuth struct {
+	Auth string `json:"auth"`
+}
+
+func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
+	name := "zarf-registry"
+	logContext := logrus.WithFields(logrus.Fields{
+		"Namespace": namespace,
+		"Name":      name,
+	})
+
+	logContext.Info("Generating private registry credentials")
+	secretDockerConfig := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{},
+	}
+
+	// Generate or create the zarf secret
+	gitSecret := git.GetOrCreateZarfSecret()
+
+	// Auth field must be usernmae:password and base64 encoded
+	fieldValue := config.ZarfGitUser + ":" + gitSecret
+	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
+
+	// Create the expected structure for the dockerconfigjson
+	dockerConfigJSON := DockerConfig{
+		Auths: DockerConfigEntry{
+			config.GetEmbeddedRegistryEndpoint(): DockerConfigEntryWithAuth{
+				Auth: authEncodedValue,
+			},
+		},
+	}
+
+	// Convert to JSON
+	dockerConfigData, err := json.Marshal(dockerConfigJSON)
+	if err != nil {
+		logContext.Fatal("Unable to create the embedded registry secret")
+	}
+
+	// Add to the secret data
+	secretDockerConfig.Data[".dockerconfigjson"] = []byte(dockerConfigData)
+
+	return secretDockerConfig
+}
 
 func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
 

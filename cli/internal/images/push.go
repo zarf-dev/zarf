@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/reference/docker"
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
@@ -15,7 +14,10 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
 	for _, src := range buildImageList {
-		logContext := logrus.WithField("image", src)
+		logContext := logrus.WithFields(logrus.Fields{
+			"source": src,
+			"target": targetHost,
+		})
 		logContext.Info("Updating image")
 		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformOptions)
 		if err != nil {
@@ -30,10 +32,7 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 			logContext.Warn("Unable to parse the image domain")
 			return
 		}
-		// Allow overriding target registry
-		if targetHost == "" {
-			targetHost = config.ZarfLocalIP
-		}
+
 		offlineName := strings.Replace(src, docker.Domain(onlineName), targetHost, 1)
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)

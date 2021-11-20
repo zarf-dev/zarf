@@ -2,9 +2,7 @@ package packager
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -182,13 +180,11 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 		utils.CreateFilePath(targetBase)
 		utils.WriteFile(targetBase+"template.yaml", []byte(templatedChart))
 
-		injectManifestSecrets(targetBase)
 		k8s.GitopsProcess(targetBase, time.Now().Format(time.RFC3339Nano), chart.Namespace)
 	}
 
 	if component.Appliance.ManifestsPath != "" {
 		logrus.Info("Loading manifests for local install")
-		injectManifestSecrets(tempPath.manifests)
 		k8s.GitopsProcess(tempPath.manifests, time.Now().Format(time.RFC3339Nano), "")
 	}
 
@@ -278,28 +274,6 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func injectManifestSecrets(path string) {
-	gitSecret := git.GetOrCreateZarfSecret()
-
-	zarfHtPassword, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
-	}
-	zarfDockerAuth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", config.ZarfGitUser, gitSecret)))
-
-	// Get a list of all the k3s manifest files
-	manifests := utils.RecursiveFileList(path)
-
-	// Iterate through all the manifests and replace any ZARF_SECRET, ZARF_HTPASSWD, or ZARF_DOCKERAUTH values
-	for _, manifest := range manifests {
-		logrus.WithField("path", manifest).Info("Processing manifest file")
-		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
-		utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", zarfHtPassword)
-		utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", zarfDockerAuth)
-	}
-}
-
 func loopScriptUntilSuccess(script string) {
 	logContext := logrus.WithField("script", script)
 	logContext.Info("Waiting for script to complete successfully")
@@ -313,7 +287,9 @@ func loopScriptUntilSuccess(script string) {
 		logContext.Debug(err)
 		logContext.Warn("Unable to determine the current zarf binary path")
 	} else {
-		script = strings.ReplaceAll(script, "./zarf ", binaryPath)
+		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
+		// Update since we may have a new parsed script
+		logContext = logrus.WithField("script", script)
 	}
 
 	// 2 minutes per script (60 * 2 second waits)
