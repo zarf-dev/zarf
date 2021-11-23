@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"path/filepath"
+
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/packager"
 
 	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
@@ -44,13 +46,12 @@ func handleTLSOptions() {
 		}
 		_ = survey.AskOne(modePrompt, &tlsMode)
 
-		if tlsMode == Generate {
-			// Generate mode requires a host entry
-			prompt := &survey.Input{
-				Message: "Enter a host DNS entry or IP Address for the cluster ingress",
-			}
-			_ = survey.AskOne(prompt, &initOptions.PKI.Host, survey.WithValidator(survey.Required))
-		} else {
+		// Always ask for a host entry to avoid having to guess which entry in a cert if provided
+		prompt := &survey.Input{
+			Message: "Enter a host DNS entry or IP Address for the cluster ingress",
+		}
+		_ = survey.AskOne(prompt, &initOptions.PKI.Host, survey.WithValidator(survey.Required))
+		if tlsMode != Generate {
 			// Import mode requires the public and private key paths
 			prompt := &survey.Input{
 				Message: "Enter a file path to the ingress public key",
@@ -68,6 +69,8 @@ func handleTLSOptions() {
 	}
 	if !utils.CheckHostName(initOptions.PKI.Host) {
 		logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters.\n", initOptions.PKI.Host)
+	} else {
+		config.SetEmbeddedRegistryEndpoint(initOptions.PKI.Host)
 	}
 }
 

@@ -21,8 +21,8 @@ const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
 
 var CLIVersion = "unset"
-
 var config ZarfConfig
+var registryEndpoint = "10.0.2.15"
 
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
@@ -58,7 +58,11 @@ func GetValidPackageExtensions() [3]string {
 }
 
 func GetEmbeddedRegistryEndpoint() string {
-	return "127.0.0.1:45000"
+	return registryEndpoint + ":45000"
+}
+
+func SetEmbeddedRegistryEndpoint(endpoint string) {
+	registryEndpoint = endpoint
 }
 
 func Load(path string) {

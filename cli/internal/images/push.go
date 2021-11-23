@@ -26,14 +26,8 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 			return
 		}
 
-		onlineName, err := docker.ParseNormalizedNamed(src)
-		if err != nil {
-			logContext.Debug(err)
-			logContext.Warn("Unable to parse the image domain")
-			return
-		}
+		offlineName := SwapHost(src, targetHost)
 
-		offlineName := strings.Replace(src, docker.Domain(onlineName), targetHost, 1)
 		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {
@@ -41,4 +35,17 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 			logContext.Warn("Unable to push the image to the registry")
 		}
 	}
+}
+
+func SwapHost(src string, targetHost string) string {
+	onlineName, err := docker.ParseNormalizedNamed(src)
+	if err != nil {
+		logContext := logrus.WithField("image", src)
+		logContext.Debug(err)
+		logContext.Warn("Unable to parse the image domain")
+		return ""
+	}
+
+	result := strings.Replace(src, docker.Domain(onlineName), targetHost, 1)
+	return result
 }

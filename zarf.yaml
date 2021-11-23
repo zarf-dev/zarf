@@ -46,8 +46,6 @@ components:
         - "systemctl enable --now k3s"
         # Wait for the K3s node to come up
         - "/usr/local/bin/kubectl get nodes"
-        # Because K3s currently deploys Traefik, wait for it to finish loading it's CRDs
-        - "/usr/local/bin/kubectl get middleware"
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
@@ -83,6 +81,10 @@ components:
     required: true
     appliance:
       manifests: assets/manifests/traefik
+    scripts:
+      before:
+        # Wait for traefik to be fully loaded before loading it's config
+        - "/usr/local/bin/kubectl get middleware"
 
   - name: management
     description: "Add the K9s terminal-based K8s UI for cluster management"
@@ -97,42 +99,42 @@ components:
       - source: assets/misc/k9s-theme.yaml
         target: /root/.k9s/skin.yml
 
-  - name: logging
-    description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
-    default: true
-    appliance:
-      manifests: assets/manifests/logging
-      images:
-        - grafana/loki:2.2.0
-        - grafana/promtail:2.1.0
-        - grafana/grafana:7.5.0
-        - kiwigrid/k8s-sidecar:0.1.209
-      charts:
-        - name: loki-stack
-          url: https://grafana.github.io/helm-charts
-          version: 2.4.1
-          namespace: logging
-          valuesFile: assets/charts/pgl-values.yaml
+  # - name: logging
+  #   description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
+  #   default: true
+  #   appliance:
+  #     manifests: assets/manifests/logging
+  #     images:
+  #       - grafana/loki:2.2.0
+  #       - grafana/promtail:2.1.0
+  #       - grafana/grafana:7.5.0
+  #       - kiwigrid/k8s-sidecar:0.1.209
+  #     charts:
+  #       - name: loki-stack
+  #         url: https://grafana.github.io/helm-charts
+  #         version: 2.4.1
+  #         namespace: logging
+  #         valuesFile: assets/charts/pgl-values.yaml
 
-  - name: gitops-service
-    description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
-    scripts:
-      after:
-        # Zarf catalog will return 0 when the registry is operational
-        - "./zarf tools registry catalog 127.0.0.1"
-    appliance:
-      manifests: assets/manifests/gitops
-      images:
-        - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
-        - gitea/gitea:1.13.7
-      charts:
-        - name: docker-registry
-          url: https://helm.twun.io
-          version: 1.10.1
-          namespace: registry
-          valuesFile: assets/charts/registry-values.yaml
-        - name: gitea
-          url: https://dl.gitea.io/charts
-          version: 2.2.5
-          namespace: git
-          valuesFile: assets/charts/registry-values.yaml
+  # - name: gitops-service
+  #   description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
+  #   scripts:
+  #     after:
+  #       # Zarf catalog will return 0 when the registry is operational
+  #       - "./zarf tools registry catalog 127.0.0.1"
+  #   appliance:
+  #     manifests: assets/manifests/gitops
+  #     images:
+  #       - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+  #       - gitea/gitea:1.13.7
+  #     charts:
+  #       - name: docker-registry
+  #         url: https://helm.twun.io
+  #         version: 1.10.1
+  #         namespace: registry
+  #         valuesFile: assets/charts/registry-values.yaml
+  #       - name: gitea
+  #         url: https://dl.gitea.io/charts
+  #         version: 2.2.5
+  #         namespace: git
+  #         valuesFile: assets/charts/registry-values.yaml

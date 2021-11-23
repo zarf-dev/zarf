@@ -161,7 +161,7 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 	if len(component.Appliance.Images) > 0 {
 		// Handle appliance mode images
 		logrus.Info("Loading images for appliance mode install")
-		images.PushAll(tempPath.imagesAppliance, component.Appliance.Images, config.ZarfLocalIP+":45000")
+		images.PushAll(tempPath.imagesAppliance, component.Appliance.Images, config.GetEmbeddedRegistryEndpoint())
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(tempPath.imagesAppliance)
 	}
@@ -180,12 +180,12 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 		utils.CreateFilePath(targetBase)
 		utils.WriteFile(targetBase+"template.yaml", []byte(templatedChart))
 
-		k8s.GitopsProcess(targetBase, time.Now().Format(time.RFC3339Nano), chart.Namespace)
+		k8s.GitopsProcess(targetBase, chart.Namespace, component.Appliance)
 	}
 
 	if component.Appliance.ManifestsPath != "" {
 		logrus.Info("Loading manifests for local install")
-		k8s.GitopsProcess(tempPath.manifests, time.Now().Format(time.RFC3339Nano), "")
+		k8s.GitopsProcess(tempPath.manifests, "", component.Appliance)
 	}
 
 	if len(component.Gitops.Images) > 0 {

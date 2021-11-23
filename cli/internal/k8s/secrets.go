@@ -15,7 +15,7 @@ import (
 )
 
 type DockerConfig struct {
-	Auths DockerConfigEntry
+	Auths DockerConfigEntry `json:"auths"`
 }
 
 type DockerConfigEntry map[string]DockerConfigEntryWithAuth
@@ -71,6 +71,49 @@ func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	secretDockerConfig.Data[".dockerconfigjson"] = []byte(dockerConfigData)
 
 	return secretDockerConfig
+}
+
+func GenerateTLSSecret(namespace string, name string, certPath string, keyPath string) *corev1.Secret {
+	logContext := logrus.WithFields(logrus.Fields{
+		"Namespace": namespace,
+		"Name":      name,
+		"Cert":      certPath,
+	})
+
+	logContext.Info("Generating TLS ingress secret")
+
+	tlsCert, err := readFile(certPath)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to read the TLS public certificate")
+	}
+	tlsKey, err := readFile(keyPath)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to read the TLS private key")
+	}
+	if _, err := tls.X509KeyPair(tlsCert, tlsKey); err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to create the TLS keypair")
+	}
+
+	secretTLS := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{},
+	}
+
+	secretTLS.Data[corev1.TLSCertKey] = []byte(tlsCert)
+	secretTLS.Data[corev1.TLSPrivateKeyKey] = []byte(tlsKey)
+
+	return secretTLS
 }
 
 func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {

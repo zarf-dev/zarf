@@ -21,6 +21,7 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/utils/kube"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,14 +46,17 @@ func (syncSettings *settings) getGCMark(key kube.ResourceKey) string {
 	return "sha256." + base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
-func (syncSettings *settings) parseManifests() ([]*unstructured.Unstructured, error) {
+func (syncSettings *settings) parseManifests(componentImages []string) ([]*unstructured.Unstructured, error) {
+	// Collection of parsed K8s resources
 	var k8sResources []*unstructured.Unstructured
+	// Track the namespaces found in the manifests
 	namespaces := make(map[string]bool)
-
+	// The target embedded registry to replace in manifests
 	registryEndpoint := config.GetEmbeddedRegistryEndpoint()
-
+	// Embedded registry password
 	gitSecret := git.GetOrCreateZarfSecret()
 
+	// Create the embedded registry auth token
 	zarfHtPassword, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
 	if err != nil {
 		logrus.Debug(err)
@@ -60,12 +64,29 @@ func (syncSettings *settings) parseManifests() ([]*unstructured.Unstructured, er
 	}
 	zarfDockerAuth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", config.ZarfGitUser, gitSecret)))
 
+	// Only pull in yml and yaml files
 	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
 	manifests := utils.RecursiveFileList(syncSettings.path, pattern)
 
+	// Pre-compute all the replacments for the embedded registry
+	type ImageSwap struct {
+		find    string
+		replace string
+	}
+	var imageSwap []ImageSwap
+	for _, image := range componentImages {
+		imageSwap = append(imageSwap, ImageSwap{
+			find:    image,
+			replace: images.SwapHost(image, registryEndpoint),
+		})
+	}
+
 	for _, manifest := range manifests {
 		logrus.WithField("path", manifest).Info("Processing manifest file")
-		utils.ReplaceText(manifest, "###ZARF_REGISTRY###", registryEndpoint)
+		// Iterate over each imageswap to see if it exists in the manifest
+		for _, swap := range imageSwap {
+			utils.ReplaceText(manifest, swap.find, swap.replace)
+		}
 		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
 		utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", zarfHtPassword)
 		utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", zarfDockerAuth)
@@ -106,23 +127,24 @@ func (syncSettings *settings) parseManifests() ([]*unstructured.Unstructured, er
 	}
 
 	// Track annotations to help Gitops Engine know what's already managed by it
-	for _, resource := range k8sResources {
-		annotations := resource.GetAnnotations()
+	for idx := range k8sResources {
+		annotations := k8sResources[idx].GetAnnotations()
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
-		annotations[annotationGCMark] = syncSettings.getGCMark(kube.GetResourceKey(resource))
-		resource.SetAnnotations(annotations)
+		annotations[annotationGCMark] = syncSettings.getGCMark(kube.GetResourceKey(k8sResources[idx]))
+		k8sResources[idx].SetAnnotations(annotations)
 	}
 
 	return k8sResources, nil
 }
 
-func GitopsProcess(path string, revision string, namespace string) {
+func GitopsProcess(path string, namespace string, component config.ZarfComponentAppliance) {
 
 	logContext := logrus.WithField("manifest", path)
 	syncSettings := settings{path}
 	restConfig := getRestConfig()
+	revision := time.Now().Format(time.RFC3339Nano)
 
 	logContext.Info("Caching cluster state data")
 	clusterCache := cache.NewClusterCache(restConfig,
@@ -156,7 +178,7 @@ func GitopsProcess(path string, revision string, namespace string) {
 
 		logrus.Infof("Sync attempt %d of 20", attempt)
 
-		target, err := syncSettings.parseManifests()
+		target, err := syncSettings.parseManifests(component.Images)
 		if err != nil {
 			logrus.Debug(err)
 			logrus.Error(err, "Failed to parse target state")

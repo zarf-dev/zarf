@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
       - name: game
-        image: "###ZARF_REGISTRY###/platform-one/big-bang/apps/product-tools/zarf/game:doom"
+        image: "registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom"
         ports:
         - name: http
           containerPort: 8000

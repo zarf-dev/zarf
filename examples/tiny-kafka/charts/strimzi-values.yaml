@@ -1,5 +1,5 @@
 image:
-  imagePullSecrets: private-registry
+  imagePullSecrets: zarf-registry
 imageRegistryOverride: registry1.dso.mil
 imageRepositoryOverride: ironbank/opensource/strimzi
 watchNamespaces:

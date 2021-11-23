@@ -21,9 +21,11 @@ func Install(options *InstallOptions) {
 
 	// Generate or create the zarf secret
 	gitSecret := git.GetOrCreateZarfSecret()
+	logrus.Debug("gitSecret", gitSecret)
 
 	// Convert to htpassword for the embedded registry
 	zarfHtPassword, err := utils.GetHtpasswdString(config.ZarfGitUser, gitSecret)
+	logrus.Debug("zarfHtPassword", zarfHtPassword)
 	if err != nil {
 		logrus.Debug(err)
 		logrus.Fatal("Unable to define `htpasswd` string for the Zarf user")
@@ -33,7 +35,7 @@ func Install(options *InstallOptions) {
 	utils.WriteFile("/etc/zarf-registry-htpasswd", []byte(zarfHtPassword))
 
 	// Now that we have what the password will be, we should add the login entry to the system's registry config
-	err1 := utils.Login(config.ZarfLocalIP+":45000", config.ZarfGitUser, gitSecret)
+	err1 := utils.Login(config.GetEmbeddedRegistryEndpoint(), config.ZarfGitUser, gitSecret)
 	err2 := utils.Login(config.ZarfLocalIP, config.ZarfGitUser, gitSecret)
 	if err1 != nil || err2 != nil {
 		logrus.Debug(err1)

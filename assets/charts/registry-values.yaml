@@ -2,7 +2,7 @@ persistence:
   enabled: true
   storageClass: local-path
 image:
-  repository: "###ZARF_REGISTRY###/ironbank/opensource/docker/registry-v2"
+  repository: "registry1.dso.mil/ironbank/opensource/docker/registry-v2"
 imagePullSecrets: private-registry  
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
