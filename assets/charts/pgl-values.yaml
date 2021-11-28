@@ -14,8 +14,9 @@ grafana:
       root_url: "%(protocol)s://%(domain)s/monitor"
       serve_from_sub_path: true
 promtail:
-  imagePullSecrets:
-    - "zarf-registry"
+  image:
+    pullSecrets:
+      - "zarf-registry"
   extraScrapeConfigs:
     - job_name: journal
       journal:

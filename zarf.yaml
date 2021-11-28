@@ -122,10 +122,6 @@ components:
 
   - name: gitops-service
     description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
-    scripts:
-      after:
-        # Zarf catalog will return 0 when the registry is operational
-        - "./zarf tools registry catalog 127.0.0.1"
     appliance:
       manifests: assets/manifests/gitops
       images:
@@ -141,4 +137,4 @@ components:
           url: https://dl.gitea.io/charts
           version: 2.2.5
           namespace: git
-          valuesFile: assets/charts/registry-values.yaml
+          valuesFile: assets/charts/gitea-values.yaml
