@@ -6,7 +6,7 @@
 # configGeneral:
   # docker_image: registry1.dso.mil/.../spilo-13:2.1-p1
 imagePullSecrets:
-  - name: private-registry
+  - name: zarf-registry
 configPostgresPodResources:
   default_cpu_request: "100m"
   default_memory_request: "100Mi"

@@ -1,12 +1,21 @@
+loki:
+  image:
+    pullSecrets:
+      - "zarf-registry"
 grafana:
   enabled: true
   adminUser: "zarf-admin"
   adminPassword: "###ZARF_SECRET###"
+  image:
+    pullSecrets:
+      - "zarf-registry"
   grafana.ini:
     server:
       root_url: "%(protocol)s://%(domain)s/monitor"
       serve_from_sub_path: true
 promtail:
+  imagePullSecrets:
+    - "zarf-registry"
   extraScrapeConfigs:
     - job_name: journal
       journal:
@@ -29,5 +38,3 @@ promtail:
     - name: journal
       mountPath: /var/log/journal
       readOnly: true
-image:
-  pullPolicy: Never

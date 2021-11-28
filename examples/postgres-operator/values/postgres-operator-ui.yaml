@@ -3,7 +3,7 @@
   # repository: ??
   # tag: ??
 imagePullSecrets:
-  - name: private-registry
+  - name: zarf-registry
 resources:
   requests:
     cpu: "100m"

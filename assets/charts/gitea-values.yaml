@@ -1,5 +1,7 @@
 persistence:
   storageClass: local-path
+imagePullSecrets:
+  - "zarf-registry"
 gitea:
   admin:
     username: "zarf-git-user"
