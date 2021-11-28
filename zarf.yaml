@@ -32,6 +32,10 @@ components:
       # Create the registry config
       - source: assets/scripts/registry.conf
         target: /etc/zarf-registry.conf
+      # Registry removal script
+      - source: assets/scripts/zarf-clean-registry.sh
+        target: /usr/local/bin/zarf-clean-registry.sh
+        executable: true        
 
   - name: k3s
     description: >
@@ -62,8 +66,8 @@ components:
         shasum: 772ae839f8c7718e2022d103076df53452d4f09d2a22afdf4b5796cf0cbce62c
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       # K3s removal script
-      - source: assets/scripts/k3s-remove.sh
-        target: /usr/local/bin/k3s-remove.sh
+      - source: assets/scripts/zarf-clean-k3s.sh
+        target: /usr/local/bin/zarf-clean-k3s.sh
         executable: true
       # The K3s systemd service definition
       - source: assets/scripts/k3s.service
@@ -99,42 +103,42 @@ components:
       - source: assets/misc/k9s-theme.yaml
         target: /root/.k9s/skin.yml
 
-  # - name: logging
-  #   description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
-  #   default: true
-  #   appliance:
-  #     manifests: assets/manifests/logging
-  #     images:
-  #       - grafana/loki:2.2.0
-  #       - grafana/promtail:2.1.0
-  #       - grafana/grafana:7.5.0
-  #       - kiwigrid/k8s-sidecar:0.1.209
-  #     charts:
-  #       - name: loki-stack
-  #         url: https://grafana.github.io/helm-charts
-  #         version: 2.4.1
-  #         namespace: logging
-  #         valuesFile: assets/charts/pgl-values.yaml
+  - name: logging
+    description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
+    default: true
+    appliance:
+      manifests: assets/manifests/logging
+      images:
+        - grafana/loki:2.2.0
+        - grafana/promtail:2.1.0
+        - grafana/grafana:7.5.0
+        - kiwigrid/k8s-sidecar:0.1.209
+      charts:
+        - name: loki-stack
+          url: https://grafana.github.io/helm-charts
+          version: 2.4.1
+          namespace: logging
+          valuesFile: assets/charts/pgl-values.yaml
 
-  # - name: gitops-service
-  #   description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
-  #   scripts:
-  #     after:
-  #       # Zarf catalog will return 0 when the registry is operational
-  #       - "./zarf tools registry catalog 127.0.0.1"
-  #   appliance:
-  #     manifests: assets/manifests/gitops
-  #     images:
-  #       - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
-  #       - gitea/gitea:1.13.7
-  #     charts:
-  #       - name: docker-registry
-  #         url: https://helm.twun.io
-  #         version: 1.10.1
-  #         namespace: registry
-  #         valuesFile: assets/charts/registry-values.yaml
-  #       - name: gitea
-  #         url: https://dl.gitea.io/charts
-  #         version: 2.2.5
-  #         namespace: git
-  #         valuesFile: assets/charts/registry-values.yaml
+  - name: gitops-service
+    description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
+    scripts:
+      after:
+        # Zarf catalog will return 0 when the registry is operational
+        - "./zarf tools registry catalog 127.0.0.1"
+    appliance:
+      manifests: assets/manifests/gitops
+      images:
+        - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+        - gitea/gitea:1.13.7
+      charts:
+        - name: docker-registry
+          url: https://helm.twun.io
+          version: 1.10.1
+          namespace: registry
+          valuesFile: assets/charts/registry-values.yaml
+        - name: gitea
+          url: https://dl.gitea.io/charts
+          version: 2.2.5
+          namespace: git
+          valuesFile: assets/charts/registry-values.yaml
