@@ -35,11 +35,11 @@ func Install(options *InstallOptions) {
 	utils.WriteFile("/etc/zarf-registry-htpasswd", []byte(zarfHtPassword))
 
 	// Now that we have what the password will be, we should add the login entry to the system's registry config
-	err1 := utils.Login(config.GetEmbeddedRegistryEndpoint(), config.ZarfGitUser, gitSecret)
-	err2 := utils.Login(config.ZarfLocalIP, config.ZarfGitUser, gitSecret)
-	if err1 != nil || err2 != nil {
-		logrus.Debug(err1)
-		logrus.Debug(err2)
+	err = utils.Login(config.GetEmbeddedRegistryEndpoint(), config.ZarfGitUser, gitSecret)
+	_ = utils.Login(config.ZarfLocalIP, config.ZarfGitUser, gitSecret)
+	_ = utils.Login(config.ZarfLocalIP+":45000", config.ZarfGitUser, gitSecret)
+	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatal("Unable to add login credentials for the gitops registry")
 	}
 
