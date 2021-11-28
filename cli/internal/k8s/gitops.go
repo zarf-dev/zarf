@@ -87,6 +87,7 @@ func (syncSettings *settings) parseManifests(componentImages []string) ([]*unstr
 		for _, swap := range imageSwap {
 			utils.ReplaceText(manifest, swap.find, swap.replace)
 		}
+		utils.ReplaceText(manifest, "###ZARF_REGISTRY###", registryEndpoint)
 		utils.ReplaceText(manifest, "###ZARF_SECRET###", gitSecret)
 		utils.ReplaceText(manifest, "###ZARF_HTPASSWD###", zarfHtPassword)
 		utils.ReplaceText(manifest, "###ZARF_DOCKERAUTH###", zarfDockerAuth)

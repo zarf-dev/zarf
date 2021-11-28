@@ -1,7 +1,7 @@
 domain: bigbang.dev
 
 registryCredentials:
-  registry: "registry1.dso.mil"
+  registry: "###ZARF_REGISTRY###"
   username: "zarf-git-user"
   password: "###ZARF_SECRET###"
 
