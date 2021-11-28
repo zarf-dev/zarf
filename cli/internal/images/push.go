@@ -1,9 +1,8 @@
 package images
 
 import (
-	"strings"
+	"regexp"
 
-	"github.com/containerd/containerd/reference/docker"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
@@ -38,14 +37,7 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 }
 
 func SwapHost(src string, targetHost string) string {
-	onlineName, err := docker.ParseNormalizedNamed(src)
-	if err != nil {
-		logContext := logrus.WithField("image", src)
-		logContext.Debug(err)
-		logContext.Warn("Unable to parse the image domain")
-		return ""
-	}
-
-	result := strings.Replace(src, docker.Domain(onlineName), targetHost, 1)
-	return result
+	var parser = regexp.MustCompile(`(?im)^([a-z0-9\-.]+\.[a-z0-9\-]+:?[0-9]*)?/?(.+)$`)
+	var substitution = targetHost + "/$2"
+	return parser.ReplaceAllString(src, substitution)
 }

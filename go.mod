@@ -7,7 +7,6 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20211022214203-8b29eab41725
 	github.com/argoproj/gitops-engine v0.4.1
 	github.com/bombsimon/logrusr v1.1.0
-	github.com/containerd/containerd v1.5.7
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
