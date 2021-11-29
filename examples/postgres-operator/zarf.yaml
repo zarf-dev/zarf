@@ -13,12 +13,12 @@ components:
           url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
           version: 1.7.0
           namespace: postgres-operator
-          valuesFile: values/posgres-operator.yaml
+          valuesFile: values/postgres-operator.yaml
         - name: postgres-operator-ui
           url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
           version: 1.7.0
           namespace: postgres-operator
-          valuesFile: values/posgres-operator-ui.yaml
+          valuesFile: values/postgres-operator-ui.yaml
         - name: pgadmin4
           url: https://helm.runix.net
           version: 1.7.2
