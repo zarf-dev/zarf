@@ -311,7 +311,9 @@ func loopScriptUntilSuccess(script string) {
 			continue
 		} else {
 			// Script successful, output results and continue
-			logContext.Print(output)
+			if output != "" {
+				logContext.Print(output)
+			}
 			logContext.Info("Script completed successfully")
 			break
 		}
