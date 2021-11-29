@@ -1,8 +1,10 @@
 package packager
 
 import (
+	"fmt"
 	"io/ioutil"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
@@ -29,5 +31,9 @@ func Inspect(packageName string) {
 
 	utils.ColorPrintYAML(text)
 
+	// Load the config to get the build version
+	config.Load(tempPath.base + "/zarf.yaml")
+	fmt.Printf("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
 	cleanup(tempPath)
+
 }
