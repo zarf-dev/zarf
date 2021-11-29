@@ -12,9 +12,6 @@ import (
 	"strings"
 	"time"
 
-	adapter "github.com/bombsimon/logrusr"
-	"github.com/go-logr/logr"
-
 	"github.com/argoproj/gitops-engine/pkg/cache"
 	"github.com/argoproj/gitops-engine/pkg/engine"
 	"github.com/argoproj/gitops-engine/pkg/sync"
@@ -23,14 +20,19 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 )
 
 const (
 	annotationGCMark = "gitops-agent.argoproj.io/gc-mark"
 )
 
+type logShim struct {
+	ctx *logrus.Entry
+}
 type resourceInfo struct {
 	gcMark string
 }
@@ -95,12 +97,14 @@ func (syncSettings *settings) parseManifests(componentImages []string) ([]*unstr
 		// Load the file contents
 		data, err := ioutil.ReadFile(manifest)
 		if err != nil {
-			logrus.Fatal(err)
+			logrus.Debug(err)
+			logrus.Fatal("Unable to read the manfest file")
 		}
 		// Split the k8s resources
 		items, err := kube.SplitYAML(data)
 		if err != nil {
-			logrus.Fatal(err)
+			logrus.Debug(err)
+			logrus.Fatal("Error splitting the yaml file into individual sections")
 		}
 		// Append resources to the list
 		k8sResources = append(k8sResources, items...)
@@ -143,11 +147,12 @@ func (syncSettings *settings) parseManifests(componentImages []string) ([]*unstr
 func GitopsProcess(path string, namespace string, component config.ZarfComponentAppliance) {
 
 	logContext := logrus.WithField("manifest", path)
+	klog.SetLogger(NewLogShim(logContext))
 	syncSettings := settings{path}
 	restConfig := getRestConfig()
 	revision := time.Now().Format(time.RFC3339Nano)
 
-	logContext.Info("Caching cluster state data")
+	logContext.Info("Fetching cluster state")
 	clusterCache := cache.NewClusterCache(restConfig,
 		cache.SetPopulateResourceInfoHandler(func(un *unstructured.Unstructured, isRoot bool) (info interface{}, cacheManifest bool) {
 			// store gc mark of every resource
@@ -177,8 +182,6 @@ func GitopsProcess(path string, namespace string, component config.ZarfComponent
 			break
 		}
 
-		logrus.Infof("Sync attempt %d of 20", attempt)
-
 		target, err := syncSettings.parseManifests(component.Images)
 		if err != nil {
 			logrus.Debug(err)
@@ -195,7 +198,6 @@ func GitopsProcess(path string, namespace string, component config.ZarfComponent
 			},
 			revision,
 			namespace,
-			sync.WithLogr(newLogrusLogger(logContext)),
 			sync.WithPrune(true),
 			sync.WithManifestValidation(true),
 			sync.WithNamespaceCreation(true, func(un *unstructured.Unstructured) bool {
@@ -211,7 +213,7 @@ func GitopsProcess(path string, namespace string, component config.ZarfComponent
 		}
 
 		for _, res := range result {
-			logrus.WithField("result", res.Message).Info(res.ResourceKey.String())
+			logrus.WithField("result", res.Message).Debug(res.ResourceKey.String())
 		}
 
 		break
@@ -222,9 +224,31 @@ func GitopsProcess(path string, namespace string, component config.ZarfComponent
 
 }
 
-// https://github.com/argoproj/argo-cd/blob/a21b0363e39e93982d280722a0eb86c449145766/util/log/logrus.go#L20
-func newLogrusLogger(fieldLogger logrus.FieldLogger) logr.Logger {
-	return adapter.NewLoggerWithFormatter(fieldLogger, func(val interface{}) string {
-		return ""
-	})
+func NewLogShim(l *logrus.Entry) *logShim {
+	return &logShim{ctx: l}
+}
+
+func (l *logShim) Enabled() bool {
+	return true
+}
+
+func (l *logShim) V(level int) logr.Logger {
+	return l
+}
+
+func (l *logShim) WithValues(keysAndValues ...interface{}) logr.Logger {
+	return l
+}
+
+func (l *logShim) WithName(name string) logr.Logger {
+	return l
+}
+
+func (l *logShim) Info(msg string, keysAndValues ...interface{}) {
+	l.ctx.Debug(msg)
+}
+
+func (l *logShim) Error(err error, msg string, keysAndValues ...interface{}) {
+	l.ctx.Debug(err, msg, keysAndValues)
+	l.ctx.Warn(msg, keysAndValues)
 }

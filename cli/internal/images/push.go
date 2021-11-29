@@ -9,7 +9,6 @@ import (
 )
 
 func PushAll(imageTarballPath string, buildImageList []string, targetHost string) {
-	logrus.Info("Loading images")
 	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
 	for _, src := range buildImageList {
@@ -27,7 +26,6 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 
 		offlineName := SwapHost(src, targetHost)
 
-		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {
 			logContext.Debug(err)
