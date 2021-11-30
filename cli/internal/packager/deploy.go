@@ -123,7 +123,7 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 	}
 
 	for _, script := range component.Scripts.Before {
-		loopScriptUntilSuccess(script)
+		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
 	for index, file := range component.Files {
@@ -203,7 +203,7 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 	}
 
 	for _, script := range component.Scripts.After {
-		loopScriptUntilSuccess(script)
+		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
 }
@@ -274,7 +274,7 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func loopScriptUntilSuccess(script string) {
+func loopScriptUntilSuccess(script string, retry bool) {
 	logContext := logrus.WithField("script", script)
 	logContext.Info("Waiting for script to complete successfully")
 
@@ -298,23 +298,27 @@ func loopScriptUntilSuccess(script string) {
 		tries--
 		// If there are no more tries left, drop a warning and continue
 		if tries < 1 {
-			logContext.Warn("Script timed out after 2 minutes")
+			logContext.Warn("Script failed or timed out")
 			logContext.Print(output)
 			break
 		}
 		// Try to silently run the script
 		output, err = utils.ExecCommand(false, nil, "sh", "-c", script)
 		if err != nil {
-			// On error, wait 2 seconds and try again
 			logrus.Debug(err)
-			time.Sleep(time.Second * 2)
+			if retry {
+				// if retry is enabled, on error wait 2 seconds and try again
+				time.Sleep(time.Second * 2)
+			} else {
+				// No retry, abort
+				tries = 0
+			}
 			continue
 		} else {
 			// Script successful, output results and continue
 			if output != "" {
 				logContext.Print(output)
 			}
-			logContext.Info("Script completed successfully")
 			break
 		}
 	}

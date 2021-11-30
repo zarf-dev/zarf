@@ -39,6 +39,7 @@ type ZarfComponentGitops struct {
 }
 
 type ZarfComponentScripts struct {
+	Retry  bool     `yaml:"retry,omitempty"`
 	Before []string `yaml:"before,omitempty"`
 	After  []string `yaml:"after,omitempty"`
 }

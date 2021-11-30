@@ -135,6 +135,9 @@
     },
     "ZarfComponentScripts": {
       "properties": {
+        "retry": {
+          "type": "boolean"
+        },
         "before": {
           "items": {
             "type": "string"

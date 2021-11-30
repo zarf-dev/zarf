@@ -11,6 +11,8 @@ components:
       available.
     required: true
     scripts:
+      # Retry on error 
+      retry: true
       after:
         # Reload systemd with the new registry service
         - "systemctl daemon-reload"
@@ -44,6 +46,7 @@ components:
       host a low-resource Gitops Service if not using an existing Kubernetes platform.
     required: true
     scripts:
+      retry: true    
       after:
         # Configure K3s systemd service
         - "systemctl daemon-reload"
@@ -86,6 +89,7 @@ components:
     appliance:
       manifests: assets/manifests/traefik
     scripts:
+      retry: true    
       before:
         # Wait for traefik to be fully loaded before loading it's config
         - "/usr/local/bin/kubectl get middleware"
