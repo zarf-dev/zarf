@@ -82,7 +82,7 @@ func GetValidComponents(allComponents []config.ZarfComponent, requestedComponent
 	// Verify that we were able to successfully identify all of the requested components
 	nonMatchedComponents := []string{}
 	for requestedComponentIndex, componentMatched := range confirmedCompoonents {
-		if componentMatched == false {
+		if !componentMatched {
 			nonMatchedComponents = append(nonMatchedComponents, requestedComponentNames[requestedComponentIndex])
 		}
 	}

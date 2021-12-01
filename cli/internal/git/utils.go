@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 
@@ -46,11 +45,6 @@ func transformURL(baseUrl string, url string) string {
 		"New": output,
 	}).Info("Transformed Git URL")
 	return output
-}
-
-func transformRepoDirToURL(baseUrl string, repoDir string) string {
-	baseDir := path.Base(repoDir)
-	return baseUrl + "/zarf-git-user/" + baseDir
 }
 
 func credentialFilePath() string {
