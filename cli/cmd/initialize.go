@@ -70,7 +70,7 @@ func handleTLSOptions() {
 	if !utils.CheckHostName(initOptions.PKI.Host) {
 		logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters.\n", initOptions.PKI.Host)
 	} else {
-		config.SetEmbeddedRegistryEndpoint(initOptions.PKI.Host)
+		config.SetTargetEndpoint(initOptions.PKI.Host)
 	}
 }
 

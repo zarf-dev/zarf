@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
@@ -180,14 +179,9 @@ func generateCA(caFile string, validFor time.Duration) (*x509.Certificate, *rsa.
 func generateCert(host string, certFile string, keyFile string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration) error {
 	template := newCertificate(validFor)
 
-	// Always add the Zarf local IP address to the cert
-	template.IPAddresses = []net.IP{net.ParseIP(config.ZarfLocalIP)}
-
 	if ip := net.ParseIP(host); ip != nil {
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
-		// Add localhost to make things cleaner
-		template.DNSNames = append(template.DNSNames, host, "localhost", "*.localhost")
 		if template.Subject.CommonName == "" {
 			template.Subject.CommonName = host
 		}

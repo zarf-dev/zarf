@@ -54,7 +54,7 @@ func (syncSettings *settings) parseManifests(componentImages []string) ([]*unstr
 	// Track the namespaces found in the manifests
 	namespaces := make(map[string]bool)
 	// The target embedded registry to replace in manifests
-	registryEndpoint := config.GetEmbeddedRegistryEndpoint()
+	registryEndpoint := config.GetApplianceEndpoint()
 	// Embedded registry password
 	gitSecret := git.GetOrCreateZarfSecret()
 

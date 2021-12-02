@@ -17,7 +17,10 @@ import (
 
 func Create(confirm bool) {
 
-	config.Load("zarf.yaml")
+	if err := config.LoadConfig("zarf.yaml"); err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to read the zarf.yaml file")
+	}
 
 	tempPath := createPaths()
 	packageName := config.GetPackageName()
@@ -26,7 +29,10 @@ func Create(confirm bool) {
 	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
-	config.WriteConfig(configFile)
+	if err := config.BuildConfig(configFile); err != nil {
+		logrus.Debug(err)
+		logrus.WithField("path", configFile).Fatal("Unable to write the zarf.yaml file")
+	}
 
 	confirm = confirmAction(configFile, confirm, "Create")
 

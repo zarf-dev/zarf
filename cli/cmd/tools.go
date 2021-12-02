@@ -61,7 +61,7 @@ var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
 	Short: "Returns the Zarf admin password read from ~/.git-credentials",
 	Run: func(cmd *cobra.Command, args []string) {
-		authInfo := git.FindAuthForHost(config.ZarfLocalIP)
+		authInfo := git.FindAuthForHost(config.GetApplianceEndpoint())
 		fmt.Println(authInfo.Auth.Password)
 	},
 }
@@ -70,7 +70,7 @@ var configSchemaCmd = &cobra.Command{
 	Use:   "config-schema",
 	Short: "Generates a JSON schema for the zarf.yaml configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&config.ZarfConfig{})
+		schema := jsonschema.Reflect(&config.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			logrus.Debug(err)

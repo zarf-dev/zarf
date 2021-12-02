@@ -12,7 +12,6 @@ import (
 )
 
 func getRestConfig() *rest.Config {
-
 	homePath, err := os.UserHomeDir()
 	if err != nil {
 		logrus.Fatal("Unable to load the current user's home directory")
@@ -27,7 +26,6 @@ func getRestConfig() *rest.Config {
 }
 
 func getClientset() *kubernetes.Clientset {
-
 	config := getRestConfig()
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)

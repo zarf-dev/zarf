@@ -51,7 +51,10 @@ func Deploy(packagePath string, confirm bool, componentRequest string) {
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	config.Load(tempPath.base + "/zarf.yaml")
+	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+		logrus.Debug(err)
+		logrus.Fatalf("Unable to read the zarf.yaml file from %s", tempPath.base)
+	}
 
 	dataInjectionList := config.GetDataInjections()
 
@@ -61,7 +64,7 @@ func Deploy(packagePath string, confirm bool, componentRequest string) {
 	if componentRequest != "" {
 		requestedComponents = strings.Split(componentRequest, ",")
 	}
-	componentsToDeploy := utils.GetValidComponents(components, requestedComponents)
+	componentsToDeploy := getValidComponents(components, requestedComponents)
 
 	// Deploy all of the components
 	for _, component := range componentsToDeploy {
@@ -161,7 +164,7 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 	if len(component.Appliance.Images) > 0 {
 		// Handle appliance mode images
 		logrus.Info("Loading images for appliance mode install")
-		images.PushAll(tempPath.imagesAppliance, component.Appliance.Images, config.GetEmbeddedRegistryEndpoint())
+		images.PushAll(tempPath.imagesAppliance, component.Appliance.Images, config.GetApplianceEndpoint())
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(tempPath.imagesAppliance)
 	}
@@ -191,7 +194,7 @@ func deployComponents(tempPath componentPaths, component config.ZarfComponent) {
 	if len(component.Gitops.Images) > 0 {
 		// Handle gitops images
 		logrus.Info("Sending images to the gitops service registry")
-		images.PushAll(tempPath.imagesGitops, component.Appliance.Images, config.ZarfLocalIP)
+		images.PushAll(tempPath.imagesGitops, component.Appliance.Images, config.GetGitopsEndpoint())
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(tempPath.imagesGitops)
 	}

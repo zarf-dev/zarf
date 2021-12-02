@@ -44,7 +44,7 @@ type ZarfComponentScripts struct {
 	After  []string `yaml:"after,omitempty"`
 }
 
-type ZarfMetatdata struct {
+type ZarfMetadata struct {
 	Name         string `yaml:"name,omitempty"`
 	Description  string `yaml:"description,omitempty"`
 	Version      string `yaml:"version,omitempty"`
@@ -70,10 +70,15 @@ type ZarfBuildData struct {
 	Version   string `yaml:"string"`
 }
 
-type ZarfConfig struct {
+type ZarfPackage struct {
 	Kind       string          `yaml:"kind,omitempty"`
-	Metadata   ZarfMetatdata   `yaml:"metadata,omitempty"`
-	Package    ZarfBuildData   `yaml:"package,omitempty"`
+	Metadata   ZarfMetadata    `yaml:"metadata,omitempty"`
+	Build      ZarfBuildData   `yaml:"build,omitempty"`
 	Data       []ZarfData      `yaml:"data,omitempty"`
 	Components []ZarfComponent `yaml:"components,omitempty"`
+}
+
+type ZarfState struct {
+	Kind           string `yaml:"kind"`
+	TargetEndpoint string `yaml:"kind"`
 }

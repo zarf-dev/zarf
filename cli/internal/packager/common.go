@@ -3,6 +3,7 @@ package packager
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -77,4 +78,51 @@ func confirmAction(configPath string, confirm bool, message string) bool {
 	}
 
 	return confirm
+}
+
+func getValidComponents(allComponents []config.ZarfComponent, requestedComponentNames []string) []config.ZarfComponent {
+	var validComponentsList []config.ZarfComponent
+	confirmedComponents := make([]bool, len(requestedComponentNames))
+	for _, component := range allComponents {
+		confirmComponent := component.Required
+
+		// If the component is not required check if the user wants it deployed
+		if !confirmComponent {
+			// Check if this is one of the components that has been requested
+			if len(requestedComponentNames) > 0 {
+				for index, requestedComponent := range requestedComponentNames {
+					if strings.ToLower(requestedComponent) == component.Name {
+						confirmComponent = true
+						confirmedComponents[index] = true
+					}
+				}
+			} else {
+				// Since no requested components were provided, prompt the user
+				prompt := &survey.Confirm{
+					Message: "Deploy the " + component.Name + " component?",
+					Default: component.Default,
+					Help:    component.Description,
+				}
+				_ = survey.AskOne(prompt, &confirmComponent)
+			}
+		}
+
+		if confirmComponent {
+			validComponentsList = append(validComponentsList, component)
+		}
+	}
+
+	// Verify that we were able to successfully identify all of the requested components
+	var nonMatchedComponents []string
+	for requestedComponentIndex, componentMatched := range confirmedComponents {
+		if !componentMatched {
+			nonMatchedComponents = append(nonMatchedComponents, requestedComponentNames[requestedComponentIndex])
+		}
+	}
+
+	if len(nonMatchedComponents) > 0 {
+		logrus.Fatalf("Unable to find these components to deploy: %v.", nonMatchedComponents)
+	}
+
+	return validComponentsList
 }

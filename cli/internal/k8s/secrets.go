@@ -55,7 +55,7 @@ func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{
-			config.GetEmbeddedRegistryEndpoint(): DockerConfigEntryWithAuth{
+			config.GetApplianceEndpoint(): DockerConfigEntryWithAuth{
 				Auth: authEncodedValue,
 			},
 		},
