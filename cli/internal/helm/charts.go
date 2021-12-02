@@ -38,7 +38,7 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 
 	if err != nil {
 		logContext.Debug(err)
-		logContext.Fatal("Helm is unable to save the archive and create the package: %s", name)
+		logContext.Fatal("Helm is unable to save the archive and create the package:", name)
 	}
 
 	_ = os.RemoveAll(tempPath)
