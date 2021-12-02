@@ -1,0 +1,20 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name:
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: "./deploy/overlays/dev/"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: podinfo
+  healthChecks:
+    - kind: Deployment
+      name: frontend
+      namespace: dev
+    - kind: Deployment
+      name: backend
+      namespace: dev
+  timeout: 80s

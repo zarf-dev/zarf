@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    owner: bigbang
+  name: bigbang
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: zarf
+  namespace: bigbang
+spec:
+  ignore: |
+    # exclude file extensions
+    /**/*.md
+    /**/*.txt
+    /**/*.sh
+  interval: 5m
+  url: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git
+  ref:
+    branch: feature/145-big-bang-core-example-correct-gitops
+#    tag: 1.21.0
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: bigbang
+  namespace: bigbang
+spec:
+  interval: 5m
+  path: "./examples/big-bang/template/bigbang/"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: zarf
+  healthChecks:
+    - kind: Deployment
+      name: frontend
+      namespace: dev
+    - kind: Deployment
+      name: backend
+      namespace: dev
+  timeout: 80s
