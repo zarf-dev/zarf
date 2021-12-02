@@ -49,6 +49,10 @@ func GetComponents() []ZarfComponent {
 	return config.Components
 }
 
+func GetBuildData() ZarfBuildData {
+	return config.Package
+}
+
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
