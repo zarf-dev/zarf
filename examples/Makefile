@@ -54,7 +54,7 @@ vm-destroy: ## Cleanup plz
 	@vagrant destroy -f
 
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-appliance package-example-data-injection package-example-game package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
+package-examples: package-example-big-bang package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
 
 .PHONY: vendor-big-bang-base
 vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to do funky things to let Flux grab it from a private repo
@@ -72,10 +72,6 @@ vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to
 package-example-big-bang: vendor-big-bang-base ## Create the Big Bang Core example
 	cd big-bang && kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
-.PHONY: package-example-appliance
-package-example-appliance: ## Create the Podinfo example
-	cd appliance && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
-
 .PHONY: package-example-data-injection
 package-example-data-injection: ## Create the Data Injection example
 	cd data-injection && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
@@ -83,6 +79,10 @@ package-example-data-injection: ## Create the Data Injection example
 .PHONY: package-example-game
 package-example-game: ## Create the Doom example
 	cd game && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-gitops-data
+package-example-gitops-data: ## Create the gitops-data example
+	cd gitops-data && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-single-big-bang-package
 package-example-single-big-bang-package: ## Create the Single Big Bang Package example

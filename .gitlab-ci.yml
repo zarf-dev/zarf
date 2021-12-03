@@ -35,7 +35,7 @@ package:
     - packages
   image: golang:1.16
   before_script:
-    - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
+    - ./build/zarf tools registry login registry1.dso.mil --username "$REGISTRY1_USERNAME_ZARF_ROBOT" --password "$REGISTRY1_PASSWORD_ZARF_ROBOT"
   script:
     - make ci-release
   after_script:
@@ -46,8 +46,12 @@ package:
     paths:
       - build/
 
+# Don't run the legacy E2E tests on tags, since GitHub Actions is replacing them and they shouldn't be in the critical
+# path to cutting a release.
 e2e:
-  <<: *only-default
+  only:
+    - master
+    - merge_requests
   stage: e2e
   needs:
     - job: package
@@ -62,7 +66,7 @@ e2e:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
-    - ./build/zarf tools registry login registry1.dso.mil --username "robot\$bb-dev-imagepullonly" --password "$REGISTRY1_PASSWORD"
+    - ./build/zarf tools registry login registry1.dso.mil --username "$REGISTRY1_USERNAME_ZARF_ROBOT" --password "$REGISTRY1_PASSWORD_ZARF_ROBOT"
   script:
     - ./e2e.sh
   resource_group: e2e
@@ -74,7 +78,7 @@ artifact-upload:
   image: amazon/aws-cli
   stage: upload
   needs:
-    - job: e2e
+    - job: package
       artifacts: true
   rules:
     - if: $CI_COMMIT_TAG

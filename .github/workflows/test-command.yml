@@ -114,7 +114,7 @@ jobs:
           export GOPATH="$HOME/go"
           export PATH="$PATH:$GOPATH/bin"
           make build-cli-linux
-          ./build/zarf tools registry login registry1.dso.mil --username "${{ secrets.REGISTRY1_USERNAME_ROTHANDREW2 }}" --password "${{ secrets.REGISTRY1_PASSWORD_ROTHANDREW2 }}"
+          ./build/zarf tools registry login registry1.dso.mil --username "${{ secrets.REGISTRY1_USERNAME_ZARF_ROBOT }}" --password "${{ secrets.REGISTRY1_PASSWORD_ZARF_ROBOT }}"
           make init-package
 
       - name: "Upload the artifacts"
