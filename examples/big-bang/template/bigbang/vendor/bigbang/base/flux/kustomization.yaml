@@ -131,4 +131,4 @@ patches:
                   memory: 150Mi
                 requests:
                   cpu: 100m
-                  memory: 150Mi
+                  memory: 150Mi                                
