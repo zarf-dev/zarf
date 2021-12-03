@@ -1,0 +1,37 @@
+configurations:
+- transformer.yaml
+
+namespace: bigbang
+
+commonLabels:
+  owner: bigbang
+
+resources:
+  - namespace.yaml
+  - gitrepository.yaml
+  - helmrelease.yaml
+
+configMapGenerator:
+  - name: common
+    behavior: create
+    literals:
+    - values.yaml=
+  - name: environment
+    behavior: create
+    literals:
+    - values.yaml=
+
+# Flux combines secrets and configmaps in `valuesFrom`.  Kustomize
+# cannot distinguish between them when applying suffixes.  Therefore,
+# the secrets must have different names than the configmaps
+# While capital letters or dashes could be used, '-bb' was chosen
+# to make the difference obvious at a glance
+secretGenerator:
+  - name: common-bb
+    behavior: create
+    literals:
+    - values.yaml=
+  - name: environment-bb
+    behavior: create
+    literals:
+    - values.yaml=

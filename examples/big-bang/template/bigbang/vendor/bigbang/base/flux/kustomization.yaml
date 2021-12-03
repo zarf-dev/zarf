@@ -1,0 +1,134 @@
+# start with a default flux deployment
+resources:
+- gotk-components.yaml
+
+# update flux components to use ironbank images
+images:
+- name: ghcr.io/fluxcd/helm-controller
+  newName: registry1.dso.mil/ironbank/fluxcd/helm-controller
+  newTag: v0.11.0
+- name: ghcr.io/fluxcd/kustomize-controller
+  newName: registry1.dso.mil/ironbank/fluxcd/kustomize-controller
+  newTag: v0.13.0
+- name: ghcr.io/fluxcd/notification-controller
+  newName: registry1.dso.mil/ironbank/fluxcd/notification-controller
+  newTag: v0.15.0
+- name: ghcr.io/fluxcd/source-controller
+  newName: registry1.dso.mil/ironbank/fluxcd/source-controller
+  newTag: v0.14.0
+
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: whatever
+      spec:
+        template:
+          metadata:
+            annotations:
+              # Required by Kubernetes node autoscaler
+              cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+          spec:
+            imagePullSecrets:
+            - name: private-registry
+            terminationGracePeriodSeconds: 60
+            # Required by Pod Security Policy
+            securityContext:
+              runAsUser: 1000
+              fsGroup: 1000
+            containers:
+              - name: manager
+                # Required by Pod Security Policy
+                securityContext:
+                  runAsUser: 1000
+                  runAsGroup: 1000
+                  privileged: false
+                  readOnlyRootFilesystem: true
+                  allowPrivilegeEscalation: false
+                  runAsNonRoot: true
+                  capabilities:
+                    drop:
+                      - ALL
+  - target:
+      kind: Deployment
+      name: helm-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: helm-controller
+      spec:
+        template:
+          spec:
+            containers:
+            - name: manager
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 750Mi
+                requests:
+                  cpu: 500m
+                  memory: 750Mi
+  - target:
+      kind: Deployment
+      name: kustomize-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: kustomize-controller
+      spec:
+        template:
+          spec:
+            containers:
+            - name: manager
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 200Mi
+                requests:
+                  cpu: 100m
+                  memory: 200Mi
+  - target:
+      kind: Deployment
+      name: notification-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification-controller
+      spec:
+        template:
+          spec:
+            containers:
+            - name: manager
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 100Mi
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+  - target:
+      kind: Deployment
+      name: source-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: source-controller
+      spec:
+        template:
+          spec:
+            containers:
+            - name: manager
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 150Mi
+                requests:
+                  cpu: 100m
+                  memory: 150Mi

@@ -5,6 +5,16 @@ metadata:
     owner: bigbang
   name: bigbang
 ---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: zarf-git-secret
+  namespace: bigbang
+stringData:
+  username: "zarf-git-user"
+  password: "###ZARF_SECRET###"
+---
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
@@ -18,6 +28,8 @@ spec:
     /**/*.sh
   interval: 5m
   url: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git
+  secretRef:
+    name: zarf-git-secret
   ref:
     branch: feature/145-big-bang-core-example-correct-gitops
 #    tag: 1.21.0
@@ -29,16 +41,16 @@ metadata:
   namespace: bigbang
 spec:
   interval: 5m
-  path: "./examples/big-bang/template/bigbang/"
+  path: "./examples/big-bang/template/bigbang"
   prune: true
   sourceRef:
     kind: GitRepository
     name: zarf
-  healthChecks:
-    - kind: Deployment
-      name: frontend
-      namespace: dev
-    - kind: Deployment
-      name: backend
-      namespace: dev
-  timeout: 80s
+#  healthChecks:
+#    - kind: Deployment
+#      name: frontend
+#      namespace: dev
+#    - kind: Deployment
+#      name: backend
+#      namespace: dev
+  timeout: 60m
