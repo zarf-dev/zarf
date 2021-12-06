@@ -68,9 +68,12 @@ func handleTLSOptions() {
 		}
 	}
 	if !utils.CheckHostName(initOptions.PKI.Host) {
-		logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters.\n", initOptions.PKI.Host)
+		logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.  Any form of localhost is also invalid.\n", initOptions.PKI.Host)
 	} else {
-		config.SetTargetEndpoint(initOptions.PKI.Host)
+		if err := config.SetTargetEndpoint(initOptions.PKI.Host); err != nil {
+			logrus.Debug(err)
+			logrus.Fatal("Unable to save the zarf state file.")
+		}
 	}
 }
 

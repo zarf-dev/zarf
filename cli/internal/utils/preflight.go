@@ -9,12 +9,17 @@ import (
 )
 
 func CheckHostName(hostname string) bool {
-	expression := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
-	return expression.MatchString(hostname)
+	rfcDomain := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
+	localhost := regexp.MustCompile(`^localhost|127\.\d+\.\d+\.\d+|::1$`)
+	isValid := rfcDomain.MatchString(hostname)
+	if isValid {
+		isValid = !localhost.MatchString(hostname)
+	}
+	return isValid
 }
 
 func IsValidHostName() bool {
-	logrus.Info("Preflight check: validating hostname")
+	logrus.Debug("Preflight check: validating hostname")
 	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
 	hostname, err := os.Hostname()
 
@@ -26,12 +31,12 @@ func IsValidHostName() bool {
 }
 
 func IsUserRoot() bool {
-	logrus.Info("Preflight check: validating user is root")
+	logrus.Debug("Preflight check: validating user is root")
 	return os.Getuid() == 0
 }
 
 func IsAMD64() bool {
-	logrus.Info("Preflight check: validating AMD64 arch")
+	logrus.Debug("Preflight check: validating AMD64 arch")
 	return runtime.GOARCH == "amd64"
 }
 
