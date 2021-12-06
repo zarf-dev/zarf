@@ -305,8 +305,12 @@ func loopScriptUntilSuccess(script string, retry bool) {
 			logContext.Print(output)
 			break
 		}
+		scriptEnvVars := []string{
+			"ZARF_GITOPS_ENDPOINT=" + config.GetGitopsEndpoint(),
+			"ZARF_APPLIANCE_ENDPOINT=" + config.GetApplianceEndpoint(),
+		}
 		// Try to silently run the script
-		output, err = utils.ExecCommand(false, nil, "sh", "-c", script)
+		output, err = utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
 		if err != nil {
 			logrus.Debug(err)
 			if retry {
