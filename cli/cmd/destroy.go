@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ var destroyCmd = &cobra.Command{
 	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
 		burn()
+		_ = os.Remove(config.ZarfStatePath)
 		pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
 		scripts := utils.RecursiveFileList("/usr/local/bin", pattern)
 		// Iterate over al matching zarf-clean scripts and exec them

@@ -4,6 +4,7 @@ package utils
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 
 	"github.com/fatih/color"
@@ -77,15 +78,15 @@ func ReadYaml(path string, destConfig interface{}) error {
 		return err
 	}
 
-	return yaml.Unmarshal(file, &destConfig)
+	return yaml.Unmarshal(file, destConfig)
 }
 
-func WriteYaml(path string, srcConfig interface{}) error {
+func WriteYaml(path string, srcConfig interface{}, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
 	content, err := yaml.Marshal(srcConfig)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(path, content, 0400)
+	return ioutil.WriteFile(path, content, perm)
 }

@@ -52,7 +52,7 @@ func GetComponents() []ZarfComponent {
 }
 
 func GetBuildData() ZarfBuildData {
-	return config.Package
+	return config.Build
 }
 
 func GetValidPackageExtensions() [3]string {
@@ -69,7 +69,7 @@ func GetApplianceEndpoint() string {
 
 func SetTargetEndpoint(endpoint string) error {
 	state.TargetEndpoint = endpoint
-	return utils.WriteYaml(ZarfStatePath, state)
+	return utils.WriteYaml(ZarfStatePath, state, 0600)
 }
 
 func LoadConfig(path string) error {
@@ -97,5 +97,5 @@ func BuildConfig(path string) error {
 		config.Build.User = currentUser.Username
 	}
 
-	return utils.WriteYaml(path, config)
+	return utils.WriteYaml(path, config, 0400)
 }
