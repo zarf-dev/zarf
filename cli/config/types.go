@@ -80,5 +80,5 @@ type ZarfPackage struct {
 
 type ZarfState struct {
 	Kind           string `yaml:"kind"`
-	TargetEndpoint string `yaml:"kind"`
+	TargetEndpoint string `yaml:"targetEndpoint"`
 }
