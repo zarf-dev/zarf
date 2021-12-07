@@ -8,19 +8,21 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 
 1. Install [Vagrant](https://www.vagrantup.com/)
 2. Install `make` and `kustomize`
+1. Install `sha256sum` (on Mac it's `brew install coreutils`)
 
 ## Instructions
 
-1. From within the examples directory, Run: `make all`, which will download the latest built binaries, build all of the example packages, and launch a basic VM to run in. Alternatively, run `make all-dev` if you want to build the binaries using the current codebase instead of downloading them.
-5. Run: `sudo su` - Change user to root
-6. Run: `cd zarf-examples` - Change to the directory where the examples folder is mounted
-7. Run: `./zarf init --confirm --components management,gitops-service --host localhost` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain
-8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-9. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core
-10. Wait several minutes. Run `k9s` to watch progress
-11. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
-12. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-13. When you're done, run `make vm-destroy` to bring everything down
+1. `cd examples/big-bang`
+1. Run one of these two commands:
+   - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
+   - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
+1. Run: `./zarf init --confirm --components management,gitops-service --host localhost` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
+1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
+1. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
+1. Wait several minutes. Run `k9s` to watch progress
+1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
+1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
+1. When you're done, run `make vm-destroy` to bring everything down
 
 ## Kubescape scan
 
