@@ -31,7 +31,7 @@ spec:
   secretRef:
     name: zarf-git-secret
   ref:
-    branch: feature/145-big-bang-core-example-correct-gitops
+    branch: master
 #    tag: 1.21.0
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
