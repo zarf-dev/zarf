@@ -1,5 +1,7 @@
 hostname: minio.localhost
 tenants:
+  imagePullSecret:
+    name: zarf-registry
   pools:
       ## Servers specifies the number of MinIO Tenant Pods / Servers in this pool.
       ## For standalone mode, supply 1. For distributed mode, supply 4 or more.
