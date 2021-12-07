@@ -22,7 +22,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 1. Wait several minutes. Run `k9s` to watch progress
 1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-1. When you're done, run `make vm-destroy` to bring everything down
+1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
 
 ## Kubescape scan
 
