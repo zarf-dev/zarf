@@ -56,6 +56,18 @@ vm-destroy: ## Cleanup plz
 .PHONY: package-examples
 package-examples: package-example-big-bang package-examlpe-big-bang-umbrella package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
 
+.PHONY: vendor-big-bang-umbrella
+vendor-big-bang-umbrella: ## Do the umbrella vendoring
+	cd big-bang-umbrella/template/bigbang/vendor && \
+	rm -rf bigbang && \
+	git init bigbang && \
+	cd bigbang && \
+	git remote add -f origin https://repo1.dso.mil/platform-one/big-bang/bigbang.git && \
+	git config core.sparseCheckout true && \
+	echo "base/" > .git/info/sparse-checkout && \
+	git checkout tags/1.17.0 -b tagbranch && \
+	rm -rf .git
+
 .PHONY: vendor-big-bang-base
 vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to do funky things to let Flux grab it from a private repo
 	cd big-bang/template/bigbang/vendor && \
@@ -73,8 +85,8 @@ package-example-big-bang: vendor-big-bang-base ## Create the Big Bang Core examp
 	cd big-bang && kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-big-bang
-package-example-big-bang-umbrella: ## Create the Big Bang Core example
-	cd big-bang-umbrella && kustomize build template/bigbang > manifests/bigbang_generated.yaml && kustomize build template/flux > manifests/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+package-example-big-bang-umbrella: vendor-big-bang-umbrella ## Create the Big Bang Core example
+	cd big-bang-umbrella && kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux_generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## Create the Data Injection example

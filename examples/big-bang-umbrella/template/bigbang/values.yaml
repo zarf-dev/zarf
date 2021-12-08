@@ -3,13 +3,13 @@ domain: bigbang.dev
 registryCredentials:
   - registry: "registry1.dso.mil"
     username: "zarf-git-user"
-    password: "###ZARF_SECRET###"
+    password: "${zarf_secret}"
   - registry: "docker.io"
     username: "zarf-git-user"
-    password: "###ZARF_SECRET###"
+    password: "${zarf_secret}"
   - registry: "registry.dso.mil"
     username: "zarf-git-user"
-    password: "###ZARF_SECRET###"
+    password: "${zarf_secret}"
 
 git:
   existingSecret: "zarf-git-secret"
