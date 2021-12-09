@@ -10,12 +10,7 @@ import (
 
 func CheckHostName(hostname string) bool {
 	rfcDomain := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
-	localhost := regexp.MustCompile(`^localhost|127\.\d+\.\d+\.\d+|::1$`)
-	isValid := rfcDomain.MatchString(hostname)
-	if isValid {
-		isValid = !localhost.MatchString(hostname)
-	}
-	return isValid
+	return rfcDomain.MatchString(hostname)
 }
 
 func IsValidHostName() bool {

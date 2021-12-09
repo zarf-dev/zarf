@@ -76,7 +76,7 @@ func handleTLSOptions() {
 
 	if !utils.CheckHostName(state.TLS.Host) {
 		// On error warn user and cycle the function
-		logrus.Warnf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.  Any form of localhost is also invalid.\n", state.TLS.Host)
+		logrus.Warnf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.\n", state.TLS.Host)
 		handleTLSOptions()
 	} else {
 		if err := config.WriteState(state); err != nil {
