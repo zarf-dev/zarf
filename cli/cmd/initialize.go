@@ -54,7 +54,7 @@ func handleTLSOptions() {
 
 	// Always ask for a host entry to avoid having to guess which entry in a cert if provided
 	prompt := &survey.Input{
-		Message: "Enter a host DNS entry or IP Address for the cluster ingress",
+		Message: "Enter a host DNS entry or IP Address for the cluster ingress. If using localhost, use 127.0.0.1",
 	}
 	_ = survey.AskOne(prompt, &state.TLS.Host, survey.WithValidator(survey.Required))
 
@@ -76,7 +76,7 @@ func handleTLSOptions() {
 
 	if !utils.CheckHostName(state.TLS.Host) {
 		// On error warn user and cycle the function
-		logrus.Warnf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.\n", state.TLS.Host)
+		logrus.Warnf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.  If using localhost, you must use the 127.0.0.1.\n", state.TLS.Host)
 		handleTLSOptions()
 	} else {
 		if err := config.WriteState(state); err != nil {

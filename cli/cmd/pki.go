@@ -23,14 +23,14 @@ var pkiRegenerate = &cobra.Command{
 		// Prompt for a hostname if it wasn't provided as a command flag
 		if tempState.TLS.Host == "" {
 			prompt := &survey.Input{
-				Message: "Enter a host DNS entry or IP Address for the gitops service ingress",
+				Message: "Enter a host DNS entry or IP Address for the gitops service ingress. If using localhost, use 127.0.0.1",
 			}
 			_ = survey.AskOne(prompt, &tempState.TLS.Host, survey.WithValidator(survey.Required))
 		}
 
 		// Verify the hostname provided is valid
 		if !utils.CheckHostName(tempState.TLS.Host) {
-			logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.\n", tempState.TLS.Host)
+			logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035. If using localhost, you must use the 127.0.0.1.\n", tempState.TLS.Host)
 		}
 
 		pki.GeneratePKI()
