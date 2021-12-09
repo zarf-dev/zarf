@@ -475,7 +475,7 @@ twistlock:
         memory: "1Gi"
       limits:
         cpu: "500m"
-        memory: "2Gii"
+        memory: "2Gi"
 
 
 addons:

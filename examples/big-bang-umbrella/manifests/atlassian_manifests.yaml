@@ -15,7 +15,7 @@ spec:
   chart: https://%{KUBERNETES_API}%/static/charts/jira-0.1.0-bb.7.tgz
   targetNamespace: jira
   valuesContent: |-
-    imagePUllSecrets:
+    imagePullSecrets:
       - name: private-registry
     ingress:
       nginx: false
