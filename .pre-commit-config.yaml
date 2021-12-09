@@ -10,8 +10,10 @@ repos:
       - id: detect-private-key
         exclude: "^examples/big-bang/template/bigbang/values.yaml$"
       - id: end-of-file-fixer
+        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
       - id: fix-byte-order-marker
       - id: trailing-whitespace
+        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
         args: [--markdown-linebreak-ext=md]
   - repo: https://github.com/sirosen/fix-smartquotes
     rev: 0.2.0
