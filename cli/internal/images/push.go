@@ -34,7 +34,9 @@ func PushAll(imageTarballPath string, buildImageList []string, targetHost string
 	}
 }
 
+// SwapHost Perform base url replacment without the docker libs
 func SwapHost(src string, targetHost string) string {
+	// For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
 	var parser = regexp.MustCompile(`(?im)^([a-z0-9\-.]+\.[a-z0-9\-]+:?[0-9]*)?/?(.+)$`)
 	var substitution = targetHost + "/$2"
 	return parser.ReplaceAllString(src, substitution)
