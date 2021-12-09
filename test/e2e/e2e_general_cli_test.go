@@ -106,6 +106,7 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 
 	// Test that changing the log level actually applies the requested level
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf version --log-level warn 2> /dev/null", username))
+	require.NoError(t, err, output)
 	expectedOutString := "The log level has been changed to: warning"
 	logLevelOutput := strings.Split(output, "\n")[0]
 	require.Equal(t, expectedOutString, logLevelOutput, "The log level should be changed to 'warn'")
