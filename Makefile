@@ -51,7 +51,7 @@ build-cli: clean build-cli-linux build-cli-mac ## Build the CLI
 init-package: ## Create the zarf init package
 	$(ZARF_BIN) package create --confirm
 	mv zarf-init.tar.zst build
-	cd build && sha256sum -b zarf* > zarf.sha256
+	cd build && shasum -a 256 -b zarf* > zarf.sha256
 	ls -lh build
 
 build-test: build-cli init-package ## Build the CLI and create the init package

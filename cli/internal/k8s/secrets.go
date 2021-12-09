@@ -4,19 +4,21 @@ import (
 	"context"
 	"crypto/tls"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
+func ReplaceTLSSecret(namespace string, name string) {
 
+	state := config.GetState()
 	clientSet := connect()
 	logContext := logrus.WithFields(logrus.Fields{
 		"Namespace": namespace,
 		"Name":      name,
-		"Cert":      certPath,
+		"Cert":      state.TLS.CertPublicPath,
 	})
 	namespaceSecrets := clientSet.CoreV1().Secrets(namespace)
 
@@ -28,12 +30,12 @@ func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath st
 		logContext.Warn("Error deleting the secret")
 	}
 
-	tlsCert, err := readFile(certPath)
+	tlsCert, err := readFile(state.TLS.CertPublicPath)
 	if err != nil {
 		logContext.Debug(err)
 		logContext.Fatal("Unable to read the TLS public certificate")
 	}
-	tlsKey, err := readFile(keyPath)
+	tlsKey, err := readFile(state.TLS.CertPrivatePath)
 	if err != nil {
 		logContext.Debug(err)
 		logContext.Fatal("Unable to read the TLS private key")

@@ -1,4 +1,4 @@
-package utils
+package pki
 
 import (
 	"crypto/rand"
@@ -15,14 +15,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 )
-
-type PKIConfig struct {
-	CertPublicPath  string
-	CertPrivatePath string
-	Host            string
-}
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
 
@@ -33,42 +28,20 @@ const org = "Zarf Cluster"
 // 13 months is the max length allowed by browsers
 const validFor = time.Hour * 24 * 375
 
-// Very limited special chars for git / basic auth
-// https://owasp.org/www-community/password-special-characters has complete list of safe chars
-const randomStringChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!~-"
-
-func RandomString(length int) string {
-	bytes := make([]byte, length)
-
-	if _, err := rand.Read(bytes); err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("unable to generate a random secret")
-	}
-
-	for i, b := range bytes {
-		bytes[i] = randomStringChars[b%byte(len(randomStringChars))]
-	}
-
-	return string(bytes)
-}
-
-func HandlePKI(config PKIConfig) {
-	if config.CertPublicPath != "" && config.CertPrivatePath != "" {
-		logrus.WithFields(logrus.Fields{
-			"public":  config.CertPublicPath,
-			"private": config.CertPrivatePath,
-		}).Info("Injecting user-provided keypair for ingress TLS")
-		InjectServerCert(config)
-	} else {
-		GeneratePKI(config)
+func HandlePKI() {
+	pkiConfig := config.GetState().TLS
+	if pkiConfig.CertPublicPath == "" || pkiConfig.CertPrivatePath == "" {
+		// No certs provided, so generate them with an ephemeral CA
+		GeneratePKI()
 	}
 }
 
 // GeneratePKI create a CA and signed server keypair
-func GeneratePKI(config PKIConfig) {
+func GeneratePKI() {
+	state := config.GetState()
 	directory := "zarf-pki"
 
-	_ = CreateDirectory(directory, 0700)
+	_ = utils.CreateDirectory(directory, 0700)
 	caFile := filepath.Join(directory, "zarf-ca.crt")
 	ca, caKey, err := generateCA(caFile, validFor)
 	if err != nil {
@@ -77,7 +50,7 @@ func GeneratePKI(config PKIConfig) {
 
 	hostCert := filepath.Join(directory, "zarf-server.crt")
 	hostKey := filepath.Join(directory, "zarf-server.key")
-	if err := generateCert(config.Host, hostCert, hostKey, ca, caKey, validFor); err != nil {
+	if err := generateCert(state.TLS.Host, hostCert, hostKey, ca, caKey, validFor); err != nil {
 		logrus.Fatal(err)
 	}
 
@@ -88,18 +61,22 @@ func GeneratePKI(config PKIConfig) {
 
 	publicKeyPem := string(pem.EncodeToMemory(&publicKeyBlock))
 
-	config.CertPublicPath = directory + "/zarf-server.crt"
-	config.CertPrivatePath = directory + "/zarf-server.key"
-	InjectServerCert(config)
+	state.TLS.CertPublicPath = directory + "/zarf-server.crt"
+	state.TLS.CertPrivatePath = directory + "/zarf-server.key"
 
 	addCAToTrustStore(caFile)
 
 	fmt.Println("Ephemeral CA below and saved to " + caFile + "\n")
 	fmt.Println(publicKeyPem)
+
+	if err := config.WriteState(state); err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to save the zarf state file.")
+	}
 }
 
-func InjectServerCert(pkiConfig PKIConfig) {
-	k8s.ReplaceTLSSecret("kube-system", "tls-pem", pkiConfig.CertPublicPath, pkiConfig.CertPrivatePath)
+func InjectServerCert() {
+	k8s.ReplaceTLSSecret("kube-system", "tls-pem")
 }
 
 func addCAToTrustStore(caFilePath string) {
@@ -108,16 +85,16 @@ func addCAToTrustStore(caFilePath string) {
 	rhelBinary := "update-ca-trust"
 	debianBinary := "update-ca-certificates"
 
-	if VerifyBinary(rhelBinary) {
-		CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
-		_, err := ExecCommand(nil, rhelBinary, "extract")
+	if utils.VerifyBinary(rhelBinary) {
+		utils.CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
+		_, err := utils.ExecCommand(true, nil, rhelBinary, "extract")
 		if err != nil {
 			logrus.Debug(err)
 			logrus.Warn("Error adding the ephemeral CA to the RHEL root trust")
 		}
-	} else if VerifyBinary(debianBinary) {
-		CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
-		_, err := ExecCommand(nil, debianBinary)
+	} else if utils.VerifyBinary(debianBinary) {
+		utils.CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
+		_, err := utils.ExecCommand(true, nil, debianBinary)
 		if err != nil {
 			logrus.Debug(err)
 			logrus.Warn("Error adding the ephemeral CA to the trust store")
@@ -197,14 +174,9 @@ func generateCA(caFile string, validFor time.Duration) (*x509.Certificate, *rsa.
 func generateCert(host string, certFile string, keyFile string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration) error {
 	template := newCertificate(validFor)
 
-	// Always add the Zarf local IP address to the cert
-	template.IPAddresses = []net.IP{net.ParseIP(config.ZarfLocalIP)}
-
 	if ip := net.ParseIP(host); ip != nil {
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
-		// Add localhost to make things cleaner
-		template.DNSNames = append(template.DNSNames, host, "localhost", "*.localhost")
 		if template.Subject.CommonName == "" {
 			template.Subject.CommonName = host
 		}
