@@ -113,6 +113,8 @@ jobs:
           asdf global golang 1.16.7
           export GOPATH="$HOME/go"
           export PATH="$PATH:$GOPATH/bin"
+          # Install the shasum tool
+          apk add shasum
           make build-cli-linux
           ./build/zarf tools registry login registry1.dso.mil --username "${{ secrets.REGISTRY1_USERNAME_ZARF_ROBOT }}" --password "${{ secrets.REGISTRY1_PASSWORD_ZARF_ROBOT }}"
           make init-package
