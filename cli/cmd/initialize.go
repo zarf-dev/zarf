@@ -35,10 +35,17 @@ func handleTLSOptions() {
 
 	const Generate = 0
 	const Import = 1
-	var tlsMode int
+	var tlsMode int = -1
+
+	// If it's obvious what the user intended to do for TLS certs, set that config early
+	if initOptions.Generate == true {
+		tlsMode = Generate
+	} else if state.TLS.CertPrivatePath != "" {
+		tlsMode = Import
+	}
 
 	// Check to see if the certpaths or host entries are set as flags first
-	if state.TLS.CertPublicPath == "" && state.TLS.Host == "" {
+	if tlsMode == -1 {
 		// Determine flow for generate or import
 		modePrompt := &survey.Select{
 			Message: "Will Zarf be generating a TLS chain or importing an existing ingress cert?",
@@ -48,17 +55,17 @@ func handleTLSOptions() {
 			},
 		}
 		_ = survey.AskOne(modePrompt, &tlsMode)
-	} else {
-		tlsMode = Import
 	}
 
-	// Always ask for a host entry to avoid having to guess which entry in a cert if provided
-	prompt := &survey.Input{
-		Message: "Enter a host DNS entry or IP Address for the cluster ingress. If using localhost, use 127.0.0.1",
+	if state.TLS.Host == "" {
+		// If not provided, always ask for a host entry to avoid having to guess which entry in a cert if provided
+		prompt := &survey.Input{
+			Message: "Enter a host DNS entry or IP Address for the cluster ingress. If using localhost, use 127.0.0.1",
+		}
+		_ = survey.AskOne(prompt, &state.TLS.Host, survey.WithValidator(survey.Required))
 	}
-	_ = survey.AskOne(prompt, &state.TLS.Host, survey.WithValidator(survey.Required))
 
-	if tlsMode != Generate {
+	if tlsMode == Import && (state.TLS.CertPrivatePath == "" || state.TLS.CertPublicPath == "") {
 		// Import mode requires the public and private key paths
 		prompt := &survey.Input{
 			Message: "Enter a file path to the ingress public key",
@@ -75,8 +82,9 @@ func handleTLSOptions() {
 	}
 
 	if !utils.CheckHostName(state.TLS.Host) {
-		// On error warn user and cycle the function
+		// On error warn user, reset the field, and cycle the function
 		logrus.Warnf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.  If using localhost, you must use the 127.0.0.1.\n", state.TLS.Host)
+		state.TLS.Host = ""
 		handleTLSOptions()
 	} else {
 		if err := config.WriteState(state); err != nil {
@@ -87,10 +95,10 @@ func handleTLSOptions() {
 }
 
 func init() {
-	state := config.GetState()
 
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().BoolVar(&initOptions.Confirmed, "confirm", false, "Confirm the install without prompting")
+	initCmd.Flags().BoolVar(&initOptions.Generate, "generate", false, "Automatically generate the tls certs")
 	initCmd.Flags().StringVar(&state.TLS.Host, "host", "", "Specify the host or IP for the gitops service ingress.  E.g. host=10.10.10.5 or host=gitops.domain.com")
 	initCmd.Flags().StringVar(&state.TLS.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")
 	initCmd.Flags().StringVar(&state.TLS.CertPrivatePath, "server-key", "", "Path to the server private key if not generating unique PKI")
