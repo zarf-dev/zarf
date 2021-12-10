@@ -48,10 +48,10 @@ build-cli-mac: ## Build the Mac CLI
 
 build-cli: clean build-cli-linux build-cli-mac ## Build the CLI
 
-init-package: ## Create the zarf init package
+init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm
 	mv zarf-init.tar.zst build
-	cd build && shasum -a 256 -b zarf* > zarf.sha256
+	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 
 build-test: build-cli init-package ## Build the CLI and create the init package
