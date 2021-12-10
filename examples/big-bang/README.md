@@ -16,7 +16,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 1. Run one of these two commands:
    - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
    - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
-1. Run: `./zarf init --confirm --components management,gitops-service --host localhost` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
+1. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1 --generate` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
 1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 1. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
 1. Wait several minutes. Run `k9s` to watch progress
