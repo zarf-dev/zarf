@@ -83,12 +83,13 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 	assert.NotEqual(t, string(output), "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test for expected failure when given a bad component input
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --components management,foo,logging", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --host 127.0.0.1 --components management,foo,logging", username))
 	require.Error(t, err, output)
 
 	// Test for expected failure when given invalid hostnames
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --host bad!hostname", username))
-	require.Error(t, err, output)
+	// output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --host bad!hostname", username))
+	// require.Error(t, err, output)
+
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host zarf@server", username))
 	require.Error(t, err, output)
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", username))
