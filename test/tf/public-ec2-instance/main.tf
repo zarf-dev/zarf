@@ -1,5 +1,7 @@
 terraform {
-  required_version = "1.0.11"
+  # Follow best practice for root module version constraing
+  # See https://www.terraform.io/docs/language/expressions/version-constraints.html
+  required_version = "~> 1.1.0"
 }
 
 locals {
