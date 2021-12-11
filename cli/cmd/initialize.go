@@ -29,6 +29,19 @@ var initCmd = &cobra.Command{
 	Short: "Deploys the gitops service or appliance cluster on a clean linux box",
 	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		if !initOptions.Confirmed {
+			var confirm bool
+			prompt := &survey.Confirm{
+				Message: "⚠️  This will initialize a new Zarf deployment on this machine which will make changes to your filesystem. You should not run zarf init more than once without first running zarf destroy.  Do you want to continue?",
+			}
+			_ = survey.AskOne(prompt, &confirm)
+			if !confirm {
+				// Gracefully exit because they didn't want to play after all :-/
+				os.Exit(0)
+			}
+		}
+
 		handleTLSOptions()
 		pki.HandlePKI()
 		packager.Install(&initOptions)
@@ -46,6 +59,11 @@ func promptIsImportCerts() bool {
 
 	if hasCertPaths() {
 		return true
+	}
+
+	if initOptions.Confirmed {
+		// Assume generate on confirmed without cert paths
+		return false
 	}
 
 	// Determine flow for generate or import
@@ -80,6 +98,11 @@ func promptCertPaths() {
 // Ask user for the hostname or ip if not provided via automation and validate the input
 func promptAndValidateHost() {
 	if state.TLS.Host == "" {
+		if initOptions.Confirmed {
+			// Fail if host is not provided on confirm
+			logrus.Fatalf(invalidHostMessage, state.TLS.Host)
+		}
+
 		// If not provided, always ask for a host entry to avoid having to guess which entry in a cert if provided
 		prompt := &survey.Input{
 			Message: "Enter a host DNS entry or IP Address for the cluster ingress. If using localhost, use 127.0.0.1",
@@ -106,7 +129,7 @@ func promptAndValidateHost() {
 			},
 		}
 		err := survey.AskOne(prompt, &state.TLS.Host, survey.WithValidator(survey.Required))
-		if err.Error() == os.Interrupt.String() {
+		if err != nil && err.Error() == os.Interrupt.String() {
 			// Handle CTRL+C
 			os.Exit(0)
 		}
