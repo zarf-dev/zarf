@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
@@ -105,7 +106,8 @@ func ReplaceText(path string, old string, new string) {
 	}
 }
 
-func RecursiveFileList(root string) []string {
+// RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths
+func RecursiveFileList(root string, pattern *regexp.Regexp) []string {
 	var files []string
 
 	err := filepath.Walk(root,
@@ -114,7 +116,13 @@ func RecursiveFileList(root string) []string {
 				return err
 			}
 			if !info.IsDir() {
-				files = append(files, path)
+				if pattern != nil {
+					if len(pattern.FindStringIndex(path)) > 0 {
+						files = append(files, path)
+					}
+				} else {
+					files = append(files, path)
+				}
 			}
 			return nil
 		})

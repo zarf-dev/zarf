@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
+
 	"fmt"
+	"github.com/alecthomas/jsonschema"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
@@ -59,8 +62,22 @@ var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
 	Short: "Returns the Zarf admin password read from ~/.git-credentials",
 	Run: func(cmd *cobra.Command, args []string) {
-		authInfo := git.FindAuthForHost(config.ZarfLocalIP)
+		authInfo := git.FindAuthForHost(config.GetTargetEndpoint())
 		fmt.Println(authInfo.Auth.Password)
+	},
+}
+
+var configSchemaCmd = &cobra.Command{
+	Use:   "config-schema",
+	Short: "Generates a JSON schema for the zarf.yaml configuration",
+	Run: func(cmd *cobra.Command, args []string) {
+		schema := jsonschema.Reflect(&config.ZarfPackage{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Fatal("Unable to generate the zarf config schema")
+		}
+		fmt.Print(string(output))
 	},
 }
 
@@ -69,6 +86,7 @@ func init() {
 
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
+	toolsCmd.AddCommand(configSchemaCmd)
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
