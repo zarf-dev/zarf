@@ -174,12 +174,11 @@ func generateCA(caFile string, validFor time.Duration) (*x509.Certificate, *rsa.
 func generateCert(host string, certFile string, keyFile string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration) error {
 	template := newCertificate(validFor)
 
+	// Only use SANs to keep golang happy, https://go-review.googlesource.com/c/go/+/231379
 	if ip := net.ParseIP(host); ip != nil {
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
-		if template.Subject.CommonName == "" {
-			template.Subject.CommonName = host
-		}
+		template.DNSNames = append(template.DNSNames, host)
 	}
 
 	privateKey, err := newPrivateKey()
