@@ -54,7 +54,7 @@ beforeAll() {
     _run "sudo zarf destroy --confirm"
 
     # Launch the gitops service with logging and management
-    _run "sudo zarf init --confirm --generate --host=pipeline.zarf.dev --components=management,logging,gitops-service"
+    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --components=management,logging,gitops-service"
 
     _sleep 30
 }
