@@ -16,12 +16,7 @@ const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
-// ExecCommand performs a process execution outside of Go
-func ExecCommand(envVariables []string, commandName string, args ...string) (string, error) {
-	return execCommand(true, envVariables, commandName, args...)
-}
-
-func execCommand(showLogs bool, envVariables []string, commandName string, args ...string) (string, error) {
+func ExecCommand(showLogs bool, envVariables []string, commandName string, args ...string) (string, error) {
 	if showLogs {
 		fmt.Println()
 		fmt.Printf("%s", colorGreen)
