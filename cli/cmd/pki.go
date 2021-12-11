@@ -29,8 +29,8 @@ var pkiRegenerate = &cobra.Command{
 		}
 
 		// Verify the hostname provided is valid
-		if !utils.CheckHostName(tempState.TLS.Host) {
-			logrus.Fatalf("The hostname provided (%v) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035. If using localhost, you must use the 127.0.0.1.\n", tempState.TLS.Host)
+		if !utils.ValidHostname(tempState.TLS.Host) {
+			logrus.Fatalf(invalidHostMessage, tempState.TLS.Host)
 		}
 
 		pki.GeneratePKI()

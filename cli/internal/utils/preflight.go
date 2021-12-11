@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CheckHostName(hostname string) bool {
+func ValidHostname(hostname string) bool {
 	// Explanation: https://regex101.com/r/zUGqjP/1/
 	rfcDomain := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
 	// Explanation: https://regex101.com/r/vPGnzR/1/
@@ -29,7 +29,7 @@ func IsValidHostName() bool {
 		return false
 	}
 
-	return CheckHostName(hostname)
+	return ValidHostname(hostname)
 }
 
 func IsUserRoot() bool {

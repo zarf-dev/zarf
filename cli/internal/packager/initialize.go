@@ -10,7 +10,6 @@ import (
 type InstallOptions struct {
 	Confirmed  bool
 	Components string
-	Generate   bool
 }
 
 func Install(options *InstallOptions) {
