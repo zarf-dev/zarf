@@ -4,8 +4,11 @@ package utils
 
 import (
 	"fmt"
+	"io/fs"
+	"io/ioutil"
 
 	"github.com/fatih/color"
+	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/mattn/go-colorable"
@@ -64,4 +67,26 @@ func ColorPrintYAML(text string) {
 	if err != nil {
 		logrus.Warn("Unable to print the config yaml contents")
 	}
+}
+
+func ReadYaml(path string, destConfig interface{}) error {
+	logContext := logrus.WithField("path", path)
+	logContext.Info("Loading dynamic config")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(file, destConfig)
+}
+
+func WriteYaml(path string, srcConfig interface{}, perm fs.FileMode) error {
+	// Save the parsed output to the config path given
+	content, err := yaml.Marshal(srcConfig)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, content, perm)
 }

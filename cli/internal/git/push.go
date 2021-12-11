@@ -38,7 +38,7 @@ func push(localPath string) {
 		return
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL("https://"+config.ZarfLocalIP, remoteUrl)
+	targetUrl := transformURL("https://"+config.GetTargetEndpoint(), remoteUrl)
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
@@ -50,7 +50,7 @@ func push(localPath string) {
 		logContext.Fatal("Failed to create offline remote")
 	}
 
-	gitCred := FindAuthForHost(config.ZarfLocalIP)
+	gitCred := FindAuthForHost(config.GetTargetEndpoint())
 
 	pushContext := logContext.WithField("target", targetUrl)
 

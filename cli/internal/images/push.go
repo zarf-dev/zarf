@@ -1,21 +1,21 @@
 package images
 
 import (
-	"strings"
+	"regexp"
 
-	"github.com/containerd/containerd/reference/docker"
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
 )
 
-func PushAll(imageTarballPath string, buildImageList []string) {
-	logrus.Info("Loading images")
+func PushAll(imageTarballPath string, buildImageList []string, targetHost string) {
 	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
 
 	for _, src := range buildImageList {
-		logContext := logrus.WithField("image", src)
+		logContext := logrus.WithFields(logrus.Fields{
+			"source": src,
+			"target": targetHost,
+		})
 		logContext.Info("Updating image")
 		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformOptions)
 		if err != nil {
@@ -24,19 +24,20 @@ func PushAll(imageTarballPath string, buildImageList []string) {
 			return
 		}
 
-		onlineName, err := docker.ParseNormalizedNamed(src)
-		if err != nil {
-			logContext.Debug(err)
-			logContext.Warn("Unable to parse the image domain")
-			return
-		}
+		offlineName := SwapHost(src, targetHost)
 
-		offlineName := strings.Replace(src, docker.Domain(onlineName), config.ZarfLocalIP, 1)
-		logrus.Info(offlineName)
 		err = crane.Push(img, offlineName, cranePlatformOptions)
 		if err != nil {
 			logContext.Debug(err)
 			logContext.Warn("Unable to push the image to the registry")
 		}
 	}
+}
+
+// SwapHost Perform base url replacment without the docker libs
+func SwapHost(src string, targetHost string) string {
+	// For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
+	var parser = regexp.MustCompile(`(?im)^([a-z0-9\-.]+\.[a-z0-9\-]+:?[0-9]*)?/?(.+)$`)
+	var substitution = targetHost + "/$2"
+	return parser.ReplaceAllString(src, substitution)
 }

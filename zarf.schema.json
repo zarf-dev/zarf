@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$ref": "#/definitions/ZarfPackage",
+  "definitions": {
+    "ZarfBuildData": {
+      "required": [
+        "terminal",
+        "user",
+        "timestamp",
+        "string"
+      ],
+      "properties": {
+        "terminal": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "string": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfChart": {
+      "required": [
+        "name",
+        "url",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponent": {
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "default": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "files": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfFile"
+          },
+          "type": "array"
+        },
+        "manifests": {
+          "type": "string"
+        },
+        "images": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "charts": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfChart"
+          },
+          "type": "array"
+        },
+        "repos": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "scripts": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentScripts"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentScripts": {
+      "properties": {
+        "retry": {
+          "type": "boolean"
+        },
+        "before": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "after": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfContainerTarget": {
+      "required": [
+        "namespace",
+        "selector",
+        "path"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "container": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfData": {
+      "required": [
+        "source",
+        "target"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfContainerTarget"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfFile": {
+      "required": [
+        "source",
+        "target"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "shasum": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "boolean"
+        },
+        "symlinks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "template": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfMetadata": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "uncompressed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfPackage": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "metadata": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfMetadata"
+        },
+        "build": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfBuildData"
+        },
+        "data": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfData"
+          },
+          "type": "array"
+        },
+        "components": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfComponent"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

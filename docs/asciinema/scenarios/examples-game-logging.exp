@@ -94,7 +94,7 @@ setup
 # prep cluster
 spawn bash --norc
 
-send -h "zarf init --host=localhost --components=management --confirm\r"
+send -h "zarf init --host=127.0.0.1 --components=management --confirm\r"
 expect -timeout 120 -re {.*Grafana Username[^=]*=([^\s]*)}
 set grafana_user $expect_out(1,string)
 expect -re {.*Password \(all\)[^=]*="([^"]*)"}
@@ -128,7 +128,7 @@ comment "game running?"
 do "kubectl get pod -l app=game"; wait_input
 
 comment "install logging component"
-send -h "zarf init --host=localhost --components=logging --confirm\r\r"
+send -h "zarf init --host=127.0.0.1 --components=logging --confirm\r\r"
 wait_input 120
 
 comment "PLG stack up?"

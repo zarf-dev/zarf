@@ -1,10 +1,12 @@
 package config
 
 type ZarfFile struct {
-	Source     string `yaml:"source"`
-	Shasum     string `yaml:"shasum"`
-	Target     string `yaml:"target"`
-	Executable bool   `yaml:"executable"`
+	Source     string   `yaml:"source"`
+	Shasum     string   `yaml:"shasum,omitempty"`
+	Target     string   `yaml:"target"`
+	Executable bool     `yaml:"executable,omitempty"`
+	Symlinks   []string `yaml:"symlinks,omitempty"`
+	Template   bool     `yaml:"template,omitempty"`
 }
 
 type ZarfChart struct {
@@ -14,28 +16,35 @@ type ZarfChart struct {
 }
 
 type ZarfComponent struct {
-	Name        string      `yaml:"name"`
-	Description string      `yaml:"description"`
-	Default     bool        `yaml:"default"`
-	Required    bool        `yaml:"required"`
-	Manifests   string      `yaml:"manifests"`
-	Images      []string    `yaml:"images"`
-	Repos       []string    `yaml:"repos"`
-	Charts      []ZarfChart `yaml:"charts"`
-	Files       []ZarfFile  `yaml:"files"`
+	Name          string               `yaml:"name"`
+	Description   string               `yaml:"description,omitempty"`
+	Default       bool                 `yaml:"default,omitempty"`
+	Required      bool                 `yaml:"required,omitempty"`
+	Files         []ZarfFile           `yaml:"files,omitempty"`
+	ManifestsPath string               `yaml:"manifests,omitempty"`
+	Images        []string             `yaml:"images,omitempty"`
+	Charts        []ZarfChart          `yaml:"charts,omitempty"`
+	Repos         []string             `yaml:"repos,omitempty"`
+	Scripts       ZarfComponentScripts `yaml:"scripts,omitempty"`
 }
 
-type ZarfMetatdata struct {
-	Name         string `yaml:"name"`
-	Description  string `yaml:"description"`
-	Version      string `yaml:"version"`
-	Uncompressed bool   `yaml:"uncompressed"`
+type ZarfComponentScripts struct {
+	Retry  bool     `yaml:"retry,omitempty"`
+	Before []string `yaml:"before,omitempty"`
+	After  []string `yaml:"after,omitempty"`
+}
+
+type ZarfMetadata struct {
+	Name         string `yaml:"name,omitempty"`
+	Description  string `yaml:"description,omitempty"`
+	Version      string `yaml:"version,omitempty"`
+	Uncompressed bool   `yaml:"uncompressed,omitempty"`
 }
 
 type ZarfContainerTarget struct {
 	Namespace string `yaml:"namespace"`
 	Selector  string `yaml:"selector"`
-	Container string `yaml:"container"`
+	Container string `yaml:"container,omitempty"`
 	Path      string `yaml:"path"`
 }
 
@@ -51,10 +60,19 @@ type ZarfBuildData struct {
 	Version   string `yaml:"string"`
 }
 
-type ZarfConfig struct {
-	Kind       string          `yaml:"kind"`
-	Metadata   ZarfMetatdata   `yaml:"metadata"`
-	Package    ZarfBuildData   `yaml:"package"`
-	Data       []ZarfData      `yaml:"data"`
-	Components []ZarfComponent `yaml:"components"`
+type ZarfPackage struct {
+	Kind       string          `yaml:"kind,omitempty"`
+	Metadata   ZarfMetadata    `yaml:"metadata,omitempty"`
+	Build      ZarfBuildData   `yaml:"build,omitempty"`
+	Data       []ZarfData      `yaml:"data,omitempty"`
+	Components []ZarfComponent `yaml:"components,omitempty"`
+}
+
+type ZarfState struct {
+	Kind string `yaml:"kind"`
+	TLS  struct {
+		CertPublicPath  string `yaml:"certPublicPath"`
+		CertPrivatePath string `yaml:"certPrivatePath"`
+		Host            string `yaml:"host"`
+	} `yaml:"tls"`
 }
