@@ -29,7 +29,7 @@ _curl() {
     >&2 echo
     >&2 echo
     >&2 echo -e "🟢 ${GREEN}TEST CURL: ${YELLOW} $1 ${NOCOLOR}"
-    timeout 300 bash -c 'while [[ "$(curl -sfSL --cacert zarf-ca.crt --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w "%{http_code}" '"$1"')" != "200" ]]; do sleep 1; done' || false
+    curl -sfSL --cacert zarf-ca.crt --retry 15 --retry-connrefused --retry-delay 10 "$1"
 }
 
 _sleep() {
