@@ -54,7 +54,7 @@ beforeAll() {
     _run "sudo zarf destroy --confirm"
 
     # Launch the gitops service with logging and management
-    _run "sudo zarf init --confirm --host=pipeline.zarf.dev --components=management,logging,gitops-service"
+    _run "sudo zarf init --confirm --host=127.0.0.1 --components=management,logging,gitops-service"
 
     _sleep 30
 }
@@ -98,13 +98,13 @@ testAPIEndpoints() {
     # This is commented out because it already gets tested in the GitHub Actions pipeline. Without changes it fails
     # due to the registry needing auth now, but it's already tested elsewhere so it doesn't need to be tested here.
     # Eventually this whole file will be deleted when we have finished moving all of these tests over to GitHub Actions.
-    # _curl "https://pipeline.zarf.dev/v2/"
+    # _curl "https://127.0.0.1/v2/"
 
     # Test gitea is up and can be logged into
-    _curl "https://zarf-git-user:${ZARF_PWD}@pipeline.zarf.dev/api/v1/user"
+    _curl "https://zarf-git-user:${ZARF_PWD}@127.0.0.1/api/v1/user"
 
     # Test grafana is up and can be logged into
-    _curl "https://zarf-admin:${ZARF_PWD}@pipeline.zarf.dev/monitor/api/org"
+    _curl "https://zarf-admin:${ZARF_PWD}@127.0.0.1/monitor/api/org"
 }
 
 testDataInjection() {
@@ -133,7 +133,7 @@ testGitBasedHelmChart() {
     _run "sudo zarf package deploy $PACKAGE --confirm"
     _sleep 60
     # Test to confirm the Twistlock Console was deployed
-    _curl "https://pipeline.zarf.dev/api/v1/settings/initialized?project=Central+Console"
+    _curl "https://127.0.0.1/api/v1/settings/initialized?project=Central+Console"
 }
 
 beforeAll
@@ -153,7 +153,7 @@ testAPIEndpoints
 _run "sudo /usr/local/bin/kubectl -n git delete ingress git-ingress"
 
 # Test Zarf PKI Regenerate, final testing doesn't occur until after loadZarfCA and testGitBasedHelmChart
-_run "sudo zarf pki regenerate --host=pipeline.zarf.dev"
+_run "sudo zarf pki regenerate --host=127.0.0.1"
 
 # Update the CA first
 loadZarfCA
