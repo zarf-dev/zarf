@@ -1,13 +1,12 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
 	"time"
 
-	"github.com/goccy/go-yaml"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,12 +16,18 @@ const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
 const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
-const ZarfLocalIP = "127.0.0.1"
 const ZarfGitUser = "zarf-git-user"
+const ZarfStatePath = ".zarf-state.yaml"
 
 var CLIVersion = "unset"
+var config ZarfPackage
+var state ZarfState
 
-var config ZarfConfig
+func init() {
+	if err := utils.ReadYaml(ZarfStatePath, &state); err != nil {
+		state.Kind = "ZarfState"
+	}
+}
 
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
@@ -41,7 +46,7 @@ func GetDataInjections() []ZarfData {
 	return config.Data
 }
 
-func GetMetaData() ZarfMetatdata {
+func GetMetaData() ZarfMetadata {
 	return config.Metadata
 }
 
@@ -50,62 +55,51 @@ func GetComponents() []ZarfComponent {
 }
 
 func GetBuildData() ZarfBuildData {
-	return config.Package
+	return config.Build
 }
 
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
-func Load(path string) {
-	logContext := logrus.WithField("path", path)
-	logContext.Info("Loading dynamic config")
-	file, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Unable to load the config file")
-	}
-
-	err = yaml.Unmarshal(file, &config)
-	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Unable to parse the config file")
-	}
+func GetState() ZarfState {
+	return state
 }
 
-func WriteConfig(path string) {
-	logContext := logrus.WithField("path", path)
+func GetTargetEndpoint() string {
+	return state.TLS.Host
+}
+
+func WriteState(incomingState ZarfState) error {
+	logrus.Debug(incomingState)
+	state = incomingState
+	return utils.WriteYaml(ZarfStatePath, state, 0600)
+}
+
+func LoadConfig(path string) error {
+	return utils.ReadYaml(path, &config)
+}
+
+func BuildConfig(path string) error {
 	now := time.Now()
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
 
 	// Record the time of package creation
-	config.Package.Timestamp = now.Format(time.RFC1123Z)
+	config.Build.Timestamp = now.Format(time.RFC1123Z)
 
 	// Record the Zarf Version the CLI was built with
-	config.Package.Version = CLIVersion
+	config.Build.Version = CLIVersion
 
 	if hostErr == nil {
 		// Record the hostname of the package creation terminal
-		config.Package.Terminal = hostname
+		config.Build.Terminal = hostname
 	}
 
 	if userErr == nil {
 		// Record the name of the user creating the package
-		config.Package.User = currentUser.Username
+		config.Build.User = currentUser.Username
 	}
 
-	// Save the parsed output to the config path given
-	content, err := yaml.Marshal(config)
-	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Unable to process the config data")
-	}
-
-	err = ioutil.WriteFile(path, content, 0400)
-	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Unable to write the config file")
-	}
+	return utils.WriteYaml(path, config, 0400)
 }

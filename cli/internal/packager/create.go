@@ -17,7 +17,10 @@ import (
 
 func Create(confirm bool) {
 
-	config.Load("zarf.yaml")
+	if err := config.LoadConfig("zarf.yaml"); err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to read the zarf.yaml file")
+	}
 
 	tempPath := createPaths()
 	packageName := config.GetPackageName()
@@ -26,7 +29,10 @@ func Create(confirm bool) {
 	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
-	config.WriteConfig(configFile)
+	if err := config.BuildConfig(configFile); err != nil {
+		logrus.Debug(err)
+		logrus.WithField("path", configFile).Fatal("Unable to write the zarf.yaml file")
+	}
 
 	confirm = confirmAction(configFile, confirm, "Create")
 
@@ -108,9 +114,9 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 		images.PullAll(assets.Images, tempPath.images)
 	}
 
-	if assets.Manifests != "" {
-		logrus.WithField("path", assets.Manifests).Info("Loading manifests for local install")
-		utils.CreatePathAndCopy(assets.Manifests, tempPath.manifests)
+	if assets.ManifestsPath != "" {
+		logrus.WithField("path", assets.ManifestsPath).Info("Loading manifests for local install")
+		utils.CreatePathAndCopy(assets.ManifestsPath, tempPath.manifests)
 	}
 
 	if len(assets.Repos) > 0 {

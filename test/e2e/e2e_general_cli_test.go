@@ -83,12 +83,13 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 	assert.NotEqual(t, string(output), "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test for expected failure when given a bad component input
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --components management,foo,logging", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --confirm --host 127.0.0.1 --components management,foo,logging", username))
 	require.Error(t, err, output)
 
 	// Test for expected failure when given invalid hostnames
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --host bad!hostname", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf init --confirm --host localhost", username))
 	require.Error(t, err, output)
+
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host zarf@server", username))
 	require.Error(t, err, output)
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", username))
@@ -105,8 +106,7 @@ func testGeneralCliStuff(t *testing.T, terraformOptions *terraform.Options, keyP
 	require.Error(t, err, output)
 
 	// Test that changing the log level actually applies the requested level
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf version --log-level warn 2> /dev/null", username))
-	require.NoError(t, err, output)
+	output, _ = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("cd /home/%s/build && ./zarf version --log-level warn 2> /dev/null", username))
 	expectedOutString := "The log level has been changed to: warning"
 	logLevelOutput := strings.Split(output, "\n")[0]
 	require.Equal(t, expectedOutString, logLevelOutput, "The log level should be changed to 'warn'")
