@@ -32,7 +32,10 @@ func Inspect(packageName string) {
 	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
-	_ = config.LoadConfig(tempPath.base + "/zarf.yaml")
+	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+		logrus.Fatalf("Unable to read the zarf.yaml file from %s", tempPath.base)
+	}
+
 	fmt.Printf("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
 	cleanup(tempPath)
 
