@@ -33,6 +33,7 @@ func Inspect(packageName string) {
 
 	// Load the config to get the build version
 	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+		logrus.Fatal(err)
 		logrus.Fatalf("Unable to read the zarf.yaml file from %s", tempPath.base)
 	}
 
