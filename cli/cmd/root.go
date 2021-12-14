@@ -64,6 +64,6 @@ func setLogLevel(logLevel string) {
 	case "panic":
 		logrus.SetLevel(logrus.PanicLevel)
 	default:
-		logrus.Fatal("Unrecognized log level entry:", logLevel)
+		logrus.Fatalf("Unrecognized log level entry:", logLevel)
 	}
 }
