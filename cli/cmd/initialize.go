@@ -114,7 +114,7 @@ func promptAndValidateHost() {
 					for _, iface := range interfaces {
 						// Conver the CIRD to the IP string if valid
 						ip, _, _ := net.ParseCIDR(iface.String())
-						if iface.String() != "" {
+						if utils.ValidHostname(ip.String()) {
 							suggestions = append(suggestions, ip.String())
 						}
 					}
