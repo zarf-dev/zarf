@@ -34,7 +34,7 @@ var rootCmd = &cobra.Command{
 				return
 			}
 		}
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -64,6 +64,6 @@ func setLogLevel(logLevel string) {
 	case "panic":
 		logrus.SetLevel(logrus.PanicLevel)
 	default:
-		logrus.Fatal("Unrecognized log level entry: %s", logLevel)
+		logrus.Fatalf("Unrecognized log level entry: %s", logLevel)
 	}
 }
