@@ -4,6 +4,8 @@ This example extends the Big Bang Core example package and deploys Big Bang Umbr
 
 Because the same cluster will be running both Traefik and Istio, Istio's VirtualServices will be available on port 9443
 
+NOTE: This package can be quite large (especially if you choose to enable more of the features in Big Bang Core). We recommend deploying this onto a host with at least 64 GB of RAM.
+
 ## Prerequisites
 
 1. Install [Vagrant](https://www.vagrantup.com/)
@@ -14,14 +16,15 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 1. From within the examples directory, Run: `make all`, which will download the latest built binaries, build all of the example packages, and launch a basic VM to run in. Alternatively, run `make all-dev` if you want to build the binaries using the current codebase instead of downloading them.
 5. Run: `sudo su` - Change user to root
 6. Run: `cd zarf-examples` - Change to the directory where the examples folder is mounted
-7. Run: `./zarf init --confirm --components management,gitops-service --host localhost` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain
+7. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1` as the domain
 8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-9. Run: `sysctl -w vm.max_map_count=262144` - Set max_map_count for ElasticSearch
 10. Run: `./zarf package deploy zarf-package-big-bang-umbrella-demo.tar.zst --confirm` - Deploy Big Bang Umbrella
 11. Wait several minutes. Run `k9s` to watch progress
 12. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 13. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 14. When you're done, run `make vm-destroy` to bring everything down
+
+NOTE: If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
 
 ## Kubescape scan
 

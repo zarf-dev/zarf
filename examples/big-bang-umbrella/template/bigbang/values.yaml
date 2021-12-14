@@ -215,7 +215,7 @@ istiooperator:
           memory: "256Mi"
 
 jaeger:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
   values:
@@ -249,7 +249,7 @@ jaeger:
           image: registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
 
 kiali:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
   values:
@@ -272,7 +272,7 @@ kiali:
               memory: "368Mi"
 
 clusterAuditor:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__cluster-auditor.git
   values:
@@ -285,7 +285,7 @@ clusterAuditor:
         memory: "512Mi"
 
 gatekeeper:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
@@ -340,7 +340,7 @@ gatekeeper:
             - "registry/registry-ingress"
 
 logging:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
   values:
@@ -378,12 +378,12 @@ logging:
           cpu: "500m"
 
 eckoperator:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
 
 fluentbit:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
   values:
@@ -398,7 +398,7 @@ fluentbit:
         memory: "128Mi"
 
 monitoring:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__monitoring.git
   values:
@@ -462,7 +462,7 @@ monitoring:
           memory: "128Mi"
 
 twistlock:
-  enabled: true
+  enabled: false
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
   values:
