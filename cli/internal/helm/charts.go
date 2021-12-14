@@ -34,7 +34,12 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	client.Run(tempPath+"/chart", nil)
+	name, err := client.Run(tempPath+"/chart", nil)
+
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Helm is unable to save the archive and create the package:", name)
+	}
 
 	_ = os.RemoveAll(tempPath)
 }
@@ -79,7 +84,12 @@ func DownloadPublishedChart(chart config.ZarfChart, destination string) {
 
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(destination, chart)
-	os.Rename(saved, destinationTarball)
+	err = os.Rename(saved, destinationTarball)
+
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to rename tarball")
+	}
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf

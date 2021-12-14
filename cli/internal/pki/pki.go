@@ -201,7 +201,10 @@ func generateFromTemplate(certFile, keyFile string, template, parent *x509.Certi
 	if err != nil {
 		return err
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return err
+	}
 	certOut.Close()
 
 	return savePrivateKey(key, keyFile)
@@ -216,7 +219,10 @@ func savePrivateKey(key *rsa.PrivateKey, keyFile string) error {
 	defer keyOut.Close()
 
 	keyBytes := x509.MarshalPKCS1PrivateKey(key)
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes})
+	err = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -144,7 +144,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 
 	// Check the extension on the package is what we expect
 	if !isValidFileExtension(providedURL.Path) {
-		logrus.Fatalf("Only %s file extensions are permitted.\n", config.GetValidPackageExtensions)
+		logrus.Fatalf("Only %s file extensions are permitted.\n", config.GetValidPackageExtensions())
 	}
 
 	// Download the package

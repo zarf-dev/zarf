@@ -23,14 +23,13 @@ repos:
     rev: v0.4.0
     hooks:
       - id: go-fmt
-# Commenting this one out for now since it fails
 ## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
-#  - repo: local
-#    hooks:
-#      - id: golangci-lint
-#        name: golangci-lint
-#        entry: hooks/run-golangci-lint.sh
-#        types: [ go ]
-#        language: script
-#        pass_filenames: false
-#        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        entry: hooks/run-golangci-lint.sh
+        types: [ go ]
+        language: script
+        pass_filenames: false
+        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"

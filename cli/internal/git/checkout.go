@@ -59,25 +59,27 @@ func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.Refer
 
 	objRef, err := repo.Object(plumbing.AnyObject, hash)
 
-	var commitHash plumbing.Hash
-	switch objRef := objRef.(type) {
-	case *object.Tag:
-		commitHash = objRef.Target
-	case *object.Commit:
-		commitHash = objRef.Hash
-	default:
-		// This shouldn't ever hit, but we should at least log it if someday it
-		// does get hit
-		logContext.Debug("Unsupported tag hash type: " + objRef.Type().String())
-		logContext.Fatal("Checkout failed. Hash type not supported.")
-	}
+	if err != nil {
+		var commitHash plumbing.Hash
+		switch objRef := objRef.(type) {
+		case *object.Tag:
+			commitHash = objRef.Target
+		case *object.Commit:
+			commitHash = objRef.Hash
+		default:
+			// This shouldn't ever hit, but we should at least log it if someday it
+			// does get hit
+			logContext.Debug("Unsupported tag hash type: " + objRef.Type().String())
+			logContext.Fatal("Checkout failed. Hash type not supported.")
+		}
 
-	options := &git.CheckoutOptions{
-		Hash:   commitHash,
-		Branch: branch,
-		Create: true,
+		options := &git.CheckoutOptions{
+			Hash:   commitHash,
+			Branch: branch,
+			Create: true,
+		}
+		checkout(path, options)
 	}
-	checkout(path, options)
 }
 
 // checkout performs a `git checkout` on the path provided using the options provided
