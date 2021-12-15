@@ -57,7 +57,11 @@ func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.Refer
 		logContext.Fatal("Not a valid git repo or unable to open")
 	}
 
-	objRef, _ := repo.Object(plumbing.AnyObject, hash)
+	objRef, err := repo.Object(plumbing.AnyObject, hash)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("An error occurred when getting the repo's object reference")
+	}
 
 	var commitHash plumbing.Hash
 	switch objRef := objRef.(type) {

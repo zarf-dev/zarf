@@ -195,7 +195,7 @@ func RemoveHeadCopies(gitDirectory string) []*plumbing.Reference {
 	head, err := repo.Head()
 	if err != nil {
 		logContext.Debug(err)
-		logContext.Fatal("Failed to identify references")
+		logContext.Fatal("Failed to identify references when running `repo.Head()`")
 	}
 
 	headHash := head.Hash().String()
@@ -225,7 +225,7 @@ func removeReferences(
 	references, err := repo.References()
 	if err != nil {
 		logContext.Debug(err)
-		logContext.Fatal("Failed to identify references")
+		logContext.Fatal("Failed to identify references when running `repo.References()`")
 	}
 
 	head, err := repo.Head()
