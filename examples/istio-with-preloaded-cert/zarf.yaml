@@ -1,0 +1,103 @@
+kind: ZarfPackageConfig
+metadata:
+  name: istio-with-preloaded-cert
+  description: "Demo of Istio deployed with a preloaded ingress cert"
+
+components:
+  - name: flux
+    required: true
+    manifests: manifests/flux
+    images:
+      # Flux images
+      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
+      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
+      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
+      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
+
+  - name: istio-from-bigbang
+    required: true
+    # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
+    # 2. Add the actual bigbang repo as well
+    # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
+    manifests: manifests/big-bang
+    repos:
+      - https://github.com/defenseunicorns/zarf.git
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.7
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.23.0-bb.2
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.2
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.21-bb.0
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.16.6-bb.0
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@14.0.0-bb.10
+#      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.9-bb.0
+
+    images:
+      # TODO: Figure out a better way to derive this list.
+      # 1. Deploy Big Bang Core using some other method like https://repo1.dso.mil/platform-one/quick-start/big-bang
+      # 2. kubectl get pods --all-namespaces -o json | jq '.items[].spec.containers[].image' | jq -s 'unique' | yq e -P
+      # 3. Move all 'registry1.dso.mil/ironbank/fluxcd' images to the 'local.images' section
+      # 4. Add 'docker.io/' to any images that aren't fully qualified (example: rancher/metrics-server -> docker.io/rancher/metrics-server
+      # OR go through each values.yaml file in each git repo specified above and pull out all the images
+
+      # common
+      - registry1.dso.mil/ironbank/big-bang/base:8.4
+
+#      # cluster-auditor
+#      - registry1.dso.mil/ironbank/cluster-auditor/opa-collector:0.3.2
+#
+#      # policy
+#      - registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.1
+#      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.2
+
+      # istio-controlplane
+      - registry1.dso.mil/ironbank/opensource/istio/istioctl:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.10.4
+
+      # istio-operator
+      - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
+
+#      # jaeger
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-agent:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
+#      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
+#
+#      # kiali
+#      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
+#      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
+#
+#      # eck-operator
+#      - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
+#
+#      # elasticsearch-kibana
+#      - registry1.dso.mil/ironbank/elastic/kibana/kibana:7.12.0
+#      - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.13.4
+#
+#      # fluentbit
+#      - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.8.6
+#
+#      # monitoring
+#      - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.21.0
+#      - registry1.dso.mil/ironbank/opensource/grafana/grafana:7.5.2
+#      - registry1.dso.mil/ironbank/opensource/bats/bats:1.2.1
+#      - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.10.6
+#      - registry1.dso.mil/ironbank/opensource/coreos/kube-state-metrics:v1.9.8
+#      - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.0.1
+#      - registry1.dso.mil/ironbank/opensource/jet/kube-webhook-certgen:v1.5.1
+#      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.46.0
+#      - registry1.dso.mil/ironbank/opensource/jimmidyson/configmap-reload:v0.5.0
+#      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.46.0
+#      - registry1.dso.mil/ironbank/opensource/kubernetes-1.20/kubectl-1.20:v1.20.8
+#      - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.25.0
+#
+#      # twistlock
+#      - registry1.dso.mil/ironbank/twistlock/console/console:21.04.439

@@ -8,12 +8,24 @@ repos:
         args:
           - "--allow-missing-credentials"
       - id: detect-private-key
-        exclude: "^examples/big-bang/template/bigbang/values.yaml$"
+        exclude: |
+          (?x)^(
+            examples/big-bang/template/bigbang/values.yaml|
+            examples/istio-with-preloaded-cert/template/bigbang/values.yaml
+          )$
       - id: end-of-file-fixer
-        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
+        exclude: |
+          (?x)^(
+            examples/big-bang/template/bigbang/vendor/.*|
+            examples/istio-with-preloaded-cert/template/bigbang/vendor/.*
+          )$
       - id: fix-byte-order-marker
       - id: trailing-whitespace
-        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
+        exclude: |
+          (?x)^(
+            examples/big-bang/template/bigbang/vendor/.*|
+            examples/istio-with-preloaded-cert/template/bigbang/vendor/.*
+          )$
         args: [--markdown-linebreak-ext=md]
   - repo: https://github.com/sirosen/fix-smartquotes
     rev: 0.2.0

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    owner: bigbang
+  name: bigbang
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: zarf-git-secret
+  namespace: bigbang
+stringData:
+  username: "zarf-git-user"
+  password: "###ZARF_SECRET###"
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: zarf
+  namespace: bigbang
+spec:
+  ignore: |
+    # exclude file extensions
+    /**/*.md
+    /**/*.txt
+    /**/*.sh
+  interval: 5m
+  url: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git
+  secretRef:
+    name: zarf-git-secret
+  ref:
+    branch: feature/120-preloaded-istio-cert
+#    tag: 1.21.0
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: bigbang
+  namespace: bigbang
+spec:
+  interval: 5m
+  path: "./examples/istio-with-preloaded-cert/template/bigbang"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: zarf
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      namespace: bigbang
+      name: istio
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      namespace: bigbang
+      name: istio-operator
+  timeout: 60m
+  postBuild:
+    substitute:
+      zarf_secret: "###ZARF_SECRET###"
