@@ -75,7 +75,7 @@ func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
 	if len(assets.Charts) > 0 {
 		logrus.Info("Loading static helm charts")
 		_ = utils.CreateDirectory(tempPath.charts, 0700)
-		re := regexp.MustCompile(`\\.git$`)
+		re := regexp.MustCompile("\\.git$")
 		for _, chart := range assets.Charts {
 			matched := re.MatchString(chart.Url)
 			if matched {
