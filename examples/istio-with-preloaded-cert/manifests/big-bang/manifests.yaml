@@ -55,6 +55,10 @@ spec:
       kind: HelmRelease
       namespace: bigbang
       name: istio-operator
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      namespace: bigbang
+      name: kiali
   timeout: 60m
   postBuild:
     substitute:

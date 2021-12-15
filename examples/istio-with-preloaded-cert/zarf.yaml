@@ -25,6 +25,7 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
 
     images:
       # TODO: Figure out a better way to derive this list.
@@ -45,3 +46,7 @@ components:
 
       # istio-operator
       - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
+
+      # kiali
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
