@@ -57,29 +57,27 @@ func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.Refer
 		logContext.Fatal("Not a valid git repo or unable to open")
 	}
 
-	objRef, err := repo.Object(plumbing.AnyObject, hash)
+	objRef, _ := repo.Object(plumbing.AnyObject, hash)
 
-	if err != nil {
-		var commitHash plumbing.Hash
-		switch objRef := objRef.(type) {
-		case *object.Tag:
-			commitHash = objRef.Target
-		case *object.Commit:
-			commitHash = objRef.Hash
-		default:
-			// This shouldn't ever hit, but we should at least log it if someday it
-			// does get hit
-			logContext.Debug("Unsupported tag hash type: " + objRef.Type().String())
-			logContext.Fatal("Checkout failed. Hash type not supported.")
-		}
-
-		options := &git.CheckoutOptions{
-			Hash:   commitHash,
-			Branch: branch,
-			Create: true,
-		}
-		checkout(path, options)
+	var commitHash plumbing.Hash
+	switch objRef := objRef.(type) {
+	case *object.Tag:
+		commitHash = objRef.Target
+	case *object.Commit:
+		commitHash = objRef.Hash
+	default:
+		// This shouldn't ever hit, but we should at least log it if someday it
+		// does get hit
+		logContext.Debug("Unsupported tag hash type: " + objRef.Type().String())
+		logContext.Fatal("Checkout failed. Hash type not supported.")
 	}
+
+	options := &git.CheckoutOptions{
+		Hash:   commitHash,
+		Branch: branch,
+		Create: true,
+	}
+	checkout(path, options)
 }
 
 // checkout performs a `git checkout` on the path provided using the options provided
