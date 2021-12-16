@@ -34,19 +34,19 @@ vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to
 	git checkout tags/1.17.0 -b tagbranch && \
 	rm -rf .git
 
-.PHONY: package-example-istio-with-preloaded-cert
-package-example-istio-with-preloaded-cert: vendor-big-bang-base ## Example that deploys Istio with a preloaded certificate
+.PHONY: package-example-istio-with-separate-cert
+package-example-istio-with-separate-cert: vendor-big-bang-base ## Example that deploys Istio without an ingress certificate
 	kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: all
 all: ## Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
 	@cd .. && $(MAKE) clean fetch-release
-	@$(MAKE) package-example-istio-with-preloaded-cert vm-init
+	@$(MAKE) package-example-istio-with-separate-cert vm-init
 
 .PHONY: all-dev
 all-dev: ## Same as 'default', but build Zarf rather than downloading it
 	@cd .. && $(MAKE) clean build-release
-	@$(MAKE) package-example-istio-with-preloaded-cert vm-init
+	@$(MAKE) package-example-istio-with-separate-cert vm-init
 
 .PHONY: vm-init
 vm-init: ## Bring up the VM

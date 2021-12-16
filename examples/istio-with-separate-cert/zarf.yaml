@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: istio-with-preloaded-cert
-  description: "Demo of Istio deployed with a preloaded ingress cert"
+  name: istio-with-separate-cert
+  description: "Demo of Istio deployed with a separately ingress cert"
 
 components:
   - name: flux

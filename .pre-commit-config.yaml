@@ -11,20 +11,20 @@ repos:
         exclude: |
           (?x)^(
             examples/big-bang/template/bigbang/values.yaml|
-            examples/istio-with-preloaded-cert/template/bigbang/values.yaml
+            examples/istio-with-separate-cert/template/bigbang/values.yaml
           )$
       - id: end-of-file-fixer
         exclude: |
           (?x)^(
             examples/big-bang/template/bigbang/vendor/.*|
-            examples/istio-with-preloaded-cert/template/bigbang/vendor/.*
+            examples/istio-with-separate-cert/template/bigbang/vendor/.*
           )$
       - id: fix-byte-order-marker
       - id: trailing-whitespace
         exclude: |
           (?x)^(
             examples/big-bang/template/bigbang/vendor/.*|
-            examples/istio-with-preloaded-cert/template/bigbang/vendor/.*
+            examples/istio-with-separate-cert/template/bigbang/vendor/.*
           )$
         args: [--markdown-linebreak-ext=md]
   - repo: https://github.com/sirosen/fix-smartquotes
