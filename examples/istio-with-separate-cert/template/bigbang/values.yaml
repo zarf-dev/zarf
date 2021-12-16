@@ -55,7 +55,9 @@ istio:
   gateways:
     public:
       tls:
-        credentialsName: "public-cert"
+        cert: "The chart won't let me leave this blank. If it is blank, a default cert is applied (the `*.bigbang.dev` one)"
+        key: "The chart won't let me leave this blank. If it is blank, a default cert is applied (the `*.bigbang.dev` one)"
+        credentialName: "public-cert-actual"
         mode: "SIMPLE"
 
   values:
