@@ -41,7 +41,7 @@ metadata:
   namespace: bigbang
 spec:
   interval: 5m
-  path: "./examples/istio-with-preloaded-cert/template/bigbang"
+  path: "./examples/istio-with-separate-cert/template/bigbang"
   prune: true
   sourceRef:
     kind: GitRepository
