@@ -1,6 +1,6 @@
-# Example: Big Bang Core All-In-One
+# Example: Big Bang's Istio with a separately loaded cert
 
-This example deploys Big Bang Core with a gitops service. This is not normally the method that will be used in production but for a demo it works great.
+This example deploys Big Bang's Istio, but without an ingress cert. It is applicable in use cases where you want to have a freely distributable zarf package, but your ingress cert is private and can't be distributed in the same way that you want the Zarf package to be.
 
 Because the same cluster will be running both Traefik and Istio, Istio's VirtualServices will be available on port 9443
 
@@ -12,14 +12,14 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 
 ## Instructions
 
-1. `cd examples/big-bang`
+1. `cd examples/istio-with-separate-cert`
 1. Run one of these two commands:
    - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
    - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
 1. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
 1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-1. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --components kubescape --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-1. Wait several minutes. Run `k9s` to watch progress
+1. Run: `./zarf package deploy zarf-package-istio-with-separate-cert.tar.zst --confirm` - Deploy the package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
+1. Wait for a couple of minutes. Run `k9s` to watch progress
 1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
