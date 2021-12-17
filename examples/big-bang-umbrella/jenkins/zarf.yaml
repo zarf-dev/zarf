@@ -9,12 +9,13 @@ components:
 
     manifests: "./manifests"
 
-    files:
-      - source: https://raw.githubusercontent.com/jenkinsci/kubernetes-operator/master/chart/jenkins-operator/jenkins-operator-0.6.0.tgz
-        # shasum: TODO: add shasum
-        target: "/var/lib/rancher/k3s/server/static/charts/jenkins-operator.tgz"
+    charts:
+      - name: jenkins
+        url: https://charts.jenkins.io
+        version: 3.9.4
 
     images:
-      - jenkins/jenkins:lts
-      - virtuslab/jenkins-operator-backup-pvc:v0.1.0
-      - virtuslab/jenkins-operator:v0.6.0
+      - jenkins/jenkins:2.319.1-jdk11
+      - kiwigrid/k8s-sidecar:1.14.2
+      - jenkins/inbound-agent:4.11-1
+      - maorfr/kube-tasks:0.2.0

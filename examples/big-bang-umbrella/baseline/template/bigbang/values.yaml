@@ -249,7 +249,7 @@ jaeger:
           image: registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
 
 kiali:
-  enabled: false
+  enabled: true
   git:
     repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
   values:

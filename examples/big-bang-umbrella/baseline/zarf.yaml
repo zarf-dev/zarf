@@ -26,7 +26,7 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
       # - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.23.0-bb.2
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
       # - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.2
       # - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.21-bb.0
       # - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.16.6-bb.0
@@ -79,9 +79,9 @@ components:
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
 
-      # # kiali
-      # - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
-      # - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
+      # kiali
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
 
       # # eck-operator
       # - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
