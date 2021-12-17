@@ -41,12 +41,16 @@ package-example-istio-with-separate-cert: vendor-big-bang-base ## Example that d
 .PHONY: all
 all: ## Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
 	@cd .. && $(MAKE) clean fetch-release
-	@$(MAKE) package-example-istio-with-separate-cert vm-init
+	@$(MAKE) package-example-istio-with-separate-cert copy-cert-file vm-init
 
 .PHONY: all-dev
 all-dev: ## Same as 'default', but build Zarf rather than downloading it
 	@cd .. && $(MAKE) clean build-release
-	@$(MAKE) package-example-istio-with-separate-cert vm-init
+	@$(MAKE) package-example-istio-with-separate-cert copy-cert-file vm-init
+
+.PHONY: copy-cert-file
+copy-cert-file: ## Copy the ingress cert into the sync directory
+	@cp files/secret-tls.yaml ../sync/secret-tls.yaml
 
 .PHONY: vm-init
 vm-init: ## Bring up the VM
