@@ -8,7 +8,11 @@ repos:
         args:
           - "--allow-missing-credentials"
       - id: detect-private-key
-        exclude: "^examples/big-bang/template/bigbang/values.yaml$"
+        exclude: |
+          (?x)^(
+            examples/big-bang/template/bigbang/values.yaml|
+            examples/big-bang-umbrella/baseline/template/bigbang/values.yaml
+          )$
       - id: end-of-file-fixer
         exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
       - id: fix-byte-order-marker

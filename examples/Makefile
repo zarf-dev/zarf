@@ -74,7 +74,8 @@ package-example-big-bang: vendor-big-bang-base ## Create the Big Bang Core examp
 
 .PHONY: package-example-big-bang-umbrella
 package-example-big-bang-umbrella: ## Create the Big Bang Umbrella example
-	cd big-bang-umbrella && kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+	cd big-bang-umbrella/baseline && kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && ../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
+	cd big-bang-umbrella/jenkins && ../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## Create the Data Injection example

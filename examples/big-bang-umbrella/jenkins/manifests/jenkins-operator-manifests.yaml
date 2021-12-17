@@ -1,0 +1,164 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins-operator
+  labels:
+    istio-injection: "enabled"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins
+  labels:
+    istio-injection: "enabled"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helm-install-jenkins
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: private-registry
+  namespace: jenkins-operator
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "registry.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry1.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry-1.docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "ghcr.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: private-registry
+  namespace: jenkins
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "registry.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry1.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry-1.docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "ghcr.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        }
+      }
+    }
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: jenkins-operator
+  namespace: helm-install-jenkins
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/jenkins-operator.tgz
+  targetNamespace: jenkins-operator
+  valuesContent: |-
+    operator:
+      image: virtuslab/jenkins-operator:v0.6.0
+      imagePullSecrets:
+        - name: private-registry
+      resources:
+        requests:
+          cpu: "10m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+    jenkins:
+      enabled: true
+      namespace: jenkins
+      image: jenkins/jenkins:lts
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+        - name: private-registry
+      basePlugins:
+        - name: kubernetes
+          version: "1.31.1"
+        - name: workflow-job
+          version: "2.42"
+        - name: workflow-aggregator
+          version: "2.6"
+        - name: git
+          version: "4.10.1"
+        - name: job-dsl
+          version: "1.78.1"
+        - name: configuration-as-code
+          version: "1.55"
+        - name: kubernetes-credentials-provider
+          version: "0.20"
+      plugins: []
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "500Mi"
+        limits:
+          cpu: "1500m"
+          memory: "3Gi"
+      volumes:
+        - name: backup
+          persistentVolumeClaim:
+            claimName: jenkins-backup
+      backup:
+        enabled: true
+        image: virtuslab/jenkins-operator-backup-pvc:v0.1.0
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "500Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        pvc:
+          enabled: true
+          className: "local-path"
+      # configuration: <InsertConfigurationHere!>
+      livenessProbe:
+        failureThreshold: 40
+        httpGet:
+          path: /login
+          port: http
+          scheme: HTTP
+        initialDelaySeconds: 100
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 8
+      readinessProbe:
+        failureThreshold: 60
+        httpGet:
+          path: /login
+          port: http
+          scheme: HTTP
+        initialDelaySeconds: 120
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 8

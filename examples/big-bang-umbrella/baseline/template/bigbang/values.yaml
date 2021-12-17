@@ -20,7 +20,7 @@ flux:
     cleanupOnFail: false
 
 networkPolicies:
-  enabled: true
+  enabled: false
   # When in prod use a real CIDR. Don't do this, it isn't secure. This is done here since it is a demo and the CIDR changes based on which Linux distro you are running on.
   controlPlaneCidr: "0.0.0.0/0"
   nodeCidr: "0.0.0.0/0"
@@ -481,7 +481,7 @@ twistlock:
 addons:
   # Addons for bb-umbrella
   sonarqube:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__developer-tools__sonarqube.git
     values:
@@ -495,7 +495,7 @@ addons:
           imagePullSecrets:
             - "private-registry"
   gitlab:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__developer-tools__gitlab.git
     values:
@@ -511,18 +511,18 @@ addons:
           gateways:
             - istio-system/public
   gitlabRunner:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__developer-tools__gitlab-runner.git
   minioOperator:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__application-utilities__minio-operator.git
     values:
       istio:
         enabled: true
   mattermostoperator:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__collaboration-tools__mattermost-operator.git
       tag: "1.16.0-bb.0"
@@ -530,7 +530,7 @@ addons:
       istio:
         enabled: true
   mattermost:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__collaboration-tools__mattermost.git
       tag: 0.2.4-bb.0
@@ -544,7 +544,7 @@ addons:
         install: true
         bucketCreationImage: "registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z"
   nexus:
-    enabled: true
+    enabled: false
     git:
       repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__developer-tools__nexus.git
       tag: 36.0.0-bb.0
