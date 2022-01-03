@@ -8,37 +8,30 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 
 ## Prerequisites
 
-- [Vagrant](https://www.vagrantup.com/)
-- [VirtualBox](https://www.virtualbox.org/)
 - `make`
 - `kustomize`
 - `sha256sum`
 - TONS of CPU and RAM. Our testing shows the EC2 instance type r6i.4xlarge works pretty well at about $1/hour, which can be reduced further if you do a spot instance.
+- [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/), only if you are going to use a Vagrant VM, which is incompatible when using an EC2 instance.
 
 Note: Vagrant and VirtualBox aren't required for Zarf to function, but this example's Makefile uses them to create a VM which everything will run in. In production you'll likely just run Zarf on the machine itself.
 
 ## Instructions
 
-1. From within the examples directory, Run: `make all`, which will download the latest built binaries, build all of the example packages, and launch a basic VM to run in. Alternatively, run `make all-dev` if you want to build the binaries using the current codebase instead of downloading them.
-5. Run: `sudo su` - Change user to root
-6. Run: `cd zarf-examples` - Change to the directory where the examples folder is mounted
-7. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1` as the domain
-8. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-10. Run: `./zarf package deploy zarf-package-big-bang-umbrella-demo.tar.zst --confirm` - Deploy Big Bang Umbrella
-11. Wait several minutes. Run `k9s` to watch progress
-12. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
-13. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-14. When you're done, run `make vm-destroy` to bring everything down
+1. `cd examples/big-bang-umbrella`
+1. Run one of these two commands:
+   - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
+   - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant. Requires Golang.
 
-NOTE: If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
-
-## Kubescape scan
-
-This example adds the `kubescape` binary, which can scan clusters for compliance with the NSA/CISA Kubernetes Hardening Guide
-
-```shell
-kubescape scan framework nsa --use-from=/usr/local/bin/kubescape-framework-nsa.json --exceptions=/usr/local/bin/kubescape-exceptions.json
-```
+     > Note: If you are in an EC2 instance you should skip the `vm-init` make target, so run `make clean fetch-release package-example-big-bang-umbrella && cd ../sync && sudo su` instead, then move on to the next step.
+1. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1`
+1. . If you want to use interactive mode instead just run `./zarf init`.
+1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
+1. Run: `./zarf package deploy zarf-package-big-bang-umbrella-demo.tar.zst --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
+1. Wait several minutes. Run `k9s` to watch progress
+1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
+1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
+1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
 
 ## Services
 
