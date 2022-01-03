@@ -50,7 +50,7 @@ vm-destroy: ## Cleanup plz
 	@cd .. && $(MAKE) vm-destroy
 
 .PHONY: package-example-big-bang-umbrella
-package-example-big-bang-umbrella-baseline: ## Create the Big Bang Umbrella example
+package-example-big-bang-umbrella: ## Create the Big Bang Umbrella example
 	kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: ssh

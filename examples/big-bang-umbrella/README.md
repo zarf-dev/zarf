@@ -8,8 +8,13 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 
 ## Prerequisites
 
-1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install `make` and `kustomize`
+- [Vagrant](https://www.vagrantup.com/)
+- [VirtualBox](https://www.virtualbox.org/)
+- `make`
+- `kustomize`
+- `sha256sum`
+
+Note: Vagrant and VirtualBox aren't required for Zarf to function, but this example's Makefile uses them to create a VM which everything will run in. In production you'll likely just run Zarf on the machine itself.
 
 ## Instructions
 
