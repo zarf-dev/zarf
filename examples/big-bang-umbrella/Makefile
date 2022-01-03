@@ -1,5 +1,5 @@
 # Figure out which Zarf binary we should use based on the operating system we are on
-ZARF_BIN := ../../sync/zarf
+ZARF_BIN := ../sync/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
 ifneq ($(UNAME_S),Linux)
@@ -51,7 +51,7 @@ vm-destroy: ## Cleanup plz
 
 .PHONY: package-example-big-bang-umbrella
 package-example-big-bang-umbrella: ## Create the Big Bang Umbrella example
-	kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+	@kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: ssh
 ssh: ## SSH into the Vagrant VM

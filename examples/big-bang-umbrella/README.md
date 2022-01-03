@@ -4,7 +4,7 @@ This example extends the Big Bang Core example package and deploys Big Bang Umbr
 
 Because the same cluster will be running both Traefik and Istio, Istio's VirtualServices will be available on port 9443
 
-<span style="color:red; font-size:2em">NOTE: This package is huge (especially if you choose to enable more of the features in Big Bang Core). We recommend deploying this onto a host with at least 64 GB of RAM.</span>
+<span style="color:red; font-size:2em">NOTE: This package is huge. We recommend not trying to run it on a developer laptop without disabling lots of stuff first.</span>
 
 ## Prerequisites
 
@@ -13,6 +13,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 - `make`
 - `kustomize`
 - `sha256sum`
+- TONS of CPU and RAM. Our testing shows the EC2 instance type r6i.4xlarge works pretty well at about $1/hour, which can be reduced further if you do a spot instance.
 
 Note: Vagrant and VirtualBox aren't required for Zarf to function, but this example's Makefile uses them to create a VM which everything will run in. In production you'll likely just run Zarf on the machine itself.
 
