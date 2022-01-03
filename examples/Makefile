@@ -54,7 +54,7 @@ vm-destroy: ## Cleanup plz
 	@vagrant destroy -f
 
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-big-bang-umbrella package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
+package-examples: package-example-big-bang package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
 
 .PHONY: vendor-big-bang-base
 vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to do funky things to let Flux grab it from a private repo
