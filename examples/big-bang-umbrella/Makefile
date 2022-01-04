@@ -1,5 +1,5 @@
 # Figure out which Zarf binary we should use based on the operating system we are on
-ZARF_BIN := ../../sync/zarf
+ZARF_BIN := ../sync/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
 ifneq ($(UNAME_S),Linux)

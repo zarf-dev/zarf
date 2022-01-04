@@ -42,6 +42,7 @@ fetch-release: ## Grab the latest release as an alternative to needing to build 
 .PHONY: build-release
 build-release: ## Build the binaries as an alternative to downloading the latest release
 	@cd .. && $(MAKE) build-test
+	@mkdir -p sync
 	@cp -R ../build/* sync
 
 .PHONY: vm-init
