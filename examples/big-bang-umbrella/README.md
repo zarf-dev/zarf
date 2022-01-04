@@ -12,7 +12,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 - `make`
 - `kustomize`
 - `sha256sum`
-- TONS of CPU and RAM. Our testing shows the EC2 instance type r6i.4xlarge works pretty well at about $1/hour, which can be reduced further if you do a spot instance.
+- TONS of CPU and RAM. Our testing shows the EC2 instance type m6i.8xlarge works pretty well at about $1/hour, which can be reduced further if you do a spot instance.
 - [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/), only if you are going to use a Vagrant VM, which is incompatible when using an EC2 instance.
 
 Note: Vagrant and VirtualBox aren't required for Zarf to function, but this example's Makefile uses them to create a VM which everything will run in. In production you'll likely just run Zarf on the machine itself.
