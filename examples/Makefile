@@ -42,6 +42,7 @@ fetch-release: ## Grab the latest release as an alternative to needing to build 
 .PHONY: build-release
 build-release: ## Build the binaries as an alternative to downloading the latest release
 	@cd .. && $(MAKE) build-test
+	@mkdir -p sync
 	@cp -R ../build/* sync
 
 .PHONY: vm-init
@@ -71,6 +72,10 @@ vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to
 .PHONY: package-example-big-bang
 package-example-big-bang: vendor-big-bang-base ## Create the Big Bang Core example
 	cd big-bang && kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-big-bang-umbrella
+package-example-big-bang-umbrella: ## Create the Big Bang Umbrella example
+	cd big-bang-umbrella && kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## Create the Data Injection example
