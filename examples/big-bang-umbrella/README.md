@@ -34,7 +34,10 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
 1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
 
-NOTE: If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
+## Notes
+
+- If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
+- If you want to turn off certain services to help the package run on smaller machines go into `template/bigbang/values.yaml` and change `enabled: true` to `enabled: false` for each service you want to disable.
 
 ## Services
 
