@@ -8,6 +8,7 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
 
 ## Prerequisites
 
+- Logged into registry1.dso.mil
 - `make`
 - `kustomize`
 - `sha256sum`
@@ -32,6 +33,8 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
 1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
+
+NOTE: If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
 
 ## Services
 
