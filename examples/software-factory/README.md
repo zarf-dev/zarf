@@ -48,7 +48,7 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
 ## Notes
 
 - If you are not running in a Vagrant box created with the Vagrantfile in ./examples you will have to run `sysctl -w vm.max_map_count=262144` to get ElasticSearch to start correctly.
-- If you want to turn off certain services to help the package run on smaller machines go into `template/bigbang/values.yaml` and change `enabled: true` to `enabled: false` for each service you want to disable.
+- If you want to turn off certain services to help the package run on smaller machines go into `template/bigbang/values.yaml` and change `enabled: true` to `enabled: false` for each service you want to disable. You can disable the Atlassian stack or Jenkins from `zarf.yaml`. Change `required: true` to `required:false` then press `N` when asked whether you want to deploy them.
 
 ## Services
 

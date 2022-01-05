@@ -51,7 +51,7 @@ vm-destroy: ## Cleanup plz
 
 .PHONY: package-example-software-factory
 package-example-software-factory: ## Create the software factory deploy package
-	@kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
+	@kustomize build template/bigbang > manifests/bigbang/bigbang-generated.yaml && kustomize build template/flux > manifests/flux/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: ssh
 ssh: ## SSH into the Vagrant VM
