@@ -8,12 +8,12 @@ stringData:
   username: "zarf-git-user"
   password: "###ZARF_SECRET###"
 ---
-apiVersion: v1
+apiVersion: v2
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
   name: private-registry
-  namespace: flux-system
+  namespace: gitlab
 stringData:
   .dockerconfigjson: |
     {

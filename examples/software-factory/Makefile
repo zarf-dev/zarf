@@ -24,10 +24,10 @@ help: ## Show a list of all targets
 	| column -t -s ":"
 
 .PHONY: all
-all: clean fetch-release package-example-big-bang-umbrella-baseline package-example-big-bang-umbrella-jenkins vm-init ## Download zarf, build all packages and launch a basic VM with the assets
+all: clean fetch-release package-example-software-factory vm-init ## Download zarf, build all packages and launch a basic VM with the assets
 
 .PHONY: all-dev
-all-dev: clean build-release package-example-big-bang-umbrella-baseline package-example-big-bang-umbrella-jenkins package-examples vm-init ## Same as target 'all', but build the binaries using the current codebase rather than downloading the latest version from the internet
+all-dev: clean build-release package-example-software-factory vm-init ## Same as target 'all', but build the binaries using the current codebase rather than downloading the latest version from the internet
 
 .PHONY: clean
 clean: ## Clean the sync dir
@@ -49,13 +49,9 @@ vm-init: vm-destroy ## Stripped-down vagrant box to reduce friction for basic us
 vm-destroy: ## Cleanup plz
 	@cd .. && $(MAKE) vm-destroy
 
-.PHONY: package-example-big-bang-umbrella-baseline
-package-example-big-bang-umbrella-baseline: ## Create the Big Bang Umbrella example
-	@cd baseline && kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
-
-.PHONY: package-example-big-bang-umbrella-jenkins
-package-example-big-bang-umbrella-jenkins: ## Create the Jenkins package
-	@cd jenkins && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
+.PHONY: package-example-software-factory
+package-example-software-factory: ## Create the software factory deploy package
+	@kustomize build template/bigbang > manifests/bigbang-generated.yaml && kustomize build template/flux > manifests/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../../sync/
 
 .PHONY: ssh
 ssh: ## SSH into the Vagrant VM

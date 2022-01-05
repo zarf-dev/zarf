@@ -1,8 +1,20 @@
-# Example: Big Bang Umbrella
+# Example: Software Factory
 
-This example extends the Big Bang Core example package and deploys Big Bang Umbrella with a gitops service. This package deploys both built in addons such as gitlab, mattermost, sonarqube, and nexus, and additional helm charts such as Jira and Confluence. This is not normally the method that will be used in production but for a demo it works great.
+This example deploys a software factory with the following services, all running on top of Big Bang Core:
 
-Because the same cluster will be running both Traefik and Istio, Istio's VirtualServices will be available on port 9443
+- SonarQube*
+- GitLab*
+- GitLab Runner*
+- Minio Operator*
+- Mattermost Operator*
+- Mattermost*
+- Nexus*
+- Keycloak*
+- Jira
+- Confluence
+- Jenkins
+
+**Deployed using Big Bang Umbrella*
 
 <span style="color:red; font-size:2em">NOTE: This package is huge. We recommend not trying to run it on a developer laptop without disabling lots of stuff first.</span>
 
@@ -19,16 +31,15 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
 
 ## Instructions
 
-1. `cd examples/big-bang-umbrella`
+1. `cd examples/software-factory`
 1. Run one of these two commands:
    - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
    - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant. Requires Golang.
 
-     > Note: If you are in an EC2 instance you should skip the `vm-init` make target, so run `make clean fetch-release package-example-big-bang-umbrella && cd ../sync && sudo su` instead, then move on to the next step.
-1. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1`
-1. . If you want to use interactive mode instead just run `./zarf init`.
+     > Note: If you are in an EC2 instance you should skip the `vm-init` make target, so run `make clean fetch-release package-example-software-factory && cd ../sync && sudo su` instead, then move on to the next step.
+1. Run: `./zarf init --confirm --components management,gitops-service --host 127.0.0.1` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1` as the cluster's address. If you want to use interactive mode instead just run `./zarf init`.
 1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-1. Run: `./zarf package deploy zarf-package-big-bang-umbrella-demo.tar.zst --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
+1. Run: `./zarf package deploy zarf-package-software-factory-demo.tar.zst --confirm` - Deploy the software factory package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
 1. Wait several minutes. Run `k9s` to watch progress
 1. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 1. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
