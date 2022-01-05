@@ -1,14 +1,16 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: jenkins
-  labels:
-    istio-injection: "enabled"
+  name: helm-install-jenkins
+labels:
+    istio-injection: "disabled"
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: helm-install-jenkins
+  name: jenkins
+labels:
+    istio-injection: "enabled"
 ---
 apiVersion: v1
 kind: Secret
