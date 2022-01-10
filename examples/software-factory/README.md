@@ -1,6 +1,6 @@
 # Example: Software Factory
 
-This example deploys a software factory with the following services, all running on top of Big Bang Core:
+This example deploys the components of a software factory with the following services, all running on top of Big Bang Core:
 
 - SonarQube*
 - GitLab*
@@ -16,7 +16,9 @@ This example deploys a software factory with the following services, all running
 
 **Deployed using Big Bang Umbrella*
 
-<span style="color:red; font-size:2em">NOTE: This package is huge. We recommend not trying to run it on a developer laptop without disabling lots of stuff first.</span>
+<span style="color:red; font-size:2em">This package is huge. We recommend not trying to run it on a developer laptop without disabling lots of stuff first.</span>
+
+> Note: Right now the intention is to show that all of these services can be deployed easily using a single Zarf package. They are not configured (yet). You can't take this demo and deploy it expecting to have a fully operational software factory at the push of a button, though that is the end goal. There's a lot of work to do between what is here now and that end goal, some of which might just not make very much sense in the context of a demo/example.
 
 ## Prerequisites
 
@@ -52,18 +54,19 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
 
 ## Services
 
-| URL                                                   | Username  | Password                                                                                                                                                                                   | Notes                                                               |
-| ----------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| [AlertManager](https://alertmanager.bigbang.dev:9443) | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Grafana](https://grafana.bigbang.dev:9443)           | `admin`   | `prom-operator`                                                                                                                                                                            |                                                                     |
-| [Kiali](https://kiali.bigbang.dev:9443)               | n/a       | `kubectl get secret -n kiali -o=json \| jq -r '.items[] \| select(.metadata.annotations."kubernetes.io/service-account.name"=="kiali-service-account") \| .data.token' \| base64 -d; echo` |                                                                     |
-| [Kibana](https://kibana.bigbang.dev:9443)             | `elastic` | `kubectl get secret -n logging logging-ek-es-elastic-user -o=jsonpath='{.data.elastic}' \| base64 -d; echo`                                                                                |                                                                     |
-| [Prometheus](https://prometheus.bigbang.dev:9443)     | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Jaeger](https://tracing.bigbang.dev:9443)            | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Twistlock](https://twistlock.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
-| [Jira](https://jira.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
-| [Confluence](https://confluence.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
-| [GitLab](https://gitlab.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        |  |
-| [Nexus](https://nexus.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
-| [Mattermost](https://chat.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
-| [Sonarqube](https://sonarqube.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        | |
+| URL                                                   | Username  | Password                                                                                                                                                                                   | Notes           |
+| ----------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| [AlertManager](https://alertmanager.bigbang.dev:9443) | n/a       | n/a                                                                                                                                                                                        | Unauthenticated |
+| [Grafana](https://grafana.bigbang.dev:9443)           | `admin`   | `prom-operator`                                                                                                                                                                            |                 |
+| [Kiali](https://kiali.bigbang.dev:9443)               | n/a       | `kubectl get secret -n kiali -o=json \| jq -r '.items[] \| select(.metadata.annotations."kubernetes.io/service-account.name"=="kiali-service-account") \| .data.token' \| base64 -d; echo` |                 |
+| [Kibana](https://kibana.bigbang.dev:9443)             | `elastic` | `kubectl get secret -n logging logging-ek-es-elastic-user -o=jsonpath='{.data.elastic}' \| base64 -d; echo`                                                                                |                 |
+| [Prometheus](https://prometheus.bigbang.dev:9443)     | n/a       | n/a                                                                                                                                                                                        | Unauthenticated |
+| [Jaeger](https://tracing.bigbang.dev:9443)            | n/a       | n/a                                                                                                                                                                                        | Unauthenticated |
+| [Twistlock](https://twistlock.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Jira](https://jira.bigbang.dev:9443)                 | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Confluence](https://confluence.bigbang.dev:9443)     | n/a       | n/a                                                                                                                                                                                        |                 |
+| [GitLab](https://gitlab.bigbang.dev:9443)             | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Nexus](https://nexus.bigbang.dev:9443)               | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Mattermost](https://chat.bigbang.dev:9443)           | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Sonarqube](https://sonarqube.bigbang.dev:9443)       | n/a       | n/a                                                                                                                                                                                        |                 |
+| [Jenkins](https://jenkins.bigbang.dev:9443)           | `admin`   | `admin`                                                                                                                                                                                    |                 |
