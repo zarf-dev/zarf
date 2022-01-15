@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -18,8 +16,6 @@ var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
-		burn()
-
 		state := k8s.LoadZarfState()
 		_ = os.Remove(".zarf-registry")
 
@@ -36,20 +32,9 @@ var destroyCmd = &cobra.Command{
 			}
 		} else {
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
-			if err := k8s.DeleteZarfNamespace(); err != nil {
-				message.Fatal(err, "Unable to fully remove the zarf namespace from this cluster")
-			}
+			k8s.DeleteZarfNamespace()
 		}
-		burn()
 	},
-}
-
-func burn() {
-	fmt.Println("")
-	for count := 0; count < 40; count++ {
-		fmt.Print("🔥")
-	}
-	fmt.Println("")
 }
 
 func init() {

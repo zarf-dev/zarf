@@ -2,10 +2,12 @@ package k8s
 
 import (
 	"context"
-
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
+	"time"
 )
 
 func GetNamespaces() (*corev1.NamespaceList, error) {
@@ -39,7 +41,24 @@ func CreateNamespace(name string) (*corev1.Namespace, error) {
 	return match, err
 }
 
-func DeleteZarfNamespace() error {
+func DeleteZarfNamespace() {
+	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
+	defer spinner.Stop()
+
 	clientset := getClientset()
-	return clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
+	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
+
+	if err != nil && !errors.IsNotFound(err) {
+		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
+	}
+
+	for {
+		spinner.Updatef("Zarf namespace deletion scheduled, waiting for all resources to be removed")
+		_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			spinner.Successf("Zarf removed from this cluster")
+			os.Exit(0)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
