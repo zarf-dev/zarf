@@ -25,7 +25,6 @@ const (
 var logLevel = InfoLevel
 
 func init() {
-	// pterm.ThemeDefault.InfoMessageStyle = *pterm.NewStyle(pterm.FgWhite)
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -79,7 +78,7 @@ func Warn(message string) {
 }
 
 func Warnf(format string, a ...interface{}) {
-	message := pararaph(format, a...)
+	message := paragraph(format, a...)
 	pterm.Warning.Println(message)
 }
 
@@ -91,7 +90,7 @@ func Fatal(err interface{}, message string) {
 
 func Fatalf(err interface{}, format string, a ...interface{}) {
 	Debug(err)
-	message := pararaph(format, a...)
+	message := paragraph(format, a...)
 	errorPrinter().Println(message)
 	os.Exit(1)
 }
@@ -102,20 +101,20 @@ func Info(message string) {
 
 func Infof(format string, a ...interface{}) {
 	if logLevel > 0 {
-		message := pararaph(format, a...)
+		message := paragraph(format, a...)
 		pterm.Info.Println(message)
 	}
 }
 
 func Question(text string) {
 	pterm.Println()
-	message := pararaph(text)
+	message := paragraph(text)
 	pterm.FgMagenta.Println(message)
 }
 
 func Note(text string) {
 	pterm.Println()
-	message := pararaph(text)
+	message := paragraph(text)
 	pterm.FgYellow.Println(message)
 }
 
@@ -131,6 +130,6 @@ func HeaderInfof(format string, a ...interface{}) {
 		Printfln(message + strings.Repeat(" ", padding))
 }
 
-func pararaph(format string, a ...interface{}) string {
+func paragraph(format string, a ...interface{}) string {
 	return pterm.DefaultParagraph.WithMaxWidth(100).Sprintf(format, a...)
 }

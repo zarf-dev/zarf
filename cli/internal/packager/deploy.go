@@ -96,7 +96,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
-	spinner := message.NewProgresSpinner("Copying %v files", len(component.Files))
+	spinner := message.NewProgressSpinner("Copying %v files", len(component.Files))
 	defer spinner.Stop()
 
 	for index, file := range component.Files {
@@ -141,7 +141,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 	}
 
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
-		spinner := message.NewProgresSpinner("Loading the Zarf State from the Kubernetes cluster")
+		spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 		defer spinner.Stop()
 
 		state := k8s.LoadZarfState()

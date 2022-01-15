@@ -125,7 +125,7 @@ func (syncSettings *settings) parseManifests(componentImages []string, spinner *
 
 func GitopsProcess(path string, namespace string, component config.ZarfComponent) {
 	message.Debugf("k8s.GitopsProcess(%s, %s, %v)", path, namespace, component)
-	spinner := message.NewProgresSpinner("Processing manifests for %s", path)
+	spinner := message.NewProgressSpinner("Processing manifests for %s", path)
 	defer spinner.Stop()
 
 	klog.SetLogger(GenerateLogShim())

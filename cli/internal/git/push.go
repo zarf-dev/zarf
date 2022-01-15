@@ -25,7 +25,7 @@ func PushAllDirectories(localPath string) {
 		message.Fatalf(err, "unable to list the %s directory", localPath)
 	}
 
-	spinner := message.NewProgresSpinner("Processing %d git repos", len(paths))
+	spinner := message.NewProgressSpinner("Processing %d git repos", len(paths))
 	defer spinner.Stop()
 
 	for _, path := range paths {

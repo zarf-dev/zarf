@@ -28,7 +28,7 @@ func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s)", namespace)
 	name := "zarf-registry"
 
-	spinner := message.NewProgresSpinner("Generating private registry credentials %s/%s", namespace, name)
+	spinner := message.NewProgressSpinner("Generating private registry credentials %s/%s", namespace, name)
 	defer spinner.Success()
 
 	secretDockerConfig := &corev1.Secret{

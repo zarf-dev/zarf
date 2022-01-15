@@ -17,7 +17,19 @@ import (
 )
 
 func PullAll(buildImageList []string, imageTarballPath string) {
-	spinner := message.NewProgresSpinner("Loading metadata for %v images", len(buildImageList))
+	var (
+		longer     string
+		imageCount = len(buildImageList)
+	)
+
+	// Give some additional user feedback on larger image sets
+	if imageCount > 15 {
+		longer = "This step may take a couple of minutes to complete."
+	} else if imageCount > 5 {
+		longer = "This step may take several seconds to complete."
+	}
+
+	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
 
 	imageMap := map[string]v1.Image{}
@@ -27,9 +39,9 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 		logs.Progress.SetOutput(spinner)
 	}
 
-	for _, src := range buildImageList {
-		spinner.Updatef("Fetching image metadata for %v", src)
-		img, err := crane.Pull(src, cranePlatformOptions)
+	for idx, src := range buildImageList {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
+		img, err := crane.Pull(src, cranePlatformAMD64, cranePlatformARM64)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}
@@ -77,16 +89,19 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 		case update.Error != nil:
 			message.Fatal(update.Error, "error writing image tarball")
 		default:
+			title = fmt.Sprintf("Pulling %v images (%s of %s)", len(imageMap),
+				utils.ByteFormat(float64(update.Complete), 2),
+				utils.ByteFormat(float64(update.Total), 2),
+			)
 			if progressBar == nil {
-				total := int(update.Total)
-				title = fmt.Sprintf("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(total), 2))
 				progressBar, _ = pterm.DefaultProgressbar.
-					WithTotal(total).
+					WithTotal(int(update.Total)).
 					WithShowCount(false).
 					WithTitle(title).
 					WithRemoveWhenDone(true).
 					Start()
 			}
+			progressBar.UpdateTitle(title)
 			chunk := int(update.Complete) - progressBar.Current
 			progressBar.Add(chunk)
 		}

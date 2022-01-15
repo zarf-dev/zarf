@@ -16,7 +16,7 @@ import (
 
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
 func DownloadChartFromGit(chart config.ZarfChart, destination string) {
-	spinner := message.NewProgresSpinner("Processing helm chart %s:%s from git url %s", chart.Name, chart.Version, chart.Url)
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from git url %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 
 	client := action.NewPackage()
@@ -41,7 +41,7 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 
 // DownloadPublishedChart loads a specific chart version from a remote repo
 func DownloadPublishedChart(chart config.ZarfChart, destination string) {
-	spinner := message.NewProgresSpinner("Processing helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.Url)
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 
 	// Set up the helm pull config

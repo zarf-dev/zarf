@@ -210,7 +210,7 @@ func isValidFileExtension(filename string) bool {
 }
 
 func loopScriptUntilSuccess(script string, retry bool) {
-	spinner := message.NewProgresSpinner("Waiting for command \"%s\"", script)
+	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Stop()
 
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"

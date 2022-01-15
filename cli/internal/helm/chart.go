@@ -28,7 +28,7 @@ type renderer struct {
 
 // InstallOrUpgradeChart performs a helm install of the given chart
 func InstallOrUpgradeChart(options ChartOptions) {
-	spinner := message.NewProgresSpinner("Processing helm chart %s:%s from %s",
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
 		options.Chart.Name,
 		options.Chart.Version,
 		options.Chart.Url)
@@ -95,7 +95,7 @@ func InstallOrUpgradeChart(options ChartOptions) {
 
 // TemplateChart generates a helm template from a given chart
 func TemplateChart(options ChartOptions) string {
-	spinner := message.NewProgresSpinner("Processing helm template %s:%s from %s",
+	spinner := message.NewProgressSpinner("Processing helm template %s:%s from %s",
 		options.Chart.Name,
 		options.Chart.Version,
 		options.Chart.Url)

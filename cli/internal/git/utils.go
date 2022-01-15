@@ -56,7 +56,7 @@ func credentialParser() []Credential {
 	defer func(credentialsFile *os.File) {
 		err := credentialsFile.Close()
 		if err != nil {
-			message.Error(err, "Unable to load an existing git credentials file")
+			message.Debugf("Unable to load an existing git credentials file: %w", err)
 		}
 	}(credentialsFile)
 

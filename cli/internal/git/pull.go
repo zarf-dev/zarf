@@ -27,7 +27,7 @@ func Pull(gitUrl string, targetFolder string) string {
 }
 
 func pull(gitUrl string, targetFolder string) {
-	spinner := message.NewProgresSpinner("Processing git repo %s", gitUrl)
+	spinner := message.NewProgressSpinner("Processing git repo %s", gitUrl)
 	defer spinner.Stop()
 
 	gitCred := FindAuthForHost(gitUrl)

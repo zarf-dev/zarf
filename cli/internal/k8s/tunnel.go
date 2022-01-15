@@ -164,7 +164,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 
 // Establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
 func (tunnel *Tunnel) Establish() error {
-	spinner := message.NewProgresSpinner("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
+	spinner := message.NewProgressSpinner("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
 		tunnel.resourceType,
 		tunnel.resourceName,
 		tunnel.namespace,

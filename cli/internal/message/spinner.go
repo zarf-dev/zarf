@@ -11,7 +11,7 @@ type Spinner struct {
 	startText string
 }
 
-func NewProgresSpinner(format string, a ...interface{}) *Spinner {
+func NewProgressSpinner(format string, a ...interface{}) *Spinner {
 	text := fmt.Sprintf(format, a...)
 	spinner, _ := pterm.DefaultSpinner.
 		WithRemoveWhenDone(false).

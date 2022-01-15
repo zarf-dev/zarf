@@ -26,16 +26,16 @@ func ByteFormat(inputNum float64, precision int) string {
 
 	if inputNum >= 1000000000 {
 		returnVal = RoundUp(inputNum/1073741824, precision)
-		unit = " gigabyte" // gigabyte
+		unit = " GB" // gigabyte
 	} else if inputNum >= 1000000 {
 		returnVal = RoundUp(inputNum/1048576, precision)
-		unit = " megabyte" // megabyte
+		unit = " MB" // megabyte
 	} else if inputNum >= 1000 {
 		returnVal = RoundUp(inputNum/1024, precision)
-		unit = " kilobyte" // kilobyte
+		unit = " KB" // kilobyte
 	} else {
 		returnVal = inputNum
-		unit = " byte" // byte
+		unit = " Byte" // byte
 	}
 
 	if returnVal > 1 {
