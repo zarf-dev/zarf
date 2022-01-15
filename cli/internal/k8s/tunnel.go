@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	PortRegistry = iota + 45000
+	PortRegistry = iota + 45001
 	PortLogging
 	PortGit
 )
