@@ -46,9 +46,13 @@ components:
     charts:
       - name: jira
         url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/jira.git
+        namespace: jira
+        gitPath: chart
         version: 0.1.0-bb.7
       - name: confluence
         url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/confluence.git
+        namespace: confluence
+        gitPath: chart
         version: 0.1.0-bb.9
 
     images:
