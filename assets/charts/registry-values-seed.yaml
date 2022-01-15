@@ -1,0 +1,2 @@
+image:
+  repository: "###ZARF_SEED_REGISTRY###/ironbank/opensource/docker/registry-v2"

@@ -2,17 +2,16 @@ package git
 
 import (
 	"bufio"
+	"fmt"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/sirupsen/logrus"
 )
 
 type Credential struct {
@@ -24,7 +23,7 @@ func MutateGitUrlsInText(host string, text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
 		if strings.Contains(match, "/zarf-git-user/") {
-			logrus.WithField("Match", match).Warn("This url seems to have been previously patched.")
+			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
 		return transformURL(host, match)
@@ -40,10 +39,7 @@ func transformURLtoRepoName(url string) string {
 func transformURL(baseUrl string, url string) string {
 	replaced := transformURLtoRepoName(url)
 	output := baseUrl + "/zarf-git-user/" + replaced
-	logrus.WithFields(logrus.Fields{
-		"Old": url,
-		"New": output,
-	}).Info("Transformed Git URL")
+	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output
 }
 
@@ -57,7 +53,12 @@ func credentialParser() []Credential {
 	var credentials []Credential
 
 	credentialsFile, _ := os.Open(credentialsPath)
-	defer credentialsFile.Close()
+	defer func(credentialsFile *os.File) {
+		err := credentialsFile.Close()
+		if err != nil {
+			message.Error(err, "Unable to load an existing git credentials file")
+		}
+	}(credentialsFile)
 
 	scanner := bufio.NewScanner(credentialsFile)
 	for scanner.Scan() {
@@ -98,71 +99,9 @@ func FindAuthForHost(baseUrl string) Credential {
 	return matchedCred
 }
 
-func GetOrCreateZarfSecret() string {
-	var gitSecret string
-
-	credentials := FindAuthForHost(config.GetTargetEndpoint())
-
-	if (credentials == Credential{}) {
-		gitSecret = CredentialsGenerator()
-	} else {
-		gitSecret = credentials.Auth.Password
-	}
-
-	return gitSecret
-}
-
-func CredentialsGenerator() string {
-
-	// Get a random secret for use in the cluster
-	gitSecret := utils.RandomString(28)
-	credentialsPath := credentialFilePath()
-
-	// Prevent duplicates by purging the git creds file~
-	_ = os.Remove(credentialsPath)
-
-	credentialsFile, err := os.OpenFile(credentialsPath, os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Unable to access the git credentials file")
-	}
-	defer credentialsFile.Close()
-
-	// Needed by zarf to do repo pushes
-	zarfUrl := url.URL{
-		Scheme: "https",
-		User:   url.UserPassword(config.ZarfGitUser, gitSecret),
-		Host:   config.GetTargetEndpoint(),
-	}
-
-	credentialsText := zarfUrl.String() + "\n"
-
-	// Write the entry to the file
-	_, err = credentialsFile.WriteString(credentialsText)
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Unable to update the git credentials file")
-	}
-
-	// Save the change
-	err = credentialsFile.Sync()
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Unable to update the git credentials file")
-	}
-
-	return gitSecret
-}
-
-// GetTaggedUrl builds a URL of the repo@tag format
-// It returns a string of format repo@tag
-func GetTaggedUrl(gitUrl string, gitTag string) string {
-	return gitUrl + "@" + gitTag
-}
-
-// RemoveLocalBranchRefs removes all refs that are local branches
+// removeLocalBranchRefs removes all refs that are local branches
 // It returns a slice of references deleted
-func RemoveLocalBranchRefs(gitDirectory string) []*plumbing.Reference {
+func removeLocalBranchRefs(gitDirectory string) ([]*plumbing.Reference, error) {
 	return removeReferences(
 		gitDirectory,
 		func(ref *plumbing.Reference) bool {
@@ -171,9 +110,9 @@ func RemoveLocalBranchRefs(gitDirectory string) []*plumbing.Reference {
 	)
 }
 
-// RemoveOnlineRemoteRefs removes all refs pointing to the online-upstream
+// removeOnlineRemoteRefs removes all refs pointing to the online-upstream
 // It returns a slice of references deleted
-func RemoveOnlineRemoteRefs(gitDirectory string) []*plumbing.Reference {
+func removeOnlineRemoteRefs(gitDirectory string) ([]*plumbing.Reference, error) {
 	return removeReferences(
 		gitDirectory,
 		func(ref *plumbing.Reference) bool {
@@ -182,20 +121,18 @@ func RemoveOnlineRemoteRefs(gitDirectory string) []*plumbing.Reference {
 	)
 }
 
-// RemoveHeadCopies removes any refs that aren't HEAD but have the same hash
+// removeHeadCopies removes any refs that aren't HEAD but have the same hash
 // It returns a slice of references deleted
-func RemoveHeadCopies(gitDirectory string) []*plumbing.Reference {
-	logContext := logrus.WithField("Repo", gitDirectory)
+func removeHeadCopies(gitDirectory string) ([]*plumbing.Reference, error) {
+	message.Debugf("Remove head copies for %s", gitDirectory)
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Not a valid git repo or unable to open")
+		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	head, err := repo.Head()
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to identify references when getting the repo's head")
+		return nil, fmt.Errorf("failed to identify references when getting the repo's head: %w", err)
 	}
 
 	headHash := head.Hash().String()
@@ -214,27 +151,24 @@ func RemoveHeadCopies(gitDirectory string) []*plumbing.Reference {
 func removeReferences(
 	gitDirectory string,
 	shouldRemove func(*plumbing.Reference) bool,
-) []*plumbing.Reference {
-	logContext := logrus.WithField("Repo", gitDirectory)
+) ([]*plumbing.Reference, error) {
+	message.Debugf("Remove git references %s", gitDirectory)
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Not a valid git repo or unable to open")
+		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	references, err := repo.References()
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to identify references when getting the repo's references")
+		return nil, fmt.Errorf("failed to identify references when getting the repo's references: %w", err)
 	}
 
 	head, err := repo.Head()
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to identify head")
+		return nil, fmt.Errorf("failed to identify head: %w", err)
 	}
 
-	removedRefs := []*plumbing.Reference{}
+	var removedRefs []*plumbing.Reference
 	err = references.ForEach(func(ref *plumbing.Reference) error {
 		refIsNotHeadOrHeadTarget := ref.Name() != plumbing.HEAD && ref.Name() != head.Name()
 		// Run shouldRemove inline here to take advantage of short circuit
@@ -250,58 +184,51 @@ func removeReferences(
 	})
 
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to remove references")
+		return nil, fmt.Errorf("failed to remove references: %w", err)
 	}
 
-	return removedRefs
+	return removedRefs, nil
 }
 
-// AddRefs adds a provided arbitrary list of references to a repo
+// addRefs adds a provided arbitrary list of references to a repo
 // It is intended to be used with references returned by a Remove function
-func AddRefs(gitDirectory string, refs []*plumbing.Reference) {
-	logContext := logrus.WithField("Repo", gitDirectory)
+func addRefs(gitDirectory string, refs []*plumbing.Reference) error {
+	message.Debugf("Add git refs %s", gitDirectory)
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Not a valid git repo or unable to open")
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	for _, ref := range refs {
 		err = repo.Storer.SetReference(ref)
 		if err != nil {
-			logContext.Debug(err)
-			logContext.Fatal("Failed to add references")
+			return fmt.Errorf("failed to add references: %w", err)
 		}
 	}
+
+	return nil
 }
 
-// DeleteBranchIfExists ensures the provided branch name does not exist
-func DeleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName) {
-	logContext := logrus.WithFields(logrus.Fields{
-		"Repo":   gitDirectory,
-		"Branch": branchName.String,
-	})
+// deleteBranchIfExists ensures the provided branch name does not exist
+func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName) error {
+	message.Debugf("Delete branch %s for %s if it exists", branchName.String(), gitDirectory)
 
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Not a valid git repo or unable to open")
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	// Deletes the branch by name
 	err = repo.DeleteBranch(branchName.Short())
 	if err != nil && err != git.ErrBranchNotFound {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to delete branch")
+		return fmt.Errorf("failed to delete branch: %w", err)
 	}
 
 	// Delete reference too
 	err = repo.Storer.RemoveReference(branchName)
 	if err != nil && err != git.ErrInvalidReference {
-		logContext.Debug(err)
-		logContext.Fatal("Failed to delete branch reference")
+		return fmt.Errorf("failed to delete branch reference: %w", err)
 	}
 
-	logContext.Info("Branch deleted")
+	return nil
 }

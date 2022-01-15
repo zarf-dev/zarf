@@ -1,36 +1,49 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
-	"github.com/sirupsen/logrus"
 )
 
+const IPV4Localhost = "127.0.0.1"
+
 const K3sBinary = "/usr/local/bin/k3s"
-const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
-const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
-const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
 const PackageInitName = "zarf-init.tar.zst"
 const PackagePrefix = "zarf-package-"
-const ZarfGitUser = "zarf-git-user"
-const ZarfStatePath = ".zarf-state.yaml"
+const ZarfGitPushUser = "zarf-git-user"
+const ZarfRegistryPushUser = "zarf-push"
+const ZarfRegistryPullUser = "zarf-pull"
+const ZarfSeedPort = "45000"
+const ZarfRegistry = IPV4Localhost + ":45001"
+const ZarfSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
 
 var CLIVersion = "unset"
+var TLS TLSConfig
+var DeployOptions ZarfDeployOptions
+
+// private
 var config ZarfPackage
 var state ZarfState
 
-func init() {
-	if err := utils.ReadYaml(ZarfStatePath, &state); err != nil {
-		state.Kind = "ZarfState"
-	}
-}
-
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
+}
+
+// GetSeedImages returns a list of image strings specified in the package, but only for init packages
+func GetSeedImages() []string {
+	message.Debugf("config.GetSeedImages()")
+	// Only allow seed images for init config
+	if IsZarfInitConfig() {
+		return config.Seed
+	} else {
+		return []string{}
+	}
 }
 
 func GetPackageName() string {
@@ -62,18 +75,22 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
+func InitState(tmpState ZarfState) {
+	message.Debugf("config.InitState(%v)", tmpState)
+	state = tmpState
+	initSecrets()
+}
+
 func GetState() ZarfState {
 	return state
 }
 
-func GetTargetEndpoint() string {
-	return state.TLS.Host
+func GetRegistry() string {
+	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
 }
 
-func WriteState(incomingState ZarfState) error {
-	logrus.Debug(incomingState)
-	state = incomingState
-	return utils.WriteYaml(ZarfStatePath, state, 0600)
+func GetSeedRegistry() string {
+	return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
 }
 
 func LoadConfig(path string) error {
@@ -81,6 +98,7 @@ func LoadConfig(path string) error {
 }
 
 func BuildConfig(path string) error {
+	message.Debugf("config.BuildConfig(%v)", path)
 	now := time.Now()
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
@@ -102,4 +120,8 @@ func BuildConfig(path string) error {
 	}
 
 	return utils.WriteYaml(path, config, 0400)
+}
+
+func IsTLSLocalhost() bool {
+	return TLS.Host == IPV4Localhost
 }

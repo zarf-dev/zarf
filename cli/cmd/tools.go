@@ -2,17 +2,16 @@ package cmd
 
 import (
 	"encoding/json"
-
 	"fmt"
-	"github.com/alecthomas/jsonschema"
 
+	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +34,7 @@ var archiverCompressCmd = &cobra.Command{
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
-			logrus.Fatal(err)
+			message.Fatal(err, "Unable to perform compression")
 		}
 	},
 }
@@ -48,7 +47,7 @@ var archiverDecompressCmd = &cobra.Command{
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
-			logrus.Fatal(err)
+			message.Fatal(err, "Unable to perform decompression")
 		}
 	},
 }
@@ -62,7 +61,7 @@ var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
 	Short: "Returns the Zarf admin password read from ~/.git-credentials",
 	Run: func(cmd *cobra.Command, args []string) {
-		authInfo := git.FindAuthForHost(config.GetTargetEndpoint())
+		authInfo := git.FindAuthForHost(config.TLS.Host)
 		fmt.Println(authInfo.Auth.Password)
 	},
 }
@@ -74,8 +73,7 @@ var configSchemaCmd = &cobra.Command{
 		schema := jsonschema.Reflect(&config.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			logrus.Debug(err)
-			logrus.Fatal("Unable to generate the zarf config schema")
+			message.Fatal(err, "Unable to generate the zarf config schema")
 		}
 		fmt.Print(string(output))
 	},

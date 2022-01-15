@@ -34,13 +34,13 @@ spec:
     spec:
       containers:
       - name: game
-        image: registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom
+        image: "registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom"
         ports:
         - name: http
           containerPort: 8000
           protocol: TCP
       imagePullSecrets:
-        - name: private-registry
+        - name: zarf-registry
 ---
 apiVersion: v1
 kind: Service
@@ -48,7 +48,6 @@ metadata:
   name: game
   namespace: default
 spec:
-  type: ClusterIP
   selector:
     app: game
   ports:
