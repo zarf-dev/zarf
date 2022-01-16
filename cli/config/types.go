@@ -89,7 +89,8 @@ type TLSConfig struct {
 }
 
 type ZarfDeployOptions struct {
-	PackagePath string
-	Confirm     bool
-	Components  string
+	PackagePath   string
+	Confirm       bool
+	Components    string
+	ApplianceMode bool
 }

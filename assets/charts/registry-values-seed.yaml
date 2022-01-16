@@ -1,2 +1,2 @@
 image:
-  repository: "###ZARF_SEED_REGISTRY###/registry"
+  repository: "###ZARF_SEED_REGISTRY###/library/registry"

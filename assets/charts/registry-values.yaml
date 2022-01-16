@@ -2,7 +2,7 @@ persistence:
   enabled: true
   storageClass: "###ZARF_STORAGE_CLASS###"
 image:
-  repository: "###ZARF_REGISTRY###/registry"
+  repository: "###ZARF_REGISTRY###/library/registry"
 imagePullSecrets:
   - name: zarf-registry
 secrets:

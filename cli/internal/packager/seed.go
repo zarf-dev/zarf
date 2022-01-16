@@ -103,7 +103,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		// If the state is invalid, assume this is a new cluster
 		message.Debug("New cluster, no zarf state found")
 
-		if deployingK3s {
+		if config.DeployOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true

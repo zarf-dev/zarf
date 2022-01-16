@@ -41,7 +41,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 
 	for idx, src := range buildImageList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
-		img, err := crane.Pull(src, cranePlatformAMD64, cranePlatformARM64)
+		img, err := crane.Pull(src, cranePlatformOptions)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}

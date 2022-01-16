@@ -36,8 +36,6 @@ type tempPaths struct {
 	components     string
 }
 
-var deployingK3s bool
-
 func createPaths() tempPaths {
 	basePath, _ := utils.MakeTempDir()
 	return tempPaths{
@@ -128,7 +126,7 @@ func getValidComponents(allComponents []config.ZarfComponent, requestedComponent
 			validComponentsList = append(validComponentsList, component)
 			// Make it easier to know we are running k3s
 			if config.IsZarfInitConfig() && component.Name == "k3s" {
-				deployingK3s = true
+				config.DeployOptions.ApplianceMode = true
 			}
 		}
 	}

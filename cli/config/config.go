@@ -90,7 +90,11 @@ func GetRegistry() string {
 }
 
 func GetSeedRegistry() string {
-	return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
+	if DeployOptions.ApplianceMode {
+		return "docker.io"
+	} else {
+		return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
+	}
 }
 
 func LoadConfig(path string) error {
