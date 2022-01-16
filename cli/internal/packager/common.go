@@ -30,6 +30,7 @@ type componentPaths struct {
 }
 type tempPaths struct {
 	base           string
+	seedImages     string
 	images         string
 	dataInjections string
 	components     string
@@ -41,6 +42,7 @@ func createPaths() tempPaths {
 	basePath, _ := utils.MakeTempDir()
 	return tempPaths{
 		base:           basePath,
+		seedImages:     basePath + "/seed-images.tar",
 		images:         basePath + "/images.tar",
 		dataInjections: basePath + "/data",
 		components:     basePath + "/components",
@@ -226,7 +228,7 @@ func loopScriptUntilSuccess(script string, retry bool) {
 	for {
 		scriptEnvVars := []string{
 			"ZARF_REGISTRY=" + config.ZarfRegistry,
-			"ZARF_SEED_REGISTRY=" + config.ZarfSeedRegistry,
+			"ZARF_SEED_REGISTRY=" + config.ZarfLocalSeedRegistry,
 		}
 		// Try to silently run the script
 		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)

@@ -91,6 +91,7 @@ func init() {
 	toolsCmd.AddCommand(registryCmd)
 	cranePlatformOptions := []crane.Option{
 		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"}),
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "arm64"}),
 	}
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))

@@ -39,13 +39,8 @@ func Create() {
 	}
 
 	if len(seedImages) > 0 {
-		// Hack for now since this is what the embedded registry is tracking
-		config.TLS.Host = config.IPV4Localhost
-		startEmbeddedRegistry(false)
-		for _, image := range seedImages {
-			dest := utils.SwapHost(image, config.ZarfSeedRegistry)
-			images.Copy(image, dest)
-		}
+		// Load seed images into their own happy little tarball for ease of import on init
+		images.PullAll(seedImages, tempPath.seedImages)
 	}
 
 	var combinedImageList []string

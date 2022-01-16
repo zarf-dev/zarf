@@ -2,7 +2,7 @@ persistence:
   enabled: true
   storageClass: "###ZARF_STORAGE_CLASS###"
 image:
-  repository: "###ZARF_REGISTRY###/ironbank/opensource/docker/registry-v2"
+  repository: "###ZARF_REGISTRY###/registry"
 imagePullSecrets:
   - name: zarf-registry
 secrets:

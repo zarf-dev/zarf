@@ -21,7 +21,7 @@ const ZarfRegistryPushUser = "zarf-push"
 const ZarfRegistryPullUser = "zarf-pull"
 const ZarfSeedPort = "45000"
 const ZarfRegistry = IPV4Localhost + ":45001"
-const ZarfSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
+const ZarfLocalSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
 
 var CLIVersion = "unset"
 var TLS TLSConfig
@@ -120,8 +120,4 @@ func BuildConfig(path string) error {
 	}
 
 	return utils.WriteYaml(path, config, 0400)
-}
-
-func IsTLSLocalhost() bool {
-	return TLS.Host == IPV4Localhost
 }

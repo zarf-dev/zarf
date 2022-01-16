@@ -154,7 +154,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 	}
 
 	if hasImages {
-		images.PushAll(tempPath.images, component.Images)
+		images.PushToZarfRegistry(tempPath.images, component.Images, config.ZarfRegistry)
 	}
 
 	for _, chart := range component.Charts {
@@ -186,7 +186,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 	}
 
 	if isSeedRegistry {
-		postSeedRegistry()
+		postSeedRegistry(tempPath)
 	}
 }
 

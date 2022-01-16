@@ -1,7 +1,7 @@
 kind: ZarfInitConfig
 
 seed:
-  - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+  - registry:2.7.1
 
 components:
   - name: management
@@ -64,9 +64,6 @@ components:
 
   - name: container-registry-seed
     required: true
-    files:
-      - source: .zarf-registry
-        target: .zarf-registry
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
