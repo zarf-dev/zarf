@@ -90,10 +90,12 @@ func preSeedRegistry(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%v)", tempPath)
 
 	var (
-		distro        string
-		err           error
-		injectCommand string
-		injectArgs    []string
+		distro string
+		err    error
+		inject struct {
+			command string
+			args    []string
+		}
 	)
 
 	// Attempt to load an existing state prior to init
@@ -127,40 +129,39 @@ func preSeedRegistry(tempPath tempPaths) {
 	switch state.Distro {
 	case k8s.DistroIsK3s:
 		state.StorageClass = "local-path"
-		injectCommand = "k3s"
-		injectArgs = []string{"ctr", "images", "import", tempPath.seedImages}
+		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
+		inject.command = "k3s"
+		inject.args = []string{"ctr", "images", "import", tempPath.seedImages}
 
 	case k8s.DistroIsK3d:
 		state.StorageClass = "local-path"
 		clusterName := getClusterName("k3d")
-		injectCommand = "k3d"
-		injectArgs = []string{"", "image", "import", tempPath.seedImages, "--cluster", clusterName}
+		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
+		inject.command = "k3d"
+		inject.args = []string{"", "image", "import", tempPath.seedImages, "--cluster", clusterName}
 
 	case k8s.DistroIsKind:
 		state.StorageClass = "standard"
 		// See https://github.com/kubernetes-sigs/kind/blob/v0.11.1/pkg/cluster/internal/kubeconfig/internal/kubeconfig/helpers.go#L24
 		clusterName := getClusterName("kind")
-		injectCommand = "kind"
-		injectArgs = []string{"load", "image-archive", tempPath.seedImages, "--name", clusterName}
+		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
+		inject.command = "kind"
+		inject.args = []string{"load", "image-archive", tempPath.seedImages, "--name", clusterName}
 
+	default:
+		state.Registry.SeedType = config.ZarfSeedTypeRuntimeRegistry
 	}
 
-	// Save the state back to K8s
-	if err := k8s.SaveZarfState(state); err != nil {
-		message.Fatal(err, "Unable to save the Zarf state data back to the cluster")
-	}
-
-	// Load state for the rest of the operations
-	config.InitState(state)
-
-	if injectCommand != "" {
+	switch state.Registry.SeedType {
+	case config.ZarfSeedTypeCLIInject:
 		// If this is a seed image injection, attempt to run it and warn if there is an error
-		if _, err = utils.ExecCommand(true, nil, injectCommand, injectArgs...); err != nil {
+		if _, err = utils.ExecCommand(true, nil, inject.command, inject.args...); err != nil {
 			message.Errorf(err, "Unable to inject the seed image from the %s archive", tempPath.seedImages)
 		}
 		// Set TLS host so that the seed template isn't broken
 		config.TLS.Host = config.IPV4Localhost
-	} else {
+
+	case config.ZarfSeedTypeRuntimeRegistry:
 		// Otherwise, start embedded registry read/write (only on localhost)
 		startSeedRegistry(config.IPV4Localhost, false)
 
@@ -178,7 +179,18 @@ func preSeedRegistry(tempPath tempPaths) {
 
 		// Start the registry again read-only now
 		startSeedRegistry(config.TLS.Host, true)
+
+	default:
+		message.Fatalf(nil, "Unknown seed registry status")
 	}
+
+	// Save the state back to K8s
+	if err := k8s.SaveZarfState(state); err != nil {
+		message.Fatal(err, "Unable to save the Zarf state data back to the cluster")
+	}
+
+	// Load state for the rest of the operations
+	config.InitState(state)
 
 	registrySecret := config.GetSecret(config.StateRegistryPush)
 	// Now that we have what the password will be, we should add the login entry to the system's registry config

@@ -13,23 +13,37 @@ import (
 
 const IPV4Localhost = "127.0.0.1"
 
-const K3sBinary = "/usr/local/bin/k3s"
-const PackageInitName = "zarf-init.tar.zst"
-const PackagePrefix = "zarf-package-"
-const ZarfGitPushUser = "zarf-git-user"
-const ZarfRegistryPushUser = "zarf-push"
-const ZarfRegistryPullUser = "zarf-pull"
-const ZarfSeedPort = "45000"
-const ZarfRegistry = IPV4Localhost + ":45001"
-const ZarfLocalSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
+const (
+	K3sBinary       = "/usr/local/bin/k3s"
+	PackageInitName = "zarf-init.tar.zst"
+	PackagePrefix   = "zarf-package-"
 
-var CLIVersion = "unset"
-var TLS TLSConfig
-var DeployOptions ZarfDeployOptions
+	ZarfGitPushUser       = "zarf-git-user"
+	ZarfRegistryPushUser  = "zarf-push"
+	ZarfRegistryPullUser  = "zarf-pull"
+	ZarfSeedPort          = "45000"
+	ZarfRegistry          = IPV4Localhost + ":45001"
+	ZarfLocalSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
 
-// private
-var config ZarfPackage
-var state ZarfState
+	ZarfSeedTypeCLIInject         = "cli-inject"
+	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
+	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
+)
+
+var (
+	// CLIVersion track the version of the CLI
+	CLIVersion = "unset"
+
+	// TLS options used for cert creation
+	TLS TLSConfig
+
+	// DeployOptions tracks user-defined values for the active deployment
+	DeployOptions ZarfDeployOptions
+
+	// Private vars
+	config ZarfPackage
+	state  ZarfState
+)
 
 func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
@@ -90,7 +104,7 @@ func GetRegistry() string {
 }
 
 func GetSeedRegistry() string {
-	if DeployOptions.ApplianceMode {
+	if state.Registry.SeedType == ZarfSeedTypeCLIInject {
 		return "docker.io"
 	} else {
 		return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)

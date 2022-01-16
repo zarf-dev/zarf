@@ -12,9 +12,11 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-const ZarfNamespace = "zarf"
-const ZarfStateSecretName = "zarf-state"
-const ZarfStateDataKey = "state"
+const (
+	ZarfNamespace       = "zarf"
+	ZarfStateSecretName = "zarf-state"
+	ZarfStateDataKey    = "state"
+)
 
 // getZarfStateInterface returns a secret interface for the zarf namespace
 func getZarfStateInterface() v1.SecretInterface {

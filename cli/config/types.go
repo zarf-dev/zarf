@@ -73,13 +73,14 @@ type ZarfPackage struct {
 }
 
 type ZarfState struct {
-	ZarfAppliance bool   `yaml:"zarfAppliance"`
-	Distro        string `yaml:"distro"`
-	StorageClass  string `yaml:"storageClass"`
-	Secret        string `yaml:"secret"`
+	ZarfAppliance bool   `json:"zarfAppliance"`
+	Distro        string `json:"distro"`
+	StorageClass  string `json:"storageClass"`
+	Secret        string `json:"secret"`
 	Registry      struct {
-		NodePort string `yaml:"nodePort"`
-	} `yaml:"registry"`
+		SeedType string `json:"seedType"`
+		NodePort string `json:"nodePort"`
+	} `json:"registry"`
 }
 
 type TLSConfig struct {
