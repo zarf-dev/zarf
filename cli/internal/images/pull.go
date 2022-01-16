@@ -84,6 +84,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 		switch {
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
 			_, _ = progressBar.Stop()
+			title = fmt.Sprintf("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			pterm.Success.Println(title)
 			return
 		case update.Error != nil:
