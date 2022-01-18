@@ -10,7 +10,8 @@ import (
 
 var cachePath = ".zarf-image-cache"
 
-var cranePlatformOptions = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
+var cranePlatformAMD64 = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
+var cranePlatformARM64 = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "arm64"})
 
 func init() {
 	homePath, _ := os.UserHomeDir()

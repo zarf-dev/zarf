@@ -19,7 +19,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target
 
 	for _, src := range buildImageList {
 		message.Infof("Updating image %s -> %s", src, target)
-		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformOptions)
+		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformAMD64, cranePlatformARM64)
 		if err != nil {
 			message.Error(err, "Unable to load the image from the update package")
 			return
@@ -27,7 +27,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target
 
 		offlineName := utils.SwapHost(src, target)
 
-		err = crane.Push(img, offlineName, cranePlatformOptions)
+		err = crane.Push(img, offlineName, cranePlatformAMD64, cranePlatformARM64)
 		if err != nil {
 			message.Error(err, "Unable to push the image to the registry")
 		}

@@ -63,7 +63,7 @@ func SaveZarfState(state config.ZarfState) error {
 	dataWrapper := make(map[string][]byte)
 	dataWrapper[ZarfStateDataKey] = data
 
-	// The secret opbject
+	// The secret object
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
