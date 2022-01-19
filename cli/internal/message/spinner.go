@@ -2,7 +2,6 @@ package message
 
 import (
 	"fmt"
-
 	"github.com/pterm/pterm"
 )
 
@@ -41,7 +40,11 @@ func (p *Spinner) Debugf(format string, a ...interface{}) {
 }
 
 func (p *Spinner) Stop() {
-	_ = p.spinner.Stop()
+	if p.spinner.IsActive {
+		// Only stop if not stopped to avoid extra line break injections in the CLI
+		_ = p.spinner.Stop()
+		Debug("Possible spinner leak detected")
+	}
 }
 
 func (p *Spinner) Success() {
