@@ -138,7 +138,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		clusterName := getClusterName("k3d")
 		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
 		inject.command = "k3d"
-		inject.args = []string{"", "image", "import", tempPath.seedImages, "--cluster", clusterName}
+		inject.args = []string{"image", "import", tempPath.seedImages, "--cluster", clusterName}
 
 	case k8s.DistroIsKind:
 		state.StorageClass = "standard"
