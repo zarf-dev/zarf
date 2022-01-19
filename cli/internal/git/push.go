@@ -54,7 +54,8 @@ func push(localPath string, spinner *message.Spinner) error {
 
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL("https://"+config.TLS.Host, remoteUrl)
+	targetHost := fmt.Sprintf("http://%s:%d", config.IPV4Localhost, k8s.PortGit)
+	targetUrl := transformURL(targetHost, remoteUrl)
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
