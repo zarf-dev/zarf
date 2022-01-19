@@ -6,13 +6,17 @@ metadata:
 components:
   - name: baseline
     required: true
-    manifests: manifests
+    manifests:
+      - name: kafka-config
+        files:
+          - manifests/kafka.yaml
+          - manifests/kafka-topic.yaml
     charts:
       - name: strimzi-kafka-operator
         url: https://strimzi.io/charts/
         version: 0.24.0
         namespace: kafka-demo
-        valuesFiles: 
+        valuesFiles:
           - charts/strimzi-values.yaml
     images:
       - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0

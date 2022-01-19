@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -125,8 +126,11 @@ func addComponent(tempPath tempPaths, component config.ZarfComponent) {
 		}
 	}
 
-	if component.ManifestsPath != "" {
-		utils.CreatePathAndCopy(component.ManifestsPath, componentPath.manifests)
+	for _, manifest := range component.Manifests {
+		for _, file := range manifest.Files {
+			destination := fmt.Sprintf("%s/%s", componentPath.manifests, file)
+			utils.CreatePathAndCopy(file, destination)
+		}
 	}
 
 	// Load all specified git repos

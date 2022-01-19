@@ -91,7 +91,11 @@
           "type": "array"
         },
         "manifests": {
-          "type": "string"
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfManifest"
+          },
+          "type": "array"
         },
         "images": {
           "items": {
@@ -197,9 +201,28 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfManifest": {
+      "required": [
+        "name",
+        "files"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
         },
-        "template": {
-          "type": "boolean"
+        "namespace": {
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,

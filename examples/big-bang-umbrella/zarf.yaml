@@ -6,7 +6,12 @@ metadata:
 components:
   - name: baseline
     required: true
-    manifests: manifests
+    manifests:
+      # This will create a helm chart based on the info below
+      - name: big-bang-umbrella-with-atlassian
+        files:
+          - manifests/atlassian-manifests.yaml
+          - manifests/bigbang-git-secret.yaml
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
@@ -49,11 +54,15 @@ components:
         namespace: jira
         gitPath: chart
         version: 0.1.0-bb.7
+        valuesFiles:
+          - charts/jira-values.yaml
       - name: confluence
         url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/confluence.git
         namespace: confluence
         gitPath: chart
         version: 0.1.0-bb.9
+        valuesFiles:
+          - charts/conluence-values.yaml
 
     images:
       # TODO: Figure out a better way to derive this list.

@@ -75,7 +75,10 @@ components:
 
   - name: container-registry
     required: true
-    manifests: assets/manifests/registry
+    manifests:
+      - name: kep-1775-registry-annotation
+        files:
+        - assets/manifests/registry/configmap.yaml
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
@@ -87,7 +90,10 @@ components:
   - name: traefik-ingress
     description: "Install the Traefik ingress (usually needed for appliance mode)"
     default: true
-    manifests: assets/manifests/traefik
+    manifests:
+      - name: configure-traefik-tls
+        files:
+        - assets/manifests/traefik/traefik-tls.yaml
     images:
       - traefik:2.5.6
     charts:

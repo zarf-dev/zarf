@@ -20,7 +20,11 @@ components:
     files:
       - source: ../assets/manifests
         target: manifests
-    manifests: ../assets/manifests
+    manifests:
+      - name: test-manifests
+        files:
+        - ../assets/manifests/regsitry/configmap.yaml
+        - ../assets/manifests/traefik/traefik-tls.yaml
     images:
       - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.3.0
     repos:

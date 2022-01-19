@@ -40,7 +40,7 @@ func Deploy() {
 
 	// Load the config from the extracted archive zarf.yaml
 	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
-		message.Fatalf(err, "Unable to read the zarf.yaml file from %s", tempPath.base)
+		message.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
 	// Init config already verifies installation at the start
@@ -86,7 +86,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "container-registry-seed"
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
-	hasManifests := component.ManifestsPath != ""
+	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 
 	// All components now require a name
@@ -122,7 +122,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			utils.CreateFilePath(link)
+			_ = utils.CreateFilePath(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
@@ -172,8 +172,8 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 		})
 	}
 
-	if hasManifests {
-		k8s.GitopsProcess(componentPath.manifests, "", component)
+	for _, manifest := range component.Manifests {
+		helm.GenerateChart(componentPath.manifests, manifest, component.Images)
 	}
 
 	if hasRepos {
