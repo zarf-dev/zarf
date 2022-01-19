@@ -89,7 +89,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	case ZarfLogging:
 		tunnel.resourceName = "loki-stack-grafana"
 		tunnel.localPort = PortLogging
-		tunnel.remotePort = 80
+		tunnel.remotePort = 3000
 	case ZarfGit:
 		tunnel.resourceName = "gitea-http"
 		tunnel.localPort = PortGit
