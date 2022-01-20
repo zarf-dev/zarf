@@ -1,0 +1,11 @@
+image:
+  repository: registry1.dso.mil/ironbank/atlassian/confluence-data-center/confluence-node:7.13.0
+  tag: "7.13.0"
+imagePullSecrets:
+  - name: zarf-registry
+ingress:
+  nginx: false
+istio:
+  enabled: true
+  gateways:
+    - istio-system/public

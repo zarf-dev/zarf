@@ -1,43 +1,35 @@
 package images
 
 import (
-	"regexp"
-
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/k8s"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/sirupsen/logrus"
 )
 
-func PushAll(imageTarballPath string, buildImageList []string, targetHost string) {
-	cranePlatformOptions := crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"})
+func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target string) {
+
+	// Establish a registry tunnel to send the images if pushing to the zarf registry
+	if target == config.ZarfRegistry {
+		tunnel := k8s.NewZarfTunnel()
+		tunnel.Connect(k8s.ZarfRegistry, false)
+		defer tunnel.Close()
+	}
 
 	for _, src := range buildImageList {
-		logContext := logrus.WithFields(logrus.Fields{
-			"source": src,
-			"target": targetHost,
-		})
-		logContext.Info("Updating image")
-		img, err := crane.LoadTag(imageTarballPath, src, cranePlatformOptions)
+		message.Infof("Updating image %s -> %s", src, target)
+		img, err := crane.LoadTag(imageTarballPath, src, config.ActiveCranePlatform)
 		if err != nil {
-			logContext.Debug(err)
-			logContext.Warn("Unable to load the image from the update package")
+			message.Error(err, "Unable to load the image from the update package")
 			return
 		}
 
-		offlineName := SwapHost(src, targetHost)
+		offlineName := utils.SwapHost(src, target)
 
-		err = crane.Push(img, offlineName, cranePlatformOptions)
+		err = crane.Push(img, offlineName, config.ActiveCranePlatform)
 		if err != nil {
-			logContext.Debug(err)
-			logContext.Warn("Unable to push the image to the registry")
+			message.Error(err, "Unable to push the image to the registry")
 		}
 	}
-}
-
-// SwapHost Perform base url replacment without the docker libs
-func SwapHost(src string, targetHost string) string {
-	// For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
-	var parser = regexp.MustCompile(`(?im)^([a-z0-9\-.]+\.[a-z0-9\-]+:?[0-9]*)?/?(.+)$`)
-	var substitution = targetHost + "/$2"
-	return parser.ReplaceAllString(src, substitution)
 }

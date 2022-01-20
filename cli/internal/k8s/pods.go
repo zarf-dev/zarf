@@ -2,43 +2,47 @@ package k8s
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const waitLimit = 30
 
-func WaitForPodsAndContainers(target config.ZarfContainerTarget) []string {
+// WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
+func WaitForPodsAndContainers(target config.ZarfContainerTarget, waitForAllPods bool) []string {
 
-	clientSet := connect()
-	logContext := logrus.WithFields(logrus.Fields{
-		"Namespace": target.Namespace,
-		"Selector":  target.Selector,
-		"Container": target.Container,
-	})
+	clientSet := getClientset()
 
+	message.Debugf("Waiting for ready pod %s/%s", target.Namespace, target.Selector)
 	for count := 0; count < waitLimit; count++ {
-		logContext.Info("Looking up K8s pod")
 
 		pods, err := clientSet.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: target.Selector,
 		})
 		if err != nil {
-			logContext.Warn("Unable to find matching pods", err.Error())
+			message.Error(err, "Unable to find matching pods")
 			break
 		}
 
 		var readyPods []string
 
+		// Reverse sort by creation time
+		sort.Slice(pods.Items, func(i, j int) bool {
+			return pods.Items[i].CreationTimestamp.After(pods.Items[j].CreationTimestamp.Time)
+		})
+
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
+				message.Debugf("Testing pod %s", pod.Name)
 
 				// Handle container targetting
 				if target.Container != "" {
+					message.Debugf("Testing for container")
 					var matchesInitContainer bool
 
 					// Check the status of initContainers for a running match
@@ -66,22 +70,29 @@ func WaitForPodsAndContainers(target config.ZarfContainerTarget) []string {
 					}
 
 				} else {
+					status := pod.Status.Phase
+					message.Debugf("Testing for pod only, phase: %s", status)
 					// Regular status checking without a container
-					if pod.Status.Phase == v1.PodRunning {
+					if status == corev1.PodRunning {
 						readyPods = append(readyPods, pod.Name)
 					}
 				}
 
 			}
-			if len(pods.Items) == len(readyPods) {
+			message.Debug("Ready pods", readyPods)
+			somePodsReady := len(readyPods) > 0
+			allPodsReady := len(pods.Items) == len(readyPods)
+
+			if allPodsReady || somePodsReady && !waitForAllPods {
 				return readyPods
 			}
+
 		}
 
 		time.Sleep(3 * time.Second)
 	}
 
-	logContext.Warn("Pod lookup timeout exceeded")
+	message.Warn("Pod lookup timeout exceeded")
 
 	return []string{}
 }
