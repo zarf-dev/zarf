@@ -22,6 +22,9 @@ data:
 components:
   - name: baseline
     required: true
-    manifests: manifests
+    manifests:
+      - name: example-data-injection-pod
+        files:
+          - manifests/data-injection.yaml
     images:
       - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4

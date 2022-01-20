@@ -1,36 +1,73 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
-	"github.com/sirupsen/logrus"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-const K3sBinary = "/usr/local/bin/k3s"
-const K3sChartPath = "/var/lib/rancher/k3s/server/static/charts"
-const K3sManifestPath = "/var/lib/rancher/k3s/server/manifests"
-const K3sImagePath = "/var/lib/rancher/k3s/agent/images"
-const PackageInitName = "zarf-init.tar.zst"
-const PackagePrefix = "zarf-package-"
-const ZarfGitUser = "zarf-git-user"
-const ZarfStatePath = ".zarf-state.yaml"
+const (
+	IPV4Localhost = "127.0.0.1"
 
-var CLIVersion = "unset"
-var config ZarfPackage
-var state ZarfState
+	K3sBinary       = "/usr/local/bin/k3s"
+	PackageInitName = "zarf-init.tar.zst"
+	PackagePrefix   = "zarf-package-"
 
-func init() {
-	if err := utils.ReadYaml(ZarfStatePath, &state); err != nil {
-		state.Kind = "ZarfState"
-	}
-}
+	ZarfGitPushUser       = "zarf-git-user"
+	ZarfRegistryPushUser  = "zarf-push"
+	ZarfRegistryPullUser  = "zarf-pull"
+	ZarfSeedPort          = "45000"
+	ZarfRegistry          = IPV4Localhost + ":45001"
+	ZarfLocalSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
+
+	ZarfSeedTypeCLIInject         = "cli-inject"
+	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
+	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
+)
+
+var (
+	// CLIVersion track the version of the CLI
+	CLIVersion = "unset"
+
+	// TLS options used for cert creation
+	TLS TLSConfig
+
+	// DeployOptions tracks user-defined values for the active deployment
+	DeployOptions ZarfDeployOptions
+
+	ActiveCranePlatform crane.Option
+
+	// Private vars
+	config ZarfPackage
+	state  ZarfState
+)
 
 func IsZarfInitConfig() bool {
+	message.Debug("config.IsZarfInitConfig")
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
+}
+
+func SetAcrch(arch string) {
+	message.Debugf("config.SetArch(%s)", arch)
+	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
+}
+
+// GetSeedImages returns a list of image strings specified in the package, but only for init packages
+func GetSeedImages() []string {
+	message.Debugf("config.GetSeedImages()")
+	// Only allow seed images for init config
+	if IsZarfInitConfig() {
+		return config.Seed
+	} else {
+		return []string{}
+	}
 }
 
 func GetPackageName() string {
@@ -62,18 +99,26 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
+func InitState(tmpState ZarfState) {
+	message.Debugf("config.InitState(%v)", tmpState)
+	state = tmpState
+	initSecrets()
+}
+
 func GetState() ZarfState {
 	return state
 }
 
-func GetTargetEndpoint() string {
-	return state.TLS.Host
+func GetRegistry() string {
+	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
 }
 
-func WriteState(incomingState ZarfState) error {
-	logrus.Debug(incomingState)
-	state = incomingState
-	return utils.WriteYaml(ZarfStatePath, state, 0600)
+func GetSeedRegistry() string {
+	if state.Registry.SeedType == ZarfSeedTypeCLIInject {
+		return "docker.io"
+	} else {
+		return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
+	}
 }
 
 func LoadConfig(path string) error {
@@ -81,6 +126,7 @@ func LoadConfig(path string) error {
 }
 
 func BuildConfig(path string) error {
+	message.Debugf("config.BuildConfig(%v)", path)
 	now := time.Now()
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()

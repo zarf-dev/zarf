@@ -1,14 +1,35 @@
 kind: ZarfInitConfig
 
+seed:
+  - library/registry:2.7.1
+
 components:
+  - name: management
+    description: "Add the K9s terminal-based K8s UI for cluster management"
+    default: true
+    files:
+      # The zarf binary is hosted on govcloud since the release on https://github.com/derailed/k9s/ is a tarball
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
+        shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
+        target: /usr/local/bin/k9s
+        executable: true
+      # Simple theme file to make K9s colors similar to Zarfs UI colors
+      - source: assets/misc/k9s-theme.yaml
+        target: /root/.k9s/skin.yml
+
   - name: k3s
     description: >
+      *** REQUIRES ROOT ***
       Install K3s, certified Kubernetes distribution built for IoT & Edge computing.
       K3s provides the cluster need for Zarf running in Appliance MOde as well as can
       host a low-resource Gitops Service if not using an existing Kubernetes platform.
-    required: true
+    default: true
     scripts:
       retry: true
+      before:
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now"
       after:
         # Configure K3s systemd service
         - "systemctl daemon-reload"
@@ -39,60 +60,57 @@ components:
         target: /etc/systemd/system/k3s.service
         symlinks:
           - /etc/systemd/system/multi-user.target.wants/k3s.service
-      # Containerd mirroring configuration with zarf string injection
-      - source: assets/misc/registries.yaml
-        target: "/etc/rancher/k3s/registries.yaml"
-        template: true
       # Mock file for creating the kube config symlink
       - source: assets/misc/empty-file
         target: /etc/rancher/k3s/k3s.yaml
         symlinks:
           - /root/.kube/config
 
-  - name: management
-    description: "Add the K9s terminal-based K8s UI for cluster management"
-    default: true
-    files:
-      # The zarf binary is hosted on govcloud since the release on https://github.com/derailed/k9s/ is a tarball
-      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
-        shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
-        target: /usr/local/bin/k9s
-        executable: true
-      # Simple theme file to make K9s colors similar to Zarfs UI colors
-      - source: assets/misc/k9s-theme.yaml
-        target: /root/.k9s/skin.yml
-
-  - name: traefik-ingress
-    description: "Install the Traefik ingress (usually needed for appliance mode)"
+  - name: container-registry-seed
     required: true
-    scripts:
-      retry: true
-      after:
-        - "/usr/local/bin/kubectl get middleware"
-    manifests: assets/manifests/traefik
     charts:
-      - name: traefik
-        url: https://helm.traefik.io/traefik
-        version: 9.18.2
+      - name: docker-registry
+        url: https://github.com/defenseunicorns/docker-registry.helm.git
+        version: 2.0.0
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/registry-values.yaml
+          - assets/charts/registry-values-seed.yaml
 
   - name: container-registry
     required: true
-    scripts:
-      retry: true
-      after:
-        - "./zarf tools registry catalog $ZARF_TARGET_ENDPOINT"
-    manifests: assets/manifests/registry
-    images:
-      - registry1.dso.mil/ironbank/opensource/docker/registry-v2:2.7.1
+    manifests:
+      - name: kep-1775-registry-annotation
+        files:
+          - assets/manifests/registry/configmap.yaml
     charts:
       - name: docker-registry
-        url: https://helm.twun.io
-        version: 1.10.1
+        url: https://github.com/defenseunicorns/docker-registry.helm.git
+        version: 2.0.0
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/registry-values.yaml
+
+  - name: traefik-ingress
+    description: "Install the Traefik ingress (usually needed for appliance mode)"
+    default: true
+    manifests:
+      - name: configure-traefik-tls
+        files:
+          - assets/manifests/traefik/traefik-tls.yaml
+    images:
+      - traefik:2.5.6
+    charts:
+      - name: traefik
+        url: https://helm.traefik.io/traefik
+        version: 10.9.1
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/traefik-values.yaml
 
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     default: true
-    manifests: assets/manifests/logging
     images:
       - grafana/loki:2.2.0
       - grafana/promtail:2.1.0
@@ -102,13 +120,18 @@ components:
       - name: loki-stack
         url: https://grafana.github.io/helm-charts
         version: 2.4.1
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/pgl-values.yaml
 
   - name: gitops-service
-    description: "Add Gitea for serving gitops-based clusters in an airgap"
-    manifests: assets/manifests/gitops
+    description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
     images:
       - gitea/gitea:1.13.7
     charts:
       - name: gitea
         url: https://dl.gitea.io/charts
         version: 2.2.5
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/gitea-values.yaml

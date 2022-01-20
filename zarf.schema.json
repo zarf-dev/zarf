@@ -30,7 +30,8 @@
       "required": [
         "name",
         "url",
-        "version"
+        "version",
+        "namespace"
       ],
       "properties": {
         "name": {
@@ -40,6 +41,18 @@
           "type": "string"
         },
         "version": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "valuesFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "gitPath": {
           "type": "string"
         }
       },
@@ -70,19 +83,23 @@
           },
           "type": "array"
         },
-        "manifests": {
-          "type": "string"
-        },
-        "images": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "charts": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfChart"
+          },
+          "type": "array"
+        },
+        "manifests": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfManifest"
+          },
+          "type": "array"
+        },
+        "images": {
+          "items": {
+            "type": "string"
           },
           "type": "array"
         },
@@ -184,15 +201,38 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfManifest": {
+      "required": [
+        "name",
+        "files"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
         },
-        "template": {
-          "type": "boolean"
+        "namespace": {
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
       "type": "object"
     },
     "ZarfMetadata": {
+      "required": [
+        "url:omitempty",
+        "image:omitempty"
+      ],
       "properties": {
         "name": {
           "type": "string"
@@ -201,6 +241,12 @@
           "type": "string"
         },
         "version": {
+          "type": "string"
+        },
+        "url:omitempty": {
+          "type": "string"
+        },
+        "image:omitempty": {
           "type": "string"
         },
         "uncompressed": {
@@ -234,6 +280,12 @@
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfComponent"
+          },
+          "type": "array"
+        },
+        "seed": {
+          "items": {
+            "type": "string"
           },
           "type": "array"
         }
