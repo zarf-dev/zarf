@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -41,7 +42,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 
 	for idx, src := range buildImageList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
-		img, err := crane.Pull(src, cranePlatformAMD64, cranePlatformARM64)
+		img, err := crane.Pull(src, config.ActiveCranePlatform)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}

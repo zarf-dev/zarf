@@ -9,11 +9,13 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-const IPV4Localhost = "127.0.0.1"
-
 const (
+	IPV4Localhost = "127.0.0.1"
+
 	K3sBinary       = "/usr/local/bin/k3s"
 	PackageInitName = "zarf-init.tar.zst"
 	PackagePrefix   = "zarf-package-"
@@ -40,13 +42,21 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions ZarfDeployOptions
 
+	ActiveCranePlatform crane.Option
+
 	// Private vars
 	config ZarfPackage
 	state  ZarfState
 )
 
 func IsZarfInitConfig() bool {
+	message.Debug("config.IsZarfInitConfig")
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
+}
+
+func SetAcrch(arch string) {
+	message.Debugf("config.SetArch(%s)", arch)
+	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
 
 // GetSeedImages returns a list of image strings specified in the package, but only for init packages
