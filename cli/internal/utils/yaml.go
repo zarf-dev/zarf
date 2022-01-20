@@ -1,18 +1,18 @@
 package utils
 
-// shamelessly stolen from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
+// fork from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
 import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/mattn/go-colorable"
-	"github.com/sirupsen/logrus"
 )
 
 const yamlEscape = "\x1b"
@@ -22,7 +22,6 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 func ColorPrintYAML(text string) {
-
 	tokens := lexer.Tokenize(text)
 
 	var p printer.Printer
@@ -63,15 +62,14 @@ func ColorPrintYAML(text string) {
 		}
 	}
 	writer := colorable.NewColorableStdout()
-	_, err := writer.Write([]byte("\n\n" + p.PrintTokens(tokens) + "\n\n\n"))
+	_, err := writer.Write([]byte("\n" + p.PrintTokens(tokens) + "\n"))
 	if err != nil {
-		logrus.Warn("Unable to print the config yaml contents")
+		message.Error(err, "Unable to print the config yaml contents")
 	}
 }
 
 func ReadYaml(path string, destConfig interface{}) error {
-	logContext := logrus.WithField("path", path)
-	logContext.Info("Loading dynamic config")
+	message.Debugf("Loading zarf config %s", path)
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
