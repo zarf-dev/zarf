@@ -1,7 +1,7 @@
 domain: bigbang.dev
 
 registryCredentials:
-  registry: "registry1.dso.mil"
+  registry: "###ZARF_REGISTRY###"
   username: "zarf-git-user"
   password: "${zarf_secret}"
 
@@ -22,7 +22,7 @@ networkPolicies:
 istio:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
   ingressGateways:
     public-ingressgateway:
       type: "LoadBalancer"
@@ -197,7 +197,7 @@ istio:
 istiooperator:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
   values:
     operator:
       resources:
@@ -211,7 +211,7 @@ istiooperator:
 jaeger:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
   values:
     resources:
       requests:
@@ -245,7 +245,7 @@ jaeger:
 kiali:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
   values:
     resources:
       requests:
@@ -268,7 +268,7 @@ kiali:
 clusterAuditor:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__cluster-auditor.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__cluster-auditor.git
   values:
     resources:
       requests:
@@ -281,7 +281,7 @@ clusterAuditor:
 gatekeeper:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
     replicas: 1
     controllerManager:
@@ -336,7 +336,7 @@ gatekeeper:
 logging:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
   values:
     elasticsearch:
       master:
@@ -374,12 +374,12 @@ logging:
 eckoperator:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
 
 fluentbit:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
   values:
     securityContext:
       privileged: true
@@ -394,7 +394,7 @@ fluentbit:
 monitoring:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__monitoring.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__monitoring.git
   values:
     alertmanager:
       alertmanagerSpec:
@@ -458,7 +458,7 @@ monitoring:
 twistlock:
   enabled: true
   git:
-    repo: http://stuart-gitea-http.git.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
+    repo: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
   values:
     console:
       persistence:

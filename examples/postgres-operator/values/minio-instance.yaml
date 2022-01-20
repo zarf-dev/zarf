@@ -1,0 +1,41 @@
+hostname: minio.localhost
+tenants:
+  imagePullSecret:
+    name: zarf-registry
+  pools:
+      ## Servers specifies the number of MinIO Tenant Pods / Servers in this pool.
+      ## For standalone mode, supply 1. For distributed mode, supply 4 or more.
+      ## Note that the operator does not support upgrading from standalone to distributed mode.
+    - servers: 1
+      ## volumesPerServer specifies the number of volumes attached per MinIO Tenant Pod / Server.
+      volumesPerServer: 4
+      ## size specifies the capacity per volume
+      size: 1Gi
+      ## storageClass specifies the storage class name to be used for this pool
+      storageClassName: local-path
+      ## Used to specify a toleration for a pod
+      tolerations: {}
+      ## nodeSelector parameters for MinIO Pods. It specifies a map of key-value pairs. For the pod to be
+      ## eligible to run on a node, the node must have each of the
+      ## indicated key-value pairs as labels.
+      ## Read more here: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+      nodeSelector: {}
+      ## Affinity settings for MinIO pods. Read more about affinity
+      ## here: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity.
+      affinity: {}
+      ## Configure resource requests and limits for MinIO containers
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "1Gi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+        ## Configure security context
+        ## BB Note: Defaults for Ironbank image are 1001 for user, group, and fsGroup
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+console:
+  enabled: true
