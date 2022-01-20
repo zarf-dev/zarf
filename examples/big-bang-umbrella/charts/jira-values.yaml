@@ -1,0 +1,8 @@
+imagePullSecrets:
+  - name: zarf-registry
+ingress:
+  nginx: false
+istio:
+  enabled: true
+  gateways:
+    - istio-system/public

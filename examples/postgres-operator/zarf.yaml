@@ -2,34 +2,56 @@ kind: ZarfPackageConfig
 metadata:
   name: postgres-operator-demo
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
-#  uncompressed: true
 
 components:
   - name: baseline
     required: true
-    manifests: manifests
 
     scripts:
       retry: true
       after:
         - "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"private-registry\"}]}' -n postgres-operator"
 
+    manifests:
+      - name: postgres-example-config
+        files:
+          - manifests/minio-instance.yaml
+          - manifests/pgadmin.yaml
+          - manifests/postgres-operator.yaml
+          - manifests/postgres-operator-ui.yaml
     charts:
       - name: postgres-operator
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
         version: 1.7.0
+        namespace: postgres-operator
+        valuesFiles:
+          - values/postgres-operator.yaml
       - name: postgres-operator-ui
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
         version: 1.7.0
+        namespace: postgres-operator
+        valuesFiles:
+          - values/postgres-operator-ui.yaml
       - name: pgadmin4
         url: https://helm.runix.net
         version: 1.7.2
+        namespace: postgres-operator
+        valuesFiles:
+          - values/pgadmin.yaml
       - name: minio-operator
         url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git
         version: 4.2.3-bb.1
+        namespace: minio-operator
+        gitPath: chart
+        valuesFiles:
+          - values/minio-operator.yaml
       - name: minio-instance
         url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git
         version: 4.2.3-bb.1
+        namespace: minio-operator
+        gitPath: chart
+        valuesFiles:
+          - values/minio-instance.yaml
 
 
     images:

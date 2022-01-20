@@ -12,9 +12,9 @@
             "program": "${workspaceFolder}/cli",
             "env": {},
             "args": [
-                "package",
-                "create",
-                "--confirm"
+                "init",
+                "--confirm",
+                "--components=gitops-service"
             ]
         },
 
