@@ -264,6 +264,11 @@ jobs:
           GITHUB_REF: ${{ github.event.client_payload.pull_request.head.ref }}
           GITHUB_OWNER: ${{ github.event.client_payload.github.payload.repository.owner.login }}
 
+  # Run the E2E test of Gitea and Grafana
+  # TODO: finish this
+  # e2e-gitea-grafana:
+
+
   # Run the Game E2E test
   e2e-general-cli:
     runs-on: ubuntu-latest
