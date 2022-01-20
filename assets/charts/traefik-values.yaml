@@ -1,0 +1,12 @@
+ports:
+  websecure:
+    tls:
+      enabled: true
+providers:
+  kubernetesIngress:
+    publishedService:
+      enabled: true
+priorityClassName: "system-cluster-critical"
+deployment:
+  imagePullSecrets:
+    - name: zarf-registry

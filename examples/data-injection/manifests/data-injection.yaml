@@ -17,4 +17,4 @@ spec:
       image: registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
       command: ["/bin/sh", "-ec", "mkdir -p /test && while :; do ls -lah /test; sleep 5 ; done"]
   imagePullSecrets:
-    - name: private-registry
+    - name: zarf-registry

@@ -1,12 +1,10 @@
 package git
 
 import (
-	"os"
-
+	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/sirupsen/logrus"
 
 	"strings"
 )
@@ -14,9 +12,9 @@ import (
 const onlineRemoteName = "online-upstream"
 
 func DownloadRepoToTemp(gitUrl string) string {
-	path := utils.MakeTempDir()
+	path, _ := utils.MakeTempDir()
 	// If downloading to temp, grab all tags since the repo isn't being
-	// packaged anyways and it saves us from having to fetch the tags
+	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
 	pull(gitUrl, path)
 	return path
@@ -29,10 +27,8 @@ func Pull(gitUrl string, targetFolder string) string {
 }
 
 func pull(gitUrl string, targetFolder string) {
-	logContext := logrus.WithFields(logrus.Fields{
-		"Remote": gitUrl,
-	})
-	logContext.Info("Processing git repo")
+	spinner := message.NewProgressSpinner("Processing git repo %s", gitUrl)
+	defer spinner.Stop()
 
 	gitCred := FindAuthForHost(gitUrl)
 
@@ -40,7 +36,7 @@ func pull(gitUrl string, targetFolder string) {
 	fetchAllTags := len(matches) == 1
 	cloneOptions := &git.CloneOptions{
 		URL:        matches[0],
-		Progress:   os.Stdout,
+		Progress:   spinner,
 		RemoteName: onlineRemoteName,
 	}
 
@@ -57,10 +53,9 @@ func pull(gitUrl string, targetFolder string) {
 	repo, err := git.PlainClone(targetFolder, false, cloneOptions)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		logContext.Info("Repo already cloned")
+		spinner.Debugf("Repo already cloned")
 	} else if err != nil {
-		logContext.Debug(err)
-		logContext.Fatal("Not a valid git repo or unable to clone")
+		spinner.Fatalf(err, "Not a valid git repo or unable to clone")
 	}
 
 	if !fetchAllTags {
@@ -72,22 +67,21 @@ func pull(gitUrl string, targetFolder string) {
 
 		if err != nil {
 			// No repo head available
-			logContext.Debug(err)
-			logContext.Warn("Failed to identify repo head. Tag will be pushed to 'master'.")
+			spinner.Errorf(err, "Failed to identify repo head. Tag will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
 			// Valid repo head and it is a branch
 			trunkBranchName = head.Name()
 		} else {
 			// Valid repo head but not a branch
-			logContext.Warn("No branch found for this repo head. Tag will be pushed to 'master'.")
+			spinner.Errorf(nil, "No branch found for this repo head. Tag will be pushed to 'master'.")
 		}
 
-		RemoveLocalBranchRefs(targetFolder)
-		RemoveOnlineRemoteRefs(targetFolder)
+		removeLocalBranchRefs(targetFolder)
+		removeOnlineRemoteRefs(targetFolder)
 
-		FetchTag(targetFolder, tag)
+		fetchTag(targetFolder, tag)
 		CheckoutTagAsBranch(targetFolder, tag, trunkBranchName)
-	}
 
-	logContext.Info("Git repo synced")
+	}
+	spinner.Success()
 }
