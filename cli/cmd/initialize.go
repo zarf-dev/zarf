@@ -39,8 +39,9 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		config.DeployOptions.PackagePath = config.PackageInitName
-		
-		packager.Install()
+
+		// Run everything
+		packager.Deploy()
 	},
 }
 

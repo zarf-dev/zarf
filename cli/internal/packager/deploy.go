@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
+	"github.com/pterm/pterm"
 )
 
 var valueTemplate template.Values
@@ -43,8 +44,11 @@ func Deploy() {
 		message.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
-	// Init config already verifies installation at the start
-	if !config.IsZarfInitConfig() {
+	if config.IsZarfInitConfig() {
+		// If init config, make sure things are ready
+		utils.RunPreflightChecks()
+	} else {
+		// Otherwise, skip duplicate user approval
 		configPath := tempPath.base + "/zarf.yaml"
 		confirm := confirmAction(configPath, "Deploy")
 
@@ -68,16 +72,29 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	if !config.IsZarfInitConfig() {
+	if config.IsZarfInitConfig() {
+		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
+		_ = os.Remove(".zarf-registry")
+
+		_ = pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData{
+			{"Application", "Username", "Password", "Connect"},
+			{"Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
+			{"Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
+		}).Render()
+	} else {
+		// Otherwise, look for any datainjections to run after the components
 		dataInjectionList := config.GetDataInjections()
 		if len(dataInjectionList) > 0 {
 			message.Info("Loading data injections")
 			handleDataInjection(dataInjectionList, tempPath)
 		}
-
 	}
 
 	cleanup(tempPath)
+
+	// All done
+	os.Exit(0)
 }
 
 func deployComponents(tempPath tempPaths, component config.ZarfComponent) {

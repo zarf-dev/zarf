@@ -26,6 +26,10 @@ components:
     default: true
     scripts:
       retry: true
+      before:
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now"
       after:
         # Configure K3s systemd service
         - "systemctl daemon-reload"
@@ -78,7 +82,7 @@ components:
     manifests:
       - name: kep-1775-registry-annotation
         files:
-        - assets/manifests/registry/configmap.yaml
+          - assets/manifests/registry/configmap.yaml
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
@@ -93,7 +97,7 @@ components:
     manifests:
       - name: configure-traefik-tls
         files:
-        - assets/manifests/traefik/traefik-tls.yaml
+          - assets/manifests/traefik/traefik-tls.yaml
     images:
       - traefik:2.5.6
     charts:
