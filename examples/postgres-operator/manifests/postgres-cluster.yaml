@@ -6,6 +6,8 @@ metadata:
   labels:
     team: acid
 spec:
+  imagePullSecrets:
+    - name: private-registry
   teamId: "acid"
   postgresql:
     version: "13"
