@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -17,6 +18,9 @@ var initCmd = &cobra.Command{
 	Short: "Deploys the gitops service or appliance cluster on a clean linux box",
 	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
+		zarfLogo := getLogo()
+		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+
 		if !config.DeployOptions.Confirm {
 			var confirm bool
 
@@ -33,6 +37,9 @@ var initCmd = &cobra.Command{
 			}
 		}
 
+		// Continue running package deploy for all components like any other package
+		config.DeployOptions.PackagePath = config.PackageInitName
+		
 		packager.Install()
 	},
 }

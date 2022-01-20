@@ -40,12 +40,20 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	zarfLogo := getLogo()
-	_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 	cobra.CheckErr(rootCmd.Execute())
 }
 
 func init() {
+	// Store the original cobra help func
+	originalHelp := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
+		// Don't show the zarf logo constantly
+		zarfLogo := getLogo()
+		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+		// Re-add the original help function
+		originalHelp(c, s)
+	})
+
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 }
