@@ -47,16 +47,16 @@ func Deploy() {
 	if config.IsZarfInitConfig() {
 		// If init config, make sure things are ready
 		utils.RunPreflightChecks()
-	} else {
-		// Otherwise, skip duplicate user approval
-		configPath := tempPath.base + "/zarf.yaml"
-		confirm := confirmAction(configPath, "Deploy")
+	}
 
-		// Don't continue unless the user says so
-		if !confirm {
-			cleanup(tempPath)
-			os.Exit(0)
-		}
+	// Confirm the overall package deployment
+	configPath := tempPath.base + "/zarf.yaml"
+	confirm := confirmAction(configPath, "Deploy")
+
+	// Don't continue unless the user says so
+	if !confirm {
+		cleanup(tempPath)
+		os.Exit(0)
 	}
 
 	// Verify the components requested all exist
