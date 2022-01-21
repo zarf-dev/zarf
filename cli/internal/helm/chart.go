@@ -20,6 +20,7 @@ import (
 type ChartOptions struct {
 	BasePath      string
 	Chart         config.ZarfChart
+	ReleaseName   string
 	ChartOverride *chart.Chart
 	ValueOverride map[string]interface{}
 	Images        []string
@@ -40,6 +41,7 @@ func InstallOrUpgradeChart(options ChartOptions) {
 
 	var output *release.Release
 
+	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	actionConfig, err := createActionConfig(options.Chart.Namespace)
 
 	// Setup K8s connection
@@ -59,17 +61,17 @@ func InstallOrUpgradeChart(options ChartOptions) {
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
-				_ = rollbackChart(actionConfig, options.Chart.Name)
+				_ = rollbackChart(actionConfig, options.ReleaseName)
 			} else {
 				spinner.Updatef("Performing chart uninstall")
-				_, _ = uninstallChart(actionConfig, options.Chart.Name)
+				_, _ = uninstallChart(actionConfig, options.ReleaseName)
 			}
 			spinner.Errorf(nil, "Unable to complete helm chart install/upgrade")
 			break
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
-		if _, histErr := histClient.Run(options.Chart.Name); histErr == driver.ErrReleaseNotFound {
+		if _, histErr := histClient.Run(options.ReleaseName); histErr == driver.ErrReleaseNotFound {
 			// No prior release, try to install it
 			spinner.Updatef("Attempting chart installation")
 			output, err = installChart(actionConfig, options)
@@ -105,7 +107,7 @@ func GenerateChart(basePath string, manifest config.ZarfManifest, images []strin
 	// Generate a new chart
 	tmpChart := new(chart.Chart)
 	tmpChart.Metadata = new(chart.Metadata)
-	tmpChart.Metadata.Name = fmt.Sprintf("zarf-%s", manifest.Name)
+	tmpChart.Metadata.Name = fmt.Sprintf("raw-%s", manifest.Name)
 	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry
 	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", now.Unix())
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
@@ -159,7 +161,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions) (*re
 	client.SkipCRDs = false
 
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this
-	client.ReleaseName = options.Chart.Name
+	client.ReleaseName = options.ReleaseName
 
 	// Namespace must be specified
 	client.Namespace = options.Chart.Namespace
@@ -198,7 +200,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions) (*re
 	}
 
 	// Perform the loadedChart upgrade
-	return client.Run(options.Chart.Name, loadedChart, chartValues)
+	return client.Run(options.ReleaseName, loadedChart, chartValues)
 }
 
 func rollbackChart(actionConfig *action.Configuration, name string) error {
