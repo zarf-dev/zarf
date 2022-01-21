@@ -83,15 +83,15 @@ func NewZarfTunnel() *Tunnel {
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
-		tunnel.resourceName = "docker-registry"
+		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.localPort = PortRegistry
 		tunnel.remotePort = 5000
 	case ZarfLogging:
-		tunnel.resourceName = "loki-stack-grafana"
+		tunnel.resourceName = "zarf-loki-stack-grafana"
 		tunnel.localPort = PortLogging
 		tunnel.remotePort = 3000
 	case ZarfGit:
-		tunnel.resourceName = "gitea-http"
+		tunnel.resourceName = "zarf-gitea-http"
 		tunnel.localPort = PortGit
 		tunnel.remotePort = 3000
 	default:
