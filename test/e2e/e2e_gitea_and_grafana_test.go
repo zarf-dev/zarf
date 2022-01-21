@@ -64,7 +64,7 @@ func testGiteaAndGrafana(t *testing.T, terraformOptions *terraform.Options, keyP
 	require.NoError(t, err, output)
 
 	// Make sure Gitea comes up cleanly
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/api/v1/user\")\" != \"200\" ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/api/v1/user\")\" != \"401\" ]]; do sleep 1; done' || false")
 	require.NoError(t, err, output)
 
 	// Make sure Grafana comes up cleanly
