@@ -4,19 +4,6 @@ seed:
   - library/registry:2.7.1
 
 components:
-  - name: management
-    description: "Add the K9s terminal-based K8s UI for cluster management"
-    default: true
-    files:
-      # The zarf binary is hosted on govcloud since the release on https://github.com/derailed/k9s/ is a tarball
-      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/k9s_Linux_x86_64_v0_24_11
-        shasum: 18a5a33bbf58cb228e56a03380dcb6b9bb8624acab4ff63deb7364dc15d3c03f
-        target: /usr/local/bin/k9s
-        executable: true
-      # Simple theme file to make K9s colors similar to Zarfs UI colors
-      - source: assets/misc/k9s-theme.yaml
-        target: /root/.k9s/skin.yml
-
   - name: k3s
     description: >
       *** REQUIRES ROOT ***
