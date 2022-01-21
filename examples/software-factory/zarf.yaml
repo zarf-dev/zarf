@@ -43,6 +43,7 @@ components:
       # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.1.2-bb.6
       # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.2.3-bb.1
       # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.2.3-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/keycloak.git@11.0.1-bb.6
 
     images:
       # TODO: Figure out a better way to derive this list.
@@ -55,12 +56,12 @@ components:
       # common
       - registry1.dso.mil/ironbank/big-bang/base:8.4
 
-      # # cluster-auditor
-      # - registry1.dso.mil/ironbank/cluster-auditor/opa-collector:0.3.2
+      # cluster-auditor
+      - registry1.dso.mil/ironbank/cluster-auditor/opa-collector:0.3.2
 
-      # # policy
-      # - registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.1
-      # - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.2
+      # policy
+      - registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.1
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.2
 
       # istio-controlplane
       - registry1.dso.mil/ironbank/opensource/istio/istioctl:1.10.4
@@ -71,6 +72,11 @@ components:
       # istio-operator
       - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
 
+      # Keycloak
+      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:14.0.0-1.0.6-1
+      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/postgresql:11.8.0-debian-10-r61
+      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/busybox:1.32
+
       # # jaeger
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.24.0
@@ -80,36 +86,36 @@ components:
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
       # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
 
-      # # kiali
-      # - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
-      # - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
+      # kiali
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
 
-      # # eck-operator
-      # - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
+      # eck-operator
+      - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.6.0
 
-      # # elasticsearch-kibana
-      # - registry1.dso.mil/ironbank/elastic/kibana/kibana:7.12.0
-      # - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.13.4
+      # elasticsearch-kibana
+      - registry1.dso.mil/ironbank/elastic/kibana/kibana:7.12.0
+      - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.13.4
 
-      # # fluentbit
-      # - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.8.6
+      # fluentbit
+      - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.8.6
 
-      # # monitoring
-      # - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.21.0
-      # - registry1.dso.mil/ironbank/opensource/grafana/grafana:7.5.2
-      # - registry1.dso.mil/ironbank/opensource/bats/bats:1.2.1
-      # - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.10.6
-      # - registry1.dso.mil/ironbank/opensource/coreos/kube-state-metrics:v1.9.8
-      # - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.0.1
-      # - registry1.dso.mil/ironbank/opensource/jet/kube-webhook-certgen:v1.5.1
-      # - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.46.0
-      # - registry1.dso.mil/ironbank/opensource/jimmidyson/configmap-reload:v0.5.0
-      # - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.46.0
-      # - registry1.dso.mil/ironbank/opensource/kubernetes-1.20/kubectl-1.20:v1.20.8
-      # - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.25.0
+      # monitoring
+      - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.21.0
+      - registry1.dso.mil/ironbank/opensource/grafana/grafana:7.5.2
+      - registry1.dso.mil/ironbank/opensource/bats/bats:1.2.1
+      - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.10.6
+      - registry1.dso.mil/ironbank/opensource/coreos/kube-state-metrics:v1.9.8
+      - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.0.1
+      - registry1.dso.mil/ironbank/opensource/jet/kube-webhook-certgen:v1.5.1
+      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.46.0
+      - registry1.dso.mil/ironbank/opensource/jimmidyson/configmap-reload:v0.5.0
+      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.46.0
+      - registry1.dso.mil/ironbank/opensource/kubernetes-1.20/kubectl-1.20:v1.20.8
+      - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.25.0
 
-      # # twistlock
-      # - registry1.dso.mil/ironbank/twistlock/console/console:21.04.439
+      # twistlock
+      - registry1.dso.mil/ironbank/twistlock/console/console:21.04.439
 
       # # sonarqube
       # - registry1.dso.mil/ironbank/big-bang/sonarqube:8.9-community
