@@ -22,17 +22,17 @@ components:
     # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
     repos:
       - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.7
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.7
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
       # - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.23.0-bb.2
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.2
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.21-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.16.6-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@14.0.0-bb.10
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.9-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.21-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.16.6-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@14.0.0-bb.10
+      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.9-bb.0
       # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube.git@9.6.3-bb.2
       # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab.git@4.12.9-bb.6
       # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab-runner.git@0.29.0-bb.1
