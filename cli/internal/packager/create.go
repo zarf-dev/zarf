@@ -2,6 +2,7 @@ package packager
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,6 +35,9 @@ func Create() {
 	if err := config.BuildConfig(configFile); err != nil {
 		message.Fatalf(err, "Unable to write the %s file", configFile)
 	}
+
+	// Perform early package validation
+	validate.Run()
 
 	if !confirmAction(configFile, "Create") {
 		os.Exit(0)
