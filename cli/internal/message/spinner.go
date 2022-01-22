@@ -14,6 +14,8 @@ func NewProgressSpinner(format string, a ...interface{}) *Spinner {
 	text := fmt.Sprintf(format, a...)
 	spinner, _ := pterm.DefaultSpinner.
 		WithRemoveWhenDone(false).
+		// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
+		WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
 		Start(text)
 
 	return &Spinner{
