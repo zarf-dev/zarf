@@ -1,4 +1,4 @@
-package config
+package types
 
 // ZarfFile defines a file to deploy
 type ZarfFile struct {
