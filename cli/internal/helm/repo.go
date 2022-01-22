@@ -1,9 +1,9 @@
 package helm
 
 import (
+	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"helm.sh/helm/v3/pkg/action"
@@ -15,7 +15,7 @@ import (
 )
 
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
-func DownloadChartFromGit(chart config.ZarfChart, destination string) {
+func DownloadChartFromGit(chart types.ZarfChart, destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from git url %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 
@@ -40,7 +40,7 @@ func DownloadChartFromGit(chart config.ZarfChart, destination string) {
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo
-func DownloadPublishedChart(chart config.ZarfChart, destination string) {
+func DownloadPublishedChart(chart types.ZarfChart, destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 
