@@ -29,7 +29,7 @@ func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	name := "zarf-registry"
 
 	spinner := message.NewProgressSpinner("Generating private registry credentials %s/%s", namespace, name)
-	defer spinner.Success()
+	defer spinner.Stop()
 
 	secretDockerConfig := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -71,6 +71,7 @@ func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	// Add to the secret data
 	secretDockerConfig.Data[".dockerconfigjson"] = dockerConfigData
 
+	spinner.Success()
 	return secretDockerConfig
 }
 

@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
-			if strings.Contains(args[0], "zarf-package-") {
+			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
 				config.DeployOptions.PackagePath = args[0]
 				packager.Deploy()
 				return
