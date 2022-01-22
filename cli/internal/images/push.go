@@ -9,7 +9,6 @@ import (
 )
 
 func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target string) {
-
 	// Establish a registry tunnel to send the images if pushing to the zarf registry
 	if target == config.ZarfRegistry {
 		tunnel := k8s.NewZarfTunnel()
@@ -17,11 +16,14 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target
 		defer tunnel.Close()
 	}
 
+	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
+	defer spinner.Stop()
+
 	for _, src := range buildImageList {
-		message.Infof("Updating image %s -> %s", src, target)
+		spinner.Updatef("Updating image %s", src)
 		img, err := crane.LoadTag(imageTarballPath, src, config.ActiveCranePlatform)
 		if err != nil {
-			message.Error(err, "Unable to load the image from the update package")
+			spinner.Errorf(err, "Unable to load the image from the update package")
 			return
 		}
 
@@ -29,7 +31,9 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target
 
 		err = crane.Push(img, offlineName, config.ActiveCranePlatform)
 		if err != nil {
-			message.Error(err, "Unable to push the image to the registry")
+			spinner.Errorf(err, "Unable to push the image to the registry")
 		}
 	}
+
+	spinner.Success()
 }
