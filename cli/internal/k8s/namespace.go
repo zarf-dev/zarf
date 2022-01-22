@@ -52,8 +52,8 @@ func DeleteZarfNamespace() {
 		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
 	}
 
+	spinner.Updatef("Zarf namespace deletion scheduled, waiting for all resources to be removed")
 	for {
-		spinner.Updatef("Zarf namespace deletion scheduled, waiting for all resources to be removed")
 		_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			spinner.Successf("Zarf removed from this cluster")
