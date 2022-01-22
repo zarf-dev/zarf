@@ -7,7 +7,7 @@ import (
 )
 
 func Destroy() {
-	spinner := message.NewProgressSpinner("Searching for Zarf-installed charts")
+	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
 
 	// Initially load the actionConfig without a namespace
@@ -52,4 +52,5 @@ func Destroy() {
 		}
 	}
 
+	spinner.Success()
 }
