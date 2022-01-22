@@ -3,11 +3,11 @@ package helm
 import (
 	"bytes"
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"io/ioutil"
 	"os"
 	"time"
 
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
@@ -19,7 +19,7 @@ import (
 
 type ChartOptions struct {
 	BasePath      string
-	Chart         config.ZarfChart
+	Chart         types.ZarfChart
 	ReleaseName   string
 	ChartOverride *chart.Chart
 	ValueOverride map[string]interface{}
@@ -97,7 +97,7 @@ func InstallOrUpgradeChart(options ChartOptions) {
 	}
 }
 
-func GenerateChart(basePath string, manifest config.ZarfManifest, images []string) {
+func GenerateChart(basePath string, manifest types.ZarfManifest, images []string) {
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -131,7 +131,7 @@ func GenerateChart(basePath string, manifest config.ZarfManifest, images []strin
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	options := ChartOptions{
 		BasePath: basePath,
-		Chart: config.ZarfChart{
+		Chart: types.ZarfChart{
 			Name:      tmpChart.Metadata.Name,
 			Version:   tmpChart.Metadata.Version,
 			Namespace: manifest.DefaultNamespace,

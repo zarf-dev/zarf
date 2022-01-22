@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/types"
 
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,11 +28,11 @@ func getZarfStateInterface() v1.SecretInterface {
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState
-func LoadZarfState() config.ZarfState {
+func LoadZarfState() types.ZarfState {
 	message.Debug("k8s.LoadZarfState()")
 
 	// The empty state that we will try to fill
-	state := config.ZarfState{
+	state := types.ZarfState{
 		Distro: DistroIsUnknown,
 	}
 
@@ -50,7 +50,7 @@ func LoadZarfState() config.ZarfState {
 }
 
 // SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret
-func SaveZarfState(state config.ZarfState) error {
+func SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState(%v)", state)
 
 	// Convert the data back to JSON

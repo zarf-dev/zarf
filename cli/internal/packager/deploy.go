@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -97,7 +98,7 @@ func Deploy() {
 	os.Exit(0)
 }
 
-func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
+func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.Debugf("packager.deployComponents(%v, %v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "container-registry-seed"
@@ -209,7 +210,7 @@ func deployComponents(tempPath tempPaths, component config.ZarfComponent) {
 
 // handleDataInjection performs data-copy operations into a pod
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(dataInjectionList []config.ZarfData, tempPath tempPaths) {
+func handleDataInjection(dataInjectionList []types.ZarfData, tempPath tempPaths) {
 	injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		return
