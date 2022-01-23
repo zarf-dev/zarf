@@ -5,7 +5,7 @@ loki:
 grafana:
   enabled: true
   adminUser: "zarf-admin"
-  adminPassword: "###ZARF_SECRET###"
+  adminPassword: "###ZARF_LOGGING_AUTH###"
   image:
     pullSecrets:
       - "zarf-registry"
