@@ -18,8 +18,9 @@ import (
 )
 
 var toolsCmd = &cobra.Command{
-	Use:   "tools",
-	Short: "Collection of additional tools to make airgap easier",
+	Use:     "tools",
+	Aliases: []string{"t"},
+	Short:   "Collection of additional tools to make airgap easier",
 }
 
 // destroyCmd represents the init command
