@@ -62,7 +62,7 @@ components:
         gitPath: chart
         version: 0.1.0-bb.9
         valuesFiles:
-          - charts/conluence-values.yaml
+          - charts/confluence-values.yaml
 
     images:
       # TODO: Figure out a better way to derive this list.
