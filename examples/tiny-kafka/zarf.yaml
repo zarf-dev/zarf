@@ -15,7 +15,7 @@ components:
       - name: strimzi-kafka-operator
         url: https://strimzi.io/charts/
         version: 0.24.0
-        namespace: kafka-demo
+        namespace: kafka-operator
         valuesFiles:
           - charts/strimzi-values.yaml
     images:
