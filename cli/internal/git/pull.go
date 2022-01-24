@@ -11,24 +11,23 @@ import (
 
 const onlineRemoteName = "online-upstream"
 
-func DownloadRepoToTemp(gitUrl string) string {
+func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	path, _ := utils.MakeTempDir()
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	pull(gitUrl, path)
+	pull(gitUrl, path, spinner)
 	return path
 }
 
-func Pull(gitUrl string, targetFolder string) string {
+func Pull(gitUrl string, targetFolder string, spinner *message.Spinner) string {
 	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
-	pull(gitUrl, path)
+	pull(gitUrl, path, spinner)
 	return path
 }
 
-func pull(gitUrl string, targetFolder string) {
-	spinner := message.NewProgressSpinner("Processing git repo %s", gitUrl)
-	defer spinner.Stop()
+func pull(gitUrl string, targetFolder string, spinner *message.Spinner) {
+	spinner.Updatef("Processing git repo %s", gitUrl)
 
 	gitCred := FindAuthForHost(gitUrl)
 
@@ -76,12 +75,11 @@ func pull(gitUrl string, targetFolder string) {
 			spinner.Errorf(nil, "No branch found for this repo head. Tag will be pushed to 'master'.")
 		}
 
-		removeLocalBranchRefs(targetFolder)
-		removeOnlineRemoteRefs(targetFolder)
+		_, _ = removeLocalBranchRefs(targetFolder)
+		_, _ = removeOnlineRemoteRefs(targetFolder)
 
 		fetchTag(targetFolder, tag)
 		CheckoutTagAsBranch(targetFolder, tag, trunkBranchName)
 
 	}
-	spinner.Success()
 }
