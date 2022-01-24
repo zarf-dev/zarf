@@ -8,8 +8,9 @@ import (
 )
 
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Displays the version the zarf binary was built from",
+	Use:     "version",
+	Aliases: []string{"v"},
+	Short:   "Displays the version the zarf binary was built from",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.CLIVersion)
 	},
