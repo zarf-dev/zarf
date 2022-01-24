@@ -71,17 +71,23 @@ func InstallOrUpgradeChart(options ChartOptions) {
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
-		if _, histErr := histClient.Run(options.ReleaseName); histErr == driver.ErrReleaseNotFound {
+
+		_, histErr := histClient.Run(options.ReleaseName)
+
+		switch histErr {
+		case driver.ErrReleaseNotFound:
 			// No prior release, try to install it
 			spinner.Updatef("Attempting chart installation")
 			output, err = installChart(actionConfig, options)
-		} else if err != nil {
-			// Something broke
-			spinner.Fatalf(err, "Unable to verify the chart installation status")
-		} else {
+
+		case nil:
 			// Otherwise, there is a prior release so upgrade it
 			spinner.Updatef("Attempting chart upgrade")
 			output, err = upgradeChart(actionConfig, options)
+
+		default:
+			// 😭 things aren't working
+			spinner.Fatalf(err, "Unable to verify the chart installation status")
 		}
 
 		if err != nil {
