@@ -148,11 +148,11 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
-func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
+func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string, func()) {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
-		return packagePath
+		return packagePath, func() {}
 	}
 
 	if !insecureDeploy && shasum == "" {
@@ -198,7 +198,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 		}
 	}
 
-	return localPackagePath
+	return localPackagePath, tempPath.clean
 }
 
 func isValidFileExtension(filename string) bool {
