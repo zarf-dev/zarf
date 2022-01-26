@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -21,10 +20,6 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
-		}
-		if arch == "" {
-			// Default to the current running arch for images
-			arch = runtime.GOARCH
 		}
 		config.SetAcrch(arch)
 	},
