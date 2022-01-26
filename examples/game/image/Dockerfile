@@ -24,4 +24,4 @@ COPY --from=0 /binary /binary
 WORKDIR /site
 ENTRYPOINT ["/binary/darkhttpd", "/site", "--port", "8000"]
 
-# docker build -t registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom --build-arg GAME_URL=https://archive.org/download/DoomsharewareEpisode/doom.ZIP --build-arg GAME_ARGS=\"DOOM.EXE\" .
+#  docker buildx build --push --platform linux/arm/v7,linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-game:doom --build-arg GAME_URL=https://archive.org/download/DoomsharewareEpisode/doom.ZIP --build-arg GAME_ARGS=\"DOOM.EXE\" .
