@@ -64,7 +64,7 @@ package-example-game: ## Create the Doom example
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## create the Zarf package for the data injection example
-	cd examples && $(MAKE) package-example-data-injection
+	cd examples/data-injection && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
 .PHONY: test-cloud-e2e-example-game
 test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
