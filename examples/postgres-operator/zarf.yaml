@@ -12,7 +12,7 @@ components:
     scripts:
       retry: true
       after:
-        - "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"private-registry\"}]}'"
+        - "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"private-registry\"}]}' -n postgres-operator"
 
     charts:
       - name: postgres-operator

@@ -14,8 +14,8 @@ spec:
       # repository: ??
       # tag: ??
     configGeneral:
-      repair_period: 3m
-      resync_period: 5m
+      repair_period: 1m
+      resync_period: 2m
       # docker_image: registry1.dso.mil/.../spilo-13:2.1-p1
     imagePullSecrets:
       - name: private-registry
@@ -94,4 +94,4 @@ metadata:
   name: zalando-postgres-operator
   namespace: postgres-operator
 imagePullSecrets: 
-    - name: private-registry
+  - name: private-registry
