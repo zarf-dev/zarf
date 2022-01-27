@@ -1,0 +1,9 @@
+# usage:  
+#   create: k3d cluster create --config k3d.yaml
+#   delete: k3d cluster delete --config k3d.yaml
+# Schema compains but cli complains with v2... ¯\_(ツ)_/¯
+apiVersion: k3d.io/v1alpha3
+kind: Simple
+name: zarf-test
+servers: 1
+agents: 2
