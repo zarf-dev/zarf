@@ -173,7 +173,6 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 
 	// Write the package to a local file
 	tempPath := createPaths()
-	defer tempPath.clean()
 
 	localPackagePath := tempPath.base + providedURL.Path
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
