@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    zarf.dev/connect-description: "Connect to the Twistlock Console web interface"
+  labels:
+    # Enables "zarf connect twistlock"
+    zarf.dev/connect-name: twistlock
+  name: twistlock-ui-connect
+  namespace: twistlock
+spec:
+  type: ClusterIP
+  ports:
+    - name: mgmt-http
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+  selector:
+    name: twistlock-console
