@@ -51,6 +51,8 @@ var (
 
 	ActiveCranePlatform crane.Option
 
+	CliArch string
+
 	// Private vars
 	config types.ZarfPackage
 	state  types.ZarfState
@@ -61,8 +63,9 @@ func IsZarfInitConfig() bool {
 	return strings.ToLower(config.Kind) == "zarfinitconfig"
 }
 
-func SetAcrch(arch string) {
-	if arch == "" {
+func SetAcrch() {
+	var arch string
+	if CliArch == "" {
 		// If not cli override for arch, set to the package arch
 		arch = config.Metadata.Architecture
 
@@ -70,6 +73,8 @@ func SetAcrch(arch string) {
 			// Finally, default to current system arch when all else fails
 			arch = runtime.GOARCH
 		}
+	} else {
+		arch = CliArch
 	}
 
 	message.Debugf("config.SetArch(%s)", arch)
