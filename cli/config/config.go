@@ -35,6 +35,9 @@ const (
 	ZarfSeedTypeCLIInject         = "cli-inject"
 	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
 	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
+
+	ZarfConnectLabelName             = "zarf.dev/connect-name"
+	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 )
 
 var (
