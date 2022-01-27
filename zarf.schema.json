@@ -6,6 +6,7 @@
       "required": [
         "terminal",
         "user",
+        "architecture",
         "timestamp",
         "string"
       ],
@@ -14,6 +15,9 @@
           "type": "string"
         },
         "user": {
+          "type": "string"
+        },
+        "architecture": {
           "type": "string"
         },
         "timestamp": {
@@ -229,10 +233,6 @@
       "type": "object"
     },
     "ZarfMetadata": {
-      "required": [
-        "url:omitempty",
-        "image:omitempty"
-      ],
       "properties": {
         "name": {
           "type": "string"
@@ -243,14 +243,17 @@
         "version": {
           "type": "string"
         },
-        "url:omitempty": {
+        "url": {
           "type": "string"
         },
-        "image:omitempty": {
+        "image": {
           "type": "string"
         },
         "uncompressed": {
           "type": "boolean"
+        },
+        "architecture": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
