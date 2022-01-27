@@ -270,21 +270,21 @@ func handleDataInjection(dataInjectionList []types.ZarfData, tempPath tempPaths)
 				// Handle top-level directory targets
 				destination = "/"
 			}
-			cpPodExecArgs := []string{"kubectl", "-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
+			cpPodExecArgs := []string{"-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
 
 			if data.Target.Container != "" {
 				// Append the container args if they are specified
 				cpPodExecArgs = append(cpPodExecArgs, "-c", data.Target.Container)
 			}
 
-			_, err := utils.ExecCommand(true, nil, config.K3sBinary, cpPodExecArgs...)
+			_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
 			if err != nil {
 				message.Warn("Error copying data into the pod")
 			} else {
 				// Leave a marker in the target container for pods to track the sync action
-				cpPodExecArgs[4] = injectionCompletionMarker
-				cpPodExecArgs[5] = pod + ":" + data.Target.Path
-				_, err = utils.ExecCommand(true, nil, config.K3sBinary, cpPodExecArgs...)
+				cpPodExecArgs[3] = injectionCompletionMarker
+				cpPodExecArgs[4] = pod + ":" + data.Target.Path
+				_, err = utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
 				if err != nil {
 					message.Warn("Error saving the zarf sync completion file")
 				}
