@@ -2,16 +2,19 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-umbrella-demo
   description: "Demo Zarf deployment of Big Bang Umbrella"
+  # Big Bang / Iron Bank are only amd64
+  architecture: amd64
 
 components:
   - name: baseline
     required: true
     manifests:
       # This will create a helm chart based on the info below
-      - name: big-bang-umbrella-with-atlassian
+      - name: big-bang-flux
         files:
-          - manifests/atlassian-manifests.yaml
           - manifests/bigbang-git-secret.yaml
+          # kustomize build template/flux > manifests/flux-generated.yaml
+          - manifests/flux-generated.yaml
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
@@ -47,6 +50,13 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.1.2-bb.6
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.2.3-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.2.3-bb.1
+
+    manifests:
+      - name: big-bang-umbrella
+        files:
+          - manifests/atlassian-manifests.yaml
+          # kustomize build template/bigbang > manifests/bigbang-generated.yaml &&
+          - "manifests/bigbang-generated.yaml"
 
     charts:
       - name: jira
@@ -175,8 +185,6 @@ components:
       - registry1.dso.mil/ironbank/opensource/postgres/postgresql11:11.10
       - registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.8
 
-
       # nexus
       - registry1.dso.mil/ironbank/redhat/ubi/ubi8-minimal:8.4
       - registry1.dso.mil/ironbank/sonatype/nexus/nexus:3.36.0-01
-
