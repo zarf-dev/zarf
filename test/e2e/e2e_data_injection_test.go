@@ -72,14 +72,14 @@ func runTest(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2
 	require.NoError(t, err, output)
 
 	// Wait until the deployment is ready
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 sudo bash -c 'while [[ \"$(/usr/local/bin/kubectl get pods -n demo -l app=data-injection --field-selector=status.phase=Running -o json | jq -r '.items | length')\" -gt 0 ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, `timeout 300 sudo bash -c 'while [ "$(/usr/local/bin/kubectl get pods -n demo -l app=data-injection --field-selector=status.phase=Running -o json | jq -r '"'"'.items | length'"'"')" -lt "1" ]; do sleep 1; done' || false`)
 	require.NoError(t, err, output)
 
 	// Test to confirm the root file was placed
-	output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example'")
+	output, err = ssh.CheckSshCommandE(t, publicHost, `sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example'`)
 	require.NoError(t, err, output)
 
 	// Test to confirm the subdirectory file was placed
-	output, err = ssh.CheckSshCommandE(t, publicHost, "sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example'")
+	output, err = ssh.CheckSshCommandE(t, publicHost, `sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example'`)
 	require.NoError(t, err, output)
 }
