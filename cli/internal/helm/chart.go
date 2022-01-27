@@ -9,6 +9,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/types"
+	"k8s.io/cli-runtime/pkg/printers"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -31,7 +32,7 @@ type ChartOptions struct {
 }
 
 type renderer struct {
-	images         []string
+	options        ChartOptions
 	namespaces     []string
 	connectStrings ConnectStrings
 }
@@ -46,9 +47,9 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 
 	var output *release.Release
 
-	postRender := NewRenderer(options.Images, options.Chart.Namespace)
 	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	actionConfig, err := createActionConfig(options.Chart.Namespace)
+	postRender := NewRenderer(options)
 
 	// Setup K8s connection
 	if err != nil {
@@ -221,6 +222,9 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Namespace must be specified
 	client.Namespace = options.Chart.Namespace
 
+	// Create namespace if it does not exist
+	client.CreateNamespace = true
+
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
 
@@ -307,11 +311,11 @@ func loadChartData(options ChartOptions) (*chart.Chart, map[string]interface{}, 
 	return loadedChart, chartValues, nil
 }
 
-func NewRenderer(images []string, namespace string) *renderer {
-	message.Debugf("helm.NewRenderer(%v, %s)", images, namespace)
+func NewRenderer(options ChartOptions) *renderer {
+	message.Debugf("helm.NewRenderer(%v)", options)
 	return &renderer{
-		images:         images,
-		namespaces:     []string{namespace},
+		options:        options,
+		namespaces:     []string{options.Chart.Namespace},
 		connectStrings: make(ConnectStrings),
 	}
 }
@@ -327,7 +331,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	k8s.ProcessYamlFilesInPath(tempDir, r.images)
+	k8s.ProcessYamlFilesInPath(tempDir, r.options.Images)
 
 	// Read back the final file contents
 	buff, err := os.ReadFile(path)
@@ -373,17 +377,37 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 	}
 
+	chartText := string(buff)
+	secretPrefix := "---\n"
+	secretName := "zarf-registry"
 	for _, namespace := range r.namespaces {
-		if err := k8s.ReplaceRegistrySecret(namespace); err != nil {
-			message.Error(err, "Unable to update the registry secret")
+		// Try to get an existing secret
+		secret, _ := k8s.GetSecret(namespace, secretName)
+
+		if secret.Name == secretName && secret.Annotations["meta.helm.sh/release-name"] != r.options.ReleaseName {
+			// Don't add a secret if it already was created by another chart
+			// But we have to include it this chart deployed it or helm will remove it
+			continue
 		}
+
+		// Create the secret as a k8s object
+		secret = k8s.GenerateRegistryPullCreds(namespace, secretName)
+
+		// Convert to yaml buffer
+		buf := new(bytes.Buffer)
+		yp := printers.YAMLPrinter{}
+		yp.PrintObj(secret, buf)
+
+		// Prepend the secret to the helm chart text
+		chartText = secretPrefix + buf.String() + chartText
+
 	}
 
 	// Cleanup the temp file
 	_ = os.RemoveAll(tempDir)
 
 	// Send the bytes back to helm
-	return bytes.NewBuffer(buff), nil
+	return bytes.NewBuffer([]byte(chartText)), nil
 }
 
 func contains(haystack []string, needle string) bool {
