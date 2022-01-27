@@ -2,6 +2,8 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-single-package-demo
   description: "Demo Zarf appliance mode with a single DoD Platform One Big Bang package"
+  # Big Bang / Iron Bank are only amd64
+  architecture: amd64
 
 components:
   - name: baseline
