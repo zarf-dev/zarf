@@ -3,10 +3,12 @@ package helm
 import (
 	"bytes"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -17,6 +19,7 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
+type ConnectStrings map[string]string
 type ChartOptions struct {
 	BasePath          string
 	Chart             types.ZarfChart
@@ -28,12 +31,13 @@ type ChartOptions struct {
 }
 
 type renderer struct {
-	images     []string
-	namespaces []string
+	images         []string
+	namespaces     []string
+	connectStrings ConnectStrings
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) {
+func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
 		options.Chart.Name,
 		options.Chart.Version,
@@ -42,6 +46,7 @@ func InstallOrUpgradeChart(options ChartOptions) {
 
 	var output *release.Release
 
+	postRender := NewRenderer(options.Images, options.Chart.Namespace)
 	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	actionConfig, err := createActionConfig(options.Chart.Namespace)
 
@@ -79,12 +84,12 @@ func InstallOrUpgradeChart(options ChartOptions) {
 		case driver.ErrReleaseNotFound:
 			// No prior release, try to install it
 			spinner.Updatef("Attempting chart installation")
-			output, err = installChart(actionConfig, options)
+			output, err = installChart(actionConfig, options, postRender)
 
 		case nil:
 			// Otherwise, there is a prior release so upgrade it
 			spinner.Updatef("Attempting chart upgrade")
-			output, err = upgradeChart(actionConfig, options)
+			output, err = upgradeChart(actionConfig, options, postRender)
 
 		default:
 			// 😭 things aren't working
@@ -102,10 +107,14 @@ func InstallOrUpgradeChart(options ChartOptions) {
 		}
 
 	}
+
+	// return any collected connect strings for zarf connect
+	return postRender.connectStrings
 }
 
 // TemplateChart generates a helm template from a given chart
 func TemplateChart(options ChartOptions) (string, error) {
+	message.Debugf("helm.TemplateChart(%v)", options)
 
 	actionConfig, err := createActionConfig(options.Chart.Namespace)
 
@@ -141,7 +150,8 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, images []string) {
+func GenerateChart(basePath string, manifest types.ZarfManifest, images []string) ConnectStrings {
+	message.Debugf("helm.GenerateChart(%s, %v, %v)", basePath, manifest, images)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -189,10 +199,11 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, images []string
 
 	spinner.Success()
 
-	InstallOrUpgradeChart(options)
+	return InstallOrUpgradeChart(options)
 }
 
-func installChart(actionConfig *action.Configuration, options ChartOptions) (*release.Release, error) {
+func installChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
+	message.Debugf("helm.installChart(%v, %v, %v)", actionConfig, options, postRender)
 	// Bind the helm action
 	client := action.NewInstall(actionConfig)
 
@@ -211,7 +222,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions) (*re
 	client.Namespace = options.Chart.Namespace
 
 	// Post-processing our manifests for reasons....
-	client.PostRenderer = NewRenderer(options.Images, options.Chart.Namespace)
+	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := loadChartData(options)
 	if err != nil {
@@ -222,7 +233,8 @@ func installChart(actionConfig *action.Configuration, options ChartOptions) (*re
 	return client.Run(loadedChart, chartValues)
 }
 
-func upgradeChart(actionConfig *action.Configuration, options ChartOptions) (*release.Release, error) {
+func upgradeChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
+	message.Debugf("helm.upgradeChart(%v, %v, %v)", actionConfig, options, postRender)
 	client := action.NewUpgrade(actionConfig)
 
 	// Let each chart run for 5 minutes
@@ -236,7 +248,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions) (*re
 	client.Namespace = options.Chart.Namespace
 
 	// Post-processing our manifests for reasons....
-	client.PostRenderer = NewRenderer(options.Images, options.Chart.Namespace)
+	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := loadChartData(options)
 	if err != nil {
@@ -248,6 +260,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions) (*re
 }
 
 func rollbackChart(actionConfig *action.Configuration, name string) error {
+	message.Debugf("helm.rollbackChart(%v, %s)", actionConfig, name)
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
@@ -257,6 +270,7 @@ func rollbackChart(actionConfig *action.Configuration, name string) error {
 }
 
 func uninstallChart(actionConfig *action.Configuration, name string) (*release.UninstallReleaseResponse, error) {
+	message.Debugf("helm.uninstallChart(%v, %s)", actionConfig, name)
 	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
 	client.Timeout = 3 * time.Minute
@@ -265,6 +279,7 @@ func uninstallChart(actionConfig *action.Configuration, name string) (*release.U
 }
 
 func loadChartData(options ChartOptions) (*chart.Chart, map[string]interface{}, error) {
+	message.Debugf("helm.loadChartData(%v)", options)
 	var (
 		loadedChart *chart.Chart
 		chartValues map[string]interface{}
@@ -293,14 +308,16 @@ func loadChartData(options ChartOptions) (*chart.Chart, map[string]interface{}, 
 }
 
 func NewRenderer(images []string, namespace string) *renderer {
+	message.Debugf("helm.NewRenderer(%v, %s)", images, namespace)
 	return &renderer{
-		images:     images,
-		namespaces: []string{namespace},
+		images:         images,
+		namespaces:     []string{namespace},
+		connectStrings: make(ConnectStrings),
 	}
 }
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
-	message.Debug("Post-rendering helm chart")
+	message.Debugf("helm.Run(%v)", renderedManifests)
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, _ := utils.MakeTempDir()
 	path := tempDir + "/chart.yaml"
@@ -331,9 +348,27 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			// grab the namespace,
 			namespace := resource.GetNamespace()
 			message.Debugf("Found namespace %s", namespace)
+
 			// and append to the list if it's unique
 			if namespace != "" && !contains(r.namespaces, namespace) {
 				r.namespaces = append(r.namespaces, namespace)
+			}
+
+			if resource.GetKind() == "Service" {
+				// Check service resources for the zarf-connect label
+				labels := resource.GetLabels()
+				annotations := resource.GetAnnotations()
+
+				if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
+					// If there is a zarf-connect label
+					if description, descExists := annotations[config.ZarfConnectAnnotationDescription]; descExists {
+						// and a description set the label and description
+						r.connectStrings[key] = description
+					} else {
+						// Otherwise, just set the label
+						r.connectStrings[key] = ""
+					}
+				}
 			}
 		}
 	}
@@ -352,6 +387,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 }
 
 func contains(haystack []string, needle string) bool {
+	message.Debugf("helm.contains(%v, %s)", haystack, needle)
 	for _, hay := range haystack {
 		if hay == needle {
 			return true
