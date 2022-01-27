@@ -27,7 +27,7 @@ spec:
     /**/*.txt
     /**/*.sh
   interval: 5m
-  url: http://stuart-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git
+  url: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git
   secretRef:
     name: zarf-git-secret
   ref:
