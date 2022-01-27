@@ -46,14 +46,20 @@ func DeleteZarfNamespace() {
 	defer spinner.Stop()
 
 	clientset := getClientset()
-	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
+	// Get the zarf ns and ignore errors
+	namespace, _ := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
+	// Remove the k8s finalizer to speed up destroy
+	_, _ = clientset.CoreV1().Namespaces().Finalize(context.TODO(), namespace, metav1.UpdateOptions{})
 
+	// Attempt to delete the namespace
+	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
 	}
 
 	spinner.Updatef("Zarf namespace deletion scheduled, waiting for all resources to be removed")
 	for {
+		// Keep checking for the
 		_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			spinner.Successf("Zarf removed from this cluster")
