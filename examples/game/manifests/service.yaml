@@ -3,6 +3,11 @@ kind: Service
 metadata:
   name: game
   namespace: default
+  annotations:
+    zarf.dev/connect-description: "Play doom!!!"
+  labels:
+    # Enables "zarf connect doom"
+    zarf.dev/connect-name: doom
 spec:
   selector:
     app: game
