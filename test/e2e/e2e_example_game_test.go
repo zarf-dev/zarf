@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/ssh"
@@ -66,19 +67,21 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
 	require.NoError(t, err, output)
 
 	// run `zarf init`
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management --host 127.0.0.1'", username))
-	require.NoError(t, err, output)
-
-	// Wait until the Docker registry is ready
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/v2/\")\" != \"401\" ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s --host 127.0.0.1'", username))
 	require.NoError(t, err, output)
 
 	// Deploy the game
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
 	require.NoError(t, err, output)
 
+	// Establish the port-forward into the game service; give the service a few seconds to come up since this is not a command we can retry
+	time.Sleep(5 * time.Second)
+	portForwardCommand := fmt.Sprintf("sudo bash -c '(/home/%s/build/zarf connect doom &> /dev/nul &)'", username)
+	output, err = ssh.CheckSshCommandE(t, publicHost, portForwardCommand)
+	require.NoError(t, err, output)
+
 	// Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1\")\" != \"200\" ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1\")\" != \"200\" ]]; do sleep 1; done' || false")
 	require.NoError(t, err, output)
 
 	// Run `zarf destroy` to make sure that works correctly
