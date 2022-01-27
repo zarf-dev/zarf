@@ -72,27 +72,29 @@ loadZarfCA() {
     _run "sudo cat zarf-pki/zarf-ca.crt" > zarf-ca.crt
 }
 
-testPrepareCommands() {
-    # Validate working SHASUM computation
-    EXPECTED_SHASUM="61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109"
-    _run "echo 'random test data 🦄' > shasum-test-file"
-    ZARF_SHASUM=$(_run "zarf prepare sha256sum shasum-test-file")
-    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
-        echo -e "${RED}zarf prepare sha256sum failed for local file${NOCOLOR}"
-        exit 1
-    fi
-    # Validate working SHASUM for remote asset
-    EXPECTED_SHASUM="c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617"
-    ZARF_SHASUM=$(_run "zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
-    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
-        echo -e "${RED}zarf prepare sha256sum failed for remote file${NOCOLOR}"
-        exit 1
-    fi
-}
+# Commented out since this is tested now in the Terratest E2E suite
+#testPrepareCommands() {
+#    # Validate working SHASUM computation
+#    EXPECTED_SHASUM="61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109"
+#    _run "echo 'random test data 🦄' > shasum-test-file"
+#    ZARF_SHASUM=$(_run "zarf prepare sha256sum shasum-test-file")
+#    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+#        echo -e "${RED}zarf prepare sha256sum failed for local file${NOCOLOR}"
+#        exit 1
+#    fi
+#    # Validate working SHASUM for remote asset
+#    EXPECTED_SHASUM="c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617"
+#    ZARF_SHASUM=$(_run "zarf prepare sha256sum https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
+#    if [ $EXPECTED_SHASUM != $ZARF_SHASUM ]; then
+#        echo -e "${RED}zarf prepare sha256sum failed for remote file${NOCOLOR}"
+#        exit 1
+#    fi
+#}
 
-testAPIEndpoints() {
-    # Update the CA first
-    loadZarfCA
+# Commented out since this is now tested in the Terratest E2E suite
+#testAPIEndpoints() {
+#    # Update the CA first
+#    loadZarfCA
 
     # Test the docker registry
     # This is commented out because it already gets tested in the GitHub Actions pipeline. Without changes it fails
@@ -101,11 +103,13 @@ testAPIEndpoints() {
     # _curl "https://pipeline.zarf.dev/v2/"
 
     # Test gitea is up and can be logged into
-    _curl "https://zarf-git-user:${ZARF_PWD}@pipeline.zarf.dev/api/v1/user"
+    # Commented out since this is now tested in the Terratest E2E suite
+    # _curl "https://zarf-git-user:${ZARF_PWD}@pipeline.zarf.dev/api/v1/user"
 
     # Test grafana is up and can be logged into
-    _curl "https://zarf-admin:${ZARF_PWD}@pipeline.zarf.dev/monitor/api/org"
-}
+    # Commented out since this is now tested in the Terratest E2E suite
+    # _curl "https://zarf-admin:${ZARF_PWD}@pipeline.zarf.dev/monitor/api/org"
+#}
 
 testDataInjection() {
     # Create the package
@@ -138,7 +142,8 @@ testGitBasedHelmChart() {
 
 beforeAll
 
-testPrepareCommands
+# Commented out since this is now tested in the Terratest E2E suite
+#testPrepareCommands
 
 # Get the admin credentials
 ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
@@ -147,7 +152,8 @@ ZARF_PWD=$(_run "sudo zarf tools get-admin-password")
 _run "sudo /usr/local/bin/k9s info"
 
 # Test gitops service and monitoring components are up
-testAPIEndpoints
+# Commented out since this is now tested in the Terratest E2E suite
+#testAPIEndpoints
 
 # Remove the top-level ingress, hack until we parallize these tests
 _run "sudo /usr/local/bin/kubectl -n git delete ingress git-ingress"
