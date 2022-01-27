@@ -27,4 +27,4 @@ components:
         files:
           - manifests/data-injection.yaml
     images:
-      - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
+      - alpine:3.15
