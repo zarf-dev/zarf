@@ -35,7 +35,7 @@ func TestDataInjection(t *testing.T) {
 
 		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", username), "0700")
 		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", username), "0600")
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-data-injection-demo.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-data-injection-demo.tar.zst", username), "0600")
+		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-data-injection-demo.tar", fmt.Sprintf("/home/%s/build/zarf-package-data-injection-demo.tar", username), "0600")
 	})
 
 	teststructure.RunTestStage(t, "TEST", func() {
@@ -68,7 +68,7 @@ func runTest(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2
 	require.NoError(t, err, output)
 
 	// Deploy the data injection example
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-data-injection-demo.tar.zst --confirm'", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-data-injection-demo.tar --confirm'", username))
 	require.NoError(t, err, output)
 
 	// Wait until the deployment is ready
