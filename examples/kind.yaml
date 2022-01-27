@@ -1,6 +1,6 @@
 # usage:
 #   create: kind create cluster --config kind.yaml
-#   delete: kind delete cluster --config kind.yaml
+#   delete: kind delete cluster --name=zarf-test
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: zarf-test
