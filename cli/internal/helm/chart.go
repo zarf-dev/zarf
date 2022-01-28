@@ -9,7 +9,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/types"
-	"k8s.io/cli-runtime/pkg/printers"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -33,7 +34,7 @@ type ChartOptions struct {
 
 type renderer struct {
 	options        ChartOptions
-	namespaces     []string
+	namespaces     map[string]*corev1.Namespace
 	connectStrings ConnectStrings
 }
 
@@ -222,9 +223,6 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Namespace must be specified
 	client.Namespace = options.Chart.Namespace
 
-	// Create namespace if it does not exist
-	client.CreateNamespace = true
-
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
 
@@ -315,13 +313,13 @@ func NewRenderer(options ChartOptions) *renderer {
 	message.Debugf("helm.NewRenderer(%v)", options)
 	return &renderer{
 		options:        options,
-		namespaces:     []string{options.Chart.Namespace},
+		namespaces:     make(map[string]*corev1.Namespace),
 		connectStrings: make(ConnectStrings),
 	}
 }
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
-	message.Debugf("helm.Run(%v)", renderedManifests)
+	message.Debugf("helm.Run(renderedManifests *bytes.Buffer)")
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, _ := utils.MakeTempDir()
 	path := tempDir + "/chart.yaml"
@@ -349,15 +347,35 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	} else {
 		// Otherwise, loop over the resources,
 		for _, resource := range resources {
-			// grab the namespace,
-			namespace := resource.GetNamespace()
 
-			// and append to the list if it's unique
-			if namespace != "" && !contains(r.namespaces, namespace) {
-				r.namespaces = append(r.namespaces, namespace)
-			}
+			switch resource.GetKind() {
+			case "Namespace":
+				var namespace corev1.Namespace
+				// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shennanigans
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(resource.UnstructuredContent(), &namespace); err != nil {
+					message.Errorf(err, "could not parse namespace %s", resource.GetName())
+				} else {
+					message.Debugf("Matched helm namespace %s for zarf annotation", &namespace.Name)
+					// add the adoption reqs for this namespace, https://github.com/helm/helm/pull/7649
+					if namespace.Labels == nil {
+						// Ensure map exists to avoid nil panic
+						namespace.Labels = make(map[string]string)
+					}
+					namespace.Labels["app.kubernetes.io/managed-by"] = "Helm"
+					if namespace.Annotations == nil {
+						// Ensure map exists to avoid nil panic
+						namespace.Annotations = make(map[string]string)
+					}
+					namespace.Annotations["meta.helm.sh/release-name"] = r.options.ReleaseName
+					namespace.Annotations["meta.helm.sh/release-namespace"] = r.options.Chart.Namespace
 
-			if resource.GetKind() == "Service" {
+					// Add it to the stack
+					r.namespaces[namespace.Name] = &namespace
+				}
+				// skip so we can strip namespaces from helms brain
+				continue
+
+			case "Service":
 				// Check service resources for the zarf-connect label
 				labels := resource.GetLabels()
 				annotations := resource.GetAnnotations()
@@ -365,6 +383,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
 					// If there is a zarf-connect label
 					if description, descExists := annotations[config.ZarfConnectAnnotationDescription]; descExists {
+						message.Debugf("Match helm service %s for zarf connection %s", resource.GetName(), key)
 						// and a description set the label and description
 						r.connectStrings[key] = description
 					} else {
@@ -373,48 +392,51 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 					}
 				}
 			}
+
+			namespace := resource.GetNamespace()
+			if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
+				// if this is the first time seeing this ns, we need to track that to create it as well
+				r.namespaces[namespace] = nil
+			}
 		}
 	}
 
-	chartText := string(buff)
-	secretPrefix := "---\n"
 	secretName := "zarf-registry"
-	for _, namespace := range r.namespaces {
-		// Try to get an existing secret
-		secret, _ := k8s.GetSecret(namespace, secretName)
+	existingNamespaces, _ := k8s.GetNamespaces()
 
-		if secret.Name == secretName && secret.Annotations["meta.helm.sh/release-name"] != r.options.ReleaseName {
-			// Don't add a secret if it already was created by another chart
-			// But we have to include it this chart deployed it or helm will remove it
-			continue
+	for name, namespace := range r.namespaces {
+
+		// Check to see if this namespace already exists
+		var existingNamespace bool
+		for _, serverNamespace := range existingNamespaces.Items {
+			if serverNamespace.Name == name {
+				existingNamespace = true
+			}
 		}
 
-		// Create the secret as a k8s object
-		secret = k8s.GenerateRegistryPullCreds(namespace, secretName)
+		if !existingNamespace {
+			// This is a new namespace, add it
+			if _, err := k8s.CreateNamespace(name, namespace); err != nil {
+				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
+			}
+		}
 
-		// Convert to yaml buffer
-		buf := new(bytes.Buffer)
-		yp := printers.YAMLPrinter{}
-		yp.PrintObj(secret, buf)
-
-		// Prepend the secret to the helm chart text
-		chartText = secretPrefix + buf.String() + chartText
-
+		// Try to get an existing secret
+		if secret, _ := k8s.GetSecret(name, secretName); secret.Name == secretName {
+			// Don't add a secret if it already was created by another chart
+			continue
+		} else {
+			// Create the secret as a k8s object
+			secret = k8s.GenerateRegistryPullCreds(name, secretName)
+			if err := k8s.CreateSecret(secret); err != nil {
+				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
+			}
+		}
 	}
 
 	// Cleanup the temp file
 	_ = os.RemoveAll(tempDir)
 
 	// Send the bytes back to helm
-	return bytes.NewBuffer([]byte(chartText)), nil
-}
-
-func contains(haystack []string, needle string) bool {
-	message.Debugf("helm.contains(%v, %s)", haystack, needle)
-	for _, hay := range haystack {
-		if hay == needle {
-			return true
-		}
-	}
-	return false
+	return bytes.NewBuffer(buff), nil
 }
