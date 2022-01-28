@@ -43,11 +43,11 @@ func TestDataInjection(t *testing.T) {
 		keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
 
 		// Finally run the actual test
-		runTest(t, terraformOptions, keyPair, username)
+		runDataInjectionTest(t, terraformOptions, keyPair, username)
 	})
 }
 
-func runTest(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
+func runDataInjectionTest(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
 	// Run `terraform output` to get the value of an output variable
 	publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
