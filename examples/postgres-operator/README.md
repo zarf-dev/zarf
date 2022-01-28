@@ -2,8 +2,6 @@
 
 This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
 
-:warning: NOTE: It looks like this example doesn't currently quite work. The operators come up but it doesn't deploy a postgres database like it used to. We are working on a fix.
-
 ## Tool Choice
 
 After looking at several alternatives, Zalando's postgres operator felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).

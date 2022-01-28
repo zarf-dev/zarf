@@ -9,6 +9,11 @@ components:
     required: true
     manifests: manifests
 
+    scripts:
+      retry: true
+      after:
+        - "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"private-registry\"}]}' -n postgres-operator"
+
     charts:
       - name: postgres-operator
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
@@ -26,6 +31,7 @@ components:
         url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git
         version: 4.2.3-bb.1
 
+
     images:
       - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
       - registry.opensource.zalan.do/acid/spilo-13:2.1-p1
@@ -33,5 +39,6 @@ components:
       - registry.opensource.zalan.do/acid/pgbouncer:master-18
       - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
       - docker.io/dpage/pgadmin4:5.5
+      - docker.io/rancher/pause:3.1
       - registry1.dso.mil/ironbank/opensource/minio/operator:v4.2.3
       - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z

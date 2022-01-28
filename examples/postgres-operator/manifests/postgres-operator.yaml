@@ -54,6 +54,8 @@ spec:
       runAsNonRoot: true
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+    podServiceAccount:
+      name: "zalando-postgres-operator"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -70,3 +72,11 @@ data:
   WALG_DISABLE_S3_SSE: "true"
   USE_WALG_RESTORE: "false"
   AWS_S3_FORCE_PATH_STYLE: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: 
+  name: zalando-postgres-operator
+  namespace: postgres-operator
+imagePullSecrets: 
+  - name: private-registry
