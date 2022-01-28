@@ -41,6 +41,9 @@ func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "zarf",
+			},
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{},
@@ -99,6 +102,9 @@ func GenerateTLSSecret(namespace string, name string, certPath string, keyPath s
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "zarf",
+			},
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{},
@@ -133,6 +139,9 @@ func ReplaceTLSSecret(namespace string, name string) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "zarf",
+			},
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{},
