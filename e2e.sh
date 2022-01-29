@@ -111,20 +111,20 @@ loadZarfCA() {
     # _curl "https://zarf-admin:${ZARF_PWD}@pipeline.zarf.dev/monitor/api/org"
 #}
 
-testDataInjection() {
-    # Create the package
-    pushd examples/data-injection
-    PACKAGE="zarf-package-data-injection-demo.tar"
-    ../../build/zarf package create --confirm
-    _send $PACKAGE
-    popd
-    # Deploy the package
-    _run "sudo zarf package deploy $PACKAGE --confirm"
-    # Test to confirm the root file was placed
-    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
-    # Test to confirm the subdirectory file was placed
-    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
-}
+#testDataInjection() {
+#    # Create the package
+#    pushd examples/data-injection
+#    PACKAGE="zarf-package-data-injection-demo.tar"
+#    ../../build/zarf package create --confirm
+#    _send $PACKAGE
+#    popd
+#    # Deploy the package
+#    _run "sudo zarf package deploy $PACKAGE --confirm"
+#    # Test to confirm the root file was placed
+#    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example"
+#    # Test to confirm the subdirectory file was placed
+#    _run "sudo /usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example"
+#}
 
 testGitBasedHelmChart() {
     # Create the package
@@ -164,8 +164,8 @@ _run "sudo zarf pki regenerate --host=pipeline.zarf.dev"
 # Update the CA first
 loadZarfCA
 
-# Run the data injection test
-testDataInjection
+## Run the data injection test
+#testDataInjection
 
 # Run the helm chart tests for git-based charts (Big Bang)
 testGitBasedHelmChart
