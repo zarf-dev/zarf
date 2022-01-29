@@ -35,7 +35,7 @@ vm-destroy: ## Destroy the VM
 
 e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
 	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
-	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip)
+	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip | tr -d '"')
 
 clean: ## Clean the build dir
 	rm -rf build
