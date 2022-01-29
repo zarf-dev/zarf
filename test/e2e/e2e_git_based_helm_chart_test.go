@@ -74,8 +74,4 @@ func runGitBasedCliTest(t *testing.T, terraformOptions *terraform.Options, keyPa
 	// Wait until the deployment is ready
 	output, err = ssh.CheckSshCommandE(t, publicHost, `timeout 300 sudo bash -c 'while [ "$(/usr/local/bin/kubectl get pods -n twistlock -l app=twistlock-console --field-selector=status.phase=Running -o json | jq -r '"'"'.items | length'"'"')" -lt "1" ]; do sleep 1; done' || false`)
 	require.NoError(t, err, output)
-
-	// Test to confirm the Twistlock Console was deployed
-	output, err = ssh.CheckSshCommandE(t, publicHost, `timeout 300 sudo bash -c 'while [[ "$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w "%{http_code}" "https://127.0.0.1/api/v1/settings/initialized?project=Central+Console")" != "200" ]]; do sleep 1; done' || false`)
-	require.NoError(t, err, output)
 }
