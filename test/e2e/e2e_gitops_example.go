@@ -71,4 +71,14 @@ func testGitopsExample(t *testing.T, terraformOptions *terraform.Options, keyPai
 	// Deploy the gitops example
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-gitops-service-data.tar.zst --confirm'", username))
 	require.NoError(t, err, output)
+
+	// Check for full git repo mirror(foo.git) from https://github.com/stefanprodan/podinfo.git
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", username))
+	require.NoError(t, err, output)
+
+	// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.12.0
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", username))
+	require.NoError(t, err, output)
+
+	
 }

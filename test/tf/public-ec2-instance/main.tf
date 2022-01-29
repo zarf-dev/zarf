@@ -25,6 +25,16 @@ resource "aws_instance" "public" {
   # This EC2 Instance has a public IP and will be accessible directly from the public Internet
   associate_public_ip_address = true
 
+  user_data = <<EOF
+#!/bin/bash
+echo "Installing git"
+apt-get install -y git
+
+echo "Creating a simulated airgap by modifying the machine's hosts file"
+echo "0.0.0.0 registry.opensource.zalan.do ghcr.io registry.hub.docker.com hub.docker.com charts.helm.sh repo1.dso.mil github.com registry.dso.mil registry1.dso.mil docker.io index.docker.io auth.docker.io registry-1.docker.io dseasb33srnrn.cloudfront.net production.cloudflare.docker.com" >> /etc/hosts
+
+EOF
+
   tags = {
     Name = "${local.fullname}-public"
   }
