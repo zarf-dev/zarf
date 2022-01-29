@@ -35,7 +35,7 @@ vm-destroy: ## Destroy the VM
 
 e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
 	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
-	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip)
+	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip | tr -d '"')
 
 clean: ## Clean the build dir
 	rm -rf build
@@ -62,6 +62,14 @@ ci-release: init-package ## Create the init package
 package-example-game: ## Create the Doom example
 	cd examples/game && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
+.PHONY: package-example-data-injection
+package-example-data-injection: ## create the Zarf package for the data injection example
+	cd examples/data-injection && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
+.PHONY: package-example-single-big-bang-package
+package-example-single-big-bang-package: ## Create the Zarf package for single-big-bang-package example
+	cd examples/single-big-bang-package && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
 .PHONY: test-cloud-e2e-example-game
 test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
 	cd test/e2e && go test ./... -run TestE2eExampleGame -v -timeout 1200s
@@ -71,11 +79,11 @@ test-cloud-e2e-gitea-and-grafana: ## E2E test of Gitea & Grafana. Requires acces
 	cd test/e2e && go test ./... -run TestGiteaAndGrafana -v -timeout 1200s
 
 .PHONY: test-cloud-e2e-data-injection
-test-cloud-e2e-data-injection: ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
+test-cloud-e2e-data-injection: package-example-data-injection ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -run TestDataInjection -v -timeout 1200s
 
 .PHONY: test-cloud-e2e-git-based-helm-chart
-test-cloud-e2e-git-based-helm-chart: ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
+test-cloud-e2e-git-based-helm-chart: package-example-single-big-bang-package ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -run TestGitBasedHelmChart -v -timeout 1200s
 
 .PHONY: test-cloud-e2e-general-cli
