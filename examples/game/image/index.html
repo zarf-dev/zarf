@@ -1,23 +1,115 @@
 <html>
-  <style type="text/css" media="screen">
-      canvas {
-          width: 800px;
-          height: 600px;
+<style type="text/css" media="screen">
+  canvas {
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
+
+<head>
+  <title>Zarf needs games too</title>
+  <script src="js-dos.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #444;
+    }
+
+    .header {
+      text-align: center;
+      padding: 32px;
+    }
+
+    .row {
+      display: -ms-flexbox;
+      /* IE10 */
+      display: flex;
+      -ms-flex-wrap: wrap;
+      /* IE10 */
+      flex-wrap: wrap;
+      padding: 0 4px;
+      justify-content: center;
+    }
+
+    /* Create four equal columns that sits next to each other */
+    .column {
+      -ms-flex: 25%;
+      /* IE10 */
+      flex: 25%;
+      max-width: 25%;
+      padding: 0 4px;
+    }
+
+    .column img {
+      margin-top: 8px;
+      vertical-align: middle;
+      width: 100%;
+    }
+
+    /* Responsive layout - makes a two column-layout instead of four columns */
+    @media screen and (max-width: 800px) {
+      .column {
+        -ms-flex: 50%;
+        flex: 50%;
+        max-width: 50%;
       }
+    }
+
+    /* Responsive layout - makes the two columns stack on top of each other instead of next to each other */
+    @media screen and (max-width: 600px) {
+      .column {
+        -ms-flex: 100%;
+        flex: 100%;
+        max-width: 100%;
+      }
+    }
   </style>
-  <head>
-    <title>Zarf needs games too</title>
-    <script src="js-dos.js"></script>
-  </head>
-  <body>
-    <canvas id="jsdos" width="800" height="600" ></canvas>
-    <script>
-      Dos(document.getElementById("jsdos"), {
-      }).ready((fs, main) => {
-        fs.extract("game.zip").then(() => {
-          main(["-c", GAME_ARGS])
+  </style>
+</head>
+
+<body>
+  <canvas id="jsdos" style="display: none;"></canvas>
+  <script>
+    const game = location.search.substr(1)
+    const gamePaths = {
+      'aladdin': 'ALADDIN.EXE',
+      'doom': 'DOOM.EXE',
+      'mario-brothers': 'MARIO.BAT',
+      'mega-man-x': 'MMXDEMO.EXE',
+      'prince-of-persia': 'pop1demo.exe',
+      'quake': 'QUAKE.EXE',
+      'sim-city-2k': 'SC2000.EXE',
+      'warcraft-ii': 'WAR2.EXE',
+    }
+
+    if (gamePaths[game]) {
+      document.getElementById('jsdos').style.display = "block"
+      Dos(document.getElementById("jsdos"), {}).ready((fs, main) => {
+        fs.extract(game + '.zip').then(() => {
+          main(["-c", gamePaths[game]])
         });
       });
-    </script>
-  </body>
-</html>
+    }
+
+  </script>
+
+  <div class="row">
+    <div class="column">
+      <a href="?aladdin"><img src="aladdin.png" style="width:100%"></a>
+      <a href="?doom"><img src="doom.png" style="width:100%"></a>
+    </div>
+    <div class="column">
+      <a href="?mario-brothers"><img src="mario-brothers.png" style="width:100%"></a>
+      <a href="?prince-of-persia"><img src="prince-of-persia.png" style="width:100%"></a>
+    </div>
+    <div class="column">
+      <a href="?quake"><img src="quake.png" style="width:100%"></a>
+      <a href="?warcraft-ii"><img src="warcraft-ii.png" style="width:100%"></a>
+    </div>
+  </div>
