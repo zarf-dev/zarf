@@ -111,9 +111,9 @@ func Deploy() {
 		if len(connectStrings) > 0 {
 			list := pterm.TableData{{"     Connect Command", "Description"}}
 			// Loop over each connecStrings and convert to pterm.TableData
-			for name, description := range connectStrings {
+			for name, connect := range connectStrings {
 				name = fmt.Sprintf("     zarf connect %s", name)
-				list = append(list, []string{name, description})
+				list = append(list, []string{name, connect.Description})
 			}
 
 			// Create the table output with the data
