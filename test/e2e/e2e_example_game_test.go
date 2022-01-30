@@ -67,7 +67,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
 	require.NoError(t, err, output)
 
 	// run `zarf init`
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s --host 127.0.0.1'", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", username))
 	require.NoError(t, err, output)
 
 	// Deploy the game
