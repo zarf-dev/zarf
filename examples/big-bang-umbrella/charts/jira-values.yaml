@@ -1,5 +1,3 @@
-imagePullSecrets:
-  - name: zarf-registry
 ingress:
   nginx: false
 istio:

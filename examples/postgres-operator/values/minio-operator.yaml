@@ -1,5 +1,3 @@
-imagePullSecrets:
-  - name: zarf-registry
 operator:
   image:
     repository: registry1.dso.mil/ironbank/opensource/minio/operator

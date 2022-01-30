@@ -1,2 +1,0 @@
-imagePullSecrets:
-  - name: zarf-registry

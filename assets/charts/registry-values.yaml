@@ -3,8 +3,6 @@ persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
-imagePullSecrets:
-  - name: zarf-registry
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
 # https://github.com/containerd/containerd/blob/v1.5.8/pkg/cri/server/image_pull.go#L412
