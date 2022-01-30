@@ -9,10 +9,10 @@ components:
   - name: flux
     required: true
     manifests:
-      - name: flux-config
-        files:
-          # kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml
-          - manifests/flux/flux-generated.yaml
+      - name: flux-installer
+        # This will be built on the package create side and deployed as a regular manifest on package deploy
+        kustomizations:
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0

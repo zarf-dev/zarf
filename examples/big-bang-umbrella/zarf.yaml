@@ -6,15 +6,13 @@ metadata:
   architecture: amd64
 
 components:
-  - name: baseline
+  - name: flux
     required: true
     manifests:
-      # This will create a helm chart based on the info below
-      - name: big-bang-flux
-        files:
-          - manifests/bigbang-git-secret.yaml
-          # kustomize build template/flux > manifests/flux-generated.yaml
-          - manifests/flux-generated.yaml
+      - name: flux-installer
+        # This will be built on the package create side and deployed as a regular manifest on package deploy
+        kustomizations:
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
