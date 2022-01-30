@@ -60,7 +60,7 @@ func runGitBasedCliTest(t *testing.T, terraformOptions *terraform.Options, keyPa
 	}
 
 	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management --host 127.0.0.1'", username))
+	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", username))
 	require.NoError(t, err, output)
 
 	// Wait until the Docker registry is ready

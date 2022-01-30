@@ -62,7 +62,7 @@ func testGiteaAndGrafana(t *testing.T, terraformOptions *terraform.Options, keyP
 	}
 
 	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service --host 127.0.0.1'", username))
+	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service'", username))
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
