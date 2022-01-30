@@ -37,6 +37,7 @@ const (
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
+	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
 )
 
 var (
