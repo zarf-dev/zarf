@@ -16,7 +16,11 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-type ConnectStrings map[string]string
+type ConnectString struct {
+	Description string
+	Url         string
+}
+type ConnectStrings map[string]ConnectString
 type ChartOptions struct {
 	BasePath          string
 	Chart             types.ZarfChart

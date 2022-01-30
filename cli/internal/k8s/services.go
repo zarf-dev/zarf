@@ -15,7 +15,23 @@ func GetService(namespace string, serviceName string) (*corev1.Service, error) {
 	return clientset.CoreV1().Services(namespace).Get(context.Background(), serviceName, metav1.GetOptions{})
 }
 
-// GetServicesByLabelExists returns a list of matched services given a set of labels.  TO search all namespaces, pass "" in the namespace arg
+// GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg
+func GetServicesByLabel(namespace string, label string, value string) (*corev1.ServiceList, error) {
+	message.Debugf("k8s.GetServicesByLabel(%s, %s)", namespace, label)
+	clientset := getClientset()
+
+	// Creat the selector and add the requirement
+	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			label: value,
+		},
+	})
+
+	// Run the query with the selector and return as a ServiceList
+	return clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
+}
+
+// GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg
 func GetServicesByLabelExists(namespace string, label string) (*corev1.ServiceList, error) {
 	message.Debugf("k8s.GetServicesByLabelExists(%s, %s)", namespace, label)
 	clientset := getClientset()
