@@ -1,16 +1,16 @@
 kind: ZarfPackageConfig
 metadata:
-  name: appliance-demo-doom
-  description: "Demo Zarf appliance mode with doom game"
+  name: appliance-demo-multi-games
+  description: "Demo Zarf appliance mode with some dos games"
 
 components:
   - name: baseline
     required: true
     manifests:
-      - name: doom
+      - name: multi-games
         files:
           - manifests/ingress.yaml
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - defenseunicorns/zarf-game:doom
+      - defenseunicorns/zarf-game:multi-tile-dark
