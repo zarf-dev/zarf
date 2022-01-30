@@ -59,6 +59,7 @@ type Tunnel struct {
 	namespace    string
 	resourceType string
 	resourceName string
+	urlSuffix    string
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 }
@@ -159,7 +160,7 @@ func (tunnel *Tunnel) Close() {
 
 func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 	message.Debugf("tunnel.checkForZarfConnectLabel(%s)", name)
-	matches, err := GetServicesByLabelExists("", config.ZarfConnectLabelName)
+	matches, err := GetServicesByLabel("", config.ZarfConnectLabelName, name)
 	if err != nil {
 		return fmt.Errorf("unable to lookup the service: %w", err)
 	}
@@ -175,7 +176,10 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		// Only support a service with a single port
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 
-		message.Debugf("tunnel connection match: %s/%s on port %i", svc.Namespace, svc.Name, tunnel.remotePort)
+		// Add the url suffix too
+		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationUrl]
+
+		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, tunnel.remotePort)
 	}
 
 	return nil
@@ -261,7 +265,7 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		spinner.Stop()
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
-		url := fmt.Sprintf("http://%s:%v", config.IPV4Localhost, tunnel.localPort)
+		url := fmt.Sprintf("http://%s:%v%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
 		spinner.Successf("Creating port forwarding tunnel available at %s", url)
 		return url, nil
 	}
