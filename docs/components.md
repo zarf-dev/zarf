@@ -31,7 +31,6 @@ These optional components are listed below along with the "magic strings" you pa
 
 |--components       |Description|
 |---                |---|
-|management         |Installs tools for managing the Zarf cluster from the local host, including: [k9s](https://k9scli.io/).|
 |logging            |Adds a log monitoring stack&mdash;[promtail / loki / graphana (a.k.a. PLG)](https://github.com/grafana/loki)&mdash;into the cluster.|
 |gitops-service     |Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster.|
 
