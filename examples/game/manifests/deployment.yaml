@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: game
-  namespace: default
 spec:
   selector:
     matchLabels:
@@ -13,8 +12,8 @@ spec:
         app: game
     spec:
       containers:
-        - name: game
-          image: "defenseunicorns/zarf-game:doom"
+        - name: multi-game
+          image: "defenseunicorns/zarf-game:multi-tile-dark"
           ports:
             - name: http
               containerPort: 8000
@@ -26,5 +25,3 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "500m"
-      imagePullSecrets:
-        - name: zarf-registry
