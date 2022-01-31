@@ -28,7 +28,7 @@ type ChartOptions struct {
 	ChartLoadOverride string
 	ChartOverride     *chart.Chart
 	ValueOverride     map[string]interface{}
-	Images            []string
+	Component         types.ZarfComponent
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
@@ -149,8 +149,8 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, images []string) ConnectStrings {
-	message.Debugf("helm.GenerateChart(%s, %v, %v)", basePath, manifest, images)
+func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) ConnectStrings {
+	message.Debugf("helm.GenerateChart(%s, %v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -193,7 +193,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, images []string
 		// We don't have any values because we do not expose them in the zarf.yaml currently
 		ValueOverride: map[string]interface{}{},
 		// Images needed for eventual post-render templating
-		Images: images,
+		Component: component,
 	}
 
 	spinner.Success()
