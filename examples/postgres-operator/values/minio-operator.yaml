@@ -10,3 +10,7 @@ operator:
     limits:
       cpu: 200m
       memory: 256Mi
+# @todo:  need to look at if this is neeeded for zarf with SA injection
+# tenants:
+#   imagePullSecret:
+#     name: zarf-registry

@@ -1,0 +1,6 @@
+# This will make zarf aware of this SA to do the imagepullsecret patching for it
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-pod
+  namespace: postgres-operator
