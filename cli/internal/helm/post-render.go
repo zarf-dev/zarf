@@ -189,7 +189,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 		// Keep the default SAs up-to-date so they will use the zarf-registry pull secret for the namespace
 		if defaultSvcAccount, err := k8s.GetServiceAccount(name, corev1.NamespaceDefault); err != nil {
-			return nil, fmt.Errorf("unable to get service acocunts for namespace %s", name)
+			return nil, fmt.Errorf("unable to get service accounts for namespace %s", name)
 		} else {
 			// Look to see if the service account is already patched
 			if defaultSvcAccount.Labels[managedByLabel] != "zarf" {
