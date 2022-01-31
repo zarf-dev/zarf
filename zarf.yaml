@@ -26,6 +26,8 @@ components:
         - "systemctl enable --now k3s"
         # Wait for the K3s node to come up
         - "/usr/local/bin/kubectl get nodes"
+        # Make sure things are really ready in k8s 
+        - "/usr/local/bin/kubectl wait --for=condition=available deployment/coredns -n kube-system"
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
