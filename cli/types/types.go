@@ -21,16 +21,38 @@ type ZarfChart struct {
 
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf
 type ZarfComponent struct {
-	Name        string               `yaml:"name"`
-	Description string               `yaml:"description,omitempty"`
-	Default     bool                 `yaml:"default,omitempty"`
-	Required    bool                 `yaml:"required,omitempty"`
-	Files       []ZarfFile           `yaml:"files,omitempty"`
-	Charts      []ZarfChart          `yaml:"charts,omitempty"`
-	Manifests   []ZarfManifest       `yaml:"manifests,omitempty"`
-	Images      []string             `yaml:"images,omitempty"`
-	Repos       []string             `yaml:"repos,omitempty"`
-	Scripts     ZarfComponentScripts `yaml:"scripts,omitempty"`
+	// Name is the unique identifier for this component
+	Name string `yaml:"name"`
+
+	// Description is a message given to a user when deciding to enable this componenent or not
+	Description string `yaml:"description,omitempty"`
+
+	// Default changes the default option when deploying this component
+	Default bool `yaml:"default,omitempty"`
+
+	// Required makes this component mandatory for package deployment
+	Required bool `yaml:"required,omitempty"`
+
+	// SecretName is the secret zarf will use for the registry, the default is "zarf-registry"
+	SecretName string `yaml:"secretName,omitempty"`
+
+	// Files are files to place on disk during deploy
+	Files []ZarfFile `yaml:"files,omitempty"`
+
+	// Charts are helm charts to install during package deploy
+	Charts []ZarfChart `yaml:"charts,omitempty"`
+
+	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
+	Manifests []ZarfManifest `yaml:"manifests,omitempty"`
+
+	// Images are the online images needed to be included in the zarf package
+	Images []string `yaml:"images,omitempty"`
+
+	// Repos are any git repos that need to be pushed into the gitea server
+	Repos []string `yaml:"repos,omitempty"`
+
+	// Scripts are custom commands that run before or after package deployment
+	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
