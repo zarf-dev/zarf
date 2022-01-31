@@ -38,7 +38,7 @@ func TestE2eExampleGame(t *testing.T) {
 
 		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", username), "0700")
 		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", username), "0600")
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-appliance-demo-doom.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-appliance-demo-doom.tar.zst", username), "0600")
+		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-appliance-demo-multi-games.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-appliance-demo-multi-games.tar.zst", username), "0600")
 	})
 
 	teststructure.RunTestStage(t, "TEST", func() {
@@ -71,7 +71,7 @@ func testGameExample(t *testing.T, terraformOptions *terraform.Options, keyPair 
 	require.NoError(t, err, output)
 
 	// Deploy the game
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-appliance-demo-doom.tar.zst --confirm'", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-appliance-demo-multi-games.tar.zst --confirm'", username))
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service; give the service a few seconds to come up since this is not a command we can retry
