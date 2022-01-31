@@ -1,5 +1,5 @@
 bases:
-  - vendor/bigbang/base
+  - git::http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__bigbang.git//base?ref=1.17.0
 
 configMapGenerator:
   - name: common
@@ -19,3 +19,7 @@ patchesStrategicMerge:
       url: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__bigbang.git
       secretRef:
         name: zarf-git-secret
+      ref:
+        $patch: replace
+        tag: "1.17.0"
+        
