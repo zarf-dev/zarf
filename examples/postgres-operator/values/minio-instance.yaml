@@ -10,7 +10,7 @@ tenants:
       ## size specifies the capacity per volume
       size: 1Gi
       ## storageClass specifies the storage class name to be used for this pool
-      storageClassName: local-path
+      storageClassName: "###ZARF_STORAGE_CLASS###"
       ## Used to specify a toleration for a pod
       tolerations: {}
       ## nodeSelector parameters for MinIO Pods. It specifies a map of key-value pairs. For the pod to be
