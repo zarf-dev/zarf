@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/goccy/go-yaml"
 
@@ -99,7 +100,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 		// If the component is not required check if the user wants it deployed
 		if !confirmComponent {
 			// Check if this is one of the components that has been requested
-			if len(requestedComponentNames) > 0 {
+			if len(requestedComponentNames) > 0 || config.DeployOptions.Confirm {
 				for index, requestedComponent := range requestedComponentNames {
 					if strings.ToLower(requestedComponent) == component.Name {
 						confirmComponent = true
