@@ -80,6 +80,9 @@
         "required": {
           "type": "boolean"
         },
+        "secretName": {
+          "type": "string"
+        },
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
