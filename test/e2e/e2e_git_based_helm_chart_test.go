@@ -2,72 +2,38 @@ package test
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/aws"
-	"github.com/gruntwork-io/terratest/modules/ssh"
-	"github.com/gruntwork-io/terratest/modules/terraform"
+	"testing"
+
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGitBasedHelmChart(t *testing.T) {
-	t.Parallel()
-	// Our SSH username, will change based on which AMI we use
-	username := "ubuntu"
-
-	// Copy the terraform folder to a temp directory so we can run multiple tests in parallel
-	tmpFolder := teststructure.CopyTerraformFolderToTemp(t, "..", "tf/public-ec2-instance")
+	e2e := NewE2ETest(t)
 
 	// At the end of the test, run `terraform destroy` to clean up any resources that were created
-	defer teststructure.RunTestStage(t, "TEARDOWN", func() {
-		teardown(t, tmpFolder)
-	})
-
-	// Deploy the terraform infra
-	teststructure.RunTestStage(t, "SETUP", func() {
-		setup(t, tmpFolder)
-	})
+	defer teststructure.RunTestStage(e2e.testing, "TEARDOWN", e2e.teardown)
 
 	// Upload the Zarf artifacts
-	teststructure.RunTestStage(t, "UPLOAD", func() {
-		terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
-		keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
+	teststructure.RunTestStage(e2e.testing, "UPLOAD", func() {
 
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", username), "0700")
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", username), "0600")
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-package-big-bang-single-package-demo.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-big-bang-single-package-demo.tar.zst", username), "0600")
+		e2e.syncFileToRemoteServer("../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", e2e.username), "0700")
+		e2e.syncFileToRemoteServer("../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", e2e.username), "0600")
+		e2e.syncFileToRemoteServer("../../build/zarf-package-big-bang-single-package-demo.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-big-bang-single-package-demo.tar.zst", e2e.username), "0600")
 	})
 
-	teststructure.RunTestStage(t, "TEST", func() {
-		terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
-		keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
+	teststructure.RunTestStage(e2e.testing, "TEST", func() {
+		// run `zarf init`
+		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", e2e.username)
+		require.NoError(e2e.testing, err, output)
 
-		// Finally run the actual test
-		runGitBasedCliTest(t, terraformOptions, keyPair, username)
+		// Deploy the single-big-bang-package example
+		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-big-bang-single-package-demo.tar.zst --confirm'", e2e.username)
+		require.NoError(e2e.testing, err, output)
+
+		// Wait until the deployment is ready
+		output, err = e2e.runSSHCommand(`timeout 300 sudo bash -c 'while [ "$(/usr/local/bin/kubectl get pods -n twistlock -l app=twistlock-console --field-selector=status.phase=Running -o json | jq -r '"'"'.items | length'"'"')" -lt "1" ]; do sleep 1; done' || false`)
+		require.NoError(e2e.testing, err, output)
 	})
-}
 
-func runGitBasedCliTest(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
-	// Run `terraform output` to get the value of an output variable
-	publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
-
-	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
-	// as we know the Instance is running an Ubuntu AMI that has such a user
-	publicHost := ssh.Host{
-		Hostname:    publicInstanceIP,
-		SshKeyPair:  keyPair.KeyPair,
-		SshUserName: username,
-	}
-
-	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", username))
-	require.NoError(t, err, output)
-
-	// Deploy the single-big-bang-package example
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-big-bang-single-package-demo.tar.zst --confirm'", username))
-	require.NoError(t, err, output)
-
-	// Wait until the deployment is ready
-	output, err = ssh.CheckSshCommandE(t, publicHost, `timeout 300 sudo bash -c 'while [ "$(/usr/local/bin/kubectl get pods -n twistlock -l app=twistlock-console --field-selector=status.phase=Running -o json | jq -r '"'"'.items | length'"'"')" -lt "1" ]; do sleep 1; done' || false`)
-	require.NoError(t, err, output)
 }
