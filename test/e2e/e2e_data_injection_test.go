@@ -63,16 +63,8 @@ func runDataInjectionTest(t *testing.T, terraformOptions *terraform.Options, key
 	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", username))
 	require.NoError(t, err, output)
 
-	// Wait until the Docker registry is ready
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/v2/\")\" != \"401\" ]]; do sleep 1; done' || false")
-	require.NoError(t, err, output)
-
 	// Deploy the data injection example
 	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-data-injection-demo.tar --confirm'", username))
-	require.NoError(t, err, output)
-
-	// Wait until the deployment is ready
-	output, err = ssh.CheckSshCommandE(t, publicHost, `timeout 300 sudo bash -c 'while [ "$(/usr/local/bin/kubectl get pods -n demo -l app=data-injection --field-selector=status.phase=Running -o json | jq -r '"'"'.items | length'"'"')" -lt "1" ]; do sleep 1; done' || false`)
 	require.NoError(t, err, output)
 
 	// Test to confirm the root file was placed
