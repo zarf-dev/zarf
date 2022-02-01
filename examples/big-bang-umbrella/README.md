@@ -27,9 +27,9 @@ Note: Vagrant and VirtualBox aren't required for Zarf to function, but this exam
      > Note: If you are in an EC2 instance you should skip the `vm-init` make target, so run `make clean fetch-release package-example-big-bang-umbrella && cd ../sync && sudo su` instead, then move on to the next step.
 2. Run: `./zarf init --confirm --components k3s,gitops-service` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `127.0.0.1`
 3. . If you want to use interactive mode instead just run `./zarf init`.
-4. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
+4. Wait a bit, run `./zarf tools k9s` to see pods come up. Don't move on until everything is running
 5. Run: `./zarf package deploy zarf-package-big-bang-umbrella-demo.tar.zst --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-6. Wait several minutes. Run `k9s` to watch progress
+6. Wait several minutes. Run `./zarf tools k9s` to watch progress
 7. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 8. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 9. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
