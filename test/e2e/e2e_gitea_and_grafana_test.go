@@ -5,80 +5,41 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gruntwork-io/terratest/modules/aws"
-	"github.com/gruntwork-io/terratest/modules/ssh"
-	"github.com/gruntwork-io/terratest/modules/terraform"
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
-	t.Parallel()
-
-	// Our SSH username, will change based on which AMI we use
-	username := "ubuntu"
-
-	// Copy the terraform folder to a temp directory so we can run multiple tests in parallel
-	tmpFolder := teststructure.CopyTerraformFolderToTemp(t, "..", "tf/public-ec2-instance")
+	e2e := NewE2ETest(t)
 
 	// At the end of the test, run `terraform destroy` to clean up any resources that were created
-	defer teststructure.RunTestStage(t, "TEARDOWN", func() {
-		teardown(t, tmpFolder)
-	})
-
-	// Deploy the terraform infra
-	teststructure.RunTestStage(t, "SETUP", func() {
-		setup(t, tmpFolder)
-	})
+	defer teststructure.RunTestStage(e2e.testing, "TEARDOWN", e2e.teardown)
 
 	// Upload the Zarf artifacts
-	teststructure.RunTestStage(t, "UPLOAD", func() {
-		terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
-		keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
-
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", username), "0700")
-		syncFileToRemoteServer(t, terraformOptions, keyPair, username, "../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", username), "0600")
+	teststructure.RunTestStage(e2e.testing, "UPLOAD", func() {
+		e2e.syncFileToRemoteServer("../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", e2e.username), "0700")
+		e2e.syncFileToRemoteServer("../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", e2e.username), "0600")
 	})
 
-	teststructure.RunTestStage(t, "TEST", func() {
-		terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
-		keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
+	teststructure.RunTestStage(e2e.testing, "TEST", func() {
+		// run `zarf init`
+		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service'", e2e.username)
+		require.NoError(e2e.testing, err, output)
 
-		// Finally run the actual test
-		testGiteaAndGrafana(t, terraformOptions, keyPair, username)
+		// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
+		time.Sleep(15 * time.Second)
+		_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", e2e.username)
+
+		// 	// Make sure Gitea comes up cleanly
+		// 	output, err = e2e.runSSHCommand(`timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45003/explore/repos\")\" != \"200\" ]]; do sleep 1; done' || false`)
+		// 	require.NoError(e2e.testing, err, output)
+
+		// 	// Establish the port-forward into the logging service
+		// 	_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", e2e.username)
+
+		// 	// Make sure Grafana comes up cleanly
+		// 	output, err = e2e.runSSHCommand(`timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45002/monitor/login\")\" != \"200\" ]]; do sleep 1; done' || false`)
+		// 	require.NoError(e2e.testing, err, output)
 	})
-}
 
-func testGiteaAndGrafana(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, username string) {
-	// Run `terraform output` to get the value of an output variable
-	publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
-
-	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
-	// as we know the Instance is running an Ubuntu AMI that has such a user
-	publicHost := ssh.Host{
-		Hostname:    publicInstanceIP,
-		SshKeyPair:  keyPair.KeyPair,
-		SshUserName: username,
-	}
-
-	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service'", username))
-	require.NoError(t, err, output)
-
-	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
-	time.Sleep(15 * time.Second)
-	portForwardCommand := fmt.Sprintf("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", username)
-	output, err = ssh.CheckSshCommandE(t, publicHost, portForwardCommand)
-
-	// Make sure Gitea comes up cleanly
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45003/explore/repos\")\" != \"200\" ]]; do sleep 1; done' || false")
-	require.NoError(t, err, output)
-
-	// Establish the port-forward into the logging service
-	portForwardCommand = fmt.Sprintf("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", username)
-	output, err = ssh.CheckSshCommandE(t, publicHost, portForwardCommand)
-
-	// Make sure Grafana comes up cleanly
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45002/monitor/login\")\" != \"200\" ]]; do sleep 1; done' || false")
-	require.NoError(t, err, output)
 }
