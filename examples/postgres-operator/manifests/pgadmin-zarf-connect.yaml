@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin-zarf-connect
+  namespace: postgres-operator
+  annotations:
+    zarf.dev/connect-description: "Launch the pgadmin web interface"
+  labels:
+    zarf.dev/connect-name: pgadmin
+spec:
+  selector:
+    app.kubernetes.io/instance: zarf-pgadmin4
+    app.kubernetes.io/name: pgadmin4
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
