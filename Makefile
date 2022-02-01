@@ -90,9 +90,11 @@ test-cloud-e2e-gitops: package-example-gitops-data ## E2E test of Gitops example
 test-cloud-e2e-data-injection: package-example-data-injection ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -run TestDataInjection -v -timeout 1200s
 
+################ BEGIN Pending removal post-merge
 .PHONY: test-cloud-e2e-git-based-helm-chart
-test-cloud-e2e-git-based-helm-chart: package-example-single-big-bang-package ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
-	cd test/e2e && go test ./... -run TestGitBasedHelmChart -v -timeout 1200s
+test-cloud-e2e-git-based-helm-chart: 
+	echo done
+################ END Pending removal post-merge
 
 .PHONY: test-cloud-e2e-general-cli
 test-cloud-e2e-general-cli: ## Runs tests of the CLI that don't need a cluster
