@@ -73,12 +73,31 @@ func testGitopsExample(t *testing.T, terraformOptions *terraform.Options, keyPai
 	require.NoError(t, err, output)
 
 	// Check for full git repo mirror(foo.git) from https://github.com/stefanprodan/podinfo.git
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)@127.0.0.1/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", username))
 	require.NoError(t, err, output)
 
 	// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.12.0
-	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", username))
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(zarf tools get-admin-password)@127.0.0.1/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", username))
 	require.NoError(t, err, output)
 
-	
+
+	// Check for correct tag mirror
+	expectedTag := "v0.12.0"
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git tag'", username))
+	require.NoError(t, err, output)
+	assert.Equal(t, expectedTag, output, "Expected tag should match output")
+
+	// Check for correct commits
+	expectedCommits := "4fb0f14\ncd45237\n9ac3338"
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git log -3 --oneline --pretty=format:\"%h\"'", username))
+	require.NoError(t, err, output)
+	assert.Equal(t, expectedTag, output, "Expected commits should match output")
+
+	// Check for correct branches
+	expectedBranch := "master"
+	output, err = ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build/mirror__github.com__stefanprodan__podinfo && git branch --list'", username))
+	require.NoError(t, err, output)
+	assert.Equal(t, expectedBranch, output, "Expected Branch should match output")
+
+
 }
