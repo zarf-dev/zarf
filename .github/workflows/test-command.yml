@@ -700,7 +700,7 @@ jobs:
           export GOPATH="$HOME/go"
           export PATH="$PATH:$GOPATH/bin"
           chmod +x build/zarf
-          make test-cloud-e2e-gitops-example
+          make test-cloud-e2e-gitops
 
       # Update GitHub status for failing pipeline run
       - name: "Update GitHub Status for failure"
