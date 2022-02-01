@@ -46,7 +46,7 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 	var output *release.Release
 
 	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
-	actionConfig, err := createActionConfig(options.Chart.Namespace)
+	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
 	postRender := NewRenderer(options, actionConfig)
 
 	// Setup K8s connection
@@ -114,8 +114,10 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 // TemplateChart generates a helm template from a given chart
 func TemplateChart(options ChartOptions) (string, error) {
 	message.Debugf("helm.TemplateChart(%v)", options)
+	spinner := message.NewProgressSpinner("Templating helm chart %s", options.Chart.Name)
+	defer spinner.Stop()
 
-	actionConfig, err := createActionConfig(options.Chart.Namespace)
+	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
 
 	// Setup K8s connection
 	if err != nil {
@@ -145,6 +147,8 @@ func TemplateChart(options ChartOptions) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
+
+	spinner.Success()
 
 	return templatedChart.Manifest, nil
 }
