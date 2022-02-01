@@ -30,16 +30,16 @@ func TestGiteaAndGrafana(t *testing.T) {
 		time.Sleep(15 * time.Second)
 		_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", e2e.username)
 
-		// 	// Make sure Gitea comes up cleanly
-		// 	output, err = e2e.runSSHCommand(`timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45003/explore/repos\")\" != \"200\" ]]; do sleep 1; done' || false`)
-		// 	require.NoError(e2e.testing, err, output)
+		// Make sure Gitea comes up cleanly
+		output, err = e2e.runSSHCommand(`bash -c '[[ $(curl -sfSL -o /dev/null -w '%%{http_code}' 'http://127.0.0.1:45003/explore/repos') == 200 ]]'`)
+		require.NoError(e2e.testing, err, output)
 
-		// 	// Establish the port-forward into the logging service
-		// 	_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", e2e.username)
+		// Establish the port-forward into the logging service
+		_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", e2e.username)
 
 		// 	// Make sure Grafana comes up cleanly
-		// 	output, err = e2e.runSSHCommand(`timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45002/monitor/login\")\" != \"200\" ]]; do sleep 1; done' || false`)
-		// 	require.NoError(e2e.testing, err, output)
+		output, err = e2e.runSSHCommand(`bash -c ' [[ $(curl -sfSL -o /dev/null -w '%%{http_code}' 'http://127.0.0.1:45002/monitor/login') == 200]]'`)
+		require.NoError(e2e.testing, err, output)
 	})
 
 }
