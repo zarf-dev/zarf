@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-console-zarf-connect
+  namespace: minio-operator
+  annotations:
+    zarf.dev/connect-description: "Launch the minio console"
+  labels:
+    zarf.dev/connect-name: minio
+spec:
+  selector:
+    v1.min.io/tenant: zarf-minio-instance
+  ports:
+    - name: http-console
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
