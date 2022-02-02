@@ -24,23 +24,23 @@ func TestGitopsExample(t *testing.T) {
 
 	teststructure.RunTestStage(t, "TEST", func() {
 		// run `zarf init`
-		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management,logging,gitops-service --host 127.0.0.1'", e2e.username)
+		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service --host 127.0.0.1'", e2e.username)
 		require.NoError(t, err, output)
-
-		// Make sure Gitea comes up cleanly
-		output, err = e2e.runSSHCommand(`bash -c '[[ $(curl -sfSL -o /dev/null -w '%%{http_code}' 'http://127.0.0.1:45003/explore/repos') == 200 ]]'`)
-		require.NoError(e2e.testing, err, output)
 
 		// Deploy the gitops example
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-gitops-service-data.tar.zst --confirm'", e2e.username)
 		require.NoError(t, err, output)
 
+		// Create a tunnel to the git resources
+		output, err = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", e2e.username)
+		require.NoError(t, err, output)
+
 		// Check for full git repo mirror(foo.git) from https://github.com/stefanprodan/podinfo.git
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", e2e.username)
+		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", e2e.username)
 		require.NoError(t, err, output)
 
 		// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.12.0
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone https://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", e2e.username)
+		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", e2e.username)
 		require.NoError(t, err, output)
 
 		// Check for correct tag
