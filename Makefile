@@ -78,6 +78,10 @@ test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. 
 test-cloud-e2e-gitea-and-grafana: ## E2E test of Gitea & Grafana. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -run TestGiteaAndGrafana -v -timeout 1200s
 
+.PHONY: test-cloud-e2e-gitops
+test-cloud-e2e-gitops: ## E2E test of Gitops example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
+	cd test/e2e && go test ./... -run TestGitopsExample -v -timeout 1200s
+
 .PHONY: test-cloud-e2e-data-injection
 test-cloud-e2e-data-injection: package-example-data-injection ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
 	cd test/e2e && go test ./... -run TestDataInjection -v -timeout 1200s

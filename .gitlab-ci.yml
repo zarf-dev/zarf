@@ -1,7 +1,6 @@
 stages:
   - build
   - package
-  - e2e
   - upload
   - release
 
@@ -43,34 +42,6 @@ package:
   artifacts:
     reports:
       dotenv: job.env
-    paths:
-      - build/
-
-# Don't run the legacy E2E tests on tags, since GitHub Actions is replacing them and they shouldn't be in the critical
-# path to cutting a release.
-e2e:
-  only:
-    - master
-    - merge_requests
-  stage: e2e
-  needs:
-    - job: package
-      artifacts: true
-  tags:
-    - bigbang
-    - packages
-  before_script:
-    - yum install openssh-clients -y
-    - eval $(ssh-agent -s)
-    - ssh-add <(echo "$ZARF_PIPELINE_KEY")
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - echo "$ZARF_KNOWN_HOST" > ~/.ssh/known_hosts
-    - ./build/zarf tools registry login registry1.dso.mil --username "$REGISTRY1_USERNAME_ZARF_ROBOT" --password "$REGISTRY1_PASSWORD_ZARF_ROBOT"
-  script:
-    - ./e2e.sh
-  resource_group: e2e
-  artifacts:
     paths:
       - build/
 
