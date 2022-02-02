@@ -3,12 +3,13 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
+
+	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/git"
+	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
@@ -66,10 +67,18 @@ var registryCmd = &cobra.Command{
 
 var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
-	Short: "Returns the Zarf admin password read from ~/.git-credentials",
+	Short: "Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
-		authInfo := git.FindAuthForHost(config.TLS.Host)
-		fmt.Println(authInfo.Auth.Password)
+		state := k8s.LoadZarfState()
+		if state.Distro == k8s.DistroIsUnknown {
+			// If no distro the zarf secret did not load properly
+			message.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
+		}
+
+		// Continue loading state data if it is valid
+		config.InitState(state)
+
+		fmt.Println(config.GetSecret(config.StateGitPush))
 	},
 }
 
