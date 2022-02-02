@@ -38,12 +38,12 @@ func TestE2eExampleGame(t *testing.T) {
 
 		// Establish the port-forward into the game service; give the service a few seconds to come up since this is not a command we can retry
 		time.Sleep(5 * time.Second)
-		output, err = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect doom &> /dev/nul &)'", e2e.username)
+		output, err = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect doom --local-port 22333 &> /dev/nul &)'", e2e.username)
 		require.NoError(e2e.testing, err, output)
 
-		// // Wait for the game to be live. Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
-		// output, err = e2e.runSSHCommand("timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1\")\" != \"200\" ]]; do sleep 1; done' || false")
-		// require.NoError(e2e.testing, err, output)
+		// Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
+		output, err = e2e.runSSHCommand("bash -c '[[ $(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%%{http_code}\" 'http://127.0.0.1:22333?doom') == 200 ]]'")
+		require.NoError(e2e.testing, err, output)
 
 		// Run `zarf destroy` to make sure that works correctly
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf destroy --confirm'", e2e.username)
