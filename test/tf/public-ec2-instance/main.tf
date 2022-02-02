@@ -30,6 +30,9 @@ resource "aws_instance" "public" {
 echo "Installing jq"
 apt-get install -y jq
 
+echo "Installing git"
+apt-get install -y git
+
 echo "Updating max_map_count for elasticsearch support"
 sysctl -w vm.max_map_count=262144
 
