@@ -4,4 +4,5 @@ This example demonstrates using Zarf in a very low-resources/singlue-use environ
 
 ### Steps to use:
 1. Create a Zarf cluster as outlined in the main [README](../../README.md#2-create-the-zarf-cluster)
-2. Follow [step 3](../../README.md#3-add-resources-to-the-zarf-cluster) using this config in this folder
+2. Run `zarf package create` in this directory to build this example package.
+3. Run `zarf package deploy zarf-package-data-injection-demo.tar`
