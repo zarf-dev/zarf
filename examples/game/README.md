@@ -13,9 +13,6 @@ More specifically, you'll be running a copy of the 1993, mega-hit video game _**
 
 ## The Flow
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&autoplay=1">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="320" />
-</a>
 
 Here's what you'll do in this example:
 
@@ -36,9 +33,6 @@ Here's what you'll do in this example:
 
 ## Get ready
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&t=1">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
-</a>
 
 Before the magic can happen you have to do a few things:
 
@@ -57,9 +51,6 @@ Before the magic can happen you have to do a few things:
 
 ## Create a cluster
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&t=48">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
-</a>
 
 You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster".
 
@@ -91,9 +82,6 @@ Congratulations!  Your machine is now a single node k8s cluster!
 
 ## Package the game
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&t=80">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
-</a>
 
 Zarf is (at heart) a tool for making it easy to get software from _where you have it_ to _**where you need it**_&mdash;specifically, across an airgap. Since moving bits is so core to Zarf the idea of a "ready-to-move group of software" has a specific name&mdash;the _package_.
 
@@ -113,9 +101,6 @@ Answer the questions & watch the terminal scroll for a while. Once things are do
 
 ## Deploy it
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&t=111">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
-</a>
 
 It's time to feed the package you built into your cluster.
 
@@ -142,16 +127,16 @@ Respond as appropriate and in a couple seconds the cluster will have loaded your
 
 ## Space marine the demon invasion!
 
-<a href="../../.images/get-started/not-private.png">
-<img align="right" alt="privacy error" src="../../.images/get-started/not-private.png" height="256" />
-</a>
-After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play.
+After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play. 
+
+If you're running in a vagrant virtual machine you might notice this command does not work, this is because the networking of the Vagrant vm clashes with the networking of the kubernetes cluster. In this case you will have to manually create a tunnel to the game. You can do that by running the following set of commands:
+  - `kubectl get pods -n default`
+    - This will return a pod starting with `game-#####-####`. Copy this name to be used in the next command.
+  - kubectl port-forward -n default --address 0.0.0.0 {COPIED_POD_NAME} 8000:8000
+    - This will enable you to now go to `127.0.0.1:8000` on your host machine to play the games!
+
 
 ### It begins!
-
-<a href="../../.images/get-started/dosbox.png">
-<img align="right" alt="dosbox" src="../../.images/get-started/dosbox.png" height="256" />
-</a>
 
 Give the example a couple of seconds to "boot up".
 
@@ -168,9 +153,6 @@ Once you see the ultra-iconic title screen, you're ready to go (save the world)!
 
 ## Cleanup
 
-<a href="https://asciinema.org/a/444679?x-scenario=examples-game-scripted&t=162">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/444679.svg?x-scenario=examples-game-scripted" height="256" />
-</a>
 
 Once you've had your fun it's time to clean up.
 
