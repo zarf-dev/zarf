@@ -10,7 +10,7 @@ repos:
       - id: detect-private-key
         exclude: |
           (?x)^(
-            examples/big-bang/template/bigbang/values.yaml|
+            examples/big-bang/kustomizations/bigbang/values.yaml|
             examples/big-bang-umbrella/template/bigbang/values.yaml
           )$
       - id: end-of-file-fixer
