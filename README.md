@@ -1,4 +1,4 @@
-# Zarf - Kubernetes Air Gap Buddy
+# Zarf - Kubernetes Air Gap Buddy 
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
