@@ -19,7 +19,7 @@ PACKAGE_PATH :=  $(shell cd $(name) && pwd)
 .PHONY: default 
 default: help
 
-.PHONY: build-package
+.PHONY: package
 package:
 ifdef name
 	@cd $(name) && $(ZARF_BIN) package create --confirm 
@@ -40,6 +40,6 @@ endif
 help:
 	@echo "\nAvailable commands: "
 	@echo "\n  package     Builds a tar.zst given the name of the component you wish to create."
-	@echo "               example: make build-package name=flux"
+	@echo "               example: make package name=flux"
 	@echo "\n  help        shows this menu."
 	@echo
