@@ -57,63 +57,63 @@ istio:
       tls:
         key: |
           -----BEGIN PRIVATE KEY-----
-          MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDbaLWaC86eG74Z
-          D5JxLJ0X4DpOTZgGeP3oY+oS5S1pE+nZq30LrC6YMQeBLSvJDWpBtvV5x9F88gMz
-          yhU94HgrWH26LBUQIBti+ip6IbS0sAKc6bicw6NBtR2F4BnLGw+mrUniVT8WNrRL
-          C1NkN5shexmTE6XAY9Ak6UpApHVmTiB8xz6hypr4JwqnqQfxDO0+AfaGSHheKo5h
-          xTSgUYULhyA9UaImHU+S/SekwGLRLX1KfcTpnz1+TZiQqShG9vqUB4dAge+imwAs
-          ZTCnI9H3tmz6jWekXQYRUraJUwjEaqqLoSQT5VQmEl518ueeRKKNB/8mi1pylWqN
-          UjedV4A5AgMBAAECggEBAM56xORaljBO9WAKOotNK+1rNBO6jAYTWQeY95CeolSP
-          y/PvobcZa6QICAL16o3DlSqQroTTmf7WllLnq4PWueA43+ETWSMaxAsqWE0laTTd
-          qyfV/8lvhzTv5/+z/TIZnmoCDFT2Wm9iPdudpfXbKp+ghFnYFJVwmVITRbB91InX
-          38LaEvLWFnJ3/DPYursaXerwwrm50d0PCdpa/ceqBCVHlpT3Zc0lT0rYpDVtc9BG
-          3gjbvKwhVUQBDfD3FGEobxhbc5eEH6JEf0PUWKnsU5F0qRKjQnfM19XKbczP+9gY
-          71BDL1sALSZxxJXW865+7GeXKCtxObkcCwYbf8UrS30CgYEA+HSH4ZpuHZ8IKIbs
-          vFaAjsEMkRfZPao8b/g4/JCg4TuOpAdFZUTSPWmdUq3i/J8o9b+e8/bznn9HLHIT
-          qyreSyiRUQRtcniSL1ZUHSzzW9QefYKzPghGYHXQLIBAWt50PDaMfPQ6Sj1NaEPH
-          h3hq4YNYNMQP/QVmfFdiT4xVA6cCgYEA4hJgSc17hh/u84uYAKhg2zSlFG5LlYKc
-          Yb2aFQJhFz2QqGxMeOXyIVDFD6btGcOLtPt4RdsBuCLZZzFBDUlWL7rY9qlL+/+P
-          ERStyHE9gFBDa0KWfvQxHSXIuxN2mkokktiVfaTisi8SWEKRJYp+B8HCa5lSDBti
-          eXcGBK3hWR8CgYBJ+aBPmsR4i1ZJgsrP1M2YM4CDXt9uzdYK3JRTFtjf1vTEf+m4
-          mkIiyORvrphr8ROn//La3sdwhKLzZ8/VYgEnzZ9eyPuxXpbgA0suGKkoyUJ+ykCG
-          Er6pj8p4xYLjy2I+X1t7BNiqLBB1H+Ezw7XHCW1k4I+GHWqDUR1TZAwX9wKBgFhy
-          KAm3wqPuymWuL4HSXlJkflFH9XpA5z22GBowHBwjkfzSofiKvfgayX4eKJTz1Cyy
-          VZO+4yVPPQ8KThEMqBN0Xn3iLkAg87ATDwpkg1M4E6hbHNX+Y1ir96R5MOWcLELn
-          SVUmtSpREDRHltHBJR2TyKSgD2F9NUGgN1KNVKSxAoGARyx7VceWlpdmnr+i26UH
-          B4h6/rL/nY7M2oWgUaj7FeygcfemtO6cV+R1Bl876Q9Dx797hZ4ddGAgxmDFsv8J
-          f6SSzTJBB6IGxt+1ZcxD4uFXUrOVFv00br/Re14bsXQcMwi9kEJF2idbR5E7O2qc
-          qbLlPssjuZS5pDnRa05bEIQ=
+          MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDWf1Mu3PzeB7cL
+          KMFYUoImy+bX6aXyV1d1gDCgxvXmIkY2EMFG0yL4fqRSMExgmmTVBJmDcJixBr36
+          m14t6g39FX0n0XEnB4BvxyARFnbyecB7EUQ6AGCzUTbAW16pgQC2SKuIm7qjygdS
+          UObgPfXqkUDshARZo1Q6OEFBZgn2R/lISg3wNlxlIp8BSCgLEE5mhAJZX9OzfVXC
+          zJTxXtl9IUSQwuE9ANGb0AP10xdp9gR2uyAyYXgW+d0/GTKGzJTrkcy5x39XXIuY
+          ddOg7dQ7lSb6VqtFXaDvnrHao1Pn/W/UG8bmGM0uDRqLdvllxp9Bj2UlHD2W9v+C
+          OLtxxaubAgMBAAECggEBALaCAfJHADWfVOT+2XxgP/Po3NNsL9IC9Ry6ZSX4BHS7
+          RwhruzibIA9WGlUAWYx88jy6PDC1loZSGUXp+vmQRDTKmwJNWD0ASg1R3fwMJEtu
+          wxMz/txnQ+BvwulrFSGe7U8siB+leeoxVYd55Oh6cAsVaquULOtkaJ9dDFEsFF/j
+          ENySaIXqpuEG457xLL/uCfmUd7SaLhS8FbmwadvYphQK6huVpVFbBhRzLbTRFGI/
+          S/kpZ9cdBIxmoZTSy1l2mveCEpgdqMbqsdLQLijYUM5ZWjW+VA+4sgmY0/oPW3Mx
+          M6gQUu7TQeIZFmtl05UAOICm4FjqezBmaiihjsLr3JkCgYEA78V53BvgXNvN9zzr
+          sn3/WDBhYxZQiGacVvirk42rT/mPr3o9tqI4pxsN3ZK3pTvBoNbRI2UrfjgAQ/+J
+          OVuwaheXKeTdDiSWc3suddkfAHAHECD+FZ9iSIH8t8h+sVlf7HvTe5on+JGhi2nK
+          26zWv5FBjBFBgFMyXikaSQBpK20CgYEA5QPs4L1YF7HskrIeN75sbQUgNL1t+Q0H
+          SkOpfTZ/VbnT+92lKkdWPxmXabZLZrTYxw9/ZswrW+SgIc95kbLOiwiV46PVca/Z
+          fLdSBZcKqV0GWnehuh0ClhiNDJA4ZXNDucu5ZP7eWVvO/Xh3SNvhAZtFidvRuO52
+          bCT7W3j5hicCgYEA4pm+BjBuRTQSnpN7qW/8j2sBzvR63b4kCOnwtX2RJv8TNWMQ
+          yfbcFcmyu/H6D3W/E/ORKaNmjF3+mkT5ejTWMB3lZdl+tOwNKEyFZyjwbKhzdGHJ
+          38OGzkHTBhm86n0t88A+6TSSjA+OHcS4zA230spDqU1xmwaFtomf5tg1jK0CgYAs
+          pgRDmIaZMAYIX5OGmKh45LvvrFLJcGHQd7qOf9Z5dx4+B2tQ/9FvweSEJpcyseVl
+          gb774qg9ZShXDyULY8niz0yxsdpGLNuA9hiWoGjithEsCBDOwSMk8iplnaRxGvTE
+          P1SovQvKbhy/zAGtgbivYH9BLksH++24jck3fzFelwKBgQCbTi5jgcNO5UZc0zct
+          BboFbBykE1LlVOWGBB9aQ6FcKmj42DZOav4M87Yajh+2GvvgeijGvGj0xdhaWEMD
+          /G+OLmLlXucuzb+BAxO8jgIoQhh4gVEFOuFaXrBoQT5sMuTJDnYzxLnLXOKlMf4K
+          Uq/W3NP3fz/2PMW2GS19TX7EQQ==
           -----END PRIVATE KEY-----
         cert: |
           -----BEGIN CERTIFICATE-----
-          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
+          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
-          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
+          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
-          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
+          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
-          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
-          nMqEgcgAiA2VuE62Q4HE0Rs5wA==
+          cnlwdC5vcmcwggEFBgorBgEEAdZ5AgQCBIH2BIHzAPEAdwDfpV6raIJPH2yt7rhf
+          Tj5a6s2iEqRqXo47EsAgRFwqcwAAAX2+VcfaAAAEAwBIMEYCIQDPwjYC5CixLXKp
+          NytLx3H1gd0D3t0sCwCs8zpF++OQEwIhAOYj8nLjKWayunsZiUSBow5Tp30iNJqA
+          HAl00ztr1ei/AHYAKXm+8J45OSHwVnOfY6V35b5XfZxgCvj5TV0mXCVdx4QAAAF9
+          vlXH1AAABAMARzBFAiAb6uSCWFwa3boOPrG7LyOc2nKMU9w/QedWI/Il6wJOmQIh
+          AIyhqQskxeMJZjj6v1RxPY4Y4gRDzaDql1PjnXYMDLeFMA0GCSqGSIb3DQEBCwUA
+          A4IBAQBsIx5S6YTk8wdnvKWos7lzsHq8+RxJ6spK5JoWRTLaOIPZKPIruNudyt4D
+          tbGTeiYqh1hP8uoWea8tE8yBoENAner05Wh+CyMlIoULF71lOLryRVokVYYCo/NT
+          HiOX4RzgX3WVeve39AU6xMCmVnRLfTHS+5kGJ+cP7rAStsMKpiiG5JM4gkNSrP/T
+          f++rEw1H742L5bTkbxV8K+KULhT7y1zDSgkPkG0iQgYdzWJgqrpkFM+mtcpWbKv5
+          ygOJ3+D9VAyfiWjSNJ90HwswN+6uYzJsilkqBfCuew8F3sDQCJdxgRWDaSv8/iEy
+          44zB6B3HDGNd7ZJkym49I12FSnnx
           -----END CERTIFICATE-----
           -----BEGIN CERTIFICATE-----
           MIIFFjCCAv6gAwIBAgIRAJErCErPDBinU/bWLiWnX1owDQYJKoZIhvcNAQELBQAw
@@ -176,6 +176,7 @@ istio:
           he8Y4IWS6wY7bCkjCWDcRQJMEhg76fsO3txE+FiYruq9RUWhiF1myv4Q6W+CyBFC
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
+
 
   values:
     hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
