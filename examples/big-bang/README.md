@@ -1,28 +1,83 @@
-# Example: Big Bang Core All-In-One
+# Example: Big Bang Core
 
-This example deploys Big Bang Core with a gitops service. This is not normally the method that will be used in production but for a demo it works great.
+This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
 
-Because the same cluster will be running both Traefik and Istio, Istio's VirtualServices will be available on port 9443
+![pods](img/pods.png)
+
+![helmreleases](img/helmreleases.png)
+
+## Known Issues
+
+- Due to issues with Elasticsearch this example doesn't work yet in some distros. It does work in the Vagrant VM detailed below. Upcoming work to update to the latest version of Big Bang and swap the EFK stack out for the PLG stack (Promtail, Loki, Grafana) should resolve this issue
 
 ## Prerequisites
 
 1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install `make` and `kustomize`
+2. Install `make`
 1. Install `sha256sum` (on Mac it's `brew install coreutils`)
 
 ## Instructions
 
-1. `cd examples/big-bang`
-1. Run one of these two commands:
-   - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
-   - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
-2. Run: `./zarf init --confirm --components k3s,gitops-service` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
-3. Wait a bit, run `./zarf tools k9s` to see pods come up. Don't move on until everything is running
-4. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --components kubescape --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-5. Wait several minutes. Run `./zarf tools k9s` to watch progress
-6. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
-7. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
-8. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
+### Pull down the code and binaries
+
+```shell
+# clone the binaries
+git clone https://github.com/defenseunicorns/zarf.git
+
+# change to the examples folder
+cd zarf/examples
+
+# Download the latest release of Zarf and the Init Package to the 'examples/sync' folder
+make fetch-release
+```
+
+### Build the deploy package
+
+```shell
+# Create the deploy package and move it to the 'examples/sync' folder
+make package-example-big-bang
+```
+
+### Start the Vagrant VM
+
+```shell
+# Start the VM. You'll be dropped into a shell in the VM as the Root user
+make vm-init
+```
+
+> NOTE:
+>
+> All subsequent commands should be happening INSIDE the Vagrant VM
+
+### Initialize Zarf
+
+```shell
+# Initialize Zarf
+./zarf init --confirm --components k3s,gitops-service
+
+# (Optional) Inspect the results
+./zarf tools k9s
+```
+
+### Deploy Big Bang
+
+```shell
+# Deploy Big Bang
+./zarf package deploy --confirm zarf-package-big-bang-core-demo.tar.zst --components kubescape
+
+# (Optional) Inspect the results
+./zarf tools k9s
+```
+
+### Clean Up
+
+```shell
+# Inside the VM
+exit
+
+# On the host
+make vm-destroy
+```
 
 ## Kubescape scan
 
