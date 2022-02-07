@@ -36,7 +36,8 @@ Here's what you'll do in this example:
 
 Before the magic can happen you have to do a few things:
 
-1. Get a "root" shell &mdash; `zarf` needs power to install stuff / bind ports / etc.
+1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
+
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
@@ -127,7 +128,7 @@ Respond as appropriate and in a couple seconds the cluster will have loaded your
 
 ## Space marine the demon invasion!
 
-After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play. 
+After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play.
 
 If you're running in a vagrant virtual machine you might notice this command does not work, this is because the networking of the Vagrant vm clashes with the networking of the kubernetes cluster. In this case you will have to manually create a tunnel to the game. You can do that by running the following set of commands:
   - `kubectl get pods -n default`
