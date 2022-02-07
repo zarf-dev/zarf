@@ -79,16 +79,18 @@ func confirmAction(configPath string, userMessage string) bool {
 	utils.ColorPrintYAML(text)
 
 	// Display prompt if not auto-confirmed
+	var confirmFlag bool
 	if config.DeployOptions.Confirm {
 		message.Infof("%s Zarf package confirmed", userMessage)
+		return config.DeployOptions.Confirm
 	} else {
 		prompt := &survey.Confirm{
 			Message: userMessage + " this Zarf package?",
 		}
-		_ = survey.AskOne(prompt, &config.DeployOptions.Confirm)
+		_ = survey.AskOne(prompt, &confirmFlag)
 	}
 
-	return config.DeployOptions.Confirm
+	return confirmFlag
 }
 
 func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
