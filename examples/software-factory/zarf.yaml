@@ -26,24 +26,24 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.23.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.23.0-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.6.0-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.1.21-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.16.6-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@14.0.0-bb.10
       - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.9-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube.git@9.6.3-bb.2
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab.git@4.12.9-bb.6
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab-runner.git@0.29.0-bb.1
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/collaboration-tools/mattermost.git@0.2.4-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/collaboration-tools/mattermost-operator.git@1.16.0-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/nexus.git@36.0.0-bb.0
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.1.2-bb.3
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.1.2-bb.6
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.2.3-bb.1
-      # - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.2.3-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/keycloak.git@11.0.1-bb.6
+      - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube.git@9.6.3-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab.git@4.12.9-bb.6
+      - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab-runner.git@0.29.0-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/collaboration-tools/mattermost.git@0.2.4-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/collaboration-tools/mattermost-operator.git@1.16.0-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/developer-tools/nexus.git@36.0.0-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.1.2-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.1.2-bb.6
+      - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.2.3-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.2.3-bb.1
+      # - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/keycloak.git@11.0.1-bb.6
 
     images:
       # TODO: Figure out a better way to derive this list.
@@ -72,19 +72,19 @@ components:
       # istio-operator
       - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
 
-      # Keycloak
-      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:14.0.0-1.0.6-1
-      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/postgresql:11.8.0-debian-10-r61
-      - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/busybox:1.32
+      # # Keycloak
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:14.0.0-1.0.6-1
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/postgresql:11.8.0-debian-10-r61
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/busybox:1.32
 
-      # # jaeger
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-agent:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
-      # - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
+      # jaeger
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-agent:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
 
       # kiali
       - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
@@ -117,47 +117,47 @@ components:
       # twistlock
       - registry1.dso.mil/ironbank/twistlock/console/console:21.04.439
 
-      # # sonarqube
-      # - registry1.dso.mil/ironbank/big-bang/sonarqube:8.9-community
-      # - registry1.dso.mil/ironbank/opensource/postgres/postgresql96:9.6.20
-      # - registry.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube/postgresql:11.7.0-debian-10-r26
+      # sonarqube
+      - registry1.dso.mil/ironbank/big-bang/sonarqube:8.9-community
+      - registry1.dso.mil/ironbank/opensource/postgres/postgresql96:9.6.20
+      - registry.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube/postgresql:11.7.0-debian-10-r26
 
-      # # gitlab
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/alpine-certificates:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab-runner/gitlab-runner:v13.12.0
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/kubectl:13.12.9
-      # - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
-      # - registry1.dso.mil/ironbank/bitnami/analytics/redis-exporter:1.18.0
-      # - registry1.dso.mil/ironbank/opensource/redis/redis5:5.0.9
-      # - registry.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab/postgresql:11.9.0
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-container-registry:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/cfssl-self-sign:1.4.1
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-task-runner:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-exporter:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-webservice:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-workhorse:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-sidekiq:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitaly:13.12.9
-      # - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-shell:13.12.9
-      # - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-04-06T23-11-00Z
-      # - registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2021-03-23T05-46-11Z
-      # - docker.io/rancher/pause:3.1
+      # gitlab
+      - registry1.dso.mil/ironbank/gitlab/gitlab/alpine-certificates:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab-runner/gitlab-runner:v13.12.0
+      - registry1.dso.mil/ironbank/gitlab/gitlab/kubectl:13.12.9
+      - registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.4
+      - registry1.dso.mil/ironbank/bitnami/analytics/redis-exporter:1.18.0
+      - registry1.dso.mil/ironbank/opensource/redis/redis5:5.0.9
+      - registry.dso.mil/platform-one/big-bang/apps/developer-tools/gitlab/postgresql:11.9.0
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-container-registry:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/cfssl-self-sign:1.4.1
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-task-runner:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-exporter:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-webservice:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-workhorse:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-sidekiq:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitaly:13.12.9
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-shell:13.12.9
+      - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-04-06T23-11-00Z
+      - registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2021-03-23T05-46-11Z
+      - docker.io/rancher/pause:3.1
 
-      # # minio & minio-operator
-      # - registry1.dso.mil/ironbank/opensource/minio/operator:v4.1.2
-      # - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z
-      # - registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2021-09-02T09-21-27Z
+      # minio & minio-operator
+      - registry1.dso.mil/ironbank/opensource/minio/operator:v4.1.2
+      - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z
+      - registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2021-09-02T09-21-27Z
 
-      # # mattermost & mattermost-operator
-      # - registry1.dso.mil/ironbank/opensource/mattermost/mattermost:5.39.0
-      # - registry1.dso.mil/ironbank/opensource/mattermost/mattermost-operator:v1.16.0
-      # - registry1.dso.mil/ironbank/opensource/postgres/postgresql11:11.10
-      # - registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.8
+      # mattermost & mattermost-operator
+      - registry1.dso.mil/ironbank/opensource/mattermost/mattermost:5.39.0
+      - registry1.dso.mil/ironbank/opensource/mattermost/mattermost-operator:v1.16.0
+      - registry1.dso.mil/ironbank/opensource/postgres/postgresql11:11.10
+      - registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.8
 
 
-      # # nexus
-      # - registry1.dso.mil/ironbank/redhat/ubi/ubi8-minimal:8.4
-      # - registry1.dso.mil/ironbank/sonatype/nexus/nexus:3.36.0-01
+      # nexus
+      - registry1.dso.mil/ironbank/redhat/ubi/ubi8-minimal:8.4
+      - registry1.dso.mil/ironbank/sonatype/nexus/nexus:3.36.0-01
 
   - name: atlassian
     required: true
