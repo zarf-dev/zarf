@@ -1,9 +1,9 @@
-apiVersion: v2
+apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
   name: private-registry
-  namespace: gitlab
+  namespace: flux-system
 stringData:
   .dockerconfigjson: |
     {
@@ -25,4 +25,3 @@ stringData:
         }
       }
     }
----
