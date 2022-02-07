@@ -1,12 +1,12 @@
 kind: ZarfPackageConfig
 metadata:
-  name: big-bang-umbrella-demo
-  description: "Demo Zarf deployment of Big Bang Umbrella"
+  name: software-factory-demo
+  description: "Demo Zarf deployment of a software factory"
 
 components:
-  - name: baseline
+  - name: flux
     required: true
-    manifests: manifests
+    manifests: manifests/flux
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
@@ -16,6 +16,7 @@ components:
 
   - name: bb-umbrella
     required: true
+    manifests: manifests/bigbang
     # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
     # 2. Add the actual bigbang repo as well
     # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
@@ -42,14 +43,7 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.1.2-bb.6
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git@4.2.3-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git@4.2.3-bb.1
-
-    charts:
-      - name: jira
-        url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/jira.git
-        version: 0.1.0-bb.7
-      - name: confluence
-        url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/confluence.git
-        version: 0.1.0-bb.9
+      # - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/keycloak.git@11.0.1-bb.6
 
     images:
       # TODO: Figure out a better way to derive this list.
@@ -77,6 +71,11 @@ components:
 
       # istio-operator
       - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
+
+      # # Keycloak
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:14.0.0-1.0.6-1
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/postgresql:11.8.0-debian-10-r61
+      # - registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/busybox:1.32
 
       # jaeger
       - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.24.0
@@ -118,17 +117,10 @@ components:
       # twistlock
       - registry1.dso.mil/ironbank/twistlock/console/console:21.04.439
 
-      # jira
-      - registry1.dso.mil/ironbank/atlassian/jira-data-center/jira-node:8.18.1
-
       # sonarqube
       - registry1.dso.mil/ironbank/big-bang/sonarqube:8.9-community
       - registry1.dso.mil/ironbank/opensource/postgres/postgresql96:9.6.20
       - registry.dso.mil/platform-one/big-bang/apps/developer-tools/sonarqube/postgresql:11.7.0-debian-10-r26
-
-      # confluance
-      - registry1.dso.mil/ironbank/atlassian/confluence-data-center/confluence-node:7.13.0
-      - registry1.dso.mil/ironbank/redhat/ubi/ubi7-minimal:7.9
 
       # gitlab
       - registry1.dso.mil/ironbank/gitlab/gitlab/alpine-certificates:13.12.9
@@ -167,3 +159,50 @@ components:
       - registry1.dso.mil/ironbank/redhat/ubi/ubi8-minimal:8.4
       - registry1.dso.mil/ironbank/sonatype/nexus/nexus:3.36.0-01
 
+  - name: atlassian
+    required: true
+    manifests: manifests/atlassian
+    charts:
+      - name: jira
+        url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/jira.git
+        version: 0.1.0-bb.7
+      - name: confluence
+        url: https://repo1.dso.mil/platform-one/big-bang/apps/third-party/confluence.git
+        version: 0.1.0-bb.9
+    files:
+      # We need jq because the script uses it to check whether Istio is running yet
+      - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        shasum: af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44
+        target: ./jq
+        executable: true
+    images:
+      # jira
+      - registry1.dso.mil/ironbank/atlassian/jira-data-center/jira-node:8.18.1
+      # confluence
+      - registry1.dso.mil/ironbank/atlassian/confluence-data-center/confluence-node:7.13.0
+      - registry1.dso.mil/ironbank/redhat/ubi/ubi7-minimal:7.9
+    scripts:
+      retry: true
+      before:
+        # Check to see if istiod is running before trying to deploy. If Istio is running then so is Gatekeeper. This is a poor man's version of "DependsOn" since we aren't doing real gitops yet
+        - |
+          test $(/usr/local/bin/kubectl get pods -n istio-system -l app=istiod --field-selector=status.phase=Running -o json | ./jq -r '.items | length') -gt 0
+
+  - name: jenkins
+    required: true
+    manifests: manifests/jenkins
+    charts:
+      - name: jenkins
+        url: https://charts.jenkins.io
+        version: 3.9.4
+    images:
+      - jenkins/jenkins:2.319.1-jdk11
+      - kiwigrid/k8s-sidecar:1.14.2
+      - jenkins/inbound-agent:4.11-1
+      - maorfr/kube-tasks:0.2.0
+    scripts:
+      retry: true
+      before:
+        # Check to see if istiod is running before trying to deploy. If Istio is running then so is Gatekeeper. This is a poor man's version of "DependsOn" since we aren't doing real gitops yet
+        - |
+          test $(/usr/local/bin/kubectl get pods -n istio-system -l app=istiod --field-selector=status.phase=Running -o json | ./jq -r '.items | length') -gt 0

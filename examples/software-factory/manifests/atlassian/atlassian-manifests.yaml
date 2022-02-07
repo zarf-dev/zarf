@@ -1,3 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helm-install-atlassian
+  labels:
+    istio-injection: "disabled"
 ---
 apiVersion: v1
 kind: Namespace
@@ -10,7 +16,7 @@ apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
   name: jira
-  namespace: jira
+  namespace: helm-install-atlassian
 spec:
   chart: https://%{KUBERNETES_API}%/static/charts/jira-0.1.0-bb.7.tgz
   targetNamespace: jira
@@ -64,7 +70,7 @@ apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
   name: confluence
-  namespace: confluence
+  namespace: helm-install-atlassian
 spec:
   chart: https://%{KUBERNETES_API}%/static/charts/confluence-0.1.0-bb.9.tgz
   targetNamespace: confluence
