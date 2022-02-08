@@ -11,4 +11,4 @@ resources:
     memory: "512Mi"
 env:
   email: "zarf@example.local"
-  password: "###ZARF_GIT_AUTH_PUSH###"
+  password: "###ZARF_SECRET###"
