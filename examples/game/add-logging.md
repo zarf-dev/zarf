@@ -1,17 +1,12 @@
 # Zarf Components - Add Logging
 
-This example demonstrates using a [Zarf component](./components.md) to inject zero-config, centralized logging into your Zarf cluster.
+This example demonstrates using a Zarf component to inject zero-config, centralized logging into your Zarf cluster.
 
 More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://github.com/grafana/loki) stack to the example game cluster by installing Zarf's "logging" component.
 
 &nbsp;
 
-
 ## The Flow
-
-<a href="https://asciinema.org/a/446956?x-scenario=examples-game-logging&autoplay=1">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/446956.svg?x-scenario=examples-game-logging" height="320" />
-</a>
 
 Here's what you'll do in this example:
 
@@ -32,26 +27,17 @@ Here's what you'll do in this example:
 
 ## Get ready
 
-<a href="https://asciinema.org/a/446956?x-scenario=examples-game-logging&t=1">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/446956.svg?x-scenario=examples-game-logging" height="256" />
-</a>
-
 This scenario builds upon the previous one, so:
 
-1. Run through the [Zarf game example](./README.md) again but _**don't** do the cleanup step_ &mdash; you're setup correctly once you can pull the game up in your browser.
+1. Run through the [Zarf game example](./README.md) but stop when you're told to run `zarf init`
 
-1. Take a deep breath&mdash;because it's good for your body&mdash;and  read on!
-
-&nbsp;
+1. Take a deep breath&mdash;because it's good for your body&mdash;and read on!
 
 &nbsp;
 
+&nbsp;
 
 ## Install the logging component
-
-<a href="https://asciinema.org/a/446956?x-scenario=examples-game-logging&t=19">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/446956.svg?x-scenario=examples-game-logging" height="256" />
-</a>
 
 Installing a Zarf component is _really_ easy&mdash;you just have to let `zarf init` know that you want use it.  That's it!
 
@@ -68,14 +54,9 @@ Give it some time for the new logging pods to come up and you're ready to go!
 
  > _**Note**_
  >
- > You can install components as part of new cluster installs too (obviously)&mdash;there's no need to update afterward if you already know you need a component.
-
- > _**Note**_
- >
  > Zarf supports non-interactive installs too! See `zarf init --help` for how to make that work.
 
 &nbsp;
-
 
 ## Note the credentials
 
@@ -85,29 +66,22 @@ Pay attention to these because you're going to need them to log into your shiny,
 
 The line you want will look something like this:
 
-```sh
-WARN[0026] Credentials stored in ~/.git-credentials      Gitea Username (if installed)=zarf-git-user Grafana Username=zarf-admin Password (all)="AbCDe0fGH12IJklMnOPQRSt~uVWx"
-```
+![logging-creds](./img/logging-creds.png)
 
-Pull out the `Grafana Username` and `Password (all)` values & save them for later.
+The ones under "Logging" are what you'll need.
 
 &nbsp;
 
 
 ## Check the logs
 
-<a href="https://asciinema.org/a/446956?x-scenario=examples-game-logging&t=55">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/446956.svg?x-scenario=examples-game-logging" height="256" />
-</a>
-
 We've only _just_ installed the logging utilities so we (likely) haven't had time to record anything interesting. Since log aggregation & monitoring aren't worth much without something to collect, let's get some data in there.
 
 &nbsp;
 
-
 ### Generate some traffic
 
-Pull up the game in your brower&mdash;_[instructions here](./README.md#space-marine-the-demon-invasion), in case you forgot how_&mdash;and then reload the browser window a few times.
+Deploy the Game example again, then pull up the game in your brower&mdash;_[instructions here](./README.md#space-marine-the-demon-invasion), in case you forgot how_&mdash;and then reload the browser window a few times.
 
 Doing that sends a bunch of HTTP traffic into the cluster & should give you something worth looking at in Grafana.
 
