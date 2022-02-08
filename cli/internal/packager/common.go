@@ -204,6 +204,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 func isValidFileExtension(filename string) bool {
 	for _, extension := range config.GetValidPackageExtensions() {
 		if strings.HasSuffix(filename, extension) {
+			message.Warnf("Extension for %s is invalid", filename)
 			return true
 		}
 	}
