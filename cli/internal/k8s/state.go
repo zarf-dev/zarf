@@ -83,7 +83,7 @@ func SaveZarfState(state types.ZarfState) error {
 	message.Debug(secret)
 
 	// Attempt to create or replace the secret and return
-	if err := ReplaceSecret(secret); err != nil {
+	if err := replaceSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 

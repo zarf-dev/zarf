@@ -150,47 +150,29 @@ func ReplaceTLSSecret(namespace string, name string) {
 	secret.Data[corev1.TLSCertKey] = tlsCert
 	secret.Data[corev1.TLSPrivateKeyKey] = tlsKey
 
-	if err := ReplaceSecret(secret); err != nil {
+	if err := replaceSecret(secret); err != nil {
 		message.Fatalf(err, "Unable to create the secret")
 	}
 }
 
-func ReplaceSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.ReplaceSecret(%v)", secret)
+func replaceSecret(secret *corev1.Secret) error {
+	message.Debugf("k8s.replaceSecret(%v)", secret)
+	clientSet := getClientset()
 
-	if _, err := CreateNamespace(secret.Namespace, nil); err != nil {
+	_, err := CreateNamespace(secret.Namespace)
+	if err != nil {
 		return fmt.Errorf("unable to create or read the namespace: %w", err)
 	}
 
-	if err := DeleteSecret(secret); err != nil {
-		return err
-	}
-
-	return CreateSecret(secret)
-}
-
-func DeleteSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.DeleteSecret(%v)", secret)
-	clientSet := getClientset()
-
 	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)
 
-	err := namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
+	err = namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error deleting the secret: %w", err)
 	}
 
-	return nil
-}
-
-func CreateSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.CreateSecret(%v)", secret)
-	clientSet := getClientset()
-
-	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)
-
-	// create the given secret
-	if _, err := namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
+	_, err = namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{})
+	if err != nil {
 		return fmt.Errorf("unable to create the secret: %w", err)
 	}
 
