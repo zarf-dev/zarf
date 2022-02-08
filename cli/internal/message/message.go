@@ -25,8 +25,6 @@ const (
 var logLevel = InfoLevel
 
 func init() {
-	// Help capture text cleaner
-	pterm.SetDefaultOutput(os.Stderr)
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
