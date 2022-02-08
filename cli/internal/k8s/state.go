@@ -72,9 +72,6 @@ func SaveZarfState(state types.ZarfState) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "zarf",
-			},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: dataWrapper,
