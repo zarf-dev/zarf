@@ -2,7 +2,7 @@
 
 This example demonstrates using Zarf to kill time (and evil).
 
-More specifically, you'll be running a copy of the 1993, mega-hit video game _**Doom**_ in a Zarf-installed Kubernetes (k8s) cluster&mdash;_right on your local machine_.
+More specifically, you'll be running a copy of the 1993, mega-hit video game _**Doom**_ in a Zarf-enabled Kubernetes (k8s) cluster&mdash;_right on your local machine_.
 
 > _**Note**_
 >
@@ -36,46 +36,63 @@ Here's what you'll do in this example:
 
 Before the magic can happen you have to do a few things:
 
-1. Get a "root" shell &mdash; `zarf` needs power to install stuff / bind ports / etc.
+1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
+
+1. Install [KinD](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using KinD for this example since it is easy and tested frequently and thoroughly.
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
 1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
 
-1. Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em).
+1. (Optional) Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
 
-1. Put `zarf` on your path &mdash; _technically_ optional but makes running commands simpler.
+1. (Optional) Put `zarf` on your path &mdash; _technically_ optional but makes running commands simpler. Make sure you are picking the right binary that matches your system architecture. `zarf` for x86 Linux, `zarf-mac-intel` for x86 MacOS, `zarf-mac-apple` for M1 MacOS.
 
 &nbsp;
 
 
 ## Create a cluster
 
+You can't run software without _somewhere to run it_, so the first thing to do is create a local Kubernetes cluster that Zarf can deploy to. In this example we'll be using KinD to create a lightweight, local K8s cluster running in Docker.
 
-You can't run software without _somewhere to run it_, so the first thing to do is have `zarf` install & run a new, local k8s cluster&mdash;the "Zarf cluster".
+Kick that off by running this command:
 
-Kick that off by _moving into the directory with your init package_ and running this command:
+```sh
+kind create cluster
+```
+
+This will result in a single-node Kubernetes cluster called `kind-kind` on your local machine running in Docker. Your KUBECONFIG should be automatically configured to talk to the new cluster.
 
 ```sh
 cd <same dir as zarf-init.tar.zst>
 zarf init
 ```
 
-Answer the follow-on prompts as appropriate for your machine configuration & give it a few seconds to run.
+Follow the prompts, answering "no" to each of the optional components, since we don't need them for this deployment.
 
-Congratulations!  Your machine is now a single node k8s cluster!
+Congratulations!  Your machine is now running a single-node Kubernetes cluster powered by Zarf!
 
  > _**Note**_
  >
- > Zarf supports fire-and-forget installs too! Give `zarf init --help` a call for more details on that.
+ > Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
 
-> _**Error &mdash; missing or unreadable package**_
+**Troubleshooting:**
+
+> _**ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst**_
 >
 > The zarf binary needs an init package to know how to setup your cluster! So, if `zarf init` returns an error like this:
 > ```sh
-> FATA[0004] The package archive seems to be missing or unreadable.  archive=zarf-init.tar.zst
+> ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst
 > ```
 > It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
+
+> _**ERROR: failed to create cluster: node(s) already exist for a cluster with the name "kind"**_
+>
+> You already have a KinD cluster running. Either just move on to use the current cluster, or run `kind delete cluster`, then `kind create cluster`.
+
+> _**Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?**_
+>
+> Docker isn't running or you're otherwise not able to talk to it. Check your Docker installation, then try again.
 
 &nbsp;
 
@@ -91,10 +108,10 @@ Luckily, this is very easy to do&mdash;package contents are defined by simple, d
 
 ```sh
 cd <zarf dir>/examples/game     # directory with zarf.yaml, and
-zarf package create             # make the package
+zarf package create --confirm   # make the package
 ```
 
-Answer the questions & watch the terminal scroll for a while. Once things are downloaded & zipped up and you'll see a file ending in `.tar.zst` drop.  _That's_ your package.
+Watch the terminal scroll for a while. Once things are downloaded & zipped up and you'll see a file ending in `.tar.zst` drop.  _That's_ your package.
 
 &nbsp;
 
@@ -111,45 +128,22 @@ It's time to feed the package you built into your cluster.
 Since you're running a Zarf cluster directly on your local machine&mdash;where the game package & `zarf` binary _already are_&mdash;deploying the game is very simple:
 
 ```sh
-zarf package deploy
+zarf package deploy ./zarf-package-appliance-demo-multi-games.tar.zst --confirm
 ```
 
-Respond as appropriate and in a couple seconds the cluster will have loaded your package.
-
-> _**Important**_
->
-> It's possible to try a package deploy _before the Zarf cluster is ready to receive it_. If you see an error like `"https://<cluster ip>/v2/": dial tcp ,<cluster ip>:443: connect: connection refused;` then it's very likely that you've beat the Zarf startup routines.
->
-> The fix is simple: just wait for the cluster to finish starting & try again.
+In a couple seconds the cluster will have loaded your package.
 
 &nbsp;
-
 
 ## Space marine the demon invasion!
 
-After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play. 
-
-If you're running in a vagrant virtual machine you might notice this command does not work, this is because the networking of the Vagrant vm clashes with the networking of the kubernetes cluster. In this case you will have to manually create a tunnel to the game. You can do that by running the following set of commands:
-  - `kubectl get pods -n default`
-    - This will return a pod starting with `game-#####-####`. Copy this name to be used in the next command.
-  - kubectl port-forward -n default --address 0.0.0.0 {COPIED_POD_NAME} 8000:8000
-    - This will enable you to now go to `127.0.0.1:8000` on your host machine to play the games!
-
-
-### It begins!
-
-Give the example a couple of seconds to "boot up".
+After the deploy has completed, a prompt would have displayed the new connect commands you can use to connect automatically bring up the game in your browser. Running the command `zarf connect games` should open your browser to `http://localhost:<SOME_PORT>` and be greeted by a short catalog of games to play. Run `zarf connect doom` to directly open the _**Doom**_ game. We use `zarf connect` here so we can connect to it in a browser without needing a Kubernetes Ingress Controller, which is a more advanced topic and has different configurations depending on which controller and which distribution of Kubernetes you are using.
 
 Once you see the ultra-iconic title screen, you're ready to go (save the world)!
 
-&nbsp;
-
-> _**Note**_
->
-> The images / steps described here are for Chrome but all major, modern browsers will have a similar security mechanism and associated workaround.
+![game](img/game.png)
 
 &nbsp;
-
 
 ## Cleanup
 
@@ -159,10 +153,10 @@ Once you've had your fun it's time to clean up.
 In this case, since the Zarf cluster was installed specifically (and _only_) to serve this example, clean up is really easy&mdash;you just tear down the entire cluster:
 
 ```sh
-zarf destroy
+kind delete cluster
 ```
 
-It only takes a couple moments for the _entire Zarf cluster_ to disappear&mdash;long-running system services and all&mdash;leaving your machine ready for the next adventure.
+It only takes a couple moments for the _entire cluster_ to disappear&mdash;long-running system services and all&mdash;leaving your machine ready for the next adventure.
 
 &nbsp;
 
