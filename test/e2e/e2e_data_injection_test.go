@@ -60,7 +60,7 @@ func runDataInjectionTest(t *testing.T, terraformOptions *terraform.Options, key
 	}
 
 	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", username))
+	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management --host 127.0.0.1'", username))
 	require.NoError(t, err, output)
 
 	// Wait until the Docker registry is ready

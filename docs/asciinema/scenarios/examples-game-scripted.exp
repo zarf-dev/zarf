@@ -99,7 +99,7 @@ do "which zarf"
 comment "create cluster"
 send -h "zarf init \\\n"
 send -h "  --host=127.0.0.1 \\\n"
-send -h "  --components=k3s \\\n"
+send -h "  --components=management \\\n"
 send -h "  --confirm"
 sleep 1 ; send "\n\n" ; wait_input 120
 

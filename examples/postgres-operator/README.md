@@ -18,12 +18,12 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 1. Run one of these two commands:
   - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
   - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
-2. Run: `./zarf init --confirm --components k3s` - Initialize Zarf, telling it to install just the management component, and tells Zarf to use `127.0.0.1` as the hostname. If you want to use interactive mode instead just run `./zarf init`.
-3. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-4. Run: `./zarf package deploy zarf-package-postgres-operator-demo.tar.zst --confirm` - Deploy the package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-5. Wait a couple of minutes. Run `k9s` to watch progress
-6. The Postgres Operator UI will be available at [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) and PGAdmin will be available at [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443).
-7. Set up a server in PGAdmin:
+1. Run: `./zarf init --confirm --components management --host 127.0.0.1` - Initialize Zarf, telling it to install just the management component, and tells Zarf to use `127.0.0.1` as the hostname. If you want to use interactive mode instead just run `./zarf init`.
+1. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
+1. Run: `./zarf package deploy zarf-package-postgres-operator-demo.tar.zst --confirm` - Deploy the package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
+1. Wait a couple of minutes. Run `k9s` to watch progress
+1. The Postgres Operator UI will be available at [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) and PGAdmin will be available at [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443).
+1. Set up a server in PGAdmin:
   - General // Name: `acid-zarf-test`
   - General // Server group: `Servers`
   - Connection // Host: (the URL in the table below)
