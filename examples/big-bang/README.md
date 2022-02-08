@@ -17,9 +17,9 @@ Because the same cluster will be running both Traefik and Istio, Istio's Virtual
    - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
    - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
 2. Run: `./zarf init --confirm --components k3s,gitops-service` - Initialize Zarf, telling it to install the management component and gitops service and skip logging component (since BB has logging already) and tells Zarf to use `localhost` as the domain. If you want to use interactive mode instead just run `./zarf init`.
-3. Wait a bit, run `./zarf tools k9s` to see pods come up. Don't move on until everything is running
+3. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 4. Run: `./zarf package deploy zarf-package-big-bang-core-demo.tar.zst --components kubescape --confirm` - Deploy Big Bang Core. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-5. Wait several minutes. Run `./zarf tools k9s` to watch progress
+5. Wait several minutes. Run `k9s` to watch progress
 6. :warning: `kubectl delete -n istio-system envoyfilter/misdirected-request` (due to [this bug](https://repo1.dso.mil/platform-one/big-bang/bigbang/-/issues/802))
 7. Use a browser to visit the various services, available at https://*.bigbang.dev:9443
 8. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down

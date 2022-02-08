@@ -22,8 +22,7 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 3. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
 4. Run: `./zarf package deploy zarf-package-postgres-operator-demo.tar.zst --confirm` - Deploy the package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
 5. Wait a couple of minutes. Run `k9s` to watch progress
-6. The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
-  -  If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.
+6. The Postgres Operator UI will be available at [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) and PGAdmin will be available at [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443).
 7. Set up a server in PGAdmin:
   - General // Name: `acid-zarf-test`
   - General // Server group: `Servers`
@@ -34,7 +33,7 @@ After looking at several alternatives, Zalando's postgres operator felt like the
   - Connection // Password: (run the command in the table below)
   - SSL // SSL mode: `Require`
 1. Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
-  1. Run `zarf connect minio` to navigate to the web console.
+  1. Navigate to [https://minio-console.localhost:8443](https://minio-console.localhost:8443)
   1. Log in - Username: `minio` - Password: `minio123`
   1. Buckets -> Create Bucket
     - Bucket Name: `postgres-operator-backups`
