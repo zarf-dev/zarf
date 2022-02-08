@@ -13,8 +13,8 @@ service:
   nodePort: "###ZARF_REGISTRY_NODEPORT###"
 resources:
   requests:
-    cpu: "500m"
-    memory: "256Mi"
+    cpu: "100m"
+    memory: "512Mi"
   limits:
-    cpu: "3"
+    cpu: "1"
     memory: "2Gi"
