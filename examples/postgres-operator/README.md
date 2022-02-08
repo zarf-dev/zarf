@@ -8,23 +8,51 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 
 ## Prerequisites
 
-1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install `make` and `kustomize`
-1. Install `sha256sum` (on Mac it's `brew install coreutils`)
+1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
+
+1. Install [KinD](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using KinD for this example since it is easy and tested frequently and thoroughly.
+
+1. Clone the Zarf project &mdash; for the example configuration files.
+
+1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
+
+1. Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
+
+1. (Optional) Put `zarf` on your path &mdash; _technically_ optional but makes running commands simpler. Make sure you are picking the right binary that matches your system architecture. `zarf` for x86 Linux, `zarf-mac-intel` for x86 MacOS, `zarf-mac-apple` for M1 MacOS.
+
+1. Create a Zarf cluster as described in the [Doom example docs](../game/README.md)
 
 ## Instructions
 
-1. `cd examples/postgres-operator`
-1. Run one of these two commands:
-  - `make all` - Download the latest version of Zarf, build the deploy package, and start a VM with Vagrant
-  - `make all-dev` - Build Zarf locally, build the deploy package, and start a VM with Vagrant
-2. Run: `./zarf init --confirm --components k3s` - Initialize Zarf, telling it to install just the management component, and tells Zarf to use `127.0.0.1` as the hostname. If you want to use interactive mode instead just run `./zarf init`.
-3. Wait a bit, run `k9s` to see pods come up. Don't move on until everything is running
-4. Run: `./zarf package deploy zarf-package-postgres-operator-demo.tar.zst --confirm` - Deploy the package. If you want interactive mode instead just run `./zarf package deploy`, it will give you a picker to choose the package.
-5. Wait a couple of minutes. Run `k9s` to watch progress
-6. The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
-  -  If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.
-7. Set up a server in PGAdmin:
+### Deploy the package
+
+```sh
+# Open the directory
+cd examples/postgres-operator
+
+# Build the package
+zarf package create
+
+# Deploy the package (Press TAB for the listing of available packages)
+zarf package deploy
+```
+
+Wait a couple of minutes. You'll know it is done when Zarf exits and you get the 3 connect commands.
+
+### Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
+
+1. Run `zarf connect minio` to navigate to the web console.
+1. Log in - Username: `minio` - Password: `minio123`
+1. Buckets -> Create Bucket
+   - Bucket Name: `postgres-operator-backups`
+
+### Open the UI
+
+The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
+
+> If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.
+
+### Set up a server in PGAdmin:
   - General // Name: `acid-zarf-test`
   - General // Server group: `Servers`
   - Connection // Host: (the URL in the table below)
@@ -33,23 +61,21 @@ After looking at several alternatives, Zalando's postgres operator felt like the
   - Connection // Username: `zarf`
   - Connection // Password: (run the command in the table below)
   - SSL // SSL mode: `Require`
-1. Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
-  1. Run `zarf connect minio` to navigate to the web console.
-  1. Log in - Username: `minio` - Password: `minio123`
-  1. Buckets -> Create Bucket
-    - Bucket Name: `postgres-operator-backups`
-1. When you're done, run `exit` to leave the VM then `make vm-destroy` to bring everything down
 
+### Clean Up
 
+```sh
+kind delete cluster
+```
 
 ## Logins
 
 | Service                   | URL                                                                                        | Username             | Password                                                                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Postgres Operator UI      | [https://postgres-operator-ui.localhost:8443](https://postgres-operator-ui.localhost:8443) | N/A                  | N/A                                                                                                                                                        |
-| PGAdmin                   | [https://pgadmin.localhost:8443](https://pgadmin.localhost:8443)                           | `zarf@example.local` | Run: `zarf tools get-admin-password`                                                                                                                       |
+| Postgres Operator UI      | `zarf connect postgres-operator-ui` | N/A                  | N/A                                                                                                                                                        |
+| PGAdmin                   | `zarf connect pgadmin`                           | `zarf@example.local` | Run: `zarf tools get-admin-password`                                                                                                                       |
 | Example Postgres Database | `acid-zarf-test.postgres-operator.svc.cluster.local`                                       | `zarf`               | Run: `echo $(kubectl get secret zarf.acid-zarf-test.credentials.postgresql.acid.zalan.do -n postgres-operator --template={{.data.password}} \| base64 -d)` |
-| Minio Console             | [https://minio-console.localhost:8443](https://minio-console.localhost:8443)               | `minio`              | `minio123`                                                                                                                                                 |
+| Minio Console             | `zarf connect minio`               | `minio`              | `minio123`                                                                                                                                                 |
 
 ## References
 - https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/
