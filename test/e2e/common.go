@@ -18,75 +18,27 @@ import (
 	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
-type ZarfE2ETest struct {
-	testing          *testing.T
-	tempFolder       string
-	username         string
-	terraformOptions *terraform.Options
-	keyPair          *aws.Ec2Keypair
-	publicIP         string
-	publicHost       ssh.Host
+func teardown(t *testing.T, tmpFolder string) {
+	keyPair := teststructure.LoadEc2KeyPair(t, tmpFolder)
+	aws.DeleteEC2KeyPair(t, keyPair)
+
+	terraformOptions := teststructure.LoadTerraformOptions(t, tmpFolder)
+	terraform.Destroy(t, terraformOptions)
 }
 
-func NewE2ETest(testing *testing.T) *ZarfE2ETest {
-
-	testing.Parallel()
-
-	// Copy the terraform folder to a temp directory so we can run multiple tests in parallel
-	tempFolder := teststructure.CopyTerraformFolderToTemp(testing, "..", "tf/public-ec2-instance")
-
-	e2e := ZarfE2ETest{
-		testing:    testing,
-		tempFolder: tempFolder,
-		// Our SSH username, will change based on which AMI we use
-		username: "ubuntu",
-	}
-
-	// Deploy the terraform infra
-	teststructure.RunTestStage(testing, "SETUP", e2e.setup)
-
-	return &e2e
-}
-
-func (e2e *ZarfE2ETest) runSSHCommand(format string, a ...interface{}) (string, error) {
-	command := fmt.Sprintf(format, a...)
-	return ssh.CheckSshCommandE(e2e.testing, e2e.publicHost, command)
-}
-
-func (e2e *ZarfE2ETest) teardown() {
-	keyPair := teststructure.LoadEc2KeyPair(e2e.testing, e2e.tempFolder)
-	aws.DeleteEC2KeyPair(e2e.testing, keyPair)
-
-	terraformOptions := teststructure.LoadTerraformOptions(e2e.testing, e2e.tempFolder)
-	terraform.Destroy(e2e.testing, terraformOptions)
-}
-
-func (e2e *ZarfE2ETest) setup() {
-	terraformOptions, keyPair, err := e2e.configureTerraformOptions()
-	require.NoError(e2e.testing, err)
+func setup(t *testing.T, tmpFolder string) {
+	terraformOptions, keyPair, err := configureTerraformOptions(t, tmpFolder)
+	require.NoError(t, err)
 
 	// Save the options and key pair so later test stages can use them
-	teststructure.SaveTerraformOptions(e2e.testing, e2e.tempFolder, terraformOptions)
-	teststructure.SaveEc2KeyPair(e2e.testing, e2e.tempFolder, keyPair)
+	teststructure.SaveTerraformOptions(t, tmpFolder, terraformOptions)
+	teststructure.SaveEc2KeyPair(t, tmpFolder, keyPair)
 
 	// This will run `terraform init` and `terraform apply` and fail the test if there are any errors
-	terraform.InitAndApply(e2e.testing, terraformOptions)
-
-	// Run `terraform output` to get the value of an output variable
-	e2e.publicIP = terraform.Output(e2e.testing, terraformOptions, "public_instance_ip")
-	e2e.terraformOptions = terraformOptions
-	e2e.keyPair = keyPair
-
-	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
-	// as we know the Instance is running an Ubuntu AMI that has such a user
-	e2e.publicHost = ssh.Host{
-		Hostname:    e2e.publicIP,
-		SshKeyPair:  e2e.keyPair.KeyPair,
-		SshUserName: e2e.username,
-	}
+	terraform.InitAndApply(t, terraformOptions)
 }
 
-func (e2e *ZarfE2ETest) configureTerraformOptions() (*terraform.Options, *aws.Ec2Keypair, error) {
+func configureTerraformOptions(t *testing.T, tmpFolder string) (*terraform.Options, *aws.Ec2Keypair, error) {
 	// A unique ID we can use to namespace resources so we don't clash with anything already in the AWS account or
 	// tests running in parallel
 	uniqueID := random.UniqueId()
@@ -104,13 +56,13 @@ func (e2e *ZarfE2ETest) configureTerraformOptions() (*terraform.Options, *aws.Ec
 
 	// Create an EC2 KeyPair that we can use for SSH access
 	keyPairName := fmt.Sprintf("%s-%s-%s", namespace, stage, name)
-	keyPair := aws.CreateAndImportEC2KeyPair(e2e.testing, awsRegion, keyPairName)
+	keyPair := aws.CreateAndImportEC2KeyPair(t, awsRegion, keyPairName)
 
 	// Construct the terraform options with default retryable errors to handle the most common retryable errors in
 	// terraform testing.
-	terraformOptions := terraform.WithDefaultRetryableErrors(e2e.testing, &terraform.Options{
+	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		// The path to where our Terraform code is located
-		TerraformDir: e2e.tempFolder,
+		TerraformDir: tmpFolder,
 
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
@@ -128,48 +80,48 @@ func (e2e *ZarfE2ETest) configureTerraformOptions() (*terraform.Options, *aws.Ec
 
 // syncFileToRemoteServer uses SCP to sync a file from source to destination. `destPath` can be absolute or relative to
 // the SSH user's home directory. It has to be in a directory that the SSH user is allowed to write to.
-func (e2e *ZarfE2ETest) syncFileToRemoteServer(srcPath string, destPath string, chmod string) {
+func syncFileToRemoteServer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair, sshUsername string, srcPath string, destPath string, chmod string) {
 	// Run `terraform output` to get the value of an output variable
-	publicInstanceIP := terraform.Output(e2e.testing, e2e.terraformOptions, "public_instance_ip")
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_instance_ip")
 
 	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
 	// as we know the Instance is running an Ubuntu AMI that has such a user
 	host := ssh.Host{
 		Hostname:    publicInstanceIP,
-		SshKeyPair:  e2e.keyPair.KeyPair,
-		SshUserName: e2e.username,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: sshUsername,
 	}
 
 	// It can take a minute or so for the Instance to boot up, so retry a few times
 	maxRetries := 15
 	timeBetweenRetries, err := time.ParseDuration("5s")
-	require.NoError(e2e.testing, err)
+	require.NoError(t, err)
 
 	// Wait for the instance to be ready
-	_, err = retry.DoWithRetryE(e2e.testing, "Wait for the instance to be ready", maxRetries, timeBetweenRetries, func() (string, error) {
-		_, err := ssh.CheckSshCommandE(e2e.testing, host, "whoami")
+	_, err = retry.DoWithRetryE(t, "Wait for the instance to be ready", maxRetries, timeBetweenRetries, func() (string, error) {
+		_, err := ssh.CheckSshCommandE(t, host, "whoami")
 		if err != nil {
 			return "", err
 		}
 		return "", nil
 	})
-	require.NoError(e2e.testing, err)
+	require.NoError(t, err)
 
 	// Create the folder structure
-	output, err := ssh.CheckSshCommandE(e2e.testing, host, fmt.Sprintf("bash -c 'install -m 644 -D /dev/null \"%s\"'", destPath))
-	require.NoError(e2e.testing, err, output)
+	output, err := ssh.CheckSshCommandE(t, host, fmt.Sprintf("bash -c 'install -m 644 -D /dev/null \"%s\"'", destPath))
+	require.NoError(t, err, output)
 
 	// The ssh lib only supports sending strings so we'll base64encode it first
 	f, err := os.Open(srcPath)
-	require.NoError(e2e.testing, err)
+	require.NoError(t, err)
 	reader := bufio.NewReader(f)
 	content, err := ioutil.ReadAll(reader)
-	require.NoError(e2e.testing, err)
+	require.NoError(t, err)
 	encodedContent := base64.StdEncoding.EncodeToString(content)
-	err = ssh.ScpFileToE(e2e.testing, host, 0600, fmt.Sprintf("%s.b64", destPath), encodedContent)
-	require.NoError(e2e.testing, err)
-	output, err = ssh.CheckSshCommandE(e2e.testing, host, fmt.Sprintf("base64 -d \"%s.b64\" > \"%s\" && chmod \"%s\" \"%s\"", destPath, destPath, chmod, destPath))
-	require.NoError(e2e.testing, err, output)
+	err = ssh.ScpFileToE(t, host, 0600, fmt.Sprintf("%s.b64", destPath), encodedContent)
+	require.NoError(t, err)
+	output, err = ssh.CheckSshCommandE(t, host, fmt.Sprintf("base64 -d \"%s.b64\" > \"%s\" && chmod \"%s\" \"%s\"", destPath, destPath, chmod, destPath))
+	require.NoError(t, err, output)
 }
 
 // getAwsRegion returns the desired AWS region to use by first checking the env var AWS_REGION, then checking
