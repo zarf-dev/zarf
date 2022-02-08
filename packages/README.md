@@ -8,7 +8,6 @@ executing the command `make package name=NAME_OF_PACKAGE` will build the zarf-pa
 ### Building Composable Packages example: 
 ```yaml
 ☁  packages  ⚡  make package name=flux
-
 Created flux add the sha and path to your zarf yaml components: 
   - name: flux
     files:
