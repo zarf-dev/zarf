@@ -4,26 +4,23 @@ This example demonstrates using Zarf to deploy a simple operator example, in thi
 
 ## The Flow
 
-
 Here's what you'll do in this example:
 
 1. [Get ready](#get-ready)
 
 1. [Create a cluster](#create-a-cluster)
 
-2. [Package it](#package-it)
+1. [Package it](#package-it)
 
-3. [Deploy it](#deploy-it)
+1. [Deploy it](#deploy-it)
 
-4. [Try it](#try-it)
+1. [Try it](#try-it)
 
-5. [Cleanup](#cleanup)
+1. [Cleanup](#cleanup)
 
 &nbsp;
 
-
 ## Get ready
-
 
 Before the magic can happen you have to do a few things:
 
@@ -36,7 +33,6 @@ Before the magic can happen you have to do a few things:
 4. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
 
 &nbsp;
-
 
 ## Create a cluster
 
@@ -57,20 +53,22 @@ zarf init
 
 Follow the prompts, answering "no" to each of the optional components, since we don't need them for this deployment.
 
-Congratulations!  Your machine is now running a single-node Kubernetes cluster powered by Zarf!
+Congratulations! Your machine is now running a single-node Kubernetes cluster powered by Zarf!
 
- > _**Note**_
- >
- > Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
+> _**Note**_
+>
+> Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
 
 **Troubleshooting:**
 
-> _**ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst**_
+> _**ERROR: Unable to find the package on the local system, expected package at zarf-init.tar.zst**_
 >
 > The zarf binary needs an init package to know how to setup your cluster! So, if `zarf init` returns an error like this:
+>
 > ```sh
 > ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst
 > ```
+>
 > It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
 
 > _**ERROR: failed to create cluster: node(s) already exist for a cluster with the name "kind"**_
@@ -83,13 +81,11 @@ Congratulations!  Your machine is now running a single-node Kubernetes cluster p
 
 &nbsp;
 
-
 ## Package it
-
 
 Zarf is (at heart) a tool for making it easy to get software from _where you have it_ to _**where you need it**_&mdash;specifically, across an airgap. Since moving bits is so core to Zarf the idea of a "ready-to-move group of software" has a specific name&mdash;the _package_.
 
-All of the software a Zarf cluster runs is installed via package&mdash;for many reasons like versioning, auditability, etc&mdash;which means that if you want to run a  in your cluster you're going to have to build a package for it.
+All of the software a Zarf cluster runs is installed via package&mdash;for many reasons like versioning, auditability, etc&mdash;which means that if you want to run a in your cluster you're going to have to build a package for it.
 
 Luckily, this is very easy to do&mdash;package contents are defined by simple, declarative yaml files and _we've already made one for you_. To build this package you simply:
 
@@ -98,13 +94,11 @@ cd <zarf dir>/examples/tiny-kafka     # directory with zarf.yaml, and
 zarf package create --confirm         # make the package
 ```
 
-Watch the terminal scroll for a while. Once things are downloaded & zipped up and you'll see a file ending in `.tar.zst` drop.  _That's_ your package.
+Watch the terminal scroll for a while. Once things are downloaded & zipped up and you'll see a file ending in `.tar.zst` drop. _That's_ your package.
 
 &nbsp;
 
-
 ## Deploy it
-
 
 It's time to feed the package you built into your cluster.
 
@@ -120,7 +114,7 @@ In a couple seconds the cluster will have loaded your package.
 
 ## Use it
 
-Testing will require JDK and the kafka tools:  `sudo apt install openjdk-14-jdk-headless` for Ubuntu.  More details can be found at https://kafka.apache.org/quickstart.  Steps to test:
+Testing will require JDK and the kafka tools: `sudo apt install openjdk-14-jdk-headless` for Ubuntu. More details can be found at https://kafka.apache.org/quickstart. Steps to test:
 
 1. Install JDK and extract the Kafka tools from the package `kafka.tgz`
 2. Get the Nodeport: `NODEPORT=$(kubectl get service demo-kafka-external-bootstrap -n kafka-demo -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')`
@@ -131,7 +125,6 @@ Testing will require JDK and the kafka tools:  `sudo apt install openjdk-14-jdk-
 
 ## Cleanup
 
-
 Once you've had your fun it's time to clean up.
 
 In this case, since the Zarf cluster was installed specifically (and _only_) to serve this example, clean up is really easy&mdash;you just tear down the entire cluster:
@@ -141,17 +134,3 @@ kind delete cluster
 ```
 
 It only takes a couple moments for the _entire cluster_ to disappear&mdash;long-running system services and all&mdash;leaving your machine ready for the next adventure.
-
-&nbsp;
-
----
-
-&nbsp;
-
-### Credits
-
-✨ Special thanks to these fine references! ✨
-
-- https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/
-
-- https://earthly.dev/blog/dos-gaming-in-docker/
