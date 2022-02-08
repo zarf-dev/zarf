@@ -24,9 +24,9 @@ var valueTemplate template.Values
 
 func Deploy() {
 	message.Debug("packager.Deploy()")
-
+	// Prevent disk pressure on smaller systems due to leaking temp files
+	_ = os.RemoveAll("/tmp/zarf*")
 	tempPath := createPaths()
-	defer tempPath.clean()
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(config.DeployOptions.PackagePath) {
@@ -56,6 +56,7 @@ func Deploy() {
 
 	// Don't continue unless the user says so
 	if !confirm {
+		cleanup(tempPath)
 		os.Exit(0)
 	}
 
@@ -90,6 +91,8 @@ func Deploy() {
 			handleDataInjection(dataInjectionList, tempPath)
 		}
 	}
+
+	cleanup(tempPath)
 
 	// All done
 	os.Exit(0)

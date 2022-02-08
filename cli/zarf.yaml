@@ -17,6 +17,9 @@ components:
         version: 3.5.1-bb.10
         gitPath: chart
         namespace: gatekeeper
+    files:
+      - source: ../assets/manifests
+        target: manifests
     manifests:
       - name: test-manifests
         files:

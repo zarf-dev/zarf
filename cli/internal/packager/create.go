@@ -26,8 +26,6 @@ func Create() {
 	}
 
 	tempPath := createPaths()
-	defer tempPath.clean()
-
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
 	seedImages := config.GetSeedImages()
@@ -81,6 +79,8 @@ func Create() {
 	if err != nil {
 		message.Fatal(err, "Unable to create the package archive")
 	}
+
+	cleanup(tempPath)
 }
 
 func addComponent(tempPath tempPaths, component types.ZarfComponent) {
@@ -94,7 +94,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		for _, chart := range component.Charts {
 			isGitURL := re.MatchString(chart.Url)
 			if isGitURL {
-				_ = helm.DownloadChartFromGit(chart, componentPath.charts)
+				helm.DownloadChartFromGit(chart, componentPath.charts)
 			} else {
 				helm.DownloadPublishedChart(chart, componentPath.charts)
 			}
@@ -139,13 +139,8 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	// Load all specified git repos
-	if len(component.Repos) > 0 {
-		spinner := message.NewProgressSpinner("Loading %v git repos", len(component.Repos))
-		defer spinner.Stop()
-		for _, url := range component.Repos {
-			// Pull all the references if there is no `@` in the string
-			git.Pull(url, componentPath.repos, spinner)
-		}
-		spinner.Success()
+	for _, url := range component.Repos {
+		// Pull all the references if there is no `@` in the string
+		git.Pull(url, componentPath.repos)
 	}
 }

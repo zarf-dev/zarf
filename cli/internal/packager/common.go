@@ -48,11 +48,6 @@ func createPaths() tempPaths {
 	}
 }
 
-func (t tempPaths) clean() {
-	message.Debug("Cleaning up temp files")
-	_ = os.RemoveAll(t.base)
-}
-
 func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
 	basePath = basePath + "/" + component.Name
 	_ = utils.CreateDirectory(basePath, 0700)
@@ -64,6 +59,11 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 		manifests: basePath + "/manifests",
 		values:    basePath + "/values",
 	}
+}
+
+func cleanup(tempPath tempPaths) {
+	message.Debug("Cleaning up temp files")
+	_ = os.RemoveAll(tempPath.base)
 }
 
 func confirmAction(configPath string, userMessage string) bool {
@@ -173,8 +173,6 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 
 	// Write the package to a local file
 	tempPath := createPaths()
-	defer tempPath.clean()
-
 	localPackagePath := tempPath.base + providedURL.Path
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)

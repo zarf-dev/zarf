@@ -12,7 +12,6 @@ import (
 // Inspect list the contents of a package
 func Inspect(packageName string) {
 	tempPath := createPaths()
-	defer tempPath.clean()
 
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
@@ -37,4 +36,6 @@ func Inspect(packageName string) {
 	}
 
 	message.Infof("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
+	cleanup(tempPath)
+
 }
