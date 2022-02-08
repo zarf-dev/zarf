@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/internal/packager"
 	"io/ioutil"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -67,17 +66,8 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	},
 }
 
-var prepareFindImages = &cobra.Command{
-	Use:   "find-images",
-	Short: "evaluates components in a zarf file to identify images specified in their helm charts and manifests",
-	Run: func(cmd *cobra.Command, args []string) {
-		packager.FindImages()
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
-	prepareCmd.AddCommand(prepareFindImages)
 }

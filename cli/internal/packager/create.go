@@ -19,8 +19,8 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// Create generates a zarf package tarball for consumption by
 func Create() {
+
 	if err := config.LoadConfig("zarf.yaml"); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}

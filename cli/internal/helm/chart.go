@@ -97,43 +97,6 @@ func InstallOrUpgradeChart(options ChartOptions) {
 	}
 }
 
-// TemplateChart generates a helm template from a given chart
-func TemplateChart(options ChartOptions) (string, error) {
-
-	actionConfig, err := createActionConfig(options.Chart.Namespace)
-
-	// Setup K8s connection
-	if err != nil {
-		return "", fmt.Errorf("unable to initialize the K8s client: %w", err)
-	}
-
-	// Bind the helm action
-	client := action.NewInstall(actionConfig)
-
-	client.DryRun = false
-	client.Replace = true // Skip the name check
-	client.ClientOnly = true
-	client.IncludeCRDs = true
-
-	client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
-
-	// Namespace must be specified
-	client.Namespace = options.Chart.Namespace
-
-	loadedChart, chartValues, err := loadChartData(options)
-	if err != nil {
-		return "", fmt.Errorf("unable to load chart data: %w", err)
-	}
-
-	// Perform the loadedChart installation
-	templatedChart, err := client.Run(loadedChart, chartValues)
-	if err != nil {
-		return "", fmt.Errorf("error generating helm chart template: %w", err)
-	}
-
-	return templatedChart.Manifest, nil
-}
-
 func GenerateChart(basePath string, manifest types.ZarfManifest, images []string) {
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
