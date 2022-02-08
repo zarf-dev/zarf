@@ -15,14 +15,14 @@ import (
 )
 
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
-func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
-	spinner := message.NewProgressSpinner("Processing helm chart %s", chart.Name)
+func DownloadChartFromGit(chart types.ZarfChart, destination string) {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from git url %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 
 	client := action.NewPackage()
 
 	// Get the git repo
-	tempPath := git.DownloadRepoToTemp(chart.Url, spinner)
+	tempPath := git.DownloadRepoToTemp(chart.Url)
 
 	// Switch to the correct tag
 	git.CheckoutTag(tempPath, chart.Version)
@@ -37,8 +37,6 @@ func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 
 	_ = os.RemoveAll(tempPath)
 	spinner.Success()
-
-	return name
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo

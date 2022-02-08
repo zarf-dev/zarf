@@ -24,13 +24,10 @@ func StandardName(destination string, chart types.ZarfChart) string {
 // loadChartFromTarball returns a helm chart from a tarball
 func loadChartFromTarball(options ChartOptions) (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(options.BasePath+"/charts", options.Chart) + ".tgz"
-	if options.ChartLoadOverride != "" {
-		sourceFile = options.ChartLoadOverride
-	}
+	sourceTarball := StandardName(options.BasePath+"/charts", options.Chart) + ".tgz"
 
 	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(sourceFile)
+	loadedChart, err := loader.Load(sourceTarball)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -46,12 +43,8 @@ func loadChartFromTarball(options ChartOptions) (*chart.Chart, error) {
 func parseChartValues(options ChartOptions) (map[string]interface{}, error) {
 	valueOpts := &values.Options{}
 
-	for idx, file := range options.Chart.ValuesFiles {
+	for idx := range options.Chart.ValuesFiles {
 		path := StandardName(options.BasePath+"/values", options.Chart) + "-" + strconv.Itoa(idx)
-		// If we are overriding the chart path, assuming this is for zarf prepare
-		if options.ChartLoadOverride != "" {
-			path = file
-		}
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 

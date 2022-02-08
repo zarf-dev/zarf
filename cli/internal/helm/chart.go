@@ -18,13 +18,12 @@ import (
 )
 
 type ChartOptions struct {
-	BasePath          string
-	Chart             types.ZarfChart
-	ReleaseName       string
-	ChartLoadOverride string
-	ChartOverride     *chart.Chart
-	ValueOverride     map[string]interface{}
-	Images            []string
+	BasePath      string
+	Chart         types.ZarfChart
+	ReleaseName   string
+	ChartOverride *chart.Chart
+	ValueOverride map[string]interface{}
+	Images        []string
 }
 
 type renderer struct {
@@ -117,7 +116,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	// Bind the helm action
 	client := action.NewInstall(actionConfig)
 
-	client.DryRun = true
+	client.DryRun = false
 	client.Replace = true // Skip the name check
 	client.ClientOnly = true
 	client.IncludeCRDs = true
