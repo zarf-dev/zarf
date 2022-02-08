@@ -166,22 +166,10 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	switch state.Registry.SeedType {
 	case config.ZarfSeedTypeCLIInject:
-		var (
-			output  string
-			spinner = message.NewProgressSpinner("Injecting Zarf registry image using %s", inject.command)
-		)
-		defer spinner.Stop()
-
 		// If this is a seed image injection, attempt to run it and warn if there is an error
-		output, err = utils.ExecCommand(false, nil, inject.command, inject.args...)
-		message.Debug(output)
-		if err != nil {
-			spinner.Errorf(err, "Unable to inject the seed image from the %s archive", tempPath.seedImages)
-			spinner.Stop()
-		} else {
-			spinner.Success()
+		if _, err = utils.ExecCommand(true, nil, inject.command, inject.args...); err != nil {
+			message.Errorf(err, "Unable to inject the seed image from the %s archive", tempPath.seedImages)
 		}
-
 		// Set TLS host so that the seed template isn't broken
 		config.TLS.Host = config.IPV4Localhost
 
@@ -218,7 +206,7 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	registrySecret := config.GetSecret(config.StateRegistryPush)
 	// Now that we have what the password will be, we should add the login entry to the system's registry config
-	if err := utils.DockerLogin(config.ZarfRegistry, config.ZarfRegistryPushUser, registrySecret); err != nil {
+	if err := utils.Login(config.ZarfRegistry, config.ZarfRegistryPushUser, registrySecret); err != nil {
 		message.Fatal(err, "Unable to add login credentials for the gitops registry")
 	}
 }
