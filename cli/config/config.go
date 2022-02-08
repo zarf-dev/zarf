@@ -20,14 +20,12 @@ const (
 	PackageInitName = "zarf-init.tar.zst"
 	PackagePrefix   = "zarf-package-"
 
-	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength = 40
-	ZarfGitPushUser        = "zarf-git-user"
-	ZarfRegistryPushUser   = "zarf-push"
-	ZarfRegistryPullUser   = "zarf-pull"
-	ZarfSeedPort           = "45000"
-	ZarfRegistry           = IPV4Localhost + ":45001"
-	ZarfLocalSeedRegistry  = IPV4Localhost + ":" + ZarfSeedPort
+	ZarfGitPushUser       = "zarf-git-user"
+	ZarfRegistryPushUser  = "zarf-push"
+	ZarfRegistryPullUser  = "zarf-pull"
+	ZarfSeedPort          = "45000"
+	ZarfRegistry          = IPV4Localhost + ":45001"
+	ZarfLocalSeedRegistry = IPV4Localhost + ":" + ZarfSeedPort
 
 	ZarfSeedTypeCLIInject         = "cli-inject"
 	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
@@ -58,7 +56,6 @@ func IsZarfInitConfig() bool {
 
 func SetAcrch(arch string) {
 	message.Debugf("config.SetArch(%s)", arch)
-	config.Build.Arch = arch
 	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
 

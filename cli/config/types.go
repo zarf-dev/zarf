@@ -52,8 +52,8 @@ type ZarfMetadata struct {
 	Name         string `yaml:"name,omitempty"`
 	Description  string `yaml:"description,omitempty"`
 	Version      string `yaml:"version,omitempty"`
-	Url          string `yaml:"url,omitempty"`
-	Image        string `yaml:"image,omitempty"`
+	Url          string `yaml:"url:omitempty"`
+	Image        string `yaml:"image:omitempty"`
 	Uncompressed bool   `yaml:"uncompressed,omitempty"`
 }
 
@@ -75,7 +75,6 @@ type ZarfData struct {
 type ZarfBuildData struct {
 	Terminal  string `yaml:"terminal"`
 	User      string `yaml:"user"`
-	Arch      string `yaml:"arch"`
 	Timestamp string `yaml:"timestamp"`
 	Version   string `yaml:"string"`
 }
