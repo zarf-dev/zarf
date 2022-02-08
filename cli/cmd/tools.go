@@ -104,9 +104,6 @@ func init() {
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	// Ensure the arch is set to avoid crane nil pointer
-	config.SetAcrch()
-
 	cranePlatformOptions := []crane.Option{config.ActiveCranePlatform}
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
