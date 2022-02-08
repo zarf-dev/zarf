@@ -1,16 +1,21 @@
 package helm
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/types"
-
-	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"helm.sh/helm/v3/pkg/action"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/defenseunicorns/zarf/cli/internal/k8s"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -27,23 +32,25 @@ type ChartOptions struct {
 	Images            []string
 }
 
+type renderer struct {
+	options        ChartOptions
+	namespaces     map[string]*corev1.Namespace
+	connectStrings ConnectStrings
+}
+
 // InstallOrUpgradeChart performs a helm install of the given chart
 func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
-	fromMessage := options.Chart.Url
-	if fromMessage == "" {
-		fromMessage = "Zarf-generated helm chart"
-	}
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
 		options.Chart.Name,
 		options.Chart.Version,
-		fromMessage)
+		options.Chart.Url)
 	defer spinner.Stop()
 
 	var output *release.Release
 
 	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	actionConfig, err := createActionConfig(options.Chart.Namespace)
-	postRender := NewRenderer(options, actionConfig)
+	postRender := NewRenderer(options)
 
 	// Setup K8s connection
 	if err != nil {
@@ -174,7 +181,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, images []string
 
 	if manifest.DefaultNamespace == "" {
 		// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
-		manifest.DefaultNamespace = corev1.NamespaceDefault
+		manifest.DefaultNamespace = "zarf"
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart()
@@ -300,4 +307,136 @@ func loadChartData(options ChartOptions) (*chart.Chart, map[string]interface{}, 
 	}
 
 	return loadedChart, chartValues, nil
+}
+
+func NewRenderer(options ChartOptions) *renderer {
+	message.Debugf("helm.NewRenderer(%v)", options)
+	return &renderer{
+		options:        options,
+		namespaces:     make(map[string]*corev1.Namespace),
+		connectStrings: make(ConnectStrings),
+	}
+}
+
+func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+	message.Debugf("helm.Run(renderedManifests *bytes.Buffer)")
+	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
+	tempDir, _ := utils.MakeTempDir()
+	path := tempDir + "/chart.yaml"
+
+	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {
+		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+	}
+
+	// Run the template engine against the chart output
+	k8s.ProcessYamlFilesInPath(tempDir, r.options.Images)
+
+	// Read back the final file contents
+	buff, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+	}
+
+	message.Debug(string(buff))
+
+	// Try to parse the yaml into unstructured data
+	resources, err := k8s.SplitYAML(buff)
+	if err != nil {
+		// On error only drop a warning
+		message.Errorf(err, "Problem parsing post-render manifest data")
+	} else {
+		// Otherwise, loop over the resources,
+		for _, resource := range resources {
+
+			switch resource.GetKind() {
+			case "Namespace":
+				var namespace corev1.Namespace
+				// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shennanigans
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(resource.UnstructuredContent(), &namespace); err != nil {
+					message.Errorf(err, "could not parse namespace %s", resource.GetName())
+				} else {
+					message.Debugf("Matched helm namespace %s for zarf annotation", &namespace.Name)
+					// add the adoption reqs for this namespace, https://github.com/helm/helm/pull/7649
+					if namespace.Labels == nil {
+						// Ensure map exists to avoid nil panic
+						namespace.Labels = make(map[string]string)
+					}
+					namespace.Labels["app.kubernetes.io/managed-by"] = "Helm"
+					if namespace.Annotations == nil {
+						// Ensure map exists to avoid nil panic
+						namespace.Annotations = make(map[string]string)
+					}
+					namespace.Annotations["meta.helm.sh/release-name"] = r.options.ReleaseName
+					namespace.Annotations["meta.helm.sh/release-namespace"] = r.options.Chart.Namespace
+
+					// Add it to the stack
+					r.namespaces[namespace.Name] = &namespace
+				}
+				// skip so we can strip namespaces from helms brain
+				continue
+
+			case "Service":
+				// Check service resources for the zarf-connect label
+				labels := resource.GetLabels()
+				annotations := resource.GetAnnotations()
+
+				if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
+					// If there is a zarf-connect label
+					if description, descExists := annotations[config.ZarfConnectAnnotationDescription]; descExists {
+						message.Debugf("Match helm service %s for zarf connection %s", resource.GetName(), key)
+						// and a description set the label and description
+						r.connectStrings[key] = description
+					} else {
+						// Otherwise, just set the label
+						r.connectStrings[key] = ""
+					}
+				}
+			}
+
+			namespace := resource.GetNamespace()
+			if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
+				// if this is the first time seeing this ns, we need to track that to create it as well
+				r.namespaces[namespace] = nil
+			}
+		}
+	}
+
+	secretName := "zarf-registry"
+	existingNamespaces, _ := k8s.GetNamespaces()
+
+	for name, namespace := range r.namespaces {
+
+		// Check to see if this namespace already exists
+		var existingNamespace bool
+		for _, serverNamespace := range existingNamespaces.Items {
+			if serverNamespace.Name == name {
+				existingNamespace = true
+			}
+		}
+
+		if !existingNamespace {
+			// This is a new namespace, add it
+			if _, err := k8s.CreateNamespace(name, namespace); err != nil {
+				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
+			}
+		}
+
+		// Try to get an existing secret
+		if secret, _ := k8s.GetSecret(name, secretName); secret.Name == secretName {
+			// Don't add a secret if it already was created by another chart
+			continue
+		} else {
+			// Create the secret as a k8s object
+			secret = k8s.GenerateRegistryPullCreds(name, secretName)
+			if err := k8s.CreateSecret(secret); err != nil {
+				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
+			}
+		}
+	}
+
+	// Cleanup the temp file
+	_ = os.RemoveAll(tempDir)
+
+	// Send the bytes back to helm
+	return bytes.NewBuffer(buff), nil
 }

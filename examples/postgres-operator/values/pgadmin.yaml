@@ -1,3 +1,9 @@
+# image:
+  # registry: registry1.dso.mil
+  # repository: ??
+  # tag: ??
+imagePullSecrets:
+  - name: zarf-registry
 serviceAccount:
   create: true
 persistentVolume:
