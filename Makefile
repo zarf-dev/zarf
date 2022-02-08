@@ -92,7 +92,7 @@ test-cloud-e2e-data-injection: package-example-data-injection ## E2E test of the
 
 ################ BEGIN Pending removal post-merge
 .PHONY: test-cloud-e2e-git-based-helm-chart
-test-cloud-e2e-git-based-helm-chart:
+test-cloud-e2e-git-based-helm-chart: 
 	echo done
 ################ END Pending removal post-merge
 
