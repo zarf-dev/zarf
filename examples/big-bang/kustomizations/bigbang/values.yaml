@@ -2,8 +2,8 @@ domain: bigbang.dev
 
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
-  username: "zarf-pull"
-  password: "###ZARF_REGISTRY_AUTH_PULL###"
+  username: "zarf-git-user"
+  password: "${zarf_secret}"
 
 git:
   existingSecret: "zarf-git-secret"
@@ -178,10 +178,6 @@ istio:
           -----END CERTIFICATE-----
 
   values:
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
-    cni:
-      image:
-        hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
     istiod:
       hpaSpec:
         maxReplicas: 1
@@ -203,7 +199,6 @@ istiooperator:
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
   values:
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
     operator:
       resources:
         requests:
@@ -218,11 +213,6 @@ jaeger:
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__jaeger.git
   values:
-    image:
-      repository: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-operator
-    retention:
-      image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.24.0
-
     resources:
       requests:
         cpu: "100m"
@@ -233,7 +223,6 @@ jaeger:
     jaeger:
       spec:
         allInOne:
-          image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/all-in-one:1.24.0
           resources:
             requests:
               cpu: "100m"
@@ -241,14 +230,7 @@ jaeger:
             limits:
               cpu: "500m"
               memory: "128Mi"
-        agent:
-          image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-agent:1.24.0
-        ingester:
-          image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
-        query:
-          image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-query:1.24.0
         collector:
-          image: ###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-collector:1.24.0
           resources:
             requests:
               cpu: "100m"
@@ -256,14 +238,15 @@ jaeger:
             limits:
               cpu: "500m"
               memory: "128Mi"
+        ingester:
+          # TODO: Remove this once the upstream bug is fixed (https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger/-/issues/15)
+          image: registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.24.0
 
 kiali:
   enabled: true
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
   values:
-    image:
-      repo: ###ZARF_REGISTRY###/ironbank/opensource/kiali/kiali-operator
     resources:
       requests:
         cpu: "100m"
@@ -274,7 +257,6 @@ kiali:
     cr:
       spec:
         deployment:
-          image_name: ###ZARF_REGISTRY###/ironbank/opensource/kiali/kiali
           resources:
             requests:
               cpu: "100m"
@@ -282,18 +264,12 @@ kiali:
             limits:
               cpu: "500m"
               memory: "368Mi"
-    svcPatchJob:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/big-bang/base
-
 
 clusterAuditor:
   enabled: true
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__cluster-auditor.git
   values:
-    image:
-      repo: ###ZARF_REGISTRY###/ironbank/cluster-auditor/opa-collector
     resources:
       requests:
         cpu: "100m"
@@ -307,16 +283,6 @@ gatekeeper:
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
   values:
-    postInstall:
-      labelNamespace:
-        image:
-          repository: ###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.21/kubectl
-    postUpgrade:
-      cleanupCRD:
-        image:
-          repository: ###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.21/kubectl
-    image:
-      repository: "###ZARF_REGISTRY###/ironbank/opensource/openpolicyagent/gatekeeper"
     replicas: 1
     controllerManager:
       resources:
@@ -337,8 +303,6 @@ gatekeeper:
     violations:
       allowedDockerRegistries:
         parameters:
-          repos:
-            - ###ZARF_REGISTRY###
           excludedResources:
             # K3s kube-system stuff, better than excluding the whole namespace
             - "kube-system/coredns-.*"
@@ -375,8 +339,6 @@ logging:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__elasticsearch-kibana.git
   values:
     elasticsearch:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/elastic/elasticsearch/elasticsearch
       master:
         count: 1
         persistence:
@@ -400,8 +362,6 @@ logging:
             cpu: "500m"
             memory: "3Gi"
     kibana:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/elastic/kibana/kibana
       count: 1
       resources:
         requests:
@@ -410,25 +370,17 @@ logging:
         limits:
           memory: "1Gi"
           cpu: "500m"
-    upgradeJob:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/big-bang/base
 
 eckoperator:
   enabled: true
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__eck-operator.git
-  values:
-    image:
-      repository: ###ZARF_REGISTRY###/ironbank/elastic/eck-operator/eck-operator
 
 fluentbit:
   enabled: true
   git:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__fluentbit.git
   values:
-    image:
-      repository: ###ZARF_REGISTRY###/ironbank/opensource/fluent/fluent-bit
     securityContext:
       privileged: true
     resources:
@@ -446,8 +398,6 @@ monitoring:
   values:
     alertmanager:
       alertmanagerSpec:
-        image:
-          repository: ###ZARF_REGISTRY###/ironbank/opensource/prometheus/alertmanager
         resources:
           requests:
             cpu: "100m"
@@ -456,8 +406,6 @@ monitoring:
             cpu: "500m"
             memory: "256Mi"
     prometheusOperator:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/prometheus-operator/prometheus-operator
       resources:
         requests:
           cpu: "100m"
@@ -465,20 +413,8 @@ monitoring:
         limits:
           cpu: "500m"
           memory: "512Mi"
-      admissionWebhooks:
-        patch:
-          image:
-            repository: ###ZARF_REGISTRY###/ironbank/opensource/jet/kube-webhook-certgen
-      configmapReloadImage:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/jimmidyson/configmap-reload
-      prometheusConfigReloaderImage:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/prometheus-operator/prometheus-config-reloader
-      kubectlImage:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.20/kubectl-1.20
     prometheus:
       prometheusSpec:
-        image:
-          repository: ###ZARF_REGISTRY###/ironbank/opensource/prometheus/prometheus
         resources:
           requests:
             cpu: "100m"
@@ -487,11 +423,7 @@ monitoring:
             cpu: "500m"
             memory: "2Gi"
     grafana:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/grafana/grafana
       sidecar:
-        image:
-          repository: ###ZARF_REGISTRY###/ironbank/kiwigrid/k8s-sidecar
         resources:
           requests:
             cpu: "50m"
@@ -506,11 +438,7 @@ monitoring:
         limits:
           cpu: "500m"
           memory: "128Mi"
-      testFramework:
-        image: "###ZARF_REGISTRY###/ironbank/opensource/bats/bats"
     kube-state-metrics:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/coreos/kube-state-metrics
       resources:
         requests:
           cpu: "10m"
@@ -519,8 +447,6 @@ monitoring:
           cpu: "500m"
           memory: "128Mi"
     prometheus-node-exporter:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/opensource/prometheus/node-exporter
       resources:
         requests:
           cpu: "100m"
@@ -535,8 +461,6 @@ twistlock:
     repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
   values:
     console:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/twistlock/console/console
       persistence:
         size: 5Gi
     resources:
