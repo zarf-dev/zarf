@@ -9,13 +9,16 @@ components:
   - name: baseline
     required: true
 
+    scripts:
+      retry: true
+      after:
+        - "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"private-registry\"}]}' -n postgres-operator"
+
     manifests:
       - name: postgres-example-config
         files:
-          - manifests/patch-svc-accounts.yaml
           - manifests/minio-instance.yaml
           - manifests/pgadmin.yaml
-          - manifests/postgres-cluster.yaml
           - manifests/postgres-operator.yaml
           - manifests/postgres-operator-ui.yaml
     charts:
@@ -51,6 +54,7 @@ components:
         gitPath: chart
         valuesFiles:
           - values/minio-instance.yaml
+
 
     images:
       - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
