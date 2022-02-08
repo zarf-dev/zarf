@@ -8,10 +8,6 @@ metadata:
 components:
   - name: baseline
     required: true
-    manifests:
-      - name: twistlock-zarf-connect
-        files:
-          - "twistlock-zarf-connect.yaml"
     charts:
       - name: twistlock
         url: https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git
