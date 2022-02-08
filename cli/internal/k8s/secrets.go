@@ -24,14 +24,9 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
-func GetSecret(namespace string, name string) (*corev1.Secret, error) {
-	message.Debugf("k8s.getSecret(%s, %s)", namespace, name)
-	clientSet := getClientset()
-	return clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-}
-
-func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
+func GenerateRegistryPullCreds(namespace string) *corev1.Secret {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s)", namespace)
+	name := "zarf-registry"
 
 	spinner := message.NewProgressSpinner("Generating private registry credentials %s/%s", namespace, name)
 	defer spinner.Stop()
@@ -112,6 +107,11 @@ func GenerateTLSSecret(namespace string, name string, certPath string, keyPath s
 	secretTLS.Data[corev1.TLSPrivateKeyKey] = tlsKey
 
 	return secretTLS
+}
+
+func ReplaceRegistrySecret(namespace string) error {
+	secret := GenerateRegistryPullCreds(namespace)
+	return replaceSecret(secret)
 }
 
 func ReplaceTLSSecret(namespace string, name string) {
