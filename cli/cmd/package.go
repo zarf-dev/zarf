@@ -13,9 +13,8 @@ var insecureDeploy bool
 var shasum string
 
 var packageCmd = &cobra.Command{
-	Use:     "package",
-	Aliases: []string{"p"},
-	Short:   "Pack and unpack updates for the Zarf gitops service.",
+	Use:   "package",
+	Short: "Pack and unpack updates for the Zarf gitops service.",
 }
 
 var packageCreateCmd = &cobra.Command{

@@ -13,9 +13,8 @@ var (
 	connectRemotePort   int
 
 	connectCmd = &cobra.Command{
-		Use:     "connect <REGISTRY|LOGGING|GIT>",
-		Aliases: []string{"c"},
-		Short:   "Access services or pods deployed in the cluster.",
+		Use:   "connect <REGISTRY|LOGGING|GIT>",
+		Short: "Access services or pods deployed in the cluster.",
 		Run: func(cmd *cobra.Command, args []string) {
 			var target string
 			if len(args) > 0 {

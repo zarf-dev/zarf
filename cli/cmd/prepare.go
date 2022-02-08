@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
 	Use:   "prepare",
 	Short: "Tools to help prepare assets for packaging",
@@ -69,11 +68,10 @@ var prepareComputeFileSha256sum = &cobra.Command{
 }
 
 var prepareFindImages = &cobra.Command{
-	Use:     "find-images",
-	Aliases: []string{"prep"},
-	Short:   "evaluates components in a zarf file to identify images specified in their helm charts and manifests",
+	Use:   "find-images",
+	Short: "evaluates components in a zarf file to identify images specified in their helm charts and manifests",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.FindImages(repoHelmChartPath)
+		packager.FindImages()
 	},
 }
 
@@ -82,7 +80,4 @@ func init() {
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
-
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
-
 }

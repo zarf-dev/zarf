@@ -15,9 +15,8 @@ var confirmDestroy bool
 var removeComponents bool
 
 var destroyCmd = &cobra.Command{
-	Use:     "destroy",
-	Aliases: []string{"d"},
-	Short:   "Tear it all down, we'll miss you Zarf...",
+	Use:   "destroy",
+	Short: "Tear it all down, we'll miss you Zarf...",
 	Run: func(cmd *cobra.Command, args []string) {
 		state := k8s.LoadZarfState()
 		_ = os.Remove(".zarf-registry")

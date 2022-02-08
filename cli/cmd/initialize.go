@@ -12,10 +12,9 @@ import (
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:     "init",
-	Aliases: []string{"i"},
-	Short:   "Deploys the gitops service or appliance cluster on a clean linux box",
-	Long:    "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
+	Use:   "init",
+	Short: "Deploys the gitops service or appliance cluster on a clean linux box",
+	Long:  "Flags are only required if running via automation, otherwise the init command will prompt you for your configuration choices",
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := getLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
