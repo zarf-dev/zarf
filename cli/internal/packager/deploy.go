@@ -226,9 +226,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 		// Generate helm templates to pass to gitops engine
 		addedConnectStrings := helm.InstallOrUpgradeChart(helm.ChartOptions{
-			BasePath:  componentPath.base,
-			Chart:     chart,
-			Component: component,
+			BasePath: componentPath.base,
+			Chart:    chart,
+			Images:   component.Images,
 		})
 
 		// Iterate over any connectStrings and add to the main map
@@ -245,7 +245,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		}
 
 		// Iterate over any connectStrings and add to the main map
-		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component) {
+		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component.Images) {
 			connectStrings[name] = description
 		}
 	}

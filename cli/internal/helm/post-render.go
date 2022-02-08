@@ -18,9 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const secretName = "zarf-registry"
 const managedByLabel = "app.kubernetes.io/managed-by"
-
-var secretName = "zarf-registry"
 
 type renderer struct {
 	actionConfig   *action.Configuration
@@ -48,18 +47,13 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	tempDir, _ := utils.MakeTempDir()
 	path := tempDir + "/chart.yaml"
 
-	if r.options.Component.SecretName != "" {
-		// A custom secret name was given for this component
-		secretName = r.options.Component.SecretName
-	}
-
 	// Write the context to a file for processing
 	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {
 		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
 	}
 
 	// Run the template engine against the chart output
-	k8s.ProcessYamlFilesInPath(tempDir, r.options.Component.Images)
+	k8s.ProcessYamlFilesInPath(tempDir, r.options.Images)
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
