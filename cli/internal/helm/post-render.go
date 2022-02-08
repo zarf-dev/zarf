@@ -138,12 +138,13 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 				if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
 					// If there is a zarf-connect label
-					message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
-
-					// Add the connectstring for processing later in the deployment
-					r.connectStrings[key] = ConnectString{
-						Description: annotations[config.ZarfConnectAnnotationDescription],
-						Url:         annotations[config.ZarfConnectAnnotationUrl],
+					if description, descExists := annotations[config.ZarfConnectAnnotationDescription]; descExists {
+						message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
+						// and a description set the label and description
+						r.connectStrings[key] = description
+					} else {
+						// Otherwise, just set the label
+						r.connectStrings[key] = ""
 					}
 				}
 			}
