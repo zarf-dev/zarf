@@ -507,6 +507,7 @@ jobs:
           export GOPATH="$HOME/go"
           export PATH="$PATH:$GOPATH/bin"
           chmod +x build/zarf
+          ./build/zarf tools registry login registry1.dso.mil --username "${{ secrets.REGISTRY1_USERNAME_ZARF_ROBOT }}" --password "${{ secrets.REGISTRY1_PASSWORD_ZARF_ROBOT }}"
           make test-cloud-e2e-general-cli
 
       # Update GitHub status for failing pipeline run
