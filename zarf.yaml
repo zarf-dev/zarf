@@ -19,7 +19,7 @@ components:
       before:
         # If running RHEL variant, disable firewalld
         # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
-        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        # NOTE: The empty echo prevents infinate retry loops on non-RHEL systems where the exit code would be an error
         - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
       after:
         # Configure K3s systemd service
