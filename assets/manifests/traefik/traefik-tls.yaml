@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: tls-pem
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ssl-redirect
+  namespace: kube-system
+spec:
+  redirectRegex:
+    regex: ^http://(.*)
+    replacement: https://${1}
+    permanent: true

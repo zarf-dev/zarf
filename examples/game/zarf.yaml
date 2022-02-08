@@ -9,8 +9,6 @@ components:
     manifests:
       - name: doom
         files:
-          - manifests/ingress.yaml
-          - manifests/deployment.yaml
-          - manifests/service.yaml
+          - manifests/game.yaml
     images:
-      - defenseunicorns/zarf-game:doom
+      - registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom

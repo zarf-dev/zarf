@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-ssl-redirect@kubernetescrd
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: game
+                port:
+                  number: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: game
+  template:
+    metadata:
+      labels:
+        app: game
+    spec:
+      containers:
+      - name: game
+        image: "registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom"
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      imagePullSecrets:
+        - name: zarf-registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: game
+  namespace: default
+spec:
+  selector:
+    app: game
+  ports:
+    - name: http
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
