@@ -2,13 +2,12 @@ package k8s
 
 import (
 	"context"
-	"os"
-	"time"
-
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
+	"time"
 )
 
 func GetNamespaces() (*corev1.NamespaceList, error) {
@@ -18,27 +17,15 @@ func GetNamespaces() (*corev1.NamespaceList, error) {
 	return clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
-func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func CreateNamespace(name string) (*corev1.Namespace, error) {
 	message.Debugf("k8s.CreateNamespace(%s)", name)
 
 	clientset := getClientset()
 
-	if namespace == nil {
-		// if only a name was provided create the namespace object
-		namespace = &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Namespace",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Labels: map[string]string{
-					// track the creation of this ns by zarf
-					"app.kubernetes.io/managed-by": "zarf",
-				},
-			},
-		}
-	} 
+	namespace := &corev1.Namespace{
+		TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Namespace"},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
 
 	metaOptions := metav1.GetOptions{}
 	createOptions := metav1.CreateOptions{}
