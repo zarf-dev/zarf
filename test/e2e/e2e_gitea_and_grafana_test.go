@@ -2,14 +2,12 @@ package test
 
 import (
 	"fmt"
-	"testing"
-	"time"
-
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
@@ -62,23 +60,14 @@ func testGiteaAndGrafana(t *testing.T, terraformOptions *terraform.Options, keyP
 	}
 
 	// run `zarf init`
-	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service --host 127.0.0.1'", username))
+	output, err := ssh.CheckSshCommandE(t, publicHost, fmt.Sprintf("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components management,logging,gitops-service --host 127.0.0.1'", username))
 	require.NoError(t, err, output)
-
-	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
-	time.Sleep(15 * time.Second)
-	portForwardCommand := fmt.Sprintf("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", username)
-	output, err = ssh.CheckSshCommandE(t, publicHost, portForwardCommand)
 
 	// Make sure Gitea comes up cleanly
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45003/explore/repos\")\" != \"200\" ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/api/v1/user\")\" != \"401\" ]]; do sleep 1; done' || false")
 	require.NoError(t, err, output)
 
-	// Establish the port-forward into the logging service
-	portForwardCommand = fmt.Sprintf("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", username)
-	output, err = ssh.CheckSshCommandE(t, publicHost, portForwardCommand)
-
 	// Make sure Grafana comes up cleanly
-	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:45002/monitor/login\")\" != \"200\" ]]; do sleep 1; done' || false")
+	output, err = ssh.CheckSshCommandE(t, publicHost, "timeout 300 bash -c 'while [[ \"$(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 -o /dev/null -w \"%{http_code}\" \"https://127.0.0.1/monitor/api/org\")\" != \"401\" ]]; do sleep 1; done' || false")
 	require.NoError(t, err, output)
 }
