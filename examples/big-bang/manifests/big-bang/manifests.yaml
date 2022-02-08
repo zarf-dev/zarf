@@ -13,7 +13,7 @@ metadata:
   namespace: bigbang
 stringData:
   username: "zarf-git-user"
-  password: "###ZARF_GIT_AUTH_PUSH###"
+  password: "###ZARF_SECRET###"
 ---
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
@@ -98,4 +98,4 @@ spec:
   timeout: 60m
   postBuild:
     substitute:
-      zarf_secret: "###ZARF_REGISTRY_AUTH_PULL###"
+      zarf_secret: "###ZARF_SECRET###"

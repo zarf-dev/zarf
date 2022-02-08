@@ -31,17 +31,6 @@ type ZarfComponent struct {
 	Images      []string             `yaml:"images,omitempty"`
 	Repos       []string             `yaml:"repos,omitempty"`
 	Scripts     ZarfComponentScripts `yaml:"scripts,omitempty"`
-	Connect     []ZarfConnect        `yaml:"connect,omitempty"`
-}
-
-// ZarfConnect defines tunnel parameters a component can use with zarf connect to expose a service or pod
-type ZarfConnect struct {
-	Identifier string `yaml:"identifier"`
-	Namespace  string `yaml:"namespace"`
-	Name       string `yaml:"name"`
-	Type       string `yaml:"type"`
-	RemotePort int    `yaml:"remotePort"`
-	LocalPort  int    `yaml:"localPort,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
