@@ -351,6 +351,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		for _, resource := range resources {
 			// grab the namespace,
 			namespace := resource.GetNamespace()
+			message.Debugf("Found namespace %s", namespace)
 
 			// and append to the list if it's unique
 			if namespace != "" && !contains(r.namespaces, namespace) {

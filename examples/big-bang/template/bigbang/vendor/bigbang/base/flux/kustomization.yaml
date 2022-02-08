@@ -33,7 +33,7 @@ patches:
               cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
           spec:
             imagePullSecrets:
-            - name: zarf-registry
+            - name: private-registry
             terminationGracePeriodSeconds: 60
             # Required by Pod Security Policy
             securityContext:

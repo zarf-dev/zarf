@@ -11,6 +11,7 @@ components:
     manifests:
       - name: flux-config
         files:
+          - manifests/flux/regcred-secret.yaml
           # kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml
           - manifests/flux/flux-generated.yaml
     images:
@@ -38,7 +39,6 @@ components:
     manifests:
       - name: bb-core-config
         files:
-          - manifests/flux/regcred-secret.yaml
           - manifests/big-bang/manifests.yaml
     # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
     # 2. Add the actual bigbang repo as well
