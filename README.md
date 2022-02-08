@@ -64,21 +64,65 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
   </td>
   <td>
 
-You will also need to configure the .env file, use the command below to generate a template.  _Note that you don't need to set RHEL creds if you aren't using RHEL_
+  [Read](./examples/game/add-logging.md)
 
-`earthly +envfile`
+  </td>
+  </tr>
+<!-- row end -->
 
-## Building
----
-To build the packages needed for RHEL-based distros, you will need a Red Hat account (developer accounts are free) to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify the credentials along with the RHEL version flag (7 or 8) in the .env file.  To build the package:
+<!-- row start -->
+  <tr valign="top">
+  <td>
 
-### Step 1b - Configure the `.env` file
+  **Roll Your Own**
 
-Some secrets also have to be passed to Earthly for your build, these are stored in the `.env` file.  YOu can generate a template to complete with the command below. 
+  _Custom packages_
 
-`earthly +envfile`
+  </td>
+  <td>
 
-_To build the packages needed for RHEL-based distros, you will need to use your RedHat Developer account to pull the required RPMs for SELINUX-enforcing within the environment.  You must specify your credentials along with a RHEL version flag (7 or 8) in the `.env` file_
+  Once you're comfortable with the basic workflow & able to deploy _someone else's_ Zarf deployment packages, it's time to roll your own.  Here's how.
+
+  </td>
+  <td>
+
+  Coming Soon!
+
+  </td>
+  </tr>
+<!-- row end -->
+
+</tbody>
+</table>
+
+&nbsp;
+
+
+<!--
+##########
+# This block is about expected USECASES & ADMIN of Zarf (in production)
+##########
+-->
+## To understand *the different modes of use*, have a look at...
+
+<table>
+<tbody>
+
+<!-- row start: cuz markdown hates html indention -->
+  <tr valign="top">
+  <td width="150">
+
+  **Simple Applications**
+
+  _Appliance Mode_
+
+  </td>
+  <td>
+
+  If want to "run a Kubernetes app" but aren't into hand-rolling a cluster just for it, Zarf can help. Here's how, and _why_ you might want to.
+
+  </td>
+  <td>
 
   Coming Soon!
 
