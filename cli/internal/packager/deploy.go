@@ -31,33 +31,27 @@ func Deploy() {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	spinner := message.NewProgressSpinner("Preparing zarf package %s", config.DeployOptions.PackagePath)
-	defer spinner.Stop()
-
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(config.DeployOptions.PackagePath) {
-		spinner.Fatalf(nil, "Unable to find the package on the local system, expected package at %s", config.DeployOptions.PackagePath)
+		message.Fatalf(nil, "Unable to find the package on the local system, expected package at %s", config.DeployOptions.PackagePath)
 	}
 
 	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
+	message.Info("Extracting the package, this may take a few moments")
 	err := archiver.Unarchive(config.DeployOptions.PackagePath, tempPath.base)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to extract the package contents")
+		message.Fatal(err, "Unable to extract the package contents")
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
 	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
-		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
+		message.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
 	if config.IsZarfInitConfig() {
 		// If init config, make sure things are ready
 		utils.RunPreflightChecks()
 	}
-
-	spinner.Success()
 
 	// Confirm the overall package deployment
 	configPath := tempPath.base + "/zarf.yaml"
@@ -138,46 +132,44 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
-	if len(component.Files) > 0 {
-		spinner := message.NewProgressSpinner("Copying %v files", len(component.Files))
-		defer spinner.Stop()
+	spinner := message.NewProgressSpinner("Copying %v files", len(component.Files))
+	defer spinner.Stop()
 
-		for index, file := range component.Files {
-			spinner.Updatef("Loading %s", file.Target)
-			sourceFile := componentPath.files + "/" + strconv.Itoa(index)
+	for index, file := range component.Files {
+		spinner.Updatef("Loading %s", file.Target)
+		sourceFile := componentPath.files + "/" + strconv.Itoa(index)
 
-			// If a shasum is specified check it again on deployment as well
-			if file.Shasum != "" {
-				spinner.Updatef("Validating SHASUM for %s", file.Target)
-				utils.ValidateSha256Sum(file.Shasum, sourceFile)
-			}
-
-			// Copy the file to the destination
-			spinner.Updatef("Saving %s", file.Target)
-			err := copy.Copy(sourceFile, file.Target)
-			if err != nil {
-				spinner.Fatalf(err, "Unable to copy the contents of %s", file.Target)
-			}
-
-			// Loop over all symlinks and create them
-			for _, link := range file.Symlinks {
-				spinner.Updatef("Adding symlink %s->%s", link, file.Target)
-				// Try to remove the filepath if it exists
-				_ = os.RemoveAll(link)
-				// Make sure the parent directory exists
-				_ = utils.CreateFilePath(link)
-				// Create the symlink
-				err := os.Symlink(file.Target, link)
-				if err != nil {
-					spinner.Fatalf(err, "Unable to create the symbolic link %s -> %s", link, file.Target)
-				}
-			}
-
-			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(sourceFile)
+		// If a shasum is specified check it again on deployment as well
+		if file.Shasum != "" {
+			spinner.Updatef("Validating SHASUM for %s", file.Target)
+			utils.ValidateSha256Sum(file.Shasum, sourceFile)
 		}
-		spinner.Success()
+
+		// Copy the file to the destination
+		spinner.Updatef("Saving %s", file.Target)
+		err := copy.Copy(sourceFile, file.Target)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to copy the contents of %s", file.Target)
+		}
+
+		// Loop over all symlinks and create them
+		for _, link := range file.Symlinks {
+			spinner.Updatef("Adding symlink %s->%s", link, file.Target)
+			// Try to remove the filepath if it exists
+			_ = os.RemoveAll(link)
+			// Make sure the parent directory exists
+			_ = utils.CreateFilePath(link)
+			// Create the symlink
+			err := os.Symlink(file.Target, link)
+			if err != nil {
+				spinner.Fatalf(err, "Unable to create the symbolic link %s -> %s", link, file.Target)
+			}
+		}
+
+		// Cleanup now to reduce disk pressure
+		_ = os.RemoveAll(sourceFile)
 	}
+	spinner.Success()
 
 	if isSeedRegistry {
 		preSeedRegistry(tempPath)
