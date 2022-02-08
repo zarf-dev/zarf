@@ -38,7 +38,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 		_, _ = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect logging &> /dev/nul &)'", e2e.username)
 
 		// 	// Make sure Grafana comes up cleanly
-		output, err = e2e.runSSHCommand(`bash -c '[[ $(curl -sfSL -o /dev/null -w '%%{http_code}' 'http://127.0.0.1:45002/monitor/login') == 200 ]]'`)
+		output, err = e2e.runSSHCommand(`bash -c ' [[ $(curl -sfSL -o /dev/null -w '%%{http_code}' 'http://127.0.0.1:45002/monitor/login') == 200]]'`)
 		require.NoError(e2e.testing, err, output)
 	})
 
