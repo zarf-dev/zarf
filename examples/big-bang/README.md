@@ -97,7 +97,7 @@ make vm-destroy
 This example adds the `kubescape` binary, which can scan clusters for compliance with the NSA/CISA Kubernetes Hardening Guide
 
 ```shell
-kubescape scan framework nsa --use-from=/usr/local/bin/kubescape-framework-nsa.json --exceptions=/usr/local/bin/kubescape-exceptions.json
+kubescape scan framework nsa --use-from=/usr/sbin/kubescape-framework-nsa.json --exceptions=/usr/sbin/kubescape-exceptions.json
 ```
 
 ## Services
