@@ -6,13 +6,12 @@ import (
 )
 
 const (
-	DistroIsUnknown       = "unknown"
-	DistroIsK3s           = "k3s"
-	DistroIsK3d           = "k3d"
-	DistroIsKind          = "kind"
-	DistroIsMicroK8s      = "microk8s"
-	DistroIsEKSAnywhere   = "eksanywhere"
-	DistroIsDockerDesktop = "dockerdesktop"
+	DistroIsUnknown     = "unknown"
+	DistroIsK3s         = "k3s"
+	DistroIsK3d         = "k3d"
+	DistroIsKind        = "kind"
+	DistroIsMicroK8s    = "microk8s"
+	DistroIsEKSAnywhere = "eksanywhere"
 
 	// todo: more distros
 )
@@ -50,10 +49,6 @@ func DetectDistro() (string, error) {
 			if label == "microk8s.io/cluster=true" {
 				return DistroIsMicroK8s, nil
 			}
-		}
-
-		if node.GetName() == "docker-desktop" {
-			return DistroIsDockerDesktop, nil
 		}
 
 	}

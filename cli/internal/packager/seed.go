@@ -148,12 +148,6 @@ func preSeedRegistry(tempPath tempPaths) {
 		inject.command = "kind"
 		inject.args = []string{"load", "image-archive", tempPath.seedImages, "--name", clusterName}
 
-	case k8s.DistroIsDockerDesktop:
-		state.StorageClass = "hostpath"
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "docker"
-		inject.args = []string{"load", "-i", tempPath.seedImages}
-
 	default:
 		state.Registry.SeedType = config.ZarfSeedTypeRuntimeRegistry
 	}
