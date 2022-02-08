@@ -217,11 +217,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		images.PushToZarfRegistry(tempPath.images, component.Images, config.ZarfRegistry)
 	}
 
-	if hasRepos {
-		// Push all the repos from the extracted archive
-		git.PushAllDirectories(componentPath.repos)
-	}
-
 	for _, chart := range component.Charts {
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
@@ -253,6 +248,11 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component) {
 			connectStrings[name] = description
 		}
+	}
+
+	if hasRepos {
+		// Push all the repos from the extracted archive
+		git.PushAllDirectories(componentPath.repos)
 	}
 
 	for _, script := range component.Scripts.After {
