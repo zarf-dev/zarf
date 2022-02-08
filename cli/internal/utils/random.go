@@ -3,7 +3,7 @@ package utils
 import (
 	"crypto/rand"
 
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/sirupsen/logrus"
 )
 
 // Very limited special chars for git / basic auth
@@ -14,7 +14,8 @@ func RandomString(length int) string {
 	bytes := make([]byte, length)
 
 	if _, err := rand.Read(bytes); err != nil {
-		message.Fatal(err, "unable to generate a random secret")
+		logrus.Debug(err)
+		logrus.Fatal("unable to generate a random secret")
 	}
 
 	for i, b := range bytes {

@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helm-install-atlassian
+  labels:
+    istio-injection: "disabled"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jira
+  labels:
+    istio-injection: "enabled"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: jira
+  namespace: helm-install-atlassian
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/jira-0.1.0-bb.7.tgz
+  targetNamespace: jira
+  valuesContent: |-
+    imagePullSecrets:
+      - name: private-registry
+    ingress:
+      nginx: false
+    istio:
+      enabled: true
+      gateways:
+        - istio-system/public
+
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: private-registry
+  namespace: jira
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "registry.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry1.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry-1.docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "ghcr.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: confluence
+  labels:
+    istio-injection: "enabled"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: confluence
+  namespace: helm-install-atlassian
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/confluence-0.1.0-bb.9.tgz
+  targetNamespace: confluence
+  valuesContent: |-
+    image:
+      repository: registry1.dso.mil/ironbank/atlassian/confluence-data-center/confluence-node:7.13.0
+      tag: "7.13.0"
+    imagePullSecrets:
+      - name: private-registry
+    ingress:
+      nginx: false
+    istio:
+      enabled: true
+      gateways:
+        - istio-system/public
+
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: private-registry
+  namespace: confluence
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "registry.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry1.dso.mil": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "registry-1.docker.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        },
+        "ghcr.io": {
+          "auth":"###ZARF_DOCKERAUTH###"
+        }
+      }
+    }

@@ -14,8 +14,9 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
@@ -28,29 +29,29 @@ const org = "Zarf Cluster"
 const validFor = time.Hour * 24 * 375
 
 func HandlePKI() {
-	pkiConfig := config.TLS
+	pkiConfig := config.GetState().TLS
 	if pkiConfig.CertPublicPath == "" || pkiConfig.CertPrivatePath == "" {
 		// No certs provided, so generate them with an ephemeral CA
 		GeneratePKI()
-		pkiConfig = config.TLS
 	}
 }
 
 // GeneratePKI create a CA and signed server keypair
 func GeneratePKI() {
+	state := config.GetState()
 	directory := "zarf-pki"
 
 	_ = utils.CreateDirectory(directory, 0700)
 	caFile := filepath.Join(directory, "zarf-ca.crt")
 	ca, caKey, err := generateCA(caFile, validFor)
 	if err != nil {
-		message.Fatal(err, "Unable to generate the ephemeral CA")
+		logrus.Fatal(err)
 	}
 
 	hostCert := filepath.Join(directory, "zarf-server.crt")
 	hostKey := filepath.Join(directory, "zarf-server.key")
-	if err := generateCert(config.TLS.Host, hostCert, hostKey, ca, caKey, validFor); err != nil {
-		message.Fatalf(err, "Unable to generate the cert for %s", config.TLS.Host)
+	if err := generateCert(state.TLS.Host, hostCert, hostKey, ca, caKey, validFor); err != nil {
+		logrus.Fatal(err)
 	}
 
 	publicKeyBlock := pem.Block{
@@ -60,17 +61,26 @@ func GeneratePKI() {
 
 	publicKeyPem := string(pem.EncodeToMemory(&publicKeyBlock))
 
-	config.TLS.CertPublicPath = directory + "/zarf-server.crt"
-	config.TLS.CertPrivatePath = directory + "/zarf-server.key"
+	state.TLS.CertPublicPath = directory + "/zarf-server.crt"
+	state.TLS.CertPrivatePath = directory + "/zarf-server.key"
 
 	addCAToTrustStore(caFile)
 
 	fmt.Println("Ephemeral CA below and saved to " + caFile + "\n")
 	fmt.Println(publicKeyPem)
+
+	if err := config.WriteState(state); err != nil {
+		logrus.Debug(err)
+		logrus.Fatal("Unable to save the zarf state file.")
+	}
+}
+
+func InjectServerCert() {
+	k8s.ReplaceTLSSecret("kube-system", "tls-pem")
 }
 
 func addCAToTrustStore(caFilePath string) {
-	message.Info("Adding Ephemeral CA to the host root trust store")
+	logrus.Info("Adding Ephemeral CA to the host root trust store")
 
 	rhelBinary := "update-ca-trust"
 	debianBinary := "update-ca-certificates"
@@ -79,13 +89,15 @@ func addCAToTrustStore(caFilePath string) {
 		utils.CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
 		_, err := utils.ExecCommand(true, nil, rhelBinary, "extract")
 		if err != nil {
-			message.Error(err, "Error adding the ephemeral CA to the RHEL root trust")
+			logrus.Debug(err)
+			logrus.Warn("Error adding the ephemeral CA to the RHEL root trust")
 		}
 	} else if utils.VerifyBinary(debianBinary) {
 		utils.CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
 		_, err := utils.ExecCommand(true, nil, debianBinary)
 		if err != nil {
-			message.Error(err, "Error adding the ephemeral CA to the trust store")
+			logrus.Debug(err)
+			logrus.Warn("Error adding the ephemeral CA to the trust store")
 		}
 	}
 }
@@ -98,7 +110,7 @@ func newCertificate(validFor time.Duration) *x509.Certificate {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		message.Fatalf(err, "failed to generate the certificate serial number")
+		logrus.Fatalf("failed to generate serial number: %s", err)
 	}
 
 	return &x509.Certificate{
@@ -157,13 +169,10 @@ func generateCA(caFile string, validFor time.Duration) (*x509.Certificate, *rsa.
 }
 
 // generateCert generates a new certificate for the given host using the
-// provided certificate authority. The cert and key files are stored in
+// provided certificate authority. The cert and key files are stored in the
 // the provided files.
 func generateCert(host string, certFile string, keyFile string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration) error {
 	template := newCertificate(validFor)
-
-	template.IPAddresses = append(template.IPAddresses, net.ParseIP(config.IPV4Localhost))
-	template.DNSNames = append(template.DNSNames, "docker-registry.zarf.svc.cluster.local", "git.zarf.svc.cluster.local")
 
 	// Only use SANs to keep golang happy, https://go-review.googlesource.com/c/go/+/231379
 	if ip := net.ParseIP(host); ip != nil {

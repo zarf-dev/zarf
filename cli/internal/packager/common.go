@@ -3,7 +3,6 @@ package packager
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,36 +11,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-yaml"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type componentPaths struct {
 	base      string
 	files     string
 	charts    string
-	values    string
+	images    string
 	repos     string
 	manifests string
 }
 type tempPaths struct {
 	base           string
-	seedImages     string
-	images         string
 	dataInjections string
 	components     string
 }
 
 func createPaths() tempPaths {
-	basePath, _ := utils.MakeTempDir()
+	basePath := utils.MakeTempDir()
 	return tempPaths{
 		base:           basePath,
-		seedImages:     basePath + "/seed-images.tar",
-		images:         basePath + "/images.tar",
 		dataInjections: basePath + "/data",
 		components:     basePath + "/components",
 	}
@@ -54,21 +47,21 @@ func createComponentPaths(basePath string, component config.ZarfComponent) compo
 		base:      basePath,
 		files:     basePath + "/files",
 		charts:    basePath + "/charts",
+		images:    basePath + "/images-component-" + component.Name + ".tar",
 		repos:     basePath + "/repos",
 		manifests: basePath + "/manifests",
-		values:    basePath + "/values",
 	}
 }
 
 func cleanup(tempPath tempPaths) {
-	message.Debug("Cleaning up temp files")
+	logrus.Info("Cleaning up temp files")
 	_ = os.RemoveAll(tempPath.base)
 }
 
-func confirmAction(configPath string, userMessage string) bool {
+func confirmAction(configPath string, confirm bool, message string) bool {
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		message.Fatal(err, "Unable to open the package config file")
+		logrus.Fatal(err)
 	}
 
 	// Convert []byte to string and print to screen
@@ -77,16 +70,16 @@ func confirmAction(configPath string, userMessage string) bool {
 	utils.ColorPrintYAML(text)
 
 	// Display prompt if not auto-confirmed
-	if config.DeployOptions.Confirm {
-		message.Infof("%s Zarf package confirmed", userMessage)
+	if confirm {
+		logrus.Info(message + " Zarf package confirmed")
 	} else {
 		prompt := &survey.Confirm{
-			Message: userMessage + " this Zarf package?",
+			Message: message + " this Zarf package?",
 		}
-		_ = survey.AskOne(prompt, &config.DeployOptions.Confirm)
+		_ = survey.AskOne(prompt, &confirm)
 	}
 
-	return config.DeployOptions.Confirm
+	return confirm
 }
 
 func getValidComponents(allComponents []config.ZarfComponent, requestedComponentNames []string) []config.ZarfComponent {
@@ -106,17 +99,11 @@ func getValidComponents(allComponents []config.ZarfComponent, requestedComponent
 					}
 				}
 			} else {
-				// Present the users with the component details one more time
-				displayComponent := component
-				displayComponent.Description = ""
-				content, _ := yaml.Marshal(displayComponent)
-				utils.ColorPrintYAML(string(content))
-				message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
-
 				// Since no requested components were provided, prompt the user
 				prompt := &survey.Confirm{
-					Message: "Deploy this component?",
+					Message: "Deploy the " + component.Name + " component?",
 					Default: component.Default,
+					Help:    component.Description,
 				}
 				_ = survey.AskOne(prompt, &confirmComponent)
 			}
@@ -124,14 +111,10 @@ func getValidComponents(allComponents []config.ZarfComponent, requestedComponent
 
 		if confirmComponent {
 			validComponentsList = append(validComponentsList, component)
-			// Make it easier to know we are running k3s
-			if config.IsZarfInitConfig() && component.Name == "k3s" {
-				config.DeployOptions.ApplianceMode = true
-			}
 		}
 	}
 
-	// Verify that we were able to successfully identify all the requested components
+	// Verify that we were able to successfully identify all of the requested components
 	var nonMatchedComponents []string
 	for requestedComponentIndex, componentMatched := range confirmedComponents {
 		if !componentMatched {
@@ -140,7 +123,7 @@ func getValidComponents(allComponents []config.ZarfComponent, requestedComponent
 	}
 
 	if len(nonMatchedComponents) > 0 {
-		message.Fatalf(nil, "Unable to find these components to deploy: %v.", nonMatchedComponents)
+		logrus.Fatalf("Unable to find these components to deploy: %v.", nonMatchedComponents)
 	}
 
 	return validComponentsList
@@ -151,33 +134,35 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
+		logrus.WithField("archive", packagePath).Debug("The package provided is not a remote package.")
 		return packagePath
 	}
 
 	if !insecureDeploy && shasum == "" {
-		message.Fatal(nil, "When deploying a remote package you must provide either a `--shasum` or the `--insecure` flag. Neither were provided.")
+		logrus.Fatal("When deploying a remote package you must provide either a `--shasum` or the `--insecure` flag. Neither were provided.")
 	}
 
 	// Check the extension on the package is what we expect
 	if !isValidFileExtension(providedURL.Path) {
-		message.Fatalf(nil, "Only %s file extensions are permitted.\n", config.GetValidPackageExtensions())
+		logrus.Fatalf("Only %s file extensions are permitted.\n", config.GetValidPackageExtensions())
 	}
 
 	// Download the package
 	resp, err := http.Get(packagePath)
 	if err != nil {
-		message.Fatal(err, "Unable to download the package")
+		logrus.Fatal("Unable to download the package: ", err)
 	}
 	defer resp.Body.Close()
 
 	// Write the package to a local file
 	tempPath := createPaths()
 	localPackagePath := tempPath.base + providedURL.Path
-	message.Debugf("Creating local package with the path: %s", localPackagePath)
+	logrus.Debug("Creating local package with the path: ", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)
 	_, err = io.Copy(packageFile, resp.Body)
 	if err != nil {
-		message.Fatal(err, "Unable to copy the contents of the provided URL into a local file.")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to copy the contents of the provided URL into a local file.")
 	}
 
 	// Check the shasum if necessary
@@ -185,13 +170,14 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 		hasher := sha256.New()
 		_, err = io.Copy(hasher, packageFile)
 		if err != nil {
-			message.Fatal(err, "Unable to calculate the sha256 of the provided remote package.")
+			logrus.Debug(err)
+			logrus.Fatal("Unable to calculate the sha256 of the provided remote package.")
 		}
 
 		value := hex.EncodeToString(hasher.Sum(nil))
 		if value != shasum {
 			_ = os.Remove(localPackagePath)
-			message.Fatalf(nil, "Provided shasum (%s) of the package did not match what was downloaded (%s)\n", shasum, value)
+			logrus.Fatalf("Provided shasum (%s) of the package did not match what was downloaded (%s)\n", shasum, value)
 		}
 	}
 
@@ -201,7 +187,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 func isValidFileExtension(filename string) bool {
 	for _, extension := range config.GetValidPackageExtensions() {
 		if strings.HasSuffix(filename, extension) {
-			message.Warnf("Extension for %s is invalid", filename)
+			logrus.WithField("packagePath", filename).Warn("Package extension is valid.")
 			return true
 		}
 	}
@@ -210,66 +196,54 @@ func isValidFileExtension(filename string) bool {
 }
 
 func loopScriptUntilSuccess(script string, retry bool) {
-	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
-	defer spinner.Stop()
+	logContext := logrus.WithField("script", script)
+	logContext.Info("Waiting for script to complete successfully")
+
+	var output string
+	var err error
 
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
 	binaryPath, err := os.Executable()
 	if err != nil {
-		spinner.Errorf(err, "Unable to determine the current zarf binary path")
+		logContext.Debug(err)
+		logContext.Warn("Unable to determine the current zarf binary path")
 	} else {
 		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
+		// Update since we may have a new parsed script
+		logContext = logrus.WithField("script", script)
 	}
 
 	// 2 minutes per script (60 * 2 second waits)
 	tries := 60
 	for {
+		tries--
+		// If there are no more tries left, drop a warning and continue
+		if tries < 1 {
+			logContext.Warn("Script failed or timed out")
+			logContext.Print(output)
+			break
+		}
 		scriptEnvVars := []string{
-			"ZARF_REGISTRY=" + config.ZarfRegistry,
-			"ZARF_SEED_REGISTRY=" + config.ZarfLocalSeedRegistry,
+			"ZARF_TARGET_ENDPOINT=" + config.GetTargetEndpoint(),
 		}
 		// Try to silently run the script
-		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
-
+		output, err = utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
 		if err != nil {
-			message.Debug(err, output)
-
+			logrus.Debug(err)
 			if retry {
-				tries--
-
-				// If there are no more tries left, we have failed
-				if tries < 1 {
-					spinner.Fatalf(nil, "Script timed out after 2 minutes")
-				} else {
-					// if retry is enabled, on error wait 2 seconds and try again
-					time.Sleep(time.Second * 2)
-					continue
-				}
+				// if retry is enabled, on error wait 2 seconds and try again
+				time.Sleep(time.Second * 2)
+			} else {
+				// No retry, abort
+				tries = 0
 			}
-
-			spinner.Fatalf(nil, "Script failed")
+			continue
+		} else {
+			// Script successful, output results and continue
+			if output != "" {
+				logContext.Print(output)
+			}
+			break
 		}
-
-		// Script successful,continue
-		message.Debug(output)
-		spinner.Success()
-		break
 	}
-}
-
-// removeDuplicates reduces a string slice to unique values only, https://www.dotnetperls.com/duplicates-go
-func removeDuplicates(elements []string) []string {
-	seen := map[string]bool{}
-
-	// Create a map of all unique elements.
-	for v := range elements {
-		seen[elements[v]] = true
-	}
-
-	// Place all keys from the map into a slice.
-	var result []string
-	for key := range seen {
-		result = append(result, key)
-	}
-	return result
 }

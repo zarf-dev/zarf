@@ -6,9 +6,7 @@ metadata:
 components:
   - name: baseline
     required: true
-    manifests:
-      - name: doom
-        files:
-          - manifests/game.yaml
+    manifests: manifests
+
     images:
       - registry.dso.mil/platform-one/big-bang/apps/product-tools/zarf/game:doom

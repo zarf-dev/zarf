@@ -3,42 +3,34 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/cli/config"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/packager"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 )
 
 var zarfLogLevel = ""
-var arch string
 
 var rootCmd = &cobra.Command{
-	Use: "zarf [COMMAND]|[ZARF-PACKAGE]|[ZARF-YAML]",
+	Use: "zarf COMMAND|ZARF-PACKAGE|ZARF-YAML",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if zarfLogLevel != "" {
-			setLogLevel(zarfLogLevel)
+		setLogLevel(zarfLogLevel)
+		if logrus.GetLevel() != logrus.InfoLevel {
+			fmt.Printf("The log level has been changed to: %s\n", logrus.GetLevel())
 		}
-		if arch == "" {
-			// Default to the current running arch for images
-			arch = runtime.GOARCH
-		}
-		config.SetAcrch(arch)
 	},
-	Short: "Small tool to bundle dependencies with K3s for air-gaped deployments",
+	Short: "Small tool to bundle dependencies with K3s for airgapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			if strings.Contains(args[0], "zarf-package-") {
-				config.DeployOptions.PackagePath = args[0]
-				packager.Deploy()
+				packager.Deploy(args[0], confirmDeploy, "")
 				return
 			}
 			if args[0] == "zarf.yaml" {
-				packager.Create()
+				packager.Create(confirmCreate)
 				return
 			}
 		}
@@ -47,37 +39,31 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
+	zarfLogo := getLogo()
+	fmt.Fprintln(os.Stderr, zarfLogo)
 	cobra.CheckErr(rootCmd.Execute())
 }
 
 func init() {
-	// Store the original cobra help func
-	originalHelp := rootCmd.HelpFunc()
-	rootCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
-		// Don't show the zarf logo constantly
-		zarfLogo := getLogo()
-		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
-		// Re-add the original help function
-		originalHelp(c, s)
-	})
-
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
-	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
+	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "info", "Log level when running Zarf. Valid options are: debug, info, warn, error, fatal")
 }
 
 func setLogLevel(logLevel string) {
-	match := map[string]message.LogLevel{
-		"warn":  message.WarnLevel,
-		"info":  message.InfoLevel,
-		"debug": message.DebugLevel,
-		"trace": message.TraceLevel,
-	}
-
-	if lvl, ok := match[logLevel]; ok {
-		message.SetLogLevel(lvl)
-		message.Note("Log level set to " + logLevel)
-	} else {
-		message.Warn("invalid log level setting")
+	switch logLevel {
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	default:
+		logrus.Fatalf("Unrecognized log level entry: %s", logLevel)
 	}
 }

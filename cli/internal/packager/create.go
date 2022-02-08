@@ -1,60 +1,49 @@
 package packager
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/helm"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/mholt/archiver/v3"
+	"github.com/sirupsen/logrus"
 )
 
-func Create() {
+func Create(confirm bool) {
 
 	if err := config.LoadConfig("zarf.yaml"); err != nil {
-		message.Fatal(err, "Unable to read the zarf.yaml file")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to read the zarf.yaml file")
 	}
 
 	tempPath := createPaths()
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
-	seedImages := config.GetSeedImages()
 	components := config.GetComponents()
 	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
-		message.Fatalf(err, "Unable to write the %s file", configFile)
+		logrus.Debug(err)
+		logrus.WithField("path", configFile).Fatal("Unable to write the zarf.yaml file")
 	}
 
-	if !confirmAction(configFile, "Create") {
+	confirm = confirmAction(configFile, confirm, "Create")
+
+	if !confirm {
 		os.Exit(0)
 	}
 
-	if len(seedImages) > 0 {
-		// Load seed images into their own happy little tarball for ease of import on init
-		images.PullAll(seedImages, tempPath.seedImages)
-	}
-
-	var combinedImageList []string
 	for _, component := range components {
-		addComponent(tempPath, component)
-		// Combine all component images into a single entry for efficient layer reuse
-		combinedImageList = append(combinedImageList, component.Images...)
-	}
-
-	// Images are handled separately from other component assets
-	if len(combinedImageList) > 0 {
-		uniqueList := removeDuplicates(combinedImageList)
-		images.PullAll(uniqueList, tempPath.images)
+		logrus.WithField("component", component.Name).Info("Loading component assets")
+		componentPath := createComponentPaths(tempPath.components, component)
+		addLocalAssets(componentPath, component)
 	}
 
 	if config.IsZarfInitConfig() {
@@ -63,6 +52,7 @@ func Create() {
 	} else {
 		// Init packages do not use data or utilityCluster keys
 		if len(dataInjections) > 0 {
+			logrus.Info("Loading data injections")
 			for _, data := range dataInjections {
 				destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
 				utils.CreatePathAndCopy(data.Source, destinationFile)
@@ -72,39 +62,35 @@ func Create() {
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
-		message.Fatal(err, "Unable to create the package archive")
+		logrus.Debug(err)
+		logrus.Fatal("Unable to create the package archive")
 	}
+
+	logrus.WithField("name", packageName).Info("Package creation complete")
 
 	cleanup(tempPath)
 }
 
-func addComponent(tempPath tempPaths, component config.ZarfComponent) {
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-	componentPath := createComponentPaths(tempPath.components, component)
-
-	if len(component.Charts) > 0 {
-		_ = utils.CreateDirectory(componentPath.charts, 0700)
-		_ = utils.CreateDirectory(componentPath.values, 0700)
+func addLocalAssets(tempPath componentPaths, assets config.ZarfComponent) {
+	if len(assets.Charts) > 0 {
+		logrus.Info("Loading static helm charts")
+		_ = utils.CreateDirectory(tempPath.charts, 0700)
 		re := regexp.MustCompile(`\.git$`)
-		for _, chart := range component.Charts {
-			isGitURL := re.MatchString(chart.Url)
-			if isGitURL {
-				helm.DownloadChartFromGit(chart, componentPath.charts)
+		for _, chart := range assets.Charts {
+			matched := re.MatchString(chart.Url)
+			if matched {
+				helm.DownloadChartFromGit(chart, tempPath.charts)
 			} else {
-				helm.DownloadPublishedChart(chart, componentPath.charts)
-			}
-			for idx, path := range chart.ValuesFiles {
-				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-				utils.CreatePathAndCopy(path, chartValueName)
+				helm.DownloadPublishedChart(chart, tempPath.charts)
 			}
 		}
 	}
 
-	if len(component.Files) > 0 {
-		_ = utils.CreateDirectory(componentPath.files, 0700)
-		for index, file := range component.Files {
-			message.Debugf("Loading %v", file)
-			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
+	if len(assets.Files) > 0 {
+		logrus.Info("Downloading files for local install")
+		_ = utils.CreateDirectory(tempPath.files, 0700)
+		for index, file := range assets.Files {
+			destinationFile := tempPath.files + "/" + strconv.Itoa(index)
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile)
 			} else {
@@ -116,9 +102,7 @@ func addComponent(tempPath tempPaths, component config.ZarfComponent) {
 				utils.ValidateSha256Sum(file.Shasum, destinationFile)
 			}
 
-			info, _ := os.Stat(destinationFile)
-
-			if file.Executable || info.IsDir() {
+			if file.Executable {
 				_ = os.Chmod(destinationFile, 0700)
 			} else {
 				_ = os.Chmod(destinationFile, 0600)
@@ -126,16 +110,22 @@ func addComponent(tempPath tempPaths, component config.ZarfComponent) {
 		}
 	}
 
-	for _, manifest := range component.Manifests {
-		for _, file := range manifest.Files {
-			destination := fmt.Sprintf("%s/%s", componentPath.manifests, file)
-			utils.CreatePathAndCopy(file, destination)
-		}
+	if len(assets.Images) > 0 {
+		logrus.Info("Loading container images")
+		images.PullAll(assets.Images, tempPath.images)
 	}
 
-	// Load all specified git repos
-	for _, url := range component.Repos {
-		// Pull all the references if there is no `@` in the string
-		git.Pull(url, componentPath.repos)
+	if assets.ManifestsPath != "" {
+		logrus.WithField("path", assets.ManifestsPath).Info("Loading manifests for local install")
+		utils.CreatePathAndCopy(assets.ManifestsPath, tempPath.manifests)
+	}
+
+	if len(assets.Repos) > 0 {
+		logrus.Info("loading git repos for gitops service transfer")
+		// Load all specified git repos
+		for _, url := range assets.Repos {
+			// Pull all of the references if there is no `@` in the string
+			git.Pull(url, tempPath.repos)
+		}
 	}
 }

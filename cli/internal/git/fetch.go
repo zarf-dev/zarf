@@ -3,32 +3,44 @@ package git
 import (
 	"path"
 
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
+	"github.com/sirupsen/logrus"
 )
 
-// fetchTag performs a `git fetch` of _only_ the provided tag
-func fetchTag(gitDirectory string, tag string) {
-	message.Debugf("Fetch git tag %s from repo %s", tag, path.Base(gitDirectory))
+// FetchTag performs a `git fetch` of _only_ the provided tag
+func FetchTag(gitDirectory string, tag string) {
+	logContext := logrus.WithFields(logrus.Fields{
+		// Base should be similar to the repo name
+		"Repo": path.Base(gitDirectory),
+	})
 
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		message.Fatal(err, "Unable to load the git repo")
+		logContext.Fatal(err)
 	}
 
 	remotes, err := repo.Remotes()
 	// There should never be no remotes, but it's easier to account for than
 	// let be a bug later
 	if err != nil || len(remotes) == 0 {
-		message.Fatal(err, "Failed to identify remotes.")
+		if err != nil {
+			logContext.Debug(err)
+		}
+		logContext.Fatal("Failed to identify remotes.")
 	}
 
 	gitUrl := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find tag: %s for %s", tag, gitUrl)
+	// Now that we have an exact match, we may as well update the logger,
+	// especially since nothing has been logged to this point that hasn't been
+	// fatal.
+	logContext = logrus.WithFields(logrus.Fields{
+		"Remote": gitUrl,
+	})
 
 	gitCred := FindAuthForHost(gitUrl)
 
+	logContext.Debug("Attempting to find tag: " + tag)
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
 		RefSpecs: []goConfig.RefSpec{
@@ -43,8 +55,11 @@ func fetchTag(gitDirectory string, tag string) {
 	err = repo.Fetch(fetchOptions)
 
 	if err == git.ErrTagExists {
-		message.Debug("Tag already fetched")
+		logContext.Info("Tag already fetched")
 	} else if err != nil {
-		message.Fatal(err, "Not a valid tag or unable to fetch")
+		logContext.Debug(err)
+		logContext.Fatal("Not a valid tag or unable to fetch")
 	}
+
+	logContext.Info("Git tag fetched")
 }

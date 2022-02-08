@@ -9,7 +9,7 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.0.0
     repos:
-      # Do a tag-provided Git Repo mirror
+        # Do a tag-provided Git Repo mirror
       - https://github.com/defenseunicorns/zarf.git@v0.12.0
         # Do a tag-provided Git Repo mirror with the default branch of main
       - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.0.9-bb.0

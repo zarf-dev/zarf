@@ -6,14 +6,13 @@ metadata:
 components:
   - name: baseline
     required: true
+    manifests: manifests
+
     charts:
       - name: twistlock
         url: https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git
         version: 0.0.6-bb.1
-        namespace: twistlock
-        gitPath: chart
-        valuesFiles:
-          - twistlock-values.yaml
+
     # https://umbrella-bigbang-releases.s3-us-gov-west-1.amazonaws.com/umbrella/1.14.0/images.txt
     images:
       - registry1.dso.mil/ironbank/twistlock/defender/defender:20.12.531

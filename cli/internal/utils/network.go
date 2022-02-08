@@ -1,15 +1,13 @@
 package utils
 
 import (
-	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 
-	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 )
 
 func IsUrl(source string) bool {
@@ -18,79 +16,74 @@ func IsUrl(source string) bool {
 }
 
 func Fetch(url string) io.ReadCloser {
+	logContext := logrus.WithFields(logrus.Fields{
+		"url": url,
+	})
+
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		message.Fatal(err, "Unable to download the file")
+		logContext.Fatal("Unable to download the file", err)
 	}
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		message.Fatalf(nil, "Bad HTTP status: %s", resp.Status)
+		logContext.Fatalf("Bad HTTP status: %s", resp.Status)
 	}
 
 	return resp.Body
 }
 
+func Download(url string) []byte {
+	logContext := logrus.WithFields(logrus.Fields{
+		"url": url,
+	})
+
+	data := Fetch(url)
+
+	defer data.Close()
+
+	body, err := ioutil.ReadAll(data)
+	if err != nil {
+		logContext.Fatal("Unable to download the remote file", err)
+	}
+	return body
+}
+
 func DownloadToFile(url string, target string) {
+
+	logContext := logrus.WithFields(logrus.Fields{
+		"url":         url,
+		"destination": target,
+	})
+
+	logContext.Info("Downloading file")
 
 	// Create the file
 	destinationFile, err := os.Create(target)
 	if err != nil {
-		message.Fatal(err, "Unable to create the destination file")
+		logContext.Debug(err)
+		logContext.Fatal("Unable to create the destination file")
 	}
 	defer destinationFile.Close()
 
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		message.Fatal(err, "Unable to download the file")
+		logContext.Debug(err)
+		logContext.Fatal("Unable to download the file", err)
 	}
 	defer resp.Body.Close()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		message.Fatalf(nil, "Bad HTTP status: %s", resp.Status)
+		logContext.Fatalf("Bad HTTP status: %s", resp.Status)
 	}
 
 	// Writer the body to file
-	text := fmt.Sprintf("Downloading %s", url)
-	counter := NewWriteCounter(url, int(resp.ContentLength))
-
-	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, counter)); err != nil {
-		_, _ = counter.progress.Stop()
-		message.Fatalf(err, "Unable to save the file %s", target)
+	_, err = io.Copy(destinationFile, resp.Body)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to save the file", err)
 	}
-
-	_, _ = counter.progress.Stop()
-	pterm.Success.Println(text)
-}
-
-type WriteCounter struct {
-	Total    int
-	progress *pterm.ProgressbarPrinter
-}
-
-func NewWriteCounter(url string, total int) *WriteCounter {
-	// keep it brief to avoid a panic on smaller windows
-	title := fmt.Sprintf("Downloading %s", path.Base(url))
-	if total < 1 {
-		message.Debugf("invalid content length detected: %v", total)
-	}
-	progressBar, _ := pterm.DefaultProgressbar.
-		WithTotal(total).
-		WithShowCount(false).
-		WithTitle(title).
-		WithRemoveWhenDone(true).
-		Start()
-	return &WriteCounter{
-		Total:    total,
-		progress: progressBar,
-	}
-}
-
-func (wc *WriteCounter) Write(p []byte) (int, error) {
-	n := len(p)
-	wc.progress.Add(n)
-	return n, nil
 }

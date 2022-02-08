@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-operator
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: strimzi
+  namespace: kafka-operator
+spec:
+  chart: https://%{KUBERNETES_API}%/static/charts/strimzi-kafka-operator-0.24.0.tgz
+  targetNamespace: kafka-operator
+  valuesContent: |-
+    image:
+      imagePullSecrets: private-registry
+    imageRegistryOverride: registry1.dso.mil
+    imageRepositoryOverride: ironbank/opensource/strimzi
+    watchNamespaces:
+      - kafka-demo

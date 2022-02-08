@@ -14,6 +14,7 @@ rpms/
 data/
 *.vbox
 bundle/
+charts/
 .idea/
 .tool-versions
 test/tf/public-ec2-instance/.test-data
@@ -21,6 +22,3 @@ test/tf/public-ec2-instance/.terraform
 terraform.tfstate
 terraform.tfstate.backup
 .terraform.lock.hcl
-
-.zarf*
-zarf-pki

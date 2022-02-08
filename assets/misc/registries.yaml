@@ -1,0 +1,19 @@
+mirrors:
+  registry.dso.mil:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"
+  registry1.dso.mil:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"
+  docker.io:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"
+  registry-1.docker.io:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"
+  ghcr.io:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"
+  registry.opensource.zalan.do:
+    endpoint:
+      - "https://###ZARF_TARGET_ENDPOINT###"

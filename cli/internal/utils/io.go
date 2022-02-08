@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,17 +9,22 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/otiai10/copy"
-	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 )
 
 var TempPathPrefix = "zarf-"
 
-func MakeTempDir() (string, error) {
+func MakeTempDir() string {
 	tmp, err := ioutil.TempDir("", TempPathPrefix)
-	message.Debugf("Creating temp path %s", tmp)
-	return tmp, err
+	logContext := logrus.WithField("path", tmp)
+	logContext.Info("Creating temp path")
+
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to create temp directory")
+	}
+	return tmp
 }
 
 // VerifyBinary returns true if binary is available
@@ -29,11 +33,12 @@ func VerifyBinary(binary string) bool {
 	return err == nil
 }
 
-// CreateDirectory creates a directory for the given path and file mode
+// CreateDirectory
 func CreateDirectory(path string, mode os.FileMode) error {
 	if InvalidPath(path) {
 		return os.MkdirAll(path, mode)
 	}
+
 	return nil
 }
 
@@ -43,11 +48,12 @@ func InvalidPath(path string) bool {
 	return os.IsNotExist(err)
 }
 
-func ListDirectories(directory string) ([]string, error) {
+func ListDirectories(directory string) []string {
 	var directories []string
 	paths, err := os.ReadDir(directory)
 	if err != nil {
-		return directories, fmt.Errorf("unable to load the directory %s: %w", directory, err)
+		logrus.Debug(err)
+		logrus.WithField("path", directory).Fatal("Unable to load the directory")
 	}
 
 	for _, entry := range paths {
@@ -56,39 +62,47 @@ func ListDirectories(directory string) ([]string, error) {
 		}
 	}
 
-	return directories, nil
+	return directories
 }
 
-func WriteFile(path string, data []byte) error {
+func WriteFile(path string, data []byte) {
+
+	logContext := logrus.WithField("path", path)
+
 	f, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("unable to create the file at %s to write the contents: %w", path, err)
+		logContext.Debug(err)
+		logContext.Fatal("Unable to create the file to write the contents")
 	}
 
 	_, err = f.Write(data)
 	if err != nil {
 		_ = f.Close()
-		return fmt.Errorf("unable to write the file at %s contents:%w", path, err)
+		logContext.Debug(err)
+		logContext.Fatal("Unable to write the file contents")
 	}
 
 	err = f.Close()
 	if err != nil {
-		return fmt.Errorf("error saving file %s: %w", path, err)
+		logContext.Debug(err)
+		logContext.Fatal("Error saving file")
 	}
 
-	return nil
 }
 
 func ReplaceText(path string, old string, new string) {
+	logContext := logrus.WithField("path", path)
 	input, err := ioutil.ReadFile(path)
 	if err != nil {
-		message.Fatalf(err, "Unable to load %s", path)
+		logContext.Debug(err)
+		logContext.Fatal("Unable to load the given file")
 	}
 
 	output := bytes.Replace(input, []byte(old), []byte(new), -1)
 
 	if err = ioutil.WriteFile(path, output, 0600); err != nil {
-		message.Fatalf(err, "Unable to update %s", path)
+		logContext.Debug(err)
+		logContext.Fatal("Unable to update the given file")
 	}
 }
 
@@ -114,25 +128,36 @@ func RecursiveFileList(root string, pattern *regexp.Regexp) []string {
 		})
 
 	if err != nil {
-		message.Fatalf(err, "Unable to walk the directory %s", root)
+		logrus.Debug(err)
+		logrus.WithField("path", root).Fatal("Unable to complete directory walking")
 	}
 
 	return files
 }
 
-func CreateFilePath(destination string) error {
+func CreateFilePath(destination string) {
 	parentDest := path.Dir(destination)
-	return CreateDirectory(parentDest, 0700)
+	err := CreateDirectory(parentDest, 0700)
+	if err != nil {
+		logrus.Debug(err)
+		logrus.WithField("path", parentDest).Fatal("Unable to create the destination path")
+	}
 }
 
 func CreatePathAndCopy(source string, destination string) {
-	if err := CreateFilePath(destination); err != nil {
-		message.Fatalf(err, "unable to copy the file %s", source)
-	}
+	logContext := logrus.WithFields(logrus.Fields{
+		"Source":      source,
+		"Destination": destination,
+	})
+
+	logContext.Info("Copying file")
+
+	CreateFilePath(destination)
 
 	// Copy the asset
-	if err := copy.Copy(source, destination); err != nil {
-		message.Fatalf(err, "unable to copy the file %s", source)
+	err := copy.Copy(source, destination)
+	if err != nil {
+		logContext.Debug(err)
+		logContext.Fatal("Unable to copy the contents of the asset")
 	}
-	pterm.Success.Printfln("Copying %s", source)
 }
