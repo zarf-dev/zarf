@@ -31,7 +31,8 @@ spec:
   secretRef:
     name: zarf-git-secret
   ref:
-    branch: multi-distro-support
+    branch: master
+#    tag: 1.21.0
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
 kind: Kustomization
