@@ -64,7 +64,7 @@ func parseChartValues(options ChartOptions) (map[string]interface{}, error) {
 	return valueOpts.MergeValues(providers)
 }
 
-func createActionConfig(namespace string, spinner *message.Spinner) (*action.Configuration, error) {
+func createActionConfig(namespace string) (*action.Configuration, error) {
 	// OMG THIS IS SOOOO GROSS PPL... https://github.com/helm/helm/issues/8780
 	_ = os.Setenv("HELM_NAMESPACE", namespace)
 
@@ -73,7 +73,7 @@ func createActionConfig(namespace string, spinner *message.Spinner) (*action.Con
 	settings := cli.New()
 
 	// Setup K8s connection
-	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", message.Debugf)
 
 	return actionConfig, err
 }

@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pgadmin-ingressroute
+  namespace: postgres-operator
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`pgadmin.localhost`)
+      kind: Rule
+      services:
+        - name: pgadmin4
+          port: 80

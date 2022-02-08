@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: postgres-operator-ui-ingressroute
+  namespace: postgres-operator
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`postgres-operator-ui.localhost`)
+      kind: Rule
+      services:
+        - name: postgres-operator-ui
+          port: 80

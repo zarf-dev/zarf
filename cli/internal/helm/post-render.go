@@ -51,7 +51,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	if r.options.Component.SecretName != "" {
 		// A custom secret name was given for this component
 		secretName = r.options.Component.SecretName
-		message.Debugf("using custom zarf secret name %s", secretName)
 	}
 
 	// Write the context to a file for processing

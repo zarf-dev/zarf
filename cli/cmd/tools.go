@@ -25,16 +25,14 @@ var toolsCmd = &cobra.Command{
 
 // destroyCmd represents the init command
 var archiverCmd = &cobra.Command{
-	Use:     "archiver",
-	Aliases: []string{"a"},
-	Short:   "Compress/Decompress tools",
+	Use:   "archiver",
+	Short: "Compress/Decompress tools",
 }
 
 var archiverCompressCmd = &cobra.Command{
-	Use:     "compress SOURCES ARCHIVE",
-	Aliases: []string{"c"},
-	Short:   "Compress a collection of sources based off of the destination file extension",
-	Args:    cobra.MinimumNArgs(2),
+	Use:   "compress SOURCES ARCHIVE",
+	Short: "Compress a collection of sources based off of the destination file extension",
+	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
@@ -45,10 +43,9 @@ var archiverCompressCmd = &cobra.Command{
 }
 
 var archiverDecompressCmd = &cobra.Command{
-	Use:     "decompress ARCHIVE DESTINATION",
-	Aliases: []string{"d"},
-	Short:   "Decompress an archive to a specified location.",
-	Args:    cobra.ExactArgs(2),
+	Use:   "decompress ARCHIVE DESTINATION",
+	Short: "Decompress an archive to a specified location.",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
@@ -59,9 +56,8 @@ var archiverDecompressCmd = &cobra.Command{
 }
 
 var registryCmd = &cobra.Command{
-	Use:     "registry",
-	Aliases: []string{"r"},
-	Short:   "Collection of registry commands provided by Crane",
+	Use:   "registry",
+	Short: "Collection of registry commands provided by Crane",
 }
 
 var readCredsCmd = &cobra.Command{
@@ -74,9 +70,8 @@ var readCredsCmd = &cobra.Command{
 }
 
 var configSchemaCmd = &cobra.Command{
-	Use:     "config-schema",
-	Aliases: []string{"c"},
-	Short:   "Generates a JSON schema for the zarf.yaml configuration",
+	Use:   "config-schema",
+	Short: "Generates a JSON schema for the zarf.yaml configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
@@ -88,9 +83,8 @@ var configSchemaCmd = &cobra.Command{
 }
 
 var k9sCmd = &cobra.Command{
-	Use:     "monitor",
-	Aliases: []string{"m", "k9s"},
-	Short:   "Launch K9s tool for managing K8s clusters",
+	Use:   "k9s",
+	Short: "Launch K9s tool for managing K8s clusters",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
 		os.Args = []string{os.Args[0], "-n", "zarf"}

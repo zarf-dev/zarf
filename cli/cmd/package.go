@@ -19,19 +19,17 @@ var packageCmd = &cobra.Command{
 }
 
 var packageCreateCmd = &cobra.Command{
-	Use:     "create",
-	Aliases: []string{"c"},
-	Short:   "Create an update package to push to the gitops server (runs online)",
+	Use:   "create",
+	Short: "Create an update package to push to the gitops server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
 		packager.Create()
 	},
 }
 
 var packageDeployCmd = &cobra.Command{
-	Use:     "deploy [PACKAGE]",
-	Aliases: []string{"d"},
-	Short:   "Deploys an update package from a local file or URL (runs offline)",
-	Args:    cobra.MaximumNArgs(1),
+	Use:   "deploy [PACKAGE]",
+	Short: "Deploys an update package from a local file or URL (runs offline)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var done func()
 		packageName := choosePackage(args)
@@ -42,10 +40,9 @@ var packageDeployCmd = &cobra.Command{
 }
 
 var packageInspectCmd = &cobra.Command{
-	Use:     "inspect [PACKAGE]",
-	Aliases: []string{"i"},
-	Short:   "lists the payload of an update package file (runs offline)",
-	Args:    cobra.MaximumNArgs(1),
+	Use:   "inspect [PACKAGE]",
+	Short: "lists the payload of an update package file (runs offline)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
 		packager.Inspect(packageName)

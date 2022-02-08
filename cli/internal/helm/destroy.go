@@ -11,7 +11,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 	defer spinner.Stop()
 
 	// Initially load the actionConfig without a namespace
-	actionConfig, err := createActionConfig("", spinner)
+	actionConfig, err := createActionConfig("")
 	if err != nil {
 		// Don't fatal since this is a removal action
 		spinner.Errorf(err, "Unable to initialize the K8s client")
@@ -45,7 +45,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 		if zarfPrefix.MatchString(release.Name) {
 			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)
 			// Establish a new actionConfig for the namespace
-			actionConfig, _ = createActionConfig(release.Namespace, spinner)
+			actionConfig, _ = createActionConfig(release.Namespace)
 			// Perform the uninstall
 			response, err := uninstallChart(actionConfig, release.Name)
 			message.Debug(response)

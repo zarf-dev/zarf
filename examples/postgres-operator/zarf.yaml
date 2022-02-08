@@ -9,17 +9,18 @@ components:
   - name: baseline
     required: true
     # Big Bang charts expect this
-    secretName: "private-registry"
+    secretName: "private-registry"    
 
     manifests:
       - name: postgres-example-config
+        # @todo: update IngressRoute manifets to use k8s Ingress or Zarf Connect logic
         files:
           - manifests/patch-svc-accounts.yaml
-          - manifests/minio-instance-zarf-connect.yaml
-          - manifests/pgadmin-zarf-connect.yaml
-          - manifests/postgres-cluster.yaml
+          # - manifests/minio-instance-ingress.yaml
+          - manifests/pgadmin-ingress.yaml
+          # - manifests/postgres-cluster.yaml
           - manifests/postgres-operator.yaml
-          - manifests/postgres-operator-ui-zarf-connect.yaml
+          # - manifests/postgres-operator-ui-ingress.yaml
     charts:
       - name: postgres-operator
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
