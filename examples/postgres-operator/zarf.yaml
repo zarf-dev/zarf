@@ -2,8 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: postgres-operator-demo
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
-  # Big Bang / Iron Bank are only amd64
-  architecture: amd64
 
 components:
   - name: baseline
