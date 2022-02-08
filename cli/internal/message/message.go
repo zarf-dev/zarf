@@ -34,8 +34,8 @@ func init() {
 		Style: pterm.NewStyle(pterm.FgLightGreen),
 	}
 	pterm.Error.Prefix = pterm.Prefix{
-		Text:  "    ERROR:",
-		Style: pterm.NewStyle(pterm.BgLightRed, pterm.FgBlack),
+		Text:  "    Error:",
+		Style: pterm.NewStyle(pterm.FgLightRed),
 	}
 	pterm.Info.Prefix = pterm.Prefix{
 		Text: " •",

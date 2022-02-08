@@ -52,9 +52,6 @@ func Deploy() {
 		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
-	// Determine the proper arch now that the config file is loaded
-	config.SetAcrch()
-
 	if config.IsZarfInitConfig() {
 		// If init config, make sure things are ready
 		utils.RunPreflightChecks()
@@ -193,15 +190,13 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		defer spinner.Stop()
 
 		state := k8s.LoadZarfState()
+		config.InitState(state)
+		valueTemplate = template.Generate()
 
-		if state.Distro == k8s.DistroIsUnknown {
+		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
 		}
-
-		// Continue loading state data if it is valid
-		config.InitState(state)
-		valueTemplate = template.Generate()
 
 		if hasImages && state.Architecture != config.GetBuildData().Architecture {
 			// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull

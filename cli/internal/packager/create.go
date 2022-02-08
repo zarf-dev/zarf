@@ -34,8 +34,6 @@ func Create() {
 	components := config.GetComponents()
 	configFile := tempPath.base + "/zarf.yaml"
 
-	config.SetAcrch()
-
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
 		message.Fatalf(err, "Unable to write the %s file", configFile)

@@ -21,7 +21,7 @@ var rootCmd = &cobra.Command{
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
 		}
-		config.CliArch = arch
+		config.SetAcrch(arch)
 	},
 	Short: "Small tool to bundle dependencies with K3s for air-gaped deployments",
 	Args:  cobra.MaximumNArgs(1),
