@@ -1,9 +1,8 @@
 # Workstation Setup
 
-There are several ways to use Zarf & the tooling needed depends on what plan to do with it.  Here are some of the most common use cases, along with what you'll need to install on your workstation to play along.
+There are several ways to use Zarf & the tooling needed depends on what you plan to do with it.  Here are some of the most common use cases, along with what you'll need to install on your workstation to play along.
 
 &nbsp;
-
 
 ## Just gimmie Zarf!
 
@@ -52,24 +51,30 @@ chmod +x ./zarf && ./zarf help
 # substitute ./zarf-mac-intel or ./zarf-mac-apple above, as appropriate
 ```
 
-> _**Take note**_
->
-> Commands run this way _will_ make changes to your current system / environment!
->
->This is the expected usage pattern for production but for demonstration / development & test there are better, **virtual machine**-isolated ways to run Zarf. Keep reading to find out how to get setup for those!
-
-You'll know everything is installed correctly when you see the Zarf axolotl scroll through your terminal!
-
 &nbsp;
-
 
 ## I want a demo/example sandbox
 
-If you're looking for an easy & low-risk way to evaluate Zarf, our recommendation is to pop into the `examples` folder.  Because the demos _aren't_ intended to be long-lived and _are_ expected to clean up after themselves they've been wrapped into **virtual-machine (VM)**-isolated environments for easy setup & teardown.
+If you're looking for an easy & low-risk way to evaluate Zarf, our recommendation is to pop into the `examples` folder.  Because the demos _aren't_ intended to be long-lived and _are_ expected to clean up after themselves they are a perfect way to kick the tires.
 
-### Install
+There are lots of ways to get a sandbox environment, here's two of them:
 
-You'll need to install _these_ tools to run the examples:
+### Kubernetes-In-Docker (KinD)
+
+1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
+
+1. Install [KinD](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using KinD for this example since it is easy and tested frequently and thoroughly.
+
+1. Run
+   ```sh
+   kind create cluster
+   ```
+
+That's it! You should now have a Kubernetes cluster running in Docker for use. Run `kind delete cluster` to clean up when you are done.
+
+### Vagrant
+
+You'll need to install _these_ tools to run the examples if you want to use Vagrant:
 
 1. [Virtualbox ](https://www.virtualbox.org/wiki/Downloads) &mdash; The [hypervisor](https://www.redhat.com/en/topics/virtualization/what-is-a-hypervisor) we use to run our example VMs.
 
@@ -91,11 +96,10 @@ You'll need to install _these_ tools to run the examples:
 
 ### Try it out
 
-Once you've got everything installed you're ready to run some examples! We recommend giving the [Get Started - game](../examples/game/) example a try!
+Once you've got everything installed you're ready to run some examples! We recommend giving the [Get Started - game](../examples/game/README.md) example a try!
 <!-- update link once Get Started page is written! -->
 
 &nbsp;
-
 
 ## I need a dev machine
 
@@ -105,7 +109,7 @@ During dev & test, Zarf gets its exercise the same way the examples do&mdash;ins
 
 1. [Go](https://golang.org/doc/install) &mdash; the programming language / build tools we use to create the `zarf` (et al.) binary.
 
-    Currently recommended version is `1.16.x`.
+    Currently required version is `1.16.x`.
 
 &nbsp;
 
