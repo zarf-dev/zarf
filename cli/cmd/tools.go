@@ -3,15 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
-	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
@@ -80,33 +79,23 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
-var k9sCmd = &cobra.Command{
-	Use:   "k9s",
-	Short: "Launch K9s tool for managing K8s clusters",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Hack to make k9s think it's all alone
-		os.Args = []string{os.Args[0], "-n", "zarf"}
-		k9s.Execute()
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(configSchemaCmd)
-	toolsCmd.AddCommand(k9sCmd)
-	toolsCmd.AddCommand(registryCmd)
-
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	cranePlatformOptions := []crane.Option{config.ActiveCranePlatform}
+	toolsCmd.AddCommand(registryCmd)
+	cranePlatformOptions := []crane.Option{
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "amd64"}),
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: "arm64"}),
+	}
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
-
 }
