@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-func Destroy(purgeAllZarfInstallations bool) {
+func Destroy() {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
 
@@ -37,10 +37,6 @@ func Destroy(purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, release := range releases {
-		if !purgeAllZarfInstallations && release.Namespace != "zarf" {
-			// Don't process releases outside the zarf namespace unless purgae all is true
-			continue
-		}
 		// Filter on zarf releases
 		if zarfPrefix.MatchString(release.Name) {
 			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)

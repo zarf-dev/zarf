@@ -34,8 +34,10 @@ var destroyCmd = &cobra.Command{
 				_ = os.Remove(script)
 			}
 		} else {
-			// Perform chart uninstallation
-			helm.Destroy(removeComponents)
+			if removeComponents {
+				// The default behavior for charts installed outside the zarf namespace will be to leave them installed
+				helm.Destroy()
+			}
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			k8s.DeleteZarfNamespace()
