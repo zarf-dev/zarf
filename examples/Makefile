@@ -71,7 +71,7 @@ vendor-big-bang-base: ## Grab the bigbang base kustomization so we don't need to
 
 .PHONY: package-example-big-bang
 package-example-big-bang: vendor-big-bang-base ## Create the Big Bang Core example
-	cd big-bang && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+	cd big-bang && kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-softare-factory
 package-example-software-factory: ## Create the Big Bang Software Factory example

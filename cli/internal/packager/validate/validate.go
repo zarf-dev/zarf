@@ -75,8 +75,8 @@ func validateManifest(manifest types.ZarfManifest) error {
 	}
 
 	// Require files in manifest
-	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
-		return fmt.Errorf("%s must have at least one file or kustomization", intro)
+	if len(manifest.Files) < 1 {
+		return fmt.Errorf("%s must have at least 1 file", intro)
 	}
 
 	return nil

@@ -37,8 +37,7 @@ type ZarfComponent struct {
 type ZarfManifest struct {
 	Name             string   `yaml:"name"`
 	DefaultNamespace string   `yaml:"namespace,omitempty"`
-	Files            []string `yaml:"files,omitempty"`
-	Kustomizations   []string `yaml:"kustomizations,omitempty"`
+	Files            []string `yaml:"files"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed

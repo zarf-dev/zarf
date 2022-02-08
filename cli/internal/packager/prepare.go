@@ -2,16 +2,9 @@ package packager
 
 import (
 	"fmt"
-	"os"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
-
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/helm"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
-	"github.com/defenseunicorns/zarf/cli/internal/kustomize"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/defenseunicorns/zarf/cli/types"
@@ -20,6 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"os"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 type ImageMap map[string]bool
@@ -123,35 +121,19 @@ func FindImages(repoHelmChartPath string) {
 			}
 		}
 
-		if len(component.Manifests) > 0 {
-			if err := utils.CreateDirectory(componentPath.manifests, 0700); err != nil {
-				message.Errorf(err, "Unable to create the manifest path %s", componentPath.manifests)
-			}
-
-			for _, manifest := range component.Manifests {
-				for idx, kustomization := range manifest.Kustomizations {
-					// Generate manifests from kustomizations and place in the package
-					destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
-					if err := kustomize.BuildKustomization(kustomization, destination); err != nil {
-						message.Errorf(err, "unable to build the kustomization for %s", kustomization)
-					} else {
-						manifest.Files = append(manifest.Files, destination)
-					}
+		for _, manifest := range component.Manifests {
+			// Get all manifest files
+			for _, file := range manifest.Files {
+				// Read the contents of each file
+				contents, err := os.ReadFile(file)
+				if err != nil {
+					message.Errorf(err, "Unable to read the file %s", file)
+					continue
 				}
 
-				// Get all manifest files
-				for _, file := range manifest.Files {
-					// Read the contents of each file
-					contents, err := os.ReadFile(file)
-					if err != nil {
-						message.Errorf(err, "Unable to read the file %s", file)
-						continue
-					}
-
-					// Break the manifest into separate resources
-					yamls, _ := k8s.SplitYAML(contents)
-					resources = append(resources, yamls...)
-				}
+				// Break the manifest into separate resources
+				yamls, _ := k8s.SplitYAML(contents)
+				resources = append(resources, yamls...)
 			}
 		}
 
@@ -163,7 +145,7 @@ func FindImages(repoHelmChartPath string) {
 
 		if sortedImages := listImages(matchedImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
-			fmt.Printf("      # %s - %s\n", config.GetMetaData().Name, component.Name)
+			fmt.Println(fmt.Sprintf("      # %s - %s", config.GetMetaData().Name, component.Name))
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
 				fmt.Println("      - " + image)

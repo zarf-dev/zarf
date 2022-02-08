@@ -2,15 +2,13 @@ package packager
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/defenseunicorns/zarf/cli/internal/kustomize"
-	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
@@ -135,32 +133,11 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		}
 	}
 
-	if len(component.Manifests) > 0 {
-		spinner := message.NewProgressSpinner("Loading %d manifests", len(component.Manifests))
-		defer spinner.Stop()
-
-		if err := utils.CreateDirectory(componentPath.manifests, 0700); err != nil {
-			spinner.Fatalf(err, "Unable to create the manifest path %s", componentPath.manifests)
+	for _, manifest := range component.Manifests {
+		for _, file := range manifest.Files {
+			destination := fmt.Sprintf("%s/%s", componentPath.manifests, file)
+			utils.CreatePathAndCopy(file, destination)
 		}
-
-		// Iterate over all manifests
-		for _, manifest := range component.Manifests {
-			for _, file := range manifest.Files {
-				// Copy manifests without any processing
-				spinner.Updatef("Copying manifest %s", file)
-				destination := fmt.Sprintf("%s/%s", componentPath.manifests, file)
-				utils.CreatePathAndCopy(file, destination)
-			}
-			for idx, kustomization := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
-				spinner.Updatef("Building kustomization for %s", kustomization)
-				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(kustomization, destination); err != nil {
-					spinner.Fatalf(err, "unable to build the kustomization for %s", kustomization)
-				}
-			}
-		}
-		spinner.Success()
 	}
 
 	// Load all specified git repos

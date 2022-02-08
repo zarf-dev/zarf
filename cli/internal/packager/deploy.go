@@ -238,12 +238,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	for _, manifest := range component.Manifests {
-		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
-		}
-
 		// Iterate over any connectStrings and add to the main map
 		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component.Images) {
 			connectStrings[name] = description

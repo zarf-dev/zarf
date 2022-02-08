@@ -212,7 +212,8 @@
     },
     "ZarfManifest": {
       "required": [
-        "name"
+        "name",
+        "files"
       ],
       "properties": {
         "name": {
@@ -222,12 +223,6 @@
           "type": "string"
         },
         "files": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "kustomizations": {
           "items": {
             "type": "string"
           },
