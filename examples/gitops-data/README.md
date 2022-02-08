@@ -7,10 +7,10 @@ choice.
 
 ## Demonstrated Features
 
-### Docker Image Push
+### Docker Image Deployment
 
-This example demonstrates using component `images` to push container images
-to an image registry. Images provided to the `images` tag are
+This example demonstrates using component `images` to deploy container images
+to a docker container image registry. Images provided to the `images` tag are
 uploaded to a Zarf hosted docker registry, which can be later used by
 Kubernetes manifests, or manually used as shown in this guide.
 
@@ -67,31 +67,17 @@ container images to the Docker registry.
 zarf package deploy zarf-package-gitops-service-data.tar.zst
 ```
 
+> _**Important**_
+>
+> It's possible to try a package deploy _before the Zarf cluster is ready to receive it_. If you see an error like `"https://<cluster ip>/v2/": dial tcp ,<cluster ip>:443: connect: connection refused;` then it's very likely that you've beat the Zarf startup routines.
+>
+> The fix is simple: just wait for the cluster to finish starting & try again.
+
 ## Applying the Kustomization
 
 Once the package has been deployed, the Kustomization can be applied from the
 Gitea repository using the below command.
 
 ```sh
-# Run 'zarf connect' and send it to the background
-zarf connect git&
-
-# Apply the kustomization
-kubectl apply -k http://zarf-git-user:$(zarf tools get-admin-password)@localhost:<WhicheverPortGotUsed>/zarf-git-user/mirror__github.com__stefanprodan__podinfo//kustomize
-
-# Inspect
-zarf tools k9s
-
-# Bring the connection back to the foreground
-fg
-
-# Kill the connection with Ctrl-C
-```
-
-## Clean Up
-
-Clean up simply by just deleting the whole cluster
-
-```sh
-kind delete cluster
+kubectl apply -k https://zarf-git-user:$(./zarf tools get-admin-password)@localhost/zarf-git-user/mirror__github.com__stefanprodan__podinfo//kustomize
 ```
