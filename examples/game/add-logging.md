@@ -90,19 +90,15 @@ Doing that sends a bunch of HTTP traffic into the cluster & should give you some
 
 ### Get into Grafana
 
-<a href="../../.images/get-started/plg.png">
-<img align="right" alt="dosbox" src="../../.images/get-started/plg.png" height="160" />
-</a>
-
 Now that you've got some logs worth looking at, you're ready to log into your brand new Grafana instance.
 
-Get started by navigating your browser to: `https://localhost/monitor/explore`.
+Get started by opening Grafana using `zarf connect logging`
 
 You'll be redirected the `/login` page where you have to sign in with the Grafana credentials you saved [in a previous step](#note-the-credentials).
 
-Once you've successfully logged in you will be redirected back to:
+Once you've successfully logged in go to:
 
-1. the `monitor/explore` page, where
+1. The "Explore" page (Button on the left that looks like a compass)
 
 1. you can select `Loki` in the dropdown, and then
 
@@ -115,16 +111,12 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 ## Cleanup
 
-<a href="https://asciinema.org/a/446956?x-scenario=examples-game-logging&t=88">
-<img align="right" alt="asciicast" src="https://asciinema.org/a/446956.svg?x-scenario=examples-game-logging" height="256" />
-</a>
-
 Once you've had your fun it's time to clean up.
 
 In this case, since the Zarf cluster was installed specifically (and _only_) to serve this example, clean up is really easy&mdash;you just tear down the entire cluster:
 
 ```sh
-zarf destroy --confirm
+kind delete cluster
 ```
 
-It takes just a couple moments for the _entire Zarf cluster_ to disappear&mdash;long-running system services and all&mdash;leaving your machine squeaky clean.
+It takes just a couple moments for the _entire cluster_ to disappear&mdash;long-running system services and all&mdash;leaving your machine squeaky clean.
