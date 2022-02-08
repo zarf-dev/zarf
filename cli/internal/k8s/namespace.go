@@ -38,7 +38,7 @@ func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespac
 				},
 			},
 		}
-	}
+	} 
 
 	metaOptions := metav1.GetOptions{}
 	createOptions := metav1.CreateOptions{}
