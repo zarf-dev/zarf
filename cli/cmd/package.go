@@ -31,10 +31,8 @@ var packageDeployCmd = &cobra.Command{
 	Short: "Deploys an update package from a local file or URL (runs offline)",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var done func()
 		packageName := choosePackage(args)
-		config.DeployOptions.PackagePath, done = packager.HandleIfURL(packageName, shasum, insecureDeploy)
-		defer done()
+		config.DeployOptions.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
 		packager.Deploy()
 	},
 }
