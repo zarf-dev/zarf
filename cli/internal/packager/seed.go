@@ -124,7 +124,6 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.Registry.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
-		state.Architecture = config.GetBuildData().Architecture
 	}
 
 	switch state.Distro {

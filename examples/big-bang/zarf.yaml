@@ -2,8 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
   description: "Demo Zarf basic deployment of Big Bang core"
-  # Big Bang / Iron Bank are only amd64
-  architecture: amd64
 
 components:
   - name: flux

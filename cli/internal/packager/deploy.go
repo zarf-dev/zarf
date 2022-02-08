@@ -156,26 +156,15 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
-		// If we are touching K8s, make sure we can talk to it once per deployment
 		spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 		defer spinner.Stop()
 
 		state := k8s.LoadZarfState()
 		config.InitState(state)
 		valueTemplate = template.Generate()
-
 		if state.Distro == "" {
-			// If no distro the zarf secret did not load properly
-			spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
+			spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret")
 		}
-
-		if hasImages && state.Architecture != config.GetBuildData().Architecture {
-			// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
-			spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initailized with the %s architecture",
-				config.GetBuildData().Architecture,
-				state.Architecture)
-		}
-
 		spinner.Success()
 	}
 

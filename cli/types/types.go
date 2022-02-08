@@ -66,7 +66,6 @@ type ZarfMetadata struct {
 	Url          string `yaml:"url,omitempty"`
 	Image        string `yaml:"image,omitempty"`
 	Uncompressed bool   `yaml:"uncompressed,omitempty"`
-	Architecture string `yaml:"architecture,omitempty"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
@@ -85,11 +84,11 @@ type ZarfData struct {
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package
 type ZarfBuildData struct {
-	Terminal     string `yaml:"terminal"`
-	User         string `yaml:"user"`
-	Architecture string `yaml:"architecture"`
-	Timestamp    string `yaml:"timestamp"`
-	Version      string `yaml:"string"`
+	Terminal  string `yaml:"terminal"`
+	User      string `yaml:"user"`
+	Arch      string `yaml:"arch"`
+	Timestamp string `yaml:"timestamp"`
+	Version   string `yaml:"string"`
 }
 
 // ZarfPackage the top-level structure of a Zarf config file
@@ -106,7 +105,6 @@ type ZarfPackage struct {
 type ZarfState struct {
 	ZarfAppliance bool   `json:"zarfAppliance"`
 	Distro        string `json:"distro"`
-	Architecture  string `json:"architecture"`
 	StorageClass  string `json:"storageClass"`
 	Secret        string `json:"secret"`
 	Registry      struct {

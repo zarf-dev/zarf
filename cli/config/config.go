@@ -2,13 +2,11 @@ package config
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"os/user"
-	"runtime"
 	"strings"
 	"time"
-
-	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
@@ -60,19 +58,8 @@ func IsZarfInitConfig() bool {
 }
 
 func SetAcrch(arch string) {
-	if arch == "" {
-		// If not cli override for arch, set to the package arch
-		arch = config.Metadata.Architecture
-
-		if arch == "" {
-			// Finally, default to current system arch when all else fails
-			arch = runtime.GOARCH
-		}
-	}
-
 	message.Debugf("config.SetArch(%s)", arch)
-	config.Build.Architecture = arch
-	// Use the arch to define the image push/pull options for crane
+	config.Build.Arch = arch
 	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
 
