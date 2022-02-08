@@ -12,8 +12,9 @@
             "program": "${workspaceFolder}/cli",
             "env": {},
             "args": [
-                "connect",
-                "doom"
+                "init",
+                "--confirm",
+                "--components=gitops-service"
             ]
         },
 

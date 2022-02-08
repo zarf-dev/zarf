@@ -1,13 +1,11 @@
 package packager
 
 import (
-	"fmt"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/git"
@@ -23,7 +21,6 @@ import (
 )
 
 var valueTemplate template.Values
-var connectStrings = make(helm.ConnectStrings)
 
 func Deploy() {
 	message.Debug("packager.Deploy()")
@@ -79,14 +76,11 @@ func Deploy() {
 		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
 		_ = os.Remove(".zarf-registry")
 
-		pterm.Success.Println("Zarf deployment complete")
-		pterm.Println()
-
 		_ = pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData{
-			{"     Application", "Username", "Password", "Connect"},
-			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
-			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
-			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
+			{"Application", "Username", "Password", "Connect"},
+			{"Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
+			{"Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
 	} else {
 		// Otherwise, look for any datainjections to run after the components
@@ -94,21 +88,6 @@ func Deploy() {
 		if len(dataInjectionList) > 0 {
 			message.Info("Loading data injections")
 			handleDataInjection(dataInjectionList, tempPath)
-		}
-
-		pterm.Success.Println("Zarf deployment complete")
-		pterm.Println()
-
-		if len(connectStrings) > 0 {
-			list := pterm.TableData{{"     Connect Command", "Description"}}
-			// Loop over each connecStrings and convert to pterm.TableData
-			for name, description := range connectStrings {
-				name = fmt.Sprintf("     zarf connect %s", name)
-				list = append(list, []string{name, description})
-			}
-
-			// Create the table output with the data
-			_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
 		}
 	}
 
@@ -212,23 +191,15 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		}
 
 		// Generate helm templates to pass to gitops engine
-		addedConnectStrings := helm.InstallOrUpgradeChart(helm.ChartOptions{
+		helm.InstallOrUpgradeChart(helm.ChartOptions{
 			BasePath: componentPath.base,
 			Chart:    chart,
 			Images:   component.Images,
 		})
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
-		}
 	}
 
 	for _, manifest := range component.Manifests {
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component.Images) {
-			connectStrings[name] = description
-		}
+		helm.GenerateChart(componentPath.manifests, manifest, component.Images)
 	}
 
 	if hasRepos {

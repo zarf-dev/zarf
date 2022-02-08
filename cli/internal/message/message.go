@@ -37,9 +37,6 @@ func init() {
 		Text:  "    Error:",
 		Style: pterm.NewStyle(pterm.FgLightRed),
 	}
-	pterm.Info.Prefix = pterm.Prefix{
-		Text: " •",
-	}
 }
 
 func debugPrinter() *pterm.PrefixPrinter {

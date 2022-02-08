@@ -4,20 +4,18 @@ package k8s
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
-
-	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -67,7 +65,6 @@ type Tunnel struct {
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
 func NewTunnel(namespace string, resourceType string, resourceName string, local int, remote int) *Tunnel {
-	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %v, %v)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
 		out:          ioutil.Discard,
 		localPort:    local,
@@ -85,7 +82,6 @@ func NewZarfTunnel() *Tunnel {
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
-	message.Debugf("tunnel.Connect(%s, %v)", target, blocking)
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
@@ -100,12 +96,6 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		tunnel.localPort = PortGit
 		tunnel.remotePort = 3000
 	default:
-		if target != "" {
-			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
-				message.Errorf(err, "Problem looking for a zarf connect label in the cluster")
-			}
-		}
-
 		if tunnel.resourceName == "" {
 			message.Fatalf(nil, "Ensure a resource name is provided")
 		}
@@ -114,23 +104,12 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
-	if url, err := tunnel.Establish(); err != nil {
-		// On error abbort
+	if err := tunnel.Establish(); err != nil {
 		message.Fatal(err, "Unable to establish the tunnel")
-	} else if blocking {
-		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
-		switch runtime.GOOS {
-		case "linux":
-			_ = exec.Command("xdg-open", url).Start()
-		case "windows":
-			_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-		case "darwin":
-			_ = exec.Command("open", url).Start()
-		}
+	}
 
-		// Since this blocking, set the defer now so it closes properly on sigterm
+	if blocking {
 		defer tunnel.Close()
-
 		// Keep this open until an interrupt signal is received
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -147,43 +126,45 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 
 // Endpoint returns the tunnel endpoint
 func (tunnel *Tunnel) Endpoint() string {
-	message.Debug("tunnel.Endpoint()")
 	return fmt.Sprintf("localhost:%d", tunnel.localPort)
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	message.Debug("tunnel.Close()")
 	close(tunnel.stopChan)
 }
 
-func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
-	message.Debugf("tunnel.checkForZarfConnectLabel(%s)", name)
-	matches, err := GetServicesByLabelExists("", config.ZarfConnectLabelName)
+// getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
+// the name.
+func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
+	switch tunnel.resourceType {
+	case PodResource:
+		return tunnel.resourceName, nil
+	case SvcResource:
+		return tunnel.getAttachablePodForService()
+	default:
+		return "", fmt.Errorf("unknown resource type: %s", tunnel.resourceType)
+	}
+}
+
+// getAttachablePodForServiceE will find an active pod associated with the Service and return the pod name.
+func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
+	service, err := GetService(tunnel.namespace, tunnel.resourceName)
 	if err != nil {
-		return fmt.Errorf("unable to lookup the service: %w", err)
+		return "", fmt.Errorf("unable to find the service: %w", err)
 	}
+	selectorLabelsOfPods := makeLabels(service.Spec.Selector)
 
-	if len(matches.Items) > 0 {
-		// If there is a match, use the first one as these are supposed to be unique
-		svc := matches.Items[0]
+	servicePods := WaitForPodsAndContainers(types.ZarfContainerTarget{
+		Namespace: tunnel.namespace,
+		Selector:  selectorLabelsOfPods,
+	}, false)
 
-		// Reset based on the matched params
-		tunnel.resourceType = SvcResource
-		tunnel.resourceName = svc.Name
-		tunnel.namespace = svc.Namespace
-		// Only support a service with a single port
-		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
-
-		message.Debugf("tunnel connection match: %s/%s on port %i", svc.Namespace, svc.Name, tunnel.remotePort)
-	}
-
-	return nil
+	return servicePods[0], nil
 }
 
 // Establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
-func (tunnel *Tunnel) Establish() (string, error) {
-	message.Debug("tunnel.Establish()")
+func (tunnel *Tunnel) Establish() error {
 	spinner := message.NewProgressSpinner("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
 		tunnel.resourceType,
 		tunnel.resourceName,
@@ -196,7 +177,7 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource()
 	if err != nil {
-		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
+		return fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
 	spinner.Debugf("Selected pod %s to open port forward to", podName)
 
@@ -220,7 +201,7 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Construct the spdy client required by the client-go portforward library
 	transport, upgrader, err := spdy.RoundTripperFor(restConfig)
 	if err != nil {
-		return "", fmt.Errorf("unable to create the spdy client %w", err)
+		return fmt.Errorf("unable to create the spdy client %w", err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", portForwardCreateURL)
 
@@ -234,7 +215,7 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		spinner.Debugf("Requested local port is 0. Selecting an open port on host system")
 		tunnel.localPort, err = GetAvailablePort()
 		if err != nil {
-			return "", fmt.Errorf("unable to find an available port: %w", err)
+			return fmt.Errorf("unable to find an available port: %w", err)
 		}
 		spinner.Debugf("Selected port %d", tunnel.localPort)
 		globalMutex.Lock()
@@ -245,7 +226,7 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	ports := []string{fmt.Sprintf("%d:%d", tunnel.localPort, tunnel.remotePort)}
 	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, tunnel.out, tunnel.out)
 	if err != nil {
-		return "", fmt.Errorf("unable to create the port forward: %w", err)
+		return fmt.Errorf("unable to create the port forward: %w", err)
 	}
 
 	// Open the tunnel in a goroutine so that it is available in the background. Report errors to the main goroutine via
@@ -258,18 +239,16 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Wait for an error or the tunnel to be ready
 	select {
 	case err = <-errChan:
-		return "", fmt.Errorf("unable to start the tunnel: %w", err)
+		return fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
-		url := fmt.Sprintf("http://%s:%v", config.IPV4Localhost, tunnel.localPort)
-		spinner.Successf("Creating port forwarding tunnel available at %s", url)
-		return url, nil
+		spinner.Successf("Creating port forwarding tunnel available at http://%s:%v", config.IPV4Localhost, tunnel.localPort)
+		return nil
 	}
 }
 
 // GetAvailablePort retrieves an available port on the host machine. This delegates the port selection to the golang net
 // library by starting a server and then checking the port that the server is using.
 func GetAvailablePort() (int, error) {
-	message.Debug("tunnel.GetAvailablePort()")
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return 0, err
@@ -288,35 +267,4 @@ func GetAvailablePort() (int, error) {
 		return 0, err
 	}
 	return port, err
-}
-
-// getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
-// the name.
-func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
-	message.Debug("tunnel.GettAttachablePodForResource()")
-	switch tunnel.resourceType {
-	case PodResource:
-		return tunnel.resourceName, nil
-	case SvcResource:
-		return tunnel.getAttachablePodForService()
-	default:
-		return "", fmt.Errorf("unknown resource type: %s", tunnel.resourceType)
-	}
-}
-
-// getAttachablePodForServiceE will find an active pod associated with the Service and return the pod name.
-func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
-	message.Debug("tunnel.getAttachablePodForService()")
-	service, err := GetService(tunnel.namespace, tunnel.resourceName)
-	if err != nil {
-		return "", fmt.Errorf("unable to find the service: %w", err)
-	}
-	selectorLabelsOfPods := makeLabels(service.Spec.Selector)
-
-	servicePods := WaitForPodsAndContainers(types.ZarfContainerTarget{
-		Namespace: tunnel.namespace,
-		Selector:  selectorLabelsOfPods,
-	}, false)
-
-	return servicePods[0], nil
 }
