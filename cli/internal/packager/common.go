@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,7 +47,7 @@ func createPaths() tempPaths {
 	}
 }
 
-func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
+func createComponentPaths(basePath string, component config.ZarfComponent) componentPaths {
 	basePath = basePath + "/" + component.Name
 	_ = utils.CreateDirectory(basePath, 0700)
 	return componentPaths{
@@ -90,8 +89,8 @@ func confirmAction(configPath string, userMessage string) bool {
 	return config.DeployOptions.Confirm
 }
 
-func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
-	var validComponentsList []types.ZarfComponent
+func getValidComponents(allComponents []config.ZarfComponent, requestedComponentNames []string) []config.ZarfComponent {
+	var validComponentsList []config.ZarfComponent
 	confirmedComponents := make([]bool, len(requestedComponentNames))
 	for _, component := range allComponents {
 		confirmComponent := component.Required

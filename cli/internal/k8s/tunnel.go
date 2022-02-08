@@ -4,7 +4,6 @@ package k8s
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"io"
 	"io/ioutil"
 	"net"
@@ -155,7 +154,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	}
 	selectorLabelsOfPods := makeLabels(service.Spec.Selector)
 
-	servicePods := WaitForPodsAndContainers(types.ZarfContainerTarget{
+	servicePods := WaitForPodsAndContainers(config.ZarfContainerTarget{
 		Namespace: tunnel.namespace,
 		Selector:  selectorLabelsOfPods,
 	}, false)

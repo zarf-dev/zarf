@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -10,7 +9,7 @@ import (
 )
 
 type Values struct {
-	state          types.ZarfState
+	state          config.ZarfState
 	htpasswd       string
 	seedRegistry   string
 	registry       string

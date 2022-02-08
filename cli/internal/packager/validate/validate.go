@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"github.com/defenseunicorns/zarf/cli/types"
 )
 
 // Run performs config validations and runs message.Fatal() on errors
@@ -26,7 +25,7 @@ func Run() {
 
 }
 
-func validateChart(chart types.ZarfChart) error {
+func validateChart(chart config.ZarfChart) error {
 	intro := fmt.Sprintf("chart %s", chart.Name)
 
 	// Don't allow empty names
@@ -59,7 +58,7 @@ func validateChart(chart types.ZarfChart) error {
 	return nil
 }
 
-func validateManifest(manifest types.ZarfManifest) error {
+func validateManifest(manifest config.ZarfManifest) error {
 	intro := fmt.Sprintf("chart %s", manifest.Name)
 
 	// Don't allow empty names

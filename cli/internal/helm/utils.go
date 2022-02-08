@@ -2,10 +2,10 @@ package helm
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"strconv"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -17,7 +17,7 @@ import (
 )
 
 // StandardName generates a predictable full path for a helm chart for Zarf
-func StandardName(destination string, chart types.ZarfChart) string {
+func StandardName(destination string, chart config.ZarfChart) string {
 	return destination + "/" + chart.Name + "-" + chart.Version
 }
 

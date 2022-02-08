@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 
 	"github.com/alecthomas/jsonschema"
@@ -72,7 +71,7 @@ var configSchemaCmd = &cobra.Command{
 	Use:   "config-schema",
 	Short: "Generates a JSON schema for the zarf.yaml configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&types.ZarfPackage{})
+		schema := jsonschema.Reflect(&config.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			message.Fatal(err, "Unable to generate the zarf config schema")

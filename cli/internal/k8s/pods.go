@@ -2,10 +2,10 @@ package k8s
 
 import (
 	"context"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +14,7 @@ import (
 const waitLimit = 30
 
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
-func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
+func WaitForPodsAndContainers(target config.ZarfContainerTarget, waitForAllPods bool) []string {
 
 	clientSet := getClientset()
 

@@ -3,7 +3,6 @@ package packager
 import (
 	"fmt"
 	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -83,7 +82,7 @@ func Create() {
 	cleanup(tempPath)
 }
 
-func addComponent(tempPath tempPaths, component types.ZarfComponent) {
+func addComponent(tempPath tempPaths, component config.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	componentPath := createComponentPaths(tempPath.components, component)
 

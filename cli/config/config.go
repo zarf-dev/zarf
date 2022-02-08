@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"os"
 	"os/user"
 	"strings"
@@ -40,16 +39,16 @@ var (
 	CLIVersion = "unset"
 
 	// TLS options used for cert creation
-	TLS types.TLSConfig
+	TLS TLSConfig
 
 	// DeployOptions tracks user-defined values for the active deployment
-	DeployOptions types.ZarfDeployOptions
+	DeployOptions ZarfDeployOptions
 
 	ActiveCranePlatform crane.Option
 
 	// Private vars
-	config types.ZarfPackage
-	state  types.ZarfState
+	config ZarfPackage
+	state  ZarfState
 )
 
 func IsZarfInitConfig() bool {
@@ -83,19 +82,19 @@ func GetPackageName() string {
 	}
 }
 
-func GetDataInjections() []types.ZarfData {
+func GetDataInjections() []ZarfData {
 	return config.Data
 }
 
-func GetMetaData() types.ZarfMetadata {
+func GetMetaData() ZarfMetadata {
 	return config.Metadata
 }
 
-func GetComponents() []types.ZarfComponent {
+func GetComponents() []ZarfComponent {
 	return config.Components
 }
 
-func GetBuildData() types.ZarfBuildData {
+func GetBuildData() ZarfBuildData {
 	return config.Build
 }
 
@@ -103,13 +102,13 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
-func InitState(tmpState types.ZarfState) {
+func InitState(tmpState ZarfState) {
 	message.Debugf("config.InitState(%v)", tmpState)
 	state = tmpState
 	initSecrets()
 }
 
-func GetState() types.ZarfState {
+func GetState() ZarfState {
 	return state
 }
 
