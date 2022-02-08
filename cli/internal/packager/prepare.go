@@ -117,7 +117,9 @@ func FindImages(repoHelmChartPath string) {
 
 				// Break the template into separate resources
 				yamls, _ := k8s.SplitYAML([]byte(template))
-				resources = append(resources, yamls...)
+				for _, yaml := range yamls {
+					resources = append(resources, yaml)
+				}
 			}
 		}
 
@@ -133,7 +135,9 @@ func FindImages(repoHelmChartPath string) {
 
 				// Break the manifest into separate resources
 				yamls, _ := k8s.SplitYAML(contents)
-				resources = append(resources, yamls...)
+				for _, yaml := range yamls {
+					resources = append(resources, yaml)
+				}
 			}
 		}
 

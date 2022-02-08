@@ -31,7 +31,10 @@ func GetSecret(namespace string, name string) (*corev1.Secret, error) {
 }
 
 func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
-	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
+	message.Debugf("k8s.GenerateRegistryPullCreds(%s)", namespace)
+
+	spinner := message.NewProgressSpinner("Generating private registry credentials %s/%s", namespace, name)
+	defer spinner.Stop()
 
 	secretDockerConfig := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -49,7 +52,7 @@ func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
 	// Auth field must be username:password and base64 encoded
 	credential := config.GetSecret(config.StateRegistryPull)
 	if credential == "" {
-		message.Fatalf(nil, "Generate pull cred failed")
+		spinner.Fatalf(nil, "Generate pull cred failed")
 	}
 	fieldValue := config.ZarfRegistryPullUser + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
@@ -67,12 +70,13 @@ func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
 	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
 	if err != nil {
-		message.Fatalf(err, "Unable to create the embedded registry secret")
+		spinner.Fatalf(err, "Unable to create the embedded registry secret")
 	}
 
 	// Add to the secret data
 	secretDockerConfig.Data[".dockerconfigjson"] = dockerConfigData
 
+	spinner.Success()
 	return secretDockerConfig
 }
 

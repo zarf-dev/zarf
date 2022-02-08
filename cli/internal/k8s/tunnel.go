@@ -258,7 +258,6 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Wait for an error or the tunnel to be ready
 	select {
 	case err = <-errChan:
-		spinner.Stop()
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
 		url := fmt.Sprintf("http://%s:%v", config.IPV4Localhost, tunnel.localPort)
