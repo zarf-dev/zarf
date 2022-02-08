@@ -12,8 +12,6 @@ components:
       - name: flux-config
         files:
           - manifests/flux/regcred-secret.yaml
-          # kustomize build template/bigbang/vendor/bigbang/base/flux > manifests/flux/flux-generated.yaml
-          - manifests/flux/flux-generated.yaml
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
