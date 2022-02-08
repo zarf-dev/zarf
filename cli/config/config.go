@@ -19,6 +19,7 @@ import (
 const (
 	IPV4Localhost = "127.0.0.1"
 
+	K3sBinary       = "/usr/local/bin/k3s"
 	PackageInitName = "zarf-init.tar.zst"
 	PackagePrefix   = "zarf-package-"
 
