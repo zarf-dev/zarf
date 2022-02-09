@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,19 +46,19 @@ func TestGitopsExample(t *testing.T) {
 		expectedTag := "v0.15.0\n"
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git tag'", e2e.username)
 		require.NoError(t, err, output)
-		assert.Equal(t, expectedTag, output, "Expected tag should match output")
+		require.Equal(t, expectedTag, output, "Expected tag should match output")
 
 		// Check for correct commits
-		expectedCommits := "4fb0f14\ncd45237\n9ac3338"
+		expectedCommits := "9eb207e\n7636dd0\ne02cec9"
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git log -3 --oneline --pretty=format:\"%%h\"'", e2e.username)
 		require.NoError(t, err, output)
-		assert.Equal(t, expectedCommits, output, "Expected commits should match output")
+		require.Equal(t, expectedCommits, output, "Expected commits should match output")
 
-		// Check for correct branches
+		// Check for existence of tags without specifying them, signifying that not using '@1.2.3' syntax brought over the whole repo
 		expectedTag = "0.2.2"
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__stefanprodan__podinfo && git tag'", e2e.username)
 		require.NoError(t, err, output)
-		assert.Contains(t, expectedTag, output, "Output should contain expected tag")
+		require.Contains(t, output, expectedTag, "Output should contain expected tag")
 	})
 
 }
