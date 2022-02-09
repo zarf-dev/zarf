@@ -72,7 +72,7 @@ package-example-single-big-bang-package: ## Create the Zarf package for single-b
 
 .PHONY: package-example-gitops-data
 package-example-gitops-data:
-	cd examples/gitops-data && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+	cd examples/gitops-data && rm -rf ./.image-cache && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
 .PHONY: test-cloud-e2e-example-game
 test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
