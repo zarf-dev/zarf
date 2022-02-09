@@ -19,6 +19,8 @@ func TestGeneralCli(t *testing.T) {
 	// Upload the Zarf artifacts
 	teststructure.RunTestStage(e2e.testing, "UPLOAD", func() {
 		e2e.syncFileToRemoteServer("../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", e2e.username), "0700")
+		e2e.syncFileToRemoteServer("../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", e2e.username), "0700")
+		e2e.syncFileToRemoteServer("../../build/zarf-package-kafka-strimzi-demo.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-kafka-strimzi-demo.tar.zst", e2e.username), "0700")
 	})
 
 	teststructure.RunTestStage(e2e.testing, "TEST", func() {
@@ -56,6 +58,14 @@ func TestGeneralCli(t *testing.T) {
 		require.Error(e2e.testing, err, output)
 		output, err = e2e.runSSHCommand("cd /home/%s/build && ./zarf pki regenerate --host some_unique_server", e2e.username)
 		require.Error(e2e.testing, err, output)
+
+		// Initialize Zarf for the next set of tests
+		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", e2e.username)
+		require.NoError(e2e.testing, err, output)
+
+		// Verify that we do not timeout when passing the `--confirm` flag without specifying the `--components` flag
+		output, err = e2e.runSSHCommand("sudo timeout 120 sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-kafka-strimzi-demo.tar.zst --confirm' || false", e2e.username)
+		require.NoError(e2e.testing, err, output)
 
 		// Test that `zarf package deploy` doesn't die when given a URL
 		// NOTE: Temporarily commenting this out because this seems out of scope for a general cli test. Having this included also means we would have to fully standup a `zarf init` command.

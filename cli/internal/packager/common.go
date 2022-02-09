@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/goccy/go-yaml"
 
@@ -78,16 +79,18 @@ func confirmAction(configPath string, userMessage string) bool {
 	utils.ColorPrintYAML(text)
 
 	// Display prompt if not auto-confirmed
+	var confirmFlag bool
 	if config.DeployOptions.Confirm {
 		message.Infof("%s Zarf package confirmed", userMessage)
+		return config.DeployOptions.Confirm
 	} else {
 		prompt := &survey.Confirm{
 			Message: userMessage + " this Zarf package?",
 		}
-		_ = survey.AskOne(prompt, &config.DeployOptions.Confirm)
+		_ = survey.AskOne(prompt, &confirmFlag)
 	}
 
-	return config.DeployOptions.Confirm
+	return confirmFlag
 }
 
 func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
@@ -99,7 +102,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 		// If the component is not required check if the user wants it deployed
 		if !confirmComponent {
 			// Check if this is one of the components that has been requested
-			if len(requestedComponentNames) > 0 {
+			if len(requestedComponentNames) > 0 || config.DeployOptions.Confirm {
 				for index, requestedComponent := range requestedComponentNames {
 					if strings.ToLower(requestedComponent) == component.Name {
 						confirmComponent = true
