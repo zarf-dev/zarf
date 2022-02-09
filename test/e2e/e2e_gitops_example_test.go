@@ -39,12 +39,12 @@ func TestGitopsExample(t *testing.T) {
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", e2e.username)
 		require.NoError(t, err, output)
 
-		// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.12.0
+		// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.15.0
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", e2e.username)
 		require.NoError(t, err, output)
 
 		// Check for correct tag
-		expectedTag := "v0.12.0\n"
+		expectedTag := "v0.15.0\n"
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git tag'", e2e.username)
 		require.NoError(t, err, output)
 		assert.Equal(t, expectedTag, output, "Expected tag should match output")
@@ -56,10 +56,10 @@ func TestGitopsExample(t *testing.T) {
 		assert.Equal(t, expectedCommits, output, "Expected commits should match output")
 
 		// Check for correct branches
-		expectedBranch := "* master\n"
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__stefanprodan__podinfo && git branch --list'", e2e.username)
+		expectedTag = "0.2.2"
+		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__stefanprodan__podinfo && git tag'", e2e.username)
 		require.NoError(t, err, output)
-		assert.Equal(t, expectedBranch, output, "Expected Branch should match output")
+		assert.Contains(t, expectedTag, output, "Output should contain expected tag")
 	})
 
 }
