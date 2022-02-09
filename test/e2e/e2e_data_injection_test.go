@@ -32,11 +32,11 @@ func TestDataInjection(t *testing.T) {
 		require.NoError(e2e.testing, err, output)
 
 		// Test to confirm the root file was placed
-		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example'`)
+		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/sbin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example'`)
 		require.NoError(e2e.testing, err, output)
 
 		// Test to confirm the subdirectory file was placed
-		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/local/bin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example'`)
+		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/sbin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example'`)
 		require.NoError(e2e.testing, err, output)
 	})
 

@@ -78,8 +78,8 @@ fi
 rm -f /etc/systemd/system/k3s.service
 
 for cmd in kubectl crictl ctr; do
-	if [ -L /usr/local/bin/$cmd ]; then
-		rm -f /usr/local/bin/$cmd
+	if [ -L /usr/sbin/$cmd ]; then
+		rm -f /usr/sbin/$cmd
 	fi
 done
 
@@ -88,12 +88,12 @@ rm -rf /run/k3s
 rm -rf /run/flannel
 rm -rf /var/lib/rancher/k3s
 rm -rf /var/lib/kubelet
-rm -f /usr/local/bin/k3s
-rm -f /usr/local/bin/ctr
-rm -f /usr/local/bin/crictl
-rm -f /usr/local/bin/kubectl
-rm -f /usr/local/bin/k9s
-rm -f /usr/local/bin/k3s-remove.sh
+rm -f /usr/sbin/k3s
+rm -f /usr/sbin/ctr
+rm -f /usr/sbin/crictl
+rm -f /usr/sbin/kubectl
+rm -f /usr/sbin/k9s
+rm -f /usr/sbin/k3s-remove.sh
 rm -fr zarf-pki
 
 echo -e '\033[0m'
