@@ -60,5 +60,4 @@ func TestGitopsExample(t *testing.T) {
 		require.NoError(t, err, output)
 		require.Contains(t, output, expectedTag, "Output should contain expected tag")
 	})
-
 }
