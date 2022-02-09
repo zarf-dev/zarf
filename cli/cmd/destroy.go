@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"github.com/defenseunicorns/zarf/cli/internal/helm"
 	"os"
 	"regexp"
+
+	"github.com/defenseunicorns/zarf/cli/internal/helm"
 
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
@@ -25,7 +26,7 @@ var destroyCmd = &cobra.Command{
 		if state.ZarfAppliance {
 			// If Zarf deployed the cluster, burn it all down
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			scripts := utils.RecursiveFileList("/usr/local/bin", pattern)
+			scripts := utils.RecursiveFileList("/usr/sbin", pattern)
 			// Iterate over al matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
