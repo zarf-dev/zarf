@@ -25,27 +25,27 @@ components:
         - "systemctl daemon-reload"
         - "systemctl enable --now k3s"
         # Wait for the K3s node to come up
-        - "/usr/local/bin/kubectl get nodes"
-        # Make sure things are really ready in k8s 
-        - "/usr/local/bin/kubectl wait --for=condition=available deployment/coredns -n kube-system"
+        - "/usr/sbin/kubectl get nodes"
+        # Make sure things are really ready in k8s
+        - "/usr/sbin/kubectl wait --for=condition=available deployment/coredns -n kube-system"
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
         shasum: 89eb5f3d12524d0a9d5b56ba3e2707b106e1731dd0e6d2e7b898ac585f4959df
-        target: /usr/local/bin/k3s
+        target: /usr/sbin/k3s
         executable: true
         # K3s magic provides these tools when symlinking
         symlinks:
-          - /usr/local/bin/kubectl
-          - /usr/local/bin/ctr
-          - /usr/local/bin/crictl
+          - /usr/sbin/kubectl
+          - /usr/sbin/ctr
+          - /usr/sbin/crictl
       # Transfer the K3s images for containerd to pick them up
       - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s-airgap-images-amd64.tar.zst
         shasum: 772ae839f8c7718e2022d103076df53452d4f09d2a22afdf4b5796cf0cbce62c
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       # K3s removal script
       - source: assets/scripts/zarf-clean-k3s.sh
-        target: /usr/local/bin/zarf-clean-k3s.sh
+        target: /usr/sbin/zarf-clean-k3s.sh
         executable: true
       # The K3s systemd service definition
       - source: assets/scripts/k3s.service
