@@ -21,6 +21,6 @@ test/tf/public-ec2-instance/.terraform
 terraform.tfstate
 terraform.tfstate.backup
 .terraform.lock.hcl
-
+cosign.key
 .zarf*
 zarf-pki

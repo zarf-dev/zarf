@@ -56,6 +56,11 @@ init-package: ## Create the zarf init package, macos "brew install coreutils" fi
 
 build-test: build-cli init-package ## Build the CLI and create the init package
 
+publish-image:
+	docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:${TAG} .
+	cosign sign --key cosign.key defenseunicorns/zarf-agent:${TAG}
+	cosign verify --key cosign.pub defenseunicorns/zarf-agent:${TAG}
+
 ci-release: init-package ## Create the init package
 
 .PHONY: package-example-game

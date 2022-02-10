@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
@@ -119,26 +118,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				// skip so we can strip namespaces from helms brain
 				continue
 
-			case "ServiceAccount":
-				var svcAccount corev1.ServiceAccount
-				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &svcAccount); err != nil {
-					message.Errorf(err, "could not parse service account %s", rawData.GetName())
-				} else {
-					message.Debugf("Matched helm svc account %s for zarf annotation", &svcAccount.Name)
-
-					// Add the zarf image pull secret to the sa
-					svcAccount.ImagePullSecrets = append(svcAccount.ImagePullSecrets, corev1.LocalObjectReference{
-						Name: secretName,
-					})
-
-					if byteData, err := yaml.Marshal(svcAccount); err != nil {
-						message.Error(err, "unable to marshal svc account")
-					} else {
-						// Update the contents of the svc account
-						resource.Content = string(byteData)
-					}
-				}
-
 			case "Service":
 				// Check service resources for the zarf-connect label
 				labels := rawData.GetLabels()
@@ -195,21 +174,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 		}
 
-		// Attempt to update the default service account
-		attemptsLeft := 5
-		for attemptsLeft > 0 {
-			err = updateDefaultSvcAccount(name)
-			if err == nil {
-				break
-			} else {
-				attemptsLeft--
-				time.Sleep(1 * time.Second)
-			}
-		}
-		if err != nil {
-			message.Errorf(err, "Unable to update the default service account for the %s namespace", name)
-		}
-
 	}
 
 	// Cleanup the temp file
@@ -217,36 +181,4 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	// Send the bytes back to helm
 	return finalManifestsOutput, nil
-}
-
-func updateDefaultSvcAccount(namespace string) error {
-
-	// Get the default service account from the provided namespace
-	defaultSvcAccount, err := k8s.GetServiceAccount(namespace, corev1.NamespaceDefault)
-	if err != nil {
-		return fmt.Errorf("unable to get service accounts for namespace %s", namespace)
-	}
-
-	// Look to see if the service account needs to be patched
-	if defaultSvcAccount.Labels[managedByLabel] != "zarf" {
-		// This service account needs the pull secret added
-		defaultSvcAccount.ImagePullSecrets = append(defaultSvcAccount.ImagePullSecrets, corev1.LocalObjectReference{
-			Name: secretName,
-		})
-
-		if defaultSvcAccount.Labels == nil {
-			// Ensure label map exists to avoid nil panic
-			defaultSvcAccount.Labels = make(map[string]string)
-		}
-
-		// Track this by zarf
-		defaultSvcAccount.Labels[managedByLabel] = "zarf"
-
-		// Finally update the chnage on the server
-		if _, err := k8s.SaveServiceAccount(defaultSvcAccount); err != nil {
-			return fmt.Errorf("unable to update the default service account for the %s namespace: %w", defaultSvcAccount.Namespace, err)
-		}
-	}
-
-	return nil
 }

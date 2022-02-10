@@ -83,6 +83,18 @@ components:
         valuesFiles:
           - assets/charts/registry-values.yaml
 
+  - name: agent-hook
+    required: true
+    images:
+      - defenseunicorns/zarf-agent:v0.15
+    manifests:
+      - name: agent-hook
+        files:
+          - assets/manifests/agent/service.yaml
+          - assets/manifests/agent/secret.yaml
+          - assets/manifests/agent/deployment.yaml
+          - assets/manifests/agent/webhook.yaml
+
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     images:

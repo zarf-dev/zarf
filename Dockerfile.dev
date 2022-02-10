@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/base
+COPY build/zarf /zarf
+EXPOSE 8443
+
+CMD ["/zarf", "agent", "-l=trace"]
