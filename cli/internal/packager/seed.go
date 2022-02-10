@@ -10,9 +10,10 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"github.com/defenseunicorns/zarf/cli/internal/message/tls"
+	"github.com/defenseunicorns/zarf/cli/internal/message/prompts"
 	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/defenseunicorns/zarf/cli/types"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"             // used for embedded registry
@@ -21,9 +22,9 @@ import (
 
 var stopSeedRegistry context.CancelFunc
 
-func startSeedRegistry(host string, readOnly bool) {
+func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
 	message.Debugf("packager.startSeedRegistry(%v)", readOnly)
-	useTLS := host != config.IPV4Localhost
+	useTLS := tls.Host != config.IPV4Localhost
 	registryConfig := &configuration.Configuration{}
 
 	if message.GetLogLevel() >= message.DebugLevel {
@@ -38,8 +39,8 @@ func startSeedRegistry(host string, readOnly bool) {
 	registryConfig.HTTP.Secret = utils.RandomString(20)
 
 	if useTLS {
-		registryConfig.HTTP.TLS.Certificate = config.TLS.CertPublicPath
-		registryConfig.HTTP.TLS.Key = config.TLS.CertPrivatePath
+		registryConfig.HTTP.TLS.Certificate = tls.CertPublicPath
+		registryConfig.HTTP.TLS.Key = tls.CertPrivatePath
 	}
 
 	fileStorage := configuration.Parameters{
@@ -105,8 +106,8 @@ func preSeedRegistry(tempPath tempPaths) {
 		// If the state is invalid, assume this is a new cluster
 		message.Debug("New cluster, no zarf state found")
 
+		// If the K3s component is being deployed, skip distro detection
 		if config.DeployOptions.ApplianceMode {
-			// If the K3s component is being deployed, skip distro detection
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -187,7 +188,7 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	case config.ZarfSeedTypeRuntimeRegistry:
 		// Otherwise, start embedded registry read/write (only on localhost)
-		startSeedRegistry(config.IPV4Localhost, false)
+		startSeedRegistry(&types.TLSConfig{Host: config.IPV4Localhost}, false)
 
 		// Populate the seed registry
 		images.PushToZarfRegistry(tempPath.seedImages, config.GetSeedImages(), config.ZarfLocalSeedRegistry)
@@ -195,14 +196,18 @@ func preSeedRegistry(tempPath tempPaths) {
 		// Close this registry now
 		stopSeedRegistry()
 
+		// Get user to choose/enter host info for the read-only seed registry
 		if config.TLS.Host == "" {
-			// Get user to choose/enter host info for the read-only seed registry
-			tls.HandleTLSOptions(config.DeployOptions.Confirm)
-			pki.HandlePKI()
+			prompts.HandleTLSOptions(&config.TLS, config.DeployOptions.Confirm)
+		}
+
+		// No cert paths provided so need to generate PKI
+		if config.TLS.CertPublicPath == "" || config.TLS.CertPrivatePath == "" {
+			pki.GeneratePKI(&config.TLS)
 		}
 
 		// Start the registry again read-only now
-		startSeedRegistry(config.TLS.Host, true)
+		startSeedRegistry(&config.TLS, true)
 
 	default:
 		message.Fatalf(nil, "Unknown seed registry status")
@@ -226,8 +231,8 @@ func preSeedRegistry(tempPath tempPaths) {
 func postSeedRegistry(tempPath tempPaths) {
 	message.Debug("packager.postSeedRegistry(%v)", tempPath)
 
+	// Close the seed registry, no longer needed
 	if stopSeedRegistry != nil {
-		// Close the seed registry, no longer needed
 		stopSeedRegistry()
 	}
 

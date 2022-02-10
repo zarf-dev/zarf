@@ -116,14 +116,14 @@ func GenerateTLSSecret(namespace string, name string, certPath string, keyPath s
 	return secretTLS
 }
 
-func ReplaceTLSSecret(namespace string, name string) {
+func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
 	message.Debugf("k8s.ReplaceTLSSecret(%s, %s)", namespace, name)
 
-	tlsCert, err := readFile(config.TLS.CertPublicPath)
+	tlsCert, err := readFile(certPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to read the TLS public certificate")
 	}
-	tlsKey, err := readFile(config.TLS.CertPrivatePath)
+	tlsKey, err := readFile(keyPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to read the TLS private key")
 	}
