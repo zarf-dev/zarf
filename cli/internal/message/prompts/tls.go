@@ -1,4 +1,4 @@
-package tls
+package prompts
 
 import (
 	"net"
@@ -9,20 +9,31 @@ import (
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/defenseunicorns/zarf/cli/types"
 )
 
 const InvalidHostMessage = "The hostname provided (%s) was not a valid hostname. The hostname can only contain: 'a-z', 'A-Z', '0-9', '-', and '.' characters as defined by RFC-1035.  If using localhost, you must use the 127.0.0.1.\n"
 
-// HasCertPaths Check for cert paths provided via automation (both required)
-func HasCertPaths() bool {
-	return config.TLS.CertPrivatePath != "" && config.TLS.CertPublicPath != ""
+func HandleTLSOptions(tls *types.TLSConfig, confirmed bool) {
+	// Get and validate host
+	promptAndValidateHost(tls, confirmed)
+
+	// Get the cert path if this is an import
+	if promptIsImportCerts(tls, confirmed) && !HasCertPaths(tls) {
+		promptCertPaths(tls)
+	}
 }
 
-// PromptIsImportCerts Ask user if they will be importing or generating certs, return true if importing certs
-func PromptIsImportCerts(confirmed bool) bool {
+// HasCertPaths Check for cert paths provided via automation (both required)
+func HasCertPaths(tls *types.TLSConfig) bool {
+	return tls.CertPrivatePath != "" && tls.CertPublicPath != ""
+}
+
+// promptIsImportCerts Ask user if they will be importing or generating certs, return true if importing certs
+func promptIsImportCerts(tls *types.TLSConfig, confirmed bool) bool {
 	var mode int
 
-	if HasCertPaths() {
+	if HasCertPaths(tls) {
 		return true
 	}
 
@@ -50,8 +61,8 @@ func PromptIsImportCerts(confirmed bool) bool {
 	return mode == 1
 }
 
-// PromptCertPaths Ask user for the public and private key paths to import into the cluster
-func PromptCertPaths() {
+// promptCertPaths Ask user for the public and private key paths to import into the cluster
+func promptCertPaths(tls *types.TLSConfig) {
 	prompt := &survey.Input{
 		Message: "Enter a file path to the ingress public key",
 		Suggest: func(toComplete string) []string {
@@ -60,18 +71,18 @@ func PromptCertPaths() {
 			return files
 		},
 	}
-	_ = survey.AskOne(prompt, &config.TLS.CertPublicPath, survey.WithValidator(survey.Required))
+	_ = survey.AskOne(prompt, &tls.CertPublicPath, survey.WithValidator(survey.Required))
 
 	prompt.Message = "Enter a file path to the ingress private key"
-	_ = survey.AskOne(prompt, &config.TLS.CertPrivatePath, survey.WithValidator(survey.Required))
+	_ = survey.AskOne(prompt, &tls.CertPrivatePath, survey.WithValidator(survey.Required))
 }
 
-// PromptAndValidateHost Ask user for the hostname or ip if not provided via automation and validate the input
-func PromptAndValidateHost(confirmed bool) {
-	if config.TLS.Host == "" {
+// promptAndValidateHost Ask user for the hostname or ip if not provided via automation and validate the input
+func promptAndValidateHost(tls *types.TLSConfig, confirmed bool) {
+	if tls.Host == "" {
 		if confirmed {
 			// Fail if host is not provided on confirm
-			message.Fatalf(nil, InvalidHostMessage, config.TLS.Host)
+			message.Fatalf(nil, InvalidHostMessage, tls.Host)
 		}
 
 		message.Question(`
@@ -106,32 +117,22 @@ func PromptAndValidateHost(confirmed bool) {
 				return suggestions
 			},
 		}
-		err := survey.AskOne(prompt, &config.TLS.Host, survey.WithValidator(survey.Required))
+		err := survey.AskOne(prompt, &tls.Host, survey.WithValidator(survey.Required))
 		if err != nil && err.Error() == os.Interrupt.String() {
 			// Handle CTRL+C
 			os.Exit(0)
 		}
 	}
 
-	if !utils.ValidHostname(config.TLS.Host) {
+	if !utils.ValidHostname(tls.Host) {
 		// When hitting an invalid hostname...
 		if confirmed {
 			// ...if using automation end it all
-			message.Fatalf(nil, InvalidHostMessage, config.TLS.Host)
+			message.Fatalf(nil, InvalidHostMessage, tls.Host)
 		}
 		// ...otherwise, warn user, reset the field, and cycle the function
-		message.Fatalf(nil, InvalidHostMessage, config.TLS.Host)
-		config.TLS.Host = ""
-		PromptAndValidateHost(confirmed)
-	}
-}
-
-func HandleTLSOptions(confirmed bool) {
-	// Get and validate host
-	PromptAndValidateHost(confirmed)
-
-	// Get the cert path if this is an import
-	if PromptIsImportCerts(confirmed) && !HasCertPaths() {
-		PromptCertPaths()
+		message.Fatalf(nil, InvalidHostMessage, tls.Host)
+		tls.Host = ""
+		promptAndValidateHost(tls, confirmed)
 	}
 }
