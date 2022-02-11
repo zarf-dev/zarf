@@ -100,3 +100,7 @@ test-cloud-e2e-general-cli: package-example-tiny-kafka ## Runs tests of the CLI 
 
 .PHONY: test-e2e
 test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be replaced by individual e2e test targets
+
+.PHONY: test-new-e2e
+test-new-e2e: ## Run e2e tests on a KinD cluster
+	cd test/newe2e && go test ./... -v -timeout 1200s
