@@ -11,14 +11,14 @@
 
 ### Breaking it down
 
----
-`The Zarf Binary`   
+
+**The Zarf Binary**   
 See [README](../README.md) for more details about zarf. Add `zarf` binary to your path and make it executable for ease of use i.e. `export PATH=$PATH:/path/to/zarf/binary && chmod +x /path/to/zarf/binary/zarf`
----
-`zarf tools registry login...`  
+
+**zarf tools registry login...**  
 This command is a utility of Zarf to help create a Zarf package. In other zarf commands (like `zarf prepare find-images`) the package images will be validated against a live registry! The registry login is stored in your docker config, typically stored in `~/.docker/config.json` and zarf commands don't require a container runtime (i.e. docker daemon, podman instance, etc...).
----
-`zarf prepare find-images -p /chart`  
+
+**zarf prepare find-images -p /chart**  
 This command discovers images used in a helm chart.  Try out this quick example:
 
 `git clone https://github.com/defenseunicorns/zarf.git`
@@ -40,8 +40,8 @@ No, we aren't cheating. Delete the `images:` block in the zarf.yaml and rerun `z
 The output is the same :)   
 Zarf is inspecting the helm chart specified by the directory `-p /chart` flag. The kafka image isn't even specified in the chart, but it's deployed by the operator.
 
----
-`the zarf.yaml`  
+
+**The zarf.yaml** 
 The zarf.yaml file is used specify a zarf package configuration. For the find-images command, all we really need is a ZarfPackageConfig with a component specified.
 ```yaml
 kind: ZarfPackageConfig
