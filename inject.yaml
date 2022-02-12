@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: injector
+  namespace: zarf
+  labels:
+    app: docker-registry
+    release: zarf-docker-registry
+spec:
+  containers:
+    - name: injector
+      image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.21.2-eksbuild.2
+      # image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.8.4-eksbuild.1
+      command: ["/zarf-bin/busybox", "sleep", "86400"]
+      env:
+        - name: USER
+          value: root
+      volumeMounts:
+        - name: bin-volume
+          mountPath: /zarf-bin/
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+  volumes:
+    - name: bin-volume
+      configMap:
+        name: injector-binaries
+        defaultMode: 0777
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: zarf-docker-registry
+    meta.helm.sh/release-namespace: zarf
+  labels:
+    app: docker-registry
+    app.kubernetes.io/managed-by: Helm
+  name: zarf-docker-registry
+  namespace: zarf
+spec:
+  ports:
+    - name: http-5000
+      nodePort: 31999
+      port: 5000
+      protocol: TCP
+      targetPort: 5000
+  selector:
+    app: docker-registry
+    release: zarf-docker-registry
+  type: NodePort

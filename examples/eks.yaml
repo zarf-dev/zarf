@@ -1,0 +1,12 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: zarf-eks-test
+  region: us-east-1
+  version: "1.21"
+managedNodeGroups:
+- name: primary-1-18
+  instanceType: t3.small
+  minSize: 3
+  maxSize: 6
+  spot: true

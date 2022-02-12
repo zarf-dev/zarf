@@ -56,18 +56,7 @@ components:
       - source: assets/misc/empty-file
         target: /etc/rancher/k3s/k3s.yaml
         symlinks:
-          - /root/.kube/config
-
-  - name: container-registry-seed
-    required: true
-    charts:
-      - name: docker-registry
-        url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.0.0
-        namespace: zarf
-        valuesFiles:
-          - assets/charts/registry-values.yaml
-          - assets/charts/registry-values-seed.yaml
+          - /root/.kube/configkube
 
   - name: container-registry
     required: true

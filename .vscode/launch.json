@@ -12,8 +12,8 @@
             "program": "${workspaceFolder}/cli",
             "env": {},
             "args": [
-                "connect",
-                "doom"
+                "init",
+                "--confirm"
             ]
         },
 
