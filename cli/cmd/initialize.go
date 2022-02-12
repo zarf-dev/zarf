@@ -28,8 +28,28 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var initServeLoad = &cobra.Command{
+	Use:    "serve-load [SEEDIMAGES]",
+	Hidden: true,
+	Short:  "Internal command used to setup the in-cluster registry",
+	Run: func(cmd *cobra.Command, seedImages []string) {
+		packager.LoadInternalSeedRegistry(seedImages)
+	},
+}
+
+var initServe = &cobra.Command{
+	Use:    "serve",
+	Hidden: true,
+	Short:  "Internal command used to launch the in-cluster registry",
+	Run: func(cmd *cobra.Command, args []string) {
+		packager.ServeInternalSeedRegistry()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(initCmd)
+	initCmd.AddCommand(initServeLoad)
+	initCmd.AddCommand(initServe)
 	initCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm the install without prompting")
 	initCmd.Flags().StringVar(&config.TLS.Host, "host", "", "Specify the host or IP for the gitops service ingress.  E.g. host=10.10.10.5 or host=gitops.domain.com")
 	initCmd.Flags().StringVar(&config.TLS.CertPublicPath, "server-crt", "", "Path to the server public key if not generating unique PKI")

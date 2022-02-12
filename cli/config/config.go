@@ -27,7 +27,7 @@ const (
 	ZarfGitPushUser        = "zarf-git-user"
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
-	ZarfSeedPort           = "45000"
+	ZarfSeedPort           = "5000"
 	ZarfRegistry           = IPV4Localhost + ":45001"
 	ZarfLocalSeedRegistry  = IPV4Localhost + ":" + ZarfSeedPort
 

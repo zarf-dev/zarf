@@ -128,7 +128,7 @@ func Deploy() {
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.Debugf("packager.deployComponents(%v, %v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
-	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "container-registry-seed"
+	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "container-registry"
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
@@ -259,9 +259,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
-	if isSeedRegistry {
-		postSeedRegistry(tempPath)
-	}
+	// if isSeedRegistry {
+	// 	postSeedRegistry(tempPath)
+	// }
 }
 
 // handleDataInjection performs data-copy operations into a pod
