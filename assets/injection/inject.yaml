@@ -30,10 +30,10 @@ spec:
           mountPath: /zarf-bin/
       resources:
         requests:
-          cpu: "200m"
-          memory: "128Mi"
+          cpu: ".5"
+          memory: "64Mi"
         limits:
-          cpu: "500m"
+          cpu: "1"
           memory: "256Mi"
   volumes:
     - name: payload
