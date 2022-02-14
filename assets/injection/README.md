@@ -9,7 +9,7 @@ If replacing injection
 `kubectl -n zarf delete configmap injector-binaries`
 
 Add the binaries as a configmap
-`kubectl create configmap -n zarf injector-binaries --from-file=busybox=busybox-amd64 --from-file=verify-busybox.sha256 --from-file=verify-payload.sha256 --from-file=init.sh`
+`kubectl create configmap -n zarf injector-binaries --from-file=busybox=busybox-amd64 --from-file=init.sh`
 
 `kubectl apply -f inject.yaml`
 
@@ -17,4 +17,4 @@ Once it's running
 `zarf connect seed-registry --local-port 5000`
 
 Send the files
-`./busybox tar cv zarf seed-images.tar | ./busybox netcat 127.0.0.1 5000`
+`./busybox-amd64 tar cv zarf seed-images.tar | ./busybox-amd64 netcat 127.0.0.1 5000`
