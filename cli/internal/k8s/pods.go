@@ -13,6 +13,17 @@ import (
 
 const waitLimit = 30
 
+func GetAllPods() (*corev1.PodList, error) {
+	return GetPods(corev1.NamespaceAll)
+}
+
+func GetPods(namespace string) (*corev1.PodList, error) {
+	clientset := getClientset()
+
+	metaOptions := metav1.ListOptions{}
+	return clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
+}
+
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
 
