@@ -34,13 +34,18 @@ func init() {
 }
 
 func getRestConfig() *rest.Config {
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		message.Fatal(nil, "Unable to load the current user's home directory")
+	// use the KUBECONFIG context if it exists
+	configPath := os.Getenv("KUBECONFIG")
+	if configPath == "" {
+		// use the current context in the default kubeconfig in the home path of the user
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			message.Fatal(nil, "Unable to load the current user's home directory")
+		}
+		configPath = homePath + "/.kube/config"
 	}
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", homePath+"/.kube/config")
+	config, err := clientcmd.BuildConfigFromFlags("", configPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to connect to the K8s cluster")
 	}
