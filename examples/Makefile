@@ -60,7 +60,7 @@ package-examples: package-example-big-bang package-example-software-factory pack
 
 .PHONY: package-example-big-bang
 package-example-big-bang: ## Create the Big Bang Core example
-	cd big-bang && $(ZARF_BIN) package create -l debug --confirm && mv zarf-package-* ../sync/
+	cd big-bang && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
 .PHONY: package-example-softare-factory
 package-example-software-factory: ## Create the Big Bang Software Factory example
