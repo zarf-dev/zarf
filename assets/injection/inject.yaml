@@ -9,13 +9,17 @@ metadata:
 spec:
   containers:
     - name: injector
-      image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.21.2-eksbuild.2
+      # image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.21.2-eksbuild.2
       # image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.8.4-eksbuild.1
-      command: ["/zarf-bin/busybox", "sleep", "86400"]
+      image: rancher/local-path-provisioner:v0.0.19
+      workingDir: /payload
+      command: ["/zarf-bin/init.sh"]
       env:
         - name: USER
           value: root
       volumeMounts:
+        - name: payload
+          mountPath: /payload
         - name: bin-volume
           mountPath: /zarf-bin/
       resources:
@@ -26,11 +30,27 @@ spec:
           cpu: "500m"
           memory: "256Mi"
   volumes:
+    - name: payload
+      emptyDir: {}
     - name: bin-volume
       configMap:
         name: injector-binaries
         defaultMode: 0777
   restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    zarf.dev/connect-name: seed-registry
+  name: zarf-seed-registry
+  namespace: zarf
+spec:
+  ports:
+    - port: 25000
+      protocol: TCP
+  selector:
+    app: docker-registry
 ---
 apiVersion: v1
 kind: Service
