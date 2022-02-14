@@ -75,6 +75,13 @@ make vm-init
 ./zarf tools k9s
 ```
 
+### Delete buggy EnvoyFilter
+
+```shell
+# Delete this EnvoyFilter, it is bugged. Will be fixed when we update to a later version of Big Bang
+kubectl delete -n istio-system envoyfilter/misdirected-request
+```
+
 ### Clean Up
 
 ```shell
