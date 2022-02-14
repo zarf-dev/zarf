@@ -62,6 +62,18 @@ package-examples: package-example-big-bang package-example-software-factory pack
 package-example-big-bang: ## Create the Big Bang Core example
 	cd big-bang && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
 
+.PHONY: generate-bigbang-dev-cert
+generate-bigbang-dev-cert: ## Download the TLS cert and key for the *.bigbang.dev domain
+	@mkdir -p istio-with-separate-cert/files
+	@curl -s https://repo1.dso.mil/platform-one/big-bang/bigbang/-/raw/master/chart/ingress-certs.yaml | yq .istio.gateways.public.tls.key > istio-with-separate-cert/files/bigbangdev.key
+	@curl -s https://repo1.dso.mil/platform-one/big-bang/bigbang/-/raw/master/chart/ingress-certs.yaml | yq .istio.gateways.public.tls.cert > istio-with-separate-cert/files/bigbangdev.cert
+
+.PHONY: package-example-istio-with-separate-cert
+package-example-istio-with-separate-cert: ## Create the example of Istio with a separate TLS cert
+	@cd istio-with-separate-cert && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+	@cp istio-with-separate-cert/files/bigbangdev.cert sync/bigbangdev.cert
+	@cp istio-with-separate-cert/files/bigbangdev.key sync/bigbangdev.key
+
 .PHONY: package-example-softare-factory
 package-example-software-factory: ## Create the Big Bang Software Factory example
 	cd software-factory && kustomize build template/bigbang > manifests/bigbang/bigbang-generated.yaml && kustomize build template/flux > manifests/flux/flux-generated.yaml && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/

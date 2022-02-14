@@ -15,7 +15,7 @@ This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platfor
 ## Prerequisites
 
 1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install `make`
+1. Install `make`
 1. Install `sha256sum` (on Mac it's `brew install coreutils`)
 
 ## Instructions
@@ -73,13 +73,6 @@ make vm-init
 
 # (Optional) Inspect the results
 ./zarf tools k9s
-```
-
-### Delete buggy EnvoyFilter
-
-```shell
-# Delete this EnvoyFilter, it is bugged. Will be fixed when we update to a later version of Big Bang
-kubectl delete -n istio-system envoyfilter/misdirected-request
 ```
 
 ### Clean Up
