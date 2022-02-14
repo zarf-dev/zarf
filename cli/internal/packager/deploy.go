@@ -259,9 +259,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		loopScriptUntilSuccess(script, component.Scripts.Retry)
 	}
 
-	// if isSeedRegistry {
-	// 	postSeedRegistry(tempPath)
-	// }
+	if isSeedRegistry {
+		postSeedRegistry(tempPath)
+	}
 }
 
 // handleDataInjection performs data-copy operations into a pod

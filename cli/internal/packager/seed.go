@@ -2,35 +2,36 @@ package packager
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"             // used for embedded registry
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem" // used for embedded registry
 )
 
-func LoadInternalSeedRegistry(seedImages []string) {
+var zarfSeedWriteTarget = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedWritePort)
+
+func LoadInternalSeedRegistry(path string, seedImages []string) {
 	// Launch the embedded registry to load the seed images (r/w mode)
-	startSeedRegistry(&types.TLSConfig{Host: config.IPV4Localhost}, false)
+	startSeedRegistry(false)
 
 	// Populate the seed registry
-	images.PushToZarfRegistry("/seed-images.tar", seedImages, config.ZarfLocalSeedRegistry)
-}	
+	images.PushToZarfRegistry(path, seedImages, zarfSeedWriteTarget)
 
-func ServeInternalSeedRegistry() {
-	startSeedRegistry(&types.TLSConfig{}, true)
+	// Now start the registry read-only and wait for exit
+	startSeedRegistry(true)
+
 	// Keep this open until an interrupt signal is received
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -44,9 +45,8 @@ func ServeInternalSeedRegistry() {
 	}
 }
 
-func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
-	message.Debugf("packager.startSeedRegistry(%v, %v)", tls, readOnly)
-	// useTLS := tls.Host != config.IPV4Localhost
+func startSeedRegistry(readOnly bool) {
+	message.Debugf("packager.startSeedRegistry(%v)", readOnly)
 	registryConfig := &configuration.Configuration{}
 
 	if message.GetLogLevel() >= message.DebugLevel {
@@ -57,26 +57,16 @@ func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
 		registryConfig.Log.Level = "error"
 	}
 
-	registryConfig.HTTP.DrainTimeout = 1 * time.Second
+	registryConfig.HTTP.DrainTimeout = 0
 	registryConfig.HTTP.Secret = utils.RandomString(20)
-
-	// if useTLS {
-	// 	registryConfig.HTTP.TLS.Certificate = tls.CertPublicPath
-	// 	registryConfig.HTTP.TLS.Key = tls.CertPrivatePath
-	// }
 
 	fileStorage := configuration.Parameters{
 		"rootdirectory": ".zarf-registry",
 	}
 
 	if readOnly {
-		// if useTLS {
-		// Bind to any if using tls
-		registryConfig.HTTP.Addr = ":" + config.ZarfSeedPort
-		// } else {
-		// 	// otherwise, force localhost
-		// 	registryConfig.HTTP.Addr = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedPort)
-		// }
+		// Read-only binds to all addresses
+		registryConfig.HTTP.Addr = ":" + config.ZarfSeedReadPort
 		registryConfig.Storage = configuration.Storage{
 			"filesystem": fileStorage,
 			"maintenance": configuration.Parameters{
@@ -87,7 +77,7 @@ func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
 		}
 	} else {
 		// Read-write only listen on localhost
-		registryConfig.HTTP.Addr = config.ZarfLocalSeedRegistry
+		registryConfig.HTTP.Addr = zarfSeedWriteTarget
 		registryConfig.Storage = configuration.Storage{
 			"filesystem": fileStorage,
 		}
@@ -95,7 +85,7 @@ func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
 
 	message.Debug(registryConfig)
 
-	embeddedRegistry, err := registry.NewRegistry(context.Background(), registryConfig)
+	embeddedRegistry, err := registry.NewRegistry(context.TODO(), registryConfig)
 	if err != nil {
 		message.Fatal(err, "Unable to start the embedded registry")
 	}
@@ -105,6 +95,7 @@ func startSeedRegistry(tls *types.TLSConfig, readOnly bool) {
 			message.Fatal(err, "Unable to start the embedded registry")
 		}
 	}()
+
 }
 
 func preSeedRegistry(tempPath tempPaths) {
@@ -182,7 +173,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		inject.args = []string{"ctr", "images", "import", tempPath.seedImages}
 
 	default:
-		state.Registry.SeedType = config.ZarfSeedTypeRuntimeRegistry
+		state.Registry.SeedType = config.ZarfSeedTypeInClusterRegistry
 	}
 
 	switch state.Registry.SeedType {
@@ -203,49 +194,8 @@ func preSeedRegistry(tempPath tempPaths) {
 			spinner.Success()
 		}
 
-		// Set TLS host so that the seed template isn't broken
-		config.TLS.Host = config.IPV4Localhost
-
-	case config.ZarfSeedTypeRuntimeRegistry:
-		// // Otherwise, start embedded registry read/write (only on localhost)
-		// startSeedRegistry(&types.TLSConfig{Host: config.IPV4Localhost}, false)
-
-		// message.Debug("pushing image")
-		// // Populate the seed registry
-		// images.PushToZarfRegistry(tempPath.seedImages, config.GetSeedImages(), config.ZarfLocalSeedRegistry)
-
-		// // Close this registry now
-		// stopSeedRegistry()
-
-		// // Get user to choose/enter host info for the read-only seed registry
-		// if config.TLS.Host == "" {
-		// 	prompts.HandleTLSOptions(&config.TLS, config.DeployOptions.Confirm)
-		// }
-
-		// // No cert paths provided so need to generate PKI
-		// if config.TLS.CertPublicPath == "" || config.TLS.CertPrivatePath == "" {
-		// 	// Prompt the user for TLS info
-		// 	generatedPKI := pki.GeneratePKI(&config.TLS)
-
-		// 	// Update the tls paths
-		// 	config.TLS.CertPublicPath = tempPath.base + "/server.crt"
-		// 	config.TLS.CertPrivatePath = tempPath.base + "/server.key"
-
-		// 	// Try to write the public cert
-		// 	if err := utils.WriteFile(config.TLS.CertPublicPath, generatedPKI.Cert); err != nil {
-		// 		message.Fatal(err, "Unable to write the server cert")
-		// 	}
-		// 	// Try to write the private cert
-		// 	if err := utils.WriteFile(config.TLS.CertPrivatePath, generatedPKI.Key); err != nil {
-		// 		message.Fatal(err, "Unable to write the server key ")
-		// 	}
-		// }
-
-		// // Start the registry again read-only now
-		// startSeedRegistry(&config.TLS, true)
-
-	default:
-		message.Fatalf(nil, "Unknown seed registry status")
+	case config.ZarfSeedTypeInClusterRegistry:
+		// do things
 	}
 
 	// Save the state back to K8s

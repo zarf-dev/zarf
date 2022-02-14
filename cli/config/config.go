@@ -27,12 +27,11 @@ const (
 	ZarfGitPushUser        = "zarf-git-user"
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
-	ZarfSeedPort           = "5000"
 	ZarfRegistry           = IPV4Localhost + ":45001"
-	ZarfLocalSeedRegistry  = IPV4Localhost + ":" + ZarfSeedPort
+	ZarfSeedReadPort       = "5000"
+	ZarfSeedWritePort      = "5001"
 
 	ZarfSeedTypeCLIInject         = "cli-inject"
-	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
 	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
@@ -43,9 +42,6 @@ const (
 var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
-
-	// TLS options used for cert creation
-	TLS types.TLSConfig
 
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
@@ -136,14 +132,6 @@ func GetState() types.ZarfState {
 
 func GetRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
-}
-
-func GetSeedRegistry() string {
-	if state.Registry.SeedType == ZarfSeedTypeCLIInject {
-		return "docker.io"
-	} else {
-		return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
-	}
 }
 
 func LoadConfig(path string) error {
