@@ -13,6 +13,33 @@ import (
 
 const waitLimit = 30
 
+func GeneratePod(name string, namespace string) *corev1.Pod {
+	message.Debugf("k8s.GeneratePod(%s, %s)", name, namespace)
+	return &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				// track the creation of this ns by zarf
+				"app.kubernetes.io/managed-by": "zarf",
+			},
+		},
+	}
+}
+
+func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
+	message.Debugf("k8s.CreatePod(%v)", pod)
+
+	clientset := getClientset()
+
+	createOptions := metav1.CreateOptions{}
+	return clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
+}
+
 func GetAllPods() (*corev1.PodList, error) {
 	return GetPods(corev1.NamespaceAll)
 }
