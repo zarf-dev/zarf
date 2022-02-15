@@ -14,10 +14,13 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"             // used for embedded registry
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem" // used for embedded registry
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var zarfSeedWriteTarget = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedWritePort)
@@ -195,7 +198,39 @@ func preSeedRegistry(tempPath tempPaths) {
 		}
 
 	case config.ZarfSeedTypeInClusterRegistry:
-		// do things
+		// Try to create the zarf namesapce
+		if _, err := k8s.CreateNamespace("zarf", nil); err != nil {
+			message.Fatal(err, "Unabel to create the zarf namespace")
+		}
+
+		configData := make(map[string][]byte)
+		// @todo generate configdata
+
+		configmap, err := k8s.CreateConfigmap("zarf", "injector-binaries", configData)
+
+		// @todo compute binary shasums
+
+
+		// Get all the images from the cluster
+		images, err := k8s.GetAllImages()
+		if err != nil {
+			message.Fatal(err, "Unable to generate a list of candidate images to perform the registry injection")
+		}
+
+		// Try to create an injector pod using the images in the cluster
+		for _, image := range images {
+			pod := createInjectionPod(image)
+			if pod, err = k8s.CreatePod(pod); err != nil {
+				message.Debug(err)
+				continue
+			} else {
+				message.Debug(pod)
+
+				// @todo zarf connect
+				// @todo send binaries to net cat
+				break
+			}
+		}
 	}
 
 	// Save the state back to K8s
@@ -229,4 +264,88 @@ func getClusterName(prefix string) string {
 	} else {
 		return strings.Replace(ctx, prefix+"-", "", 1)
 	}
+}
+
+func createInjectionPod(image string) *corev1.Pod {
+	pod := k8s.GeneratePod("injector", "zarf")
+	executeMode := int32(0777)
+
+	pod.Labels["app"] = "docker-registry"
+	pod.Labels["release"] = "zarf-docker-registry"
+
+	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
+
+	pod.Spec.Containers = []corev1.Container{
+		{
+			Name:       "injector",
+			Image:      image,
+			WorkingDir: "/payload",
+			Command:    []string{"/zarf-bin/init.sh"},
+
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "payload",
+					MountPath: "/payload",
+				},
+				{
+					Name:      "bin-volume",
+					MountPath: "/zarf-bin",
+				},
+			},
+
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(".5"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+			},
+
+			Env: []corev1.EnvVar{
+				{
+					Name:  "SHA256_BUSYBOX",
+					Value: "6a04784d38e8ced6432e683edb07015172acf57bf658d0653b1dc51c43b55643",
+				},
+				{
+					Name:  "SHA256_ZARF",
+					Value: "3618dde085ba1c4bbef0f65d5c5864121af1d9fe99098b5e5bca7be1d670d01a",
+				},
+				{
+					Name:  "SHA256_IMAGES",
+					Value: "4cc08af8e749ba6fdbc0123847c039ec92c54ed147fc45f7ac6ab505fa44a70e",
+				},
+				{
+					Name:  "USER",
+					Value: "root",
+				},
+			},
+		},
+	}
+
+	pod.Spec.Volumes = []corev1.Volume{
+		// Payload volume just ensures we have a safe empty directory to write the netcat paylaod to
+		{
+			Name: "payload",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		// Bin volume hosts the busybox binare and init script
+		{
+			Name: "bin-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "injector-binaries",
+					},
+					DefaultMode: &executeMode,
+				},
+			},
+		},
+	}
+
+	return pod
 }
