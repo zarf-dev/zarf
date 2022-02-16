@@ -28,8 +28,7 @@ const (
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
-	ZarfSeedReadPort       = "5000"
-	ZarfSeedWritePort      = "5001"
+
 
 	ZarfSeedTypeCLIInject         = "cli-inject"
 	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"

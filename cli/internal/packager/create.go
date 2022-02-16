@@ -71,6 +71,11 @@ func Create() {
 	if config.IsZarfInitConfig() {
 		// Override the package name for init packages
 		packageName = config.PackageInitName
+
+		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
+		utils.CreatePathAndCopy("build/zarf-registry", tempPath.injectZarfBinary)
+		utils.CreatePathAndCopy("assets/injection/busybox-amd64", tempPath.injectBinary)
+		utils.CreatePathAndCopy("assets/injection/init.sh", tempPath.injectScript)
 	} else {
 		// Init packages do not use data or utilityCluster keys
 		if len(dataInjections) > 0 {

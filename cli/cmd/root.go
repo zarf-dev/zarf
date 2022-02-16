@@ -50,7 +50,7 @@ func init() {
 	originalHelp := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
 		// Don't show the zarf logo constantly
-		zarfLogo := getLogo()
+		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 		// Re-add the original help function
 		originalHelp(c, s)

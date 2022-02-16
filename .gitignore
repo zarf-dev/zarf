@@ -5,6 +5,7 @@
 *.tgz
 .vagrant
 zarf
+zarf-registry
 build
 src/.idea/
 rpms/
