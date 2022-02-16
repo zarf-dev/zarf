@@ -67,6 +67,10 @@ func TestGeneralCli(t *testing.T) {
 		output, err = e2e.runSSHCommand("sudo timeout 120 sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-kafka-strimzi-demo.tar.zst --confirm' || false", e2e.username)
 		require.NoError(e2e.testing, err, output)
 
+		// Test that Zarf checks the $KUBECONFIG env variable
+		output, err = e2e.runSSHCommand("sudo timeout 120 sudo bash -c 'rm -rf /tmp/zarf-* && mv /root/.kube/config /home/%s/zarf-kube-config && export KUBECONFIG=/home/%s/zarf-kube-config && echo 'JPERRYISSTINKY' && echo $KUBECONFIG && cd /home/%s/build && ./zarf package deploy zarf-package-kafka-strimzi-demo.tar.zst -l trace --confirm' || false", e2e.username, e2e.username, e2e.username)
+		require.NoError(e2e.testing, err, output)
+
 		// Test that `zarf package deploy` doesn't die when given a URL
 		// NOTE: Temporarily commenting this out because this seems out of scope for a general cli test. Having this included also means we would have to fully standup a `zarf init` command.
 		// TODO: Move this to it's own e2e test.
