@@ -5,14 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
+	"strings"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	"sigs.k8s.io/kind/pkg/cluster"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
@@ -22,6 +29,8 @@ type ZarfE2ETest struct {
 
 	clusterName          string `default: "test-cluster"`
 	kubeconfigPath       string
+	filesToRemove        []string
+	cmdsToKill           []*exec.Cmd
 	kubeconfig           *os.File
 	provider             *cluster.Provider
 	restConfig           *restclient.Config
@@ -133,4 +142,69 @@ func getCLIName() string {
 		}
 	}
 	return binaryName
+}
+
+func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
+	fmt.Println("Test is finished, cleaning up now")
+
+	// Use Zarf to perform chart uninstallation
+	_, err := exec.Command(e2e.zarfBinPath, "destroy", "--confirm", "--remove-components", "-l=trace").CombinedOutput()
+	require.NoError(t, err, "unable to destroy the zarf cluster when cleaning up after a test")
+
+	// Remove files created for the test
+	for _, filePath := range e2e.filesToRemove {
+		err = os.RemoveAll(filePath)
+		require.NoError(t, err, "unable to remove file when cleaning up after a test")
+	}
+	e2e.filesToRemove = []string{}
+
+	// Kill background processes spawned during the test
+	for _, cmd := range e2e.cmdsToKill {
+		if cmd.Process != nil {
+			err = cmd.Process.Kill()
+			require.NoError(t, err, "unable to kill background cmd when cleaning up after a test")
+		}
+	}
+	e2e.cmdsToKill = []*exec.Cmd{}
+
+	fmt.Println("sleeping for 10 seconds after clean up.. for reasons..")
+	time.Sleep(10 * time.Second)
+	fmt.Println("done sleeping!")
+
+}
+
+func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string) (string, string, error) {
+	stdoutBuffer := &strings.Builder{}
+	stderrBuffer := &strings.Builder{}
+
+	req := e2e.clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podname).Namespace(namespace).SubResource("exec")
+	option := &v1.PodExecOptions{
+		Command: cmd,
+		Stdin:   true,
+		Stdout:  true,
+		Stderr:  true,
+		TTY:     true,
+	}
+	req.VersionedParams(option, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(e2e.restConfig, "POST", req.URL())
+	if err != nil {
+		fmt.Println("@JPERRY something was broken with the spdy executor...")
+		return "", "", err
+	}
+
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  os.Stdin,
+		Stdout: stdoutBuffer,
+		Stderr: stderrBuffer,
+	})
+
+	return stdoutBuffer.String(), stderrBuffer.String(), err
+}
+
+func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) error {
+	cmd := exec.Command(e2e.zarfBinPath, commandString...)
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
