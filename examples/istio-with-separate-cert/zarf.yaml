@@ -1,0 +1,67 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-istio-with-separate-cert
+  description: "Example Zarf deployment of Istio with a separate TLS cert"
+  # Big Bang / Iron Bank are only amd64
+  architecture: amd64
+
+components:
+  - name: flux
+    required: true
+    secretName: "private-registry"
+    manifests:
+      - name: flux-installer
+        # This will be built on the package create side and deployed as a regular manifest on package deploy
+        kustomizations:
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
+    images:
+      # Flux images
+      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
+      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
+      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
+      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
+
+  - name: bb-core
+    required: true
+    secretName: "private-registry"
+    manifests:
+      - name: bb-core-config
+        kustomizations:
+          - "kustomizations/bigbang"
+    # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
+    # 2. Add the actual bigbang repo as well
+    # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
+    repos:
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
+
+    images:
+      # TODO: Figure out a better way to derive this list.
+      # 1. Deploy Big Bang Core using some other method like https://repo1.dso.mil/platform-one/quick-start/big-bang
+      # 2. kubectl get pods --all-namespaces -o json | jq '.items[].spec.containers[].image' | jq -s 'unique' | yq e -P
+      # 3. Move all 'registry1.dso.mil/ironbank/fluxcd' images to the 'local.images' section
+      # 4. Add 'docker.io/' to any images that aren't fully qualified (example: rancher/metrics-server -> docker.io/rancher/metrics-server
+      # OR go through each values.yaml file in each git repo specified above and pull out all the images
+
+      # common
+      - registry1.dso.mil/ironbank/big-bang/base:8.4
+
+      # policy
+      - registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.1
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.2
+
+      # istio-controlplane
+      - registry1.dso.mil/ironbank/opensource/istio/istioctl:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.10.4
+
+      # istio-operator
+      - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
+
+      # kiali
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
