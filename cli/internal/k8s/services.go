@@ -8,11 +8,37 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func GenerateService(namespace string, name string) *corev1.Service {
+	message.Debugf("k8s.GenerateService(%s, %s)", name, namespace)
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: make(map[string]string),
+			Labels: map[string]string{
+				// track the creation of this ns by zarf
+				"app.kubernetes.io/managed-by": "zarf",
+			},
+		},
+	}
+}
+
+func CreateService(service *corev1.Service) (*corev1.Service, error) {
+	message.Debugf("k8s.CreateService(%v)", service)
+	clientset := getClientset()
+	createOptions := metav1.CreateOptions{}
+	return clientset.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)
+}
+
 // GetService returns a Kubernetes service resource in the provided namespace with the given name.
 func GetService(namespace string, serviceName string) (*corev1.Service, error) {
 	message.Debugf("k8s.GetService(%s, %s)", namespace, serviceName)
 	clientset := getClientset()
-	return clientset.CoreV1().Services(namespace).Get(context.Background(), serviceName, metav1.GetOptions{})
+	return clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 }
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg

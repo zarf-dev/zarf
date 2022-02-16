@@ -31,21 +31,28 @@ type componentPaths struct {
 	manifests string
 }
 type tempPaths struct {
-	base           string
-	seedImages     string
-	images         string
-	dataInjections string
-	components     string
+	base             string
+	injectZarfBinary string
+	injectScript     string
+	injectBinary     string
+	seedImages       string
+	images           string
+	dataInjections   string
+	components       string
 }
 
 func createPaths() tempPaths {
 	basePath, _ := utils.MakeTempDir()
 	return tempPaths{
-		base:           basePath,
-		seedImages:     basePath + "/seed-images.tar",
-		images:         basePath + "/images.tar",
-		dataInjections: basePath + "/data",
-		components:     basePath + "/components",
+		base: basePath,
+
+		injectScript:     basePath + "/init.sh",
+		injectZarfBinary: basePath + "/zarf-registry",
+		injectBinary:     basePath + "/busybox",
+		seedImages:       basePath + "/seed-images.tar",
+		images:           basePath + "/images.tar",
+		dataInjections:   basePath + "/data",
+		components:       basePath + "/components",
 	}
 }
 

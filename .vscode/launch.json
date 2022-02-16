@@ -11,7 +11,7 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cli",
       "env": {},
-      "args": ["init", "serve-load", "seed-images.tar", "library/registry:2.7.1", "-l=trace"]
+      "args": ["init", "--confirm", "-l=trace"]
     }
   ]
 }
