@@ -35,6 +35,7 @@ clean: ## Clean the sync dir
 
 .PHONY: fetch-release
 fetch-release: ## Grab the latest release as an alternative to needing to build the binaries
+	@mkdir -p sync
 	@# This probably isn't the cleanest way to get a release, but since we're moving to github, not worth adding the code until post-migration
 	@curl -fL "https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$$(git describe --tags --abbrev=0)/{zarf,zarf-mac-intel,zarf-mac-apple,zarf-init.tar.zst}" -o "sync/#1"
 	@chmod +x sync/*
@@ -60,6 +61,18 @@ package-examples: package-example-big-bang package-example-software-factory pack
 .PHONY: package-example-big-bang
 package-example-big-bang: ## Create the Big Bang Core example
 	cd big-bang && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: generate-bigbang-dev-cert
+generate-bigbang-dev-cert: ## Download the TLS cert and key for the *.bigbang.dev domain
+	@mkdir -p istio-with-separate-cert/files
+	@curl -s https://repo1.dso.mil/platform-one/big-bang/bigbang/-/raw/master/chart/ingress-certs.yaml | yq .istio.gateways.public.tls.key > istio-with-separate-cert/files/bigbangdev.key
+	@curl -s https://repo1.dso.mil/platform-one/big-bang/bigbang/-/raw/master/chart/ingress-certs.yaml | yq .istio.gateways.public.tls.cert > istio-with-separate-cert/files/bigbangdev.cert
+
+.PHONY: package-example-istio-with-separate-cert
+package-example-istio-with-separate-cert: ## Create the example of Istio with a separate TLS cert
+	@cd istio-with-separate-cert && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+	@cp istio-with-separate-cert/files/bigbangdev.cert sync/bigbangdev.cert
+	@cp istio-with-separate-cert/files/bigbangdev.key sync/bigbangdev.key
 
 .PHONY: package-example-softare-factory
 package-example-software-factory: ## Create the Big Bang Software Factory example

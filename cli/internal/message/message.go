@@ -42,12 +42,12 @@ func init() {
 	}
 }
 
-func debugPrinter() *pterm.PrefixPrinter {
-	return pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(2)
+func debugPrinter(offset int) *pterm.PrefixPrinter {
+	return pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
 
-func errorPrinter() *pterm.PrefixPrinter {
-	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(2)
+func errorPrinter(offset int) *pterm.PrefixPrinter {
+	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
 
 func SetLogLevel(lvl LogLevel) {
@@ -62,19 +62,20 @@ func GetLogLevel() LogLevel {
 }
 
 func Debug(payload ...interface{}) {
-	debugPrinter().Println(payload...)
+	debugPrinter(1).Println(payload...)
 }
 
 func Debugf(format string, a ...interface{}) {
-	debugPrinter().Printfln(format, a...)
+	debugPrinter(2).Printfln(format, a...)
 }
 
 func Error(err interface{}, message string) {
-	Errorf(err, message)
+	debugPrinter(1).Println(err)
+	Warnf(message)
 }
 
 func Errorf(err interface{}, format string, a ...interface{}) {
-	Debug(err)
+	debugPrinter(1).Println(err)
 	Warnf(format, a...)
 }
 
@@ -88,15 +89,15 @@ func Warnf(format string, a ...interface{}) {
 }
 
 func Fatal(err interface{}, message string) {
-	Debug(err)
-	errorPrinter().Println(message)
+	debugPrinter(1).Println(err)
+	errorPrinter(1).Println(message)
 	os.Exit(1)
 }
 
 func Fatalf(err interface{}, format string, a ...interface{}) {
-	Debug(err)
+	debugPrinter(1).Println(err)
 	message := paragraph(format, a...)
-	errorPrinter().Println(message)
+	errorPrinter(1).Println(message)
 	os.Exit(1)
 }
 

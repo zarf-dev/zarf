@@ -3,7 +3,7 @@ repos:
     rev: v4.0.1
     hooks:
       - id: check-added-large-files
-        args: ['--maxkb=1024']
+        args: ["--maxkb=1024"]
       - id: check-merge-conflict
       - id: detect-aws-credentials
         args:
@@ -12,7 +12,8 @@ repos:
         exclude: |
           (?x)^(
             examples/big-bang/template/bigbang/values.yaml|
-            examples/software-factory/template/bigbang/values.yaml
+            examples/software-factory/template/bigbang/values.yaml|
+            examples/istio-with-separate-cert/files/bigbangdev.key
           )$
       - id: end-of-file-fixer
         exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
@@ -28,13 +29,13 @@ repos:
     rev: v0.4.0
     hooks:
       - id: go-fmt
-## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
+  ## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
   - repo: local
     hooks:
       - id: golangci-lint
         name: golangci-lint
         entry: hooks/run-golangci-lint.sh
-        types: [ go ]
+        types: [go]
         language: script
         pass_filenames: false
         description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"

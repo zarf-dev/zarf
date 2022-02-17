@@ -15,7 +15,7 @@ This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platfor
 ## Prerequisites
 
 1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install `make`
+1. Install `make`
 1. Install `sha256sum` (on Mac it's `brew install coreutils`)
 
 ## Instructions
