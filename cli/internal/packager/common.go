@@ -225,8 +225,7 @@ func loopScriptUntilSuccess(script string, retry bool) {
 		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
 	}
 
-	// 2 minutes per script (60 * 2 second waits)
-	tries := 60
+	tries := 300
 	for {
 		scriptEnvVars := []string{
 			"ZARF_REGISTRY=" + config.ZarfRegistry,
@@ -243,7 +242,7 @@ func loopScriptUntilSuccess(script string, retry bool) {
 
 				// If there are no more tries left, we have failed
 				if tries < 1 {
-					spinner.Fatalf(nil, "Script timed out after 2 minutes")
+					spinner.Fatalf(nil, "Script timed out after 300 retries")
 				} else {
 					// if retry is enabled, on error wait 2 seconds and try again
 					time.Sleep(time.Second * 2)
