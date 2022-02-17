@@ -2,12 +2,14 @@ package k8s
 
 import (
 	"context"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/types"
+
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,6 +30,29 @@ func GeneratePod(name string, namespace string) *corev1.Pod {
 				"app.kubernetes.io/managed-by": "zarf",
 			},
 		},
+	}
+}
+
+func DeletePod(namespace string, name string) error {
+	message.Debugf("k8s.DeletePod(%s, %s)", namespace, name)
+	clientset := getClientset()
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	err := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		// Keep checking for the pod to be deleted
+		_, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
 	}
 }
 

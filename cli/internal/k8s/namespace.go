@@ -65,7 +65,8 @@ func DeleteZarfNamespace() {
 	_, _ = clientset.CoreV1().Namespaces().Finalize(context.TODO(), namespace, metav1.UpdateOptions{})
 
 	// Attempt to delete the namespace
-	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
+	gracePeriod := int64(0)
+	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
 	if err != nil && !errors.IsNotFound(err) {
 		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
 	}
