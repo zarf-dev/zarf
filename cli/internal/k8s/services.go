@@ -27,6 +27,12 @@ func GenerateService(namespace string, name string) *corev1.Service {
 	}
 }
 
+func DeleteService(namespace string, name string) error {
+	message.Debugf("k8s.DeleteService(%s, %s)", namespace, name)
+	clientset := getClientset()
+	return clientset.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
 func CreateService(service *corev1.Service) (*corev1.Service, error) {
 	message.Debugf("k8s.CreateService(%v)", service)
 	clientset := getClientset()
