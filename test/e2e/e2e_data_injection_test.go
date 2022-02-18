@@ -5,30 +5,26 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDataInjection(t *testing.T) {
 
 	// run `zarf init`
-	err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
-	// output, err := exec.Command(e2e.zarfBinPath, "init", "--confirm", "-l=trace").CombinedOutput()
-	assert.NoError(t, err, "unable to init")
+	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
+	require.NoError(t, err, output)
 
 	// Deploy the data injection example
-	err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-data-injection-demo.tar", "--confirm", "-l=trace")
-	// output, err = exec.Command(e2e.zarfBinPath, "package", "deploy", "../../build/zarf-package-data-injection-demo.tar", "--confirm", "-l=trace").CombinedOutput()
-	assert.NoError(t, err, "unable to deploy data-injection package")
-
-	// time.Sleep(5 * time.Second)
+	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-data-injection-demo.tar", "--confirm", "-l=trace")
+	require.NoError(t, err, output)
 
 	// Test to confirm the root file was placed
+	// TODO: This retry is disgusting, but race condition...
 	var execStdOut string
-	// var execStdErr string
 	attempt := 0
 	for attempt < 5 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test"})
 		attempt++
-		// fmt.Printf("stdout after %v attempts:  %v\n", attempt, execStdOut)
 		time.Sleep(2 * time.Second)
 	}
 	assert.NoError(t, err)
@@ -41,7 +37,6 @@ func TestDataInjection(t *testing.T) {
 	for attempt < 5 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test/subdirectory-test"})
 		attempt++
-		// fmt.Printf("stdout after %v attempts:  %v\n", attempt, execStdOut)
 		time.Sleep(2 * time.Second)
 	}
 	assert.NoError(t, err)
