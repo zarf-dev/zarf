@@ -2,32 +2,25 @@ package test
 
 import (
 	"net/http"
-	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestE2eExampleGame(t *testing.T) {
 
 	//run `zarf init`
-	output, err := exec.Command(e2e.zarfBinPath, "init", "--confirm").CombinedOutput()
-	assert.NoError(t, err, string(output))
+	output, err := e2e.execZarfCommand("init", "--confirm")
+	require.NoError(t, err, output)
 
 	// Deploy the game
-	output, err = exec.Command(e2e.zarfBinPath, "package", "deploy", "../../build/zarf-package-appliance-demo-multi-games.tar.zst", "--confirm").CombinedOutput()
-	assert.NoError(t, err, string(output))
+	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-appliance-demo-multi-games.tar.zst", "--confirm")
+	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service
-	cmd := exec.Command(e2e.zarfBinPath, "connect", "doom", "--local-port=22333")
-	e2e.cmdsToKill = append(e2e.cmdsToKill, cmd)
-	err = cmd.Start()
-	assert.NoError(t, err, "unable to connect to the doom port-forward")
-
-	// Give the port-forward a second to establish.
-	// Since the `connect` command gets executed in the background, it can take a few milliseconds for the tunnel to be created
-	time.Sleep(1 * time.Second)
+	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333")
+	require.NoError(t, err, "unable to connect to the doom port-forward")
 
 	// Check that 'curl' returns something.
 	// Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.

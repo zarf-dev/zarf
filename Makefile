@@ -103,7 +103,7 @@ test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be
 
 
 .PHONY: build-and-test-e2e
-build-and-test-e2e: build-cli init-package test-new-e2e ## Builds the cli and init package and runs the local e2e tests
+build-and-test-e2e: build-cli init-package package-example-game package-example-gitops-data package-example-data-injection test-new-e2e ## Builds the cli and init package and runs the local e2e tests
 
 # TODO: Rename this once we are certain this is the e2e approach we are going to be taking
 # TODO: I'm pretty sure there's some way Makefiles could be setup to not run dependant steps if their results are already cached or something
