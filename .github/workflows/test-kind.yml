@@ -27,4 +27,4 @@ jobs:
           name: test-cluster
 
       - name: Run Tests
-        run: TESTDISTRO=kind make test-new-e2e
+        run: TESTDISTRO=kind make build-and-test-e2e
