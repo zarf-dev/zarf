@@ -185,6 +185,16 @@ func (e2e *ZarfE2ETest) tearDownK3D() error {
 }
 
 func (e2e *ZarfE2ETest) setUpK3s() error {
+	// Determine what the name of the zarfBinary should be
+	e2e.zarfBinPath = path.Join("../../build", getCLIName())
+
+	var err error
+	// Create or get the kubeconfig
+	e2e.kubeconfigPath, err = getKubeconfigPath()
+	if err != nil {
+		return err
+	}
+
 	e2e.initWithK3s = true
 	return nil
 }
