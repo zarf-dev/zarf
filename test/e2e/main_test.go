@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 )
 
 var (
@@ -29,15 +28,15 @@ func TestMain(m *testing.M) {
 	// Teardown the cluster now that tests are completed
 	e2e.tearDownKind()
 
-	time.Sleep(15 * time.Second)
+	// time.Sleep(15 * time.Second)
 
-	err = e2e.setUpK3D()
-	if err != nil {
-		fmt.Printf("unable to set up k3d environment to run the e2e tests on")
-	}
+	// err = e2e.setUpK3D()
+	// if err != nil {
+	// 	fmt.Printf("unable to set up k3d environment to run the e2e tests on")
+	// }
 
-	retCode = m.Run()
-	e2e.tearDownK3D()
+	// retCode = m.Run()
+	// e2e.tearDownK3D()
 
 	// If exit code is distinct of zero, the test will be failed (red)
 	os.Exit(retCode)
