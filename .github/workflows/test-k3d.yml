@@ -20,4 +20,4 @@ jobs:
         run: make init-package
 
       - name: Run Tests
-        run: TESTDISTRO=k3d make test-new-e2e
+        run: TESTDISTRO=k3d make build-and-test-e2e
