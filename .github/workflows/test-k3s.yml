@@ -1,7 +1,4 @@
-# Attribution for a bunch of this goes to CloudPosse
-# https://github.com/cloudposse/actions/blob/master/.github/workflows/test-command.yml
-
-name: e2e
+name: e2e-k3s
 on:
   - pull_request
 
@@ -22,12 +19,5 @@ jobs:
       - name: Make Packages
         run: make init-package
 
-      - uses: engineerd/setup-kind@v0.5.0
-        with:
-          wait: 300s
-          version: v0.11.1
-          image: kindest/node:v1.21.1
-          name: test-cluster
-
       - name: Run Tests
-        run: make test-new-e2e
+        run: TESTDISTRO=k3s make test-new-e2e
