@@ -18,7 +18,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.7.0
 	github.com/pterm/pterm v0.12.33
-	github.com/rancher/k3d/v5 v5.2.0
+	github.com/rancher/k3d/v5 v5.2.1
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
