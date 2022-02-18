@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	// k3dcluster "github.com/rancher/k3d/v5/cmd/cluster"
+	k3dcluster "github.com/rancher/k3d/v5/cmd/cluster"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,58 +135,58 @@ func (e2e *ZarfE2ETest) tearDownKind() error {
 	return err
 }
 
-// func (e2e *ZarfE2ETest) setUpK3D() error {
+func (e2e *ZarfE2ETest) setUpK3D() error {
 
-// 	// Determine what the name of the zarfBinary should be
-// 	e2e.zarfBinPath = path.Join("../../build", getCLIName())
+	// Determine what the name of the zarfBinary should be
+	e2e.zarfBinPath = path.Join("../../build", getCLIName())
 
-// 	var err error
-// 	// Create or get the kubeconfig
-// 	e2e.kubeconfigPath, err = getKubeconfigPath()
-// 	if err != nil {
-// 		return err
-// 	}
+	var err error
+	// Create or get the kubeconfig
+	e2e.kubeconfigPath, err = getKubeconfigPath()
+	if err != nil {
+		return err
+	}
 
-// 	createClusterCommand := k3dcluster.NewCmdClusterCreate()
-// 	err = createClusterCommand.ExecuteContext(context.TODO())
-// 	if err != nil {
-// 		fmt.Println("ERROR WHEN TRYING TO SET UP K3D CLUSTER")
-// 		return err
-// 	}
+	createClusterCommand := k3dcluster.NewCmdClusterCreate()
+	err = createClusterCommand.ExecuteContext(context.TODO())
+	if err != nil {
+		fmt.Println("ERROR WHEN TRYING TO SET UP K3D CLUSTER")
+		return err
+	}
 
-// 	// Get config and client for the k8s cluster
-// 	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
-// 	if err != nil {
-// 		return err
-// 	}
+	// Get config and client for the k8s cluster
+	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
+	if err != nil {
+		return err
+	}
+	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+	if err != nil {
+		return err
+	}
 
-// 	// Wait for the cluster to have pods before we let the test suite run
-// 	attempt := 0
-// 	for attempt < 10 {
-// 		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
-// 		if err == nil && len(pods.Items) >= 0 {
-// 			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
-// 			break
-// 		}
+	// Wait for the cluster to have pods before we let the test suite run
+	attempt := 0
+	for attempt < 10 {
+		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+		if err == nil && len(pods.Items) >= 0 {
+			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
+			break
+		}
 
-// 		time.Sleep(1 * time.Second)
-// 		attempt++
-// 		if attempt > 15 {
-// 			return errors.New("unable to connect to KinD cluster for e2e tests")
-// 		}
-// 	}
-// 	return nil
-// }
+		time.Sleep(1 * time.Second)
+		attempt++
+		if attempt > 15 {
+			return errors.New("unable to connect to KinD cluster for e2e tests")
+		}
+	}
+	return nil
+}
 
-// func (e2e *ZarfE2ETest) tearDownK3D() error {
-// 	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
-// 	err := deleteClusterCommand.ExecuteContext(context.TODO())
-// 	return err
-// }
+func (e2e *ZarfE2ETest) tearDownK3D() error {
+	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
+	err := deleteClusterCommand.ExecuteContext(context.TODO())
+	return err
+}
 
 func getCLIName() string {
 	var binaryName string
