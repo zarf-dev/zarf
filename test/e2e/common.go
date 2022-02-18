@@ -28,7 +28,7 @@ import (
 type ZarfE2ETest struct {
 	zarfBinPath string
 
-	clusterName          string `default: "test-cluster"`
+	clusterName          string
 	kubeconfigPath       string
 	filesToRemove        []string
 	cmdsToKill           []*exec.Cmd
@@ -37,34 +37,33 @@ type ZarfE2ETest struct {
 	restConfig           *restclient.Config
 	clientset            *kubernetes.Clientset
 	clusterAlreadyExists bool
+	initWithK3s          bool
 }
 
 func getKubeconfigPath() (string, error) {
-	// k3dcluster.NewCmdClusterCreate()
 	// Check if the $KUBECONFIG env is set
-	// TODO: It would probably be good to verify a useable kubeconfig lives here
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if kubeconfigEnv != "" {
 		return kubeconfigEnv, nil
 	}
 
+	// Get the kubeconfig in ~/.kube/config
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-
 	configBaseDir := path.Join(userHomeDir, ".kube")
 	if err := os.MkdirAll(configBaseDir, 0700); err != nil {
 		return "", err
 	}
 
+	// Get (or create) the config file
 	kubeconfigPath := path.Join(configBaseDir, "config")
 	_, err = os.OpenFile(kubeconfigPath, os.O_RDWR|os.O_CREATE, 0755)
 	return kubeconfigPath, err
 }
 
 func (e2e *ZarfE2ETest) setUpKind() error {
-
 	// Determine what the name of the zarfBinary should be
 	e2e.zarfBinPath = path.Join("../../build", getCLIName())
 
@@ -93,14 +92,7 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 	}
 
 	// Get config and client for the k8s cluster
-	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
-	if err != nil {
-		return err
-	}
-	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
-	if err != nil {
-		return err
-	}
+	err = e2e.buildConfigAndClientset()
 
 	// Wait for the cluster to have pods before we let the test suite run
 	attempt := 0
@@ -121,12 +113,21 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 	return err
 }
 
+func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
+	var err error
+	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
+	if err != nil {
+		return err
+	}
+	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+
+	return err
+}
+
 func (e2e *ZarfE2ETest) tearDownKind() error {
 	if os.Getenv("SKIP_TEARDOWN") != "" || e2e.clusterAlreadyExists {
 		return nil
 	}
-
-	// k3dcluster.NewCmdClusterCreate()
 
 	// Delete the cluster and kubeconfig file
 	provider := cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
@@ -136,7 +137,6 @@ func (e2e *ZarfE2ETest) tearDownKind() error {
 }
 
 func (e2e *ZarfE2ETest) setUpK3D() error {
-
 	// Determine what the name of the zarfBinary should be
 	e2e.zarfBinPath = path.Join("../../build", getCLIName())
 
@@ -155,11 +155,7 @@ func (e2e *ZarfE2ETest) setUpK3D() error {
 	}
 
 	// Get config and client for the k8s cluster
-	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
-	if err != nil {
-		return err
-	}
-	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+	err = e2e.buildConfigAndClientset()
 	if err != nil {
 		return err
 	}
@@ -186,6 +182,16 @@ func (e2e *ZarfE2ETest) tearDownK3D() error {
 	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
 	err := deleteClusterCommand.ExecuteContext(context.TODO())
 	return err
+}
+
+func (e2e *ZarfE2ETest) setUpK3s() error {
+	e2e.initWithK3s = true
+	return nil
+}
+
+func (e2e *ZarfE2ETest) tearDownK3s() error {
+	e2e.initWithK3s = false
+	return nil
 }
 
 func getCLIName() string {
@@ -227,6 +233,14 @@ func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
 func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string) (string, string, error) {
 	stdoutBuffer := &strings.Builder{}
 	stderrBuffer := &strings.Builder{}
+	var err error
+
+	if e2e.clientset == nil {
+		err = e2e.buildConfigAndClientset()
+		if err != nil {
+			return "", "", err
+		}
+	}
 
 	req := e2e.clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podname).Namespace(namespace).SubResource("exec")
 	option := &v1.PodExecOptions{
@@ -254,6 +268,22 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string
 
 // TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
+	// Check if we need to deploy the k3s component
+	if e2e.initWithK3s && commandString[0] == "init" {
+		componentAdded := false
+		for idx, str := range commandString {
+			if strings.Contains(str, "components") {
+				commandString[idx] = str + ",k3s"
+				componentAdded = true
+				break
+			}
+		}
+
+		if !componentAdded {
+			commandString = append(commandString, "--components=k3s")
+		}
+	}
+
 	output, err := exec.Command(e2e.zarfBinPath, commandString...).CombinedOutput()
 	return string(output), err
 }

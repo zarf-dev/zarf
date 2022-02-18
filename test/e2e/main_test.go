@@ -3,40 +3,72 @@ package test
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 )
 
+type testSuite struct {
+	setupFunction   func() error
+	cleanupFunction func() error
+}
+
 var (
 	e2e ZarfE2ETest
+
+	distroTests = map[string]testSuite{
+		"k3d": {
+			setupFunction:   e2e.setUpK3D,
+			cleanupFunction: e2e.tearDownK3D,
+		},
+		"kind": {
+			setupFunction:   e2e.setUpKind,
+			cleanupFunction: e2e.tearDownKind,
+		},
+		"k3s": {
+			setupFunction:   e2e.setUpK3s,
+			cleanupFunction: e2e.tearDownK3s,
+		},
+	}
 )
 
 // TestMain will exec each test, one by one
 func TestMain(m *testing.M) {
-	// Create a kubeconfig and start up a KinD cluster
-	err := e2e.setUpKind()
-	if err != nil {
-		fmt.Printf("Unable to setup environment to run the e2e test because of err: %v\n", err)
-		os.Exit(1)
+	retCode := 0
+
+	distroToUse := strings.Split(os.Getenv("TESTDISTRO"), ",")
+	if len(distroToUse) == 0 {
+		// Use all the distros
+		for key := range distroTests {
+			distroToUse = append(distroToUse, key)
+		}
 	}
 
-	// This defer teardown still runs if a panic/fatal happens while running the tests
-	defer e2e.tearDownKind()
+	for _, distroName := range distroToUse {
+		testSuiteFunctions, exists := distroTests[distroName]
+		if !exists {
+			fmt.Printf("Provided distro %v is not recognized, continuing tests but reporting as failure\n", distroName)
+			retCode = 1
+			continue
+		}
 
-	// exec test and this returns an exit code to pass to os
-	retCode := m.Run()
+		// Setup the cluster
+		err := testSuiteFunctions.setupFunction()
+		defer testSuiteFunctions.cleanupFunction()
+		if err != nil {
+			fmt.Printf("Unable to setup %s environment to run the e2e test because of err: %v\n", distroName, err)
+			os.Exit(1)
+		}
 
-	// Teardown the cluster now that tests are completed
-	e2e.tearDownKind()
+		// exec test and capture exit code to pass to os
+		testCode := m.Run()
+		retCode = testCode | retCode
 
-	// time.Sleep(15 * time.Second)
-
-	// err = e2e.setUpK3D()
-	// if err != nil {
-	// 	fmt.Printf("unable to set up k3d environment to run the e2e tests on")
-	// }
-
-	// retCode = m.Run()
-	// e2e.tearDownK3D()
+		// Teardown the cluster now that tests are completed
+		err = testSuiteFunctions.cleanupFunction()
+		if err != nil {
+			fmt.Printf("Unable to cleanly teardown %s environment because of err: %v\n", distroName, err)
+		}
+	}
 
 	// If exit code is distinct of zero, the test will be failed (red)
 	os.Exit(retCode)
