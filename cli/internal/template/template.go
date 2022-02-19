@@ -12,6 +12,7 @@ import (
 
 type Values struct {
 	state        types.ZarfState
+	seedRegistry string
 	registry     string
 	secret       struct {
 		htpasswd       string
@@ -38,6 +39,7 @@ func Generate() Values {
 	}
 	generated.secret.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 
+	generated.seedRegistry = config.GetSeedRegistry()
 	generated.registry = config.GetRegistry()
 
 	generated.secret.registryPush = config.GetSecret(config.StateRegistryPush)
@@ -72,6 +74,7 @@ func (values Values) Apply(path string) {
 
 	mappings := map[string]string{
 		"STORAGE_CLASS":      values.state.StorageClass,
+		"SEED_REGISTRY":      values.seedRegistry,
 		"REGISTRY":           values.registry,
 		"REGISTRY_NODEPORT":  values.state.Registry.NodePort,
 		"REGISTRY_SECRET":    values.secret.registrySecret,

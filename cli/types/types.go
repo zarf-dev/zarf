@@ -111,7 +111,7 @@ type ZarfPackage struct {
 	Build      ZarfBuildData   `yaml:"build,omitempty"`
 	Data       []ZarfData      `yaml:"data,omitempty"`
 	Components []ZarfComponent `yaml:"components,omitempty"`
-	Seed       []string        `yaml:"seed,omitempty"`
+	Seed       string          `yaml:"seed,omitempty"`
 }
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data

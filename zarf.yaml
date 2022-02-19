@@ -3,8 +3,7 @@ metadata:
   name: Zarf Official Init Package
   description: "Used to establish a new Zarf cluster"
 
-seed:
-  - library/registry:2.7.1
+seed: library/registry:2.7.1
 
 components:
   - name: k3s
@@ -57,6 +56,17 @@ components:
         target: /etc/rancher/k3s/k3s.yaml
         symlinks:
           - /root/.kube/configkube
+
+  - name: container-registry-seed
+    required: true
+    charts:
+      - name: docker-registry
+        url: https://github.com/defenseunicorns/docker-registry.helm.git
+        version: 2.0.0
+        namespace: zarf
+        valuesFiles:
+          - assets/charts/registry-values.yaml
+          - assets/charts/registry-values-seed.yaml
 
   - name: container-registry
     required: true
