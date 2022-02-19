@@ -19,5 +19,7 @@ jobs:
       - name: Make Packages
         run: make init-package
 
+      - name: Try becoming root to run the tests
+        run: sudo su
       - name: Run Tests
         run: TESTDISTRO=k3s make build-and-test-e2e
