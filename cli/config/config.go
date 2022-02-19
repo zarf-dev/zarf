@@ -29,7 +29,6 @@ const (
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
 
-
 	ZarfSeedTypeCLIInject         = "cli-inject"
 	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
 
@@ -48,6 +47,8 @@ var (
 	ActiveCranePlatform crane.Option
 
 	CliArch string
+
+	ZarfSeedPort string
 
 	// Private vars
 	config types.ZarfPackage
@@ -79,14 +80,18 @@ func SetAcrch() {
 	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
 
-// GetSeedImages returns a list of image strings specified in the package, but only for init packages
-func GetSeedImages() []string {
-	message.Debugf("config.GetSeedImages()")
+func GetSeedRegistry() string {
+	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
+}
+
+// GetSeedImage returns a list of image strings specified in the package, but only for init packages
+func GetSeedImage() string {
+	message.Debugf("config.GetSeedImage()")
 	// Only allow seed images for init config
 	if IsZarfInitConfig() {
 		return config.Seed
 	} else {
-		return []string{}
+		return ""
 	}
 }
 

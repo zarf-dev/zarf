@@ -1,16 +1,18 @@
 package packager
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"regexp"
-	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -38,7 +40,7 @@ func runInjectionMadness(tempPath tempPaths) {
 		message.Fatal(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
-	spinner.Updatef("Gerating bootsrap payload SHASUMs")
+	spinner.Updatef("Generating bootstrap payload SHASUMs")
 	if envVars, err = buildEnvVars(tempPath); err != nil {
 		message.Fatal(err, "Unable to build the injection pod environment variables")
 	}
@@ -48,12 +50,14 @@ func runInjectionMadness(tempPath tempPaths) {
 		message.Fatal(err, "Unable to create the injector configmap")
 	}
 
-	if _, err = createService(); err != nil {
+	if service, err := createService(); err != nil {
 		message.Fatal(err, "Unable to create the injector service")
+	} else {
+		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
 	}
 
-	// https://regex101.com/r/iCe1iT/1
-	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:31999`)
+	// https://regex101.com/r/eLS3at/1
+	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
 	// Try to create an injector pod using an existing image in the cluster
 	for _, image := range images {
@@ -65,7 +69,6 @@ func runInjectionMadness(tempPath tempPaths) {
 		spinner.Updatef("Attempting to bootstrap with the %s", image)
 
 		// Make sure the pod is not there first
-		// Sanity buffer
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 		// Update the podspec image path
 		pod := buildInjectionPod(image, envVars)
@@ -79,12 +82,45 @@ func runInjectionMadness(tempPath tempPaths) {
 				// On failure just try the next image
 				continue
 			}
+
 			spinner.Success()
 			return
 		}
 	}
 
 	spinner.Fatalf(nil, "Unable to perform the injection")
+}
+
+func hasSeedImages() bool {
+	message.Debugf("packager.hasSeedImages()")
+
+	baseUrl := config.GetSeedRegistry()
+	seedImage := config.GetSeedImage()
+	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
+	timeout := time.After(15 * time.Second)
+	// finish := make(chan bool)
+
+	// go func() {
+	for {
+		select {
+		case <-timeout:
+			message.Debug("seed image check timed out")
+			// finish <- true
+			return false
+		default:
+			if _, err := crane.Manifest(ref, config.ActiveCranePlatform); err != nil {
+				message.Errorf(err, "Could not get image ref %s", ref)
+			} else {
+				return true
+			}
+		}
+		time.Sleep(time.Second)
+	}
+	// }()
+
+	// <-finish
+
+	// return true
 }
 
 func tryInjectorPayloadDeploy(tempPath tempPaths) error {
@@ -96,7 +132,7 @@ func tryInjectorPayloadDeploy(tempPath tempPaths) error {
 	tarPath := tempPath.base + "/payload.tar"
 	tarFileList := []string{
 		tempPath.injectZarfBinary,
-		tempPath.seedImages,
+		tempPath.seedImage,
 	}
 
 	// Create a tar archive of the injector payload
@@ -109,15 +145,24 @@ func tryInjectorPayloadDeploy(tempPath tempPaths) error {
 		return err
 	}
 
+	time.Sleep(5 * time.Second)
+
+	localPort, err := k8s.GetAvailablePort()
+	if err != nil {
+		return err
+	}
+
 	// Establish the zarf connect tunnel
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfRegistry, false)
+	tunnel := k8s.NewTunnel(k8s.ZarfNamespace, k8s.PodResource, "injector", localPort, 5000)
+	tunnel.Connect("injector", false)
 	tunnel.Establish()
 	defer tunnel.Close()
 
+	time.Sleep(5 * time.Second)
+
 	receiver := &net.TCPAddr{
 		IP:   net.IPv4(127, 0, 0, 1),
-		Port: k8s.PortRegistry,
+		Port: localPort,
 	}
 	// Open the TCP connection for the new tunel
 	if tcpConnection, err = net.DialTCP("tcp4", nil, receiver); err != nil {
@@ -131,8 +176,14 @@ func tryInjectorPayloadDeploy(tempPath tempPaths) error {
 	written, err := tcpConnection.Write(tarFile)
 	message.Debugf("%d bytes sent", written)
 	_ = tcpConnection.Close()
+	_ = os.Remove(tarPath)
+
 	if err != nil {
 		return err
+	}
+
+	if !hasSeedImages() {
+		return fmt.Errorf("seed image not found")
 	}
 
 	return nil
@@ -164,28 +215,18 @@ func createInjectorConfigmap(tempPath tempPaths) error {
 }
 
 func createService() (*corev1.Service, error) {
-	service := k8s.GenerateService(k8s.ZarfNamespace, "zarf-docker-registry")
-
-	service.Labels["app"] = "docker-registry"
-	service.Labels["app.kubernetes.io/managed-by"] = "Helm"
-
-	service.Annotations["meta.helm.sh/release-name"] = "zarf-docker-registry"
-	service.Annotations["meta.helm.sh/release-namespace"] = k8s.ZarfNamespace
+	service := k8s.GenerateService(k8s.ZarfNamespace, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
-
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-		Port:     int32(5000),
-		NodePort: int32(31999),
+		Port: int32(5000),
 	})
-
 	service.Spec.Selector = map[string]string{
-		"app":     "docker-registry",
-		"release": "zarf-docker-registry",
+		"app": "zarf-injector",
 	}
 
 	// Attempt to purse the service silently
-	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-docker-registry")
+	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
 
 	return k8s.CreateService(service)
 }
@@ -200,7 +241,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	}
 
 	// Add the seed images shasum env var
-	if envVars["SHA256_IMAGES"], err = utils.GetSha256Sum(tempPath.seedImages); err != nil {
+	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(tempPath.seedImage); err != nil {
 		return nil, err
 	}
 
@@ -210,7 +251,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	}
 
 	// Add the seed images list env var
-	envVars["SEED_IMAGES"] = strings.Join(config.GetSeedImages(), " ")
+	envVars["SEED_IMAGE"] = config.GetSeedImage()
 
 	// Setup the env vars, this one needs more testing but seems to make busybox sad in some images if not set
 	encodedEnvVars := []corev1.EnvVar{{Name: "USER", Value: "root"}}
@@ -228,8 +269,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar) *corev1.Pod {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
 
-	pod.Labels["app"] = "docker-registry"
-	pod.Labels["release"] = "zarf-docker-registry"
+	pod.Labels["app"] = "zarf-injector"
 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 

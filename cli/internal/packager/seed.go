@@ -82,5 +82,5 @@ func postSeedRegistry(tempPath tempPaths) {
 	// Try to kill the injector pod now
 	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImages, config.GetSeedImages(), config.ZarfRegistry)
+	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
 }

@@ -17,4 +17,4 @@ Once it's running
 `zarf connect seed-registry --local-port 5000`
 
 Send the files
-`./busybox-amd64 tar cv zarf seed-images.tar | ./busybox-amd64 netcat 127.0.0.1 5000`
+`./busybox-amd64 tar cv zarf seed-image.tar | ./busybox-amd64 netcat 127.0.0.1 5000`

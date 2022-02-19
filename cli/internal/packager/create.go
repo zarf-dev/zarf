@@ -32,7 +32,7 @@ func Create() {
 
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
-	seedImages := config.GetSeedImages()
+	seedImage := config.GetSeedImage()
 	components := config.GetComponents()
 	configFile := tempPath.base + "/zarf.yaml"
 
@@ -50,9 +50,9 @@ func Create() {
 		os.Exit(0)
 	}
 
-	if len(seedImages) > 0 {
+	if seedImage != "" {
 		// Load seed images into their own happy little tarball for ease of import on init
-		images.PullAll(seedImages, tempPath.seedImages)
+		images.PullAll([]string{seedImage}, tempPath.seedImage)
 	}
 
 	var combinedImageList []string

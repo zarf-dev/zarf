@@ -12,7 +12,7 @@ set -ex
 
 # Verify that the zarf assets are properly loaded
 /zarf-bin/busybox echo "$SHA256_ZARF  zarf-registry" | /zarf-bin/busybox sha256sum -c
-/zarf-bin/busybox echo "$SHA256_IMAGES  seed-images.tar" | /zarf-bin/busybox sha256sum -c
+/zarf-bin/busybox echo "$SHA256_IMAGE  seed-image.tar" | /zarf-bin/busybox sha256sum -c
 
 # Load the seed registry
-/payload/zarf-registry /payload/seed-images.tar $SEED_IMAGES
+/payload/zarf-registry /payload/seed-image.tar $SEED_IMAGE

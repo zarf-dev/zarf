@@ -35,7 +35,7 @@ type tempPaths struct {
 	injectZarfBinary string
 	injectScript     string
 	injectBinary     string
-	seedImages       string
+	seedImage        string
 	images           string
 	dataInjections   string
 	components       string
@@ -49,7 +49,7 @@ func createPaths() tempPaths {
 		injectScript:     basePath + "/init.sh",
 		injectZarfBinary: basePath + "/zarf-registry",
 		injectBinary:     basePath + "/busybox",
-		seedImages:       basePath + "/seed-images.tar",
+		seedImage:        basePath + "/seed-image.tar",
 		images:           basePath + "/images.tar",
 		dataInjections:   basePath + "/data",
 		components:       basePath + "/components",
