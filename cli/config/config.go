@@ -44,8 +44,6 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
-	ActiveCranePlatform crane.Option
-
 	CliArch string
 
 	ZarfSeedPort string
@@ -61,26 +59,27 @@ func IsZarfInitConfig() bool {
 }
 
 func GetArch() string {
+	// If CLI-orverriden then reflect that
+	if CliArch != "" {
+		return CliArch
+	}
+
 	if active.Metadata.Architecture != "" {
 		return active.Metadata.Architecture
 	}
+
 	if active.Build.Architecture != "" {
 		return active.Build.Architecture
 	}
+
 	return runtime.GOARCH
 }
 
-func SetArch(arch string) {
-	message.Debugf("config.SetArch(%s)", arch)
-
-	if arch == "" {
-		// default to current system arch when all else fails
-		arch = runtime.GOARCH
-	}
-
-	active.Metadata.Architecture = arch
-	// Use the arch to define the image push/pull options for crane
-	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
+func GetCraneOptions() crane.Option {
+	return crane.WithPlatform(&v1.Platform{
+		OS:           "linux",
+		Architecture: GetArch(),
+	})
 }
 
 func GetSeedRegistry() string {
@@ -151,8 +150,12 @@ func BuildConfig(path string) error {
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
 
-	// The build arch will always be the same but leave to avoid breaking older packages
-	active.Build.Architecture = active.Metadata.Architecture
+	// Need to ensure the arch is updated if injected
+	arch := GetArch()
+
+	// normalize these for the package confirmation
+	active.Metadata.Architecture = arch
+	active.Build.Architecture = arch
 
 	// Record the time of package creation
 	active.Build.Timestamp = now.Format(time.RFC1123Z)

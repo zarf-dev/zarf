@@ -178,7 +178,7 @@ func hasSeedImages(tunnelPort int) bool {
 		// after delay, try running
 		default:
 			//
-			if _, err := crane.Manifest(ref, config.ActiveCranePlatform); err != nil {
+			if _, err := crane.Manifest(ref, config.GetCraneOptions()); err != nil {
 				message.Debugf("Could not get image ref %s: %w", ref, err)
 			} else {
 				return true

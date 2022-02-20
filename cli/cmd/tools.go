@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/defenseunicorns/zarf/cli/types"
 
@@ -21,7 +20,6 @@ import (
 )
 
 var configCaImport bool
-var arch string
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -136,16 +134,10 @@ func init() {
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	// Ensure the arch is set to avoid crane nil pointer
-	config.SetArch(arch)
-
-	cranePlatformOptions := []crane.Option{config.ActiveCranePlatform}
+	cranePlatformOptions := []crane.Option{config.GetCraneOptions()}
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
-
-	registryCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", runtime.GOARCH, "Architecture for OCI images")
-
 }
