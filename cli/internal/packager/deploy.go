@@ -52,9 +52,6 @@ func Deploy() {
 		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
-	// Determine the proper arch now that the config file is loaded
-	config.SetAcrch()
-
 	if config.IsZarfInitConfig() {
 		// If init config, make sure things are ready
 		utils.RunPreflightChecks()
@@ -203,10 +200,10 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		config.InitState(state)
 		valueTemplate = template.Generate()
 
-		if hasImages && state.Architecture != config.GetBuildData().Architecture {
+		if hasImages && state.Architecture != config.GetArch() {
 			// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 			spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-				config.GetBuildData().Architecture,
+				config.GetArch(),
 				state.Architecture)
 		}
 

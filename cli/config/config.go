@@ -51,31 +51,34 @@ var (
 	ZarfSeedPort string
 
 	// Private vars
-	config types.ZarfPackage
+	active types.ZarfPackage
 	state  types.ZarfState
 )
 
 func IsZarfInitConfig() bool {
 	message.Debug("config.IsZarfInitConfig")
-	return strings.ToLower(config.Kind) == "zarfinitconfig"
+	return strings.ToLower(active.Kind) == "zarfinitconfig"
 }
 
-func SetAcrch() {
-	var arch string
-	if CliArch == "" {
-		// If not cli override for arch, set to the package arch
-		arch = config.Metadata.Architecture
+func GetArch() string {
+	if active.Metadata.Architecture != "" {
+		return active.Metadata.Architecture
+	}
+	if active.Build.Architecture != "" {
+		return active.Build.Architecture
+	}
+	return runtime.GOARCH
+}
 
-		if arch == "" {
-			// Finally, default to current system arch when all else fails
-			arch = runtime.GOARCH
-		}
-	} else {
-		arch = CliArch
+func SetArch(arch string) {
+	message.Debugf("config.SetArch(%s)", arch)
+
+	if arch == "" {
+		// default to current system arch when all else fails
+		arch = runtime.GOARCH
 	}
 
-	message.Debugf("config.SetArch(%s)", arch)
-	config.Build.Architecture = arch
+	active.Metadata.Architecture = arch
 	// Use the arch to define the image push/pull options for crane
 	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
@@ -89,7 +92,7 @@ func GetSeedImage() string {
 	message.Debugf("config.GetSeedImage()")
 	// Only allow seed images for init config
 	if IsZarfInitConfig() {
-		return config.Seed
+		return active.Seed
 	} else {
 		return ""
 	}
@@ -105,19 +108,19 @@ func GetPackageName() string {
 }
 
 func GetDataInjections() []types.ZarfData {
-	return config.Data
+	return active.Data
 }
 
 func GetMetaData() types.ZarfMetadata {
-	return config.Metadata
+	return active.Metadata
 }
 
 func GetComponents() []types.ZarfComponent {
-	return config.Components
+	return active.Components
 }
 
 func GetBuildData() types.ZarfBuildData {
-	return config.Build
+	return active.Build
 }
 
 func GetValidPackageExtensions() [3]string {
@@ -139,7 +142,7 @@ func GetRegistry() string {
 }
 
 func LoadConfig(path string) error {
-	return utils.ReadYaml(path, &config)
+	return utils.ReadYaml(path, &active)
 }
 
 func BuildConfig(path string) error {
@@ -148,21 +151,24 @@ func BuildConfig(path string) error {
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
 
+	// The build arch will always be the same but leave to avoid breaking older packages
+	active.Build.Architecture = active.Metadata.Architecture
+
 	// Record the time of package creation
-	config.Build.Timestamp = now.Format(time.RFC1123Z)
+	active.Build.Timestamp = now.Format(time.RFC1123Z)
 
 	// Record the Zarf Version the CLI was built with
-	config.Build.Version = CLIVersion
+	active.Build.Version = CLIVersion
 
 	if hostErr == nil {
 		// Record the hostname of the package creation terminal
-		config.Build.Terminal = hostname
+		active.Build.Terminal = hostname
 	}
 
 	if userErr == nil {
 		// Record the name of the user creating the package
-		config.Build.User = currentUser.Username
+		active.Build.User = currentUser.Username
 	}
 
-	return utils.WriteYaml(path, config, 0400)
+	return utils.WriteYaml(path, active, 0400)
 }

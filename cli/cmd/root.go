@@ -13,7 +13,6 @@ import (
 )
 
 var zarfLogLevel = ""
-var arch string
 
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]|[ZARF-PACKAGE]|[ZARF-YAML]",
@@ -21,9 +20,8 @@ var rootCmd = &cobra.Command{
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
 		}
-		config.CliArch = arch
 	},
-	Short: "Small tool to bundle dependencies with K3s for air-gaped deployments",
+	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
@@ -58,7 +56,6 @@ func init() {
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
-	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
 }
 
 func setLogLevel(logLevel string) {
