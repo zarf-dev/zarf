@@ -12,15 +12,20 @@ func preSeedRegistry(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%v)", tempPath)
 
 	var (
-		distro string
-		err    error
+		clusterArch string
+		distro      string
+		err         error
 	)
+
+	if clusterArch, err = k8s.GetArchitecture(); err != nil {
+		message.Errorf(err, "Unable to validate the cluster system architecture")
+	}
 
 	// Attempt to load an existing state prior to init
 	state := k8s.LoadZarfState()
 
-	if state.Secret == "" || state.Distro == k8s.DistroIsUnknown {
-		// If the state is invalid, assume this is a new cluster
+	// If the state is invalid, assume this is a new cluster
+	if state.Secret == "" {
 		message.Debug("New cluster, no zarf state found")
 
 		// If the K3s component is being deployed, skip distro detection
@@ -42,7 +47,11 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.Registry.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
-		state.Architecture = config.GetBuildData().Architecture
+		state.Architecture = config.GetArch()
+	}
+
+	if clusterArch != state.Architecture {
+		message.Fatalf(nil, "The current Zarf package architecture %s does not match the cluster architecture %s", state.Architecture, clusterArch)
 	}
 
 	switch state.Distro {

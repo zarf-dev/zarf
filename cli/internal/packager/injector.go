@@ -21,7 +21,7 @@ import (
 func runInjectionMadness(tempPath tempPaths) {
 	message.Debugf("packager.runInjectionMadness(%v)", tempPath)
 
-	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into cluster")
+	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
 	var err error
@@ -91,38 +91,6 @@ func runInjectionMadness(tempPath tempPaths) {
 	spinner.Fatalf(nil, "Unable to perform the injection")
 }
 
-func hasSeedImages() bool {
-	message.Debugf("packager.hasSeedImages()")
-
-	baseUrl := config.GetSeedRegistry()
-	seedImage := config.GetSeedImage()
-	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
-	timeout := time.After(15 * time.Second)
-	// finish := make(chan bool)
-
-	// go func() {
-	for {
-		select {
-		case <-timeout:
-			message.Debug("seed image check timed out")
-			// finish <- true
-			return false
-		default:
-			if _, err := crane.Manifest(ref, config.ActiveCranePlatform); err != nil {
-				message.Errorf(err, "Could not get image ref %s", ref)
-			} else {
-				return true
-			}
-		}
-		time.Sleep(time.Second)
-	}
-	// }()
-
-	// <-finish
-
-	// return true
-}
-
 func tryInjectorPayloadDeploy(tempPath tempPaths) error {
 	message.Debugf("packager.tryInjectorPayloadDeploy(%v)", tempPath)
 	var err error
@@ -182,11 +150,41 @@ func tryInjectorPayloadDeploy(tempPath tempPaths) error {
 		return err
 	}
 
-	if !hasSeedImages() {
+	if !hasSeedImages(localPort) {
 		return fmt.Errorf("seed image not found")
 	}
 
 	return nil
+}
+
+func hasSeedImages(tunnelPort int) bool {
+	message.Debugf("packager.hasSeedImages()")
+
+	baseUrl := fmt.Sprintf("%s:%d", config.IPV4Localhost, tunnelPort)
+	seedImage := config.GetSeedImage()
+	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
+	timeout := time.After(15 * time.Second)
+
+	for {
+		// delay check 3 seconds
+		time.Sleep(3 * time.Second)
+		select {
+
+		// on timeout abort
+		case <-timeout:
+			message.Debug("seed image check timed out")
+			return false
+
+		// after delay, try running
+		default:
+			//
+			if _, err := crane.Manifest(ref, config.ActiveCranePlatform); err != nil {
+				message.Debugf("Could not get image ref %s: %w", ref, err)
+			} else {
+				return true
+			}
+		}
+	}
 }
 
 func createInjectorConfigmap(tempPath tempPaths) error {

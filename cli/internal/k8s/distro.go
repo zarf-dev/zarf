@@ -80,3 +80,16 @@ func DetectDistro() (string, error) {
 
 	return DistroIsUnknown, nil
 }
+
+func GetArchitecture() (string, error) {
+	nodes, err := GetNodes()
+	if err != nil {
+		return "", err
+	}
+
+	for _, node := range nodes.Items {
+		return node.Status.NodeInfo.Architecture, nil
+	}
+
+	return "", fmt.Errorf("could not identify node architecture")
+}
