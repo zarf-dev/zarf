@@ -17,6 +17,6 @@ jobs:
       - name: Sign into Repo1
         run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
       - name: Make Packages
-        run: make init-package
+        run: make build-packages-for-e2e
       - name: Run Tests
-        run: sudo TESTDISTRO=k3s make build-and-test-e2e
+        run: sudo TESTDISTRO=k3s make test-new-e2e
