@@ -54,7 +54,6 @@ func TestGeneralCLI(t *testing.T) {
 	expectedOutString := "Log level set to warn"
 	require.Contains(t, output, expectedOutString, "The log level should be changed to 'warn'")
 
-	e2e.cleanupAfterTest(t)
 }
 
 func TestInitZarf(t *testing.T) {

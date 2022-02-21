@@ -181,6 +181,7 @@ func (e2e *ZarfE2ETest) setUpK3D() error {
 func (e2e *ZarfE2ETest) tearDownK3D() error {
 	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
 	err := deleteClusterCommand.ExecuteContext(context.TODO())
+	os.Remove(e2e.kubeconfigPath)
 	return err
 }
 
@@ -201,6 +202,7 @@ func (e2e *ZarfE2ETest) setUpK3s() error {
 
 func (e2e *ZarfE2ETest) tearDownK3s() error {
 	e2e.initWithK3s = false
+	os.Remove(e2e.kubeconfigPath)
 	return nil
 }
 
