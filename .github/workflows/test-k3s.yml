@@ -12,6 +12,10 @@ jobs:
           go-version: 1.16.x
       - name: Checkout Repo
         uses: actions/checkout@v2
+      - name: Download dependences
+        run: |
+          go mod download
+          sudo go mod download
       - name: Build CLI
         run: make build-cli-linux
       - name: Sign into Repo1
