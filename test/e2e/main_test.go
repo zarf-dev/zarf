@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	retCode := 0
 
 	distroToUse := strings.Split(os.Getenv("TESTDISTRO"), ",")
-	if len(distroToUse) == 0 {
+	if len(distroToUse) == 1 && distroToUse[0] == "" {
 		// Use all the distros
 		for key := range distroTests {
 			distroToUse = append(distroToUse, key)
