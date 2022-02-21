@@ -22,7 +22,7 @@ func TestDataInjection(t *testing.T) {
 	// TODO: This retry is disgusting, but race condition...
 	var execStdOut string
 	attempt := 0
-	for attempt < 5 && execStdOut == "" {
+	for attempt < 10 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test"})
 		attempt++
 		time.Sleep(2 * time.Second)
