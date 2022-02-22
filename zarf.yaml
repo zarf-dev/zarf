@@ -72,7 +72,7 @@ components:
   - name: container-registry
     required: true
     manifests:
-      - name: kep-1775-registry-annotation
+      - name: kep-1755-registry-annotation
         files:
           - assets/manifests/registry/configmap.yaml
     charts:

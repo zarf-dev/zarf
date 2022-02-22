@@ -54,6 +54,7 @@ func makeLabels(labels map[string]string) string {
 // Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
 type Tunnel struct {
 	out          io.Writer
+	autoOpen     bool
 	localPort    int
 	remotePort   int
 	namespace    string
@@ -83,6 +84,10 @@ func NewTunnel(namespace string, resourceType string, resourceName string, local
 
 func NewZarfTunnel() *Tunnel {
 	return NewTunnel(ZarfNamespace, SvcResource, "", 0, 0)
+}
+
+func (tunnel *Tunnel) EnableAutoOpen() {
+	tunnel.autoOpen = true
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
@@ -115,18 +120,20 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
+	// On error abbort
 	if url, err := tunnel.Establish(); err != nil {
-		// On error abbort
 		message.Fatal(err, "Unable to establish the tunnel")
 	} else if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
-		switch runtime.GOOS {
-		case "linux":
-			_ = exec.Command("xdg-open", url).Start()
-		case "windows":
-			_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-		case "darwin":
-			_ = exec.Command("open", url).Start()
+		if tunnel.autoOpen {
+			switch runtime.GOOS {
+			case "linux":
+				_ = exec.Command("xdg-open", url).Start()
+			case "windows":
+				_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+			case "darwin":
+				_ = exec.Command("open", url).Start()
+			}
 		}
 
 		// Since this blocking, set the defer now so it closes properly on sigterm
