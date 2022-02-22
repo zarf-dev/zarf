@@ -4,13 +4,10 @@ metadata:
   name: injector
   namespace: zarf
   labels:
-    app: docker-registry
-    release: zarf-docker-registry
+    app: zarf-injector
 spec:
   containers:
     - name: injector
-      # image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.21.2-eksbuild.2
-      # image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.8.4-eksbuild.1
       image: rancher/local-path-provisioner:v0.0.19
       workingDir: /payload
       command: ["/zarf-bin/init.sh"]
@@ -18,7 +15,7 @@ spec:
         - name: SHA256_BUSYBOX
           value: 6a04784d38e8ced6432e683edb07015172acf57bf658d0653b1dc51c43b55643
         - name: SHA256_ZARF
-          value: 3618dde085ba1c4bbef0f65d5c5864121af1d9fe99098b5e5bca7be1d670d01a
+          value: 1d196f71fdb3b0844f2d3676c42599b6c2eecc00904eecfa5716ea00cbab20df
         - name: SHA256_IMAGES
           value: 4cc08af8e749ba6fdbc0123847c039ec92c54ed147fc45f7ac6ab505fa44a70e
         - name: USER
@@ -47,36 +44,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    zarf.dev/connect-name: seed-registry
-  name: zarf-seed-registry
+  name: zarf-injector
   namespace: zarf
 spec:
-  ports:
-    - port: 25000
-      protocol: TCP
-  selector:
-    app: docker-registry
----
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    meta.helm.sh/release-name: zarf-docker-registry
-    meta.helm.sh/release-namespace: zarf
-  labels:
-    app: docker-registry
-    app.kubernetes.io/managed-by: Helm
-  name: zarf-docker-registry
-  namespace: zarf
-spec:
-  ports:
-    - name: http-5000
-      nodePort: 31999
-      port: 5000
-      protocol: TCP
-      targetPort: 5000
-  selector:
-    app: docker-registry
-    release: zarf-docker-registry
   type: NodePort
+  ports:
+    - port: 5000
+      nodePort: 31995
+      protocol: TCP
+  selector:
+    app: zarf-injector

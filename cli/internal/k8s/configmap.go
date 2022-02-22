@@ -10,21 +10,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ReplaceConfigmap(namespace string, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func ReplaceConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.ReplaceConfigmap(%s, %s, data)", namespace, name)
-
-	if _, err := CreateNamespace(namespace, nil); err != nil {
-		return nil, fmt.Errorf("unable to create or read the namespace: %w", err)
-	}
 
 	if err := DeleteConfigmap(namespace, name); err != nil {
 		return nil, err
 	}
 
-	return CreateConfigmap(namespace, name, data)
+	return CreateConfigmap(namespace, name, labels, data)
 }
 
-func CreateConfigmap(namespace string, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func CreateConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.CreateConfigmap(%s, %s, data)", namespace, name)
 	clientset := getClientset()
 
@@ -52,7 +48,7 @@ func DeleteConfigmap(namespace string, name string) error {
 
 	err := namespaceConfigmap.Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error deleting the secret: %w", err)
+		return fmt.Errorf("error deleting the configmap: %w", err)
 	}
 
 	return nil
