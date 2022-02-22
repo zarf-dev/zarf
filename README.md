@@ -16,6 +16,54 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
 
 &nbsp;
 
+## Install
+
+Zarf has an installer script that will automatically grab the latest version of Zarf and install it locally.
+
+You can fetch that script, and then execute it locally. It's well documented so that you can read through it and understand what it is doing before you run it.
+
+```bash
+curl -fsSL -o get_zarf.sh "https://raw.githubusercontent.com/defenseunicorns/zarf/master/install.sh"
+
+chmod 700 get_zarf.sh
+
+./get_zarf.sh
+```
+
+### Apple macOS Users
+
+If your Mac has an Intel chip, your zarf binary name is `zarf-mac-intel`. To be able to use zarf by running `zarf` commands, you can set an alias in your shell's configuration file.
+
+```zsh
+# zsh 
+echo "alias zarf=zarf-mac-intel" >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash
+# bash
+echo "alias zarf=zarf-mac-intel" >> ~/.bash_profile
+source ~/.bash_profile
+```
+
+If your Mac has an Apple M1 chip, your zarf binary name is `zarf-mac-apple`. You can set an alias for it like so:
+
+```zsh
+# zsh 
+echo "alias zarf=zarf-mac-apple" >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash
+# bash
+echo "alias zarf=zarf-mac-apple" >> ~/.bash_profile
+source ~/.bash_profile
+```
+
+&nbsp;
+
+&nbsp;
+
 <!--
 ##########
 # This block is about LEARNING TO USE Zarf
