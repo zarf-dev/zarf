@@ -8,25 +8,29 @@ import (
 )
 
 type testSuite struct {
-	setupFunction   func() error
-	cleanupFunction func() error
+	standard         bool
+	setupFunction    func() error
+	tearDownFunction func() error
 }
 
 var (
-	e2e ZarfE2ETest
-
+	e2e         ZarfE2ETest
+	static      string
 	distroTests = map[string]testSuite{
 		"k3d": {
-			setupFunction:   e2e.setUpK3D,
-			cleanupFunction: e2e.tearDownK3D,
+			standard:         true,
+			setupFunction:    e2e.setUpK3D,
+			tearDownFunction: e2e.tearDownK3D,
 		},
 		"kind": {
-			setupFunction:   e2e.setUpKind,
-			cleanupFunction: e2e.tearDownKind,
+			standard:         true,
+			setupFunction:    e2e.setUpKind,
+			tearDownFunction: e2e.tearDownKind,
 		},
 		"k3s": {
-			setupFunction:   e2e.setUpK3s,
-			cleanupFunction: e2e.tearDownK3s,
+			standard:         false,
+			setupFunction:    e2e.setUpK3s,
+			tearDownFunction: e2e.tearDownK3s,
 		},
 	}
 )
@@ -37,9 +41,12 @@ func TestMain(m *testing.M) {
 
 	distroToUse := strings.Split(os.Getenv("TESTDISTRO"), ",")
 	if len(distroToUse) == 1 && distroToUse[0] == "" {
-		// Use all the distros
-		for key := range distroTests {
-			distroToUse = append(distroToUse, key)
+		distroToUse = []string{}
+		// Use all the standard distros
+		for key, value := range distroTests {
+			if value.standard {
+				distroToUse = append(distroToUse, key)
+			}
 		}
 	}
 
@@ -53,7 +60,7 @@ func TestMain(m *testing.M) {
 
 		// Setup the cluster
 		err := testSuiteFunctions.setupFunction()
-		defer testSuiteFunctions.cleanupFunction()
+		defer testSuiteFunctions.tearDownFunction()
 		if err != nil {
 			fmt.Printf("Unable to setup %s environment to run the e2e test because of err: %v\n", distroName, err)
 			os.Exit(1)
@@ -64,7 +71,7 @@ func TestMain(m *testing.M) {
 		retCode = testCode | retCode
 
 		// Teardown the cluster now that tests are completed
-		err = testSuiteFunctions.cleanupFunction()
+		err = testSuiteFunctions.tearDownFunction()
 		if err != nil {
 			fmt.Printf("Unable to cleanly teardown %s environment because of err: %v\n", distroName, err)
 		}

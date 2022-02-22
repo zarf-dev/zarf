@@ -30,10 +30,9 @@ func TestDataInjection(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, execStdOut, "subdirectory-test")
 
-	attempt = 0
-	execStdOut = ""
-
 	// Test to confirm the subdirectory file was placed
+	execStdOut = ""
+	attempt = 0
 	for attempt < 5 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test/subdirectory-test"})
 		attempt++

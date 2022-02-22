@@ -32,7 +32,6 @@ type ZarfE2ETest struct {
 	kubeconfigPath       string
 	filesToRemove        []string
 	cmdsToKill           []*exec.Cmd
-	kubeconfig           *os.File
 	provider             *cluster.Provider
 	restConfig           *restclient.Config
 	clientset            *kubernetes.Clientset
