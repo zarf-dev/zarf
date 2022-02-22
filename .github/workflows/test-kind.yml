@@ -19,12 +19,5 @@ jobs:
       - name: Make Packages
         run: make init-package
 
-      - uses: engineerd/setup-kind@v0.5.0
-        with:
-          wait: 300s
-          version: v0.11.1
-          image: kindest/node:v1.21.1
-          name: test-cluster
-
       - name: Run Tests
-        run: TESTDISTRO=kind make build-and-test-e2e
+        run: TESTDISTRO=kind make test-e2e
