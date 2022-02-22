@@ -37,9 +37,13 @@ func TestMain(m *testing.M) {
 
 	distroToUse := strings.Split(os.Getenv("TESTDISTRO"), ",")
 	if len(distroToUse) == 1 && distroToUse[0] == "" {
+
 		// Use all the distros
+		distroToUse = make([]string, len(distroTests))
+		idx := 0
 		for key := range distroTests {
-			distroToUse = append(distroToUse, key)
+			distroToUse[idx] = key
+			idx++
 		}
 	}
 
