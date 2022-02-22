@@ -1,0 +1,30 @@
+name: e2e-kind
+on:
+  - pull_request
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GoLang
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Build CLI
+        run: make build-cli-linux
+      - name: Sign into Repo1
+        run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Make Packages
+        run: make init-package
+
+      - uses: engineerd/setup-kind@v0.5.0
+        with:
+          wait: 300s
+          version: v0.11.1
+          image: kindest/node:v1.21.1
+          name: test-cluster
+
+      - name: Run Tests
+        run: TESTDISTRO=kind make build-and-test-e2e

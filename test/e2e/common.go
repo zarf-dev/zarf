@@ -1,187 +1,311 @@
 package test
 
 import (
-	"bufio"
-	"encoding/base64"
+	"context"
+	"errors"
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/gruntwork-io/terratest/modules/retry"
-	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/gruntwork-io/terratest/modules/aws"
-	"github.com/gruntwork-io/terratest/modules/ssh"
-	"github.com/gruntwork-io/terratest/modules/terraform"
+	k3dcluster "github.com/rancher/k3d/v5/cmd/cluster"
+	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
+	"sigs.k8s.io/kind/pkg/cluster"
+	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
 
 type ZarfE2ETest struct {
-	testing          *testing.T
-	tempFolder       string
-	username         string
-	terraformOptions *terraform.Options
-	keyPair          *aws.Ec2Keypair
-	publicIP         string
-	publicHost       ssh.Host
+	zarfBinPath string
+
+	clusterName          string
+	kubeconfigPath       string
+	filesToRemove        []string
+	cmdsToKill           []*exec.Cmd
+	kubeconfig           *os.File
+	provider             *cluster.Provider
+	restConfig           *restclient.Config
+	clientset            *kubernetes.Clientset
+	clusterAlreadyExists bool
+	initWithK3s          bool
 }
 
-func NewE2ETest(testing *testing.T) *ZarfE2ETest {
-
-	testing.Parallel()
-
-	// Copy the terraform folder to a temp directory so we can run multiple tests in parallel
-	tempFolder := teststructure.CopyTerraformFolderToTemp(testing, "..", "tf/public-ec2-instance")
-
-	e2e := ZarfE2ETest{
-		testing:    testing,
-		tempFolder: tempFolder,
-		// Our SSH username, will change based on which AMI we use
-		username: "ubuntu",
+func getKubeconfigPath() (string, error) {
+	// Check if the $KUBECONFIG env is set
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if kubeconfigEnv != "" {
+		return kubeconfigEnv, nil
 	}
 
-	// Deploy the terraform infra
-	teststructure.RunTestStage(testing, "SETUP", e2e.setup)
-
-	return &e2e
-}
-
-func (e2e *ZarfE2ETest) runSSHCommand(format string, a ...interface{}) (string, error) {
-	command := fmt.Sprintf(format, a...)
-	return ssh.CheckSshCommandE(e2e.testing, e2e.publicHost, command)
-}
-
-func (e2e *ZarfE2ETest) teardown() {
-	keyPair := teststructure.LoadEc2KeyPair(e2e.testing, e2e.tempFolder)
-	aws.DeleteEC2KeyPair(e2e.testing, keyPair)
-
-	terraformOptions := teststructure.LoadTerraformOptions(e2e.testing, e2e.tempFolder)
-	terraform.Destroy(e2e.testing, terraformOptions)
-}
-
-func (e2e *ZarfE2ETest) setup() {
-	terraformOptions, keyPair, err := e2e.configureTerraformOptions()
-	require.NoError(e2e.testing, err)
-
-	// Save the options and key pair so later test stages can use them
-	teststructure.SaveTerraformOptions(e2e.testing, e2e.tempFolder, terraformOptions)
-	teststructure.SaveEc2KeyPair(e2e.testing, e2e.tempFolder, keyPair)
-
-	// This will run `terraform init` and `terraform apply` and fail the test if there are any errors
-	terraform.InitAndApply(e2e.testing, terraformOptions)
-
-	// Run `terraform output` to get the value of an output variable
-	e2e.publicIP = terraform.Output(e2e.testing, terraformOptions, "public_instance_ip")
-	e2e.terraformOptions = terraformOptions
-	e2e.keyPair = keyPair
-
-	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
-	// as we know the Instance is running an Ubuntu AMI that has such a user
-	e2e.publicHost = ssh.Host{
-		Hostname:    e2e.publicIP,
-		SshKeyPair:  e2e.keyPair.KeyPair,
-		SshUserName: e2e.username,
-	}
-}
-
-func (e2e *ZarfE2ETest) configureTerraformOptions() (*terraform.Options, *aws.Ec2Keypair, error) {
-	// A unique ID we can use to namespace resources so we don't clash with anything already in the AWS account or
-	// tests running in parallel
-	uniqueID := random.UniqueId()
-	namespace := "zarf"
-	stage := "terratest"
-	name := fmt.Sprintf("e2e-%s", uniqueID)
-
-	// Get the region to use from the system's environment
-	awsRegion, err := getAwsRegion()
+	// Get the kubeconfig in ~/.kube/config
+	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil, err
+		return "", err
+	}
+	configBaseDir := path.Join(userHomeDir, ".kube")
+	if err := os.MkdirAll(configBaseDir, 0700); err != nil {
+		return "", err
 	}
 
-	instanceType := "t3a.large"
-
-	// Create an EC2 KeyPair that we can use for SSH access
-	keyPairName := fmt.Sprintf("%s-%s-%s", namespace, stage, name)
-	keyPair := aws.CreateAndImportEC2KeyPair(e2e.testing, awsRegion, keyPairName)
-
-	// Construct the terraform options with default retryable errors to handle the most common retryable errors in
-	// terraform testing.
-	terraformOptions := terraform.WithDefaultRetryableErrors(e2e.testing, &terraform.Options{
-		// The path to where our Terraform code is located
-		TerraformDir: e2e.tempFolder,
-
-		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
-			"aws_region":    awsRegion,
-			"namespace":     namespace,
-			"stage":         stage,
-			"name":          name,
-			"instance_type": instanceType,
-			"key_pair_name": keyPairName,
-		},
-	})
-
-	return terraformOptions, keyPair, nil
+	// Get (or create) the config file
+	kubeconfigPath := path.Join(configBaseDir, "config")
+	_, err = os.OpenFile(kubeconfigPath, os.O_RDWR|os.O_CREATE, 0755)
+	return kubeconfigPath, err
 }
 
-// syncFileToRemoteServer uses SCP to sync a file from source to destination. `destPath` can be absolute or relative to
-// the SSH user's home directory. It has to be in a directory that the SSH user is allowed to write to.
-func (e2e *ZarfE2ETest) syncFileToRemoteServer(srcPath string, destPath string, chmod string) {
-	// Run `terraform output` to get the value of an output variable
-	publicInstanceIP := terraform.Output(e2e.testing, e2e.terraformOptions, "public_instance_ip")
+func (e2e *ZarfE2ETest) setUpKind() error {
+	// Determine what the name of the zarfBinary should be
+	e2e.zarfBinPath = path.Join("../../build", getCLIName())
 
-	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
-	// as we know the Instance is running an Ubuntu AMI that has such a user
-	host := ssh.Host{
-		Hostname:    publicInstanceIP,
-		SshKeyPair:  e2e.keyPair.KeyPair,
-		SshUserName: e2e.username,
+	var err error
+	// Create or get the kubeconfig
+	e2e.kubeconfigPath, err = getKubeconfigPath()
+	if err != nil {
+		return err
 	}
 
-	// It can take a minute or so for the Instance to boot up, so retry a few times
-	maxRetries := 15
-	timeBetweenRetries, err := time.ParseDuration("5s")
-	require.NoError(e2e.testing, err)
-
-	// Wait for the instance to be ready
-	_, err = retry.DoWithRetryE(e2e.testing, "Wait for the instance to be ready", maxRetries, timeBetweenRetries, func() (string, error) {
-		_, err := ssh.CheckSshCommandE(e2e.testing, host, "whoami")
-		if err != nil {
-			return "", err
-		}
-		return "", nil
-	})
-	require.NoError(e2e.testing, err)
-
-	// Create the folder structure
-	output, err := ssh.CheckSshCommandE(e2e.testing, host, fmt.Sprintf("bash -c 'install -m 644 -D /dev/null \"%s\"'", destPath))
-	require.NoError(e2e.testing, err, output)
-
-	// The ssh lib only supports sending strings so we'll base64encode it first
-	f, err := os.Open(srcPath)
-	require.NoError(e2e.testing, err)
-	reader := bufio.NewReader(f)
-	content, err := ioutil.ReadAll(reader)
-	require.NoError(e2e.testing, err)
-	encodedContent := base64.StdEncoding.EncodeToString(content)
-	err = ssh.ScpFileToE(e2e.testing, host, 0600, fmt.Sprintf("%s.b64", destPath), encodedContent)
-	require.NoError(e2e.testing, err)
-	output, err = ssh.CheckSshCommandE(e2e.testing, host, fmt.Sprintf("base64 -d \"%s.b64\" > \"%s\" && chmod \"%s\" \"%s\"", destPath, destPath, chmod, destPath))
-	require.NoError(e2e.testing, err, output)
-}
-
-// getAwsRegion returns the desired AWS region to use by first checking the env var AWS_REGION, then checking
-// AWS_DEFAULT_REGION if AWS_REGION isn't set. If neither is set it returns an error
-func getAwsRegion() (string, error) {
-	val, present := os.LookupEnv("AWS_REGION")
-	if !present {
-		val, present = os.LookupEnv("AWS_DEFAULT_REGION")
-	}
-	if !present {
-		return "", fmt.Errorf("expected either AWS_REGION or AWS_DEFAULT_REGION env var to be set, but they were not")
+	// Set up a KinD cluster if necessary
+	e2e.provider = cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
+	nodes, err := e2e.provider.ListNodes(e2e.clusterName)
+	if len(nodes) > 0 {
+		// There already is a cluster up!! yay!!
+		e2e.clusterAlreadyExists = true
 	} else {
-		return val, nil
+		err = e2e.provider.Create(
+			e2e.clusterName,
+			cluster.CreateWithNodeImage(""),
+			cluster.CreateWithRetain(false),
+			cluster.CreateWithWaitForReady(time.Duration(0)),
+			cluster.CreateWithKubeconfigPath(e2e.kubeconfigPath),
+			cluster.CreateWithDisplayUsage(false),
+		)
 	}
+
+	// Get config and client for the k8s cluster
+	err = e2e.buildConfigAndClientset()
+
+	// Wait for the cluster to have pods before we let the test suite run
+	attempt := 0
+	for attempt < 10 {
+		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+		if err == nil && len(pods.Items) >= 0 {
+			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+		attempt++
+		if attempt > 15 {
+			return errors.New("unable to connect to KinD cluster for e2e tests")
+		}
+	}
+
+	return err
+}
+
+func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
+	var err error
+	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
+	if err != nil {
+		return err
+	}
+	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+
+	return err
+}
+
+func (e2e *ZarfE2ETest) tearDownKind() error {
+	if os.Getenv("SKIP_TEARDOWN") != "" || e2e.clusterAlreadyExists {
+		return nil
+	}
+
+	// Delete the cluster and kubeconfig file
+	provider := cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
+	err := provider.Delete(e2e.clusterName, e2e.kubeconfigPath)
+	os.Remove(e2e.kubeconfigPath)
+	return err
+}
+
+func (e2e *ZarfE2ETest) setUpK3D() error {
+	// Determine what the name of the zarfBinary should be
+	e2e.zarfBinPath = path.Join("../../build", getCLIName())
+
+	var err error
+	// Create or get the kubeconfig
+	e2e.kubeconfigPath, err = getKubeconfigPath()
+	if err != nil {
+		return err
+	}
+
+	createClusterCommand := k3dcluster.NewCmdClusterCreate()
+	err = createClusterCommand.ExecuteContext(context.TODO())
+	if err != nil {
+		fmt.Println("ERROR WHEN TRYING TO SET UP K3D CLUSTER")
+		return err
+	}
+
+	// Get config and client for the k8s cluster
+	err = e2e.buildConfigAndClientset()
+	if err != nil {
+		return err
+	}
+
+	// Wait for the cluster to have pods before we let the test suite run
+	attempt := 0
+	for attempt < 10 {
+		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+		if err == nil && len(pods.Items) >= 0 {
+			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+		attempt++
+		if attempt > 15 {
+			return errors.New("unable to connect to KinD cluster for e2e tests")
+		}
+	}
+	return nil
+}
+
+func (e2e *ZarfE2ETest) tearDownK3D() error {
+	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
+	err := deleteClusterCommand.ExecuteContext(context.TODO())
+	os.Remove(e2e.kubeconfigPath)
+	return err
+}
+
+func (e2e *ZarfE2ETest) setUpK3s() error {
+	// Determine what the name of the zarfBinary should be
+	e2e.zarfBinPath = path.Join("../../build", getCLIName())
+
+	var err error
+	// Create or get the kubeconfig
+	e2e.kubeconfigPath, err = getKubeconfigPath()
+	if err != nil {
+		return err
+	}
+
+	e2e.initWithK3s = true
+	return nil
+}
+
+func (e2e *ZarfE2ETest) tearDownK3s() error {
+	e2e.initWithK3s = false
+	os.Remove(e2e.kubeconfigPath)
+	return nil
+}
+
+func getCLIName() string {
+	var binaryName string
+	if runtime.GOOS == "linux" {
+		binaryName = "zarf"
+	} else if runtime.GOOS == "darwin" {
+		if runtime.GOARCH == "arm64" {
+			binaryName = "zarf-mac-apple"
+		} else {
+			binaryName = "zarf-mac-intel"
+		}
+	}
+	return binaryName
+}
+
+func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
+	// Use Zarf to perform chart uninstallation
+	output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
+	require.NoError(t, err, output)
+
+	// Remove files created for the test
+	for _, filePath := range e2e.filesToRemove {
+		err = os.RemoveAll(filePath)
+		require.NoError(t, err, "unable to remove file when cleaning up after a test")
+	}
+	e2e.filesToRemove = []string{}
+
+	// Kill background processes spawned during the test
+	for _, cmd := range e2e.cmdsToKill {
+		if cmd.Process != nil {
+			err = cmd.Process.Kill()
+			require.NoError(t, err, "unable to kill background cmd when cleaning up after a test")
+		}
+	}
+	e2e.cmdsToKill = []*exec.Cmd{}
+}
+
+func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string) (string, string, error) {
+	stdoutBuffer := &strings.Builder{}
+	stderrBuffer := &strings.Builder{}
+	var err error
+
+	if e2e.clientset == nil {
+		err = e2e.buildConfigAndClientset()
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	req := e2e.clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podname).Namespace(namespace).SubResource("exec")
+	option := &v1.PodExecOptions{
+		Command: cmd,
+		Stdin:   true,
+		Stdout:  true,
+		Stderr:  true,
+		TTY:     true,
+	}
+	req.VersionedParams(option, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(e2e.restConfig, "POST", req.URL())
+	if err != nil {
+		return "", "", err
+	}
+
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  os.Stdin,
+		Stdout: stdoutBuffer,
+		Stderr: stderrBuffer,
+	})
+
+	return stdoutBuffer.String(), stderrBuffer.String(), err
+}
+
+// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
+func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
+	// Check if we need to deploy the k3s component
+	if e2e.initWithK3s && commandString[0] == "init" {
+		componentAdded := false
+		for idx, str := range commandString {
+			if strings.Contains(str, "components") {
+				commandString[idx] = str + ",k3s"
+				componentAdded = true
+				break
+			}
+		}
+
+		if !componentAdded {
+			commandString = append(commandString, "--components=k3s")
+		}
+	}
+
+	output, err := exec.Command(e2e.zarfBinPath, commandString...).CombinedOutput()
+	return string(output), err
+}
+
+func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
+	// Create a tunnel to the git resources
+	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
+	err := tunnelCmd.Start()
+	e2e.cmdsToKill = append(e2e.cmdsToKill, tunnelCmd)
+	time.Sleep(1 * time.Second)
+
+	return err
 }

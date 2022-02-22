@@ -1,43 +1,46 @@
 package test
 
 import (
-	"fmt"
 	"testing"
+	"time"
 
-	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDataInjection(t *testing.T) {
 
-	e2e := NewE2ETest(t)
+	// run `zarf init`
+	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
+	require.NoError(t, err, output)
 
-	// At the end of the test, run `terraform destroy` to clean up any resources that were created
-	defer teststructure.RunTestStage(e2e.testing, "TEARDOWN", e2e.teardown)
+	// Deploy the data injection example
+	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-data-injection-demo.tar", "--confirm", "-l=trace")
+	require.NoError(t, err, output)
 
-	// Upload the Zarf artifacts
-	teststructure.RunTestStage(e2e.testing, "UPLOAD", func() {
-		e2e.syncFileToRemoteServer("../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", e2e.username), "0700")
-		e2e.syncFileToRemoteServer("../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", e2e.username), "0600")
-		e2e.syncFileToRemoteServer("../../build/zarf-package-data-injection-demo.tar", fmt.Sprintf("/home/%s/build/zarf-package-data-injection-demo.tar", e2e.username), "0600")
-	})
+	// Test to confirm the root file was placed
+	// TODO: This retry is disgusting, but race condition...
+	var execStdOut string
+	attempt := 0
+	for attempt < 10 && execStdOut == "" {
+		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test"})
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
+	assert.NoError(t, err)
+	assert.Contains(t, execStdOut, "subdirectory-test")
 
-	teststructure.RunTestStage(e2e.testing, "TEST", func() {
-		// run `zarf init`
-		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s'", e2e.username)
-		require.NoError(e2e.testing, err, output)
+	attempt = 0
+	execStdOut = ""
 
-		// Deploy the data injection example
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-data-injection-demo.tar --confirm'", e2e.username)
-		require.NoError(e2e.testing, err, output)
+	// Test to confirm the subdirectory file was placed
+	for attempt < 5 && execStdOut == "" {
+		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test/subdirectory-test"})
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
+	assert.NoError(t, err)
+	assert.Contains(t, execStdOut, "this-is-an-example-file.txt")
 
-		// Test to confirm the root file was placed
-		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/sbin/kubectl -n demo exec data-injection -- ls /test | grep this-is-an-example'`)
-		require.NoError(e2e.testing, err, output)
-
-		// Test to confirm the subdirectory file was placed
-		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/sbin/kubectl -n demo exec data-injection -- ls /test/subdirectory-test | grep this-is-an-example'`)
-		require.NoError(e2e.testing, err, output)
-	})
-
+	e2e.cleanupAfterTest(t)
 }

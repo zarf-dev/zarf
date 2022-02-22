@@ -2,62 +2,66 @@ package test
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
-	teststructure "github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGitopsExample(t *testing.T) {
-	e2e := NewE2ETest(t)
+	// run `zarf init`
+	output, err := e2e.execZarfCommand("init", "--confirm", "--components=gitops-service")
+	require.NoError(t, err, output)
 
-	// At the end of the test, run `terraform destroy` to clean up any resources that were created
-	defer teststructure.RunTestStage(e2e.testing, "TEARDOWN", e2e.teardown)
+	// Deploy the gitops example
+	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-gitops-service-data.tar.zst", "--confirm")
+	require.NoError(t, err, output)
 
-	// Upload the Zarf artifacts
-	teststructure.RunTestStage(e2e.testing, "UPLOAD", func() {
-		e2e.syncFileToRemoteServer("../../build/zarf", fmt.Sprintf("/home/%s/build/zarf", e2e.username), "0700")
-		e2e.syncFileToRemoteServer("../../build/zarf-init.tar.zst", fmt.Sprintf("/home/%s/build/zarf-init.tar.zst", e2e.username), "0600")
-		e2e.syncFileToRemoteServer("../../build/zarf-package-gitops-service-data.tar.zst", fmt.Sprintf("/home/%s/build/zarf-package-gitops-service-data.tar.zst", e2e.username), "0600")
-	})
+	// Create a tunnel to the git resources
+	err = e2e.execZarfBackgroundCommand("connect", "git")
+	assert.NoError(t, err, "unable to establish tunnel to git")
 
-	teststructure.RunTestStage(t, "TEST", func() {
-		// run `zarf init`
-		output, err := e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf init --confirm --components k3s,logging,gitops-service --host 127.0.0.1'", e2e.username)
-		require.NoError(t, err, output)
+	// Check for full git repo mirror (foo.git) from https://github.com/stefanprodan/podinfo.git
+	adminPassword, err := e2e.execZarfCommand("tools", "get-admin-password")
+	assert.NoError(t, err, "Unable to get admin password for gitea instance")
 
-		// Deploy the gitops example
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf package deploy zarf-package-gitops-service-data.tar.zst --confirm'", e2e.username)
-		require.NoError(t, err, output)
+	cloneCommand := fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git", strings.TrimSpace(string(adminPassword)))
+	gitOutput, err := exec.Command("git", "clone", cloneCommand).CombinedOutput()
+	assert.NoError(t, err, string(gitOutput))
+	e2e.filesToRemove = append(e2e.filesToRemove, "mirror__github.com__stefanprodan__podinfo")
 
-		// Create a tunnel to the git resources
-		output, err = e2e.runSSHCommand("sudo bash -c '(/home/%s/build/zarf connect git &> /dev/nul &)'", e2e.username)
-		require.NoError(t, err, output)
+	// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.15.0
+	cloneCommand = fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git", strings.TrimSpace(string(adminPassword)))
+	gitOutput, err = exec.Command("git", "clone", cloneCommand).CombinedOutput()
+	assert.NoError(t, err, string(gitOutput))
+	e2e.filesToRemove = append(e2e.filesToRemove, "mirror__github.com__defenseunicorns__zarf")
 
-		// Check for full git repo mirror(foo.git) from https://github.com/stefanprodan/podinfo.git
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git'", e2e.username)
-		require.NoError(t, err, output)
+	// Check for correct tag
+	expectedTag := "v0.15.0\n"
+	err = os.Chdir("mirror__github.com__defenseunicorns__zarf")
+	assert.NoError(t, err)
+	gitOutput, err = exec.Command("git", "tag").Output()
+	assert.Equal(t, expectedTag, string(gitOutput), "Expected tag should match output")
 
-		// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.15.0
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && git clone http://zarf-git-user:$(./zarf tools get-admin-password)@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git'", e2e.username)
-		require.NoError(t, err, output)
+	// Check for correct commits
+	expectedCommits := "9eb207e\n7636dd0\ne02cec9"
+	gitOutput, err = exec.Command("git", "log", "-3", "--oneline", "--pretty=format:%h").CombinedOutput()
+	assert.NoError(t, err, string(gitOutput))
+	assert.Equal(t, expectedCommits, string(gitOutput), "Expected commits should match output")
 
-		// Check for correct tag
-		expectedTag := "v0.15.0\n"
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git tag'", e2e.username)
-		require.NoError(t, err, output)
-		require.Equal(t, expectedTag, output, "Expected tag should match output")
+	// Check for existence of tags without specifying them, signifying that not using '@1.2.3' syntax brought over the whole repo
+	expectedTag = "0.2.2"
+	err = os.Chdir("../mirror__github.com__stefanprodan__podinfo")
+	assert.NoError(t, err)
+	gitOutput, err = exec.Command("git", "tag").CombinedOutput()
+	assert.NoError(t, err, string(gitOutput))
+	assert.Contains(t, string(gitOutput), expectedTag)
 
-		// Check for correct commits
-		expectedCommits := "9eb207e\n7636dd0\ne02cec9"
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__defenseunicorns__zarf && git log -3 --oneline --pretty=format:\"%%h\"'", e2e.username)
-		require.NoError(t, err, output)
-		require.Equal(t, expectedCommits, output, "Expected commits should match output")
+	err = os.Chdir("..")
+	assert.NoError(t, err, "unable to change directories back to blah blah blah")
 
-		// Check for existence of tags without specifying them, signifying that not using '@1.2.3' syntax brought over the whole repo
-		expectedTag = "0.2.2"
-		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build/mirror__github.com__stefanprodan__podinfo && git tag'", e2e.username)
-		require.NoError(t, err, output)
-		require.Contains(t, output, expectedTag, "Output should contain expected tag")
-	})
+	e2e.cleanupAfterTest(t)
 }

@@ -1,0 +1,26 @@
+name: e2e-k3s
+on:
+  - pull_request
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GoLang
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Download dependences
+        run: |
+          go mod download
+          sudo go mod download
+      - name: Build CLI
+        run: make build-cli-linux
+      - name: Sign into Repo1
+        run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Make Packages
+        run: make build-packages-for-e2e
+      - name: Run Tests
+        run: sudo TESTDISTRO=k3s make test-new-e2e

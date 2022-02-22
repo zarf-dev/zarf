@@ -1,0 +1,23 @@
+name: e2e-k3d
+on:
+  - pull_request
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GoLang
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Build CLI
+        run: make build-cli-linux
+      - name: Sign into Repo1
+        run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Make Packages
+        run: make init-package
+
+      - name: Run Tests
+        run: TESTDISTRO=k3d make build-and-test-e2e

@@ -100,3 +100,18 @@ test-cloud-e2e-general-cli: package-example-tiny-kafka ## Runs tests of the CLI 
 
 .PHONY: test-e2e
 test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be replaced by individual e2e test targets
+
+
+.PHONY: build-and-test-e2e
+build-and-test-e2e: build-cli init-package package-example-game package-example-gitops-data package-example-data-injection test-new-e2e ## Builds the cli and init package and runs the local e2e tests
+
+.PHONY: build-packages-for-e2e
+build-packages-for-e2e: build-cli init-package package-example-game package-example-gitops-data package-example-data-injection
+
+# TODO: Rename this once we are certain this is the e2e approach we are going to be taking
+# TODO: I'm pretty sure there's some way Makefiles could be setup to not run dependant steps if their results are already cached or something
+#       That way we wouldn't need this target and can just call build-and-test-e2e and not have to wait for the build if it was already built.
+# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init.tar.zst`
+.PHONY: test-new-e2e
+test-new-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
+	cd test/e2e && cp ../../build/zarf-init.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init.tar.zst
