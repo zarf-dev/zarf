@@ -14,6 +14,7 @@ const (
 	DistroIsEks           = "eks"
 	DistroIsEKSAnywhere   = "eksanywhere"
 	DistroIsDockerDesktop = "dockerdesktop"
+	DistroIsGKE           = "gke"
 
 	// todo: more distros
 )
@@ -21,7 +22,8 @@ const (
 func DetectDistro() (string, error) {
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
-	eksNodeRegex := regexp.MustCompile(`aws:///`)
+	eksNodeRegex := regexp.MustCompile(`^aws:///`)
+	gkeNodeRegex := regexp.MustCompile(`^gce://`)
 
 	nodes, err := GetNodes()
 	if err != nil {
@@ -42,10 +44,13 @@ func DetectDistro() (string, error) {
 			return DistroIsKind, nil
 		}
 
-		// Regex explanation:
 		// https://github.com/kubernetes/cloud-provider-aws/blob/454ed784c33b974c873c7d762f9d30e7c4caf935/pkg/providers/v2/instances.go#L234
 		if eksNodeRegex.MatchString(node.Spec.ProviderID) {
 			return DistroIsEks, nil
+		}
+
+		if gkeNodeRegex.MatchString(node.Spec.ProviderID) {
+			return DistroIsGKE, nil
 		}
 
 		labels := node.GetLabels()

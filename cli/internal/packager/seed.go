@@ -55,13 +55,10 @@ func preSeedRegistry(tempPath tempPaths) {
 	}
 
 	switch state.Distro {
-	case k8s.DistroIsK3s:
+	case k8s.DistroIsK3s, k8s.DistroIsK3d:
 		state.StorageClass = "local-path"
 
-	case k8s.DistroIsK3d:
-		state.StorageClass = "local-path"
-
-	case k8s.DistroIsKind:
+	case k8s.DistroIsKind, k8s.DistroIsGKE:
 		state.StorageClass = "standard"
 
 	case k8s.DistroIsDockerDesktop:
@@ -88,8 +85,14 @@ func preSeedRegistry(tempPath tempPaths) {
 
 func postSeedRegistry(tempPath tempPaths) {
 	message.Debug("packager.postSeedRegistry(%v)", tempPath)
+
 	// Try to kill the injector pod now
 	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+
+	// Remove the configmaps
+	labelMatch := map[string]string{"zarf-injector": "payload"}
+	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+
 	// Push the seed images into to Zarf registry
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
 }
