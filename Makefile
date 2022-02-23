@@ -46,15 +46,11 @@ build-cli-linux: ## Build the Linux CLI
 build-cli-mac: ## Build the Mac CLI
 	cd cli && $(MAKE) build-mac
 
-build-bootstrap-registry:
-	cd cli && $(MAKE) build-bootstrap-registry
-
 build-cli: clean build-cli-linux build-cli-mac ## Build the CLI
 
-init-package: build-bootstrap-registry ## Create the zarf init package, macos "brew install coreutils" first
+init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm
 	mv zarf-init.tar.zst build
-	rm -f build/zarf-registry
 	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 

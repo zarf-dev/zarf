@@ -63,6 +63,7 @@ type Tunnel struct {
 	urlSuffix    string
 	stopChan     chan struct{}
 	readyChan    chan struct{}
+	spinner      *message.Spinner
 }
 
 // NewTunnel will create a new Tunnel struct
@@ -88,6 +89,10 @@ func NewZarfTunnel() *Tunnel {
 
 func (tunnel *Tunnel) EnableAutoOpen() {
 	tunnel.autoOpen = true
+}
+
+func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
+	tunnel.spinner = spinner
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
@@ -195,14 +200,24 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 // Establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
 func (tunnel *Tunnel) Establish() (string, error) {
 	message.Debug("tunnel.Establish()")
-	spinner := message.NewProgressSpinner("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
+
+	var spinner *message.Spinner
+
+	spinnerMessage := fmt.Sprintf("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
 		tunnel.resourceType,
 		tunnel.resourceName,
 		tunnel.namespace,
 		tunnel.localPort,
 		tunnel.remotePort,
 	)
-	defer spinner.Stop()
+
+	if tunnel.spinner != nil {
+		spinner = tunnel.spinner
+		spinner.Updatef(spinnerMessage)
+	} else {
+		spinner = message.NewProgressSpinner(spinnerMessage)
+		defer spinner.Stop()
+	}
 
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource()
@@ -269,11 +284,18 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Wait for an error or the tunnel to be ready
 	select {
 	case err = <-errChan:
-		spinner.Stop()
+		if tunnel.spinner == nil {
+			spinner.Stop()
+		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
 		url := fmt.Sprintf("http://%s:%v%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
-		spinner.Successf("Creating port forwarding tunnel available at %s", url)
+		msg := fmt.Sprintf("Creating port forwarding tunnel available at %s", url)
+		if tunnel.spinner == nil {
+			spinner.Successf(msg)
+		} else {
+			spinner.Updatef(msg)
+		}
 		return url, nil
 	}
 }

@@ -36,12 +36,17 @@ func CreateConfigmap(namespace string, name string, labels map[string]string, da
 		BinaryData: data,
 	}
 
+	// Add any additional labels to the service
+	for key, val := range labels {
+		configMap.ObjectMeta.Labels[key] = val
+	}
+
 	createOptions := metav1.CreateOptions{}
 	return clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, createOptions)
 }
 
 func DeleteConfigmap(namespace string, name string) error {
-	message.Debugf("k8s.DeleteConfigmap(%s, $%s)", namespace, name)
+	message.Debugf("k8s.DeleteConfigmap(%s, %s)", namespace, name)
 	clientSet := getClientset()
 
 	namespaceConfigmap := clientSet.CoreV1().ConfigMaps(namespace)
@@ -52,4 +57,19 @@ func DeleteConfigmap(namespace string, name string) error {
 	}
 
 	return nil
+}
+
+func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
+	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %v)", namespace, labels)
+	clientSet := getClientset()
+
+	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: labels,
+	})
+	metaOptions := metav1.DeleteOptions{}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labelSelector.String(),
+	}
+
+	return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(context.TODO(), metaOptions, listOptions)
 }

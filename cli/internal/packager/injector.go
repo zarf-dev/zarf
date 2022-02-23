@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+var payloadChunkSize = 1024 * 512
+
 func runInjectionMadness(tempPath tempPaths) {
 	message.Debugf("packager.runInjectionMadness(%v)", tempPath)
 
@@ -50,13 +52,15 @@ func runInjectionMadness(tempPath tempPaths) {
 		message.Fatal(err, "Unable to create the injector configmap")
 	}
 
+	spinner.Updatef("Creating the injector service")
 	if service, err := createService(); err != nil {
 		message.Fatal(err, "Unable to create the injector service")
 	} else {
 		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
 	}
 
-	if payloadConfigmaps, err = createPayloadConfigmaps(tempPath); err != nil {
+	spinner.Updatef("Loading the seed registry configmaps")
+	if payloadConfigmaps, err = createPayloadConfigmaps(tempPath, spinner); err != nil {
 		message.Fatal(err, "Unable to generate the injector payload configmaps")
 	}
 
@@ -78,20 +82,20 @@ func runInjectionMadness(tempPath tempPaths) {
 		pod := buildInjectionPod(image, envVars, payloadConfigmaps)
 		if pod, err = k8s.CreatePod(pod); err != nil {
 			message.Debug(err)
-			continue
 		} else {
 			message.Debug(pod)
-			// temp padding
-			time.Sleep(10 * time.Second)
-			spinner.Success()
-			return
+
+			if hasSeedImages(spinner) {
+				spinner.Success()
+				return
+			}
 		}
 	}
 
 	spinner.Fatalf(nil, "Unable to perform the injection")
 }
 
-func createPayloadConfigmaps(tempPath tempPaths) ([]string, error) {
+func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]string, error) {
 	message.Debugf("packager.tryInjectorPayloadDeploy(%v)", tempPath)
 	var (
 		err        error
@@ -101,7 +105,6 @@ func createPayloadConfigmaps(tempPath tempPaths) ([]string, error) {
 	)
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
-	chunkSize := 1024 * 672
 	tarPath := tempPath.base + "/payload.tgz"
 	tarFileList := []string{
 		tempPath.injectZarfBinary,
@@ -111,6 +114,7 @@ func createPayloadConfigmaps(tempPath tempPaths) ([]string, error) {
 		"zarf-injector": "payload",
 	}
 
+	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
 	if err = archiver.Archive(tarFileList, tarPath); err != nil {
 		return configMaps, err
@@ -121,31 +125,33 @@ func createPayloadConfigmaps(tempPath tempPaths) ([]string, error) {
 		return configMaps, err
 	}
 
+	spinner.Updatef("Splitting the archive into binary configmaps")
 	for {
 		if len(tarFile) == 0 {
 			break
 		}
 
 		// don't bust slice length
-		if len(tarFile) < chunkSize {
-			chunkSize = len(tarFile)
+		if len(tarFile) < payloadChunkSize {
+			payloadChunkSize = len(tarFile)
 		}
 
-		chunks = append(chunks, tarFile[0:chunkSize])
-		tarFile = tarFile[chunkSize:]
+		chunks = append(chunks, tarFile[0:payloadChunkSize])
+		tarFile = tarFile[payloadChunkSize:]
 	}
+
+	chunkCount := len(chunks)
 
 	for idx, data := range chunks {
 		// Create a cat-friendly filename
-		fileName := fmt.Sprintf("zarf-payload-%02d\n", idx)
+		fileName := fmt.Sprintf("zarf-payload-%03d", idx)
 
 		// Store the binary data
 		configData := map[string][]byte{
 			fileName: data,
 		}
 
-		// Try to delete configmap silently
-		_ = k8s.DeleteConfigmap(k8s.ZarfNamespace, fileName)
+		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
 		if _, err = k8s.ReplaceConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
@@ -153,15 +159,32 @@ func createPayloadConfigmaps(tempPath tempPaths) ([]string, error) {
 		}
 
 		configMaps = append(configMaps, fileName)
+
+		// Give the control plane a slight buffeer
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	return configMaps, nil
 }
 
-func hasSeedImages(tunnelPort int) bool {
+func hasSeedImages(spinner *message.Spinner) bool {
 	message.Debugf("packager.hasSeedImages()")
 
-	baseUrl := fmt.Sprintf("%s:%d", config.IPV4Localhost, tunnelPort)
+	localPort, err := k8s.GetAvailablePort()
+	if err != nil {
+		message.Debug(err)
+		return false
+	}
+
+	time.Sleep(3 * time.Second)
+
+	// Establish the zarf connect tunnel
+	tunnel := k8s.NewTunnel(k8s.ZarfNamespace, k8s.SvcResource, "zarf-injector", localPort, 5000)
+	tunnel.AddSpinner(spinner)
+	tunnel.Establish()
+	defer tunnel.Close()
+
+	baseUrl := fmt.Sprintf("%s:%d", config.IPV4Localhost, localPort)
 	seedImage := config.GetSeedImage()
 	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
 	timeout := time.After(15 * time.Second)
@@ -192,16 +215,11 @@ func createInjectorConfigmap(tempPath tempPaths) error {
 	var err error
 	configData := make(map[string][]byte)
 	labels := map[string]string{
-		"zarf-injector": "init",
+		"zarf-injector": "payload",
 	}
 
-	// Add the init.sh binary data to the configmap
-	if configData["init.sh"], err = os.ReadFile(tempPath.injectScript); err != nil {
-		return err
-	}
-
-	// Add the busybox binary data to the configmap
-	if configData["busybox"], err = os.ReadFile(tempPath.injectBinary); err != nil {
+	// Add the injector binary data to the configmap
+	if configData["zarf-injector"], err = os.ReadFile(tempPath.injectBinary); err != nil {
 		return err
 	}
 
@@ -237,11 +255,6 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	var err error
 	envVars := make(map[string]string)
 
-	// Add the busybox shasum env var
-	if envVars["SHA256_BUSYBOX"], err = utils.GetSha256Sum(tempPath.injectBinary); err != nil {
-		return nil, err
-	}
-
 	// Add the seed images shasum env var
 	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(tempPath.seedImage); err != nil {
 		return nil, err
@@ -255,8 +268,8 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	// Add the seed images list env var
 	envVars["SEED_IMAGE"] = config.GetSeedImage()
 
-	// Setup the env vars, this one needs more testing but seems to make busybox sad in some images if not set
-	encodedEnvVars := []corev1.EnvVar{{Name: "USER", Value: "root"}}
+	// Setup the env vars
+	encodedEnvVars := []corev1.EnvVar{}
 	for name, value := range envVars {
 		encodedEnvVars = append(encodedEnvVars, corev1.EnvVar{
 			Name:  name,
@@ -270,20 +283,63 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps []string) *corev1.Pod {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
+	seedImage := config.GetSeedImage()
 
 	pod.Labels["app"] = "zarf-injector"
 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 
+	pod.Spec.InitContainers = []corev1.Container{
+		{
+			Name:       "init-injector",
+			Image:      image,
+			WorkingDir: "/zarf-stage1",
+			Command:    []string{"/zarf-stage1/zarf-injector"},
+
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "stage1",
+					MountPath: "/zarf-stage1/zarf-injector",
+					SubPath:   "zarf-injector",
+				},
+				{
+					Name:      "stage2",
+					MountPath: "/zarf-stage2",
+				},
+			},
+
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(".5"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("2"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+			},
+
+			Env: envVars,
+		},
+	}
+
 	pod.Spec.Containers = []corev1.Container{
 		{
 			Name:       "injector",
 			Image:      image,
-			WorkingDir: "/payload",
-			Command:    []string{"/zarf-bin/init.sh"},
+			WorkingDir: "/zarf-stage2",
+			Command: []string{
+				"/zarf-stage2/zarf-registry",
+				"/zarf-stage2/seed-image.tar",
+				seedImage,
+				utils.SwapHost(seedImage, "127.0.0.1:5001"),
+			},
 
 			VolumeMounts: []corev1.VolumeMount{
-				{Name: "bin-volume", MountPath: "/zarf-bin"},
+				{
+					Name:      "stage2",
+					MountPath: "/zarf-stage2",
+				},
 			},
 
 			Resources: corev1.ResourceRequirements{
@@ -302,9 +358,9 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 	}
 
 	pod.Spec.Volumes = []corev1.Volume{
-		// Bin volume hosts the busybox binare and init script
+		// Bin volume hosts the injector binary and init script
 		{
-			Name: "bin-volume",
+			Name: "stage1",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -312,6 +368,12 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 					},
 					DefaultMode: &executeMode,
 				},
+			},
+		},
+		{
+			Name: "stage2",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
 	}
@@ -329,9 +391,9 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 			},
 		})
 
-		pod.Spec.Containers[0].VolumeMounts = append(pod.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		pod.Spec.InitContainers[0].VolumeMounts = append(pod.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      filename,
-			MountPath: fmt.Sprintf("/payload/%s", filename),
+			MountPath: fmt.Sprintf("/zarf-stage1/%s", filename),
 			SubPath:   filename,
 		})
 	}
