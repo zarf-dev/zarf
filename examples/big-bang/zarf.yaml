@@ -13,7 +13,7 @@ components:
       - name: flux-installer
         # This will be built on the package create side and deployed as a regular manifest on package deploy
         kustomizations:
-          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.27.1
     images:
       # Flux images
       - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
@@ -43,9 +43,9 @@ components:
           - "kustomizations/bigbang"
     # 1. helm template bigbang ./chart |  yq e '. | select(.kind == "GitRepository") | "- " + .spec.url + "@" + .spec.ref.tag' -
     # 2. Add the actual bigbang repo as well
-    # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
+    # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.27.1
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.27.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@0.3.0-bb.7
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
