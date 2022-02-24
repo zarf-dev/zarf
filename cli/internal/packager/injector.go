@@ -36,12 +36,6 @@ func runInjectionMadness(tempPath tempPaths) {
 		message.Fatal(err, "Unable to create the zarf namespace")
 	}
 
-	// Get all the images from the cluster
-	spinner.Updatef("Getting the list of existing cluster images")
-	if images, err = k8s.GetAllImages(); err != nil {
-		message.Fatal(err, "Unable to generate a list of candidate images to perform the registry injection")
-	}
-
 	spinner.Updatef("Generating bootstrap payload SHASUMs")
 	if envVars, err = buildEnvVars(tempPath); err != nil {
 		message.Fatal(err, "Unable to build the injection pod environment variables")
@@ -66,6 +60,21 @@ func runInjectionMadness(tempPath tempPaths) {
 
 	// https://regex101.com/r/eLS3at/1
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
+
+	// Get all the images from the cluster; make sure we get at least one image to use for injector pod
+	spinner.Updatef("Getting the list of existing cluster images")
+	attempt := 0
+	for attempt < 5 {
+		if images, err = k8s.GetAllImages(); len(images) > 0 {
+			break
+		}
+
+		time.Sleep(500 * time.Millisecond)
+		attempt++
+	}
+	if err != nil || len(images) == 0 {
+		message.Fatal(err, "Unable to generate a list of candidate images to perform the registry injection")
+	}
 
 	// Try to create an injector pod using an existing image in the cluster
 	for _, image := range images {
