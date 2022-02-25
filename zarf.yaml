@@ -56,7 +56,7 @@ components:
       - source: assets/misc/empty-file
         target: /etc/rancher/k3s/k3s.yaml
         symlinks:
-          - /root/.kube/configkube
+          - /root/.kube/config
 
   - name: container-registry-seed
     required: true

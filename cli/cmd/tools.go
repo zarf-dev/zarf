@@ -100,7 +100,7 @@ var configSchemaCmd = &cobra.Command{
 }
 
 var trustCACmd = &cobra.Command{
-	Use:     "tust-root-ca [CAFILEPATH]",
+	Use:     "trust-root-ca [CAFILEPATH]",
 	Aliases: []string{"t"},
 	Short:   "Import the given root cert into the running operating systems certificate store (Linux only)",
 	Run: func(cmd *cobra.Command, args []string) {
