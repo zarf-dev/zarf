@@ -1,0 +1,11 @@
+run:
+  timeout: 5m
+linters:
+  enable-all: true
+  disable:
+    - exhaustivestruct
+    - stylecheck
+    - wrapcheck
+    - wsl
+issues:
+  exclude-use-default: false
