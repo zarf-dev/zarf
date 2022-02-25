@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ReplaceConfigmap deletes and recreates a configmap
 func ReplaceConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.ReplaceConfigmap(%s, %s, data)", namespace, name)
 
@@ -20,6 +21,7 @@ func ReplaceConfigmap(namespace string, name string, labels map[string]string, d
 	return CreateConfigmap(namespace, name, labels, data)
 }
 
+// CreateConfigmap applys a configmap to the cluster
 func CreateConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.CreateConfigmap(%s, %s, data)", namespace, name)
 	clientset := getClientset()
@@ -45,6 +47,7 @@ func CreateConfigmap(namespace string, name string, labels map[string]string, da
 	return clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, createOptions)
 }
 
+// DeleteConfigmap delets a confimap by name
 func DeleteConfigmap(namespace string, name string) error {
 	message.Debugf("k8s.DeleteConfigmap(%s, %s)", namespace, name)
 	clientSet := getClientset()
@@ -59,6 +62,7 @@ func DeleteConfigmap(namespace string, name string) error {
 	return nil
 }
 
+// DeleteConfigMapsByLabel deletes a configmap by label(s)
 func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
 	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %v)", namespace, labels)
 	clientSet := getClientset()

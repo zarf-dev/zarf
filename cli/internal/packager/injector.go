@@ -30,7 +30,7 @@ func runInjectionMadness(tempPath tempPaths) {
 	var envVars []corev1.EnvVar
 	var payloadConfigmaps []string
 
-	// Try to create the zarf namesapce
+	// Try to create the zarf namespace
 	spinner.Updatef("Creating the Zarf namespace")
 	if _, err := k8s.CreateNamespace(k8s.ZarfNamespace, nil); err != nil {
 		message.Fatal(err, "Unable to create the zarf namespace")
