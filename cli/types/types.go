@@ -53,6 +53,9 @@ type ZarfComponent struct {
 
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
+
+	// Import refers to another zarf.yml package.
+	Import string `yaml:"import,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
