@@ -15,6 +15,7 @@ const (
 	DistroIsEKSAnywhere   = "eksanywhere"
 	DistroIsDockerDesktop = "dockerdesktop"
 	DistroIsGKE           = "gke"
+	DistroIsAKS           = "aks"
 
 	// todo: more distros
 )
@@ -24,6 +25,7 @@ func DetectDistro() (string, error) {
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
 	eksNodeRegex := regexp.MustCompile(`^aws:///`)
 	gkeNodeRegex := regexp.MustCompile(`^gce://`)
+	aksNodeRegex := regexp.MustCompile(`^azure:///subscriptions`)
 
 	nodes, err := GetNodes()
 	if err != nil {
@@ -51,6 +53,11 @@ func DetectDistro() (string, error) {
 
 		if gkeNodeRegex.MatchString(node.Spec.ProviderID) {
 			return DistroIsGKE, nil
+		}
+
+		// https://github.com/kubernetes/kubernetes/blob/v1.23.4/staging/src/k8s.io/legacy-cloud-providers/azure/azure_wrap.go#L46
+		if aksNodeRegex.MatchString(node.Spec.ProviderID) {
+			return DistroIsAKS, nil
 		}
 
 		labels := node.GetLabels()
