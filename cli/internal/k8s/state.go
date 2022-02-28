@@ -32,9 +32,7 @@ func LoadZarfState() types.ZarfState {
 	message.Debug("k8s.LoadZarfState()")
 
 	// The empty state that we will try to fill
-	state := types.ZarfState{
-		Distro: DistroIsUnknown,
-	}
+	state := types.ZarfState{}
 
 	// Set up the API connection
 	secretInterface := getZarfStateInterface()
