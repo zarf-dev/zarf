@@ -191,7 +191,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 		state := k8s.LoadZarfState()
 
-		if state.Distro == k8s.DistroIsUnknown {
+		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
 		}
