@@ -4,9 +4,6 @@ metadata:
   description: "Demo Zarf appliance mode with some dos games"
 
 components:
-  - name: flux
-    required: false
-    import: '../flux/'
   - name: baseline
     required: true
     manifests:

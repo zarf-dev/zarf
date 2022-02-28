@@ -30,28 +30,12 @@ func Create() {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
+	components, seedImages := GetComposedAssets()
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
-	seedImages := config.GetSeedImages()
-	components := []types.ZarfComponent{}
 	configFile := tempPath.base + "/zarf.yaml"
 
 	config.SetAcrch()
-
-	for _, component := range config.GetComponents() {
-		if len(component.Import) > 0 {
-			importedPackage := types.ZarfPackage{}
-			utils.ReadYaml(component.Import+"zarf.yaml", &importedPackage)
-			seedImages = append(seedImages, importedPackage.Seed...)
-			for _, composedComponent := range importedPackage.Components {
-				composedComponent.Name = importedPackage.Metadata.Name + "-" + composedComponent.Name
-				components = append(components, composedComponent)
-			}
-		} else {
-			components = append(components, component)
-		}
-	}
-	config.SetComponents(components)
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
