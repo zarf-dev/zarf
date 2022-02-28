@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -186,11 +187,14 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 		}
 
-		// Try to get an existing secret
-		if secret, _ := k8s.GetSecret(name, secretName); secret.Name != secretName {
-			// create the missing zarf secret
-			secret = k8s.GenerateRegistryPullCreds(name, secretName)
-			if err := k8s.CreateSecret(secret); err != nil {
+		// Create the secret
+		validSecret := k8s.GenerateRegistryPullCreds(name, secretName)
+
+		// Try to get a valid existing secret
+		currentSecret, _ := k8s.GetSecret(name, secretName)
+		if currentSecret.Name != secretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
+			// create/update the missing zarf secret
+			if err := k8s.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 		}
