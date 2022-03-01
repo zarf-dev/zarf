@@ -90,6 +90,7 @@ components:
       - grafana/loki:2.4.1
       - grafana/promtail:2.1.0
       - quay.io/kiwigrid/k8s-sidecar:1.12.3
+      - registry1.dso.mil/ironbank/big-bang/base:8.4
     charts:
       - name: loki-stack
         url: https://grafana.github.io/helm-charts
