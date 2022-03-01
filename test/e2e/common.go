@@ -62,16 +62,33 @@ func getKubeconfigPath() (string, error) {
 	return kubeconfigPath, err
 }
 
-func (e2e *ZarfE2ETest) setUpKind() error {
-	// Determine what the name of the zarfBinary should be
-	e2e.zarfBinPath = path.Join("../../build", getCLIName())
+func getCLIName() string {
+	var binaryName string
+	if runtime.GOOS == "linux" {
+		binaryName = "zarf"
+	} else if runtime.GOOS == "darwin" {
+		if runtime.GOARCH == "arm64" {
+			binaryName = "zarf-mac-apple"
+		} else {
+			binaryName = "zarf-mac-intel"
+		}
+	}
+	return binaryName
+}
 
+func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
 	var err error
-	// Create or get the kubeconfig
-	e2e.kubeconfigPath, err = getKubeconfigPath()
+	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
 	if err != nil {
 		return err
 	}
+	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+
+	return err
+}
+
+func (e2e *ZarfE2ETest) setUpKind() error {
+	var err error
 
 	// Set up a KinD cluster if necessary
 	e2e.provider = cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
@@ -88,37 +105,19 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 			cluster.CreateWithKubeconfigPath(e2e.kubeconfigPath),
 			cluster.CreateWithDisplayUsage(false),
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Get config and client for the k8s cluster
 	err = e2e.buildConfigAndClientset()
-
-	// Wait for the cluster to have pods before we let the test suite run
-	attempt := 0
-	for attempt < 10 {
-		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
-		if err == nil && len(pods.Items) >= 0 {
-			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
-			break
-		}
-
-		time.Sleep(1 * time.Second)
-		attempt++
-		if attempt > 15 {
-			return errors.New("unable to connect to KinD cluster for e2e tests")
-		}
-	}
-
-	return err
-}
-
-func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
-	var err error
-	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
 	if err != nil {
 		return err
 	}
-	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
+
+	// Wait for the cluster to have pods before we let the test suite run
+	err = e2e.waitForHealthyCluster()
 
 	return err
 }
@@ -136,20 +135,11 @@ func (e2e *ZarfE2ETest) tearDownKind() error {
 }
 
 func (e2e *ZarfE2ETest) setUpK3D() error {
-	// Determine what the name of the zarfBinary should be
-	e2e.zarfBinPath = path.Join("../../build", getCLIName())
-
 	var err error
-	// Create or get the kubeconfig
-	e2e.kubeconfigPath, err = getKubeconfigPath()
-	if err != nil {
-		return err
-	}
 
 	createClusterCommand := k3dcluster.NewCmdClusterCreate()
 	err = createClusterCommand.ExecuteContext(context.TODO())
 	if err != nil {
-		fmt.Println("ERROR WHEN TRYING TO SET UP K3D CLUSTER")
 		return err
 	}
 
@@ -160,21 +150,9 @@ func (e2e *ZarfE2ETest) setUpK3D() error {
 	}
 
 	// Wait for the cluster to have pods before we let the test suite run
-	attempt := 0
-	for attempt < 10 {
-		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
-		if err == nil && len(pods.Items) >= 0 {
-			fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
-			break
-		}
+	err = e2e.waitForHealthyCluster()
 
-		time.Sleep(1 * time.Second)
-		attempt++
-		if attempt > 15 {
-			return errors.New("unable to connect to KinD cluster for e2e tests")
-		}
-	}
-	return nil
+	return err
 }
 
 func (e2e *ZarfE2ETest) tearDownK3D() error {
@@ -185,16 +163,6 @@ func (e2e *ZarfE2ETest) tearDownK3D() error {
 }
 
 func (e2e *ZarfE2ETest) setUpK3s() error {
-	// Determine what the name of the zarfBinary should be
-	e2e.zarfBinPath = path.Join("../../build", getCLIName())
-
-	var err error
-	// Create or get the kubeconfig
-	e2e.kubeconfigPath, err = getKubeconfigPath()
-	if err != nil {
-		return err
-	}
-
 	e2e.initWithK3s = true
 	return nil
 }
@@ -203,20 +171,6 @@ func (e2e *ZarfE2ETest) tearDownK3s() error {
 	e2e.initWithK3s = false
 	os.Remove(e2e.kubeconfigPath)
 	return nil
-}
-
-func getCLIName() string {
-	var binaryName string
-	if runtime.GOOS == "linux" {
-		binaryName = "zarf"
-	} else if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
-			binaryName = "zarf-mac-apple"
-		} else {
-			binaryName = "zarf-mac-intel"
-		}
-	}
-	return binaryName
 }
 
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
@@ -299,6 +253,7 @@ func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error)
 	return string(output), err
 }
 
+// Kill any background 'zarf connect ...' processes spawned during the tests
 func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
 	// Create a tunnel to the git resources
 	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
@@ -307,4 +262,47 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 	time.Sleep(1 * time.Second)
 
 	return err
+}
+
+// Check if any pods exist in the 'kube-system' namespace
+func (e2e *ZarfE2ETest) checkIfClusterRunning() bool {
+	err := e2e.buildConfigAndClientset()
+	if err != nil {
+		return false
+	}
+
+	pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+	if err == nil && len(pods.Items) > 0 {
+		return true
+	}
+
+	return false
+}
+
+func (e2e *ZarfE2ETest) waitForHealthyCluster() error {
+	attempt := 0
+	for attempt < 10 {
+		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+		if err == nil && len(pods.Items) >= 0 {
+			allPodsHealthy := true
+
+			// Make sure at the pods are in the 'succeeded' or 'running' state
+			for _, pod := range pods.Items {
+				if !(pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning) {
+					allPodsHealthy = false
+					break
+				}
+			}
+
+			if allPodsHealthy {
+				fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
+				return nil
+			}
+		}
+
+		time.Sleep(1 * time.Second)
+		attempt++
+	}
+
+	return errors.New("unable to connect to cluster for e2e tests")
 }
