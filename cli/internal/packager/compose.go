@@ -2,6 +2,8 @@ package packager
 
 import (
 	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/defenseunicorns/zarf/cli/types"
 )
@@ -9,7 +11,7 @@ import (
 func GetComposedAssets() (components []types.ZarfComponent) {
 	for _, component := range config.GetComponents() {
 		// Build components list by expanding imported components.
-		if hasSubPackage(&component) {
+		if hasValidSubPackage(&component) {
 			importedComponents := getSubPackageAssets(component)
 			components = append(components, importedComponents...)
 
@@ -27,7 +29,7 @@ func GetComposedAssets() (components []types.ZarfComponent) {
 func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent) {
 	importedPackage := getSubPackage(&importComponent)
 	for _, componentToCompose := range importedPackage.Components {
-		if hasSubPackage(&componentToCompose) {
+		if hasValidSubPackage(&componentToCompose) {
 			components = append(components, getSubPackageAssets(componentToCompose)...)
 		} else {
 			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
@@ -39,12 +41,23 @@ func getSubPackageAssets(importComponent types.ZarfComponent) (components []type
 
 // Confirms inclusion of SubPackage. Need team input.
 func shouldAddImportedPackage(component *types.ZarfComponent) bool {
-	return hasSubPackage(component) && (component.Required || ConfirmOptionalComponent(*component))
+	return hasValidSubPackage(component) && (component.Required || ConfirmOptionalComponent(*component))
 }
 
-// returns true if import has url
+// Validates the sub component, errors out if validation fails.
+func hasValidSubPackage(component *types.ZarfComponent) bool {
+	if !hasSubPackage(component) {
+		return false
+	}
+	if err := validate.ValidateImportPackage(component); err != nil {
+		message.Fatalf(err, "Invalid import definition in the %s component: %s", component.Name, err)
+	}
+	return true
+}
+
+// returns true if import field is populated
 func hasSubPackage(component *types.ZarfComponent) bool {
-	return len(component.Import.Path) > 0
+	return component.Import != types.ZarfImport{}
 }
 
 // Reads the locally imported zarf.yaml
@@ -58,31 +71,31 @@ func prepComponentToCompose(component *types.ZarfComponent, parentPackageName st
 	component.Name = parentPackageName + "-" + component.Name
 
 	// Add import path to local component files.
-	for idx, file := range component.Files {
+	for fileIdx, file := range component.Files {
 		if !utils.IsUrl(file.Source) {
-			component.Files[idx].Source = importPath + file.Source
+			component.Files[fileIdx].Source = importPath + file.Source
 		}
 	}
 
 	// Add import path to local chart values files.
-	for chartIndex, chart := range component.Charts {
-		for valuesIndex, valuesFile := range chart.ValuesFiles {
+	for chartIdx, chart := range component.Charts {
+		for valuesIdx, valuesFile := range chart.ValuesFiles {
 			if !utils.IsUrl(valuesFile) {
-				component.Charts[chartIndex].ValuesFiles[valuesIndex] = importPath + valuesFile
+				component.Charts[chartIdx].ValuesFiles[valuesIdx] = importPath + valuesFile
 			}
 		}
 	}
 
 	// Add import path to local manifest files and kustomizations
-	for manifestIndex, manifest := range component.Manifests {
-		for fileIndex, file := range manifest.Files {
+	for manifestIdx, manifest := range component.Manifests {
+		for fileIdx, file := range manifest.Files {
 			if !utils.IsUrl(file) {
-				component.Manifests[manifestIndex].Files[fileIndex] = importPath + file
+				component.Manifests[manifestIdx].Files[fileIdx] = importPath + file
 			}
 		}
-		for kustomizationIndex, kustomization := range manifest.Kustomizations {
+		for kustomIdx, kustomization := range manifest.Kustomizations {
 			if !utils.IsUrl(kustomization) {
-				component.Manifests[manifestIndex].Kustomizations[kustomizationIndex] = importPath + kustomization
+				component.Manifests[manifestIdx].Kustomizations[kustomIdx] = importPath + kustomization
 			}
 		}
 	}
