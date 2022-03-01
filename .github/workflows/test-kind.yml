@@ -15,7 +15,7 @@ jobs:
       - name: Build CLI
         run: make build-cli-linux
       - name: Sign into Repo1
-        run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+        run: ./build/zarf tools registry login registry1.dso.mil -u ${{ secrets.REGISTRY_USERNAME_ZARF_ROBOT }} -p ${{ secrets.REGISTRY_PASSWORD_ZARF_ROBOT }}
       - name: Make Packages
         run: make init-package
 
