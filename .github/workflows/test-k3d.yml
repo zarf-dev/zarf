@@ -1,9 +1,13 @@
 name: e2e-k3d
 on:
-  - pull_request
-
+  pull_request:
+  pull_request_target:
+    types: [labeled]
 jobs:
   build-and-test:
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event.label.name == 'test'
     runs-on: ubuntu-latest
     steps:
       - name: Install GoLang
