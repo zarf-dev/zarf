@@ -95,11 +95,6 @@ func GetSeedImages() []string {
 	}
 }
 
-// SetSeedImages sets the list of image string specified in the package.
-func SetSeedImages(seedImages []string) {
-	config.Seed = seedImages
-}
-
 func GetPackageName() string {
 	metadata := GetMetaData()
 	if metadata.Uncompressed {

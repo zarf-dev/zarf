@@ -6,40 +6,35 @@ import (
 	"github.com/defenseunicorns/zarf/cli/types"
 )
 
-func GetComposedAssets() (components []types.ZarfComponent, seedImages []string) {
+func GetComposedAssets() (components []types.ZarfComponent) {
 	for _, component := range config.GetComponents() {
 		// Build components list by expanding imported components.
 		if hasSubPackage(&component) {
-			importedComponents, importedImages := getSubPackageAssets(component)
+			importedComponents := getSubPackageAssets(component)
 			components = append(components, importedComponents...)
-			seedImages = append(seedImages, importedImages...)
 
 		} else {
 			components = append(components, component)
 		}
 	}
-	// Update the parent package config with the expanded sub components and seed images.
+	// Update the parent package config with the expanded sub components.
 	// This is important when the deploy package is created.
 	config.SetComponents(components)
-	config.SetSeedImages(seedImages)
-	return components, seedImages
+	return components
 }
 
-// Get the sub package components/seed images to add to parent assets, recurses on sub imports.
-func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent, seedImages []string) {
+// Get the sub package components to add to parent assets, recurses on sub imports.
+func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent) {
 	importedPackage := getSubPackage(&importComponent)
-	seedImages = importedPackage.Seed
 	for _, componentToCompose := range importedPackage.Components {
 		if hasSubPackage(&componentToCompose) {
-			subComp, subImage := getSubPackageAssets(componentToCompose)
-			components = append(components, subComp...)
-			seedImages = append(seedImages, subImage...)
+			components = append(components, getSubPackageAssets(componentToCompose)...)
 		} else {
 			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
 			components = append(components, componentToCompose)
 		}
 	}
-	return components, seedImages
+	return components
 }
 
 // Confirms inclusion of SubPackage. Need team input.

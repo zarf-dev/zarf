@@ -30,7 +30,8 @@ func Create() {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	components, seedImages := GetComposedAssets()
+	components := GetComposedAssets()
+	seedImages := config.GetSeedImages()
 	packageName := config.GetPackageName()
 	dataInjections := config.GetDataInjections()
 	configFile := tempPath.base + "/zarf.yaml"
