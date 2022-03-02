@@ -11,7 +11,7 @@ import (
 func GetComposedAssets() (components []types.ZarfComponent) {
 	for _, component := range config.GetComponents() {
 		// Build components list by expanding imported components.
-		if hasValidSubPackage(&component) {
+		if shouldAddImportedPackage(&component) {
 			importedComponents := getSubPackageAssets(component)
 			components = append(components, importedComponents...)
 
@@ -29,7 +29,7 @@ func GetComposedAssets() (components []types.ZarfComponent) {
 func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent) {
 	importedPackage := getSubPackage(&importComponent)
 	for _, componentToCompose := range importedPackage.Components {
-		if hasValidSubPackage(&componentToCompose) {
+		if shouldAddImportedPackage(&componentToCompose) {
 			components = append(components, getSubPackageAssets(componentToCompose)...)
 		} else {
 			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
@@ -41,7 +41,7 @@ func getSubPackageAssets(importComponent types.ZarfComponent) (components []type
 
 // Confirms inclusion of SubPackage. Need team input.
 func shouldAddImportedPackage(component *types.ZarfComponent) bool {
-	return hasValidSubPackage(component) && (component.Required || ConfirmOptionalComponent(*component))
+	return hasValidSubPackage(component) && (config.DeployOptions.Confirm || component.Required || ConfirmOptionalComponent(*component))
 }
 
 // Validates the sub component, errors out if validation fails.
