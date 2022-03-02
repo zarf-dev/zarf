@@ -4,10 +4,6 @@ metadata:
   description: "Demo Zarf package composability"
 
 components:
-  - name: flux
-    required: false
-    import: 
-     path: '../flux/'
   - name: games
     required: true
     import: 
