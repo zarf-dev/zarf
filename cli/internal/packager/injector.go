@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+// This needs to be < 672 KBs, but larger sizes tend to face some timeout issues on GKE
+// We may need to make this dynamic in the future
 var payloadChunkSize = 1024 * 512
 
 func runInjectionMadness(tempPath tempPaths) {
@@ -78,20 +80,26 @@ func runInjectionMadness(tempPath tempPaths) {
 
 		// Make sure the pod is not there first
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+
 		// Update the podspec image path
 		pod := buildInjectionPod(image, envVars, payloadConfigmaps)
-		if pod, err = k8s.CreatePod(pod); err != nil {
-			message.Debug(err)
-		} else {
-			message.Debug(pod)
 
-			if hasSeedImages(spinner) {
-				spinner.Success()
-				return
-			}
+		// Create the pod in the cluster
+		pod, err = k8s.CreatePod(pod)
+
+		// Just debug log the output because failures just result in trying the next image
+		message.Debug(pod, err)
+
+		// if no error, try and wait for a seed image to be present, return if successful
+		if err == nil && hasSeedImages(spinner) {
+			spinner.Success()
+			return
 		}
+
+		// Otherwise just continue to try next image
 	}
 
+	// All images were exhausted and still no happiness
 	spinner.Fatalf(nil, "Unable to perform the injection")
 }
 
@@ -126,6 +134,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	}
 
 	spinner.Updatef("Splitting the archive into binary configmaps")
+	// Loop over the tarball breaking it into chunks based on the payloadChunkSize
 	for {
 		if len(tarFile) == 0 {
 			break
@@ -142,6 +151,11 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 
 	chunkCount := len(chunks)
 
+	// Remove any existing injector configmaps
+	labelMatch := map[string]string{"zarf-injector": "payload"}
+	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+
+	// Loop over all chunks and generate configmaps
 	for idx, data := range chunks {
 		// Create a cat-friendly filename
 		fileName := fmt.Sprintf("zarf-payload-%03d", idx)
@@ -154,10 +168,11 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = k8s.ReplaceConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
+		if _, err = k8s.CreateConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
 			return configMaps, err
 		}
 
+		// Add the configmap to the configmaps slice for later usage in the pod
 		configMaps = append(configMaps, fileName)
 
 		// Give the control plane a slight buffeer
@@ -170,6 +185,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 func hasSeedImages(spinner *message.Spinner) bool {
 	message.Debugf("packager.hasSeedImages()")
 
+	// Get an available local port for the tunnel connection
 	localPort, err := k8s.GetAvailablePort()
 	if err != nil {
 		message.Debug(err)
@@ -180,6 +196,7 @@ func hasSeedImages(spinner *message.Spinner) bool {
 
 	// Establish the zarf connect tunnel
 	tunnel := k8s.NewTunnel(k8s.ZarfNamespace, k8s.SvcResource, "zarf-injector", localPort, 5000)
+	// Add the spinner to avoid spinner collisions in the CLI
 	tunnel.AddSpinner(spinner)
 	tunnel.Establish()
 	defer tunnel.Close()
@@ -190,21 +207,22 @@ func hasSeedImages(spinner *message.Spinner) bool {
 	timeout := time.After(15 * time.Second)
 
 	for {
-		// delay check 3 seconds
+		// Delay check 3 seconds
 		time.Sleep(3 * time.Second)
 		select {
 
-		// on timeout abort
+		// On timeout abort
 		case <-timeout:
 			message.Debug("seed image check timed out")
 			return false
 
-		// after delay, try running
+		// After delay, try running
 		default:
-			//
+			// Check for the existence of the image in the injection pod registry, on error continue
 			if _, err := crane.Manifest(ref, config.GetCraneOptions()); err != nil {
 				message.Debugf("Could not get image ref %s: %w", ref, err)
 			} else {
+				// If not error, return true, there image is present
 				return true
 			}
 		}
@@ -280,6 +298,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	return encodedEnvVars, nil
 }
 
+// buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
 func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps []string) *corev1.Pod {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
