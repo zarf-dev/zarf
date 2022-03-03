@@ -99,3 +99,17 @@ test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be
 	fi
 
 	cd test/e2e && cp ../../build/zarf-init.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init.tar.zst
+
+.PHONY: test-cloud-e2e-example-game
+test-cloud-e2e-example-game: ## Run e2e game example..
+	@if [ ! -f $(ZARF_BIN) ]; then\
+		$(MAKE) build-cli;\
+	fi
+	@if [ ! -f ./build/zarf-init.tar.zst ]; then\
+		$(MAKE) init-package;\
+	fi
+	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games.tar.zst ]; then\
+		$(MAKE) package-example-game;\
+	fi
+
+	cd test/cloud-e2e && go test ./... -run TestCloudE2EExampleGame -v -timeout 1200s
