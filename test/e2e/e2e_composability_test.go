@@ -37,7 +37,6 @@ func TestE2eExampleComposability(t *testing.T) {
 		require.NoError(e2e.testing, err, output)
 
 		// Validate that the composed sub packages exist
-		require.Contains(e2e.testing, "flux-baseline", output)
 		require.Contains(e2e.testing, "appliance-demo-multi-games-baseline", output)
 
 		// Establish the port-forward into the game service; give the service a few seconds to come up since this is not a command we can retry
@@ -49,11 +48,6 @@ func TestE2eExampleComposability(t *testing.T) {
 		output, err = e2e.runSSHCommand("bash -c '[[ $(curl -sfSL --retry 15 --retry-connrefused --retry-delay 5 http://127.0.0.1:22333?doom') ]]'")
 		require.NoError(e2e.testing, err, output)
 		require.Contains(e2e.testing, "Zarf needs games too", output)
-
-		// Validate that the flux composed component was deployed by describing the flux helm controller and validating availibility
-		output, err = e2e.runSSHCommand(`sudo bash -c '/usr/sbin/kubectl describe deployment helm-controller -n flux-system'`)
-		require.NoError(e2e.testing, err, output)
-		require.Contains(e2e.testing, "1 desired | 1 updated | 1 total | 1 available | 0 unavailable", output)
 
 		// Run `zarf destroy` to make sure that works correctly
 		output, err = e2e.runSSHCommand("sudo bash -c 'cd /home/%s/build && ./zarf destroy --confirm'", e2e.username)
