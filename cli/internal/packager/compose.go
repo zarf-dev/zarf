@@ -15,7 +15,7 @@ func GetComposedAssets() (components []types.ZarfComponent) {
 			importedComponents := getSubPackageAssets(component)
 			components = append(components, importedComponents...)
 
-		} else {
+		} else if !hasSubPackage(&component) {
 			components = append(components, component)
 		}
 	}
@@ -31,7 +31,7 @@ func getSubPackageAssets(importComponent types.ZarfComponent) (components []type
 	for _, componentToCompose := range importedPackage.Components {
 		if shouldAddImportedPackage(&componentToCompose) {
 			components = append(components, getSubPackageAssets(componentToCompose)...)
-		} else {
+		} else if !hasSubPackage(&componentToCompose) {
 			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
 			components = append(components, componentToCompose)
 		}
