@@ -151,10 +151,6 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 
 	chunkCount := len(chunks)
 
-	// Remove any existing injector configmaps
-	labelMatch := map[string]string{"zarf-injector": "payload"}
-	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
-
 	// Loop over all chunks and generate configmaps
 	for idx, data := range chunks {
 		// Create a cat-friendly filename
@@ -168,7 +164,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = k8s.CreateConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
+		if _, err = k8s.ReplaceConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
 			return configMaps, err
 		}
 
