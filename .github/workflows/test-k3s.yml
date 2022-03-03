@@ -1,4 +1,4 @@
-name: e2e-kind
+name: e2e-k3s
 on:
   - pull_request
 
@@ -17,4 +17,5 @@ jobs:
       - name: Make Packages
         run: make init-package package-example-game package-example-data-injection package-example-gitops-data
       - name: Run Tests
-        run: TESTDISTRO=kind make test-e2e
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed in a previous step
+        run: sudo env "PATH=$PATH" TESTDISTRO=k3s make test-e2e
