@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -76,7 +75,7 @@ func DeleteZarfNamespace() {
 		_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			spinner.Successf("Zarf removed from this cluster")
-			os.Exit(0)
+			return
 		}
 		time.Sleep(1 * time.Second)
 	}
