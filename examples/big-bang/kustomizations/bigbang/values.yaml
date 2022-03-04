@@ -34,24 +34,6 @@ istio:
           limits:
             cpu: "500m"
             memory: "512Mi"
-        # service:
-        #   ports:
-        #     - name: status-port
-        #       port: 15021
-        #       protocol: TCP
-        #       targetPort: 15021
-        #     - name: http2
-        #       port: 9080
-        #       protocol: TCP
-        #       targetPort: 8080
-        #     - name: https
-        #       port: 9443
-        #       protocol: TCP
-        #       targetPort: 8443
-        #     - name: tls
-        #       port: 15443
-        #       protocol: TCP
-        #       targetPort: 15443
   gateways:
     public:
       tls:
@@ -177,7 +159,6 @@ istio:
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
 
-
   values:
     hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
     cni:
@@ -287,7 +268,6 @@ kiali:
       image:
         repository: ###ZARF_REGISTRY###/ironbank/big-bang/base
 
-
 clusterAuditor:
   enabled: true
   git:
@@ -339,7 +319,7 @@ gatekeeper:
       allowedDockerRegistries:
         parameters:
           repos:
-            - ###ZARF_REGISTRY###
+            -  ###ZARF_REGISTRY###
           excludedResources:
             # K3s kube-system stuff, better than excluding the whole namespace
             - "kube-system/coredns-.*"
