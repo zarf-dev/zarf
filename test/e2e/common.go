@@ -28,15 +28,14 @@ import (
 type ZarfE2ETest struct {
 	zarfBinPath string
 
-	clusterName          string
-	kubeconfigPath       string
-	filesToRemove        []string
-	cmdsToKill           []*exec.Cmd
-	provider             *cluster.Provider
-	restConfig           *restclient.Config
-	clientset            *kubernetes.Clientset
-	clusterAlreadyExists bool
-	initWithK3s          bool
+	clusterName    string
+	kubeconfigPath string
+	filesToRemove  []string
+	cmdsToKill     []*exec.Cmd
+	provider       *cluster.Provider
+	restConfig     *restclient.Config
+	clientset      *kubernetes.Clientset
+	initWithK3s    bool
 }
 
 func getKubeconfigPath() (string, error) {
@@ -93,10 +92,7 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 	// Set up a KinD cluster if necessary
 	e2e.provider = cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
 	nodes, err := e2e.provider.ListNodes(e2e.clusterName)
-	if len(nodes) > 0 {
-		// There already is a cluster up!! yay!!
-		e2e.clusterAlreadyExists = true
-	} else {
+	if len(nodes) == 0 {
 		err = e2e.provider.Create(
 			e2e.clusterName,
 			cluster.CreateWithNodeImage(""),
@@ -123,10 +119,6 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 }
 
 func (e2e *ZarfE2ETest) tearDownKind() error {
-	if os.Getenv("SKIP_TEARDOWN") != "" || e2e.clusterAlreadyExists {
-		return nil
-	}
-
 	// Delete the cluster and kubeconfig file
 	provider := cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
 	err := provider.Delete(e2e.clusterName, e2e.kubeconfigPath)

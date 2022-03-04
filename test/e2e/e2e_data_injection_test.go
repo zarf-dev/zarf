@@ -33,7 +33,7 @@ func TestDataInjection(t *testing.T) {
 	// Test to confirm the subdirectory file was placed
 	execStdOut = ""
 	attempt = 0
-	for attempt < 5 && execStdOut == "" {
+	for attempt < 10 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test/subdirectory-test"})
 		attempt++
 		time.Sleep(2 * time.Second)
