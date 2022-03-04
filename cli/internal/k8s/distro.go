@@ -1,7 +1,7 @@
 package k8s
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 )
 
@@ -29,7 +29,7 @@ func DetectDistro() (string, error) {
 
 	nodes, err := GetNodes()
 	if err != nil {
-		return DistroIsUnknown, fmt.Errorf("error getting cluster nodes")
+		return DistroIsUnknown, errors.New("error getting cluster nodes")
 	}
 
 	// Iterate over the nodes looking for label matches
@@ -80,7 +80,7 @@ func DetectDistro() (string, error) {
 
 	namespaces, err := GetNamespaces()
 	if err != nil {
-		return DistroIsUnknown, fmt.Errorf("error getting namesapce list")
+		return DistroIsUnknown, errors.New("error getting namesapce list")
 	}
 
 	// kubectl get ns eksa-system for EKS Anywhere
@@ -103,5 +103,5 @@ func GetArchitecture() (string, error) {
 		return node.Status.NodeInfo.Architecture, nil
 	}
 
-	return "", fmt.Errorf("could not identify node architecture")
+	return "", errors.New("could not identify node architecture")
 }

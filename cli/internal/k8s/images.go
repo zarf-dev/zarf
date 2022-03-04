@@ -17,7 +17,7 @@ func GetAllImages() ([]string, error) {
 	timeout := time.After(5 * time.Minute)
 
 	for {
-		// delay check 3 seconds
+		// delay check 2 seconds
 		time.Sleep(2 * time.Second)
 		select {
 
