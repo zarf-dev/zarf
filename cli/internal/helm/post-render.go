@@ -20,8 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const managedByLabel = "app.kubernetes.io/managed-by"
-
 var secretName = "zarf-registry"
 
 type renderer struct {
@@ -111,7 +109,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 						namespace.Labels = make(map[string]string)
 					}
 					// Now track this namespace by zarf
-					namespace.Labels[managedByLabel] = "zarf"
+					namespace.Labels[config.ZarfManagedByLabel] = "zarf"
 					namespace.Labels["zarf-helm-release"] = r.options.ReleaseName
 
 					// Add it to the stack
@@ -232,7 +230,7 @@ func updateDefaultSvcAccount(namespace string) error {
 	}
 
 	// Look to see if the service account needs to be patched
-	if defaultSvcAccount.Labels[managedByLabel] != "zarf" {
+	if defaultSvcAccount.Labels[config.ZarfManagedByLabel] != "zarf" {
 		// This service account needs the pull secret added
 		defaultSvcAccount.ImagePullSecrets = append(defaultSvcAccount.ImagePullSecrets, corev1.LocalObjectReference{
 			Name: secretName,
@@ -244,7 +242,7 @@ func updateDefaultSvcAccount(namespace string) error {
 		}
 
 		// Track this by zarf
-		defaultSvcAccount.Labels[managedByLabel] = "zarf"
+		defaultSvcAccount.Labels[config.ZarfManagedByLabel] = "zarf"
 
 		// Finally update the chnage on the server
 		if _, err := k8s.SaveServiceAccount(defaultSvcAccount); err != nil {

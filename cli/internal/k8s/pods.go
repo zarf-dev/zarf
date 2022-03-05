@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -27,7 +28,7 @@ func GeneratePod(name string, namespace string) *corev1.Pod {
 			Namespace: namespace,
 			Labels: map[string]string{
 				// track the creation of this ns by zarf
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 	}

@@ -125,7 +125,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
-	// On error abbort
+	// On error abort
 	if url, err := tunnel.Establish(); err != nil {
 		message.Fatal(err, "Unable to establish the tunnel")
 	} else if blocking {

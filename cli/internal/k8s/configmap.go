@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +33,7 @@ func CreateConfigmap(namespace string, name string, labels map[string]string, da
 			Namespace: namespace,
 			Labels: map[string]string{
 				// track the creation of this ns by zarf
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 		BinaryData: data,

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -71,7 +73,7 @@ func SaveZarfState(state types.ZarfState) error {
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,

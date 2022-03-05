@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ func GenerateService(namespace string, name string) *corev1.Service {
 			Annotations: make(map[string]string),
 			Labels: map[string]string{
 				// track the creation of this ns by zarf
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 	}

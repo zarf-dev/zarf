@@ -42,7 +42,7 @@ func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
@@ -103,7 +103,7 @@ func GenerateTLSSecret(namespace string, name string, certPath string, keyPath s
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
@@ -140,7 +140,7 @@ func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath st
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "zarf",
+				config.ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
