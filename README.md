@@ -1,21 +1,36 @@
-# Zarf - Kubernetes Air Gap Buddy 
+# Zarf - DevSecOps for Air Gap Systems 
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
-Zarf massively simplifies the setup & administration of kubernetes clusters "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))".
+## Why is Zarf Needed In This World?
+
+Most of the software ecosystem assumes your systems have access to the internet.  The world (for good reasons) has become more and more dependent upon Software as a Serivice (SaaS), which assume a robust connection to the internet and a willingness to inheritently trust 3rd party providers. Although this makes sense for 99% of the world, there are certain SECURE systems that must operate either fully disconencted, semi-disconnected, or might just want the ability to disconnect in case of emergencies (like while under an active cyber attack). Although only a small percentage of systems, these SECURE systems make up some of the most vital systems in the world, such as Aerospace and Defense, Finance, Healthcare, Energy, Water and Sewage, as well as many Federal, Local, and State Goverment systems.  
+
+These SECURE systems need a way to continously and securely deliver software too. Zarf exists to make it easy for open source, COTS, and organic software solutions to be delivered to secure and disconnected systems. Because although such systems might be small in number, they represent many of the most important systems in the world.  
+
+## What is Zarf?
+
+Zarf massively simplifies the setup & administration of kubernetes clusters that support DevSecOps "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))".
 
 It provides a static go binary CLI that can pull, package, and install all the things your clusters need to run.  It caches downloads (for speed), hashes packages (for security), and can even _install the kubernetes cluster itself_ if you want it to.
 
 Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters".
 
+## Explain Zarf Like I'm Ten
+
+Zarf allows you to bundle portions of "the internet" into a single package to be installed later following specific instructions. A Zarf package is really just a single file that includes everything you would need to manage a system or capability while fully disconnected.  Think of a disconnected system as a system that always is or sometimes is on airplane mode.
+
+You bring this single file (or package) with you to the system you want to install or update new software onto. The package includes instructions on how to assemble all the peices of software (components) once on the other side. These instructions are fully "declarative", which means that everything is represented by code and automated vs manual. The hardest part is assembeling the declarative package on the connected side. But once everything is packaged up, Zarf makes even massively complex systems easy to install, update, and maintain within disconnected systems. 
+
+Such packages also become highly distributable, as they can now run for edge, embedded systems, secure cloud, data centers, or even on a local environment. This is incredibly helpful for organizations that need to integrate and deploy software from multiple secure development environments from a disperse set of development teams into IT operational environments that are disconnected. Zarf helps ensure that development teams can integrate with the production environment they are deploying to, even if they will never actually touch that environment. 
+
+Zarf makes DevSecOps for air gap possible. 
+
 &nbsp;
 
 > _This repo is in transition from [Repo1](https://repo1.dso.mil/) by [DoD Platform One](http://p1.dso.mil/) to [Github](https://github.com/defenseunicorns/zarf).  See [the announcments post](https://github.com/defenseunicorns/zarf/discussions/1#discussion-3560306) for the latest URLs for this project during this transition._
-
 &nbsp;
-
 &nbsp;
-
 <!--
 ##########
 # This block is about LEARNING TO USE Zarf
