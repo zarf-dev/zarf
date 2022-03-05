@@ -69,7 +69,7 @@ make vm-init
 
 ```shell
 # Deploy Big Bang
-./zarf package deploy --confirm zarf-package-big-bang-core-demo.tar.zst --components kubescape
+./zarf package deploy --confirm zarf-package-big-bang-core-demo.tar.zst
 
 # (Optional) Inspect the results
 ./zarf tools k9s
@@ -90,14 +90,6 @@ exit
 
 # On the host
 make vm-destroy
-```
-
-## Kubescape scan
-
-This example adds the `kubescape` binary, which can scan clusters for compliance with the NSA/CISA Kubernetes Hardening Guide
-
-```shell
-kubescape scan framework nsa --use-from=/usr/sbin/kubescape-framework-nsa.json --exceptions=/usr/sbin/kubescape-exceptions.json
 ```
 
 ## Services
