@@ -3,14 +3,15 @@ package k8s
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-logr/logr"
 	"io"
 	"io/ioutil"
+	"os"
+	"regexp"
+
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	"os"
-	"regexp"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/template"
@@ -18,6 +19,7 @@ import (
 	"github.com/go-logr/logr/funcr"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
