@@ -11,3 +11,7 @@ func init() {
 	homePath, _ := os.UserHomeDir()
 	cachePath = fmt.Sprintf("%s/%s", homePath, cachePath)
 }
+
+func CachePath() string {
+	return cachePath
+}

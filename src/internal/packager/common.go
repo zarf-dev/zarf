@@ -38,6 +38,7 @@ type tempPaths struct {
 	seedImage        string
 	images           string
 	components       string
+	sboms            string
 }
 
 func createPaths() tempPaths {
@@ -50,6 +51,7 @@ func createPaths() tempPaths {
 		seedImage:        basePath + "/seed-image.tar",
 		images:           basePath + "/images.tar",
 		components:       basePath + "/components",
+		sboms:            basePath + "/sboms",
 	}
 }
 

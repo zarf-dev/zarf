@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/mholt/archiver/v3"
 )
@@ -50,7 +51,9 @@ func Create() {
 
 	if seedImage != "" {
 		// Load seed images into their own happy little tarball for ease of import on init
-		images.PullAll([]string{seedImage}, tempPath.seedImage)
+		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
+		_ = utils.CreateDirectory(tempPath.sboms, 0700)
+		sbom.CatalogImages(pulledImages, tempPath.sboms)
 	}
 
 	var combinedImageList []string
@@ -63,7 +66,9 @@ func Create() {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := removeDuplicates(combinedImageList)
-		images.PullAll(uniqueList, tempPath.images)
+		pulledImages := images.PullAll(uniqueList, tempPath.images)
+		_ = utils.CreateDirectory(tempPath.sboms, 0700)
+		sbom.CatalogImages(pulledImages, tempPath.sboms)
 	}
 
 	if config.IsZarfInitConfig() {

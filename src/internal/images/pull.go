@@ -17,7 +17,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func PullAll(buildImageList []string, imageTarballPath string) {
+func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.Image {
 	var (
 		longer     string
 		imageCount = len(buildImageList)
@@ -87,7 +87,7 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 			_, _ = progressBar.Stop()
 			title = fmt.Sprintf("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			pterm.Success.Println(title)
-			return
+			return tagToImage
 		case update.Error != nil:
 			message.Fatal(update.Error, "error writing image tarball")
 		default:
@@ -108,4 +108,6 @@ func PullAll(buildImageList []string, imageTarballPath string) {
 			progressBar.Add(chunk)
 		}
 	}
+
+	return tagToImage
 }
