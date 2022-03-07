@@ -139,5 +139,6 @@ type ZarfDeployOptions struct {
 	PackagePath   string
 	Confirm       bool
 	Components    string
+	// Zarf init is installing the k3s component
 	ApplianceMode bool
 }

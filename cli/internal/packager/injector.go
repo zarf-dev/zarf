@@ -21,7 +21,7 @@ import (
 // We may need to make this dynamic in the future
 var payloadChunkSize = 1024 * 512
 
-func runInjectionMadness(tempPath tempPaths) {
+func runCrazyConfigmapInjector(tempPath tempPaths) {
 	message.Debugf("packager.runInjectionMadness(%v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")

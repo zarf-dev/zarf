@@ -66,7 +66,12 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	}
 
-	runInjectionMadness(tempPath)
+	if config.DeployOptions.ApplianceMode {
+		runK3sCLIInjection(tempPath)
+
+	} else {
+		runCrazyConfigmapInjector(tempPath)
+	}
 
 	// Save the state back to K8s
 	if err := k8s.SaveZarfState(state); err != nil {
@@ -86,16 +91,37 @@ func preSeedRegistry(tempPath tempPaths) {
 func postSeedRegistry(tempPath tempPaths) {
 	message.Debug("packager.postSeedRegistry(%v)", tempPath)
 
-	// Try to kill the injector pod now
-	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+	if !config.DeployOptions.ApplianceMode {
+		// Try to kill the injector pod now
+		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 
-	// Remove the configmaps
-	labelMatch := map[string]string{"zarf-injector": "payload"}
-	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+		// Remove the configmaps
+		labelMatch := map[string]string{"zarf-injector": "payload"}
+		_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
 
-	// Reomve the injector service
-	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
+		// Remove the injector service
+		_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
+	}
 
 	// Push the seed images into to Zarf registry
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
+}
+
+func runK3sCLIInjection(tempPath tempPaths) {
+	var (
+		err     error
+		output  string
+		spinner = message.NewProgressSpinner("Injecting Zarf registry image using the K3s CLI")
+		args    = []string{"ctr", "images", "import", tempPath.seedImage}
+	)
+	defer spinner.Stop()
+
+	// If this is a seed image injection, attempt to run it and warn if there is an error
+	output, err = utils.ExecCommand(false, nil, "k3s", args...)
+	message.Debug(output)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to inject the seed image from the %s archive", tempPath.seedImage)
+	} else {
+		spinner.Success()
+	}
 }
