@@ -295,10 +295,7 @@
           "type": "array"
         },
         "seed": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+          "type": "string"
         }
       },
       "additionalProperties": false,
