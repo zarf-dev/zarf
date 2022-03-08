@@ -17,6 +17,10 @@ func preSeedRegistry(tempPath tempPaths) {
 		err         error
 	)
 
+	if err := k8s.WaitForHealthyCluster(30); err != nil {
+		message.Fatal(err, "The cluster we are using never reported 'healthy'")
+	}
+
 	if clusterArch, err = k8s.GetArchitecture(); err != nil {
 		message.Errorf(err, "Unable to validate the cluster system architecture")
 	}
