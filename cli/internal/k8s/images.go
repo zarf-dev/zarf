@@ -11,6 +11,7 @@ import (
 
 type ImageMap map[string]bool
 
+// GetAllImages returns a list of images found in pods in the cluster.
 func GetAllImages() ([]string, error) {
 	var images []string
 	var err error
@@ -39,6 +40,7 @@ func GetAllImages() ([]string, error) {
 	}
 }
 
+// GetImages returns all images for in pods in a given namespace.
 func GetImages(namespace string) ([]string, error) {
 	images := make(ImageMap)
 
@@ -54,7 +56,7 @@ func GetImages(namespace string) ([]string, error) {
 	return SortImages(images, nil), nil
 }
 
-// BuildImageMap looks for init container, ephemeral and regular container images
+// BuildImageMap looks for init container, ephemeral and regular container images.
 func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	for _, container := range pod.InitContainers {
 		images[container.Image] = true
@@ -68,7 +70,8 @@ func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	return images
 }
 
-func SortImages(images ImageMap, compareWith ImageMap) []string {
+// SortImages returns a sorted list of images.
+func SortImages(images, compareWith ImageMap) []string {
 	sortedImages := sort.StringSlice{}
 	for image := range images {
 		if !compareWith[image] || compareWith == nil {

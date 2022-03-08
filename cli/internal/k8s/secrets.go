@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -24,13 +25,13 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
-func GetSecret(namespace string, name string) (*corev1.Secret, error) {
+func GetSecret(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.getSecret(%s, %s)", namespace, name)
 	clientSet := getClientset()
 	return clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
+func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 
 	secretDockerConfig := &corev1.Secret{
@@ -79,14 +80,14 @@ func GenerateRegistryPullCreds(namespace string, name string) *corev1.Secret {
 	return secretDockerConfig
 }
 
-func GenerateTLSSecret(namespace string, name string, certPath string, keyPath string) *corev1.Secret {
+func GenerateTLSSecret(namespace, name, certPath, keyPath string) *corev1.Secret {
 	message.Debugf("k8s.GenerateTLSSecret(%s, %s, %s, %s", namespace, name, certPath, keyPath)
 
-	tlsCert, err := readFile(certPath)
+	tlsCert, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the TLS public certificate")
 	}
-	tlsKey, err := readFile(keyPath)
+	tlsKey, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the TLS private key")
 	}
@@ -116,14 +117,14 @@ func GenerateTLSSecret(namespace string, name string, certPath string, keyPath s
 	return secretTLS
 }
 
-func ReplaceTLSSecret(namespace string, name string, certPath string, keyPath string) {
+func ReplaceTLSSecret(namespace, name, certPath, keyPath string) {
 	message.Debugf("k8s.ReplaceTLSSecret(%s, %s)", namespace, name)
 
-	tlsCert, err := readFile(certPath)
+	tlsCert, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to read the TLS public certificate")
 	}
-	tlsKey, err := readFile(keyPath)
+	tlsKey, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to read the TLS private key")
 	}

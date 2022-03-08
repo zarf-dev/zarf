@@ -103,7 +103,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
 					message.Errorf(err, "could not parse namespace %s", rawData.GetName())
 				} else {
-					message.Debugf("Matched helm namespace %s for zarf annotation", &namespace.Name)
+					message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
 					if namespace.Labels == nil {
 						// Ensure label map exists to avoid nil panic
 						namespace.Labels = make(map[string]string)
@@ -123,7 +123,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &svcAccount); err != nil {
 					message.Errorf(err, "could not parse service account %s", rawData.GetName())
 				} else {
-					message.Debugf("Matched helm svc account %s for zarf annotation", &svcAccount.Name)
+					message.Debugf("Matched helm svc account %s for zarf annotation", svcAccount.Name)
 
 					// Add the zarf image pull secret to the sa
 					svcAccount.ImagePullSecrets = append(svcAccount.ImagePullSecrets, corev1.LocalObjectReference{

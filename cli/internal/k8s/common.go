@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"time"
@@ -35,51 +34,10 @@ type ImageSwap struct {
 	replace string
 }
 
-func init() {
-	klog.SetLogger(generateLogShim())
-}
-
-func getRestConfig() *rest.Config {
-	// use the KUBECONFIG context if it exists
-	configPath := os.Getenv("KUBECONFIG")
-	if configPath == "" {
-		// use the current context in the default kubeconfig in the home path of the user
-		homePath, err := os.UserHomeDir()
-		if err != nil {
-			message.Fatal(nil, "Unable to load the current user's home directory")
-		}
-		configPath = homePath + "/.kube/config"
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", configPath)
-	if err != nil {
-		message.Fatalf(err, "Unable to connect to the K8s cluster")
-	}
-	return config
-}
-
-func getClientset() *kubernetes.Clientset {
-	config := getRestConfig()
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		message.Fatal(err, "Unable to connect to the K8s cluster")
-	}
-
-	return clientset
-}
-
-// readFile just reads a file into a byte array.
-func readFile(file string) ([]byte, error) {
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		message.Debug(err)
-		return []byte{}, fmt.Errorf("cannot read file %v, %v", file, err)
-	}
-	return b, nil
-}
-
+// GetContext returns the current k8s context
 func GetContext() (string, error) {
+	message.Debug("k8s.GetContext()")
+
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{},
@@ -123,13 +81,6 @@ func ProcessYamlFilesInPath(path string, componentImages []string) []string {
 	return manifests
 }
 
-func generateLogShim() logr.Logger {
-	message.Debug("k8s.generateLogShim()")
-	return funcr.New(func(prefix, args string) {
-		message.Debug(args)
-	}, funcr.Options{})
-}
-
 // SplitYAML splits a YAML file into unstructured objects. Returns list of all unstructured objects
 // found in the yaml. If an error occurs, returns objects that have been parsed so far too.
 // Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L286
@@ -147,6 +98,97 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 		objs = append(objs, u)
 	}
 	return objs, nil
+}
+
+// WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
+func WaitForHealthyCluster(timeout time.Duration) error {
+	message.Debugf("package.WaitForHealthyCluster(%v)", timeout)
+
+	var err error
+	var nodes *corev1.NodeList
+	var pods *corev1.PodList
+	expired := time.After(timeout)
+
+	for {
+		// delay check 1 seconds
+		time.Sleep(1 * time.Second)
+		select {
+
+		// on timeout abort
+		case <-expired:
+			return errors.New("timed out waiting for cluster to report healthy")
+
+		// after delay, try running
+		default:
+			// Make sure there is at least one running Node
+			nodes, err = GetNodes()
+			if err != nil || len(nodes.Items) < 1 {
+				message.Debugf("No nodes reporting healthy yet: %v\n", err)
+				continue
+			}
+
+			// Get the cluster pod list
+			if pods, err = GetAllPods(); err != nil {
+				message.Debug(err)
+				continue
+			}
+
+			// Chec that at least one pod is in the 'succeeded' or 'running' state
+			for _, pod := range pods.Items {
+				// If a valid pod is found, return no error
+				if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
+					return nil
+				}
+			}
+
+			message.Debug("No pods reported 'succeeded' or 'running' state yet.")
+		}
+	}
+}
+
+func init() {
+	klog.SetLogger(generateLogShim())
+}
+
+func getRestConfig() *rest.Config {
+	message.Debug("k8s.getRestConfig()")
+
+	// use the KUBECONFIG context if it exists
+	configPath := os.Getenv("KUBECONFIG")
+	if configPath == "" {
+		// use the current context in the default kubeconfig in the home path of the user
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			message.Fatal(nil, "Unable to load the current user's home directory")
+		}
+		configPath = homePath + "/.kube/config"
+	}
+
+	config, err := clientcmd.BuildConfigFromFlags("", configPath)
+	if err != nil {
+		message.Fatalf(err, "Unable to connect to the K8s cluster")
+	}
+	return config
+}
+
+func getClientset() *kubernetes.Clientset {
+	message.Debug("k8s.getClientSet()")
+
+	config := getRestConfig()
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		message.Fatal(err, "Unable to connect to the K8s cluster")
+	}
+
+	return clientset
+}
+
+func generateLogShim() logr.Logger {
+	message.Debug("k8s.generateLogShim()")
+	return funcr.New(func(prefix, args string) {
+		message.Debug(args)
+	}, funcr.Options{})
 }
 
 // splitYAMLToString splits a YAML file into strings. Returns list of yamls
@@ -174,50 +216,4 @@ func splitYAMLToString(yamlData []byte) ([]string, error) {
 		objs = append(objs, string(ext.Raw))
 	}
 	return objs, nil
-}
-
-// Waits for cluster to have at least one Node and for all visible pods to be in a healthy state
-// Polls the cluster every 1 seconds for the provided duration
-func WaitForHealthyCluster(waitTimeSeconds int) error {
-	message.Debug("package.WaitForHealthyCluster()")
-
-	var err error
-	var nodes *corev1.NodeList
-	var pods *corev1.PodList
-	timeout := time.After(time.Duration(waitTimeSeconds) * time.Second)
-
-	// var nodes
-	for {
-		// delay check 1 seconds
-		time.Sleep(1 * time.Second)
-		select {
-
-		// on timeout abort
-		case <-timeout:
-			return errors.New("timed out waiting for cluster to report healthy")
-
-		// after delay, try running
-		default:
-			// Make sure there is at least one running Node
-			nodes, err = GetNodes()
-			if err != nil || len(nodes.Items) == 0 {
-				message.Debugf("No nodes reporting healthy yet: %v\n", err)
-				continue
-			}
-
-			// Make sure all the pods are in a healthy state
-			pods, err = GetAllPods()
-			if err != nil {
-				message.Debug(err)
-			}
-			// Make sure at the pods are in the 'succeeded' or 'running' state
-			for _, pod := range pods.Items {
-				if !(pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning) {
-					message.Debug("At least one pod is not in a 'succeeded' or 'running' state yet.")
-					continue
-				}
-			}
-			return nil
-		}
-	}
 }

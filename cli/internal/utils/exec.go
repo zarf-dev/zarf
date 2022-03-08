@@ -16,6 +16,7 @@ const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
+//nolint
 func ExecCommand(showLogs bool, envVariables []string, commandName string, args ...string) (string, error) {
 	if showLogs {
 		fmt.Println()

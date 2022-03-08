@@ -20,15 +20,6 @@ const (
 	ZarfStateDataKey    = "state"
 )
 
-// getZarfStateInterface returns a secret interface for the zarf namespace
-func getZarfStateInterface() v1.SecretInterface {
-	message.Debug("k8s.getZarfStateInterface()")
-	clientSet := getClientset()
-
-	// Get interface for all secrets in the zarf namespace
-	return clientSet.CoreV1().Secrets(ZarfNamespace)
-}
-
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState
 func LoadZarfState() types.ZarfState {
 	message.Debug("k8s.LoadZarfState()")
@@ -88,4 +79,13 @@ func SaveZarfState(state types.ZarfState) error {
 	}
 
 	return nil
+}
+
+// getZarfStateInterface returns a secret interface for the zarf namespace
+func getZarfStateInterface() v1.SecretInterface {
+	message.Debug("k8s.getZarfStateInterface()")
+	clientSet := getClientset()
+
+	// Get interface for all secrets in the zarf namespace
+	return clientSet.CoreV1().Secrets(ZarfNamespace)
 }

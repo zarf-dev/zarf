@@ -12,7 +12,7 @@ import (
 )
 
 // ReplaceConfigmap deletes and recreates a configmap
-func ReplaceConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func ReplaceConfigmap(namespace, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.ReplaceConfigmap(%s, %s, data)", namespace, name)
 
 	if err := DeleteConfigmap(namespace, name); err != nil {
@@ -23,7 +23,7 @@ func ReplaceConfigmap(namespace string, name string, labels map[string]string, d
 }
 
 // CreateConfigmap applys a configmap to the cluster
-func CreateConfigmap(namespace string, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func CreateConfigmap(namespace, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.CreateConfigmap(%s, %s, data)", namespace, name)
 	clientset := getClientset()
 
@@ -49,7 +49,7 @@ func CreateConfigmap(namespace string, name string, labels map[string]string, da
 }
 
 // DeleteConfigmap delets a confimap by name
-func DeleteConfigmap(namespace string, name string) error {
+func DeleteConfigmap(namespace, name string) error {
 	message.Debugf("k8s.DeleteConfigmap(%s, %s)", namespace, name)
 	clientSet := getClientset()
 

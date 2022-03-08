@@ -69,7 +69,7 @@ type Tunnel struct {
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
-func NewTunnel(namespace string, resourceType string, resourceName string, local int, remote int) *Tunnel {
+func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %v, %v)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
 		out:          ioutil.Discard,

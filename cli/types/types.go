@@ -1,6 +1,6 @@
 package types
 
-// ZarfFile defines a file to deploy
+// ZarfFile defines a file to deploy.
 type ZarfFile struct {
 	Source     string   `yaml:"source"`
 	Shasum     string   `yaml:"shasum,omitempty"`
@@ -9,7 +9,7 @@ type ZarfFile struct {
 	Symlinks   []string `yaml:"symlinks,omitempty"`
 }
 
-// ZarfChart defines a helm chart to be deployed
+// ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	Name        string   `yaml:"name"`
 	Url         string   `yaml:"url"`
@@ -19,7 +19,7 @@ type ZarfChart struct {
 	GitPath     string   `yaml:"gitPath,omitempty"`
 }
 
-// ZarfComponent is the primary functional grouping of assets to deploy by zarf
+// ZarfComponent is the primary functional grouping of assets to deploy by zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
 	Name string `yaml:"name"`

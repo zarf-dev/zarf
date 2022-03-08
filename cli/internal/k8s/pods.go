@@ -16,8 +16,10 @@ import (
 
 const waitLimit = 30
 
-func GeneratePod(name string, namespace string) *corev1.Pod {
+// GeneratePod creates a new pod without adding it to the k8s cluster
+func GeneratePod(name, namespace string) *corev1.Pod {
 	message.Debugf("k8s.GeneratePod(%s, %s)", name, namespace)
+
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -34,8 +36,10 @@ func GeneratePod(name string, namespace string) *corev1.Pod {
 	}
 }
 
+// DeletePod removees a pod from the cluster by namespace & name
 func DeletePod(namespace string, name string) error {
 	message.Debugf("k8s.DeletePod(%s, %s)", namespace, name)
+
 	clientset := getClientset()
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
@@ -57,6 +61,7 @@ func DeletePod(namespace string, name string) error {
 	}
 }
 
+// CreatePod inserts the given pod into the cluster
 func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	message.Debugf("k8s.CreatePod(%v)", pod)
 
@@ -66,11 +71,14 @@ func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	return clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
 }
 
+// GetAllPods returns a list of pods from the cluster for all namesapces
 func GetAllPods() (*corev1.PodList, error) {
 	return GetPods(corev1.NamespaceAll)
 }
 
+// GetPods returns a list of pods from the cluster by namespace
 func GetPods(namespace string) (*corev1.PodList, error) {
+	message.Debugf("k8s.GetPods(%s)", namespace)
 	clientset := getClientset()
 
 	metaOptions := metav1.ListOptions{}
@@ -79,6 +87,7 @@ func GetPods(namespace string) (*corev1.PodList, error) {
 
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
+	message.Debugf("k8s.WaitForPodsAndContainers(%v, %v)", target, waitForAllPods)
 
 	clientSet := getClientset()
 
