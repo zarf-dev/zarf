@@ -1,6 +1,8 @@
 package packager
 
 import (
+	"time"
+
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
@@ -17,20 +19,25 @@ func preSeedRegistry(tempPath tempPaths) {
 		err         error
 	)
 
-	if err := k8s.WaitForHealthyCluster(30); err != nil {
-		message.Fatal(err, "The cluster we are using never reported 'healthy'")
+	spinner := message.NewProgressSpinner("Gathering cluster information")
+	defer spinner.Stop()
+
+	if err := k8s.WaitForHealthyCluster(5 * time.Minute); err != nil {
+		spinner.Fatalf(err, "The cluster we are using never reported 'healthy'")
 	}
 
+	spinner.Updatef("Getting cluster architecture")
 	if clusterArch, err = k8s.GetArchitecture(); err != nil {
-		message.Errorf(err, "Unable to validate the cluster system architecture")
+		spinner.Errorf(err, "Unable to validate the cluster system architecture")
 	}
 
 	// Attempt to load an existing state prior to init
+	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state := k8s.LoadZarfState()
 
 	// If the state is invalid, assume this is a new cluster
 	if state.Secret == "" {
-		message.Debug("New cluster, no zarf state found")
+		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
 		if config.DeployOptions.ApplianceMode {
@@ -41,11 +48,13 @@ func preSeedRegistry(tempPath tempPaths) {
 			distro, err = k8s.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve
-				message.Fatal(err, "Unable to connect to the k8s cluster to verify the distro")
+				spinner.Fatalf(err, "Unable to connect to the cluster to verify the distro")
 			}
 		}
 
-		message.Debugf("Detected K8s distro %v", distro)
+		if distro != k8s.DistroIsUnknown {
+			spinner.Updatef("Detected K8s distro %v", distro)
+		}
 
 		// Defaults
 		state.Registry.NodePort = "31999"
@@ -55,7 +64,7 @@ func preSeedRegistry(tempPath tempPaths) {
 	}
 
 	if clusterArch != state.Architecture {
-		message.Fatalf(nil, "The current Zarf package architecture %s does not match the cluster architecture %s", state.Architecture, clusterArch)
+		spinner.Fatalf(nil, "The current Zarf package architecture %s does not match the cluster architecture %s", state.Architecture, clusterArch)
 	}
 
 	switch state.Distro {
@@ -69,6 +78,8 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.StorageClass = "hostpath"
 
 	}
+
+	spinner.Success()
 
 	if config.DeployOptions.ApplianceMode {
 		runK3sCLIInjection(tempPath)
