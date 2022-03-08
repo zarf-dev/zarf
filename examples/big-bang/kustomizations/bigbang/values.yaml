@@ -25,7 +25,7 @@ istio:
       kubernetesResourceSpec:
         resources:
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "256Mi"
           limits:
             cpu: "500m"
@@ -159,7 +159,7 @@ istio:
     istiod:
       resources:
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "512Mi"
         limits:
           cpu: "500m"
@@ -184,7 +184,7 @@ istiooperator:
           cpu: "200m"
           memory: "256Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "128Mi"
 
 jaeger:
@@ -205,7 +205,7 @@ jaeger:
           image: "###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/all-in-one:1.29.0"
           resources:
             requests:
-              cpu: "100m"
+              cpu: "50m"
               memory: "64Mi"
             limits:
               cpu: "200m"
@@ -220,7 +220,7 @@ jaeger:
           image: "###ZARF_REGISTRY###/ironbank/opensource/jaegertracing/jaeger-collector:1.29.0"
           resources:
             requests:
-              cpu: "100m"
+              cpu: "50m"
               memory: "64Mi"
             limits:
               cpu: "200m"
@@ -230,7 +230,7 @@ jaeger:
         cpu: "100m"
         memory: "128Mi"
       requests:
-        cpu: "100m"
+        cpu: "50m"
         memory: "64Mi"
 
 kiali:
@@ -242,7 +242,7 @@ kiali:
       repo: "###ZARF_REGISTRY###/ironbank/opensource/kiali/kiali-operator"
     resources:
       requests:
-        cpu: "100m"
+        cpu: "50m"
         memory: "256Mi"
       limits:
         cpu: "100m"
@@ -271,7 +271,7 @@ clusterAuditor:
       repo: "###ZARF_REGISTRY###/ironbank/bigbang/cluster-auditor/opa-exporter"
     resources:
       requests:
-        cpu: "100m"
+        cpu: "50m"
         memory: "150Mi"
       limits:
         cpu: "300m"
@@ -295,7 +295,7 @@ gatekeeper:
           cpu: "175m"
           memory: "512Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "256Mi"
     audit:
       resources:
@@ -303,7 +303,7 @@ gatekeeper:
           cpu: "500m"
           memory: "768Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "256Mi"
     bbtests:
       scripts:
@@ -347,7 +347,7 @@ logging:
       resources:
         requests:
           memory: "512Mi"
-          cpu: "100m"
+          cpu: "50m"
         limits:
           memory: "1Gi"
           cpu: "500m"
@@ -361,7 +361,7 @@ logging:
             cpu: "500m"
             memory: "3Gi"
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "1Gi"
       data:
         count: 1
@@ -370,7 +370,7 @@ logging:
             cpu: "500m"
             memory: "3Gi"
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "1Gi"
     upgradeJob:
       image:
@@ -391,7 +391,7 @@ eckoperator:
         cpu: "200m"
         memory: "256Mi"
       requests:
-        cpu: "100m"
+        cpu: "50m"
         memory: "128Mi"
     upgradeCrds:
       image:
@@ -409,7 +409,7 @@ fluentbit:
         cpu: "100m"
         memory: "128Mi"
       requests:
-        cpu: "100m"
+        cpu: "50m"
         memory: "64Mi"
     bbtests:
       scripts:
@@ -425,7 +425,7 @@ monitoring:
       resources:
         requests:
           memory: "128Mi"
-          cpu: "100m"
+          cpu: "50m"
         limits:
           memory: "256Mi"
           cpu: "100m"
@@ -448,7 +448,7 @@ monitoring:
           cpu: "100m"
           memory: "256Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "128Mi"
       testFramework:
         image: "###ZARF_REGISTRY###/ironbank/opensource/bats/bats"
@@ -460,7 +460,7 @@ monitoring:
             cpu: "100m"
             memory: "100Mi"
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "50Mi"
       downloadDashboardsImage:
         repository: "###ZARF_REGISTRY###/ironbank/big-bang/base"
@@ -480,7 +480,7 @@ monitoring:
           cpu: "100m"
           memory: "128Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "64Mi"
     prometheus-node-exporter:
       image:
@@ -490,7 +490,7 @@ monitoring:
           cpu: "200m"
           memory: "50Mi"
         requests:
-          cpu: "100m"
+          cpu: "50m"
           memory: "50Mi"
     prometheusOperator:
       admissionWebhooks:
@@ -528,7 +528,7 @@ monitoring:
           repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus-operator/prometheus-config-reloader"
         resources:
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "50Mi"
           limits:
             cpu: "100m"
@@ -546,7 +546,7 @@ monitoring:
             cpu: "300m"
             memory: "5Gi"
           requests:
-            cpu: "100m"
+            cpu: "50m"
             memory: "2Gi"
 
 twistlock:
@@ -563,7 +563,7 @@ twistlock:
         cpu: "250m"
       requests:
         memory: "256Mi"
-        cpu: "100m"
+        cpu: "50m"
     bbtests:
       scripts:
         image: "###ZARF_REGISTRY###/ironbank/stedolan/jq:1.6"
