@@ -133,7 +133,7 @@ func WaitForHealthyCluster(timeout time.Duration) error {
 				continue
 			}
 
-			// Chec that at least one pod is in the 'succeeded' or 'running' state
+			// Check that at least one pod is in the 'succeeded' or 'running' state
 			for _, pod := range pods.Items {
 				// If a valid pod is found, return no error
 				if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
