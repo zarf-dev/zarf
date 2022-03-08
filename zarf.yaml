@@ -25,7 +25,7 @@ components:
         - "systemctl daemon-reload"
         - "systemctl enable --now k3s"
         # Wait for the K3s node to come up
-        - "NODECOUNT=$(kubectl get nodes -o name | grep 'node/' | wc -l) && [ $NODECOUNT -gt 0 ]"
+        - "/usr/sbin/kubectl get nodes"
         # Make sure things are really ready in k8s
         - "/usr/sbin/kubectl wait --for=condition=available deployment/coredns -n kube-system"
     files:

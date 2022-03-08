@@ -2,13 +2,17 @@ package k8s
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
@@ -170,4 +174,50 @@ func splitYAMLToString(yamlData []byte) ([]string, error) {
 		objs = append(objs, string(ext.Raw))
 	}
 	return objs, nil
+}
+
+// Waits for cluster to have at least one Node and for all visible pods to be in a healthy state
+// Polls the cluster every 1 seconds for the provided duration
+func WaitForHealthyCluster(waitTimeSeconds int) error {
+	message.Debug("package.WaitForHealthyCluster()")
+
+	var err error
+	var nodes *corev1.NodeList
+	var pods *corev1.PodList
+	timeout := time.After(time.Duration(waitTimeSeconds) * time.Second)
+
+	// var nodes
+	for {
+		// delay check 1 seconds
+		time.Sleep(1 * time.Second)
+		select {
+
+		// on timeout abort
+		case <-timeout:
+			return errors.New("timed out waiting for cluster to report healthy")
+
+		// after delay, try running
+		default:
+			// Make sure there is at least one running Node
+			nodes, err = GetNodes()
+			if err != nil || len(nodes.Items) == 0 {
+				message.Debugf("No nodes reporting healthy yet: %v\n", err)
+				continue
+			}
+
+			// Make sure all the pods are in a healthy state
+			pods, err = GetAllPods()
+			if err != nil {
+				message.Debug(err)
+			}
+			// Make sure at the pods are in the 'succeeded' or 'running' state
+			for _, pod := range pods.Items {
+				if !(pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning) {
+					message.Debug("At least one pod is not in a 'succeeded' or 'running' state yet.")
+					continue
+				}
+			}
+			return nil
+		}
+	}
 }
