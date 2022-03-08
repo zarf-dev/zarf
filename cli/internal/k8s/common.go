@@ -3,14 +3,15 @@ package k8s
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-logr/logr"
 	"io"
 	"io/ioutil"
+	"os"
+	"regexp"
+
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	"os"
-	"regexp"
 
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/template"
@@ -18,6 +19,7 @@ import (
 	"github.com/go-logr/logr/funcr"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
@@ -34,13 +36,18 @@ func init() {
 }
 
 func getRestConfig() *rest.Config {
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		message.Fatal(nil, "Unable to load the current user's home directory")
+	// use the KUBECONFIG context if it exists
+	configPath := os.Getenv("KUBECONFIG")
+	if configPath == "" {
+		// use the current context in the default kubeconfig in the home path of the user
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			message.Fatal(nil, "Unable to load the current user's home directory")
+		}
+		configPath = homePath + "/.kube/config"
 	}
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", homePath+"/.kube/config")
+	config, err := clientcmd.BuildConfigFromFlags("", configPath)
 	if err != nil {
 		message.Fatalf(err, "Unable to connect to the K8s cluster")
 	}
