@@ -1,0 +1,21 @@
+name: e2e-k3s
+on:
+  - pull_request
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GoLang
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Build CLI
+        run: make build-cli-linux
+      - name: Make Packages
+        run: make init-package package-example-game package-example-data-injection package-example-gitops-data
+      - name: Run Tests
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed in a previous step
+        run: sudo env "PATH=$PATH" TESTDISTRO=k3s make test-e2e

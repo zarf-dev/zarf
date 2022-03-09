@@ -46,7 +46,7 @@ build-cli-linux: ## Build the Linux CLI
 build-cli-mac: ## Build the Mac CLI
 	cd cli && $(MAKE) build-mac
 
-build-cli: clean build-cli-linux build-cli-mac ## Build the CLI
+build-cli: build-cli-linux build-cli-mac ## Build the CLI
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm
@@ -78,25 +78,24 @@ package-example-gitops-data:
 package-example-tiny-kafka:
 	cd examples/tiny-kafka && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
-.PHONY: test-cloud-e2e-example-game
-test-cloud-e2e-example-game: ## Runs the Doom game as an E2E test in the cloud. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli`, `init-package`, and `package-example-game` targets first
-	cd test/e2e && go test ./... -run TestE2eExampleGame -v -timeout 1200s
+# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init.tar.zst`
+.PHONY: test-new-e2e
+test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
+	@ #Check to make sure all the packages we need exist
+	@if [ ! -f $(ZARF_BIN) ]; then\
+		$(MAKE) build-cli;\
+	fi
+	@if [ ! -f ./build/zarf-init.tar.zst ]; then\
+		$(MAKE) init-package;\
+	fi
+	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games.tar.zst ]; then\
+		$(MAKE) package-example-game;\
+	fi
+	@if [ ! -f ./build/zarf-package-data-injection-demo.tar ]; then\
+		$(MAKE) package-example-data-injection;\
+	fi
+	@if [ ! -f ./build/zarf-package-gitops-service-data.tar.zst ]; then\
+		$(MAKE) package-example-gitops-data;\
+	fi
 
-.PHONY: test-cloud-e2e-gitea-and-grafana
-test-cloud-e2e-gitea-and-grafana: ## E2E test of Gitea & Grafana. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
-	cd test/e2e && go test ./... -run TestGiteaAndGrafana -v -timeout 1200s
-
-.PHONY: test-cloud-e2e-gitops
-test-cloud-e2e-gitops: package-example-gitops-data ## E2E test of Gitops example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
-	cd test/e2e && go test ./... -run TestGitopsExample -v -timeout 1200s
-
-.PHONY: test-cloud-e2e-data-injection
-test-cloud-e2e-data-injection: package-example-data-injection ## E2E test of the Data Injection example. Requires access to an AWS account. Costs money. Make sure you ran the `build-cli` and `init-package` targets first
-	cd test/e2e && go test ./... -run TestDataInjection -v -timeout 1200s
-
-.PHONY: test-cloud-e2e-general-cli
-test-cloud-e2e-general-cli: package-example-tiny-kafka ## Runs tests of the CLI that don't need a cluster
-	cd test/e2e && go test ./... -run TestGeneralCli -v -timeout 1200s
-
-.PHONY: test-e2e
-test-e2e: package-example-game test-cloud-e2e-example-game ## DEPRECATED - to be replaced by individual e2e test targets
+	cd test/e2e && cp ../../build/zarf-init.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init.tar.zst
