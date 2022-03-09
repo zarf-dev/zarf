@@ -8,15 +8,16 @@ import (
 	"github.com/defenseunicorns/zarf/cli/types"
 )
 
-func GetComposedAssets() (components []types.ZarfComponent) {
+func GetComposedComponents() (components []types.ZarfComponent) {
 	for _, component := range config.GetComponents() {
-		// Build components list by expanding imported components.
-		if shouldAddImportedPackage(&component) {
+		// Check for standard component.
+		if !hasComposedPackage(&component) {
+			// Append standard component to list.
+			components = append(components, component)
+		} else if shouldComposePackage(&component) { // Validate and confirm inclusion of imported package.
+			// Expand and add components from imported package.
 			importedComponents := getSubPackageAssets(component)
 			components = append(components, importedComponents...)
-
-		} else if !hasSubPackage(&component) {
-			components = append(components, component)
 		}
 	}
 	// Update the parent package config with the expanded sub components.
@@ -25,39 +26,46 @@ func GetComposedAssets() (components []types.ZarfComponent) {
 	return components
 }
 
-// Get the sub package components to add to parent assets, recurses on sub imports.
-func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent) {
-	importedPackage := getSubPackage(&importComponent)
-	for _, componentToCompose := range importedPackage.Components {
-		if shouldAddImportedPackage(&componentToCompose) {
-			components = append(components, getSubPackageAssets(componentToCompose)...)
-		} else if !hasSubPackage(&componentToCompose) {
-			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
-			components = append(components, componentToCompose)
-		}
-	}
-	return components
+// Returns true if import field is populated.
+func hasComposedPackage(component *types.ZarfComponent) bool {
+	return component.Import != types.ZarfImport{}
 }
 
-// Confirms inclusion of SubPackage. Need team input.
-func shouldAddImportedPackage(component *types.ZarfComponent) bool {
-	return hasValidSubPackage(component) && (config.DeployOptions.Confirm || component.Required || ConfirmOptionalComponent(*component))
+// Validates and confirms inclusion of imported package.
+func shouldComposePackage(component *types.ZarfComponent) bool {
+	validateOrBail(component)
+	return componentConfirmedForInclusion(component)
 }
 
-// Validates the sub component, errors out if validation fails.
-func hasValidSubPackage(component *types.ZarfComponent) bool {
-	if !hasSubPackage(component) {
-		return false
-	}
+// Returns true if confirm flag is true, the component is required, or the user confirms inclusion.
+func componentConfirmedForInclusion(component *types.ZarfComponent) bool {
+	return config.DeployOptions.Confirm || component.Required || ConfirmOptionalComponent(*component)
+}
+
+// Validates the sub component, exits program if validation fails.
+func validateOrBail(component *types.ZarfComponent) {
 	if err := validate.ValidateImportPackage(component); err != nil {
 		message.Fatalf(err, "Invalid import definition in the %s component: %s", component.Name, err)
 	}
-	return true
 }
 
-// returns true if import field is populated
-func hasSubPackage(component *types.ZarfComponent) bool {
-	return component.Import != types.ZarfImport{}
+// Get expanded components from imported component.
+func getSubPackageAssets(importComponent types.ZarfComponent) (components []types.ZarfComponent) {
+	// Read the imported package.
+	importedPackage := getSubPackage(&importComponent)
+	// Iterate imported components.
+	for _, componentToCompose := range importedPackage.Components {
+		// Check for standard component.
+		if !hasComposedPackage(&componentToCompose) {
+			// Doctor standard component name and included files.
+			prepComponentToCompose(&componentToCompose, importedPackage.Metadata.Name, importComponent.Import.Path)
+			components = append(components, componentToCompose)
+		} else if shouldComposePackage(&componentToCompose) {
+			// Recurse on imported components.
+			components = append(components, getSubPackageAssets(componentToCompose)...)
+		}
+	}
+	return components
 }
 
 // Reads the locally imported zarf.yaml
@@ -68,35 +76,38 @@ func getSubPackage(component *types.ZarfComponent) (importedPackage types.ZarfPa
 
 // Updates the name and sets all local asset paths relative to the importing package.
 func prepComponentToCompose(component *types.ZarfComponent, parentPackageName string, importPath string) {
+	// Prefix component name with parent package name to distinguish similarly named components.
 	component.Name = parentPackageName + "-" + component.Name
 
-	// Add import path to local component files.
+	// Prefix composed component file paths.
 	for fileIdx, file := range component.Files {
-		if !utils.IsUrl(file.Source) {
-			component.Files[fileIdx].Source = importPath + file.Source
-		}
+		component.Files[fileIdx].Source = getComposedFilePath(file.Source, importPath)
 	}
 
-	// Add import path to local chart values files.
+	// Prefix non-url composed component chart values files.
 	for chartIdx, chart := range component.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			if !utils.IsUrl(valuesFile) {
-				component.Charts[chartIdx].ValuesFiles[valuesIdx] = importPath + valuesFile
-			}
+			component.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, importPath)
 		}
 	}
 
-	// Add import path to local manifest files and kustomizations
+	// Prefix non-url composed manifest files and kustomizations.
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, file := range manifest.Files {
-			if !utils.IsUrl(file) {
-				component.Manifests[manifestIdx].Files[fileIdx] = importPath + file
-			}
+			component.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, importPath)
 		}
 		for kustomIdx, kustomization := range manifest.Kustomizations {
-			if !utils.IsUrl(kustomization) {
-				component.Manifests[manifestIdx].Kustomizations[kustomIdx] = importPath + kustomization
-			}
+			component.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, importPath)
 		}
 	}
+}
+
+// Prefix file path with importPath if original file path is not a url.
+func getComposedFilePath(originalPath string, pathPrefix string) string {
+	// Return original if it is a remote file.
+	if utils.IsUrl(originalPath) {
+		return originalPath
+	}
+	// Add prefix for local files.
+	return pathPrefix + originalPath
 }
