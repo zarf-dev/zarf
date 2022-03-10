@@ -268,7 +268,9 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
 - All workloads are installed in the cluster via the [Helm SDK](https://helm.sh/docs/topics/advanced/#go-sdk)
 - The OCI Registries used are both from [Docker](https://github.com/distribution/distribution)
 - Currently the Registry and Git servers _are not HA_, see [#375](https://github.com/defenseunicorns/zarf/issues/376) and [#376](https://github.com/defenseunicorns/zarf/issues/376) for discussion on this
-- Zarf uses an injector custom injector sytstem, see [#329](https://github.com/defenseunicorns/zarf/pull/329) to bootstrap a new cluster:
+- In order to avoid TLS issues, Zarf binds to `127.0.0.1:319999` on each node as a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) to allow all nodes to access the pod(s) in the cluster
+- Until [#306](https://github.com/defenseunicorns/zarf/pull/306) is merged, during helm install/upgrade a [Helm PostRender](https://helm.sh/docs/topics/advanced/#post-rendering) function is called to mutate images and [ImagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) so the deployed resoures use the NodePort binding
+- Once [#329](https://github.com/defenseunicorns/zarf/pull/329) is merged, Zarf will use a new injector system to bootstrap a new cluster:
   - Get a list images in the cluster
   - Attempt to create an ephemeral pod using an image from the lsit
   - A small rust binary that is compiled using [musl](https://www.musl-libc.org/) to keep the size the max binary size of ~ 672 KBs is injected into the pod
@@ -276,5 +278,3 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
   - An init container runs the rust binary to reassabmle and extract the zarf binary and registry image
   - The container then starts and runs the zarf binary to host the registry image in an embedded docker registry
   - After this the main docker registry chart is deployed, pulls the image from the ephemeral pod and destroys the created configmaps, pod and service
-- In order to avoid TLS issues, Zarf binds to `127.0.0.1:319999` on each node as a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) to allow all nodes to access the pod(s) in the cluster
-- Until [#306](https://github.com/defenseunicorns/zarf/pull/306) is merged, during helm install/upgrade a [Helm PostRender](https://helm.sh/docs/topics/advanced/#post-rendering) function is called to mutate images and [ImagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) so the deployed resoures use the NodePort binding
