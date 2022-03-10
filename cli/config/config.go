@@ -116,6 +116,10 @@ func GetComponents() []types.ZarfComponent {
 	return config.Components
 }
 
+func SetComponents(components []types.ZarfComponent) {
+	config.Components = components
+}
+
 func GetBuildData() types.ZarfBuildData {
 	return config.Build
 }

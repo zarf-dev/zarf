@@ -2,8 +2,11 @@ package validate
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/utils"
 	"github.com/defenseunicorns/zarf/cli/types"
 )
 
@@ -79,5 +82,35 @@ func validateManifest(manifest types.ZarfManifest) error {
 		return fmt.Errorf("%s must have at least one file or kustomization", intro)
 	}
 
+	return nil
+}
+
+func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
+	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
+	path := composedComponent.Import.Path
+	packageSuffix := "zarf.yaml"
+
+	// ensure path exists
+	if !(len(path) > 0) {
+		return fmt.Errorf("%s must include a path", intro)
+	}
+
+	// remove zarf.yaml from path if path has zarf.yaml suffix
+	if strings.HasSuffix(path, packageSuffix) {
+		path = strings.Split(path, packageSuffix)[0]
+	}
+
+	// add a forward slash to end of path if it does not have one
+	if !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
+	// ensure there is a zarf.yaml in provided path
+	if utils.InvalidPath(path + packageSuffix) {
+		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
+	}
+
+	// replace component path with doctored path
+	composedComponent.Import.Path = path
 	return nil
 }

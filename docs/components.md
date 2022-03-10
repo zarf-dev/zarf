@@ -37,6 +37,17 @@ These optional components are listed below along with the "magic strings" you pa
 
 &nbsp;
 
+## Composing Package Components
+Existing components and packages within a zarf.yaml can be composed in new packages. This can be achieved by using the import field and providing a path the zarf.yaml you wish to compose. Checkout the  [composable-packages](../examples/composable-packages/zarf.yaml) example.
+```yaml
+components:
+  - name: flux
+    import: 
+     path: 'path/to/flux/package/directory/'
+```
+
+&nbsp;
+
 ## Further reading
 
 For more detail&mdash;like which components are on/off by default&mdash;there's no better place to check than the source: [zarf.yaml](../zarf.yaml).
