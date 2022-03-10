@@ -15,7 +15,7 @@ jobs:
       - name: Build CLI
         run: make build-cli-linux
       - name: Make Packages
-        run: make init-package package-example-game package-example-data-injection package-example-gitops-data
+        run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
       - name: Run Tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed in a previous step
         run: sudo env "PATH=$PATH" TESTDISTRO=k3s make test-e2e

@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: flux
+  description: "Zarf flux package."
+
+components:
+  - name: baseline
+    required: true
+    secretName: "private-registry"
+    manifests:
+      - name: flux-installer
+        # This will be built on the package create side and deployed as a regular manifest on package deploy
+        kustomizations:
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
+    images:
+      # Flux images
+      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
+      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
+      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
+      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
