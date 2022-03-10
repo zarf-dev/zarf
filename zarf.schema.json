@@ -119,6 +119,10 @@
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentScripts"
+        },
+        "import": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfImport"
         }
       },
       "additionalProperties": false,
@@ -208,6 +212,18 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfImport": {
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
