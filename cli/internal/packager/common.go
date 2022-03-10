@@ -110,19 +110,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 					}
 				}
 			} else {
-				// Present the users with the component details one more time
-				displayComponent := component
-				displayComponent.Description = ""
-				content, _ := yaml.Marshal(displayComponent)
-				utils.ColorPrintYAML(string(content))
-				message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
-
-				// Since no requested components were provided, prompt the user
-				prompt := &survey.Confirm{
-					Message: "Deploy this component?",
-					Default: component.Default,
-				}
-				_ = survey.AskOne(prompt, &confirmComponent)
+				confirmComponent = ConfirmOptionalComponent(component)
 			}
 		}
 
@@ -148,6 +136,23 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 	}
 
 	return validComponentsList
+}
+
+// Confirm optional component
+func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+	displayComponent := component
+	displayComponent.Description = ""
+	content, _ := yaml.Marshal(displayComponent)
+	utils.ColorPrintYAML(string(content))
+	message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
+
+	// Since no requested components were provided, prompt the user
+	prompt := &survey.Confirm{
+		Message: "Deploy this component?",
+		Default: component.Default,
+	}
+	_ = survey.AskOne(prompt, &confirmComponent)
+	return confirmComponent
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
