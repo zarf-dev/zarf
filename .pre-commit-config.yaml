@@ -39,3 +39,11 @@ repos:
         language: script
         pass_filenames: false
         description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.14.0
+    hooks:
+      - id: check-jsonschema
+        name: "Validate Zarf Schema"
+        files: "zarf.yaml"
+        types: [yaml]
+        args: ["--schemafile", "zarf.schema.json"]
