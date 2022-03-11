@@ -29,16 +29,10 @@ repos:
     rev: v0.4.0
     hooks:
       - id: go-fmt
-  ## Normally we wouldn't need to do a local hook but we need to modify the shell script that gets run to first change directories into the `cli` folder
-  - repo: local
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.4.0
     hooks:
-      - id: golangci-lint
-        name: golangci-lint
-        entry: hooks/run-golangci-lint.sh
-        types: [go]
-        language: script
-        pass_filenames: false
-        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
+      - id: go-lint
   - repo: local
     hooks:
       - id: generate-zarf-schema
