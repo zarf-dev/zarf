@@ -14,10 +14,8 @@ In order to create any workloads in K8s, an image has to exist on the node or be
 
 Because we cannot require third-party dependencies, the requirement from some cloud-managed or distro-managed registry is not an option as not every K8s cluster will have that available.  Running an in-memory registry while zarf is performing `zarf init` was initially explored as it would resolve the external dependency issue.  However, this solution proved to be too complex when dealing with network traversal (especially behind NATs), firewall and NACL rulesets.  Additionally, because of the complexities around TLS trust, the in-memory registry was not a viable solution.
 
-@todo: explain decision around the injector work
-
+After iterating on a number of solutions including `kubectl cp`, `kubectl exec`, a busybox configmap injection that brought in netcat to stream files and a few variations on those ideas, we found using only configmaps to be the most predictable method for injection.  The challenge wiht this mode is that the ETCD limit is 1 MB total, with binary data base64-encoded leaving roughtly 670 KBs of data per configmap, far too small to bring the registry tarball in a single configmap.  Instead we used a combination of a custom Rust binary compiled with MUSL to perform file conctenation, untarring and verification of a set of split tarball chunks across a variable number of configmaps.  We also found chunking by less than the near-maximum configmap size was more performant on some resource-constrained control planes. The details of this solution and a drawing are located in the main README of this repo.
 
 ## Consequences
 
-@todo: replace me
-What becomes easier or more difficult to do and any risks introduced by the change that will need to be mitigated.
+Because this mechanism uses only a standard Podspec and Configmap definition, there should be no problem running this on any generic K8s cluster.  However, the current implementation requires manually compiling the Rust binary and mini go binary for injection, these binaries are also currently committed to the git repo.  A future update should move this two compile actions to pipeline stages to eleminate stale binaries.  The other consideration is this does bring in a new language, even if it's only for a few dozen lines of code, it is a context swtich for the engineering team should an update need to be made in the future.
