@@ -38,6 +38,8 @@ const (
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
+
+	ZarfCleanupScriptsPath = "/opt/zarf"
 )
 
 var (
@@ -114,6 +116,10 @@ func GetMetaData() types.ZarfMetadata {
 
 func GetComponents() []types.ZarfComponent {
 	return config.Components
+}
+
+func SetComponents(components []types.ZarfComponent) {
+	config.Components = components
 }
 
 func GetBuildData() types.ZarfBuildData {

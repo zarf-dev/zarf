@@ -1,0 +1,15 @@
+registryCredentials:
+  - registry: "registry1.dso.mil"
+    username: "zarf-git-user"
+    password: "###ZARF_REGISTRY_AUTH_PULL###"
+  - registry: "docker.io"
+    username: "zarf-git-user"
+    password: "###ZARF_REGISTRY_AUTH_PULL###"
+  - registry: "registry.dso.mil"
+    username: "zarf-git-user"
+    password: "###ZARF_REGISTRY_AUTH_PULL###"
+
+flux:
+  interval: 1m
+  rollback:
+    cleanupOnFail: false

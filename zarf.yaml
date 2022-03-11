@@ -45,7 +45,7 @@ components:
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       # K3s removal script
       - source: assets/scripts/zarf-clean-k3s.sh
-        target: /usr/sbin/zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
         executable: true
       # The K3s systemd service definition
       - source: assets/scripts/k3s.service
