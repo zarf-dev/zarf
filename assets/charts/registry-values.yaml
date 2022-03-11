@@ -1,6 +1,7 @@
 persistence:
   enabled: true
   storageClass: "###ZARF_STORAGE_CLASS###"
+  size: 20Gi
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
 secrets:

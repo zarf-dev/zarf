@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// GetNodes returns a list of nodes from the k8s cluster.
 func GetNodes() (*corev1.NodeList, error) {
 	clientset := getClientset()
 

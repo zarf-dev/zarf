@@ -1,112 +1,46 @@
 package packager
 
 import (
-	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"github.com/defenseunicorns/zarf/cli/internal/message/tls"
-	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	"github.com/defenseunicorns/zarf/cli/internal/utils"
-	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/registry"
-	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"             // used for embedded registry
-	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem" // used for embedded registry
 )
-
-var stopSeedRegistry context.CancelFunc
-
-func startSeedRegistry(host string, readOnly bool) {
-	message.Debugf("packager.startSeedRegistry(%v)", readOnly)
-	useTLS := host != config.IPV4Localhost
-	registryConfig := &configuration.Configuration{}
-
-	if message.GetLogLevel() >= message.DebugLevel {
-		registryConfig.Log.Level = "debug"
-	} else {
-		registryConfig.Log.AccessLog.Disabled = true
-		registryConfig.Log.Formatter = "text"
-		registryConfig.Log.Level = "error"
-	}
-
-	registryConfig.HTTP.DrainTimeout = 5 * time.Second
-	registryConfig.HTTP.Secret = utils.RandomString(20)
-
-	if useTLS {
-		registryConfig.HTTP.TLS.Certificate = config.TLS.CertPublicPath
-		registryConfig.HTTP.TLS.Key = config.TLS.CertPrivatePath
-	}
-
-	fileStorage := configuration.Parameters{
-		"rootdirectory": ".zarf-registry",
-	}
-
-	if readOnly {
-		if useTLS {
-			// Bind to any if using tls
-			registryConfig.HTTP.Addr = ":" + config.ZarfSeedPort
-		} else {
-			// otherwise, force localhost
-			registryConfig.HTTP.Addr = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedPort)
-		}
-		registryConfig.Storage = configuration.Storage{
-			"filesystem": fileStorage,
-			"maintenance": configuration.Parameters{
-				"readonly": map[interface{}]interface{}{
-					"enabled": true,
-				},
-			},
-		}
-	} else {
-		// Read-write only listen on localhost
-		registryConfig.HTTP.Addr = config.ZarfLocalSeedRegistry
-		registryConfig.Storage = configuration.Storage{
-			"filesystem": fileStorage,
-		}
-	}
-
-	ctx, done := context.WithCancel(context.Background())
-
-	embeddedRegistry, err := registry.NewRegistry(ctx, registryConfig)
-	if err != nil {
-		message.Fatal(err, "Unable to start the embedded registry")
-	}
-
-	//go func() {
-	if err := embeddedRegistry.ListenAndServe(); err != nil {
-		message.Fatal(err, "Unable to start the embedded registry")
-	}
-	//}()
-
-	stopSeedRegistry = done
-}
 
 func preSeedRegistry(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%v)", tempPath)
 
 	var (
-		distro string
-		err    error
-		inject struct {
-			command string
-			args    []string
-		}
+		clusterArch string
+		distro      string
+		err         error
 	)
 
+	spinner := message.NewProgressSpinner("Gathering cluster information")
+	defer spinner.Stop()
+
+	if err := k8s.WaitForHealthyCluster(5 * time.Minute); err != nil {
+		spinner.Fatalf(err, "The cluster we are using never reported 'healthy'")
+	}
+
+	spinner.Updatef("Getting cluster architecture")
+	if clusterArch, err = k8s.GetArchitecture(); err != nil {
+		spinner.Errorf(err, "Unable to validate the cluster system architecture")
+	}
+
 	// Attempt to load an existing state prior to init
+	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state := k8s.LoadZarfState()
 
-	if state.Secret == "" || state.Distro == k8s.DistroIsUnknown {
-		// If the state is invalid, assume this is a new cluster
-		message.Debug("New cluster, no zarf state found")
+	// If the state is invalid, assume this is a new cluster
+	if state.Secret == "" {
+		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
+		// If the K3s component is being deployed, skip distro detection
 		if config.DeployOptions.ApplianceMode {
-			// If the K3s component is being deployed, skip distro detection
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -114,99 +48,40 @@ func preSeedRegistry(tempPath tempPaths) {
 			distro, err = k8s.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve
-				message.Fatal(err, "Unable to connect to the k8s cluster to verify the distro")
+				spinner.Fatalf(err, "Unable to connect to the cluster to verify the distro")
 			}
 		}
 
-		message.Debugf("Detected K8s distro %v", distro)
+		if distro != k8s.DistroIsUnknown {
+			spinner.Updatef("Detected K8s distro %v", distro)
+		}
 
 		// Defaults
 		state.Registry.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
-		state.Architecture = config.GetBuildData().Architecture
+		state.Architecture = config.GetArch()
+	}
+
+	if clusterArch != state.Architecture {
+		spinner.Fatalf(nil, "The current Zarf package architecture %s does not match the cluster architecture %s", state.Architecture, clusterArch)
 	}
 
 	switch state.Distro {
-	case k8s.DistroIsK3s:
+	case k8s.DistroIsK3s, k8s.DistroIsK3d:
 		state.StorageClass = "local-path"
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "k3s"
-		inject.args = []string{"ctr", "images", "import", tempPath.seedImages}
 
-	case k8s.DistroIsK3d:
-		state.StorageClass = "local-path"
-		clusterName := getClusterName("k3d")
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "k3d"
-		inject.args = []string{"images", "import", tempPath.seedImages, "--cluster", clusterName}
-
-	case k8s.DistroIsKind:
+	case k8s.DistroIsKind, k8s.DistroIsGKE:
 		state.StorageClass = "standard"
-		// See https://github.com/kubernetes-sigs/kind/blob/v0.11.1/pkg/cluster/internal/kubeconfig/internal/kubeconfig/helpers.go#L24
-		clusterName := getClusterName("kind")
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "kind"
-		inject.args = []string{"load", "image-archive", tempPath.seedImages, "--name", clusterName}
 
 	case k8s.DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "docker"
-		inject.args = []string{"load", "-i", tempPath.seedImages}
 
-	case k8s.DistroIsMicroK8s:
-		state.Registry.SeedType = config.ZarfSeedTypeCLIInject
-		inject.command = "microk8s"
-		inject.args = []string{"ctr", "images", "import", tempPath.seedImages}
-
-	default:
-		state.Registry.SeedType = config.ZarfSeedTypeRuntimeRegistry
 	}
 
-	switch state.Registry.SeedType {
-	case config.ZarfSeedTypeCLIInject:
-		var (
-			output  string
-			spinner = message.NewProgressSpinner("Injecting Zarf registry image using %s", inject.command)
-		)
-		defer spinner.Stop()
+	spinner.Success()
 
-		// If this is a seed image injection, attempt to run it and warn if there is an error
-		output, err = utils.ExecCommand(false, nil, inject.command, inject.args...)
-		message.Debug(output)
-		if err != nil {
-			spinner.Errorf(err, "Unable to inject the seed image from the %s archive", tempPath.seedImages)
-			spinner.Stop()
-		} else {
-			spinner.Success()
-		}
-
-		// Set TLS host so that the seed template isn't broken
-		config.TLS.Host = config.IPV4Localhost
-
-	case config.ZarfSeedTypeRuntimeRegistry:
-		// Otherwise, start embedded registry read/write (only on localhost)
-		startSeedRegistry(config.IPV4Localhost, false)
-
-		// Populate the seed registry
-		images.PushToZarfRegistry(tempPath.seedImages, config.GetSeedImages(), config.ZarfLocalSeedRegistry)
-
-		// Close this registry now
-		stopSeedRegistry()
-
-		if config.TLS.Host == "" {
-			// Get user to choose/enter host info for the read-only seed registry
-			tls.HandleTLSOptions(config.DeployOptions.Confirm)
-			pki.HandlePKI()
-		}
-
-		// Start the registry again read-only now
-		startSeedRegistry(config.TLS.Host, true)
-
-	default:
-		message.Fatalf(nil, "Unknown seed registry status")
-	}
+	runInjectionMadness(tempPath)
 
 	// Save the state back to K8s
 	if err := k8s.SaveZarfState(state); err != nil {
@@ -226,22 +101,16 @@ func preSeedRegistry(tempPath tempPaths) {
 func postSeedRegistry(tempPath tempPaths) {
 	message.Debug("packager.postSeedRegistry(%v)", tempPath)
 
-	if stopSeedRegistry != nil {
-		// Close the seed registry, no longer needed
-		stopSeedRegistry()
-	}
+	// Try to kill the injector pod now
+	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+
+	// Remove the configmaps
+	labelMatch := map[string]string{"zarf-injector": "payload"}
+	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+
+	// Remove the injector service
+	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
 
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImages, config.GetSeedImages(), config.ZarfRegistry)
-}
-
-func getClusterName(prefix string) string {
-	message.Debugf("packager.getClusterName(%v)", prefix)
-
-	if ctx, err := k8s.GetContext(); err != nil {
-		message.Error(err, "Unable to auto-inject the registry image into KIND")
-		return ""
-	} else {
-		return strings.Replace(ctx, prefix+"-", "", 1)
-	}
+	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
 }

@@ -2,19 +2,92 @@ package k8s
 
 import (
 	"context"
-	"github.com/defenseunicorns/zarf/cli/types"
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/types"
+
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const waitLimit = 30
 
+// GeneratePod creates a new pod without adding it to the k8s cluster
+func GeneratePod(name, namespace string) *corev1.Pod {
+	message.Debugf("k8s.GeneratePod(%s, %s)", name, namespace)
+
+	return &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				// track the creation of this ns by zarf
+				config.ZarfManagedByLabel: "zarf",
+			},
+		},
+	}
+}
+
+// DeletePod removees a pod from the cluster by namespace & name
+func DeletePod(namespace string, name string) error {
+	message.Debugf("k8s.DeletePod(%s, %s)", namespace, name)
+
+	clientset := getClientset()
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	err := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		// Keep checking for the pod to be deleted
+		_, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// CreatePod inserts the given pod into the cluster
+func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
+	message.Debugf("k8s.CreatePod(%v)", pod)
+
+	clientset := getClientset()
+
+	createOptions := metav1.CreateOptions{}
+	return clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
+}
+
+// GetAllPods returns a list of pods from the cluster for all namesapces
+func GetAllPods() (*corev1.PodList, error) {
+	return GetPods(corev1.NamespaceAll)
+}
+
+// GetPods returns a list of pods from the cluster by namespace
+func GetPods(namespace string) (*corev1.PodList, error) {
+	message.Debugf("k8s.GetPods(%s)", namespace)
+	clientset := getClientset()
+
+	metaOptions := metav1.ListOptions{}
+	return clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
+}
+
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
+	message.Debugf("k8s.WaitForPodsAndContainers(%v, %v)", target, waitForAllPods)
 
 	clientSet := getClientset()
 

@@ -16,7 +16,6 @@ type testSuite struct {
 
 var (
 	e2e         ZarfE2ETest
-	static      string
 	distroTests = map[string]testSuite{
 		"k3d": {
 			standard:         true,
@@ -78,6 +77,7 @@ func TestMain(m *testing.M) {
 
 			// Setup the cluster
 			err := testSuiteFunctions.setupFunction()
+			// nolint
 			defer testSuiteFunctions.tearDownFunction()
 			if err != nil {
 				fmt.Printf("Unable to setup %s environment to run the e2e test because of err: %v\n", distroName, err)

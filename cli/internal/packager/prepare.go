@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -17,15 +16,12 @@ import (
 	"github.com/defenseunicorns/zarf/cli/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type ImageMap map[string]bool
-
-var matchedImages ImageMap
-var maybeImages ImageMap
+var matchedImages k8s.ImageMap
+var maybeImages k8s.ImageMap
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
 func FindImages(repoHelmChartPath string) {
@@ -42,8 +38,8 @@ func FindImages(repoHelmChartPath string) {
 	for _, component := range components {
 
 		// matchedImages holds the collection of images, reset per-component
-		matchedImages = make(ImageMap)
-		maybeImages = make(ImageMap)
+		matchedImages = make(k8s.ImageMap)
+		maybeImages = make(k8s.ImageMap)
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -161,7 +157,7 @@ func FindImages(repoHelmChartPath string) {
 			}
 		}
 
-		if sortedImages := listImages(matchedImages, nil); len(sortedImages) > 0 {
+		if sortedImages := k8s.SortImages(matchedImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
 			fmt.Printf("      # %s - %s\n", config.GetMetaData().Name, component.Name)
 			for _, image := range sortedImages {
@@ -171,10 +167,10 @@ func FindImages(repoHelmChartPath string) {
 		}
 
 		// Handle the "maybes"
-		if sortedImages := listImages(maybeImages, matchedImages); len(sortedImages) > 0 {
+		if sortedImages := k8s.SortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
 			var realImages []string
 			for _, image := range sortedImages {
-				if descriptor, err := crane.Head(image, config.ActiveCranePlatform); err != nil {
+				if descriptor, err := crane.Head(image, config.GetCraneOptions()); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					message.Debugf("Suspected image does not appear to be valid: %w", err)
 				} else {
@@ -194,18 +190,6 @@ func FindImages(repoHelmChartPath string) {
 	}
 }
 
-func listImages(images ImageMap, compareWith ImageMap) []string {
-	sortedImages := sort.StringSlice{}
-	for image := range images {
-		if !compareWith[image] || compareWith == nil {
-			// Check compareWith, if it exists only add if not in that list
-			sortedImages = append(sortedImages, image)
-		}
-	}
-	sort.Sort(sortedImages)
-	return sortedImages
-}
-
 func processUnstructured(resource *unstructured.Unstructured) error {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-./]+:[\w][\w.\-]{0,127})"`)
@@ -223,28 +207,28 @@ func processUnstructured(resource *unstructured.Unstructured) error {
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
 			return fmt.Errorf("could not parse deployment: %w", err)
 		}
-		processPod(deployment.Spec.Template.Spec)
+		matchedImages = k8s.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
 
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
 			return fmt.Errorf("could not parse daemonset: %w", err)
 		}
-		processPod(daemonSet.Spec.Template.Spec)
+		matchedImages = k8s.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
 			return fmt.Errorf("could not parse statefulset: %w", err)
 		}
-		processPod(statefulSet.Spec.Template.Spec)
+		matchedImages = k8s.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
 			return fmt.Errorf("could not parse replicaset: %w", err)
 		}
-		processPod(replicaSet.Spec.Template.Spec)
+		matchedImages = k8s.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 
 	default:
 		// Capture any custom images
@@ -262,17 +246,4 @@ func processUnstructured(resource *unstructured.Unstructured) error {
 		maybeImages[group[1]] = true
 	}
 	return nil
-}
-
-// processPod looks for init container, ephemeral and regular container images
-func processPod(pod corev1.PodSpec) {
-	for _, container := range pod.InitContainers {
-		matchedImages[container.Image] = true
-	}
-	for _, container := range pod.Containers {
-		matchedImages[container.Image] = true
-	}
-	for _, container := range pod.EphemeralContainers {
-		matchedImages[container.Image] = true
-	}
 }
