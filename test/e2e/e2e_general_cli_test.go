@@ -19,7 +19,7 @@ func TestGeneralCLI(t *testing.T) {
 	testfile, _ := os.Create(shasumTestFilePath)
 	cmd := exec.Command("echo", "random test data 🦄")
 	cmd.Stdout = testfile
-	cmd.Run()
+	_ = cmd.Run()
 	e2e.filesToRemove = append(e2e.filesToRemove, shasumTestFilePath)
 
 	output, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
