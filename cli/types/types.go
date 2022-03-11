@@ -54,8 +54,8 @@ type ZarfComponent struct {
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
 
-	// Import refers to another zarf.yaml package.
-	Import ZarfImport `yaml:"import,omitempty"`
+	// Import refers to another zarf.yaml package component.
+	Import ZarfComponentImport `yaml:"import,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
@@ -145,7 +145,8 @@ type ZarfDeployOptions struct {
 	ApplianceMode bool
 }
 
-// ZarfImport structure for including imported zarf packages
-type ZarfImport struct {
-	Path string `yaml:"path"`
+// ZarfImport structure for including imported zarf components
+type ZarfComponentImport struct {
+	ComponentName string `yaml:"componentName"`
+	Path          string `yaml:"path"`
 }

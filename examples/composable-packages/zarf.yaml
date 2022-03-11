@@ -6,5 +6,6 @@ metadata:
 components:
   - name: games
     required: true
-    import: 
+    import:
      path: '../game/'
+     componentName: "baseline"
