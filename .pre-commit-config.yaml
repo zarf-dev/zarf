@@ -39,11 +39,20 @@ repos:
         language: script
         pass_filenames: false
         description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
+  - repo: local
+    hooks:
+      - id: generate-zarf-schema
+        name: Check for outdated Zarf schema
+        entry: hooks/verify-zarf-schema.sh
+        files: "cli/types/types.go"
+        types: [go]
+        language: script
+        description: "Runs `zarf tools config-schema > zarf.schema.json` to ensure schema is up to date"
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
       - id: check-jsonschema
-        name: "Validate Zarf Schema"
+        name: "Validate Zarf Configs Against Schema"
         files: "zarf.yaml"
         types: [yaml]
         args: ["--schemafile", "zarf.schema.json"]
