@@ -1,4 +1,4 @@
-# 2. Image injection into remote clusters without native support
+# 3. Image injection into remote clusters without native support
 
 Date: 2022-03-04
 
