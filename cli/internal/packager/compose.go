@@ -1,6 +1,8 @@
 package packager
 
 import (
+	"strings"
+
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	"github.com/defenseunicorns/zarf/cli/internal/packager/validate"
@@ -99,5 +101,31 @@ func getComposedFilePath(originalPath string, pathPrefix string) string {
 		return originalPath
 	}
 	// Add prefix for local files.
-	return pathPrefix + originalPath
+	return fixRelativePathBacktracking(pathPrefix + originalPath)
+}
+
+func fixRelativePathBacktracking(path string) string {
+	var newPathBuilder []string
+	var hitRealPath = false // We might need to go back several directories at the begining
+
+	// Turn paths like `../../this/is/a/very/../silly/../path` into `../../this/is/a/path`
+	splitString := strings.Split(path, "/")
+	for _, dir := range splitString {
+		if dir == ".." {
+			if hitRealPath {
+				// Instead of going back a directory, just don't get here in the first place
+				newPathBuilder = newPathBuilder[:len(newPathBuilder)-1]
+			} else {
+				// We are still going back directories for the first time, keep going back
+				newPathBuilder = append(newPathBuilder, dir)
+			}
+		} else {
+			// This is a regular directory we want to travel through
+			hitRealPath = true
+			newPathBuilder = append(newPathBuilder, dir)
+		}
+	}
+
+	// NOTE: This assumes a relative path
+	return strings.Join(newPathBuilder, "/")
 }
