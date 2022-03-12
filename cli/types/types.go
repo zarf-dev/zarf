@@ -139,15 +139,15 @@ type TLSConfig struct {
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment
 type ZarfDeployOptions struct {
-	PackagePath   string
-	Confirm       bool
-	Components    string
+	PackagePath string
+	Confirm     bool
+	Components  string
 	// Zarf init is installing the k3s component
 	ApplianceMode bool
 }
 
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
-	ComponentName string `yaml:"componentName"`
+	ComponentName string `yaml:"name,omitempty"`
 	Path          string `yaml:"path"`
 }

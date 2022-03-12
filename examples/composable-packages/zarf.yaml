@@ -7,5 +7,6 @@ components:
   - name: games
     required: true
     import:
-     path: '../game/'
-     componentName: "baseline"
+      path: ../game
+      # Example optional custom name to point to in the imported package
+      name: baseline

@@ -43,8 +43,15 @@ func getSubPackageAssets(importComponent types.ZarfComponent) (component types.Z
 	// Read the imported package.
 	importedPackage := getSubPackage(&importComponent)
 
+	componentName := importComponent.Import.ComponentName
+	// Default to the component name if a custom one was not provided
+	if componentName == "" {
+		componentName = importComponent.Name
+	}
+
+	// Loop over package components looking for a match the componentName
 	for _, componentToCompose := range importedPackage.Components {
-		if componentToCompose.Name == importComponent.Import.ComponentName {
+		if componentToCompose.Name == componentName {
 			return *prepComponentToCompose(&componentToCompose, importComponent)
 		}
 	}
