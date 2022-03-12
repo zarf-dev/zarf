@@ -1,6 +1,6 @@
 package types
 
-// ZarfFile defines a file to deploy
+// ZarfFile defines a file to deploy.
 type ZarfFile struct {
 	Source     string   `yaml:"source"`
 	Shasum     string   `yaml:"shasum,omitempty"`
@@ -9,7 +9,7 @@ type ZarfFile struct {
 	Symlinks   []string `yaml:"symlinks,omitempty"`
 }
 
-// ZarfChart defines a helm chart to be deployed
+// ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	Name        string   `yaml:"name"`
 	Url         string   `yaml:"url"`
@@ -19,7 +19,7 @@ type ZarfChart struct {
 	GitPath     string   `yaml:"gitPath,omitempty"`
 }
 
-// ZarfComponent is the primary functional grouping of assets to deploy by zarf
+// ZarfComponent is the primary functional grouping of assets to deploy by zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
 	Name string `yaml:"name"`
@@ -53,6 +53,9 @@ type ZarfComponent struct {
 
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
+
+	// Import refers to another zarf.yaml package.
+	Import ZarfImport `yaml:"import,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
@@ -111,7 +114,7 @@ type ZarfPackage struct {
 	Build      ZarfBuildData   `yaml:"build,omitempty"`
 	Data       []ZarfData      `yaml:"data,omitempty"`
 	Components []ZarfComponent `yaml:"components,omitempty"`
-	Seed       []string        `yaml:"seed,omitempty"`
+	Seed       string          `yaml:"seed,omitempty"`
 }
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data
@@ -139,5 +142,11 @@ type ZarfDeployOptions struct {
 	PackagePath   string
 	Confirm       bool
 	Components    string
+	// Zarf init is installing the k3s component
 	ApplianceMode bool
+}
+
+// ZarfImport structure for including imported zarf packages
+type ZarfImport struct {
+	Path string `yaml:"path"`
 }

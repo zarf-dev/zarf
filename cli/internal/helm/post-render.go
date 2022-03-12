@@ -19,8 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const managedByLabel = "app.kubernetes.io/managed-by"
-
 var secretName = "zarf-registry"
 
 type renderer struct {
@@ -104,13 +102,13 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
 					message.Errorf(err, "could not parse namespace %s", rawData.GetName())
 				} else {
-					message.Debugf("Matched helm namespace %s for zarf annotation", &namespace.Name)
+					message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
 					if namespace.Labels == nil {
 						// Ensure label map exists to avoid nil panic
 						namespace.Labels = make(map[string]string)
 					}
 					// Now track this namespace by zarf
-					namespace.Labels[managedByLabel] = "zarf"
+					namespace.Labels[config.ZarfManagedByLabel] = "zarf"
 					namespace.Labels["zarf-helm-release"] = r.options.ReleaseName
 
 					// Add it to the stack
@@ -118,6 +116,26 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				}
 				// skip so we can strip namespaces from helms brain
 				continue
+
+			case "ServiceAccount":
+				var svcAccount corev1.ServiceAccount
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &svcAccount); err != nil {
+					message.Errorf(err, "could not parse service account %s", rawData.GetName())
+				} else {
+					message.Debugf("Matched helm svc account %s for zarf annotation", svcAccount.Name)
+
+					// Add the zarf image pull secret to the sa
+					svcAccount.ImagePullSecrets = append(svcAccount.ImagePullSecrets, corev1.LocalObjectReference{
+						Name: secretName,
+					})
+
+					if byteData, err := yaml.Marshal(svcAccount); err != nil {
+						message.Error(err, "unable to marshal svc account")
+					} else {
+						// Update the contents of the svc account
+						resource.Content = string(byteData)
+					}
+				}
 
 			case "Service":
 				// Check service resources for the zarf-connect label
@@ -185,4 +203,36 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	// Send the bytes back to helm
 	return finalManifestsOutput, nil
+}
+
+func updateDefaultSvcAccount(namespace string) error {
+
+	// Get the default service account from the provided namespace
+	defaultSvcAccount, err := k8s.GetServiceAccount(namespace, corev1.NamespaceDefault)
+	if err != nil {
+		return fmt.Errorf("unable to get service accounts for namespace %s", namespace)
+	}
+
+	// Look to see if the service account needs to be patched
+	if defaultSvcAccount.Labels[config.ZarfManagedByLabel] != "zarf" {
+		// This service account needs the pull secret added
+		defaultSvcAccount.ImagePullSecrets = append(defaultSvcAccount.ImagePullSecrets, corev1.LocalObjectReference{
+			Name: secretName,
+		})
+
+		if defaultSvcAccount.Labels == nil {
+			// Ensure label map exists to avoid nil panic
+			defaultSvcAccount.Labels = make(map[string]string)
+		}
+
+		// Track this by zarf
+		defaultSvcAccount.Labels[config.ZarfManagedByLabel] = "zarf"
+
+		// Finally update the chnage on the server
+		if _, err := k8s.SaveServiceAccount(defaultSvcAccount); err != nil {
+			return fmt.Errorf("unable to update the default service account for the %s namespace: %w", defaultSvcAccount.Namespace, err)
+		}
+	}
+
+	return nil
 }

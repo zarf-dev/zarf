@@ -31,12 +31,11 @@ func Create() {
 	defer tempPath.clean()
 
 	packageName := config.GetPackageName()
+	components := GetComposedComponents()
 	dataInjections := config.GetDataInjections()
-	seedImages := config.GetSeedImages()
-	components := config.GetComponents()
-	configFile := tempPath.base + "/zarf.yaml"
+	seedImage := config.GetSeedImage()
 
-	config.SetAcrch()
+	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
@@ -50,9 +49,9 @@ func Create() {
 		os.Exit(0)
 	}
 
-	if len(seedImages) > 0 {
+	if seedImage != "" {
 		// Load seed images into their own happy little tarball for ease of import on init
-		images.PullAll(seedImages, tempPath.seedImages)
+		images.PullAll([]string{seedImage}, tempPath.seedImage)
 	}
 
 	var combinedImageList []string
@@ -71,6 +70,10 @@ func Create() {
 	if config.IsZarfInitConfig() {
 		// Override the package name for init packages
 		packageName = config.PackageInitName
+
+		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
+		utils.CreatePathAndCopy("injector/zarf-registry", tempPath.injectZarfBinary)
+		utils.CreatePathAndCopy("injector/zarf-injector", tempPath.injectBinary)
 	} else {
 		// Init packages do not use data or utilityCluster keys
 		if len(dataInjections) > 0 {

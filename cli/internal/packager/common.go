@@ -31,21 +31,26 @@ type componentPaths struct {
 	manifests string
 }
 type tempPaths struct {
-	base           string
-	seedImages     string
-	images         string
-	dataInjections string
-	components     string
+	base             string
+	injectZarfBinary string
+	injectBinary     string
+	seedImage        string
+	images           string
+	dataInjections   string
+	components       string
 }
 
 func createPaths() tempPaths {
 	basePath, _ := utils.MakeTempDir()
 	return tempPaths{
-		base:           basePath,
-		seedImages:     basePath + "/seed-images.tar",
-		images:         basePath + "/images.tar",
-		dataInjections: basePath + "/data",
-		components:     basePath + "/components",
+		base: basePath,
+
+		injectZarfBinary: basePath + "/zarf-registry",
+		injectBinary:     basePath + "/zarf-injector",
+		seedImage:        basePath + "/seed-image.tar",
+		images:           basePath + "/images.tar",
+		dataInjections:   basePath + "/data",
+		components:       basePath + "/components",
 	}
 }
 
@@ -110,19 +115,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 					}
 				}
 			} else {
-				// Present the users with the component details one more time
-				displayComponent := component
-				displayComponent.Description = ""
-				content, _ := yaml.Marshal(displayComponent)
-				utils.ColorPrintYAML(string(content))
-				message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
-
-				// Since no requested components were provided, prompt the user
-				prompt := &survey.Confirm{
-					Message: "Deploy this component?",
-					Default: component.Default,
-				}
-				_ = survey.AskOne(prompt, &confirmComponent)
+				confirmComponent = ConfirmOptionalComponent(component)
 			}
 		}
 
@@ -148,6 +141,23 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 	}
 
 	return validComponentsList
+}
+
+// Confirm optional component
+func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+	displayComponent := component
+	displayComponent.Description = ""
+	content, _ := yaml.Marshal(displayComponent)
+	utils.ColorPrintYAML(string(content))
+	message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
+
+	// Since no requested components were provided, prompt the user
+	prompt := &survey.Confirm{
+		Message: "Deploy this component?",
+		Default: component.Default,
+	}
+	_ = survey.AskOne(prompt, &confirmComponent)
+	return confirmComponent
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -230,7 +240,6 @@ func loopScriptUntilSuccess(script string, retry bool) {
 	for {
 		scriptEnvVars := []string{
 			"ZARF_REGISTRY=" + config.ZarfRegistry,
-			"ZARF_SEED_REGISTRY=" + config.ZarfLocalSeedRegistry,
 		}
 		// Try to silently run the script
 		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)

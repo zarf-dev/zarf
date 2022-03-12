@@ -56,7 +56,7 @@ vm-destroy: ## Cleanup plz
 	@vagrant destroy -f
 
 .PHONY: package-examples
-package-examples: package-example-big-bang package-example-software-factory package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator ## Create zarf packages from all examples
+package-examples: package-example-big-bang package-example-software-factory package-example-data-injection package-example-game package-example-gitops-data package-example-single-big-bang-package package-example-tiny-kafka package-example-postgres-operator package-example-composability ## Create zarf packages from all examples
 
 .PHONY: package-example-big-bang
 package-example-big-bang: ## Create the Big Bang Core example
@@ -101,3 +101,7 @@ package-example-tiny-kafka: ## Create the Tiny Kafka example
 .PHONY: package-example-postgres-operator
 package-example-postgres-operator: ## Create the Postgres Operator example
 	cd postgres-operator && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/
+
+.PHONY: package-example-composability
+package-example-composability: ## Create the Composable example
+	cd composable-packages && $(ZARF_BIN) package create --confirm && mv zarf-package-* ../sync/

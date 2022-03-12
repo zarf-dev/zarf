@@ -11,12 +11,15 @@ import (
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
+
+var configCaImport bool
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -32,7 +35,7 @@ var archiverCmd = &cobra.Command{
 }
 
 var archiverCompressCmd = &cobra.Command{
-	Use:     "compress SOURCES ARCHIVE",
+	Use:     "compress [SOURCES] [ARCHIVE]",
 	Aliases: []string{"c"},
 	Short:   "Compress a collection of sources based off of the destination file extension",
 	Args:    cobra.MinimumNArgs(2),
@@ -46,7 +49,7 @@ var archiverCompressCmd = &cobra.Command{
 }
 
 var archiverDecompressCmd = &cobra.Command{
-	Use:     "decompress ARCHIVE DESTINATION",
+	Use:     "decompress [ARCHIVE] [DESTINATION]",
 	Aliases: []string{"d"},
 	Short:   "Decompress an archive to a specified location.",
 	Args:    cobra.ExactArgs(2),
@@ -70,7 +73,7 @@ var readCredsCmd = &cobra.Command{
 	Short: "Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		state := k8s.LoadZarfState()
-		if state.Distro == k8s.DistroIsUnknown {
+		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
 		}
@@ -96,6 +99,15 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
+var trustCACmd = &cobra.Command{
+	Use:     "trust-root-ca [CAFILEPATH]",
+	Aliases: []string{"t"},
+	Short:   "Import the given root cert into the running operating systems certificate store (Linux only)",
+	Run: func(cmd *cobra.Command, args []string) {
+		pki.AddCAToTrustStore(os.Args[0])
+	},
+}
+
 var k9sCmd = &cobra.Command{
 	Use:     "monitor",
 	Aliases: []string{"m", "k9s"},
@@ -115,18 +127,17 @@ func init() {
 	toolsCmd.AddCommand(configSchemaCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
+	toolsCmd.AddCommand(trustCACmd)
+
+	trustCACmd.Flags().BoolVar(&configCaImport, "confirm", false, "Confirm the installation of t")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	// Ensure the arch is set to avoid crane nil pointer
-	config.SetAcrch()
-
-	cranePlatformOptions := []crane.Option{config.ActiveCranePlatform}
+	cranePlatformOptions := []crane.Option{config.GetCraneOptions()}
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
-
 }
