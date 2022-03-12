@@ -20,7 +20,10 @@ func GetComposedComponents() (components []types.ZarfComponent) {
 			validateOrBail(&component)
 
 			// Expand and add components from imported package.
-			importedComponent := getSubPackageAssets(component)
+			importedComponent := getImportedComponent(component)
+			// Merge in parent component changes.
+			mergeComponentOverrides(&importedComponent, component)
+			// Add to the list of components for the package.
 			components = append(components, importedComponent)
 		}
 	}
@@ -38,8 +41,23 @@ func validateOrBail(component *types.ZarfComponent) {
 	}
 }
 
+// Sets Name, Default, Required, Description and SecretName to the original components values
+func mergeComponentOverrides(target *types.ZarfComponent, src types.ZarfComponent) {
+	target.Name = src.Name
+	target.Default = src.Default
+	target.Required = src.Required
+
+	if src.Description != "" {
+		target.Description = src.Description
+	}
+
+	if src.SecretName != "" {
+		target.SecretName = src.SecretName
+	}
+}
+
 // Get expanded components from imported component.
-func getSubPackageAssets(importComponent types.ZarfComponent) (component types.ZarfComponent) {
+func getImportedComponent(importComponent types.ZarfComponent) (component types.ZarfComponent) {
 	// Read the imported package.
 	importedPackage := getSubPackage(&importComponent)
 
@@ -66,39 +84,37 @@ func getSubPackage(component *types.ZarfComponent) (importedPackage types.ZarfPa
 }
 
 // Updates the name and sets all local asset paths relative to the importing component.
-func prepComponentToCompose(componentToCompose *types.ZarfComponent, importComponent types.ZarfComponent) *types.ZarfComponent {
+func prepComponentToCompose(child *types.ZarfComponent, parent types.ZarfComponent) *types.ZarfComponent {
 
-	if componentToCompose.Import.Path != "" {
+	if child.Import.Path != "" {
 		// The component we are trying to compose is a composed component itself!
-		nestedComponent := getSubPackageAssets(*componentToCompose)
-		componentToCompose = prepComponentToCompose(&nestedComponent, *componentToCompose)
+		nestedComponent := getImportedComponent(*child)
+		child = prepComponentToCompose(&nestedComponent, *child)
 	}
 
-	componentToCompose.Name = importComponent.Name
-
 	// Prefix composed component file paths.
-	for fileIdx, file := range componentToCompose.Files {
-		componentToCompose.Files[fileIdx].Source = getComposedFilePath(file.Source, importComponent.Import.Path)
+	for fileIdx, file := range child.Files {
+		child.Files[fileIdx].Source = getComposedFilePath(file.Source, parent.Import.Path)
 	}
 
 	// Prefix non-url composed component chart values files.
-	for chartIdx, chart := range componentToCompose.Charts {
+	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			componentToCompose.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, importComponent.Import.Path)
+			child.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, parent.Import.Path)
 		}
 	}
 
 	// Prefix non-url composed manifest files and kustomizations.
-	for manifestIdx, manifest := range componentToCompose.Manifests {
+	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			componentToCompose.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, importComponent.Import.Path)
+			child.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, parent.Import.Path)
 		}
 		for kustomIdx, kustomization := range manifest.Kustomizations {
-			componentToCompose.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, importComponent.Import.Path)
+			child.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, parent.Import.Path)
 		}
 	}
 
-	return componentToCompose
+	return child
 }
 
 // Prefix file path with importPath if original file path is not a url.
