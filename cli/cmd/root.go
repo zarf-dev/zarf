@@ -21,11 +21,12 @@ var rootCmd = &cobra.Command{
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
 		}
-		config.CliArch = arch
 	},
-	Short: "Small tool to bundle dependencies with K3s for air-gaped deployments",
+	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		config.CliArch = arch
+
 		if len(args) > 0 {
 			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
 				config.DeployOptions.PackagePath = args[0]
@@ -50,7 +51,7 @@ func init() {
 	originalHelp := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
 		// Don't show the zarf logo constantly
-		zarfLogo := getLogo()
+		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 		// Re-add the original help function
 		originalHelp(c, s)

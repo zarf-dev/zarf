@@ -54,6 +54,7 @@ func makeLabels(labels map[string]string) string {
 // Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
 type Tunnel struct {
 	out          io.Writer
+	autoOpen     bool
 	localPort    int
 	remotePort   int
 	namespace    string
@@ -62,12 +63,13 @@ type Tunnel struct {
 	urlSuffix    string
 	stopChan     chan struct{}
 	readyChan    chan struct{}
+	spinner      *message.Spinner
 }
 
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
-func NewTunnel(namespace string, resourceType string, resourceName string, local int, remote int) *Tunnel {
+func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %v, %v)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
 		out:          ioutil.Discard,
@@ -83,6 +85,14 @@ func NewTunnel(namespace string, resourceType string, resourceName string, local
 
 func NewZarfTunnel() *Tunnel {
 	return NewTunnel(ZarfNamespace, SvcResource, "", 0, 0)
+}
+
+func (tunnel *Tunnel) EnableAutoOpen() {
+	tunnel.autoOpen = true
+}
+
+func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
+	tunnel.spinner = spinner
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
@@ -115,18 +125,20 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
+	// On error abort
 	if url, err := tunnel.Establish(); err != nil {
-		// On error abbort
 		message.Fatal(err, "Unable to establish the tunnel")
 	} else if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
-		switch runtime.GOOS {
-		case "linux":
-			_ = exec.Command("xdg-open", url).Start()
-		case "windows":
-			_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-		case "darwin":
-			_ = exec.Command("open", url).Start()
+		if tunnel.autoOpen {
+			switch runtime.GOOS {
+			case "linux":
+				_ = exec.Command("xdg-open", url).Start()
+			case "windows":
+				_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+			case "darwin":
+				_ = exec.Command("open", url).Start()
+			}
 		}
 
 		// Since this blocking, set the defer now so it closes properly on sigterm
@@ -188,14 +200,24 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 // Establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
 func (tunnel *Tunnel) Establish() (string, error) {
 	message.Debug("tunnel.Establish()")
-	spinner := message.NewProgressSpinner("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
+
+	var spinner *message.Spinner
+
+	spinnerMessage := fmt.Sprintf("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
 		tunnel.resourceType,
 		tunnel.resourceName,
 		tunnel.namespace,
 		tunnel.localPort,
 		tunnel.remotePort,
 	)
-	defer spinner.Stop()
+
+	if tunnel.spinner != nil {
+		spinner = tunnel.spinner
+		spinner.Updatef(spinnerMessage)
+	} else {
+		spinner = message.NewProgressSpinner(spinnerMessage)
+		defer spinner.Stop()
+	}
 
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource()
@@ -262,11 +284,18 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	// Wait for an error or the tunnel to be ready
 	select {
 	case err = <-errChan:
-		spinner.Stop()
+		if tunnel.spinner == nil {
+			spinner.Stop()
+		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
 		url := fmt.Sprintf("http://%s:%v%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
-		spinner.Successf("Creating port forwarding tunnel available at %s", url)
+		msg := fmt.Sprintf("Creating port forwarding tunnel available at %s", url)
+		if tunnel.spinner == nil {
+			spinner.Successf(msg)
+		} else {
+			spinner.Updatef(msg)
+		}
 		return url, nil
 	}
 }

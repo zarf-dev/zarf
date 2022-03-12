@@ -7,7 +7,7 @@ import (
 )
 
 func Copy(src string, dest string) {
-	if err := crane.Copy(src, dest, config.ActiveCranePlatform); err != nil {
+	if err := crane.Copy(src, dest, config.GetCraneOptions()); err != nil {
 		message.Fatal(err, "Unable to copy the image")
 	}
 }

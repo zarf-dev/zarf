@@ -2,9 +2,9 @@ kind: ZarfInitConfig
 metadata:
   name: Zarf Official Init Package
   description: "Used to establish a new Zarf cluster"
+  architecture: amd64
 
-seed:
-  - library/registry:2.7.1
+seed: library/registry:2.7.1
 
 components:
   - name: k3s
@@ -24,10 +24,6 @@ components:
         # Configure K3s systemd service
         - "systemctl daemon-reload"
         - "systemctl enable --now k3s"
-        # Wait for the K3s node to come up
-        - "/usr/sbin/kubectl get nodes"
-        # Make sure things are really ready in k8s
-        - "/usr/sbin/kubectl wait --for=condition=available deployment/coredns -n kube-system"
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
@@ -45,7 +41,7 @@ components:
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       # K3s removal script
       - source: assets/scripts/zarf-clean-k3s.sh
-        target: /usr/sbin/zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
         executable: true
       # The K3s systemd service definition
       - source: assets/scripts/k3s.service
@@ -72,7 +68,7 @@ components:
   - name: container-registry
     required: true
     manifests:
-      - name: kep-1775-registry-annotation
+      - name: kep-1755-registry-annotation
         files:
           - assets/manifests/registry/configmap.yaml
     charts:

@@ -27,71 +27,76 @@ const (
 	ZarfGitPushUser        = "zarf-git-user"
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
-	ZarfSeedPort           = "45000"
 	ZarfRegistry           = IPV4Localhost + ":45001"
-	ZarfLocalSeedRegistry  = IPV4Localhost + ":" + ZarfSeedPort
 
 	ZarfSeedTypeCLIInject         = "cli-inject"
-	ZarfSeedTypeRuntimeRegistry   = "runtime-registry"
 	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
+
+	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
+	ZarfCleanupScriptsPath = "/opt/zarf"
 )
 
 var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
 
-	// TLS options used for cert creation
-	TLS types.TLSConfig
-
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
-	ActiveCranePlatform crane.Option
-
 	CliArch string
 
+	ZarfSeedPort string
+
 	// Private vars
-	config types.ZarfPackage
+	active types.ZarfPackage
 	state  types.ZarfState
 )
 
 func IsZarfInitConfig() bool {
 	message.Debug("config.IsZarfInitConfig")
-	return strings.ToLower(config.Kind) == "zarfinitconfig"
+	return strings.ToLower(active.Kind) == "zarfinitconfig"
 }
 
-func SetAcrch() {
-	var arch string
-	if CliArch == "" {
-		// If not cli override for arch, set to the package arch
-		arch = config.Metadata.Architecture
-
-		if arch == "" {
-			// Finally, default to current system arch when all else fails
-			arch = runtime.GOARCH
-		}
-	} else {
-		arch = CliArch
+func GetArch() string {
+	// If CLI-orverriden then reflect that
+	if CliArch != "" {
+		return CliArch
 	}
 
-	message.Debugf("config.SetArch(%s)", arch)
-	config.Build.Architecture = arch
-	// Use the arch to define the image push/pull options for crane
-	ActiveCranePlatform = crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
+	if active.Metadata.Architecture != "" {
+		return active.Metadata.Architecture
+	}
+
+	if active.Build.Architecture != "" {
+		return active.Build.Architecture
+	}
+
+	return runtime.GOARCH
 }
 
-// GetSeedImages returns a list of image strings specified in the package, but only for init packages
-func GetSeedImages() []string {
-	message.Debugf("config.GetSeedImages()")
+func GetCraneOptions() crane.Option {
+	return crane.WithPlatform(&v1.Platform{
+		OS:           "linux",
+		Architecture: GetArch(),
+	})
+}
+
+func GetSeedRegistry() string {
+	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
+}
+
+// GetSeedImage returns a list of image strings specified in the package, but only for init packages
+func GetSeedImage() string {
+	message.Debugf("config.GetSeedImage()")
 	// Only allow seed images for init config
 	if IsZarfInitConfig() {
-		return config.Seed
+		return active.Seed
 	} else {
-		return []string{}
+		return ""
 	}
 }
 
@@ -105,23 +110,23 @@ func GetPackageName() string {
 }
 
 func GetDataInjections() []types.ZarfData {
-	return config.Data
+	return active.Data
 }
 
 func GetMetaData() types.ZarfMetadata {
-	return config.Metadata
+	return active.Metadata
 }
 
 func GetComponents() []types.ZarfComponent {
-	return config.Components
+	return active.Components
 }
 
 func SetComponents(components []types.ZarfComponent) {
-	config.Components = components
+	active.Components = components
 }
 
 func GetBuildData() types.ZarfBuildData {
-	return config.Build
+	return active.Build
 }
 
 func GetValidPackageExtensions() [3]string {
@@ -142,16 +147,8 @@ func GetRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
 }
 
-func GetSeedRegistry() string {
-	if state.Registry.SeedType == ZarfSeedTypeCLIInject {
-		return "docker.io"
-	} else {
-		return fmt.Sprintf("%s:%s", TLS.Host, ZarfSeedPort)
-	}
-}
-
 func LoadConfig(path string) error {
-	return utils.ReadYaml(path, &config)
+	return utils.ReadYaml(path, &active)
 }
 
 func BuildConfig(path string) error {
@@ -160,21 +157,28 @@ func BuildConfig(path string) error {
 	currentUser, userErr := user.Current()
 	hostname, hostErr := os.Hostname()
 
+	// Need to ensure the arch is updated if injected
+	arch := GetArch()
+
+	// normalize these for the package confirmation
+	active.Metadata.Architecture = arch
+	active.Build.Architecture = arch
+
 	// Record the time of package creation
-	config.Build.Timestamp = now.Format(time.RFC1123Z)
+	active.Build.Timestamp = now.Format(time.RFC1123Z)
 
 	// Record the Zarf Version the CLI was built with
-	config.Build.Version = CLIVersion
+	active.Build.Version = CLIVersion
 
 	if hostErr == nil {
 		// Record the hostname of the package creation terminal
-		config.Build.Terminal = hostname
+		active.Build.Terminal = hostname
 	}
 
 	if userErr == nil {
 		// Record the name of the user creating the package
-		config.Build.User = currentUser.Username
+		active.Build.User = currentUser.Username
 	}
 
-	return utils.WriteYaml(path, config, 0400)
+	return utils.WriteYaml(path, active, 0400)
 }

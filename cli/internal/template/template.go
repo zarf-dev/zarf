@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+
 	"github.com/defenseunicorns/zarf/cli/types"
 
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -11,8 +12,8 @@ import (
 
 type Values struct {
 	state        types.ZarfState
-	registry     string
 	seedRegistry string
+	registry     string
 	secret       struct {
 		htpasswd       string
 		registryPush   string
@@ -38,8 +39,8 @@ func Generate() Values {
 	}
 	generated.secret.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 
-	generated.registry = config.GetRegistry()
 	generated.seedRegistry = config.GetSeedRegistry()
+	generated.registry = config.GetRegistry()
 
 	generated.secret.registryPush = config.GetSecret(config.StateRegistryPush)
 	generated.secret.registryPull = config.GetSecret(config.StateRegistryPull)
