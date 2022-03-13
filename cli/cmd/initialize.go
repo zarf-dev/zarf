@@ -22,7 +22,7 @@ var initCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
 		// Continue running package deploy for all components like any other package
-		config.DeployOptions.PackagePath = config.PackageInitName
+		config.DeployOptions.PackagePath = fmt.Sprintf("zarf-init-%s.tar.zst", config.GetArch())
 
 		// Run everything
 		packager.Deploy()

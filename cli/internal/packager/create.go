@@ -68,9 +68,6 @@ func Create() {
 	}
 
 	if config.IsZarfInitConfig() {
-		// Override the package name for init packages
-		packageName = config.PackageInitName
-
 		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
 		utils.CreatePathAndCopy("injector/zarf-registry", tempPath.injectZarfBinary)
 		utils.CreatePathAndCopy("injector/zarf-injector", tempPath.injectBinary)
