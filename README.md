@@ -10,13 +10,11 @@ Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims t
 
 [![asciicast](https://asciinema.org/a/475530.svg)](https://asciinema.org/a/475530)
 
-&nbsp;
 ## Why is Zarf Needed?
 Most of the software ecosystem assumes your systems have access to the internet. The world (for good reasons) has become more and more dependent upon Software as a Service (SaaS), which assumes a robust connection to the internet and a willingness to inherently trust 3rd party providers. Although this makes sense for most of the world, there are certain SECURE systems that must operate either fully disconnected, semi-disconnected, or might need the ability to disconnect in case of emergencies (like while under an active cyber attack). Although only a small percentage of systems, these SECURE systems make up some of the most vital systems in the world, such as Aerospace and Defense, Finance, Healthcare, Energy, Water, Sewage, and many Federal, Local, and State Government systems.  
 
 These SECURE systems need a way to continuously and securely deliver software too. Zarf exists to make it easy for open-source, commercial, and organic software solutions to be delivered to secure and disconnected systems. Although such systems might be small in number, they represent many of the most important systems in the world.  
 
-&nbsp;
 ## Explain Zarf Like I'm Ten(ish)
 
 Zarf allows you to bundle portions of "the internet" into a single package to be installed later following specific instructions. A Zarf package is really just a single file that includes everything you would need to manage a system or capability while fully disconnected. Think of a disconnected system as a system that always is or sometimes is on airplane mode.
@@ -27,7 +25,6 @@ Such packages also become highly distributable, as they can now run on edge, emb
 
 Zarf makes DevSecOps for air gap possible. 
 
-&nbsp;
 <!--
 ##########
 # This block is about LEARNING TO USE Zarf
@@ -83,9 +80,6 @@ Zarf makes DevSecOps for air gap possible.
 <!-- row end -->
 </tbody>
 </table>
-
-&nbsp;
-
 
 <!--
 ##########
@@ -268,9 +262,9 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
 - All workloads are installed in the cluster via the [Helm SDK](https://helm.sh/docs/topics/advanced/#go-sdk)
 - The OCI Registries used are both from [Docker](https://github.com/distribution/distribution)
 - Currently the Registry and Git servers _are not HA_, see [#375](https://github.com/defenseunicorns/zarf/issues/376) and [#376](https://github.com/defenseunicorns/zarf/issues/376) for discussion on this
-- In order to avoid TLS issues, Zarf binds to `127.0.0.1:319999` on each node as a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) to allow all nodes to access the pod(s) in the cluster
+- In order to avoid TLS issues, Zarf binds to `127.0.0.1:31999` on each node as a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) to allow all nodes to access the pod(s) in the cluster
 - Until [#306](https://github.com/defenseunicorns/zarf/pull/306) is merged, during helm install/upgrade a [Helm PostRender](https://helm.sh/docs/topics/advanced/#post-rendering) function is called to mutate images and [ImagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) so the deployed resoures use the NodePort binding
-- Once [#329](https://github.com/defenseunicorns/zarf/pull/329) is merged, Zarf will use a new injector system to bootstrap a new cluster:
+- Zarf uses a custom injector system to bootstrap a new cluster.  See the PR [#329](https://github.com/defenseunicorns/zarf/pull/329) and [ADR](docs/adr/0003-image-injection-into-remote-clusters-without-native-support.md) for more details on how we came to this solution.  The general steps are listed below:
   - Get a list images in the cluster
   - Attempt to create an ephemeral pod using an image from the lsit
   - A small rust binary that is compiled using [musl](https://www.musl-libc.org/) to keep the size the max binary size of ~ 672 KBs is injected into the pod
@@ -278,3 +272,10 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
   - An init container runs the rust binary to reassabmle and extract the zarf binary and registry image
   - The container then starts and runs the zarf binary to host the registry image in an embedded docker registry
   - After this the main docker registry chart is deployed, pulls the image from the ephemeral pod and destroys the created configmaps, pod and service
+
+&nbsp;
+### Zarf Architecture
+![Architecture Diagram](./docs/architecture.drawio.svg)
+
+
+[Source DrawIO](docs/architecture.drawio.svg)

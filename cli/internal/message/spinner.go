@@ -70,6 +70,6 @@ func (p *Spinner) Errorf(err error, format string, a ...interface{}) {
 
 func (p *Spinner) Fatalf(err error, format string, a ...interface{}) {
 	p.spinner.RemoveWhenDone = true
-	p.spinner.Stop()
+	_ = p.spinner.Stop()
 	Fatalf(err, format, a...)
 }

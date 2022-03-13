@@ -1,2 +1,4 @@
+persistence:
+  enabled: false
 image:
   repository: "###ZARF_SEED_REGISTRY###/library/registry"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +34,7 @@ func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespac
 				Name: name,
 				Labels: map[string]string{
 					// track the creation of this ns by zarf
-					"app.kubernetes.io/managed-by": "zarf",
+					config.ZarfManagedByLabel: "zarf",
 				},
 			},
 		}
@@ -64,7 +65,8 @@ func DeleteZarfNamespace() {
 	_, _ = clientset.CoreV1().Namespaces().Finalize(context.TODO(), namespace, metav1.UpdateOptions{})
 
 	// Attempt to delete the namespace
-	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{})
+	gracePeriod := int64(0)
+	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
 	if err != nil && !errors.IsNotFound(err) {
 		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
 	}
