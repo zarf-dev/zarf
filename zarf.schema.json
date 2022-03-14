@@ -122,7 +122,22 @@
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfImport"
+          "$ref": "#/definitions/ZarfComponentImport"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentImport": {
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -212,18 +227,6 @@
             "type": "string"
           },
           "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "ZarfImport": {
-      "required": [
-        "path"
-      ],
-      "properties": {
-        "path": {
-          "type": "string"
         }
       },
       "additionalProperties": false,
