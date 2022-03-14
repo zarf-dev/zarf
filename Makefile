@@ -83,14 +83,14 @@ package-example-tiny-kafka:
 package-example-compose:
 	cd examples/composable-packages && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
-# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init.tar.zst`
+# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-amd64.tar.zst`
 .PHONY: test-new-e2e
 test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
 	@ #Check to make sure all the packages we need exist
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\
 	fi
-	@if [ ! -f ./build/zarf-init.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-init-amd64.tar.zst ]; then\
 		$(MAKE) init-package;\
 	fi
 	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games.tar.zst ]; then\
@@ -105,4 +105,4 @@ test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be
 	@if [ ! -f ./build/zarf-package-compose-example.tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init.tar.zst
+	cd test/e2e && cp ../../build/zarf-init-amd64.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init-amd64.tar.zst

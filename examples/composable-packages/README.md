@@ -64,7 +64,7 @@ kind create cluster
 This will result in a single-node Kubernetes cluster called `kind-kind` on your local machine running in Docker. Your KUBECONFIG should be automatically configured to talk to the new cluster.
 
 ```sh
-cd <same dir as zarf-init.tar.zst>
+cd <same dir as zarf-init-amd64.tar.zst or zarf-init-arm64.tar.zst>
 zarf init
 ```
 
@@ -78,13 +78,13 @@ Congratulations!  Your machine is now running a single-node Kubernetes cluster p
 
 **Troubleshooting:**
 
-> _**ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst**_
+> _**ERROR:  Unable to find the package on the local system, expected package at zarf-init-amd64.tar.zst or zarf-init-arm64.tar.zst**_
 >
 > The zarf binary needs an init package to know how to setup your cluster! So, if `zarf init` returns an error like this:
 > ```sh
-> ERROR:  Unable to find the package on the local system, expected package at zarf-init.tar.zst
+> ERROR:  Unable to find the package on the local system, expected package at zarf-init-amd64.tar.zst or zarf-init-arm64.tar.zst
 > ```
-> It's likely you've either forgotten to download `zarf-init.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
+> It's likely you've either forgotten to download `zarf-init-amd64.tar.zst` or `zarf-init-arm64.tar.zst` (as part of [getting ready](#get-ready)) _**OR**_ you are _not_ running `zarf init` from the directory the init package is sitting in.
 
 > _**ERROR: failed to create cluster: node(s) already exist for a cluster with the name "kind"**_
 >
