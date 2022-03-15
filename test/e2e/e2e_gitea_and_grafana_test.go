@@ -9,6 +9,7 @@ import (
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--components=gitops-service,logging", "--confirm")
@@ -31,6 +32,4 @@ func TestGiteaAndGrafana(t *testing.T) {
 	resp, err = http.Get("http://127.0.0.1:45002/monitor/login")
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
-
-	e2e.cleanupAfterTest(t)
 }
