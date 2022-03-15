@@ -18,9 +18,6 @@ func TestE2eExampleComposability(t *testing.T) {
 	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-compose-example.tar.zst", "--confirm")
 	require.NoError(t, err, output)
 
-	// Validate that the composed sub packages exist
-	require.Contains(t, output, "appliance-demo-multi-games-baseline")
-
 	// Establish the port-forward into the game service
 	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333")
 	require.NoError(t, err, "unable to connect to the doom port-forward")
