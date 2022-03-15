@@ -85,7 +85,7 @@ package-example-tiny-kafka:
 package-example-compose:
 	cd examples/composable-packages && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
-# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-amd64.tar.zst`
+# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-new-e2e
 test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
 	@ #Check to make sure all the packages we need exist

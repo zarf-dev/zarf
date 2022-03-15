@@ -16,7 +16,7 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
 1. Download:
 
-    - The zarf cluster initialization package: `zarf-init-amd64.tar.zst` or `zarf-init-arm64.tar.zst`.
+    - The zarf cluster initialization package: `zarf-init-<arch>.tar.zst`.
 
     - The appropriate zarf binary for your system (choose _one_):
 
