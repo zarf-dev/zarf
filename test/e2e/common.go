@@ -25,6 +25,7 @@ import (
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
 
+// ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
 	zarfBinPath string
 
@@ -91,7 +92,7 @@ func (e2e *ZarfE2ETest) setUpKind() error {
 
 	// Set up a KinD cluster if necessary
 	e2e.provider = cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
-	nodes, err := e2e.provider.ListNodes(e2e.clusterName)
+	nodes, _ := e2e.provider.ListNodes(e2e.clusterName)
 	if len(nodes) == 0 {
 		err = e2e.provider.Create(
 			e2e.clusterName,
@@ -273,7 +274,7 @@ func (e2e *ZarfE2ETest) checkIfClusterRunning() bool {
 
 func (e2e *ZarfE2ETest) waitForHealthyCluster() error {
 	attempt := 0
-	for attempt < 10 {
+	for attempt < 15 {
 		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
 		if err == nil && len(pods.Items) >= 0 {
 			allPodsHealthy := true

@@ -9,6 +9,7 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
@@ -40,6 +41,4 @@ func TestDataInjection(t *testing.T) {
 	}
 	assert.NoError(t, err)
 	assert.Contains(t, execStdOut, "this-is-an-example-file.txt")
-
-	e2e.cleanupAfterTest(t)
 }
