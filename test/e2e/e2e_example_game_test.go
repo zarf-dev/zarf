@@ -9,6 +9,7 @@ import (
 )
 
 func TestE2eExampleGame(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
 
 	//run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm")
@@ -27,7 +28,4 @@ func TestE2eExampleGame(t *testing.T) {
 	resp, err := http.Get("http://127.0.0.1:22333?doom")
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
-
-	// Clean up after this test (incase other tests cases will be run afterwards)
-	e2e.cleanupAfterTest(t)
 }
