@@ -19,8 +19,7 @@ import (
 const (
 	IPV4Localhost = "127.0.0.1"
 
-	PackageInitName = "zarf-init.tar.zst"
-	PackagePrefix   = "zarf-package-"
+	PackagePrefix = "zarf-package"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength = 40
@@ -102,11 +101,17 @@ func GetSeedImage() string {
 
 func GetPackageName() string {
 	metadata := GetMetaData()
-	if metadata.Uncompressed {
-		return PackagePrefix + metadata.Name + ".tar"
-	} else {
-		return PackagePrefix + metadata.Name + ".tar.zst"
+	prefix := PackagePrefix
+	suffix := "tar.zst"
+
+	if IsZarfInitConfig() {
+		return fmt.Sprintf("zarf-init-%s.tar.zst", GetArch())
 	}
+
+	if metadata.Uncompressed {
+		suffix = "tar"
+	}
+	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
 }
 
 func GetDataInjections() []types.ZarfData {

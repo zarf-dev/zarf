@@ -44,7 +44,7 @@ Installing a Zarf component is _really_ easy&mdash;you just have to let `zarf in
 Exactly like when you first created the game example cluster, you _move into the directory holding your init package_ and run:
 
 ```sh
-cd <same dir as zarf-init.tar.zst>
+cd <same dir as zarf-init-<arch>.tar.zst>
 zarf init
 ```
 
