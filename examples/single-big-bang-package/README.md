@@ -105,7 +105,7 @@ It's time to feed the package you built into your cluster.
 Since you're running a Zarf cluster directly on your local machine&mdash;where this package & `zarf` binary _already are_&mdash;deploying the package is very simple:
 
 ```sh
-zarf package deploy zarf-package-big-bang-single-package-demo.tar.zst --confirm
+zarf package deploy zarf-package-big-bang-single-package-demo-amd64.tar.zst --confirm
 ```
 
 In a couple seconds the cluster will have loaded your package.

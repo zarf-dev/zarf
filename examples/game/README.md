@@ -128,7 +128,7 @@ It's time to feed the package you built into your cluster.
 Since you're running a Zarf cluster directly on your local machine&mdash;where the game package & `zarf` binary _already are_&mdash;deploying the game is very simple:
 
 ```sh
-zarf package deploy ./zarf-package-appliance-demo-multi-games.tar.zst --confirm
+zarf package deploy ./zarf-package-appliance-demo-multi-games-<arch>.tar.zst --confirm
 ```
 
 In a couple seconds the cluster will have loaded your package.

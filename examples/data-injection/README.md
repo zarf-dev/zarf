@@ -110,7 +110,7 @@ It's time to feed the package you built into your cluster.
 Since you're running a Zarf cluster directly on your local machine&mdash;where this package & `zarf` binary _already are_&mdash;deploying the package is very simple:
 
 ```sh
-zarf package deploy zarf-package-data-injection-demo.tar --confirm
+zarf package deploy zarf-package-data-injection-demo-<arch>.tar --confirm
 ```
 
 In a couple seconds the cluster will have loaded your package.

@@ -122,7 +122,7 @@ Watch the terminal scroll for a while. Once things are downloaded & zipped up an
 It's time to feed the package you built into your cluster.
 
 ```sh
-zarf package deploy ./zarf-package-compose-example.tar.zst --confirm
+zarf package deploy ./zarf-package-compose-example-<arch>.tar.zst --confirm
 ```
 
 In a couple seconds the cluster will have loaded your package.
