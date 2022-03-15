@@ -40,7 +40,7 @@ func TestGeneralCLI(t *testing.T) {
 	assert.NotEqual(t, output, "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test for expected failure when given a bad componenet input
-	output, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
+	_, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
 
 	// Test for expected failure when given invalid hostnames
@@ -57,6 +57,7 @@ func TestGeneralCLI(t *testing.T) {
 }
 
 func TestInitZarf(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
 
 	// Initialize Zarf for the next set of tests
 	// This also confirms that using the `--confirm` flags does not hang when not also specifying the `--components` flag
@@ -66,6 +67,4 @@ func TestInitZarf(t *testing.T) {
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
 	output, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm", "-l=trace")
 	assert.Error(t, err, output)
-
-	e2e.cleanupAfterTest(t)
 }

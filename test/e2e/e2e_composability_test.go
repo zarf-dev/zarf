@@ -10,6 +10,8 @@ import (
 )
 
 func TestE2eExampleComposability(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
+
 	//run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm")
 	require.NoError(t, err, output)
@@ -17,9 +19,6 @@ func TestE2eExampleComposability(t *testing.T) {
 	// Deploy the composable game package
 	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-compose-example.tar.zst", "--confirm")
 	require.NoError(t, err, output)
-
-	// Validate that the composed sub packages exist
-	require.Contains(t, output, "appliance-demo-multi-games-baseline")
 
 	// Establish the port-forward into the game service
 	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333")
@@ -36,6 +35,4 @@ func TestE2eExampleComposability(t *testing.T) {
 	// Validate the doom title in body.
 	assert.Contains(t, string(body), "Zarf needs games too")
 	assert.Equal(t, 200, resp.StatusCode)
-
-	e2e.cleanupAfterTest(t)
 }

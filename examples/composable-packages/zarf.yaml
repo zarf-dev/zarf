@@ -6,5 +6,8 @@ metadata:
 components:
   - name: games
     required: true
-    import: 
-     path: '../game/'
+    description: "Example of a composed package with a unique description for this component"
+    import:
+      path: ../game
+      # Example optional custom name to point to in the imported package
+      name: baseline
