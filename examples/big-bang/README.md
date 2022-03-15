@@ -69,7 +69,7 @@ make vm-init
 
 ```shell
 # Deploy Big Bang
-./zarf package deploy --confirm zarf-package-big-bang-core-demo.tar.zst
+./zarf package deploy --confirm zarf-package-big-bang-core-demo-amd64.tar.zst
 
 # (Optional) Inspect the results
 ./zarf tools k9s

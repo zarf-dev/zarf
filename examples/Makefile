@@ -37,7 +37,7 @@ clean: ## Clean the sync dir
 fetch-release: ## Grab the latest release as an alternative to needing to build the binaries
 	@mkdir -p sync
 	@# This probably isn't the cleanest way to get a release, but since we're moving to github, not worth adding the code until post-migration
-	@curl -fL "https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$$(git describe --tags --abbrev=0)/{zarf,zarf-mac-intel,zarf-mac-apple,zarf-init.tar.zst}" -o "sync/#1"
+	@curl -fL "https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$$(git describe --tags --abbrev=0)/{zarf,zarf-mac-intel,zarf-mac-apple,zarf-init-amd64.tar.zst,zarf-init-arm64.tar.zst}" -o "sync/#1"
 	@chmod +x sync/*
 
 .PHONY: build-release

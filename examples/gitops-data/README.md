@@ -51,7 +51,7 @@ zarf package create                # make the package
 ```
 
 Successful execution will create a package named
-`zarf-package-gitops-service-data.tar.zst`, the Zarf example package.
+`zarf-package-gitops-service-data-<arch>.tar.zst`, the Zarf example package.
 
 ## Deploying the Zarf Package
 
@@ -64,7 +64,7 @@ command to deploy the package, uploading the Git repositories to Gitea and the
 container images to the Docker registry.
 
 ```sh
-zarf package deploy zarf-package-gitops-service-data.tar.zst
+zarf package deploy zarf-package-gitops-service-data-<arch>.tar.zst
 ```
 
 ## Applying the Kustomization

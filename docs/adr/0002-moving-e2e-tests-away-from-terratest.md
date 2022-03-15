@@ -10,7 +10,7 @@ Accepted
 
 In previous releases of Zarf, the creation of the initialization package at the core of many of our E2E tests required repository secrets to login to registry1. Since this is an open-source project, anyone could submit a change to one of our GitHub workflows that could steal our secrets. In order to protect our secrets from any bad-actors we used [peter-evans/slash-command-dispatch@v2](https://github.com/peter-evans/slash-command-dispatch) so that only a maintainer would have the ability to run the E2E tests when a PR is submitted for review.
 
-In the current version of Zarf (v0.15) images from registry1 are no longer needed to create the zarf-init.tar.zst. This means, given our current span of E2E tests, we no longer need to use repository secrets when running tests. This gives us the ability to reassess the way we do our E2E testing.
+In the current version of Zarf (v0.15) images from registry1 are no longer needed to create the zarf-init-<arch>.tar.zst. This means, given our current span of E2E tests, we no longer need to use repository secrets when running tests. This gives us the ability to reassess the way we do our E2E testing.
 
 When considering how to handle the tests, some of the important additions we were considering were:
   1. Ability to test against different kubernetes distributions

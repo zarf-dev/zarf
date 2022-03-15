@@ -1,8 +1,7 @@
 kind: ZarfInitConfig
 metadata:
-  name: Zarf Official Init Package
+  name: init
   description: "Used to establish a new Zarf cluster"
-  architecture: amd64
 
 seed: library/registry:2.7.1
 
