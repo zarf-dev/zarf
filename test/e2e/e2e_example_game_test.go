@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -14,8 +15,10 @@ func TestE2eExampleGame(t *testing.T) {
 	output, err := e2e.execZarfCommand("init", "--confirm")
 	require.NoError(t, err, output)
 
+	path := fmt.Sprintf("../../build/zarf-package-appliance-demo-multi-games-%s.tar.zst", e2e.arch)
+
 	// Deploy the game
-	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-appliance-demo-multi-games.tar.zst", "--confirm")
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service

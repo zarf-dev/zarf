@@ -6,6 +6,8 @@ import (
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/defenseunicorns/zarf/cli/config"
 )
 
 type testSuite struct {
@@ -39,6 +41,8 @@ var (
 func TestMain(m *testing.M) {
 	var err error
 	retCode := 0
+
+	e2e.arch = config.GetArch()
 
 	// Set up constants for the tests
 	e2e.zarfBinPath = path.Join("../../build", getCLIName())

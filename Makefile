@@ -2,6 +2,8 @@
 ZARF_BIN := ./build/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
+# Need a clean way to map this, arch and uname -a return x86_64 for amd64
+ARCH := amd64
 ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_S),Darwin)
 		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
@@ -90,19 +92,19 @@ test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\
 	fi
-	@if [ ! -f ./build/zarf-init-amd64.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-init-$(ARCH).tar.zst ]; then\
 		$(MAKE) init-package;\
 	fi
-	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-game;\
 	fi
-	@if [ ! -f ./build/zarf-package-data-injection-demo.tar ]; then\
+	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
 		$(MAKE) package-example-data-injection;\
 	fi
-	@if [ ! -f ./build/zarf-package-gitops-service-data.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-gitops-data;\
 	fi
-	@if [ ! -f ./build/zarf-package-compose-example.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init-amd64.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init-amd64.tar.zst
+	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init-$(ARCH).tar.zst

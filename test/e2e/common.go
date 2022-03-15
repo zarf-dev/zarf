@@ -28,6 +28,7 @@ import (
 type ZarfE2ETest struct {
 	zarfBinPath string
 
+	arch			string
 	clusterName    string
 	kubeconfigPath string
 	filesToRemove  []string
