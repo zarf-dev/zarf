@@ -12,6 +12,8 @@ import (
 )
 
 func TestGitopsExample(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
+
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm", "--components=gitops-service")
 	require.NoError(t, err, output)
@@ -45,7 +47,7 @@ func TestGitopsExample(t *testing.T) {
 	expectedTag := "v0.15.0\n"
 	err = os.Chdir("mirror__github.com__defenseunicorns__zarf")
 	assert.NoError(t, err)
-	gitOutput, err = exec.Command("git", "tag").Output()
+	gitOutput, _ = exec.Command("git", "tag").Output()
 	assert.Equal(t, expectedTag, string(gitOutput), "Expected tag should match output")
 
 	// Check for correct commits
@@ -64,6 +66,4 @@ func TestGitopsExample(t *testing.T) {
 
 	err = os.Chdir("..")
 	assert.NoError(t, err, "unable to change directories back to blah blah blah")
-
-	e2e.cleanupAfterTest(t)
 }

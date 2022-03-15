@@ -11,6 +11,8 @@ import (
 )
 
 func TestE2eExampleComposability(t *testing.T) {
+	defer e2e.cleanupAfterTest(t)
+
 	//run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm")
 	require.NoError(t, err, output)
@@ -36,6 +38,4 @@ func TestE2eExampleComposability(t *testing.T) {
 	// Validate the doom title in body.
 	assert.Contains(t, string(body), "Zarf needs games too")
 	assert.Equal(t, 200, resp.StatusCode)
-
-	e2e.cleanupAfterTest(t)
 }
