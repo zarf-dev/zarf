@@ -105,13 +105,13 @@ func GetPackageName() string {
 	suffix := "tar.zst"
 
 	if IsZarfInitConfig() {
-		prefix = "zarf"
+		return fmt.Sprintf("zarf-init-%s.tar.zst", GetArch())
 	}
 
 	if metadata.Uncompressed {
 		suffix = "tar"
 	}
-	return fmt.Sprintf("%s-%s-%s.%s", prefix, strings.ToLower(metadata.Name), GetArch(), suffix)
+	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
 }
 
 func GetDataInjections() []types.ZarfData {

@@ -1,6 +1,6 @@
 kind: ZarfInitConfig
 metadata:
-  name: Zarf Official Init Package
+  name: init
   description: "Used to establish a new Zarf cluster"
 
 seed: library/registry:2.7.1
