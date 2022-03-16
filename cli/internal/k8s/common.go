@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"time"
 
@@ -153,36 +152,15 @@ func init() {
 func getRestConfig() *rest.Config {
 	message.Debug("k8s.getRestConfig()")
 
-	// use the KUBECONFIG context if it exists
-	configPath := os.Getenv("KUBECONFIG")
-	if configPath == "" {
-		// use the current context in the default kubeconfig in the home path of the user
-		homePath, err := os.UserHomeDir()
-		if err != nil {
-			message.Fatal(nil, "Unable to load the current user's home directory")
-		}
-		configPath = homePath + "/.kube/config"
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", configPath)
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{}).ClientConfig()
 	if err != nil {
 		message.Fatalf(err, "Unable to connect to the K8s cluster")
 	}
+
 	return config
 }
-
-//func getRestConfig() *rest.Config {
-//	message.Debug("k8s.getRestConfig()")
-//
-//	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-//		clientcmd.NewDefaultClientConfigLoadingRules(),
-//		&clientcmd.ConfigOverrides{}).ClientConfig()
-//	if err != nil {
-//		message.Fatalf(err, "Unable to connect to the K8s cluster")
-//	}
-//
-//	return config
-//}
 
 func getClientset() *kubernetes.Clientset {
 	message.Debug("k8s.getClientSet()")
