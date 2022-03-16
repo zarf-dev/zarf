@@ -19,7 +19,7 @@ jobs:
           args: >-
             --agents 1
             --no-lb
-            --k3s-arg "--no-deploy=traefik"
+            --k3s-arg "--no-deploy=traefik@server:*"
       - name: Build CLI
         run: make build-cli-linux
       - name: Make Packages
