@@ -31,7 +31,7 @@ var destroyCmd = &cobra.Command{
 		_ = os.Remove(".zarf-registry")
 
 		// If Zarf deployed the cluster, burn it all down
-		if state.ZarfAppliance || (state == types.ZarfState{Distro: k8s.DistroIsUnknown}) {
+		if state.ZarfAppliance || (state == types.ZarfState{}) {
 			// Check if we have the scripts to destory everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
