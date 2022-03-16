@@ -2,8 +2,6 @@
 
 There are several ways to use Zarf & the tooling needed depends on what you plan to do with it.  Here are some of the most common use cases, along with what you'll need to install on your workstation to play along.
 
-&nbsp;
-
 ## Just gimmie Zarf!
 
 The simplest path to Zarf is to download a pre-built release and execute it on your shell (just like any other CLI tool). To do that:
@@ -20,11 +18,11 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
     - The appropriate zarf binary for your system (choose _one_):
 
-        | system          | binary            |
-        | ---             | ---               |
-        | Linux (64bit)   | `zarf`            |
-        | Intel-based Mac | `zarf-mac-intel`  |
-        | [Apple-based Mac](https://support.apple.com/en-us/HT211814) | `zarf-mac-apple`  |
+        | system                                                      | binary           |
+        | ----------------------------------------------------------- | ---------------- |
+        | Linux (64bit)                                               | `zarf`           |
+        | Intel-based Mac                                             | `zarf-mac-intel` |
+        | [Apple-based Mac](https://support.apple.com/en-us/HT211814) | `zarf-mac-apple` |
 
     - (optional) The checksum file: `zarf.sha256`.
 
@@ -40,8 +38,6 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
     > zarf-mac-intel: OK
     ```
 
-&nbsp;
-
 ### Try it out
 
 Once you've got everything downloaded, you're ready to run commands directly against the zarf binary, like:
@@ -51,8 +47,6 @@ chmod +x ./zarf && ./zarf help
 
 # substitute ./zarf-mac-intel or ./zarf-mac-apple above, as appropriate
 ```
-
-&nbsp;
 
 ## I want a demo/example sandbox
 
@@ -93,27 +87,29 @@ You'll need to install _these_ tools to run the examples if you want to use Vagr
     >
     > _Currently_ only used by the `big-bang` example but still required to start the singular example VM!
 
-&nbsp;
-
 ### Try it out
 
 Once you've got everything installed you're ready to run some examples! We recommend giving the [Get Started - game](../examples/game/README.md) example a try!
 <!-- update link once Get Started page is written! -->
 
-&nbsp;
-
 ## I need a dev machine
 
-During dev & test, Zarf gets its exercise the same way the examples do&mdash;inside a VM.  Getting setup for development means that you'll need to install:
+During dev & test, Zarf gets its exercise the same way the examples do.  Getting setup for development means that you'll need to install:
 
-1. The [demo/example sandbox](#i-want-a-demoexample-sandbox) prerequisites &mdash; the virtualization stack we use for execution isolation.
+1. The [demo/example sandbox](#i-want-a-demoexample-sandbox) prerequisites
 
-1. [Go](https://golang.org/doc/install) &mdash; the programming language / build tools we use to create the `zarf` (et al.) binary.
+1. [Go](https://golang.org/doc/install) -- the programming language / build tools we use to create the `zarf` (et al.) binary.
 
     Currently required version is `1.16.x`.
-
-&nbsp;
 
 ### Try it out
 
 Once everything is installed, you're ready to build your _own_ version of Zarf. Give it a try using the instructions here: [Build Your First Zarf](./first-time-build.md).
+
+## Troubleshooting
+
+### Zarf deployed to the wrong cluster!
+
+Zarf supports setups that have configured multiple Kubernetes clusters, either by having multiple Contexts in a single `KUBECONFIG` file, or by specifying multiple files in the `KUBECONFIG` environment variable, or a combination of both. To ensure you are deploying to the right cluster, first run something like `kubectl get nodes` with no extra parameters. If the nodes you see belong to the cluster you want to deploy to, then Zarf will use that cluster as well. See the [Kubernetes Docs page on configuring multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) for more information.
+
+Zarf does not yet support the optional flags like `--kubeconfig` that you might use with `kubectl`, though it is a feature we are interested in adding at a later time.
