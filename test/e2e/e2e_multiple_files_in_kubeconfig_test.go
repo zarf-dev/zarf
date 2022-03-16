@@ -21,6 +21,6 @@ func TestE2eMultipleFilesInKubeconfig(t *testing.T) {
 	err := os.Setenv("KUBECONFIG", fmt.Sprintf("%s:/foo/bar.yaml", originalKubeconfig))
 
 	//run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--confirm")
+	output, err := e2e.execZarfCommand("init", "--confirm", "-l", "debug")
 	require.NoError(t, err, output)
 }
