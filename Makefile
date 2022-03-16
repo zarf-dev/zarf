@@ -87,7 +87,7 @@ package-example-compose:
 
 # TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-new-e2e
-test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
+test-e2e: ## Run e2e tests. All dependencies are assumed to be built and in the ./build directory
 	@ #Check to make sure all the packages we need exist
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\

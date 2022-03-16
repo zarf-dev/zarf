@@ -2,17 +2,13 @@ package test
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	k3dcluster "github.com/rancher/k3d/v5/cmd/cluster"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,46 +17,18 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-	"sigs.k8s.io/kind/pkg/cluster"
-	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
 	zarfBinPath string
 
-	arch			string
-	clusterName    string
-	kubeconfigPath string
-	filesToRemove  []string
-	cmdsToKill     []*exec.Cmd
-	provider       *cluster.Provider
-	restConfig     *restclient.Config
-	clientset      *kubernetes.Clientset
-	initWithK3s    bool
-}
-
-func getKubeconfigPath() (string, error) {
-	// Check if the $KUBECONFIG env is set
-	kubeconfigEnv := os.Getenv("KUBECONFIG")
-	if kubeconfigEnv != "" {
-		return kubeconfigEnv, nil
-	}
-
-	// Get the kubeconfig in ~/.kube/config
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	configBaseDir := path.Join(userHomeDir, ".kube")
-	if err := os.MkdirAll(configBaseDir, 0700); err != nil {
-		return "", err
-	}
-
-	// Get (or create) the config file
-	kubeconfigPath := path.Join(configBaseDir, "config")
-	_, err = os.OpenFile(kubeconfigPath, os.O_RDWR|os.O_CREATE, 0755)
-	return kubeconfigPath, err
+	arch          string
+	clusterName   string
+	filesToRemove []string
+	cmdsToKill    []*exec.Cmd
+	restConfig    *restclient.Config
+	clientset     *kubernetes.Clientset
 }
 
 func getCLIName() string {
@@ -79,92 +47,15 @@ func getCLIName() string {
 
 func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
 	var err error
-	e2e.restConfig, err = clientcmd.BuildConfigFromFlags("", e2e.kubeconfigPath)
+	e2e.restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{}).ClientConfig()
 	if err != nil {
 		return err
 	}
 	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
 
 	return err
-}
-
-func (e2e *ZarfE2ETest) setUpKind() error {
-	var err error
-
-	// Set up a KinD cluster if necessary
-	e2e.provider = cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
-	nodes, _ := e2e.provider.ListNodes(e2e.clusterName)
-	if len(nodes) == 0 {
-		err = e2e.provider.Create(
-			e2e.clusterName,
-			cluster.CreateWithNodeImage(""),
-			cluster.CreateWithRetain(false),
-			cluster.CreateWithWaitForReady(time.Duration(0)),
-			cluster.CreateWithKubeconfigPath(e2e.kubeconfigPath),
-			cluster.CreateWithDisplayUsage(false),
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Get config and client for the k8s cluster
-	err = e2e.buildConfigAndClientset()
-	if err != nil {
-		return err
-	}
-
-	// Wait for the cluster to have pods before we let the test suite run
-	err = e2e.waitForHealthyCluster()
-
-	return err
-}
-
-func (e2e *ZarfE2ETest) tearDownKind() error {
-	// Delete the cluster and kubeconfig file
-	provider := cluster.NewProvider(cluster.ProviderWithLogger(kindcmd.NewLogger()))
-	err := provider.Delete(e2e.clusterName, e2e.kubeconfigPath)
-	_ = os.Remove(e2e.kubeconfigPath)
-	return err
-}
-
-func (e2e *ZarfE2ETest) setUpK3D() error {
-	var err error
-
-	createClusterCommand := k3dcluster.NewCmdClusterCreate()
-	err = createClusterCommand.ExecuteContext(context.TODO())
-	if err != nil {
-		return err
-	}
-
-	// Get config and client for the k8s cluster
-	err = e2e.buildConfigAndClientset()
-	if err != nil {
-		return err
-	}
-
-	// Wait for the cluster to have pods before we let the test suite run
-	err = e2e.waitForHealthyCluster()
-
-	return err
-}
-
-func (e2e *ZarfE2ETest) tearDownK3D() error {
-	deleteClusterCommand := k3dcluster.NewCmdClusterDelete()
-	err := deleteClusterCommand.ExecuteContext(context.TODO())
-	_ = os.Remove(e2e.kubeconfigPath)
-	return err
-}
-
-func (e2e *ZarfE2ETest) setUpK3s() error {
-	e2e.initWithK3s = true
-	return nil
-}
-
-func (e2e *ZarfE2ETest) tearDownK3s() error {
-	e2e.initWithK3s = false
-	_ = os.Remove(e2e.kubeconfigPath)
-	return nil
 }
 
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
@@ -228,7 +119,7 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string
 // TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
 	// Check if we need to deploy the k3s component
-	if e2e.initWithK3s && commandString[0] == "init" {
+	if shouldCreateK3sCluster() && commandString[0] == "init" {
 		componentAdded := false
 		for idx, str := range commandString {
 			if strings.Contains(str, "components") {
@@ -273,30 +164,7 @@ func (e2e *ZarfE2ETest) checkIfClusterRunning() bool {
 	return false
 }
 
-func (e2e *ZarfE2ETest) waitForHealthyCluster() error {
-	attempt := 0
-	for attempt < 15 {
-		pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
-		if err == nil && len(pods.Items) >= 0 {
-			allPodsHealthy := true
-
-			// Make sure at the pods are in the 'succeeded' or 'running' state
-			for _, pod := range pods.Items {
-				if !(pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning) {
-					allPodsHealthy = false
-					break
-				}
-			}
-
-			if allPodsHealthy {
-				fmt.Printf("💥 Cluster %s ready. You can access it by setting:\nexport KUBECONFIG='%s'\n", e2e.clusterName, e2e.kubeconfigPath)
-				return nil
-			}
-		}
-
-		time.Sleep(1 * time.Second)
-		attempt++
-	}
-
-	return errors.New("unable to connect to cluster for e2e tests")
+// Return true if the user wants to use the built-in K3s, false otherwise
+func shouldCreateK3sCluster() bool {
+	return os.Getenv("TESTDISTRO") == "k3s"
 }
