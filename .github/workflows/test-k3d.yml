@@ -6,23 +6,23 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Install GoLang
+      - name: "Install GoLang"
         uses: actions/setup-go@v2
         with:
           go-version: 1.16.x
-      - name: Checkout Repo
+      - name: "Checkout Repo"
         uses: actions/checkout@v2
-      - uses: AbsaOSS/k3d-action@v2
-        name: "Create Single Cluster"
+      - name: "Create K3d Cluster"
+        uses: AbsaOSS/k3d-action@v2
         with:
           cluster-name: "k3d-cluster"
           args: >-
             --agents 1
             --no-lb
             --k3s-arg "--no-deploy=traefik@server:*"
-      - name: Build CLI
+      - name: "Build CLI"
         run: make build-cli-linux
-      - name: Make Packages
+      - name: "Make Packages"
         run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
-      - name: Run Tests
-        run: TESTDISTRO=k3d make test-e2e
+      - name: "Run Tests"
+        run: make test-e2e
