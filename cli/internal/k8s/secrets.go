@@ -6,10 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 
 	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/cli/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,19 +80,11 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	return secretDockerConfig
 }
 
-func GenerateTLSSecret(namespace, name, certPath, keyPath string) *corev1.Secret {
-	message.Debugf("k8s.GenerateTLSSecret(%s, %s, %s, %s", namespace, name, certPath, keyPath)
+func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1.Secret, error) {
+	message.Debugf("k8s.GenerateTLSSecret(%s, %s, %v", namespace, name, conf)
 
-	tlsCert, err := ioutil.ReadFile(certPath)
-	if err != nil {
-		message.Fatal(err, "Unable to read the TLS public certificate")
-	}
-	tlsKey, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		message.Fatal(err, "Unable to read the TLS private key")
-	}
-	if _, err := tls.X509KeyPair(tlsCert, tlsKey); err != nil {
-		message.Fatal(err, "Unable to create the TLS keypair")
+	if _, err := tls.X509KeyPair(conf.Cert, conf.Key); err != nil {
+		return nil, err
 	}
 
 	secretTLS := &corev1.Secret{
@@ -111,49 +103,21 @@ func GenerateTLSSecret(namespace, name, certPath, keyPath string) *corev1.Secret
 		Data: map[string][]byte{},
 	}
 
-	secretTLS.Data[corev1.TLSCertKey] = tlsCert
-	secretTLS.Data[corev1.TLSPrivateKeyKey] = tlsKey
+	secretTLS.Data[corev1.TLSCertKey] = conf.Cert
+	secretTLS.Data[corev1.TLSPrivateKeyKey] = conf.Key
 
-	return secretTLS
+	return secretTLS, nil
 }
 
-func ReplaceTLSSecret(namespace, name, certPath, keyPath string) {
-	message.Debugf("k8s.ReplaceTLSSecret(%s, %s)", namespace, name)
+func ReplaceTLSSecret(namespace, name string, conf types.GeneratedPKI) error {
+	message.Debugf("k8s.ReplaceTLSSecret(%s, %s, %v)", namespace, name, conf)
 
-	tlsCert, err := ioutil.ReadFile(certPath)
+	secret, err := GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
-		message.Fatalf(err, "Unable to read the TLS public certificate")
-	}
-	tlsKey, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		message.Fatalf(err, "Unable to read the TLS private key")
-	}
-	if _, err := tls.X509KeyPair(tlsCert, tlsKey); err != nil {
-		message.Fatalf(err, "Unable to create the TLS keypair")
+		return err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				config.ZarfManagedByLabel: "zarf",
-			},
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{},
-	}
-
-	secret.Data[corev1.TLSCertKey] = tlsCert
-	secret.Data[corev1.TLSPrivateKeyKey] = tlsKey
-
-	if err := ReplaceSecret(secret); err != nil {
-		message.Fatalf(err, "Unable to create the secret")
-	}
+	return ReplaceSecret(secret)
 }
 
 func ReplaceSecret(secret *corev1.Secret) error {

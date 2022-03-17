@@ -6,7 +6,7 @@ webhooks:
   - name: agent-hook.zarf.dev
     namespaceSelector:
       matchLabels:
-        # Only operate on zarf-managed resources
+        # Only operate on zarf-managed namespaces until the webhook can create secrets
         app.kubernetes.io/managed-by: "zarf"
       matchExpressions:
         # Ensure we don't mess with kube-sustem

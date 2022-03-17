@@ -1,5 +1,11 @@
 package types
 
+type GeneratedPKI struct {
+	CA   []byte
+	Cert []byte
+	Key  []byte
+}
+
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
 	Source     string   `yaml:"source"`
@@ -128,13 +134,6 @@ type ZarfState struct {
 		SeedType string `json:"seedType"`
 		NodePort string `json:"nodePort"`
 	} `json:"registry"`
-}
-
-// TLSConfig tracks the user-defined options for TLS cert generation
-type TLSConfig struct {
-	CertPublicPath  string `yaml:"certPublicPath"`
-	CertPrivatePath string `yaml:"certPrivatePath"`
-	Host            string `yaml:"host"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment

@@ -12,11 +12,10 @@ spec:
       app: agent-hook
   template:
     metadata:
-      annotations:
-        # Don't mutate this pod, that would be sad times
-        zarf.dev/agent: ignore
       labels:
         app: agent-hook
+        # Don't mutate this pod, that would be sad times
+        zarf.dev/agent: ignore
     spec:
       imagePullSecrets:
         - name: zarf-registry

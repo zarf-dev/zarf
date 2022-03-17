@@ -18,12 +18,6 @@ import (
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
 
-type GeneratedPKI struct {
-	CA   []byte
-	Cert []byte
-	Key  []byte
-}
-
 // Use 2048 because we are aiming for low-resource / max-compatibility
 const rsaBits = 2048
 const org = "Zarf Cluster"
@@ -32,18 +26,18 @@ const org = "Zarf Cluster"
 const validFor = time.Hour * 24 * 375
 
 // GeneratePKI create a CA and signed server keypair
-func GeneratePKI(conf *types.TLSConfig) GeneratedPKI {
+func GeneratePKI(host string) types.GeneratedPKI {
 
-	results := GeneratedPKI{}
+	results := types.GeneratedPKI{}
 
 	ca, caKey, err := generateCA(validFor)
 	if err != nil {
 		message.Fatal(err, "Unable to generate the ephemeral CA")
 	}
 
-	hostCert, hostKey, err := generateCert(conf.Host, ca, caKey, validFor)
+	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor)
 	if err != nil {
-		message.Fatalf(err, "Unable to generate the cert for %s", conf.Host)
+		message.Fatalf(err, "Unable to generate the cert for %s", host)
 	}
 
 	results.CA = pem.EncodeToMemory(&pem.Block{

@@ -9,6 +9,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ReplaceService deletes and re-creates a service
+func ReplaceService(service *corev1.Service) (*corev1.Service, error) {
+	message.Debugf("k8s.ReplaceService(%v)", service)
+
+	if err :=DeleteService(service.Namespace, service.Name); err != nil {
+		return nil, err
+	}
+
+	return CreateService(service)
+}
+
 // GenerateService returns a K8s service struct without writing to the cluster
 func GenerateService(namespace, name string) *corev1.Service {
 	message.Debugf("k8s.GenerateService(%s, %s)", name, namespace)

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/config"
+	"github.com/defenseunicorns/zarf/cli/internal/agent"
 	"github.com/defenseunicorns/zarf/cli/internal/images"
 	"github.com/defenseunicorns/zarf/cli/internal/k8s"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
@@ -113,4 +114,8 @@ func postSeedRegistry(tempPath tempPaths) {
 
 	// Push the seed images into to Zarf registry
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
+
+
+	// Install the Zarf Agent mutating webhook
+	agent.Deploy()
 }
