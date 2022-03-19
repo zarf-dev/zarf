@@ -29,11 +29,11 @@ func TestE2eExampleComposability(t *testing.T) {
 
 	// Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
 	resp, err := http.Get("http://127.0.0.1:22333?doom")
-	assert.NoError(t, err, resp)
+	require.NoError(t, err, resp)
 
 	// Read the body into string
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err, body)
+	require.NoError(t, err, body)
 
 	// Validate the doom title in body.
 	assert.Contains(t, string(body), "Zarf needs games too")
