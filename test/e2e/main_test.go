@@ -52,20 +52,13 @@ func doAllTheThings(m *testing.M) (int, error) {
 	// If needed:
 	// [1] Create the cluster with a temporary kubeconfig file
 	// [2] Update the the KUBECONFIG env var
-	// [3] Defer the cluster destroy, deletion of the temp file, and rest of the KUBECONFIG env var back to original
-	//     value
+	// [3] Defer the cluster destroy and deletion of the temp file. We don't need to set the env var back since it was
+	//     only changed for the current process.
 	if e2e.distroToUse == clusters.Kind || e2e.distroToUse == clusters.K3d {
 		// Create the cluster
 		tempKubeconfigFilePath, err := clusters.CreateClusterWithTemporaryKubeconfig(e2e.distroToUse)
 		if err != nil {
 			return 1, fmt.Errorf("unable to create %v cluster: %w", e2e.distroToUse.String(), err)
-		}
-
-		// Modify KUBECONFIG
-		currentKubeconfig := os.Getenv("KUBECONFIG")
-		err = os.Setenv("KUBECONFIG", currentKubeconfig)
-		if err != nil {
-			return 1, fmt.Errorf("unable to update KUBECONFIG env var: %w", err)
 		}
 
 		// Defer cleanup
