@@ -107,4 +107,4 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -gcflags="all=-N -l" -v -count=1 --run TestE2eExampleGame -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
+	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
