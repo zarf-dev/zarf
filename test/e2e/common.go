@@ -45,7 +45,7 @@ func getCLIName() string {
 // deferred at the beginning of each test. Example:
 //
 // func TestE2eFooBarBaz(t *testing.T) {
-//	   defer e2e.cleanupAfterTest(t)
+//     defer e2e.cleanupAfterTest(t)
 //     doAllTheOtherStuff...
 // }
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
