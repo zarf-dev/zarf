@@ -77,10 +77,12 @@ func doAllTheThings(m *testing.M) (int, error) {
 		}(tempKubeconfigFilePath)
 	}
 
-	// Final check to make sure we have a working k8s cluster
-	err = clusters.TryValidateClusterIsRunning()
-	if err != nil {
-		return 1, fmt.Errorf("unable to connect to a running k8s cluster: %w", err)
+	// Final check to make sure we have a working k8s cluster, skipped if we are using K3s
+	if e2e.distroToUse != clusters.K3s {
+		err = clusters.TryValidateClusterIsRunning()
+		if err != nil {
+			return 1, fmt.Errorf("unable to connect to a running k8s cluster: %w", err)
+		}
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call
