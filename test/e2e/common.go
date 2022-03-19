@@ -1,7 +1,7 @@
 package test
 
 import (
-	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -9,28 +9,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/test/e2e/clusters"
+
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
-	zarfBinPath string
-
+	zarfBinPath   string
 	arch          string
-	clusterName   string
+	distroToUse   clusters.DistroToUse
 	filesToRemove []string
 	cmdsToKill    []*exec.Cmd
-	restConfig    *restclient.Config
-	clientset     *kubernetes.Clientset
 }
 
+// getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
 func getCLIName() string {
 	var binaryName string
 	if runtime.GOOS == "linux" {
@@ -45,19 +41,13 @@ func getCLIName() string {
 	return binaryName
 }
 
-func (e2e *ZarfE2ETest) buildConfigAndClientset() error {
-	var err error
-	e2e.restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
-		&clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		return err
-	}
-	e2e.clientset, err = kubernetes.NewForConfig(e2e.restConfig)
-
-	return err
-}
-
+// cleanupAfterTest cleans up after a test run so that the next test can run in a clean environment. It needs to be
+// deferred at the beginning of each test. Example:
+//
+// func TestE2eFooBarBaz(t *testing.T) {
+//	   defer e2e.cleanupAfterTest(t)
+//     doAllTheOtherStuff...
+// }
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
 	// Use Zarf to perform chart uninstallation
 	output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
@@ -80,19 +70,18 @@ func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
 	e2e.cmdsToKill = []*exec.Cmd{}
 }
 
-func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string) (string, string, error) {
+// execCommandInPod does the equivalent of `kubectl exec` to run one or more shell commands inside a pod.
+// It returns the stdout and stderr, and an error if anything went wrong
+func (e2e *ZarfE2ETest) execCommandInPod(podname string, namespace string, cmd []string) (string, string, error) {
 	stdoutBuffer := &strings.Builder{}
 	stderrBuffer := &strings.Builder{}
 	var err error
 
-	if e2e.clientset == nil {
-		err = e2e.buildConfigAndClientset()
-		if err != nil {
-			return "", "", err
-		}
+	clientSet, err := clusters.GetClientSet()
+	if err != nil {
+		return "", "", fmt.Errorf("unable to connect to cluster: %w", err)
 	}
-
-	req := e2e.clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podname).Namespace(namespace).SubResource("exec")
+	req := clientSet.CoreV1().RESTClient().Post().Resource("pods").Name(podname).Namespace(namespace).SubResource("exec")
 	option := &v1.PodExecOptions{
 		Command: cmd,
 		Stdin:   true,
@@ -102,12 +91,16 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string
 	}
 	req.VersionedParams(option, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(e2e.restConfig, "POST", req.URL())
+	config, err := clusters.GetConfig()
+	if err != nil {
+		return "", "", err
+	}
+	executor, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return "", "", err
 	}
 
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = executor.Stream(remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: stdoutBuffer,
 		Stderr: stderrBuffer,
@@ -116,10 +109,14 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname, namespace string, cmd []string
 	return stdoutBuffer.String(), stderrBuffer.String(), err
 }
 
-// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
+// execZarfCommand executes a Zarf command. It automatically knows which Zarf binary to use, and it has special logic
+// That adds the "k3s" component if the user wants to use the build-in K3s and `zarf init` is the command being run.
+// It requires
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
+	// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
+
 	// Check if we need to deploy the k3s component
-	if shouldCreateK3sCluster() && commandString[0] == "init" {
+	if e2e.distroToUse == clusters.K3s && commandString[0] == "init" {
 		componentAdded := false
 		for idx, str := range commandString {
 			if strings.Contains(str, "components") {
@@ -138,7 +135,7 @@ func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error)
 	return string(output), err
 }
 
-// Kill any background 'zarf connect ...' processes spawned during the tests
+// execZarfBackgroundCommand kills any background 'zarf connect ...' processes spawned during the tests
 func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
 	// Create a tunnel to the git resources
 	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
@@ -147,24 +144,4 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 	time.Sleep(1 * time.Second)
 
 	return err
-}
-
-// Check if any pods exist in the 'kube-system' namespace
-func (e2e *ZarfE2ETest) checkIfClusterRunning() bool {
-	err := e2e.buildConfigAndClientset()
-	if err != nil {
-		return false
-	}
-
-	pods, err := e2e.clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
-	if err == nil && len(pods.Items) > 0 {
-		return true
-	}
-
-	return false
-}
-
-// Return true if the user wants to use the built-in K3s, false otherwise
-func shouldCreateK3sCluster() bool {
-	return os.Getenv("TESTDISTRO") == "k3s"
 }

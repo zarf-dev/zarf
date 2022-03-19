@@ -86,9 +86,9 @@ package-example-compose:
 	cd examples/composable-packages && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
 # TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
-.PHONY: test-new-e2e
-test-e2e: ## Run e2e tests. All dependencies are assumed to be built and in the ./build directory
-	@ #Check to make sure all the packages we need exist
+.PHONY: test-e2e
+test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present
+	@#Check to make sure all the packages we need exist
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\
 	fi
@@ -107,4 +107,4 @@ test-e2e: ## Run e2e tests. All dependencies are assumed to be built and in the 
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
+	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -gcflags="all=-N -l" -v -count=1 --run TestE2eExampleGame -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
