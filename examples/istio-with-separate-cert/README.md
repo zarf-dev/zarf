@@ -64,7 +64,7 @@ make vm-init
 
 ```shell
 # Deploy Big Bang
-./zarf package deploy --confirm zarf-package-example-istio-with-separate-cert.tar.zst
+./zarf package deploy --confirm zarf-package-example-istio-with-separate-cert-amd64.tar.zst
 
 # (Optional) Inspect the results
 ./zarf tools k9s

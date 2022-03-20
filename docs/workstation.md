@@ -16,7 +16,7 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
 1. Download:
 
-    - The zarf cluster initialization package: `zarf-init.tar.zst`.
+    - The zarf cluster initialization package: `zarf-init-<arch>.tar.zst`.
 
     - The appropriate zarf binary for your system (choose _one_):
 
@@ -34,7 +34,8 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
     shasum -c ./zarf.sha256
 
     > zarf: OK                  # <-- you should see "OK"s, like this
-    > zarf-init.tar.zst: OK
+    > zarf-init-amd64.tar.zst: OK
+    > zarf-init-arm64.tar.zst: OK
     > zarf-mac-apple: OK
     > zarf-mac-intel: OK
     ```
