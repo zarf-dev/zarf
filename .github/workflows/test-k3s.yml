@@ -6,16 +6,18 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Install GoLang
+      - name: "Install GoLang"
         uses: actions/setup-go@v2
         with:
           go-version: 1.16.x
-      - name: Checkout Repo
+      - name: "Checkout Repo"
         uses: actions/checkout@v2
-      - name: Build CLI
+      - name: "Build CLI"
         run: make build-cli-linux
-      - name: Make Packages
+      - name: "Make Packages"
         run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
-      - name: Run Tests
-        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed in a previous step
+      - name: "Run Tests"
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
+        #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
+        #       used for each test
         run: sudo env "PATH=$PATH" TESTDISTRO=k3s make test-e2e
