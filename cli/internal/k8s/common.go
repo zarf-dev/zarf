@@ -149,6 +149,8 @@ func init() {
 	klog.SetLogger(generateLogShim())
 }
 
+// getRestConfig uses the K8s "client-go" library to get the currently active kube context, in the same way that
+// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed
 func getRestConfig() *rest.Config {
 	message.Debug("k8s.getRestConfig()")
 
