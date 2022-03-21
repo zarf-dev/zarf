@@ -8,22 +8,22 @@ seed: library/registry:2.7.1
 components:
   - name: k3s
     import: 
-      path: examples/distros/k3s
+      path: packages/distros/k3s
 
   - name: container-registry-seed
     required: true
     import:
-      path: examples/zarf-registry
+      path: packages/zarf-registry
 
   - name: container-registry
     required: true
     import:
-      path: examples/zarf-registry
+      path: packages/zarf-registry
 
   - name: logging
     import:
-      path: examples/logging-pgl
+      path: packages/logging-pgl
 
   - name: gitops-service
     import:
-      path: examples/gitea
+      path: packages/gitea
