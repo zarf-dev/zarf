@@ -25,7 +25,7 @@ func TestGitopsExample(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Create a tunnel to the git resources
-	err = e2e.execZarfBackgroundCommand("connect", "git")
+	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")
 	assert.NoError(t, err, "unable to establish tunnel to git")
 
 	// Check for full git repo mirror (foo.git) from https://github.com/stefanprodan/podinfo.git

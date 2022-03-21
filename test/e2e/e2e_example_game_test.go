@@ -23,7 +23,7 @@ func TestE2eExampleGame(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service
-	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333")
+	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333", "--cli-only")
 	require.NoError(t, err, "unable to connect to the doom port-forward")
 
 	// Check that 'curl' returns something.

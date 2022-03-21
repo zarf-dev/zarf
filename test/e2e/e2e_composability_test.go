@@ -24,7 +24,7 @@ func TestE2eExampleComposability(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service
-	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333")
+	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333", "--cli-only")
 	require.NoError(t, err, "unable to connect to the doom port-forward")
 
 	// Right now we're just checking that `curl` returns 0. It can be enhanced by scraping the HTML that gets returned or something.
