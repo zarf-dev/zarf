@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"time"
 
@@ -150,24 +149,20 @@ func init() {
 	klog.SetLogger(generateLogShim())
 }
 
+// getRestConfig uses the K8s "client-go" library to get the currently active kube context, in the same way that
+// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed
 func getRestConfig() *rest.Config {
 	message.Debug("k8s.getRestConfig()")
 
-	// use the KUBECONFIG context if it exists
-	configPath := os.Getenv("KUBECONFIG")
-	if configPath == "" {
-		// use the current context in the default kubeconfig in the home path of the user
-		homePath, err := os.UserHomeDir()
-		if err != nil {
-			message.Fatal(nil, "Unable to load the current user's home directory")
-		}
-		configPath = homePath + "/.kube/config"
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", configPath)
+	// Build the config from the currently active kube context in the default way that the k8s client-go gets it, which
+	// is to look at the KUBECONFIG env var
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{}).ClientConfig()
 	if err != nil {
 		message.Fatalf(err, "Unable to connect to the K8s cluster")
 	}
+
 	return config
 }
 

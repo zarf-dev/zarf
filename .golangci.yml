@@ -1,13 +1,17 @@
 run:
   timeout: 5m
   skip-files:
-    - cli/internal/message/logo.go  
+    - cli/internal/message/logo.go
 linters:
   enable-all: true
   disable:
     - exhaustivestruct
+    - goerr113
+    - gofumpt
     - lll
     - stylecheck
+    - testpackage
+    - varnamelen
     - wrapcheck
     - wsl
 issues:
