@@ -87,7 +87,7 @@ package-example-compose:
 
 # TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-e2e
-test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present
+test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
 	@#Check to make sure all the packages we need exist
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\

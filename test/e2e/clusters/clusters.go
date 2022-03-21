@@ -16,19 +16,19 @@ import (
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
 
-// DistroToUse is an "enum" for helping determine which k8s distro to run the tests on
+// DistroToUse is an "enum" for helping determine which k8s distro to run the tests on.
 type DistroToUse int
 
 const (
-	// DistroUnknown is the "enum" representation for when we don't know what distro the user wants
+	// DistroUnknown is the "enum" representation for when we don't know what distro the user wants.
 	DistroUnknown DistroToUse = iota
-	// DistroProvided is the "enum" representation for when the user wants to use the k8s cluster that is already present
+	// DistroProvided is the "enum" representation for when the user wants to use the k8s cluster that is already present.
 	DistroProvided
-	// DistroKind is the "enum" representation for when the user wants the test suite to set up its own KinD cluster
+	// DistroKind is the "enum" representation for when the user wants the test suite to set up its own KinD cluster.
 	DistroKind
-	// DistroK3d is the "enum" representation for when the user wants the test suite to set up its own K3d cluster
+	// DistroK3d is the "enum" representation for when the user wants the test suite to set up its own K3d cluster.
 	DistroK3d
-	// DistroK3s is the "enum" representation for when the user wants the test suite to use Zarf's built-in K3s cluster
+	// DistroK3s is the "enum" representation for when the user wants the test suite to use Zarf's built-in K3s cluster.
 	DistroK3s
 
 	kindClusterName = "kind-zarf-test"
@@ -36,7 +36,7 @@ const (
 )
 
 // GetDistroToUseFromString decides which cluster the user wants based on the string value passed from an environment
-// variable
+// variable.
 func GetDistroToUseFromString(s string) (DistroToUse, error) {
 	match := map[string]DistroToUse{
 		"provided": DistroProvided,
@@ -220,7 +220,7 @@ func createK3dClusterUsingCurrentKubeconfig() error {
 }
 
 // deleteK3dCluster deletes the K3d cluster that was created at the beginning of the test suite. It uses the currently
-// configured Kubeconfig file (from the KUBECONFIG env var)
+// configured Kubeconfig file (from the KUBECONFIG env var).
 func deleteK3dCluster() error {
 	deleteClusterCommand := k3dCluster.NewCmdClusterDelete()
 	deleteClusterCommand.SetArgs([]string{
@@ -230,6 +230,7 @@ func deleteK3dCluster() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
