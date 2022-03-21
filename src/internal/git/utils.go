@@ -2,12 +2,20 @@ package git
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	netHttp "net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -22,7 +30,7 @@ type Credential struct {
 func MutateGitUrlsInText(host string, text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		if strings.Contains(match, "/zarf-git-user/") {
+		if strings.Contains(match, config.ZarfGitPushUser) {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
@@ -38,7 +46,7 @@ func transformURLtoRepoName(url string) string {
 
 func transformURL(baseUrl string, url string) string {
 	replaced := transformURLtoRepoName(url)
-	output := baseUrl + "/zarf-git-user/" + replaced
+	output := baseUrl + "/" + config.ZarfGitPushUser + "/" + replaced
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output
 }
@@ -231,4 +239,133 @@ func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName
 	}
 
 	return nil
+}
+
+func CreateZarfOrg() error {
+	// Establish a git tunnel to send the repos
+	tunnel := k8s.NewZarfTunnel()
+	tunnel.Connect(k8s.ZarfGit, false)
+	defer tunnel.Close()
+
+	body := map[string]string{
+		"username":   config.ZarfGitOrg,
+		"visibility": "limited",
+	}
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	request, err := netHttp.NewRequest("POST", fmt.Sprintf("http://%s:%d/api/v1/orgs", config.IPV4Localhost, k8s.PortGit), bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	request.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	request.Header.Add("accept", "application/json")
+	request.Header.Add("Content-Type", "application/json")
+
+	client := &netHttp.Client{Timeout: time.Second * 10}
+	createOrgResponse, err := client.Do(request)
+	if err != nil || createOrgResponse.StatusCode < 200 || createOrgResponse.StatusCode >= 300 {
+		createOrgResponseBody, _ := io.ReadAll(createOrgResponse.Body)
+		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", createOrgResponse.Status, createOrgResponseBody)
+
+		if err == nil {
+			err = errors.New("unable to create zarf org")
+		}
+		return err
+	}
+	return err
+}
+
+func CreateReadOnlyUser() error {
+	// Establish a git tunnel to send the repo
+	tunnel := k8s.NewZarfTunnel()
+	tunnel.Connect(k8s.ZarfGit, false)
+	defer tunnel.Close()
+
+	client := &netHttp.Client{Timeout: time.Second * 10}
+
+	// Create the user
+	createUserBody := map[string]interface{}{
+		"username":             config.ZarfGitReadUser,
+		"password":             config.GetSecret(config.StateGitPull),
+		"email":                "zarf-reader@localhost.local",
+		"must_change_password": false,
+	}
+	createUserData, err := json.Marshal(createUserBody)
+	if err != nil {
+		return err
+	}
+	createUserRequest, err := netHttp.NewRequest("POST", fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit), bytes.NewBuffer(createUserData))
+	if err != nil {
+		return err
+	}
+	createUserRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	createUserRequest.Header.Add("accept", "application/json")
+	createUserRequest.Header.Add("Content-Type", "application/json")
+	createUserResponse, err := client.Do(createUserRequest)
+	if err != nil || createUserResponse.StatusCode < 200 || createUserResponse.StatusCode >= 300 {
+		createUserResponseBody, _ := io.ReadAll(createUserResponse.Body)
+		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", createUserResponse.Status, createUserResponseBody)
+		if err == nil {
+			err = errors.New("unable to create zarf read-only user")
+		}
+		return err
+	}
+
+	// Make sure the user can't create their own repos or orgs
+	updateUserBody := map[string]interface{}{
+		"email":                     "zarf-reader@localhost.local",
+		"max_repo_creation":         0,
+		"allow_create_organization": false,
+	}
+	updateUserData, _ := json.Marshal(updateUserBody)
+	updateUserRequest, _ := netHttp.NewRequest("PATCH", fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser), bytes.NewBuffer(updateUserData))
+	updateUserRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	updateUserRequest.Header.Add("accept", "application/json")
+	updateUserRequest.Header.Add("Content-Type", "application/json")
+	updateUserResponse, err := client.Do(updateUserRequest)
+	if err != nil || updateUserResponse.StatusCode < 200 || updateUserResponse.StatusCode >= 300 {
+		updateUserResponseBody, _ := io.ReadAll(updateUserResponse.Body)
+		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", updateUserResponse.Status, updateUserResponseBody)
+
+		if err == nil {
+			err = errors.New("unable to update zarf read-only user")
+		}
+		return err
+	}
+	return err
+}
+
+func addReadOnlyUser(repo string) error {
+	client := &netHttp.Client{Timeout: time.Second * 10}
+
+	// Add the readonly user to the repo
+	addColabBody := map[string]string{
+		"permission": "read",
+	}
+	addColabData, err := json.Marshal(addColabBody)
+	if err != nil {
+		return err
+	}
+	addColabRequest, err := netHttp.NewRequest("PUT", fmt.Sprintf("http://%s:%d/api/v1/repos/%s/%s/collaborators/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repo, config.ZarfGitReadUser), bytes.NewBuffer(addColabData))
+	if err != nil {
+		return err
+	}
+	addColabRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	addColabRequest.Header.Add("accept", "application/json")
+	addColabRequest.Header.Add("Content-Type", "application/json")
+	response, err := client.Do(addColabRequest)
+	if err != nil || response.StatusCode < 200 || response.StatusCode >= 300 {
+		responseBody, _ := io.ReadAll(response.Body)
+		message.Debugf("Adding the read-only user to the %v repo failed with a status-code of %v and a response body of: %v\n", repo, response.Status, responseBody)
+
+		if err == nil {
+			err = errors.New("unable to add read-only user to repo")
+		}
+		return err
+	}
+
+	return err
 }

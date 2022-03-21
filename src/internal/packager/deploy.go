@@ -97,8 +97,14 @@ func Deploy() {
 
 	if config.IsZarfInitConfig() {
 		// Create a gitea org and a read-only user
-		git.CreateZarfOrg()
-		git.CreateReadOnlyUser()
+		err := git.CreateZarfOrg()
+		if err != nil {
+			message.Error(err, "Unable to create a Zarf Org in the Gitea service.")
+		}
+		err = git.CreateReadOnlyUser()
+		if err != nil {
+			message.Error(err, "Unable to create a read-only user in the Gitea service.")
+		}
 
 		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
 		_ = os.Remove(".zarf-registry")
