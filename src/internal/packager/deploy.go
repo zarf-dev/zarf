@@ -95,6 +95,15 @@ func Deploy() {
 		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
 	}
 
+	if config.IsZarfInitConfig() {
+		// Create a gitea org and a read-only user
+		git.CreateZarfOrg()
+		git.CreateReadOnlyUser()
+
+		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
+		_ = os.Remove(".zarf-registry")
+	}
+
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
 
@@ -103,6 +112,7 @@ func Deploy() {
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
 			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
 	}
