@@ -14,6 +14,10 @@ var (
 	e2e ZarfE2ETest //nolint:gochecknoglobals
 )
 
+const (
+	testDistroEnvVarName = "TESTDISTRO"
+)
+
 // TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc
 func TestMain(m *testing.M) {
 	retCode, err := doAllTheThings(m)
@@ -36,7 +40,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	e2e.arch = config.GetArch()
 
 	e2e.zarfBinPath = path.Join("../../build", getCLIName())
-	e2e.distroToUse, err = clusters.GetDistroToUseFromString(os.Getenv("TESTDISTRO"))
+	e2e.distroToUse, err = clusters.GetDistroToUseFromString(os.Getenv(testDistroEnvVarName))
 	if err != nil {
 		return 1, fmt.Errorf("unable to determine which k8s cluster to use. Env var TESTDISTRO must be present with "+
 			"value [provided|kind|k3d|k3s]: %v", err)
@@ -54,11 +58,11 @@ func doAllTheThings(m *testing.M) (int, error) {
 	// [2] Update the the KUBECONFIG env var
 	// [3] Defer the cluster destroy and deletion of the temp file. We don't need to set the env var back since it was
 	//     only changed for the current process.
-	if e2e.distroToUse == clusters.Kind || e2e.distroToUse == clusters.K3d {
+	if e2e.distroToUse == clusters.DistroKind || e2e.distroToUse == clusters.DistroK3d {
 		// Create the cluster
 		tempKubeconfigFilePath, err := clusters.CreateClusterWithTemporaryKubeconfig(e2e.distroToUse)
 		if err != nil {
-			return 1, fmt.Errorf("unable to create %v cluster: %w", e2e.distroToUse.String(), err)
+			return 1, fmt.Errorf("unable to create %v cluster: %w", os.Getenv(testDistroEnvVarName), err)
 		}
 
 		// Defer cleanup
@@ -71,7 +75,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	}
 
 	// Final check to make sure we have a working k8s cluster, skipped if we are using K3s
-	if e2e.distroToUse != clusters.K3s {
+	if e2e.distroToUse != clusters.DistroK3s {
 		err = clusters.TryValidateClusterIsRunning()
 		if err != nil {
 			return 1, fmt.Errorf("unable to connect to a running k8s cluster: %w", err)

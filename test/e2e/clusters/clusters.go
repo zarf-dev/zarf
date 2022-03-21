@@ -16,49 +16,39 @@ import (
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 )
 
-// DistroToUse is an "enum" that helps figure out what the user wants to use for the k8s cluster.
-// Based on this article: https://threedots.tech/post/safer-enums-in-go/
-type DistroToUse struct {
-	slug string
-}
-
-var (
-	// Unknown is the "enum" representation for when we don't know what distro the user wants
-	Unknown = DistroToUse{""}
-	// Provided is the "enum" representation for when the user wants to use the k8s cluster that is already present
-	Provided = DistroToUse{"provided"}
-	// Kind is the "enum" representation for when the user wants the test suite to set up its own KinD cluster
-	Kind = DistroToUse{"kind"}
-	// K3d is the "enum" representation for when the user wants the test suite to set up its own K3d cluster
-	K3d = DistroToUse{"k3d"}
-	// K3s is the "enum" representation for when the user wants the test suite to use Zarf's built-in K3s cluster
-	K3s = DistroToUse{"k3s"}
-)
+// DistroToUse is an "enum" for helping determine which k8s distro to run the tests on
+type DistroToUse int
 
 const (
+	// DistroUnknown is the "enum" representation for when we don't know what distro the user wants
+	DistroUnknown DistroToUse = iota
+	// DistroProvided is the "enum" representation for when the user wants to use the k8s cluster that is already present
+	DistroProvided
+	// DistroKind is the "enum" representation for when the user wants the test suite to set up its own KinD cluster
+	DistroKind
+	// DistroK3d is the "enum" representation for when the user wants the test suite to set up its own K3d cluster
+	DistroK3d
+	// DistroK3s is the "enum" representation for when the user wants the test suite to use Zarf's built-in K3s cluster
+	DistroK3s
+
 	kindClusterName = "kind-zarf-test"
 	k3dClusterName  = "k3d-zarf-test"
 )
 
-// String returns the expected value from the environment variable for each distro option
-func (c DistroToUse) String() string {
-	return c.slug
-}
-
 // GetDistroToUseFromString decides which cluster the user wants based on the string value passed from an environment
 // variable
 func GetDistroToUseFromString(s string) (DistroToUse, error) {
-	switch s {
-	case Provided.slug:
-		return Provided, nil
-	case Kind.slug:
-		return Kind, nil
-	case K3d.slug:
-		return K3d, nil
-	case K3s.slug:
-		return K3s, nil
+	match := map[string]DistroToUse{
+		"provided": DistroProvided,
+		"kind":     DistroKind,
+		"k3d":      DistroK3d,
+		"k3s":      DistroK3s,
 	}
-	return Unknown, fmt.Errorf("\"%v\" is not a valid value for determining which k8s distro to use", s)
+	if distroToUse, ok := match[s]; ok {
+		return distroToUse, nil
+	} else {
+		return DistroUnknown, fmt.Errorf("\"%v\" is not a valid value for determining which k8s distro to use", s)
+	}
 }
 
 // CreateClusterWithTemporaryKubeconfig creates a temporary Kubeconfig file, updates the process's KUBECONFIG env var
@@ -69,9 +59,9 @@ func CreateClusterWithTemporaryKubeconfig(distroToUse DistroToUse) (string, erro
 	// Create the temporary Kubeconfig file
 	var clusterName string
 	switch distroToUse {
-	case Kind:
+	case DistroKind:
 		clusterName = kindClusterName
-	case K3d:
+	case DistroK3d:
 		clusterName = k3dClusterName
 	}
 	tempKubeconfigFile, err := ioutil.TempFile("", clusterName+"*.yaml")
@@ -87,12 +77,12 @@ func CreateClusterWithTemporaryKubeconfig(distroToUse DistroToUse) (string, erro
 
 	// Create the cluster
 	switch distroToUse {
-	case Kind:
+	case DistroKind:
 		err = createKindCluster(tempKubeconfigFile.Name())
 		if err != nil {
 			return "", err
 		}
-	case K3d:
+	case DistroK3d:
 		err = createK3dClusterUsingCurrentKubeconfig()
 		if err != nil {
 			return "", err
@@ -111,12 +101,12 @@ func DeleteClusterAndTemporaryKubeconfig(distroToUse DistroToUse, tempKubeconfig
 
 	// Delete the cluster
 	switch distroToUse {
-	case Kind:
+	case DistroKind:
 		err := deleteKindCluster(tempKubeconfigFilePath)
 		if err != nil {
 			return err
 		}
-	case K3d:
+	case DistroK3d:
 		err := deleteK3dCluster()
 		if err != nil {
 			return err
@@ -181,6 +171,11 @@ func createKindCluster(kubeconfigFile string) error {
 		kindCluster.CreateWithWaitForReady(time.Duration(0)),
 		kindCluster.CreateWithKubeconfigPath(kubeconfigFile),
 		kindCluster.CreateWithDisplayUsage(false))
+	if err != nil {
+		return err
+	}
+	// The cluster needs a bit more time to become healthy
+	err = waitForHealthyCluster()
 	if err != nil {
 		return err
 	}

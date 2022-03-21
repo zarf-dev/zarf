@@ -116,7 +116,7 @@ func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error)
 	// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
 
 	// Check if we need to deploy the k3s component
-	if e2e.distroToUse == clusters.K3s && commandString[0] == "init" {
+	if e2e.distroToUse == clusters.DistroK3s && commandString[0] == "init" {
 		componentAdded := false
 		for idx, str := range commandString {
 			if strings.Contains(str, "components") {
