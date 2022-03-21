@@ -28,10 +28,9 @@ var destroyCmd = &cobra.Command{
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
 		state := k8s.LoadZarfState()
-		_ = os.Remove(".zarf-registry")
 
 		// If Zarf deployed the cluster, burn it all down
-		if state.ZarfAppliance || (state == types.ZarfState{Distro: k8s.DistroIsUnknown}) {
+		if state.ZarfAppliance || (state == types.ZarfState{}) {
 			// Check if we have the scripts to destory everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
