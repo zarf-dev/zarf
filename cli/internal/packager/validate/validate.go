@@ -2,6 +2,7 @@ package validate
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/cli/config"
@@ -13,6 +14,10 @@ import (
 // Run performs config validations and runs message.Fatal() on errors
 func Run() {
 	components := config.GetComponents()
+
+	if err := validatePackageName(config.GetMetaData().Name); err != nil {
+		message.Fatalf(err, "Invalid package name")
+	}
 
 	for _, component := range components {
 		for _, chart := range component.Charts {
@@ -27,6 +32,15 @@ func Run() {
 		}
 	}
 
+}
+
+func validatePackageName(subject string) error {
+	// https://regex101.com/r/vpi8a8/1
+	isValid := regexp.MustCompile(`^[a-z\-]+$`).MatchString
+	if isValid(subject) {
+		return nil
+	}
+	return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
 }
 
 func validateChart(chart types.ZarfChart) error {

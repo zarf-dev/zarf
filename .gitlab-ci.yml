@@ -68,5 +68,6 @@ generate-release:
       --assets-link "{\"name\":\"zarf\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf\"}"
       --assets-link "{\"name\":\"zarf-mac-apple\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-mac-apple\"}"
       --assets-link "{\"name\":\"zarf-mac-intel\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-mac-intel\"}"
-      --assets-link "{\"name\":\"zarf-init.tar.zst\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-init.tar.zst\"}"
+      --assets-link "{\"name\":\"zarf-init-amd64.tar.zst\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-init-amd64.tar.zst\"}"
+      --assets-link "{\"name\":\"zarf-init-arm64.tar.zst\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf-init-arm64.tar.zst\"}"
       --assets-link "{\"name\":\"zarf.sha256\",\"url\":\"https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/$CI_COMMIT_TAG/zarf.sha256\"}"

@@ -18,12 +18,14 @@ func TestGitopsExample(t *testing.T) {
 	output, err := e2e.execZarfCommand("init", "--confirm", "--components=gitops-service")
 	require.NoError(t, err, output)
 
+	path := fmt.Sprintf("../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
+
 	// Deploy the gitops example
-	output, err = e2e.execZarfCommand("package", "deploy", "../../build/zarf-package-gitops-service-data.tar.zst", "--confirm")
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Create a tunnel to the git resources
-	err = e2e.execZarfBackgroundCommand("connect", "git")
+	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")
 	assert.NoError(t, err, "unable to establish tunnel to git")
 
 	// Check for full git repo mirror (foo.git) from https://github.com/stefanprodan/podinfo.git

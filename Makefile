@@ -2,6 +2,8 @@
 ZARF_BIN := ./build/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
+# Need a clean way to map this, arch and uname -a return x86_64 for amd64
+ARCH := amd64
 ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_S),Darwin)
 		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
@@ -49,8 +51,9 @@ build-cli-mac: ## Build the Mac CLI
 build-cli: build-cli-linux build-cli-mac ## Build the CLI
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
-	$(ZARF_BIN) package create --confirm
-	mv zarf-init.tar.zst build
+	$(ZARF_BIN) package create --confirm --architecture amd64
+	$(ZARF_BIN) package create --confirm --architecture arm64
+	mv zarf-init-*.tar.zst build
 	cd build && sha256sum -b zarf* > zarf.sha256
 	ls -lh build
 
@@ -87,26 +90,26 @@ package-example-tiny-kafka:
 package-example-compose:
 	cd examples/composable-packages && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
-# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init.tar.zst`
-.PHONY: test-new-e2e
-test-e2e: ## Run e2e tests on a KiND cluster. All dependencies are assumed to be built and in the ./build directory
-	@ #Check to make sure all the packages we need exist
+# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
+.PHONY: test-e2e
+test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
+	@#Check to make sure all the packages we need exist
 	@if [ ! -f $(ZARF_BIN) ]; then\
 		$(MAKE) build-cli;\
 	fi
-	@if [ ! -f ./build/zarf-init.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-init-$(ARCH).tar.zst ]; then\
 		$(MAKE) init-package;\
 	fi
-	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-game;\
 	fi
-	@if [ ! -f ./build/zarf-package-data-injection-demo.tar ]; then\
+	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
 		$(MAKE) package-example-data-injection;\
 	fi
-	@if [ ! -f ./build/zarf-package-gitops-service-data.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-gitops-data;\
 	fi
-	@if [ ! -f ./build/zarf-package-compose-example.tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init.tar.zst . && go test ./... -v -timeout 2400s && rm zarf-init.tar.zst
+	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst

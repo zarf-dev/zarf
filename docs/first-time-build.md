@@ -68,7 +68,7 @@ make init-package
 > ```
 > It is likely that you've forgotten to setup access to Iron Bank _or_ that your credentials have changed. In either case, you should go back through the steps to [Log into Iron Bank](#2-log-into-iron-bank) & try to build again!
 
-Assuming everything works out, you should see a shiny new `zarf-init.tar.zst` in your `./build` directory.
+Assuming everything works out, you should see a shiny new `zarf-init-<arch>.tar.zst` in your `./build` directory.
 
 Congratulations!  You've just built yourself a Zarf!
 
