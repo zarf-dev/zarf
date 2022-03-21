@@ -36,6 +36,8 @@ const (
 
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
+
+	ZarfGiteaComponentName = "gitops-service"
 )
 
 var (
