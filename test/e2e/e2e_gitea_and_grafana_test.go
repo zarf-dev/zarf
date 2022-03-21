@@ -16,7 +16,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
-	err = e2e.execZarfBackgroundCommand("connect", "git")
+	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")
 	assert.NoError(t, err, "unable to establish tunnel to git")
 
 	// Make sure Gitea comes up cleanly
@@ -25,7 +25,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// Establish the port-forward into the logging service
-	err = e2e.execZarfBackgroundCommand("connect", "logging")
+	err = e2e.execZarfBackgroundCommand("connect", "logging", "--cli-only")
 	assert.NoError(t, err, "unable to establish tunnel to logging")
 
 	// Make sure Grafana comes up cleanly
