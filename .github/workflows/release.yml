@@ -1,9 +1,7 @@
-Name: Publish Zarf Packages on Tag
+name: Publish Zarf Packages on Tag
 
 on:
   push:
-    branches:
-      - master
     tags:
       - 'v*'
 
