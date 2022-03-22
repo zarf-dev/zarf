@@ -8,18 +8,8 @@ metadata:
 components:
   - name: flux
     required: true
-    secretName: "private-registry"
-    manifests:
-      - name: flux-installer
-        # This will be built on the package create side and deployed as a regular manifest on package deploy
-        kustomizations:
-          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.28.0
-    images:
-      # Flux images
-      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.16.0
-      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.20.0
-      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.21.0
-      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.21.1
+    import:
+      path: ../../packages/flux-iron-bank
 
   - name: big-bang
     required: true
@@ -27,7 +17,7 @@ components:
     manifests:
       - name: big-bang-config
         kustomizations:
-          - "kustomizations/bigbang"
+          - "kustomization"
     repos:
       - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.28.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.11.5-bb.2

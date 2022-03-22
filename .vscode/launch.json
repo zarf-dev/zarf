@@ -9,9 +9,10 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cli",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/cli/main.go",
       "env": {},
-      "args": ["init", "--confirm", "-l=trace"]
+      "args": ["package", "create", "-l=trace"]
     }
   ]
 }

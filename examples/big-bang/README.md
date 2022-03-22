@@ -2,9 +2,9 @@
 
 This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
 
-![pods](img/pods.png)
+![pods](.images/pods.png)
 
-![helmreleases](img/helmreleases.png)
+![helmreleases](.images/helmreleases.png)
 
 ## Known Issues
 
