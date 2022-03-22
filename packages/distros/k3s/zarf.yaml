@@ -1,0 +1,53 @@
+kind: ZarfInitConfig
+metadata:
+  name: "Zarf Init Package Component - K3s"
+  description: "Used to establish a new Zarf cluster"
+  architecture: amd64
+
+components:
+  - name: k3s
+    description: >
+      *** REQUIRES ROOT ***
+      Install K3s, certified Kubernetes distribution built for IoT & Edge computing.
+      K3s provides the cluster need for Zarf running in Appliance Mode as well as can
+      host a low-resource Gitops Service if not using an existing Kubernetes platform.
+    scripts:
+      retry: true
+      before:
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+      after:
+        # Configure K3s systemd service
+        - "systemctl daemon-reload"
+        - "systemctl enable --now k3s"
+    files:
+      # Include the actual K3s binary
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
+        shasum: 89eb5f3d12524d0a9d5b56ba3e2707b106e1731dd0e6d2e7b898ac585f4959df
+        target: /usr/sbin/k3s
+        executable: true
+        # K3s magic provides these tools when symlinking
+        symlinks:
+          - /usr/sbin/kubectl
+          - /usr/sbin/ctr
+          - /usr/sbin/crictl
+      # Transfer the K3s images for containerd to pick them up
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: 772ae839f8c7718e2022d103076df53452d4f09d2a22afdf4b5796cf0cbce62c
+        target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
+      # K3s removal script
+      - source: assets/zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
+        executable: true
+      # The K3s systemd service definition
+      - source: assets/k3s.service
+        target: /etc/systemd/system/k3s.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/k3s.service
+      # Mock file for creating the kube config symlink
+      - source: assets/empty-file
+        target: /etc/rancher/k3s/k3s.yaml
+        symlinks:
+          - /root/.kube/config
