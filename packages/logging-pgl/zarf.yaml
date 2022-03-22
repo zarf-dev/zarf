@@ -1,0 +1,19 @@
+kind: ZarfPackageConfig
+metadata:
+  name: Zarf Logging Stack
+
+components:
+  - name: logging
+    description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
+    images:
+      - grafana/grafana:8.1.6
+      - grafana/loki:2.4.1
+      - grafana/promtail:2.1.0
+      - quay.io/kiwigrid/k8s-sidecar:1.12.3
+    charts:
+      - name: loki-stack
+        url: https://grafana.github.io/helm-charts
+        version: 2.5.1
+        namespace: zarf
+        valuesFiles:
+          - pgl-values.yaml
