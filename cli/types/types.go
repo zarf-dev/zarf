@@ -142,8 +142,16 @@ type ZarfDeployOptions struct {
 	PackagePath string
 	Confirm     bool
 	Components  string
+
 	// Zarf init is installing the k3s component
 	ApplianceMode bool
+
+	// Zarf init options
+	Distro       string
+	StorageClass string
+	Secret       string
+	NodePort     string
+	Architecture string
 }
 
 // ZarfImport structure for including imported zarf components
