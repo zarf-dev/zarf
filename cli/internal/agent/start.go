@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/cli/internal/pki"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -73,19 +74,61 @@ func Deploy() error {
 		return fmt.Errorf("unable to add the Zarf Agent secret %s/%s to the cluster: %w", k8s.ZarfNamespace, secretName, err)
 	}
 
+	noSideEffectsV1 := admissionv1.SideEffectClassNone
+	webhookPath := "/mutate/pods"
+	timeout := int32(300)
+
+	createRule := admissionv1.RuleWithOperations{
+		Operations: []admissionv1.OperationType{admissionv1.Create},
+		Rule: admissionv1.Rule{
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		},
+	}
+
 	// todo: deploy the webhook with the tls.CA value populated
 	webhook := k8s.GenerateMutatingWebhook(k8s.ZarfNamespace, k8s.ZarfNamespace)
 	webhook.Webhooks = append(webhook.Webhooks, admissionv1.MutatingWebhook{
 		Name: webhookName,
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				// Only operate on zarf-managed namespaces until the webhook can create secrets
+				"app.kubernetes.io/managed-by": "zarf",
+			},
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "name",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"kube-system"},
+				},
+				{
+					Key:      "zarf.dev/agent",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"skip", "ignore"},
+				},
+			},
+		},
+
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "zarf.dev/agent",
+				Operator: metav1.LabelSelectorOpNotIn,
+				Values:   []string{"skip", "ignore"},
+			}},
+		},
+
 		ClientConfig: admissionv1.WebhookClientConfig{
 			Service: &admissionv1.ServiceReference{
 				Namespace: k8s.ZarfNamespace,
 				Name:      svcName,
-				// Path:      &webhookPath,
+				Path:      &webhookPath,
 			},
 			CABundle: tls.CA,
 		},
-		// @todo, finish this
+		Rules:                   []admissionv1.RuleWithOperations{createRule},
+		SideEffects:             &noSideEffectsV1,
+		TimeoutSeconds:          &timeout,
+		AdmissionReviewVersions: []string{"v1beta1", "v1"},
 	})
 
 	return nil
@@ -99,38 +142,3 @@ func Deploy() error {
 // 	docker build --tag zarf-agent:$(tag) --file Dockerfile.dev . && \
 // 	kind load docker-image zarf-agent:$(tag) && \
 // 	sed -e 's@###ZARF_REGISTRY###\/defenseunicorns\/zarf\-agent\:v0.15@'"zarf-agent:$(tag)"'@g' < "assets/manifests/agent/deployment.yaml" | kubectl apply -f -
-
-// webhooks:
-//   - name:
-//     namespaceSelector:
-//       matchLabels:
-//         # Only operate on zarf-managed namespaces until the webhook can create secrets
-//         app.kubernetes.io/managed-by: "zarf"
-//       matchExpressions:
-//         # Ensure we don't mess with kube-sustem
-//         - key: name
-//           operator: NotIn
-//           values: ["kube-system"]
-//         # Allow zarf-managed namespaces to be ignore
-//         - key: zarf.dev/agent
-//           operator: NotIn
-//           values:
-//             - "skip"
-//             - "ignore"
-//     objectSelector:
-//       matchExpressions:
-//         # Always ignore specific resources if requested by annotation/label
-//         - key: zarf.dev/agent
-//           operator: NotIn
-//           values:
-//             - "skip"
-//             - "ignore"
-//     rules:
-//       - operations: ["CREATE"]
-//         apiGroups: [""]
-//         apiVersions: ["v1"]
-//         resources: ["pods"]
-//     failurePolicy: Fail
-//     admissionReviewVersions: ["v1", "v1beta1"]
-//     sideEffects: None
-//     timeoutSeconds: 5
