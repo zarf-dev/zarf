@@ -63,10 +63,10 @@ func credentialParser() []Credential {
 	scanner := bufio.NewScanner(credentialsFile)
 	for scanner.Scan() {
 		gitUrl, err := url.Parse(scanner.Text())
-		password, _ := gitUrl.User.Password()
 		if err != nil {
 			continue
 		}
+		password, _ := gitUrl.User.Password()
 		credential := Credential{
 			Path: gitUrl.Host,
 			Auth: http.BasicAuth{
