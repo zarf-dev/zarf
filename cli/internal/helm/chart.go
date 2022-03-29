@@ -66,10 +66,10 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
-				_ = rollbackChart(actionConfig, options.ReleaseName, options.Chart.Wait)
+				_ = rollbackChart(actionConfig, options.ReleaseName, options.Chart.NoWait)
 			} else {
 				spinner.Updatef("Performing chart uninstall")
-				_, _ = uninstallChart(actionConfig, options.ReleaseName, options.Chart.Wait)
+				_, _ = uninstallChart(actionConfig, options.ReleaseName, options.Chart.NoWait)
 			}
 			spinner.Errorf(nil, "Unable to complete helm chart install/upgrade")
 			break
@@ -192,7 +192,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 			Name:      tmpChart.Metadata.Name,
 			Version:   tmpChart.Metadata.Version,
 			Namespace: manifest.DefaultNamespace,
-			Wait:      manifest.Wait,
+			NoWait:    manifest.NoWait,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently
@@ -214,7 +214,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
-	client.Wait = options.Chart.Wait
+	client.Wait = !options.Chart.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly
 	client.SkipCRDs = false
@@ -244,7 +244,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 10 * time.Minute
 
-	client.Wait = options.Chart.Wait
+	client.Wait = !options.Chart.NoWait
 
 	client.SkipCRDs = true
 
@@ -263,22 +263,22 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	return client.Run(options.ReleaseName, loadedChart, chartValues)
 }
 
-func rollbackChart(actionConfig *action.Configuration, name string, shouldWait bool) error {
+func rollbackChart(actionConfig *action.Configuration, name string, noWait bool) error {
 	message.Debugf("helm.rollbackChart(%+v, %s)", actionConfig, name)
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
-	client.Wait = shouldWait
+	client.Wait = !noWait
 	client.Timeout = 1 * time.Minute
 	return client.Run(name)
 }
 
-func uninstallChart(actionConfig *action.Configuration, name string, shouldWait bool) (*release.UninstallReleaseResponse, error) {
+func uninstallChart(actionConfig *action.Configuration, name string, noWait bool) (*release.UninstallReleaseResponse, error) {
 	message.Debugf("helm.uninstallChart(%+v, %s)", actionConfig, name)
 	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
 	client.Timeout = 3 * time.Minute
-	client.Wait = shouldWait
+	client.Wait = !noWait
 	return client.Run(name)
 }
 

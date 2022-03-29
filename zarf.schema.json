@@ -59,7 +59,7 @@
         "gitPath": {
           "type": "string"
         },
-        "wait": {
+        "noWait": {
           "type": "boolean"
         }
       },
@@ -258,7 +258,7 @@
           },
           "type": "array"
         },
-        "wait": {
+        "noWait": {
           "type": "boolean"
         }
       },
