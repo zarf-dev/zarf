@@ -24,7 +24,9 @@ components:
     required: true
     manifests:
       - name: example-data-injection-pod
+        noWait: true
         files:
-          - manifests/data-injection.yaml
+          - manifests/pvc.yaml
+          - manifests/deployment.yaml
     images:
       - alpine:3.15
