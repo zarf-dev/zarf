@@ -58,11 +58,6 @@ func IsZarfInitConfig() bool {
 }
 
 func GetArch() string {
-	// If user-overridden then reflect that
-	if DeployOptions.Architecture != "" {
-		return DeployOptions.Architecture
-	}
-
 	// If CLI-orverriden then reflect that
 	if CliArch != "" {
 		return CliArch
@@ -151,7 +146,7 @@ func GetState() types.ZarfState {
 }
 
 func GetRegistry() string {
-	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
+	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
 }
 
 func LoadConfig(path string) error {

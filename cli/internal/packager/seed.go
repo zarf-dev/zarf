@@ -57,7 +57,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		}
 
 		// Defaults
-		state.Registry.NodePort = "31999"
+		state.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
@@ -79,6 +79,9 @@ func preSeedRegistry(tempPath tempPaths) {
 	}
 
 	// CLI provided overrides that haven't been processed already
+	if config.DeployOptions.NodePort != "" {
+		state.NodePort = config.DeployOptions.NodePort
+	}
 	if config.DeployOptions.Secret != "" {
 		state.Secret = config.DeployOptions.Secret
 	}

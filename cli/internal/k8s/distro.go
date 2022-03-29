@@ -4,7 +4,6 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/cli/config"
 	"github.com/defenseunicorns/zarf/cli/internal/message"
 )
 
@@ -26,10 +25,6 @@ const (
 // DetectDistro returns the matching distro or unknown if not found
 func DetectDistro() (string, error) {
 	message.Debugf("k8s.DetectDistro()")
-
-	if config.DeployOptions.Distro != "" {
-		return config.DeployOptions.Distro, nil
-	}
 
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
