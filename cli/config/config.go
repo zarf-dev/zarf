@@ -28,9 +28,6 @@ const (
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
 
-	ZarfSeedTypeCLIInject         = "cli-inject"
-	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
-
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
