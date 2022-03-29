@@ -113,7 +113,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 			for _, pod := range pods.Items {
 				message.Debugf("Testing pod %s", pod.Name)
 
-				// Handle container targetting
+				// Handle container targeting
 				if target.Container != "" {
 					message.Debugf("Testing for container")
 					var matchesInitContainer bool
@@ -134,7 +134,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 						continue
 					}
 
-					// Check the status of regular containers for a runing match
+					// Check the status of regular containers for a running match
 					for _, container := range pod.Status.ContainerStatuses {
 						isRunning := container.State.Running != nil
 						if isRunning && container.Name == target.Container {
@@ -150,7 +150,6 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 						readyPods = append(readyPods, pod.Name)
 					}
 				}
-
 			}
 			message.Debug("Ready pods", readyPods)
 			somePodsReady := len(readyPods) > 0
@@ -159,7 +158,6 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 			if allPodsReady || somePodsReady && !waitForAllPods {
 				return readyPods
 			}
-
 		}
 
 		time.Sleep(3 * time.Second)
