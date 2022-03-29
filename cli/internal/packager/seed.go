@@ -76,7 +76,14 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	case k8s.DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
+	}
 
+	// CLI provided overrides that haven't been processed already
+	if config.DeployOptions.Secret != "" {
+		state.Secret = config.DeployOptions.Secret
+	}
+	if config.DeployOptions.StorageClass != "" {
+		state.StorageClass = config.DeployOptions.StorageClass
 	}
 
 	spinner.Success()

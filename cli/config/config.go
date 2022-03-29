@@ -58,6 +58,11 @@ func IsZarfInitConfig() bool {
 }
 
 func GetArch() string {
+	// If user-overridden then reflect that
+	if DeployOptions.Architecture != "" {
+		return DeployOptions.Architecture
+	}
+
 	// If CLI-orverriden then reflect that
 	if CliArch != "" {
 		return CliArch
