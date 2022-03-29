@@ -213,7 +213,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
-	client.Wait = true
+	client.Wait = false
 
 	// We need to include CRDs or operator installations will fail spectacularly
 	client.SkipCRDs = false
@@ -243,7 +243,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 10 * time.Minute
 
-	client.Wait = true
+	client.Wait = false
 
 	client.SkipCRDs = true
 
@@ -267,7 +267,7 @@ func rollbackChart(actionConfig *action.Configuration, name string) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
-	client.Wait = true
+	client.Wait = false
 	client.Timeout = 1 * time.Minute
 	return client.Run(name)
 }
@@ -277,7 +277,7 @@ func uninstallChart(actionConfig *action.Configuration, name string) (*release.U
 	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
 	client.Timeout = 3 * time.Minute
-	client.Wait = true
+	client.Wait = false
 	return client.Run(name)
 }
 
