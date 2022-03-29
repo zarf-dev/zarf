@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/cli/types"
 
@@ -168,9 +169,8 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 	// Start any data injection async
 	if len(component.DataInjections) > 0 {
-		// @todo: make this async jon or we'll fire you 😘
 		message.Info("Loading data injections")
-		handleDataInjection(component.DataInjections, tempPath)
+		handleDataInjections(component.DataInjections, tempPath)
 	}
 
 	if isSeedRegistry {
@@ -255,44 +255,76 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 }
 
-// handleDataInjection performs data-copy operations into a pod
+// Wait for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(dataInjectionList []types.ZarfDataInjection, tempPath tempPaths) {
+func handleDataInjection(data types.ZarfDataInjection, tempPath tempPaths) {
 	injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		return
 	}
-	for _, data := range dataInjectionList {
-		sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-		pods := k8s.WaitForPodsAndContainers(data.Target, true)
 
-		for _, pod := range pods {
+	timeout := time.After(15 * time.Minute)
+	for {
+		// delay check 2 seconds
+		time.Sleep(2 * time.Second)
+		select {
+
+		// on timeout abort
+		case <-timeout:
+			message.Warnf("data injection into target %v timed out\n", data.Target.Namespace)
+			return
+
+		default:
+			sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+
+			// Wait until the pod we are injecting data into becomes available
+			var pods []string
+			for len(pods) == 0 {
+				pods = k8s.WaitForPodsAndContainers(data.Target, true)
+			}
+
+			// Define injection destination
 			destination := data.Target.Path
 			if destination == "/"+filepath.Base(destination) {
 				// Handle top-level directory targets
 				destination = "/"
 			}
-			cpPodExecArgs := []string{"-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
 
-			if data.Target.Container != "" {
-				// Append the container args if they are specified
-				cpPodExecArgs = append(cpPodExecArgs, "-c", data.Target.Container)
-			}
+			// Inject into all the pods that
+			for _, pod := range pods {
+				cpPodExecArgs := []string{"-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
 
-			_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
-			if err != nil {
-				message.Warn("Error copying data into the pod")
-			} else {
-				// Leave a marker in the target container for pods to track the sync action
-				cpPodExecArgs[3] = injectionCompletionMarker
-				cpPodExecArgs[4] = pod + ":" + data.Target.Path
-				_, err = utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+				if data.Target.Container != "" {
+					// Append the container args if they are specified
+					cpPodExecArgs = append(cpPodExecArgs, "-c", data.Target.Container)
+				}
+
+				// Do the actual data injection
+				_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
 				if err != nil {
-					message.Warn("Error saving the zarf sync completion file")
+					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
+				} else {
+					// Leave a marker in the target container for pods to track the sync action
+					cpPodExecArgs[3] = injectionCompletionMarker
+					cpPodExecArgs[4] = pod + ":" + data.Target.Path
+					_, err = utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+					if err != nil {
+						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
+					}
 				}
 			}
+
+			// Cleanup now to reduce disk pressure
+			_ = os.RemoveAll(sourceFile)
 		}
-		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(sourceFile)
 	}
+}
+
+// handleDataInjections performs data-copy operations into a pod
+func handleDataInjections(dataInjectionList []types.ZarfDataInjection, tempPath tempPaths) {
+
+	for _, data := range dataInjectionList {
+		go handleDataInjection(data, tempPath)
+	}
+
 }
