@@ -32,7 +32,6 @@ func Create() {
 
 	packageName := config.GetPackageName()
 	components := GetComposedComponents()
-	dataInjections := config.GetDataInjections()
 	seedImage := config.GetSeedImage()
 
 	configFile := tempPath.base + "/zarf.yaml"
@@ -71,15 +70,8 @@ func Create() {
 		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
 		utils.CreatePathAndCopy("injector/zarf-registry", tempPath.injectZarfBinary)
 		utils.CreatePathAndCopy("injector/zarf-injector", tempPath.injectBinary)
-	} else {
-		// Init packages do not use data or utilityCluster keys
-		if len(dataInjections) > 0 {
-			for _, data := range dataInjections {
-				destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-				utils.CreatePathAndCopy(data.Source, destinationFile)
-			}
-		}
 	}
+
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
@@ -133,6 +125,17 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				_ = os.Chmod(destinationFile, 0600)
 			}
 		}
+	}
+
+	if len(component.DataInjections) > 0 {
+		spinner := message.NewProgressSpinner("Loading data injections")
+		defer spinner.Stop()
+		for _, data := range component.DataInjections {
+			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
+			destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+			utils.CreatePathAndCopy(data.Source, destinationFile)
+		}
+		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {

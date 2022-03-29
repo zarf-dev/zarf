@@ -81,41 +81,28 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
+	if len(connectStrings) > 0 {
+		list := pterm.TableData{{"     Connect Command", "Description"}}
+		// Loop over each connecStrings and convert to pterm.TableData
+		for name, connect := range connectStrings {
+			name = fmt.Sprintf("     zarf connect %s", name)
+			list = append(list, []string{name, connect.Description})
+		}
+
+		// Create the table output with the data
+		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
+	}
+
+	pterm.Success.Println("Zarf deployment complete")
+	pterm.Println()
+
 	if config.IsZarfInitConfig() {
-		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
-		_ = os.Remove(".zarf-registry")
-
-		pterm.Success.Println("Zarf deployment complete")
-		pterm.Println()
-
 		_ = pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
 			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
-	} else {
-		// Otherwise, look for any datainjections to run after the components
-		dataInjectionList := config.GetDataInjections()
-		if len(dataInjectionList) > 0 {
-			message.Info("Loading data injections")
-			handleDataInjection(dataInjectionList, tempPath)
-		}
-
-		pterm.Success.Println("Zarf deployment complete")
-		pterm.Println()
-
-		if len(connectStrings) > 0 {
-			list := pterm.TableData{{"     Connect Command", "Description"}}
-			// Loop over each connecStrings and convert to pterm.TableData
-			for name, connect := range connectStrings {
-				name = fmt.Sprintf("     zarf connect %s", name)
-				list = append(list, []string{name, connect.Description})
-			}
-
-			// Create the table output with the data
-			_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
-		}
 	}
 
 	// All done
@@ -177,6 +164,13 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 			_ = os.RemoveAll(sourceFile)
 		}
 		spinner.Success()
+	}
+
+	// Start any data injection async
+	if len(component.DataInjections) > 0 {
+		// @todo: make this async jon or we'll fire you 😘
+		message.Info("Loading data injections")
+		handleDataInjection(component.DataInjections, tempPath)
 	}
 
 	if isSeedRegistry {
@@ -263,7 +257,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 // handleDataInjection performs data-copy operations into a pod
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(dataInjectionList []types.ZarfData, tempPath tempPaths) {
+func handleDataInjection(dataInjectionList []types.ZarfDataInjection, tempPath tempPaths) {
 	injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		return

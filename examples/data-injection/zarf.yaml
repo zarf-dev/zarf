@@ -5,20 +5,6 @@ metadata:
   # (optional) Some large datasets may already be compressed making zarf compression less efficient
   uncompressed: true
 
-data:
-  # Injection in a subdirectory
-  - source: sample-data
-    target:
-      namespace: demo
-      selector: app=data-injection
-      path: /test/subdirectory-test
-  # Injection at the root
-  - source: sample-data
-    target:
-      namespace: demo
-      selector: app=data-injection
-      path: /test
-
 components:
   - name: baseline
     required: true
@@ -28,3 +14,17 @@ components:
           - manifests/data-injection.yaml
     images:
       - alpine:3.15
+    # Add new data into the cluster, these will keep trying up until their timeout
+    dataInjections:
+      # Injection in a subdirectory
+      - source: sample-data
+        target:
+          namespace: demo
+          selector: app=data-injection
+          path: /test/subdirectory-test
+      # Injection at the root
+      - source: sample-data
+        target:
+          namespace: demo
+          selector: app=data-injection
+          path: /test
