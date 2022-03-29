@@ -47,7 +47,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 			// Establish a new actionConfig for the namespace
 			actionConfig, _ = createActionConfig(release.Namespace, spinner)
 			// Perform the uninstall
-			response, err := uninstallChart(actionConfig, release.Name)
+			response, err := uninstallChart(actionConfig, release.Name, false)
 			message.Debug(response)
 			if err != nil {
 				// Don't fatal since this is a removal action

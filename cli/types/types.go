@@ -17,6 +17,7 @@ type ZarfChart struct {
 	Namespace   string   `yaml:"namespace"`
 	ValuesFiles []string `yaml:"valuesFiles,omitempty"`
 	GitPath     string   `yaml:"gitPath,omitempty"`
+	Wait        bool     `yaml:"wait,omitempty" default:"true"`
 }
 
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf.
@@ -64,6 +65,7 @@ type ZarfManifest struct {
 	DefaultNamespace string   `yaml:"namespace,omitempty"`
 	Files            []string `yaml:"files,omitempty"`
 	Kustomizations   []string `yaml:"kustomizations,omitempty"`
+	Wait             bool     `yaml:"wait,omitempty" default:"true"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed

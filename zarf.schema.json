@@ -58,6 +58,9 @@
         },
         "gitPath": {
           "type": "string"
+        },
+        "wait": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
@@ -254,6 +257,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "wait": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
