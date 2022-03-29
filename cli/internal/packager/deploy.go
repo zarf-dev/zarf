@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/defenseunicorns/zarf/cli/types"
@@ -169,8 +170,14 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 	// Start any data injection async
 	if len(component.DataInjections) > 0 {
+		var waitGroup sync.WaitGroup
+
 		message.Info("Loading data injections")
-		handleDataInjections(component.DataInjections, tempPath)
+		for _, data := range component.DataInjections {
+			waitGroup.Add(1)
+			go handleDataInjection(&waitGroup, data, tempPath)
+		}
+		defer waitGroup.Wait()
 	}
 
 	if isSeedRegistry {
@@ -257,7 +264,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 // Wait for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(data types.ZarfDataInjection, tempPath tempPaths) {
+func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, tempPath tempPaths) {
+	defer wg.Done()
+
 	injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		return
@@ -318,13 +327,4 @@ func handleDataInjection(data types.ZarfDataInjection, tempPath tempPaths) {
 			_ = os.RemoveAll(sourceFile)
 		}
 	}
-}
-
-// handleDataInjections performs data-copy operations into a pod
-func handleDataInjections(dataInjectionList []types.ZarfDataInjection, tempPath tempPaths) {
-
-	for _, data := range dataInjectionList {
-		go handleDataInjection(data, tempPath)
-	}
-
 }
