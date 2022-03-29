@@ -25,6 +25,7 @@ components:
     manifests:
       - name: example-data-injection-pod
         files:
-          - manifests/data-injection.yaml
+          - manifests/pvc.yaml
+          - manifests/deployment.yaml
     images:
       - alpine:3.15
