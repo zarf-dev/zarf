@@ -299,7 +299,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				destination = "/"
 			}
 
-			// Inject into all the pods that
+			// Inject into all the pods
 			for _, pod := range pods {
 				cpPodExecArgs := []string{"-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
 

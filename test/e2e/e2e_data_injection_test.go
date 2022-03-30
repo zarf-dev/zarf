@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,8 +36,14 @@ func TestDataInjection(t *testing.T) {
 	assert.Contains(t, execStdOut, "subdirectory-test")
 
 	// Test to confirm the subdirectory file was placed
+	// NOTE: This data gets injected after pod comes up as 'healthy' so we need to retry the check until it is able to populate
 	execStdOut = ""
-	execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test/subdirectory-test"})
+	attempt := 0
+	for attempt < 10 && execStdOut == "" {
+		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test/subdirectory-test"})
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
 	assert.NoError(t, err)
 	assert.Contains(t, execStdOut, "this-is-an-example-file.txt")
 }
