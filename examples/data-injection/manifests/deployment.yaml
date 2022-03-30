@@ -54,5 +54,4 @@ spec:
               name: test
       volumes:
         - name: test
-          persistentVolumeClaim:
-            claimName: test
+          emptyDir: {}
