@@ -8,6 +8,8 @@ It provides a static go binary (can run anywhere) CLI that can pull, package, an
 
 Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters".
 
+Zarf was theorized and initially demonstrated in Naval Postgraduate School reasearch A DEVSECOPS APPROACH FOR DEVELOPING AND DEPLOYING CONTAINERIZED CLOUD-BASED SOFTWARE ON SUBMARINES  (https://calhoun.nps.edu/handle/10945/68688). Its origin story remains to be told but is of the likes seen in Kessel Run. (https://www.airforcemag.com/article/making-the-kessel-run/)
+
 [![asciicast](https://asciinema.org/a/475530.svg)](https://asciinema.org/a/475530)
 
 ## Why is Zarf Needed?
