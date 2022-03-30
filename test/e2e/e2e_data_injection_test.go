@@ -33,13 +33,13 @@ func TestDataInjection(t *testing.T) {
 	var execStdOut string
 	execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
 	assert.NoError(t, err)
-	assert.Contains(t, execStdOut, "subdirectory-test")
+	assert.Contains(t, execStdOut, "this-is-an-example-file.txt")
 
 	// Test to confirm the subdirectory file was placed
 	// NOTE: This data gets injected after pod comes up as 'healthy' so we need to retry the check until it is able to populate
 	execStdOut = ""
 	attempt := 0
-	for attempt < 30 && execStdOut == "" {
+	for attempt < 10 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test/subdirectory-test"})
 		attempt++
 		time.Sleep(2 * time.Second)
