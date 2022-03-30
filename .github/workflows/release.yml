@@ -30,13 +30,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           generate_release_notes: true    # Generates basic release notes that we can edit later
-          body: |
-            - [zarf-linux-amd64](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}/zarf)
-            - [zarf-macos-m1](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}zarf-mac-apple)
-            - [zarf-macos-intel](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}zarf-mac-intel)
-            - [zarf-int.tar.zst](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}/zarf-init-amd64.tar.zst)
-            - [zarf-int.tar.zst](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}/zarf-init-arm64.tar.zst)
-            - [zarf.sha256](https://zarf-public.s3-us-gov-west-1.amazonaws.com/release/${{ github.ref_name }}/zarf.sha256)
           files: |
             build/zarf
             build/zarf-mac-intel
