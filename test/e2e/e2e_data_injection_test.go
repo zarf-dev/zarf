@@ -29,6 +29,8 @@ func TestDataInjection(t *testing.T) {
 	require.Equal(t, len(pods.Items), 1)
 	podname := pods.Items[0].Name
 
+	time.Sleep(1 * time.Second)
+
 	// Test to confirm the root file was placed
 	var execStdOut string
 	execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
