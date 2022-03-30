@@ -126,10 +126,7 @@ type ZarfState struct {
 	Architecture  string `json:"architecture"`
 	StorageClass  string `json:"storageClass"`
 	Secret        string `json:"secret"`
-	Registry      struct {
-		SeedType string `json:"seedType"`
-		NodePort string `json:"nodePort"`
-	} `json:"registry"`
+	NodePort      string `json:"nodePort"`
 }
 
 // TLSConfig tracks the user-defined options for TLS cert generation
@@ -144,8 +141,14 @@ type ZarfDeployOptions struct {
 	PackagePath string
 	Confirm     bool
 	Components  string
+
 	// Zarf init is installing the k3s component
 	ApplianceMode bool
+
+	// Zarf init override options
+	StorageClass string
+	Secret       string
+	NodePort     string
 }
 
 // ZarfImport structure for including imported zarf components
