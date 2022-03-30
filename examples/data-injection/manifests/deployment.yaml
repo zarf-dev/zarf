@@ -52,6 +52,14 @@ spec:
           volumeMounts:
             - mountPath: /test
               name: test
+          readinessProbe:
+            exec:
+              command:
+              - cat
+              - /test/.zarf-sync-complete
+            initialDelaySeconds: 1
+            periodSeconds: 1
+
       volumes:
         - name: test
           emptyDir: {}
