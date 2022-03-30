@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 )
@@ -144,4 +146,11 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 	time.Sleep(1 * time.Second)
 
 	return err
+}
+
+// Get the pods from the provided namespace
+func (e2e *ZarfE2ETest) getPodsFromNamespace(namespace string) (*v1.PodList, error) {
+	metaOptions := metav1.ListOptions{}
+	clientset, _ := clusters.GetClientSet()
+	return clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
 }

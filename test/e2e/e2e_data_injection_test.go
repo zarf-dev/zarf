@@ -22,12 +22,21 @@ func TestDataInjection(t *testing.T) {
 	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "-l=trace")
 	require.NoError(t, err, output)
 
+	time.Sleep(5 * time.Second)
+
+	// Get the data injection pod
+	namespace := "demo'"
+	pods, err := e2e.getPodsFromNamespace(namespace)
+	require.NoError(t, err)
+	require.Equal(t, len(pods.Items), 1)
+	podname := pods.Items[0].Name
+
 	// Test to confirm the root file was placed
 	// TODO: This retry is disgusting, but race condition...
 	var execStdOut string
 	attempt := 0
 	for attempt < 10 && execStdOut == "" {
-		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test"})
+		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
 		attempt++
 		time.Sleep(2 * time.Second)
 	}
@@ -38,7 +47,7 @@ func TestDataInjection(t *testing.T) {
 	execStdOut = ""
 	attempt = 0
 	for attempt < 10 && execStdOut == "" {
-		execStdOut, _, err = e2e.execCommandInPod("data-injection", "demo", []string{"ls", "/test/subdirectory-test"})
+		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test/subdirectory-test"})
 		attempt++
 		time.Sleep(2 * time.Second)
 	}
