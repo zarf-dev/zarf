@@ -132,7 +132,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		defer spinner.Stop()
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			destinationFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+			destinationFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
 			utils.CreatePathAndCopy(data.Source, destinationFile)
 		}
 		spinner.Success()

@@ -175,7 +175,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		message.Info("Loading data injections")
 		for _, data := range component.DataInjections {
 			waitGroup.Add(1)
-			go handleDataInjection(&waitGroup, data, tempPath)
+			go handleDataInjection(&waitGroup, data, componentPath)
 		}
 		defer waitGroup.Wait()
 	}
@@ -264,10 +264,10 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 // Wait for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, tempPath tempPaths) {
+func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath componentPaths) {
 	defer wg.Done()
 
-	injectionCompletionMarker := tempPath.dataInjections + "/.zarf-sync-complete"
+	injectionCompletionMarker := componentPath.dataInjections + "/.zarf-sync-complete"
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		return
 	}
@@ -284,12 +284,12 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, tempP
 			return
 
 		default:
-			sourceFile := tempPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+			sourceFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
 
 			// Wait until the pod we are injecting data into becomes available
-			var pods []string
-			for len(pods) == 0 {
-				pods = k8s.WaitForPodsAndContainers(data.Target, true)
+			pods := k8s.WaitForPodsAndContainers(data.Target, true)
+			if len(pods) < 1 {
+				continue
 			}
 
 			// Define injection destination
@@ -312,6 +312,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, tempP
 				_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
 				if err != nil {
 					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
+					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
 					cpPodExecArgs[3] = injectionCompletionMarker
@@ -325,6 +326,9 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, tempP
 
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(sourceFile)
+
+			// Return to stop the loop
+			return
 		}
 	}
 }
