@@ -28,9 +28,6 @@ const (
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
 
-	ZarfSeedTypeCLIInject         = "cli-inject"
-	ZarfSeedTypeInClusterRegistry = "in-cluster-registry"
-
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
@@ -145,7 +142,7 @@ func GetState() types.ZarfState {
 }
 
 func GetRegistry() string {
-	return fmt.Sprintf("%s:%s", IPV4Localhost, state.Registry.NodePort)
+	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
 }
 
 func LoadConfig(path string) error {
