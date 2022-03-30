@@ -34,19 +34,7 @@ func init() {
 	initCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm the install without prompting")
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 
-	addZarfStateOverrideFlags(initCmd, false)
-
-}
-
-// Add flags to override values that will be added to ZarfState during an init
-func addZarfStateOverrideFlags(commad *cobra.Command, makeHidden bool) {
-	commad.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
-	commad.Flags().StringVar(&config.DeployOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
-	commad.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
-
-	if makeHidden {
-		packageDeployCmd.Flags().MarkHidden("storage-class")
-		packageDeployCmd.Flags().MarkHidden("secret")
-		packageDeployCmd.Flags().MarkHidden("nodeport")
-	}
+	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
+	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
 }
