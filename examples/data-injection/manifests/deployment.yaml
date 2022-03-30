@@ -40,7 +40,7 @@ spec:
             [
               "/bin/sh",
               "-ec",
-              "while :; do ls -lah /test; sleep 5 ; done",
+              "while :; do ls -lah /test/.zarf-sync-complete ; sleep 2 ; done",
             ]
           resources:
             requests:
