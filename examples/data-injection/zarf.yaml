@@ -22,10 +22,12 @@ components:
         target:
           namespace: demo
           selector: app=data-injection
+          container: data-loader
           path: /test/subdirectory-test
       # Injection at the root
       - source: sample-data
         target:
           namespace: demo
           selector: app=data-injection
+          container: data-loader
           path: /test
