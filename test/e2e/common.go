@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -150,7 +151,17 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 
 // Get the pods from the provided namespace
 func (e2e *ZarfE2ETest) getPodsFromNamespace(namespace string) (*v1.PodList, error) {
+
 	metaOptions := metav1.ListOptions{}
 	clientset, _ := clusters.GetClientSet()
-	return clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
+	tries := 0
+	for tries < 10 {
+		pods, _ := clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
+		if pods.Items[0].Status.Phase == v1.PodRunning {
+			return pods, nil
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	return nil, errors.New("unable to get a healthy pod from the namespace")
 }
