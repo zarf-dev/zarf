@@ -13,7 +13,7 @@ secrets:
 # tlsSecretName: tls-pem
 service:
   type: NodePort
-  nodePort: "###ZARF_REGISTRY_NODEPORT###"
+  nodePort: "###ZARF_NODEPORT###"
 resources:
   requests:
     cpu: "500m"
