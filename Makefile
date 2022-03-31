@@ -2,8 +2,8 @@
 ZARF_BIN := ./build/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
-# Need a clean way to map this, arch and uname -a return x86_64 for amd64
-ARCH := amd64
+# Provide a default value for the operating system architecture used in tests, e.g. " TESTDISTRO=provided make test-e2e ARCH=arm64"
+ARCH ?= amd64
 ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_S),Darwin)
 		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
@@ -35,18 +35,14 @@ vm-init: ## usage -> make vm-init OS=ubuntu
 vm-destroy: ## Destroy the VM
 	vagrant destroy -f
 
-e2e-ssh: ## Run this if you set SKIP_teardown=1 and want to SSH into the still-running test server. Don't forget to unset SKIP_teardown when you're done
-	cd test/tf/public-ec2-instance/.test-data && cat Ec2KeyPair.json | jq -r .PrivateKey > privatekey.pem && chmod 600 privatekey.pem
-	cd test/tf/public-ec2-instance && ssh -i .test-data/privatekey.pem ubuntu@$$(terraform output public_instance_ip | tr -d '"')
-
 clean: ## Clean the build dir
 	rm -rf build
 
 build-cli-linux: ## Build the Linux CLI
-	cd cli && $(MAKE) build
+	cd src && $(MAKE) build
 
 build-cli-mac: ## Build the Mac CLI
-	cd cli && $(MAKE) build-mac
+	cd src && $(MAKE) build-mac
 
 build-cli: build-cli-linux build-cli-mac ## Build the CLI
 
@@ -107,4 +103,4 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd test/e2e && cp ../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
+	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst

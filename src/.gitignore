@@ -1,0 +1,11 @@
+*.run.zstd
+*.tar.gz
+*.tgz
+.vagrant
+assets/
+build
+.env
+.image-cache/
+.DS_Store
+bundle/
+.vscode/
