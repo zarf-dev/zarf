@@ -23,12 +23,13 @@ import (
 )
 
 type componentPaths struct {
-	base      string
-	files     string
-	charts    string
-	values    string
-	repos     string
-	manifests string
+	base           string
+	files          string
+	charts         string
+	values         string
+	repos          string
+	manifests      string
+	dataInjections string
 }
 type tempPaths struct {
 	base             string
@@ -36,7 +37,6 @@ type tempPaths struct {
 	injectBinary     string
 	seedImage        string
 	images           string
-	dataInjections   string
 	components       string
 }
 
@@ -49,7 +49,6 @@ func createPaths() tempPaths {
 		injectBinary:     basePath + "/zarf-injector",
 		seedImage:        basePath + "/seed-image.tar",
 		images:           basePath + "/images.tar",
-		dataInjections:   basePath + "/data",
 		components:       basePath + "/components",
 	}
 }
@@ -63,12 +62,13 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 	basePath = basePath + "/" + component.Name
 	_ = utils.CreateDirectory(basePath, 0700)
 	return componentPaths{
-		base:      basePath,
-		files:     basePath + "/files",
-		charts:    basePath + "/charts",
-		repos:     basePath + "/repos",
-		manifests: basePath + "/manifests",
-		values:    basePath + "/values",
+		base:           basePath,
+		files:          basePath + "/files",
+		charts:         basePath + "/charts",
+		repos:          basePath + "/repos",
+		manifests:      basePath + "/manifests",
+		dataInjections: basePath + "/data",
+		values:         basePath + "/values",
 	}
 }
 
