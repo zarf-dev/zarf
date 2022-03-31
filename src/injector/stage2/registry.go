@@ -77,7 +77,7 @@ func startSeedRegistry(readOnly bool) {
 		registryConfig.Storage = configuration.Storage{
 			"filesystem": fileStorage,
 			"maintenance": configuration.Parameters{
-				"readonly": map[interface{}]interface{}{
+				"readonly": map[any]any{
 					"enabled": true,
 				},
 			},

@@ -61,20 +61,20 @@ func GetLogLevel() LogLevel {
 	return logLevel
 }
 
-func Debug(payload ...interface{}) {
+func Debug(payload ...any) {
 	debugPrinter(1).Println(payload...)
 }
 
-func Debugf(format string, a ...interface{}) {
+func Debugf(format string, a ...any) {
 	debugPrinter(2).Printfln(format, a...)
 }
 
-func Error(err interface{}, message string) {
+func Error(err any, message string) {
 	debugPrinter(1).Println(err)
 	Warnf(message)
 }
 
-func Errorf(err interface{}, format string, a ...interface{}) {
+func Errorf(err any, format string, a ...any) {
 	debugPrinter(1).Println(err)
 	Warnf(format, a...)
 }
@@ -83,18 +83,18 @@ func Warn(message string) {
 	Warnf(message)
 }
 
-func Warnf(format string, a ...interface{}) {
+func Warnf(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Warning.Println(message)
 }
 
-func Fatal(err interface{}, message string) {
+func Fatal(err any, message string) {
 	debugPrinter(1).Println(err)
 	errorPrinter(1).Println(message)
 	os.Exit(1)
 }
 
-func Fatalf(err interface{}, format string, a ...interface{}) {
+func Fatalf(err any, format string, a ...any) {
 	debugPrinter(1).Println(err)
 	message := paragraph(format, a...)
 	errorPrinter(1).Println(message)
@@ -105,7 +105,7 @@ func Info(message string) {
 	Infof(message)
 }
 
-func Infof(format string, a ...interface{}) {
+func Infof(format string, a ...any) {
 	if logLevel > 0 {
 		message := paragraph(format, a...)
 		pterm.Info.Println(message)
@@ -124,7 +124,7 @@ func Note(text string) {
 	pterm.FgYellow.Println(message)
 }
 
-func HeaderInfof(format string, a ...interface{}) {
+func HeaderInfof(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	// Ensure the text is consistent for the header width
 	padding := 85 - len(message)
@@ -136,6 +136,6 @@ func HeaderInfof(format string, a ...interface{}) {
 		Printfln(message + strings.Repeat(" ", padding))
 }
 
-func paragraph(format string, a ...interface{}) string {
+func paragraph(format string, a ...any) string {
 	return pterm.DefaultParagraph.WithMaxWidth(100).Sprintf(format, a...)
 }
