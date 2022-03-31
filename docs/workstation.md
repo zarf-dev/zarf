@@ -110,7 +110,7 @@ During dev & test, Zarf gets its exercise the same way the examples do&mdash;ins
 
 1. [Go](https://golang.org/doc/install) &mdash; the programming language / build tools we use to create the `zarf` (et al.) binary.
 
-    Currently required version is `1.16.x`.
+    Currently required version is `1.18.x`.
 
 &nbsp;
 
