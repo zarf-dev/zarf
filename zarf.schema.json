@@ -116,6 +116,13 @@
           },
           "type": "array"
         },
+        "dataInjections": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfDataInjection"
+          },
+          "type": "array"
+        },
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentScripts"
@@ -187,7 +194,7 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "ZarfData": {
+    "ZarfDataInjection": {
       "required": [
         "source",
         "target"
@@ -298,13 +305,6 @@
         "build": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfBuildData"
-        },
-        "data": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfData"
-          },
-          "type": "array"
         },
         "components": {
           "items": {

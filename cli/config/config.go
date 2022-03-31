@@ -111,10 +111,6 @@ func GetPackageName() string {
 	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
 }
 
-func GetDataInjections() []types.ZarfData {
-	return active.Data
-}
-
 func GetMetaData() types.ZarfMetadata {
 	return active.Metadata
 }
