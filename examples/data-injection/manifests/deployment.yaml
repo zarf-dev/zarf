@@ -21,7 +21,7 @@ spec:
             [
               "sh",
               "-c",
-              'while [ ! -f /test/.zarf-sync-complete ]; do echo "waiting for zarf data sync" && sleep 5; done',
+              'while [ ! -f /test/.zarf-sync-complete ]; do echo "waiting for zarf data sync" && sleep 5; done; echo "we are done waiting!"',
             ]
           resources:
             requests:

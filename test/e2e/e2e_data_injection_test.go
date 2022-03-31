@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -31,18 +30,12 @@ func TestDataInjection(t *testing.T) {
 	pod := pods.Items[0]
 	podname := pod.Name
 
-	// time.Sleep(5 * time.Second)
-
-	manualOutput, err := exec.Command("kubectl", "exec", "-n=demo", podname, "--", "ls", "/test").Output()
-
 	// Test to confirm the root file was placed
+	// NOTE: We need to loop this because the k8s api isn't able to ls the files right away for some reason??
 	var execStdOut string
 	attempt := 0
 	for attempt < 10 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
-
-		t.Logf("k8s api output of 'kubectl exec -n=demo %v -- ls /test:  %v\n", podname, execStdOut)
-		t.Logf("Manual output of 'kubectl exec -n=demo %v -- ls /test': %v\n", podname, string(manualOutput))
 		attempt++
 		time.Sleep(2 * time.Second)
 	}
