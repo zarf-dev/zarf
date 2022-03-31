@@ -10,7 +10,7 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
-	// defer e2e.cleanupAfterTest(t)
+	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
