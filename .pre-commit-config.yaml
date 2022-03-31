@@ -34,8 +34,8 @@ repos:
     hooks:
       - id: generate-zarf-schema
         name: Check for outdated Zarf schema
-        entry: hooks/verify-zarf-schema.sh
-        files: "cli/types/types.go"
+        entry: ./hooks/verify-zarf-schema.sh
+        files: "src/types/types.go"
         types: [go]
         language: script
         description: "Runs `zarf tools config-schema > zarf.schema.json` to ensure schema is up to date"
