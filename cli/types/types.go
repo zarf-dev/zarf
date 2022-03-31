@@ -51,6 +51,9 @@ type ZarfComponent struct {
 	// Repos are any git repos that need to be pushed into the gitea server
 	Repos []string `yaml:"repos,omitempty"`
 
+	// Data pacakges to push into a running cluster
+	DataInjections []ZarfDataInjection `yaml:"dataInjections,omitempty"`
+
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
 
@@ -92,8 +95,8 @@ type ZarfContainerTarget struct {
 	Path      string `yaml:"path"`
 }
 
-// ZarfData is a data-injection definition
-type ZarfData struct {
+// ZarfDataInjection is a data-injection definition
+type ZarfDataInjection struct {
 	Source string              `yaml:"source"`
 	Target ZarfContainerTarget `yaml:"target"`
 }
@@ -112,7 +115,6 @@ type ZarfPackage struct {
 	Kind       string          `yaml:"kind,omitempty"`
 	Metadata   ZarfMetadata    `yaml:"metadata,omitempty"`
 	Build      ZarfBuildData   `yaml:"build,omitempty"`
-	Data       []ZarfData      `yaml:"data,omitempty"`
 	Components []ZarfComponent `yaml:"components,omitempty"`
 	Seed       string          `yaml:"seed,omitempty"`
 }
