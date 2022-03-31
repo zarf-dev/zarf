@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
+	// defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
@@ -27,20 +28,31 @@ func TestDataInjection(t *testing.T) {
 	pods, err := e2e.getPodsFromNamespace(namespace)
 	require.NoError(t, err)
 	require.Equal(t, len(pods.Items), 1)
-	podname := pods.Items[0].Name
+	pod := pods.Items[0]
+	podname := pod.Name
 
-	time.Sleep(1 * time.Second)
+	// time.Sleep(5 * time.Second)
+
+	manualOutput, err := exec.Command("kubectl", "exec", "-n=demo", podname, "--", "ls", "/test").Output()
 
 	// Test to confirm the root file was placed
 	var execStdOut string
-	execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
+	attempt := 0
+	for attempt < 10 && execStdOut == "" {
+		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test"})
+
+		t.Logf("k8s api output of 'kubectl exec -n=demo %v -- ls /test:  %v\n", podname, execStdOut)
+		t.Logf("Manual output of 'kubectl exec -n=demo %v -- ls /test': %v\n", podname, string(manualOutput))
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
 	assert.NoError(t, err)
 	assert.Contains(t, execStdOut, "this-is-an-example-file.txt")
 
 	// Test to confirm the subdirectory file was placed
 	// NOTE: This data gets injected after pod comes up as 'healthy' so we need to retry the check until it is able to populate
 	execStdOut = ""
-	attempt := 0
+	attempt = 0
 	for attempt < 10 && execStdOut == "" {
 		execStdOut, _, err = e2e.execCommandInPod(podname, namespace, []string{"ls", "/test/subdirectory-test"})
 		attempt++
