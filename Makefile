@@ -16,6 +16,20 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
+# Windows support
+SYSTEMINFO := $(@shell systeminfo)
+ifeq (Windows,$(findstring Windows,$(SYSTEMINFO)))
+	ZARF_BIN := ./build/zarf-windows-amd64.exe
+endif
+
+.PHONY: zarf-bin
+zarf-bin:
+	@echo $(ZARF_BIN)
+
+.PHONY: foo
+foo:
+	@$(ZARF_BIN) --help
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
