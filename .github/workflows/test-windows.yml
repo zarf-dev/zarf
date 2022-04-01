@@ -7,11 +7,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: "test"
-        run:
-          - systeminfo
-          - uname -s
-          - env
-          - exit 1
+        run: |
+          systeminfo
+          uname -s
+          env
+          exit 1
       - name: "Install GoLang"
         uses: actions/setup-go@v2
         with:
