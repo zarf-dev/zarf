@@ -44,6 +44,9 @@ build-cli-linux: ## Build the Linux CLI
 build-cli-mac: ## Build the Mac CLI
 	cd src && $(MAKE) build-mac
 
+build-cli-windows: ## Build the Windows CLI
+	cd src && $(MAKE) build-windows
+
 build-cli: build-cli-linux build-cli-mac ## Build the CLI
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first

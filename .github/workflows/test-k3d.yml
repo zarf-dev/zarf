@@ -6,6 +6,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
+      - name: "Break out early"
+        run: exit 1
       - name: "Install GoLang"
         uses: actions/setup-go@v2
         with:
