@@ -18,7 +18,7 @@ If you have a cluster already running, and use the env var `TESTDISTRO=provided`
 This means that you are able to run the tests against any remote distro you want, like EKS, AKS, GKE, RKE, etc.
 
 ### No Existing K8s Cluster
-If you do not have a local cluster running, no worries! The e2e tests use the `sigs.k8s.io/kind` and `github.com/rancher/k3d/v5` libraries to stand up local clusters to test against. All you have to do is make sure Docker is running and set the `TESTDISTRO` env var to either `"kind"` or `"k3d"` and the test suite will automatically create the appropriate cluster before the test run, run the tests on it, then automatically destroy it to clean up.
+If you do not have a local cluster running, no worries! The e2e tests use the `sigs.k8s.io/kind` and `github.com/k3d-io/k3d/v5` libraries to stand up local clusters to test against. All you have to do is make sure Docker is running and set the `TESTDISTRO` env var to either `"kind"` or `"k3d"` and the test suite will automatically create the appropriate cluster before the test run, run the tests on it, then automatically destroy it to clean up.
 
 You can also use K3s by setting `TESTDISTRO=k3s` but note that there are extra requirements of being on Linux with root privileges.
 

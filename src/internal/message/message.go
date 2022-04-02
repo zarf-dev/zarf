@@ -40,6 +40,8 @@ func init() {
 	pterm.Info.Prefix = pterm.Prefix{
 		Text: " •",
 	}
+
+	pterm.DefaultProgressbar.MaxWidth = 85
 }
 
 func debugPrinter(offset int) *pterm.PrefixPrinter {
