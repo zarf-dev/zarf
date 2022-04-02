@@ -2,11 +2,23 @@ module github.com/defenseunicorns/zarf
 
 go 1.18
 
+replace (
+	// Fix for crane cmd imports
+	github.com/opencontainers/image-spec v1.0.2 => github.com/opencontainers/image-spec v1.0.2-0.20211117181255-693428a734f5
+	// Fix for k9s until .23 is supported
+	k8s.io/api v0.23.4 => k8s.io/api v0.22.3
+	k8s.io/apimachinery v0.23.4 => k8s.io/apimachinery v0.22.3
+	k8s.io/cli-runtime v0.23.4 => k8s.io/cli-runtime v0.22.3
+	k8s.io/client-go v0.23.4 => k8s.io/client-go v0.22.3
+	k8s.io/kubectl v0.23.4 => k8s.io/kubectl v0.22.3
+	k8s.io/metrics v0.23.4 => k8s.io/metrics v0.22.3
+)
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.4
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.18
-	github.com/distribution/distribution/v3 v3.0.0-20220327152031-d2c9f72c6b75
+	github.com/distribution/distribution/v3 v3.0.0-20220401223122-dc7f44b61363
 	github.com/docker/cli v20.10.14+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
@@ -20,11 +32,11 @@ require (
 	github.com/rancher/k3d/v5 v5.2.1
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
-	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
+	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
 	helm.sh/helm/v3 v3.8.1
-	k8s.io/api v0.23.5
-	k8s.io/apimachinery v0.23.5
-	k8s.io/client-go v0.23.5
+	k8s.io/api v0.23.4
+	k8s.io/apimachinery v0.23.4
+	k8s.io/client-go v0.23.4
 	k8s.io/klog/v2 v2.60.1
 	sigs.k8s.io/kind v0.12.0
 	sigs.k8s.io/kustomize/api v0.11.4
@@ -69,7 +81,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.10.1 // indirect
@@ -87,7 +98,6 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
-	github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
@@ -98,7 +108,7 @@ require (
 	github.com/fvbommel/sortorder v1.0.2 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.4.0 // indirect
-	github.com/go-errors/errors v1.0.2-0.20180813162953-d98b870cc4e0 // indirect
+	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -151,7 +161,7 @@ require (
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
@@ -236,6 +246,5 @@ require (
 	k8s.io/metrics v0.23.4 // indirect
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
 	oras.land/oras-go v1.1.0 // indirect
-	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
