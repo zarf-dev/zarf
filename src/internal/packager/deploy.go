@@ -97,11 +97,7 @@ func Deploy() {
 
 	if config.IsZarfInitConfig() {
 		if strings.Contains(config.DeployOptions.Components, config.ZarfGiteaComponentName) {
-			// Create a gitea org and a read-only user
-			err := git.CreateZarfOrg()
-			if err != nil {
-				message.Error(err, "Unable to create a Zarf Org in the Gitea service.")
-			}
+			// Create a gitea read-only user
 			err = git.CreateReadOnlyUser()
 			if err != nil {
 				message.Error(err, "Unable to create a read-only user in the Gitea service.")

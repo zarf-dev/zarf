@@ -241,43 +241,6 @@ func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName
 	return nil
 }
 
-func CreateZarfOrg() error {
-	// Establish a git tunnel to send the repos
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfGit, false)
-	defer tunnel.Close()
-
-	body := map[string]string{
-		"username":   config.ZarfGitOrg,
-		"visibility": "limited",
-	}
-	jsonData, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	request, err := netHttp.NewRequest("POST", fmt.Sprintf("http://%s:%d/api/v1/orgs", config.IPV4Localhost, k8s.PortGit), bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	request.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	request.Header.Add("accept", "application/json")
-	request.Header.Add("Content-Type", "application/json")
-
-	client := &netHttp.Client{Timeout: time.Second * 10}
-	createOrgResponse, err := client.Do(request)
-	if err != nil || createOrgResponse.StatusCode < 200 || createOrgResponse.StatusCode >= 300 {
-		createOrgResponseBody, _ := io.ReadAll(createOrgResponse.Body)
-		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", createOrgResponse.Status, createOrgResponseBody)
-
-		if err == nil {
-			err = errors.New("unable to create zarf org")
-		}
-		return err
-	}
-	return err
-}
-
 func CreateReadOnlyUser() error {
 	// Establish a git tunnel to send the repo
 	tunnel := k8s.NewZarfTunnel()
