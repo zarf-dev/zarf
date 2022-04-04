@@ -44,7 +44,7 @@ func loadChartFromTarball(options ChartOptions) (*chart.Chart, error) {
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists
-func parseChartValues(options ChartOptions) (map[string]interface{}, error) {
+func parseChartValues(options ChartOptions) (map[string]any, error) {
 	valueOpts := &values.Options{}
 
 	for idx, file := range options.Chart.ValuesFiles {

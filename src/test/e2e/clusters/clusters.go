@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	k3dCluster "github.com/rancher/k3d/v5/cmd/cluster"
+	k3dCluster "github.com/k3d-io/k3d/v5/cmd/cluster"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
