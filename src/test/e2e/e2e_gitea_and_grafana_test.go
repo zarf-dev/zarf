@@ -1,11 +1,17 @@
 package test
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
@@ -13,6 +19,11 @@ func TestGiteaAndGrafana(t *testing.T) {
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--components=gitops-service,logging", "--confirm")
+	require.NoError(t, err, output)
+
+	// Deploy the gitops example
+	path := fmt.Sprintf("../../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
@@ -32,4 +43,29 @@ func TestGiteaAndGrafana(t *testing.T) {
 	resp, err = http.Get("http://127.0.0.1:45002/monitor/login")
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
+
+	// Init the state variable
+	state := k8s.LoadZarfState()
+	config.InitState(state)
+
+	// Get the repo as the readonly user
+	client := &http.Client{Timeout: time.Second * 10}
+	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
+	getRepoRequest, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/v1/repos/%v/%v", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repoName), nil)
+	getRepoRequest.SetBasicAuth(config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	getRepoRequest.Header.Add("accept", "application/json")
+	getRepoRequest.Header.Add("Content-Type", "application/json")
+	getRepoResponse, err := client.Do(getRepoRequest)
+	assert.NoError(t, err)
+	assert.GreaterOrEqual(t, 300, getRepoResponse.StatusCode)
+	assert.LessOrEqual(t, 200, getRepoResponse.StatusCode)
+
+	// Make sure the only permissions are pull (read)
+	getRepoResponseBody, _ := io.ReadAll(getRepoResponse.Body)
+	admin := gjson.Get(string(getRepoResponseBody), "permissions.admin").Raw
+	push := gjson.Get(string(getRepoResponseBody), "permissions.push").Raw
+	pull := gjson.Get(string(getRepoResponseBody), "permissions.pull").Raw
+	assert.Equal(t, "false", admin)
+	assert.Equal(t, "false", push)
+	assert.Equal(t, "true", pull)
 }
