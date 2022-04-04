@@ -30,7 +30,7 @@ type Credential struct {
 func MutateGitUrlsInText(host string, text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		if strings.Contains(match, config.ZarfGitPushUser) {
+		if strings.Contains(match, "/"+config.ZarfGitPushUser+"/") {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
