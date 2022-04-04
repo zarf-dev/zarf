@@ -22,6 +22,10 @@ const (
 // TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc
 func TestMain(m *testing.M) {
 	message.Info("Running tests")
+
+	// K3d use the intern package, which requires this to be set in go 1.18
+	os.Setenv("ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH", "go1.18")
+
 	retCode, err := doAllTheThings(m)
 	if err != nil {
 		fmt.Println(err) //nolint:forbidigo

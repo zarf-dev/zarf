@@ -27,7 +27,7 @@ type ChartOptions struct {
 	ReleaseName       string
 	ChartLoadOverride string
 	ChartOverride     *chart.Chart
-	ValueOverride     map[string]interface{}
+	ValueOverride     map[string]any
 	Component         types.ZarfComponent
 }
 
@@ -195,7 +195,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently
-		ValueOverride: map[string]interface{}{},
+		ValueOverride: map[string]any{},
 		// Images needed for eventual post-render templating
 		Component: component,
 	}
@@ -281,11 +281,11 @@ func uninstallChart(actionConfig *action.Configuration, name string) (*release.U
 	return client.Run(name)
 }
 
-func loadChartData(options ChartOptions) (*chart.Chart, map[string]interface{}, error) {
+func loadChartData(options ChartOptions) (*chart.Chart, map[string]any, error) {
 	message.Debugf("helm.loadChartData(%v)", options)
 	var (
 		loadedChart *chart.Chart
-		chartValues map[string]interface{}
+		chartValues map[string]any
 		err         error
 	)
 
