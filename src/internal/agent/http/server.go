@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/defenseunicorns/zarf/cli/internal/agent/pods"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/agent/pods"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
 // NewServer creates and return a http.Server

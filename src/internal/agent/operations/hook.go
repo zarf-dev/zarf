@@ -3,7 +3,7 @@ package operations
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	admission "k8s.io/api/admission/v1"
 )
 

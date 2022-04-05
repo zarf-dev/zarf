@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/defenseunicorns/zarf/cli/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	v1 "k8s.io/api/admission/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

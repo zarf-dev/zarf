@@ -3,9 +3,9 @@ package pods
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/cli/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
-	"github.com/defenseunicorns/zarf/cli/internal/utils"
+	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )

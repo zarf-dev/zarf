@@ -3,8 +3,8 @@ package pods
 import (
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/cli/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/cli/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	v1 "k8s.io/api/core/v1"
 )
 
