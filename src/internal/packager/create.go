@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/sigstore/cosign/pkg/sget"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
@@ -67,9 +69,17 @@ func Create() {
 	}
 
 	if config.IsZarfInitConfig() {
+		// TODO @JPERRY: add ways for the cosign key and binary version tag to be provided dynamically
 		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
-		utils.CreatePathAndCopy("src/injector/zarf-registry", tempPath.injectZarfBinary)
-		utils.CreatePathAndCopy("src/injector/zarf-injector", tempPath.injectBinary)
+		injectorBinary, _ := os.Create(tempPath.injectBinary)
+		defer injectorBinary.Close()
+		sget.New("defenseunicorns/zarf-injector:0.1.0", "cosign.pub", injectorBinary).Do(context.TODO())
+
+		registryBinary, _ := os.Create(tempPath.injectZarfBinary)
+		defer registryBinary.Close()
+		sget.New("defenseunicorns/zarf-registry:0.2.0", "cosign.pub", registryBinary).Do(context.TODO())
+		// os.Chmod(tempPath.injectZarfBinary, 755)
+		registryBinary.Chmod(0755)
 	}
 
 	_ = os.RemoveAll(packageName)
