@@ -43,6 +43,8 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
+	CosignPubKeyPath string
+
 	CliArch string
 
 	ZarfSeedPort string

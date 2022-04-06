@@ -75,6 +75,7 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
+	packageCreateCmd.Flags().StringVar(&config.CosignPubKeyPath, "cosign-key", "cosign.pub", "Path to the public key for cosign. Default assumes key is in your current directory'")
 	packageDeployCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	packageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", false, "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")

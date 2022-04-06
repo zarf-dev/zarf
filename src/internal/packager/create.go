@@ -68,18 +68,29 @@ func Create() {
 		images.PullAll(uniqueList, tempPath.images)
 	}
 
+	// Include the injection things we need
 	if config.IsZarfInitConfig() {
-		// TODO @JPERRY: add ways for the cosign key and binary version tag to be provided dynamically
-		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
+		spinner := message.NewProgressSpinner("Loading injectory binaries")
+		defer spinner.Stop()
+
+		// Get the Rust injector binary
 		injectorBinary, _ := os.Create(tempPath.injectBinary)
 		defer injectorBinary.Close()
-		sget.New("defenseunicorns/zarf-injector:0.1.0", "cosign.pub", injectorBinary).Do(context.TODO())
+		err := sget.New("defenseunicorns/zarf-injector:0.1.0", config.CosignPubKeyPath, injectorBinary).Do(context.TODO())
+		if err != nil {
+			spinner.Fatalf(err, "Error when downloading the Rust binary. Double check the cosign.pub file is in the right place?")
+		}
 
+		// Get the Go registry binary
 		registryBinary, _ := os.Create(tempPath.injectZarfBinary)
 		defer registryBinary.Close()
-		sget.New("defenseunicorns/zarf-registry:0.2.0", "cosign.pub", registryBinary).Do(context.TODO())
-		// os.Chmod(tempPath.injectZarfBinary, 755)
+		err = sget.New("defenseunicorns/zarf-registry:0.2.0", config.CosignPubKeyPath, registryBinary).Do(context.TODO())
+		if err != nil {
+			spinner.Fatalf(err, "Error when downloading the Go binary. Double check the cosign.pub file is in the right place?")
+		}
 		registryBinary.Chmod(0755)
+
+		spinner.Success()
 	}
 
 	_ = os.RemoveAll(packageName)
