@@ -42,7 +42,7 @@ require (
 	github.com/pterm/pterm v0.12.40
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
-	github.com/testifysec/witness v0.1.7-0.20220307231058-f11e00e711dd
+	github.com/testifysec/witness v0.1.7
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
 	helm.sh/helm/v3 v3.8.1
 	k8s.io/api v0.23.5
