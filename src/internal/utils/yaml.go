@@ -68,7 +68,7 @@ func ColorPrintYAML(text string) {
 	}
 }
 
-func ReadYaml(path string, destConfig interface{}) error {
+func ReadYaml(path string, destConfig any) error {
 	message.Debugf("Loading zarf config %s", path)
 	file, err := ioutil.ReadFile(path)
 
@@ -79,7 +79,7 @@ func ReadYaml(path string, destConfig interface{}) error {
 	return yaml.Unmarshal(file, destConfig)
 }
 
-func WriteYaml(path string, srcConfig interface{}, perm fs.FileMode) error {
+func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
 	content, err := yaml.Marshal(srcConfig)
 	if err != nil {

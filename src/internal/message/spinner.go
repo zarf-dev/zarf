@@ -2,6 +2,7 @@ package message
 
 import (
 	"fmt"
+
 	"github.com/pterm/pterm"
 )
 
@@ -10,7 +11,7 @@ type Spinner struct {
 	startText string
 }
 
-func NewProgressSpinner(format string, a ...interface{}) *Spinner {
+func NewProgressSpinner(format string, a ...any) *Spinner {
 	text := fmt.Sprintf(format, a...)
 	spinner, _ := pterm.DefaultSpinner.
 		WithRemoveWhenDone(false).
@@ -29,14 +30,14 @@ func (p *Spinner) Write(text []byte) (int, error) {
 	return len(text), nil
 }
 
-func (p *Spinner) Updatef(format string, a ...interface{}) {
+func (p *Spinner) Updatef(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	p.spinner.UpdateText(text)
 }
 
-func (p *Spinner) Debugf(format string, a ...interface{}) {
+func (p *Spinner) Debugf(format string, a ...any) {
 	if logLevel >= DebugLevel {
-		text := fmt.Sprintf("Debug: "+format, a...)
+		text := fmt.Sprintf("Debug: "+format, a)
 		p.spinner.UpdateText(text)
 	}
 }
@@ -53,22 +54,22 @@ func (p *Spinner) Success() {
 	p.Successf(p.startText)
 }
 
-func (p *Spinner) Successf(format string, a ...interface{}) {
+func (p *Spinner) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	p.spinner.Success(text)
 }
 
-func (p *Spinner) Warnf(format string, a ...interface{}) {
+func (p *Spinner) Warnf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	p.spinner.Warning(text)
 }
 
-func (p *Spinner) Errorf(err error, format string, a ...interface{}) {
+func (p *Spinner) Errorf(err error, format string, a ...any) {
 	p.Warnf(format, a...)
 	Debug(err)
 }
 
-func (p *Spinner) Fatalf(err error, format string, a ...interface{}) {
+func (p *Spinner) Fatalf(err error, format string, a ...any) {
 	p.spinner.RemoveWhenDone = true
 	_ = p.spinner.Stop()
 	Fatalf(err, format, a...)
