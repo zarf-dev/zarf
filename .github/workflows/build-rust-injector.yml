@@ -5,6 +5,10 @@ on:
       versionTag:
         description: "Version tag"
         required: true
+      branchName:
+        description: "Branch to build the injector from"
+        required: false
+        default: 'master'
 
 jobs:
   build-injector:
@@ -12,6 +16,8 @@ jobs:
     steps:
       - name: "Checkout Repo"
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branchName }}
 
       - name: "Install cosign"
         uses: sigstore/cosign-installer@v2.1.0
