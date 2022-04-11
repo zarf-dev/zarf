@@ -241,15 +241,14 @@ func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName
 	return nil
 }
 
+// CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user
 func CreateReadOnlyUser() error {
 	// Establish a git tunnel to send the repo
 	tunnel := k8s.NewZarfTunnel()
 	tunnel.Connect(k8s.ZarfGit, false)
 	defer tunnel.Close()
 
-	client := &netHttp.Client{Timeout: time.Second * 10}
-
-	// Create the user
+	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
 		"username":             config.ZarfGitReadUser,
 		"password":             config.GetSecret(config.StateGitPull),
@@ -260,20 +259,12 @@ func CreateReadOnlyUser() error {
 	if err != nil {
 		return err
 	}
-	createUserRequest, err := netHttp.NewRequest("POST", fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit), bytes.NewBuffer(createUserData))
+
+	// Send API request to create the user
+	createUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit)
+	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
+	_, err = DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	if err != nil {
-		return err
-	}
-	createUserRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	createUserRequest.Header.Add("accept", "application/json")
-	createUserRequest.Header.Add("Content-Type", "application/json")
-	createUserResponse, err := client.Do(createUserRequest)
-	if err != nil || createUserResponse.StatusCode < 200 || createUserResponse.StatusCode >= 300 {
-		createUserResponseBody, _ := io.ReadAll(createUserResponse.Body)
-		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", createUserResponse.Status, createUserResponseBody)
-		if err == nil {
-			err = errors.New("unable to create zarf read-only user")
-		}
 		return err
 	}
 
@@ -284,26 +275,13 @@ func CreateReadOnlyUser() error {
 		"allow_create_organization": false,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserRequest, _ := netHttp.NewRequest("PATCH", fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser), bytes.NewBuffer(updateUserData))
-	updateUserRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	updateUserRequest.Header.Add("accept", "application/json")
-	updateUserRequest.Header.Add("Content-Type", "application/json")
-	updateUserResponse, err := client.Do(updateUserRequest)
-	if err != nil || updateUserResponse.StatusCode < 200 || updateUserResponse.StatusCode >= 300 {
-		updateUserResponseBody, _ := io.ReadAll(updateUserResponse.Body)
-		message.Debugf("Editing the read-only user permissions failed with a status-code of %v and a response body of: %v\n", updateUserResponse.Status, updateUserResponseBody)
-
-		if err == nil {
-			err = errors.New("unable to update zarf read-only user")
-		}
-		return err
-	}
+	updateUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser)
+	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
+	_, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	return err
 }
 
 func addReadOnlyUser(repo string) error {
-	client := &netHttp.Client{Timeout: time.Second * 10}
-
 	// Add the readonly user to the repo
 	addColabBody := map[string]string{
 		"permission": "read",
@@ -312,23 +290,36 @@ func addReadOnlyUser(repo string) error {
 	if err != nil {
 		return err
 	}
-	addColabRequest, err := netHttp.NewRequest("PUT", fmt.Sprintf("http://%s:%d/api/v1/repos/%s/%s/collaborators/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repo, config.ZarfGitReadUser), bytes.NewBuffer(addColabData))
-	if err != nil {
-		return err
-	}
-	addColabRequest.SetBasicAuth(config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	addColabRequest.Header.Add("accept", "application/json")
-	addColabRequest.Header.Add("Content-Type", "application/json")
-	response, err := client.Do(addColabRequest)
-	if err != nil || response.StatusCode < 200 || response.StatusCode >= 300 {
-		responseBody, _ := io.ReadAll(response.Body)
-		message.Debugf("Adding the read-only user to the %v repo failed with a status-code of %v and a response body of: %v\n", repo, response.Status, responseBody)
 
-		if err == nil {
-			err = errors.New("unable to add read-only user to repo")
-		}
-		return err
-	}
-
+	// Send API request to add a user as a read-only collaborator to a repo
+	addColabEndpoint := fmt.Sprintf("http://%s:%d/api/v1/repos/%s/%s/collaborators/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
+	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
+	_, err = DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	return err
+}
+
+// Add http request boilerplate and perform the request, checking for a successful response
+func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, error) {
+	message.Debugf("Performing %v http request to %v", request.Method, request.URL)
+
+	// Prep the request with boilerplate
+	client := &netHttp.Client{Timeout: time.Second * 10}
+	request.SetBasicAuth(username, secret)
+	request.Header.Add("accept", "application/json")
+	request.Header.Add("Content-Type", "application/json")
+
+	// Perform the request and get the response
+	response, err := client.Do(request)
+	if err != nil {
+		return []byte{}, err
+	}
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// If we get a 'bad' status code we will have no error, create a useful one to return
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		err = errors.New(fmt.Sprintf("Got status code of %v during http request with body of: %v", response.StatusCode, string(responseBody)))
+		return []byte{}, err
+	}
+
+	return responseBody, nil
 }

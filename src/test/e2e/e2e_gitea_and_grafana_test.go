@@ -3,12 +3,11 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,19 +48,12 @@ func TestGiteaAndGrafana(t *testing.T) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	client := &http.Client{Timeout: time.Second * 10}
 	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
 	getRepoRequest, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/v1/repos/%v/%v", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repoName), nil)
-	getRepoRequest.SetBasicAuth(config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
-	getRepoRequest.Header.Add("accept", "application/json")
-	getRepoRequest.Header.Add("Content-Type", "application/json")
-	getRepoResponse, err := client.Do(getRepoRequest)
+	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, 300, getRepoResponse.StatusCode)
-	assert.LessOrEqual(t, 200, getRepoResponse.StatusCode)
 
 	// Make sure the only permissions are pull (read)
-	getRepoResponseBody, _ := io.ReadAll(getRepoResponse.Body)
 	var bodyMap map[string]interface{}
 	json.Unmarshal(getRepoResponseBody, &bodyMap)
 	permissionsMap := bodyMap["permissions"].(map[string]interface{})
