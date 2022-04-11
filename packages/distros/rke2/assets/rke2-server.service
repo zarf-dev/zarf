@@ -1,0 +1,29 @@
+[Unit]
+Description=Rancher Kubernetes Engine v2 (server)
+Documentation=https://github.com/rancher/rke2#readme
+Wants=network-online.target
+After=network-online.target
+Conflicts=rke2-agent.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/default/%N
+EnvironmentFile=-/etc/sysconfig/%N
+EnvironmentFile=-/usr/local/lib/systemd/system/%N.env
+KillMode=process
+Delegate=yes
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+Restart=always
+RestartSec=5s
+ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service'
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/rke2 server
+ExecStopPost=-/bin/sh -c "systemd-cgls /system.slice/%n | grep -Eo '[0-9]+ (containerd|kubelet)' | awk '{print $1}' | xargs -r kill"

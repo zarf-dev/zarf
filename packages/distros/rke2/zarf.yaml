@@ -1,0 +1,49 @@
+kind: ZarfInitConfig
+metadata:
+  name: "Zarf Init Package Component - RKE2"
+  description: "Used to establish a new Zarf cluster"
+  architecture: amd64
+
+components:
+  - name: rke2
+    description: >
+      *** REQUIRES ROOT ***
+      Install RKE2, certified Kubernetes distribution.
+      RKE2, also known as RKE Government, is Rancher's next-generation Kubernetes distribution.
+      It is a fully conformant Kubernetes distribution that focuses on security and compliance within the U.S. Federal Government sector.
+    scripts:
+      retry: true
+      before:
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+      after:
+        # Configure RKE2 systemd service
+        - "systemctl enable rke2-server.service"
+        - "systemctl start rke2-server.service"
+    files:
+      # Include the actual RKE2 binary
+      - source: https://github.com/rancher/rke2/releases/download/v1.21.11%2Brke2r1/rke2.linux-amd64
+        shasum: 65cf790eed51ec4607900ddbb0bcd7087b4f9ed0029ef68f8e498e8ef5322ea3
+        target: /usr/local/bin/rke2
+        executable: true
+
+      # Transfer the RKE2 image tar
+      - source: https://github.com/rancher/rke2/releases/download/v1.21.11%2Brke2r1/rke2-images.linux-amd64.tar.zst
+        shasum: 3e9ebd2f6eab58a8b791f32ef69d25061e8b850ef36c82d48ab37009b3400048
+        target: /var/lib/rancher/rke2/agent/images/rke2.tar.zst
+      # RKE2 removal script
+      - source: assets/rke2-uninstall.sh
+        target: /opt/zarf/zarf-clean-rke2.sh
+        executable: true
+      # The RKE2 systemd service definition
+      - source: assets/rke2-service.service
+        target: /etc/systemd/system/rke2-service.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/rke2-service.service
+      # Mock file for creating the kube config symlink
+      - source: assets/empty-file
+        target: /etc/rancher/rke2/rke2.yaml
+        symlinks:
+          - /root/.kube/config
