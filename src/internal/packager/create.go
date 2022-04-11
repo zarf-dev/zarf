@@ -1,7 +1,6 @@
 package packager
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/sigstore/cosign/pkg/sget"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
@@ -68,31 +66,6 @@ func Create() {
 		images.PullAll(uniqueList, tempPath.images)
 	}
 
-	// Include the injection things we need
-	if config.IsZarfInitConfig() {
-		spinner := message.NewProgressSpinner("Loading injectory binaries")
-		defer spinner.Stop()
-
-		// Get the Rust injector binary
-		injectorBinary, _ := os.Create(tempPath.injectBinary)
-		defer injectorBinary.Close()
-		err := sget.New("defenseunicorns/zarf-injector:0.1.0", config.CosignPubKeyPath, injectorBinary).Do(context.TODO())
-		if err != nil {
-			spinner.Fatalf(err, "Error when downloading the Rust binary. Double check the cosign.pub file is in the right place?")
-		}
-
-		// Get the Go registry binary
-		registryBinary, _ := os.Create(tempPath.injectZarfBinary)
-		defer registryBinary.Close()
-		err = sget.New("defenseunicorns/zarf-registry:0.2.0", config.CosignPubKeyPath, registryBinary).Do(context.TODO())
-		if err != nil {
-			spinner.Fatalf(err, "Error when downloading the Go binary. Double check the cosign.pub file is in the right place?")
-		}
-		registryBinary.Chmod(0755)
-
-		spinner.Success()
-	}
-
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
@@ -128,7 +101,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 			message.Debugf("Loading %v", file)
 			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
 			if utils.IsUrl(file.Source) {
-				utils.DownloadToFile(file.Source, destinationFile)
+				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
 				utils.CreatePathAndCopy(file.Source, destinationFile)
 			}

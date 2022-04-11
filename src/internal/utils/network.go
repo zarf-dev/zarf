@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,10 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
+	"github.com/sigstore/cosign/pkg/sget"
 )
+
+const SGETProtocol = "sget://"
 
 func IsUrl(source string) bool {
 	parsedUrl, err := url.Parse(source)
@@ -32,7 +36,7 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
-func DownloadToFile(url string, target string) {
+func DownloadToFile(url string, target string, cosignKeyPath string) {
 
 	// Create the file
 	destinationFile, err := os.Create(target)
@@ -41,6 +45,15 @@ func DownloadToFile(url string, target string) {
 	}
 	defer destinationFile.Close()
 
+	// If the url start with the sget protocol use that, otherwise do a typical GET call
+	if url[:len(SGETProtocol)] == SGETProtocol {
+		sgetFile(url[len(SGETProtocol):], destinationFile, cosignKeyPath)
+	} else {
+		httpGetFile(url, destinationFile)
+	}
+}
+
+func httpGetFile(url string, destinationFile *os.File) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -59,11 +72,21 @@ func DownloadToFile(url string, target string) {
 
 	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, counter)); err != nil {
 		_, _ = counter.progress.Stop()
-		message.Fatalf(err, "Unable to save the file %s", target)
+		message.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
 	_, _ = counter.progress.Stop()
 	pterm.Success.Println(text)
+}
+
+func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
+	// Get the data
+	err := sget.New(url, cosignKeyPath, destinationFile).Do(context.TODO())
+	if err != nil {
+		message.Fatalf(err, "Unable to sget the file %v", url)
+	}
+
+	return
 }
 
 type WriteCounter struct {
