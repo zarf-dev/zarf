@@ -25,7 +25,6 @@ const (
 	ZarfMaxChartNameLength = 40
 	ZarfGitPushUser        = "zarf-git-user"
 	ZarfGitReadUser        = "zarf-git-read-user"
-	ZarfGitOrg             = "zarf-org"
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
