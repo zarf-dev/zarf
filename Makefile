@@ -38,13 +38,16 @@ vm-destroy: ## Destroy the VM
 clean: ## Clean the build dir
 	rm -rf build
 
-build-cli-linux: ## Build the Linux CLI
+build-cli-linux: build-injector-registry ## Build the Linux CLI
 	cd src && $(MAKE) build
 
-build-cli-mac: ## Build the Mac CLI
+build-cli-mac: build-injector-registry ## Build the Mac CLI
 	cd src && $(MAKE) build-mac
 
-build-cli: build-cli-linux build-cli-mac ## Build the CLI
+build-cli: build-injector-registry build-cli-linux build-cli-mac ## Build the CLI
+
+build-injector-registry:
+	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm --architecture amd64
