@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
@@ -62,10 +62,10 @@ func TestGiteaAndGrafana(t *testing.T) {
 
 	// Make sure the only permissions are pull (read)
 	getRepoResponseBody, _ := io.ReadAll(getRepoResponse.Body)
-	admin := gjson.Get(string(getRepoResponseBody), "permissions.admin").Raw
-	push := gjson.Get(string(getRepoResponseBody), "permissions.push").Raw
-	pull := gjson.Get(string(getRepoResponseBody), "permissions.pull").Raw
-	assert.Equal(t, "false", admin)
-	assert.Equal(t, "false", push)
-	assert.Equal(t, "true", pull)
+	var bodyMap map[string]interface{}
+	json.Unmarshal(getRepoResponseBody, &bodyMap)
+	permissionsMap := bodyMap["permissions"].(map[string]interface{})
+	assert.False(t, permissionsMap["admin"].(bool))
+	assert.False(t, permissionsMap["push"].(bool))
+	assert.True(t, permissionsMap["pull"].(bool))
 }
