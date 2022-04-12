@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
@@ -46,8 +47,8 @@ func DownloadToFile(url string, target string, cosignKeyPath string) {
 	defer destinationFile.Close()
 
 	// If the url start with the sget protocol use that, otherwise do a typical GET call
-	if url[:len(SGETProtocol)] == SGETProtocol {
-		sgetFile(url[len(SGETProtocol):], destinationFile, cosignKeyPath)
+	if strings.HasPrefix(url, SGETProtocol) {
+		sgetFile(url, destinationFile, cosignKeyPath)
 	} else {
 		httpGetFile(url, destinationFile)
 	}
@@ -80,10 +81,13 @@ func httpGetFile(url string, destinationFile *os.File) {
 }
 
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
-	// Get the data
+	// Remove the custom protocol header from the url
+	_, url, _ = strings.Cut(url, SGETProtocol)
+
+	// Use Cosign sget to verify and download the resource
 	err := sget.New(url, cosignKeyPath, destinationFile).Do(context.TODO())
 	if err != nil {
-		message.Fatalf(err, "Unable to sget the file %v", url)
+		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
 	}
 
 	return
