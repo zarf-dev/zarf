@@ -22,6 +22,8 @@ test/tf/public-ec2-instance/.terraform
 terraform.tfstate
 terraform.tfstate.backup
 .terraform.lock.hcl
-
+zarf-registry
+zarf-injector
 .zarf*
 zarf-pki
+.scratch/
