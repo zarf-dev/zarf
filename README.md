@@ -8,7 +8,7 @@ It provides a static go binary (can run anywhere) CLI that can pull, package, an
 
 Zarf runs on [a bunch of operating systems](./docs/supported-oses.md) and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters".
 
-Zarf was theorized and initially demonstrated in Naval Postgraduate School reasearch:
+Zarf was theorized and initially demonstrated in Naval Postgraduate School research:
 
 [A DEVSECOPS APPROACH FOR DEVELOPING AND DEPLOYING CONTAINERIZED CLOUD-BASED SOFTWARE ON SUBMARINES](https://calhoun.nps.edu/handle/10945/68688).
 
@@ -272,7 +272,7 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
 - Until [#306](https://github.com/defenseunicorns/zarf/pull/306) is merged, during helm install/upgrade a [Helm PostRender](https://helm.sh/docs/topics/advanced/#post-rendering) function is called to mutate images and [ImagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) so the deployed resoures use the NodePort binding
 - Zarf uses a custom injector system to bootstrap a new cluster.  See the PR [#329](https://github.com/defenseunicorns/zarf/pull/329) and [ADR](docs/adr/0003-image-injection-into-remote-clusters-without-native-support.md) for more details on how we came to this solution.  The general steps are listed below:
   - Get a list images in the cluster
-  - Attempt to create an ephemeral pod using an image from the lsit
+  - Attempt to create an ephemeral pod using an image from the list
   - A small rust binary that is compiled using [musl](https://www.musl-libc.org/) to keep the size the max binary size of ~ 672 KBs is injected into the pod
   - The mini zarf registry binary and `docker:2` images are put in a tar archive and split into 512 KB chunks, larger sizes tended to cause latency issues on low-resource control planes
   - An init container runs the rust binary to reassabmle and extract the zarf binary and registry image
