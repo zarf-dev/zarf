@@ -59,6 +59,9 @@ type ZarfComponent struct {
 
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `yaml:"import,omitempty"`
+
+	//Path to cosign publickey for signed online resources
+	CosignKeyPath string `yaml:"cosignKeyPath,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart

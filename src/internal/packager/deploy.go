@@ -141,6 +141,11 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 				utils.ValidateSha256Sum(file.Shasum, sourceFile)
 			}
 
+			// Replace temp target directories
+			if strings.Contains(file.Target, "###ZARF_TEMP###") {
+				file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
+			}
+
 			// Copy the file to the destination
 			spinner.Updatef("Saving %s", file.Target)
 			err := copy.Copy(sourceFile, file.Target)
