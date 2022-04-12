@@ -17,6 +17,8 @@ import (
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir string) {
 	imageCount := len(tagToImage)
 	spinner := message.NewProgressSpinner("Creating SBOMs for %d images.", imageCount)
+	defer spinner.Stop()
+
 	actx, err := attestation.NewContext([]attestation.Attestor{})
 	if err != nil {
 		spinner.Fatalf(err, "Unable to make attestation context")
