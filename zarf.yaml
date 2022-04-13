@@ -6,8 +6,20 @@ metadata:
 seed: library/registry:2.7.1
 
 components:
+  - name: injector-binaries
+    required: true
+    cosignKeyPath: cosign.pub
+    files:
+      # Rust Injector Binary
+      - source: sget://defenseunicorns/zarf-injector:0.1.0
+        target: "###ZARF_TEMP###/zarf-injector"
+        executable: true
+      # Go Registry Binary
+      - source: src/injector/stage2/zarf-registry
+        target: "###ZARF_TEMP###/zarf-registry"
+        executable: true
   - name: k3s
-    import: 
+    import:
       path: packages/distros/k3s
 
   - name: container-registry-seed
