@@ -71,12 +71,6 @@ func Create() {
 		sbom.CatalogImages(pulledImages, tempPath.sboms)
 	}
 
-	if config.IsZarfInitConfig() {
-		// Include the injection things we need, note that zarf-registry must be created by `make build-injector` first
-		utils.CreatePathAndCopy("src/injector/zarf-registry", tempPath.injectZarfBinary)
-		utils.CreatePathAndCopy("src/injector/zarf-injector", tempPath.injectBinary)
-	}
-
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
@@ -112,7 +106,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 			message.Debugf("Loading %v", file)
 			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
 			if utils.IsUrl(file.Source) {
-				utils.DownloadToFile(file.Source, destinationFile)
+				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
 				utils.CreatePathAndCopy(file.Source, destinationFile)
 			}
