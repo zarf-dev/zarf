@@ -1,0 +1,50 @@
+name: Build Rust Binary
+on:
+  workflow_dispatch:
+    inputs:
+      versionTag:
+        description: "Version tag"
+        required: true
+      branchName:
+        description: "Branch to build the injector from"
+        required: false
+        default: 'master'
+
+jobs:
+  build-injector:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repo"
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branchName }}
+
+      - name: "Install cosign"
+        uses: sigstore/cosign-installer@v2.1.0
+
+
+      - name: "Install Rust And Build"
+        uses: gmiam/rust-musl-action@v1.1.1
+        with:
+          args: cargo build --target x86_64-unknown-linux-musl --release --manifest-path src/injector/stage1/Cargo.toml
+
+      - name: "Strip The Binary Down"
+        run: sudo strip src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector
+
+      - name: "Upload Rust Binary"
+        uses: actions/upload-artifact@v2
+        with:
+          name: zarf-injector
+          path: src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: "Upload Binary To DockerHub"
+        run: cosign upload blob -f zarf-registry defenseunicorns/zarf-registry:${{ github.event.inputs.versionTag }}
+
+      - name: "Sign the binary"
+        run: cosign sign --key ${{ secrets.COSIGN_SIGNING_KEY }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
