@@ -281,7 +281,7 @@ func CreateReadOnlyUser() error {
 	return err
 }
 
-func addReadOnlyUser(repo string) error {
+func addReadOnlyUserToRepo(repo string) error {
 	// Add the readonly user to the repo
 	addColabBody := map[string]string{
 		"permission": "read",
