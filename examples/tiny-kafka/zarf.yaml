@@ -3,7 +3,7 @@ metadata:
   name: kafka-strimzi-demo
   description: "Demo tiny Zarf Kafka deployment"
   # Big Bang / Iron Bank are only amd64
-  architecture: amd64  
+  architecture: amd64
 
 components:
   - name: baseline

@@ -96,7 +96,7 @@ var configSchemaCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, "Unable to generate the zarf config schema")
 		}
-		fmt.Print(string(output))
+		fmt.Print(string(output) + "\n")
 	},
 }
 
