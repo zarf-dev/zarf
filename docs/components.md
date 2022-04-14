@@ -15,10 +15,10 @@ Backed by tooling you already know (and love) & structured to fill the gaps you 
 
 Zarf's work necessitates that some components are "always on" (a.k.a. required & cannot be disabled). Those include:
 
-|                   |Description|
-|---                |---|
-|container-seed-registry|Adds a container registry so Zarf can bootstrap itself into the cluster.|
-|container-registry |Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster.|
+|                         | Description                                                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| container-seed-registry | Adds a container registry so Zarf can bootstrap itself into the cluster.                                             |
+| container-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
 &nbsp;
 
@@ -29,11 +29,11 @@ In addition to those that are always installed, Zarf's optional components provi
 
 These optional components are listed below along with the "magic strings" you pass to `zarf init --components` to pull them in:
 
-| --components |Description|
-|--------------|---|
-| k3s          |Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.|
-| logging      |Adds a log monitoring stack&mdash;[promtail / loki / graphana (a.k.a. PLG)](https://github.com/grafana/loki)&mdash;into the cluster.|
-| git-server   |Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster.|
+| --components | Description                                                                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| k3s          | Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.                             |
+| logging      | Adds a log monitoring stack&mdash;[promtail / loki / graphana (a.k.a. PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                              |
+| git-server   | Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
 
 &nbsp;
 
