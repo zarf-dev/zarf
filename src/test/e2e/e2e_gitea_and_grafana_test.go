@@ -12,7 +12,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--components=gitops-service,logging", "--confirm")
+	output, err := e2e.execZarfCommand("init", "--components=git-server,logging", "--confirm")
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
