@@ -38,8 +38,12 @@ func PushAllDirectories(localPath string) {
 		// Add the read-only user to this repo
 		repoPathSplit := strings.Split(path, "/")
 		repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
-		repoName := strings.Split(repoNameWithGitTag, ".git__")[0]
-		addReadOnlyUser(repoName)
+		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
+		err = addReadOnlyUser(repoName)
+		if err != nil {
+			message.Debug(err)
+			message.Warnf("Unable to add the read-only user to the repo: %v\n", repoName)
+		}
 	}
 
 	spinner.Success()

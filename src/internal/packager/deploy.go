@@ -95,19 +95,6 @@ func Deploy() {
 		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
 	}
 
-	if config.IsZarfInitConfig() {
-		if strings.Contains(config.DeployOptions.Components, config.ZarfGiteaComponentName) {
-			// Create a gitea read-only user
-			err = git.CreateReadOnlyUser()
-			if err != nil {
-				message.Error(err, "Unable to create a read-only user in the Gitea service.")
-			}
-		}
-
-		// If this is the end of an initconfig, cleanup and tell the user we're ready to roll
-		_ = os.Remove(".zarf-registry")
-	}
-
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
 
