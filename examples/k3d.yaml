@@ -1,4 +1,4 @@
-# usage:  
+# usage:
 #   create: k3d cluster create --config k3d.yaml
 #   delete: k3d cluster delete --config k3d.yaml
 # Schema compains but cli complains with v2... ¯\_(ツ)_/¯

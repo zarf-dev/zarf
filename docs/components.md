@@ -42,7 +42,7 @@ Existing components and packages within a zarf.yaml can be composed in new packa
 ```yaml
 components:
   - name: flux
-    import: 
+    import:
      path: 'path/to/flux/package/directory/'
 ```
 
