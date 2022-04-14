@@ -1,4 +1,4 @@
-# Zarf - DevSecOps for Air Gap Systems 
+# Zarf - DevSecOps for Air Gap Systems
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
@@ -22,11 +22,11 @@ Most of the software ecosystem assumes your systems have access to the internet.
 
 Zarf allows you to bundle portions of "the internet" into a single package to be installed later following specific instructions. A Zarf package is just a single file that includes everything you need to manage a system or capability while fully disconnected. Think of a disconnected system as a system that always is or sometimes is on airplane mode.
 
-You bring this single file (we call it a package) to the system you want to install or update new software on. The package includes instructions on how to assemble all the pieces of software (components) once on the other side. These instructions are fully "declarative," which means that everything is represented by code and automated instead of manual. The hardest part is assembling the declarative package on the connected side. But once everything is packaged, Zarf makes even very complex systems easy to install, update, and maintain within disconnected systems. 
+You bring this single file (we call it a package) to the system you want to install or update new software on. The package includes instructions on how to assemble all the pieces of software (components) once on the other side. These instructions are fully "declarative," which means that everything is represented by code and automated instead of manual. The hardest part is assembling the declarative package on the connected side. But once everything is packaged, Zarf makes even very complex systems easy to install, update, and maintain within disconnected systems.
 
-Such packages also become highly distributable, as they can now run on edge, embedded systems, secure cloud, data centers, or even in a local environment. This is incredibly helpful for organizations that need to integrate and deploy software from multiple, secure development environments from disparate development teams into disconnected IT operational environments. Zarf helps ensure that development teams can integrate with the production environment they are deploying to, even if they will never actually touch that environment. 
+Such packages also become highly distributable, as they can now run on edge, embedded systems, secure cloud, data centers, or even in a local environment. This is incredibly helpful for organizations that need to integrate and deploy software from multiple, secure development environments from disparate development teams into disconnected IT operational environments. Zarf helps ensure that development teams can integrate with the production environment they are deploying to, even if they will never actually touch that environment.
 
-Zarf makes DevSecOps for air gap possible. 
+Zarf makes DevSecOps for air gap possible.
 
 <!--
 ##########

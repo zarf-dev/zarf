@@ -11,10 +11,10 @@ RUN wget https://js-dos.com/6.22/current/js-dos.js && \
     wget https://js-dos.com/6.22/current/wdosbox.wasm.js
 
 RUN wget -O aladdin.zip "https://web.archive.org/web/20190303222445if_/https://www.dosgames.com/files/DOSBOX_ALADDIN.ZIP"
-RUN wget -O doom.zip "https://archive.org/download/DoomsharewareEpisode/doom.ZIP" 
-RUN wget -O mario-brothers.zip "https://image.dosgamesarchive.com/games/mario-bro.zip" 
-RUN wget -O prince-of-persia.zip "https://web.archive.org/web/20181030180256if_/http://image.dosgamesarchive.com/games/pop1.zip" 
-RUN wget -O quake.zip "https://web.archive.org/web/20190303223506if_/https://www.dosgames.com/files/DOSBOX_QUAKE.ZIP" 
+RUN wget -O doom.zip "https://archive.org/download/DoomsharewareEpisode/doom.ZIP"
+RUN wget -O mario-brothers.zip "https://image.dosgamesarchive.com/games/mario-bro.zip"
+RUN wget -O prince-of-persia.zip "https://web.archive.org/web/20181030180256if_/http://image.dosgamesarchive.com/games/pop1.zip"
+RUN wget -O quake.zip "https://web.archive.org/web/20190303223506if_/https://www.dosgames.com/files/DOSBOX_QUAKE.ZIP"
 RUN wget -O warcraft-ii.zip "https://web.archive.org/web/20190303222732if_/https://www.dosgames.com/files/DOSBOX_WAR2.ZIP"
 
 RUN wget -O aladdin.png "https://image.dosgamesarchive.com/screenshots/aladdem-4.png" && \
