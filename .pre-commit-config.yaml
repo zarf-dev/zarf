@@ -11,8 +11,7 @@ repos:
       - id: detect-private-key
         exclude: |
           (?x)^(
-            examples/big-bang/kustomizations/bigbang/values.yaml|
-            examples/software-factory/template/bigbang/values.yaml|
+            examples/big-bang/kustomization/values.yaml|
             examples/istio-with-separate-cert/files/bigbangdev.key
           )$
       - id: end-of-file-fixer
@@ -34,7 +33,7 @@ repos:
     hooks:
       - id: generate-zarf-schema
         name: Check for outdated Zarf schema
-        entry: ./hooks/verify-zarf-schema.sh
+        entry: ./.hooks/verify-zarf-schema.sh
         files: "src/types/types.go"
         types: [go]
         language: script

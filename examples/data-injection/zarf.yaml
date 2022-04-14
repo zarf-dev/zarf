@@ -23,7 +23,7 @@ components:
           selector: app=data-injection
           container: data-loader
           path: /test
-          
+
   - name: pod-only
     required: true
     # Add new data into the cluster, these will keep trying up until their timeout
