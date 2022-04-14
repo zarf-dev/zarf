@@ -3,7 +3,7 @@ metadata:
   name: Zarf Gitea Service for Gitops
 
 components:
-  - name: gitops-service
+  - name: gitea
     description: "Add Gitea for serving gitops-based clusters in an airgap"
     images:
       - gitea/gitea:1.13.7
