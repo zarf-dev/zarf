@@ -9,12 +9,14 @@ jobs:
       - name: "Install GoLang"
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.x
+          go-version: 1.18.x
       - name: "Checkout Repo"
         uses: actions/checkout@v2
       - name: "Build CLI"
         run: make build-cli-windows
-      - name: "Make Packages"
+      - name: "Test zarf.exe works"
         run: |
           make zarf-bin
           make foo
+      - name: "Create the init package"
+        run: make init-package
