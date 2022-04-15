@@ -103,6 +103,7 @@ func Deploy() {
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
 			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
 	}
