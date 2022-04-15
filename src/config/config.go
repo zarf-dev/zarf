@@ -33,8 +33,9 @@ const (
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
 
-	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
-	ZarfCleanupScriptsPath = "/opt/zarf"
+	ZarfManagedByLabel        = "app.kubernetes.io/managed-by"
+	ZarfCleanupScriptsPath    = "/opt/zarf"
+	ZarfDefaultImageCachePath = ".zarf-image-cache"
 )
 
 var (
@@ -46,7 +47,8 @@ var (
 
 	CliArch string
 
-	ZarfSeedPort string
+	ZarfSeedPort       string
+	ZarfImageCachePath = ZarfDefaultImageCachePath
 
 	// Private vars
 	active types.ZarfPackage
@@ -180,4 +182,15 @@ func BuildConfig(path string) error {
 	}
 
 	return utils.WriteYaml(path, active, 0400)
+}
+
+func GetImageCachePath() string {
+	homePath, _ := os.UserHomeDir()
+	if ZarfImageCachePath == ZarfDefaultImageCachePath {
+		return fmt.Sprintf("%s/%s", homePath, ZarfImageCachePath)
+	}
+	if string(ZarfImageCachePath[0]) == "~" {
+		return fmt.Sprintf("%s/%s", homePath, ZarfImageCachePath[len("~/"):])
+	}
+	return ZarfImageCachePath
 }
