@@ -6,9 +6,7 @@ metadata:
 components:
   - name: zarf-injector
     required: true
-    # todo: imported components don't respect current directory for cosignKeyPath, 
-    # see https://github.com/defenseunicorns/zarf/issues/447
-    cosignKeyPath: cosign.pub
+    cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
       - source: sget://defenseunicorns/zarf-injector:0.1.0
