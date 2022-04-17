@@ -15,7 +15,7 @@ func TestGitopsExample(t *testing.T) {
 	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--confirm", "--components=gitops-service")
+	output, err := e2e.execZarfCommand("init", "--confirm", "--components=git-server")
 	require.NoError(t, err, output)
 
 	path := fmt.Sprintf("../../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)

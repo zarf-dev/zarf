@@ -96,7 +96,7 @@ Find some detailed uses of the `zarf.yaml` file in [our examples](../examples/).
 
 #### (2) - Package
 
-Actually making a Zarf package out of a `zarf.yaml` file is a matter of calling a single, simple command: `zarf package`.  You'll see a `zarf-package-*.tar.zst` file pop into existence afterward&mdash;that's your package.
+Actually making a Zarf package out of a `zarf.yaml` file is a matter of calling a single, simple command: `zarf package create`.  You'll see a `zarf-package-*.tar.zst` file pop into existence afterward&mdash;that's your package.
 
 Find out more about that by calling the CLI for help, or check out an example package build in [our game example](../examples/game#package-the-game).
 
@@ -136,9 +136,9 @@ Move a Zarf release + your desired packages to your Zarf cluster machine.
 
 Make your machine into a **single node** Zarf cluster with the command: `zarf init`.
 
-Recommended Zarf components: `management`.
+Recommended Zarf components: `k3s`.
 
-Deploy your package into the Zarf cluster with the command: `zarf deploy`.
+Deploy your package into the Zarf cluster with the command: `zarf package deploy`.
 
 #### (✓) - Use it
 
@@ -159,11 +159,13 @@ Move a Zarf release + desired packages to your Zarf cluster machine.
 
 #### (1) - Zarf cluster
 
-Make your Zarf cluster machine into a **single node** Zarf cluster with the command: `zarf init`.
+Configure your system to talk to an existing Kubernetes cluster, then run `zarf init`
 
-Recommended Zarf components: `management` & `gitops-services`.
+Recommended Zarf components: `git-server`.
 
-Deploy your package into the Zarf cluster with the command: `zarf deploy`.
+Deploy your package into the Zarf cluster with the command: `zarf package deploy`.
+
+> Utility Mode can be used in "single node K3s" mode too, just add the `k3s` component as well when running `zarf init`.
 
 #### (2) - Downstream cluster
 
