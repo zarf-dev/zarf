@@ -36,6 +36,6 @@ components:
     import:
       path: packages/logging-pgl
 
-  - name: gitops-service
+  - name: git-server
     import:
       path: packages/gitea
