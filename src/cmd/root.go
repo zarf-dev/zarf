@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -15,16 +14,12 @@ import (
 
 var zarfLogLevel = ""
 var arch string
-var zarfImageCache string
 
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]|[ZARF-PACKAGE]|[ZARF-YAML]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
-		}
-		if cachePathClean(zarfImageCache) {
-			config.ZarfImageCachePath = zarfImageCache
 		}
 		config.CliArch = arch
 	},
@@ -63,7 +58,6 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
-	rootCmd.PersistentFlags().StringVar(&zarfImageCache, "zarf-cache", config.ZarfDefaultImageCachePath, "Specify the location of the Zarf image cache")
 }
 
 func setLogLevel(logLevel string) {
@@ -80,13 +74,4 @@ func setLogLevel(logLevel string) {
 	} else {
 		message.Warn("invalid log level setting")
 	}
-}
-
-func cachePathClean(cachePath string) bool {
-	var isCleanPath = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
-	if !isCleanPath(cachePath) {
-		message.Warn(fmt.Sprintf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath))
-		return false
-	}
-	return true
 }

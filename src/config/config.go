@@ -47,12 +47,12 @@ var (
 
 	CliArch string
 
-	ZarfSeedPort       string
-	ZarfImageCachePath = ZarfDefaultImageCachePath
+	ZarfSeedPort string
 
 	// Private vars
-	active types.ZarfPackage
-	state  types.ZarfState
+	zarfImageCachePath = ZarfDefaultImageCachePath
+	active             types.ZarfPackage
+	state              types.ZarfState
 )
 
 func IsZarfInitConfig() bool {
@@ -184,13 +184,17 @@ func BuildConfig(path string) error {
 	return utils.WriteYaml(path, active, 0400)
 }
 
+func SetImageCachePath(cachePath string) {
+	zarfImageCachePath = cachePath
+}
+
 func GetImageCachePath() string {
 	homePath, _ := os.UserHomeDir()
-	if ZarfImageCachePath == ZarfDefaultImageCachePath {
-		return fmt.Sprintf("%s/%s", homePath, ZarfImageCachePath)
+	if zarfImageCachePath == ZarfDefaultImageCachePath {
+		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath)
 	}
-	if string(ZarfImageCachePath[0]) == "~" {
-		return fmt.Sprintf("%s/%s", homePath, ZarfImageCachePath[len("~/"):])
+	if string(zarfImageCachePath[0]) == "~" {
+		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath[len("~/"):])
 	}
-	return ZarfImageCachePath
+	return zarfImageCachePath
 }
