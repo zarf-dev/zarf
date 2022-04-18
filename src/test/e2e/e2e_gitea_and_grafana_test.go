@@ -17,7 +17,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 	defer e2e.cleanupAfterTest(t)
 
 	// run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--components=gitops-service,logging", "--confirm")
+	output, err := e2e.execZarfCommand("init", "--components=git-server,logging", "--confirm")
 	require.NoError(t, err, output)
 
 	// Deploy the gitops example
