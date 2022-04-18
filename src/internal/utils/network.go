@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
-	"github.com/sigstore/cosign/pkg/sget"
 )
 
 const SGETProtocol = "sget://"
@@ -84,35 +82,10 @@ func httpGetFile(url string, destinationFile *os.File) {
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
 	// Remove the custom protocol header from the url
 	_, url, _ = strings.Cut(url, SGETProtocol)
-
-	// Override the stdout and stderr because the sget function prints directly to both
-	oldStdout := os.Stdout
-	oldStderr := os.Stderr
-	readOut, writeOut, _ := os.Pipe()
-	readErr, writeErr, _ := os.Pipe()
-	os.Stdout = writeOut
-	os.Stderr = writeErr
-	defer writeOut.Close()
-	defer writeErr.Close()
-
-	// Use Cosign sget to verify and download the resource
-	// NOTE: We are redirecting the output of the sget call from stdout to our debug logger
-	err := sget.New(url, cosignKeyPath, destinationFile).Do(context.TODO())
-	// print out the output of the sget as debug logs (as opposed to printed directly to stdout)
-	writeOut.Close()
-	writeErr.Close()
-	output, _ := ioutil.ReadAll(readOut)
-	errOutput, _ := ioutil.ReadAll(readErr)
-	message.Debugf("sget stdout: %v\n", string(output))
-	message.Debugf("sget stderr: %v\n", string(errOutput))
+	err := Sget(url, cosignKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
 	}
-
-	// Replace the original stdout and stderr
-	os.Stdout = oldStdout
-	os.Stderr = oldStderr
-	return
 }
 
 type WriteCounter struct {
