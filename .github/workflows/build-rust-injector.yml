@@ -48,3 +48,5 @@ jobs:
 
       - name: "Sign the binary"
         run: cosign sign --key ${{ secrets.COSIGN_SIGNING_KEY }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
+        env:
+          COSIGN_EXPERIMENTAL: 1 
