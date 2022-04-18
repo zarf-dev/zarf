@@ -44,7 +44,9 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: "Upload Binary To DockerHub"
-        run: cosign upload blob -f zarf-registry defenseunicorns/zarf-registry:${{ github.event.inputs.versionTag }}
+        run: cosign upload blob -f zarf-injector defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
 
       - name: "Sign the binary"
         run: cosign sign --key ${{ secrets.COSIGN_SIGNING_KEY }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
+        env:
+          COSIGN_EXPERIMENTAL: 1 

@@ -6,18 +6,11 @@ metadata:
 seed: library/registry:2.7.1
 
 components:
-  - name: injector-binaries
+  - name: zarf-injector
     required: true
-    cosignKeyPath: cosign.pub
-    files:
-      # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:0.1.0
-        target: "###ZARF_TEMP###/zarf-injector"
-        executable: true
-      # Go Registry Binary
-      - source: src/injector/stage2/zarf-registry
-        target: "###ZARF_TEMP###/zarf-registry"
-        executable: true
+    import:
+      path: packages/zarf-injector
+
   - name: k3s
     import:
       path: packages/distros/k3s
