@@ -51,7 +51,7 @@ jobs:
         run: cosign upload blob -f ${{ env.zarfInjectorPath }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
 
       - name: "Sign the binary"
-        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=${{ github.actor }} -a version=${{ github.event.inputs.versionTag }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=${{ github.event.inputs.versionTag }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
         env:
           COSIGN_EXPERIMENTAL: 1
           AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
