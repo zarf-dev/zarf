@@ -50,8 +50,11 @@ jobs:
       - name: "Upload Binary To DockerHub"
         run: cosign upload blob -f ${{ env.zarfInjectorPath }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
 
-      # TODO: sign with an awskms key
-      # - name: "Sign the binary"
-      #   run: cosign sign --key ${{ secrets.COSIGN_SIGNING_KEY }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
-      #   env:
-      #     COSIGN_EXPERIMENTAL: 1
+      - name: "Sign the binary"
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} defenseunicorns/zarf-injector:${{ github.event.inputs.versionTag }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
+
