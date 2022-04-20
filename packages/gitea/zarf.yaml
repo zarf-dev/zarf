@@ -3,8 +3,8 @@ metadata:
   name: Zarf Gitea Service for Gitops
 
 components:
-  - name: gitops-service
-    description: "Add Registry and Gitea for serving gitops-based clusters in an airgap"
+  - name: git-server
+    description: "Add Gitea for serving gitops-based clusters in an airgap"
     images:
       - gitea/gitea:1.13.7
     charts:
@@ -14,3 +14,7 @@ components:
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
+    scripts:
+      retry: true
+      after:
+        - "./zarf tools create-read-only-gitea-user"

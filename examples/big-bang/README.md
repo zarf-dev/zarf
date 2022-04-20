@@ -59,7 +59,7 @@ make vm-init
 
 ```shell
 # Initialize Zarf
-./zarf init --confirm --components k3s,gitops-service
+./zarf init --confirm --components k3s,git-server
 
 # (Optional) Inspect the results
 ./zarf tools k9s
