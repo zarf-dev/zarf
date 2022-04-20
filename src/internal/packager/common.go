@@ -223,7 +223,7 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func loopScriptUntilSuccess(script string, retry bool) {
+func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Stop()
 
@@ -237,17 +237,23 @@ func loopScriptUntilSuccess(script string, retry bool) {
 
 	// 2 minutes per script (60 * 2 second waits)
 	tries := 60
+	if scripts.TimeoutSeconds > 0 {
+		tries = scripts.TimeoutSeconds / 2
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
+		spinner.Stop()
+	}
+
 	for {
 		scriptEnvVars := []string{
 			"ZARF_REGISTRY=" + config.ZarfRegistry,
 		}
 		// Try to silently run the script
-		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
+		output, err := utils.ExecCommand(tries > 60, scriptEnvVars, "sh", "-c", script)
 
 		if err != nil {
 			message.Debug(err, output)
 
-			if retry {
+			if scripts.Retry {
 				tries--
 
 				// If there are no more tries left, we have failed
@@ -264,8 +270,11 @@ func loopScriptUntilSuccess(script string, retry bool) {
 		}
 
 		// Script successful,continue
-		message.Debug(output)
-		spinner.Success()
+		// Only show success message if not showing logging 
+		if scripts.TimeoutSeconds < 120 {
+			message.Debug(output)
+			spinner.Success()
+		}
 		break
 	}
 }

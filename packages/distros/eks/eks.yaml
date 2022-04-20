@@ -2,10 +2,11 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  region: us-east-1
+  name: zarf-test
+  region: us-gov-west-1
   version: "1.21"
 managedNodeGroups:
-- instanceType: t3.small
-  minSize: 3
-  maxSize: 6
-  spot: true
+  - instanceType: t3.xlarge
+    name: nodegroup-1-zarf-test
+    minSize: 3
+    maxSize: 8

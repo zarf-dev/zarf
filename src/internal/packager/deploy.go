@@ -125,7 +125,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	for _, script := range component.Scripts.Before {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if len(component.Files) > 0 {
@@ -260,7 +260,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	for _, script := range component.Scripts.After {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if isSeedRegistry {
