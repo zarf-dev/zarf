@@ -9,7 +9,7 @@ import (
 	kustypes "sigs.k8s.io/kustomize/api/types"
 )
 
-// BuildKustomization reads a kustomization and builds it into a single yaml file
+// BuildKustomization reads a kustomization and builds it into a single yaml file.
 func BuildKustomization(path string, destination string) error {
 	// Kustomize has to write to the filesystem on-disk
 	fSys := filesys.MakeFsOnDisk()
@@ -31,9 +31,11 @@ func BuildKustomization(path string, destination string) error {
 		return err
 	}
 
-	if yaml, err := resources.AsYaml(); err != nil {
+	yaml, err := resources.AsYaml();
+
+	if err != nil {
 		return fmt.Errorf("problem converting kustomization to yaml: %w", err)
-	} else {
-		return utils.WriteFile(destination, yaml)
 	}
+	
+	return utils.WriteFile(destination, yaml)
 }
