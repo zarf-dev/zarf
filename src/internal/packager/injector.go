@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,6 +32,7 @@ func runInjectionMadness(tempPath tempPaths) {
 	var images []string
 	var envVars []corev1.EnvVar
 	var payloadConfigmaps []string
+	var sha256sum string
 
 	// Try to create the zarf namespace
 	spinner.Updatef("Creating the Zarf namespace")
@@ -62,7 +64,7 @@ func runInjectionMadness(tempPath tempPaths) {
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, err = createPayloadConfigmaps(tempPath, spinner); err != nil {
+	if payloadConfigmaps, sha256sum, err = createPayloadConfigmaps(tempPath, spinner); err != nil {
 		message.Fatal(err, "Unable to generate the injector payload configmaps")
 	}
 
@@ -82,7 +84,7 @@ func runInjectionMadness(tempPath tempPaths) {
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 
 		// Update the podspec image path
-		pod := buildInjectionPod(image, envVars, payloadConfigmaps)
+		pod := buildInjectionPod(image, envVars, payloadConfigmaps, sha256sum)
 
 		// Create the pod in the cluster
 		pod, err = k8s.CreatePod(pod)
@@ -103,13 +105,14 @@ func runInjectionMadness(tempPath tempPaths) {
 	spinner.Fatalf(nil, "Unable to perform the injection")
 }
 
-func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]string, error) {
+func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]string, string, error) {
 	message.Debugf("packager.tryInjectorPayloadDeploy(%v)", tempPath)
 	var (
 		err        error
 		tarFile    []byte
 		chunks     [][]byte
 		configMaps []string
+		sha256sum  string
 	)
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
@@ -125,13 +128,18 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
 	if err = archiver.Archive(tarFileList, tarPath); err != nil {
-		return configMaps, err
+		return configMaps, "", err
 	}
+
+	archiver.Archive(tarFileList, "/home/user/payload.tgz")
 
 	// Open the created archive for io.Copy
 	if tarFile, err = ioutil.ReadFile(tarPath); err != nil {
-		return configMaps, err
+		return configMaps, "", err
 	}
+
+	//Calculate the sha256sum of the tarFile before we split it up
+	sha256sum = fmt.Sprintf("%x", sha256.Sum256(tarFile))
 
 	spinner.Updatef("Splitting the archive into binary configmaps")
 	// Loop over the tarball breaking it into chunks based on the payloadChunkSize
@@ -165,7 +173,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 
 		// Attempt to create the configmap in the cluster
 		if _, err = k8s.ReplaceConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
-			return configMaps, err
+			return configMaps, "", err
 		}
 
 		// Add the configmap to the configmaps slice for later usage in the pod
@@ -175,7 +183,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return configMaps, nil
+	return configMaps, sha256sum, nil
 }
 
 func hasSeedImages(spinner *message.Spinner) bool {
@@ -295,7 +303,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
-func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps []string) *corev1.Pod {
+func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) *corev1.Pod {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
 	seedImage := config.GetSeedImage()
@@ -303,13 +311,12 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 	pod.Labels["app"] = "zarf-injector"
 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-
 	pod.Spec.InitContainers = []corev1.Container{
 		{
 			Name:       "init-injector",
 			Image:      image,
 			WorkingDir: "/zarf-stage1",
-			Command:    []string{"/zarf-stage1/zarf-injector"},
+			Command:    []string{"/zarf-stage1/zarf-injector", payloadShasum},
 
 			VolumeMounts: []corev1.VolumeMount{
 				{
