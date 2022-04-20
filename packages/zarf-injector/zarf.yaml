@@ -9,7 +9,7 @@ components:
     cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:0.3.0
+      - source: sget://defenseunicorns/zarf-injector:0.4.1
         target: "###ZARF_TEMP###/zarf-injector"
         executable: true
       # Go Registry Binary
