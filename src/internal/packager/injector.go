@@ -131,8 +131,6 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		return configMaps, "", err
 	}
 
-	archiver.Archive(tarFileList, "/home/user/payload.tgz")
-
 	// Open the created archive for io.Copy
 	if tarFile, err = ioutil.ReadFile(tarPath); err != nil {
 		return configMaps, "", err
