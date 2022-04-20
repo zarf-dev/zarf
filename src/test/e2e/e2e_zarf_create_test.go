@@ -19,4 +19,5 @@ func TestE2eZarfCreate(t *testing.T) {
 	files, err := ioutil.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
+	e2e.filesToRemove = append(e2e.filesToRemove, imageCachePath)
 }

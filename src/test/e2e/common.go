@@ -52,9 +52,12 @@ func getCLIName() string {
 //     doAllTheOtherStuff...
 // }
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
-	// Use Zarf to perform chart uninstallation
-	output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
-	require.NoError(t, err, output)
+	// Check if cluster is running and use Zarf to perform chart uninstallation
+	err := clusters.TryValidateClusterIsRunning()
+	if err == nil {
+		output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
+		require.NoError(t, err, output)
+	}
 
 	// Remove files created for the test
 	for _, filePath := range e2e.filesToRemove {
