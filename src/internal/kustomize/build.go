@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/api/krusty"	
+	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -12,7 +13,17 @@ import (
 func BuildKustomization(path string, destination string) error {
 	// Kustomize has to write to the filesystem on-disk
 	fSys := filesys.MakeFsOnDisk()
-	kustomizer := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+
+	// flux2 options for consistency
+	buildOptions := &krusty.Options{
+		DoLegacyResourceSort: true,
+		LoadRestrictions:     kustypes.LoadRestrictionsNone,
+		AddManagedbyLabel:    false,
+		DoPrune:              false,
+		PluginConfig:         kustypes.DisabledPluginConfig(),
+	}
+
+	kustomizer := krusty.MakeKustomizer(buildOptions)
 
 	// Try to build the kustomization
 	resources, err := kustomizer.Run(fSys, path)
