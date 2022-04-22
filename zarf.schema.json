@@ -130,6 +130,9 @@
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentImport"
+        },
+        "cosignKeyPath": {
+          "type": "string"
         }
       },
       "additionalProperties": false,

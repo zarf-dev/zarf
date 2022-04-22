@@ -2,12 +2,20 @@ package git
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	netHttp "net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -22,7 +30,7 @@ type Credential struct {
 func MutateGitUrlsInText(host string, text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		if strings.Contains(match, "/zarf-git-user/") {
+		if strings.Contains(match, "/"+config.ZarfGitPushUser+"/") {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
@@ -38,7 +46,7 @@ func transformURLtoRepoName(url string) string {
 
 func transformURL(baseUrl string, url string) string {
 	replaced := transformURLtoRepoName(url)
-	output := baseUrl + "/zarf-git-user/" + replaced
+	output := baseUrl + "/" + config.ZarfGitPushUser + "/" + replaced
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output
 }
@@ -231,4 +239,87 @@ func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName
 	}
 
 	return nil
+}
+
+// CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user
+func CreateReadOnlyUser() error {
+	// Establish a git tunnel to send the repo
+	tunnel := k8s.NewZarfTunnel()
+	tunnel.Connect(k8s.ZarfGit, false)
+	defer tunnel.Close()
+
+	// Create json representation of the create-user request body
+	createUserBody := map[string]interface{}{
+		"username":             config.ZarfGitReadUser,
+		"password":             config.GetSecret(config.StateGitPull),
+		"email":                "zarf-reader@localhost.local",
+		"must_change_password": false,
+	}
+	createUserData, err := json.Marshal(createUserBody)
+	if err != nil {
+		return err
+	}
+
+	// Send API request to create the user
+	createUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit)
+	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
+	_, err = DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	if err != nil {
+		return err
+	}
+
+	// Make sure the user can't create their own repos or orgs
+	updateUserBody := map[string]interface{}{
+		"email":                     "zarf-reader@localhost.local",
+		"max_repo_creation":         0,
+		"allow_create_organization": false,
+	}
+	updateUserData, _ := json.Marshal(updateUserBody)
+	updateUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser)
+	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
+	_, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	return err
+}
+
+func addReadOnlyUserToRepo(repo string) error {
+	// Add the readonly user to the repo
+	addColabBody := map[string]string{
+		"permission": "read",
+	}
+	addColabData, err := json.Marshal(addColabBody)
+	if err != nil {
+		return err
+	}
+
+	// Send API request to add a user as a read-only collaborator to a repo
+	addColabEndpoint := fmt.Sprintf("http://%s:%d/api/v1/repos/%s/%s/collaborators/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
+	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
+	_, err = DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	return err
+}
+
+// Add http request boilerplate and perform the request, checking for a successful response
+func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, error) {
+	message.Debugf("Performing %v http request to %v", request.Method, request.URL)
+
+	// Prep the request with boilerplate
+	client := &netHttp.Client{Timeout: time.Second * 10}
+	request.SetBasicAuth(username, secret)
+	request.Header.Add("accept", "application/json")
+	request.Header.Add("Content-Type", "application/json")
+
+	// Perform the request and get the response
+	response, err := client.Do(request)
+	if err != nil {
+		return []byte{}, err
+	}
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// If we get a 'bad' status code we will have no error, create a useful one to return
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		err = errors.New(fmt.Sprintf("Got status code of %v during http request with body of: %v", response.StatusCode, string(responseBody)))
+		return []byte{}, err
+	}
+
+	return responseBody, nil
 }

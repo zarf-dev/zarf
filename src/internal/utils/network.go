@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
-	"github.com/sigstore/cosign/pkg/sget"
 )
 
 const SGETProtocol = "sget://"
@@ -83,14 +82,10 @@ func httpGetFile(url string, destinationFile *os.File) {
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
 	// Remove the custom protocol header from the url
 	_, url, _ = strings.Cut(url, SGETProtocol)
-
-	// Use Cosign sget to verify and download the resource
-	err := sget.New(url, cosignKeyPath, destinationFile).Do(context.TODO())
+	err := Sget(url, cosignKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
 	}
-
-	return
 }
 
 type WriteCounter struct {

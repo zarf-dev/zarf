@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: "Zarf Init Package Component - Injector"
+  description: "Used to bootstrap the seed registry without an external registry"
+
+components:
+  - name: zarf-injector
+    required: true
+    cosignKeyPath: ../../cosign.pub
+    files:
+      # Rust Injector Binary
+      - source: sget://defenseunicorns/zarf-injector:0.4.3
+        target: "###ZARF_TEMP###/zarf-injector"
+        executable: true
+      # Go Registry Binary
+      - source: ../../build/zarf-registry
+        target: "###ZARF_TEMP###/zarf-registry"
+        executable: true

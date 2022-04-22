@@ -46,7 +46,8 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}
-		img = cache.Image(img, cache.NewFilesystemCache(cachePath))
+		imageCachePath := config.GetImageCachePath()
+		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
 	}
 
