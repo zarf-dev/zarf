@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/internal/images"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -25,7 +25,7 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 		spinner.Fatalf(err, "Unable to make attestation context")
 	}
 
-	cachePath := images.CachePath()
+	cachePath := config.GetImageCachePath()
 	currImage := 1
 	for tag := range tagToImage {
 		spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
