@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -100,15 +99,6 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
-var trustCACmd = &cobra.Command{
-	Use:     "trust-root-ca [CAFILEPATH]",
-	Aliases: []string{"t"},
-	Short:   "Import the given root cert into the running operating systems certificate store (Linux only)",
-	Run: func(cmd *cobra.Command, args []string) {
-		pki.AddCAToTrustStore(os.Args[0])
-	},
-}
-
 var k9sCmd = &cobra.Command{
 	Use:     "monitor",
 	Aliases: []string{"m", "k9s"},
@@ -144,10 +134,7 @@ func init() {
 	toolsCmd.AddCommand(configSchemaCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
-	toolsCmd.AddCommand(trustCACmd)
 	toolsCmd.AddCommand(createReadOnlyGiteaUser)
-
-	trustCACmd.Flags().BoolVar(&configCaImport, "confirm", false, "Confirm the installation of t")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)

@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -223,7 +224,7 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func loopScriptUntilSuccess(script string, retry bool) {
+func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Stop()
 
@@ -235,38 +236,50 @@ func loopScriptUntilSuccess(script string, retry bool) {
 		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
 	}
 
-	// 2 minutes per script (60 * 2 second waits)
-	tries := 60
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	// Default timeout is 5 minutes
+	if scripts.TimeoutSeconds < 1 {
+		scripts.TimeoutSeconds = 300
+	}
+
+	duration := time.Duration(scripts.TimeoutSeconds) * time.Second
+	timeout := time.After(duration)
+
+	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
+
 	for {
-		scriptEnvVars := []string{
-			"ZARF_REGISTRY=" + config.ZarfRegistry,
-		}
-		// Try to silently run the script
-		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
+		select {
+		// On timeout abort
+		case <-timeout:
+			cancel()
+			spinner.Fatalf(nil, "Script timed out")
+		// Oherwise try running the script
+		default:
+			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			output, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+			defer cancel()
 
-		if err != nil {
-			message.Debug(err, output)
-
-			if retry {
-				tries--
-
-				// If there are no more tries left, we have failed
-				if tries < 1 {
-					spinner.Fatalf(nil, "Script timed out after 2 minutes")
-				} else {
-					// if retry is enabled, on error wait 2 seconds and try again
-					time.Sleep(time.Second * 2)
+			if err != nil {
+				message.Debug(err, output)
+				// If retry, let the script run again
+				if scripts.Retry {
 					continue
 				}
+				// Otherwise fatal
+				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
 			}
 
-			spinner.Fatalf(nil, "Script failed")
-		}
+			// Script successful,continue
+			// Only show success message if not showing logging
+			if scripts.TimeoutSeconds < 120 {
+				message.Debug(output)
+				spinner.Success()
+			}
 
-		// Script successful,continue
-		message.Debug(output)
-		spinner.Success()
-		break
+			return
+		}
 	}
 }
 

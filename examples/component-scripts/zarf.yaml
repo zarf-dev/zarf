@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-scripts
+  description: "Test component to demonstrate script timeout feature"
+
+components:
+  # This script will pass after 1 second
+  - name: passes
+    scripts:
+      before:
+        - "sleep 1"
+
+  # This script will fail after 1 seconds
+  - name: fails
+    scripts:
+      timeout: 1
+      before:
+        - "sleep 30"

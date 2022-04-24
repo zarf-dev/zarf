@@ -155,6 +155,12 @@
     },
     "ZarfComponentScripts": {
       "properties": {
+        "showOutput": {
+          "type": "boolean"
+        },
+        "timeout": {
+          "type": "integer"
+        },
         "retry": {
           "type": "boolean"
         },

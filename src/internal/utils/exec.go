@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -17,10 +18,10 @@ const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
 //nolint
-func ExecCommand(showLogs bool, envVariables []string, commandName string, args ...string) (string, error) {
+func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, error) {
 	if showLogs {
 		fmt.Println()
-		fmt.Printf("%s", colorGreen)
+		fmt.Printf("  %s", colorGreen)
 		fmt.Print(commandName + " ")
 		fmt.Printf("%s", colorCyan)
 		fmt.Printf("%v", args)
@@ -29,11 +30,9 @@ func ExecCommand(showLogs bool, envVariables []string, commandName string, args 
 		fmt.Println("")
 	}
 
-	cmd := exec.Command(commandName, args...)
+	cmd := exec.CommandContext(ctx, commandName, args...)
+
 	env := os.Environ()
-	if envVariables != nil {
-		env = append(env, envVariables...)
-	}
 	cmd.Env = env
 
 	var stdoutBuf, stderrBuf bytes.Buffer
