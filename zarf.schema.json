@@ -158,7 +158,7 @@
         "showOutput": {
           "type": "boolean"
         },
-        "timeout": {
+        "timeoutSeconds": {
           "type": "integer"
         },
         "retry": {

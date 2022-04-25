@@ -75,7 +75,7 @@ type ZarfManifest struct {
 // ZarfComponentScripts are scripts that run before or after a component is deployed
 type ZarfComponentScripts struct {
 	ShowOutput     bool     `yaml:"showOutput,omitempty"`
-	TimeoutSeconds int      `yaml:"timeout,omitempty"`
+	TimeoutSeconds int      `yaml:"timeoutSeconds,omitempty"`
 	Retry          bool     `yaml:"retry,omitempty"`
 	Before         []string `yaml:"before,omitempty"`
 	After          []string `yaml:"after,omitempty"`

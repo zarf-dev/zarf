@@ -18,7 +18,7 @@ const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
 //nolint
-func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, error) {
+func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, string, error) {
 	if showLogs {
 		fmt.Println()
 		fmt.Printf("  %s", colorGreen)
@@ -44,7 +44,7 @@ func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName stri
 	stderr := io.MultiWriter(os.Stderr, &stderrBuf)
 
 	if err := cmd.Start(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if showLogs {
@@ -61,14 +61,14 @@ func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName stri
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if showLogs {
 		if errStdout != nil || errStderr != nil {
-			return "", errors.New("unable to capture stdOut or stdErr")
+			return "", "", errors.New("unable to capture stdOut or stdErr")
 		}
 	}
 
-	return stdoutBuf.String(), nil
+	return stdoutBuf.String(), stderrBuf.String(), nil
 }

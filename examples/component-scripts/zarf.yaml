@@ -13,6 +13,6 @@ components:
   # This script will fail after 1 seconds
   - name: fails
     scripts:
-      timeout: 1
+      timeoutSeconds: 1
       before:
         - "sleep 30"

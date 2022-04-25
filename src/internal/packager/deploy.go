@@ -316,7 +316,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				}
 
 				// Do the actual data injection
-				_, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
+				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 				if err != nil {
 					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
 					continue
@@ -324,7 +324,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					// Leave a marker in the target container for pods to track the sync action
 					cpPodExecArgs[3] = injectionCompletionMarker
 					cpPodExecArgs[4] = pod + ":" + data.Target.Path
-					_, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
+					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 					if err != nil {
 						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
 					}

@@ -258,11 +258,11 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		// Oherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			output, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
 			defer cancel()
 
 			if err != nil {
-				message.Debug(err, output)
+				message.Debug(err, output, errOut)
 				// If retry, let the script run again
 				if scripts.Retry {
 					continue
@@ -273,7 +273,7 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 
 			// Dump the script output in debug if output not already streamed
 			if !scripts.ShowOutput {
-				message.Debug(output)
+				message.Debug(output, errOut)
 			}
 
 			// Close the function now that we are done
