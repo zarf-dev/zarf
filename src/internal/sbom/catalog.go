@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/anchore/syft/syft/pkg"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -14,6 +15,26 @@ import (
 	"github.com/testifysec/witness/pkg/attestation"
 	"github.com/testifysec/witness/pkg/attestation/syft"
 )
+
+type SimplifiedSBOM struct {
+	Source    any
+	Distro    any
+	Artifacts []SimplifiedSBOMArtifact
+}
+type SimplifiedSBOMArtifact struct {
+	Type     string
+	Name     string
+	Version  string
+	Metadata any
+}
+
+// artifact.type,
+// artifact.name,
+// artifact.version,
+// fileList(artifact.metadata),
+// artifact.metadata.description || '-',
+// (artifact.metadata.maintainer || '-').replace(/\u003c(.*)\u003e/, '&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>'),
+// artifact.metadata.installedSize || '-',
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	imageCount := len(tagToImage)
@@ -26,7 +47,9 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	}
 
 	cachePath := config.GetImageCachePath()
+	viewerSBOM := make(map[string]SimplifiedSBOM)
 	currImage := 1
+
 	for tag := range tagToImage {
 		spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 		tarballImg, err := tarball.ImageFromPath(tarPath, &tag)
@@ -50,8 +73,39 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 			spinner.Fatalf(err, "Unable to write SBOM file for image %s", tag.String())
 		}
 
+		catalog := sbomAttestor.SBOM.Artifacts.PackageCatalog
+		sorted := catalog.Sorted()
+
+		var imageSBOM SimplifiedSBOM
+
+		for _, artifact := range sorted {
+
+			switch artifact.MetadataType {
+			case pkg.ApkMetadataType:
+				metadata, ok := artifact.Metadata.(pkg.ApkMetadata)
+				if !ok {
+					message.Debug("Unable to cast metadata to apk metadata")
+					continue
+				}
+				message.Debug(metadata)
+
+			}
+
+			imageSBOM.Artifacts = append(imageSBOM.Artifacts, SimplifiedSBOMArtifact{
+				Type:    string(artifact.Type),
+				Name:    artifact.Name,
+				Version: artifact.Version,
+				// Metadata: metadata.data,
+			})
+		}
+
+		viewerSBOM[tag.Name()] = imageSBOM
+
+		message.Debug(sorted)
+
 		currImage++
 	}
+	message.Debug(viewerSBOM)
 
 	spinner.Success()
 }
