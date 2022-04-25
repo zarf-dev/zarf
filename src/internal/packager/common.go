@@ -254,7 +254,7 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		// On timeout abort
 		case <-timeout:
 			cancel()
-			spinner.Fatalf(nil, "Script timed out")
+			spinner.Fatalf(nil, "Script \"%s\" timed out", script)
 		// Oherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
@@ -271,13 +271,13 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
 			}
 
-			// Script successful,continue
-			// Only show success message if not showing logging
-			if scripts.TimeoutSeconds < 120 {
+			// Dump the script output in debug if output not already streamed
+			if !scripts.ShowOutput {
 				message.Debug(output)
-				spinner.Success()
 			}
 
+			// Close the function now that we are done
+			spinner.Success()
 			return
 		}
 	}
