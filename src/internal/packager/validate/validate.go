@@ -36,7 +36,7 @@ func Run() {
 
 func validatePackageName(subject string) error {
 	// https://regex101.com/r/vpi8a8/1
-	isValid := regexp.MustCompile(`^[a-z\-]+$`).MatchString
+	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
 	if isValid(subject) {
 		return nil
 	}

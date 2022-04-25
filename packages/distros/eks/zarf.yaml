@@ -1,0 +1,40 @@
+kind: ZarfPackageConfig
+metadata:
+  name: "eks-k8s-distro"
+  description: "Deploy a EKS K8s cluster"
+  architecture: multi
+
+components:
+  - name: load-eksctl
+    required: true
+    scripts:
+      after:
+        # Remove existing eksctl
+        - "rm -f eksctl"
+        # Extract the correct linux or mac binary from the tarball 
+        - "./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz ."
+        # Cleanup temp files
+        - "rm -fr archives"
+    files:
+      - source: eks.yaml
+        target: eks.yaml
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_amd64.tar.gz
+        target: archives/eksctl_Darwin_amd64.tar.gz
+        shasum: 4ab4c9199ef4fcb26e3b536484773c0c4c648290e2341585c6bd5bfd79d44fb1
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_arm64.tar.gz
+        target: archives/eksctl_Darwin_arm64.tar.gz
+        shasum: 89adbf6085d37b70ae82d126c912ac82b9283e0fe5507a2b19343d0d566c6164
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Linux_amd64.tar.gz
+        target: archives/eksctl_Linux_x86_64.tar.gz
+        shasum: 7f27988d6aa4fb8041d95d6de270b9657f605a79edd317cc044dc80c49a512e8
+
+  - name: deploy-eks-cluster
+    scripts:
+      # Set timeout to 1 hr
+      timeout: 3600
+      # Show the output while the scripts run
+      showOutput: true
+      before:
+        - "./eksctl create cluster --dry-run -f eks.yaml"
+        - "sleep 15"
+        - "./eksctl create cluster -f eks.yaml"
