@@ -81,6 +81,27 @@ Zarf makes DevSecOps for air gap possible.
   </td>
   </tr>
 <!-- row end -->
+
+<!-- row start -->
+  <tr valign="top">
+  <td>
+
+  **Join Slack Channels**
+
+  </td>
+  <td>
+
+  Join our project channels on K8's slack. #zarf #zarf-dev
+
+
+  </td>
+  <td>
+
+ https://slack.k8s.io/
+
+  </td>
+  </tr>
+<!-- row end -->
 </tbody>
 </table>
 
