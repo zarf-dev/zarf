@@ -31,7 +31,7 @@ components:
   - name: deploy-eks-cluster
     scripts:
       # Set timeout to 1 hr
-      timeout: 3600
+      timeoutSeconds: 3600
       # Show the output while the scripts run
       showOutput: true
       before:
