@@ -52,9 +52,12 @@ func getCLIName() string {
 //     doAllTheOtherStuff...
 // }
 func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
-	// Use Zarf to perform chart uninstallation
-	output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
-	require.NoError(t, err, output)
+	// Check if cluster is running and use Zarf to perform chart uninstallation
+	err := clusters.TryValidateClusterIsRunning()
+	if err == nil {
+		output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
+		require.NoError(t, err, output)
+	}
 
 	// Remove files created for the test
 	for _, filePath := range e2e.filesToRemove {
@@ -64,9 +67,14 @@ func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
 	e2e.filesToRemove = []string{}
 
 	// Kill background processes spawned during the test
+	e2e.killBackgroundProcesses(t)
+}
+
+// Kill background processes spawned during the test
+func (e2e *ZarfE2ETest) killBackgroundProcesses(t *testing.T) {
 	for _, cmd := range e2e.cmdsToKill {
 		if cmd.Process != nil {
-			err = cmd.Process.Kill()
+			err := cmd.Process.Kill()
 			require.NoError(t, err, "unable to kill background cmd when cleaning up after a test")
 		}
 	}

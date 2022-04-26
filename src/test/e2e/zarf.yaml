@@ -1,0 +1,17 @@
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: "Used for Zarf e2e tests"
+seed: library/registry:2.7.1
+components:
+  - name: container-registry-seed
+    required: true
+    import:
+      path: ../../../packages/zarf-registry
+  - name: container-registry
+    required: true
+    import:
+      path: ../../../packages/zarf-registry
+  - name: k3s
+    import:
+      path: ../../../packages/distros/k3s

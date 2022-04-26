@@ -9,9 +9,9 @@ import (
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -95,16 +95,7 @@ var configSchemaCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, "Unable to generate the zarf config schema")
 		}
-		fmt.Print(string(output))
-	},
-}
-
-var trustCACmd = &cobra.Command{
-	Use:     "trust-root-ca [CAFILEPATH]",
-	Aliases: []string{"t"},
-	Short:   "Import the given root cert into the running operating systems certificate store (Linux only)",
-	Run: func(cmd *cobra.Command, args []string) {
-		pki.AddCAToTrustStore(os.Args[0])
+		fmt.Print(string(output) + "\n")
 	},
 }
 
@@ -119,6 +110,22 @@ var k9sCmd = &cobra.Command{
 	},
 }
 
+var createReadOnlyGiteaUser = &cobra.Command{
+	Use:    "create-read-only-gitea-user",
+	Hidden: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Load the state so we can get the credentials for the admin git user
+		state := k8s.LoadZarfState()
+		config.InitState(state)
+
+		// Create the non-admin user
+		err := git.CreateReadOnlyUser()
+		if err != nil {
+			message.Error(err, "Unable to create a read-only user in the Gitea service.")
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 
@@ -127,9 +134,7 @@ func init() {
 	toolsCmd.AddCommand(configSchemaCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
-	toolsCmd.AddCommand(trustCACmd)
-
-	trustCACmd.Flags().BoolVar(&configCaImport, "confirm", false, "Confirm the installation of t")
+	toolsCmd.AddCommand(createReadOnlyGiteaUser)
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)

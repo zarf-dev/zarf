@@ -114,6 +114,10 @@ func prepComponentToCompose(child *types.ZarfComponent, parent types.ZarfCompone
 		}
 	}
 
+	if child.CosignKeyPath != "" {
+		child.CosignKeyPath = getComposedFilePath(child.CosignKeyPath, parent.Import.Path)
+	}
+
 	return child
 }
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"os"
 	"regexp"
@@ -44,7 +45,7 @@ var destroyCmd = &cobra.Command{
 			// Iterate over al matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
-				_, err := utils.ExecCommand(true, nil, script)
+				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, script)
 				if errors.Is(err, os.ErrPermission) {
 					message.Warnf("Got a 'permission denied' when trying to execute the script (%v). Are you the right user and/or do you have the right kube-context?\n", script)
 

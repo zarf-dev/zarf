@@ -1,6 +1,6 @@
 ## Zarf Appliance Mode Example
 
-This example demonstrates using Zarf in a very low-resources/singlue-use environment.  In this mode there is no gitops service and Zarf is simply a standard means of wrapping airgap concerns for K3s. 
+This example demonstrates using Zarf in a very low-resources/singlue-use environment.  In this mode there is no gitops service and Zarf is simply a standard means of wrapping airgap concerns for K3s.
 
 # Zarf Data Injection Example
 
@@ -122,7 +122,7 @@ In a couple seconds the cluster will have loaded your package.
 This demo should have placed some test files in the cluster from the zarf package.  To verify they were created, you can run the following command:
 
 ```shell
-kubectl exec -n demo data-injection -- cat /test/this-is-an-example-file.txt 
+kubectl exec -n demo data-injection -- cat /test/this-is-an-example-file.txt
 ```
 
 The output should say:

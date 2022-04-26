@@ -6,8 +6,13 @@ metadata:
 seed: library/registry:2.7.1
 
 components:
+  - name: zarf-injector
+    required: true
+    import:
+      path: packages/zarf-injector
+
   - name: k3s
-    import: 
+    import:
       path: packages/distros/k3s
 
   - name: container-registry-seed
@@ -24,6 +29,6 @@ components:
     import:
       path: packages/logging-pgl
 
-  - name: gitops-service
+  - name: git-server
     import:
       path: packages/gitea

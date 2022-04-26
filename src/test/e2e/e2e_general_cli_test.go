@@ -43,12 +43,6 @@ func TestGeneralCLI(t *testing.T) {
 	_, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
 
-	// Test for expected failure when given invalid hostnames
-	output, err = e2e.execZarfCommand("pki", "regenerate", "--host", "zarf@server")
-	assert.Error(t, err, output)
-	output, err = e2e.execZarfCommand("pki", "regenerate", "--host=some_unique_server")
-	assert.Error(t, err, output)
-
 	// Test that changing the log level actually applies the requested level
 	output, _ = e2e.execZarfCommand("version", "--log-level=warn")
 	expectedOutString := "Log level set to warn"

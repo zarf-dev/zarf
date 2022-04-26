@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -103,6 +104,7 @@ func Deploy() {
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
 			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
 	}
@@ -124,7 +126,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	for _, script := range component.Scripts.Before {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if len(component.Files) > 0 {
@@ -139,6 +141,11 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 			if file.Shasum != "" {
 				spinner.Updatef("Validating SHASUM for %s", file.Target)
 				utils.ValidateSha256Sum(file.Shasum, sourceFile)
+			}
+
+			// Replace temp target directories
+			if strings.Contains(file.Target, "###ZARF_TEMP###") {
+				file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
 			}
 
 			// Copy the file to the destination
@@ -254,7 +261,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	for _, script := range component.Scripts.After {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if isSeedRegistry {
@@ -309,7 +316,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				}
 
 				// Do the actual data injection
-				_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 				if err != nil {
 					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
 					continue
@@ -317,7 +324,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					// Leave a marker in the target container for pods to track the sync action
 					cpPodExecArgs[3] = injectionCompletionMarker
 					cpPodExecArgs[4] = pod + ":" + data.Target.Path
-					_, err = utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 					if err != nil {
 						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
 					}

@@ -24,6 +24,7 @@ const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength = 40
 	ZarfGitPushUser        = "zarf-git-user"
+	ZarfGitReadUser        = "zarf-git-read-user"
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
@@ -32,8 +33,9 @@ const (
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
 
-	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
-	ZarfCleanupScriptsPath = "/opt/zarf"
+	ZarfManagedByLabel        = "app.kubernetes.io/managed-by"
+	ZarfCleanupScriptsPath    = "/opt/zarf"
+	ZarfDefaultImageCachePath = ".zarf-image-cache"
 )
 
 var (
@@ -48,8 +50,9 @@ var (
 	ZarfSeedPort string
 
 	// Private vars
-	active types.ZarfPackage
-	state  types.ZarfState
+	zarfImageCachePath = ZarfDefaultImageCachePath
+	active             types.ZarfPackage
+	state              types.ZarfState
 )
 
 func IsZarfInitConfig() bool {
@@ -179,4 +182,19 @@ func BuildConfig(path string) error {
 	}
 
 	return utils.WriteYaml(path, active, 0400)
+}
+
+func SetImageCachePath(cachePath string) {
+	zarfImageCachePath = cachePath
+}
+
+func GetImageCachePath() string {
+	homePath, _ := os.UserHomeDir()
+	if zarfImageCachePath == ZarfDefaultImageCachePath {
+		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath)
+	}
+	if string(zarfImageCachePath[0]) == "~" {
+		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath[len("~/"):])
+	}
+	return zarfImageCachePath
 }
