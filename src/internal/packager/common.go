@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,6 +60,7 @@ func createPaths() tempPaths {
 func (t tempPaths) clean() {
 	message.Debug("Cleaning up temp files")
 	_ = os.RemoveAll(t.base)
+	_ = os.RemoveAll("zarf-sbom")
 }
 
 func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
@@ -75,7 +77,7 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 	}
 }
 
-func confirmAction(configPath string, userMessage string) bool {
+func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool {
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
@@ -85,6 +87,13 @@ func confirmAction(configPath string, userMessage string) bool {
 	text := string(content)
 
 	utils.ColorPrintYAML(text)
+
+	if len(sbomViewFiles) > 0 {
+		cwd, _ := os.Getwd()
+		link := filepath.Join(cwd, "zarf-sbom", filepath.Base(sbomViewFiles[0]))
+		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
+		message.Note(msg)
+	}
 
 	// Display prompt if not auto-confirmed
 	var confirmFlag bool

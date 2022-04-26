@@ -45,7 +45,7 @@ func Create() {
 	// Perform early package validation
 	validate.Run()
 
-	if !confirmAction(configFile, "Create") {
+	if !confirmAction(configFile, "Create", nil) {
 		os.Exit(0)
 	}
 
