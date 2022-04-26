@@ -91,7 +91,7 @@ Zarf makes DevSecOps for air gap possible.
   </td>
   <td>
 
-  Join our project channels on K8's slack. #zarf #zarf-dev
+  Join our project channels on K8s slack. <a href="https://kubernetes.slack.com/archives/C03B6BJAUJ3">#zarf</a> <a href="https://kubernetes.slack.com/archives/C03BP9Z3CMA">#zarf-dev</a>
 
 
   </td>
