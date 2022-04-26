@@ -250,6 +250,9 @@
         "name": {
           "type": "string"
         },
+        "kustomizeAllowAnyDirectory": {
+          "type": "boolean"
+        },
         "namespace": {
           "type": "string"
         },
