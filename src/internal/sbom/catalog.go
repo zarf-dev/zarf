@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -21,12 +21,6 @@ import (
 
 //go:embed viewer/*
 var viewerAssets embed.FS
-
-const JS_TEMPLATE = `
-ZARF_SBOM_IMAGE_LIST = [];
-ZARF_SBOM_DATA = 
-`
-
 var tranformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
@@ -42,35 +36,37 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	cachePath := config.GetImageCachePath()
 	currImage := 1
 
+	// Generate a list of images for the sbom viewer
 	jsonImageList, err := generateImageListJSON(tagToImage)
 	if err != nil {
 		spinner.Fatalf(err, "Unable to generate the SBOM image list")
 	}
 
-	copyViewerFile(sbomDir, "library.js")
-	copyViewerFile(sbomDir, "viewer.js")
-	copyViewerFile(sbomDir, "theme.css")
-	copyViewerFile(sbomDir, "styles.css")
-
+	// Generate SBOM for each image
 	for tag := range tagToImage {
 		spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
+		// Get the image
 		tarballImg, err := tarball.ImageFromPath(tarPath, &tag)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to open image %s", tag.String())
 		}
 
+		// Create the sbom
 		sbomAttestor := syft.New(syft.WithImageSource(tarballImg, cachePath, tag.String()))
 		if err := sbomAttestor.Attest(actx); err != nil {
 			spinner.Fatalf(err, "Unable to build sbom for image %s", tag.String())
 		}
 
+		// Write the sbom to disk using the image tag as the filename
 		normalized := tranformRegex.ReplaceAllString(tag.String(), "_")
 		sbomFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("%s.json", normalized)))
 		if err != nil {
 			spinner.Fatalf(err, "Unable to create SBOM file for image %s", tag.String())
 		}
-		sbomViewerFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("%s.html", normalized)))
+
+		// Create the sbom viewer file for the image
+		sbomViewerFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("sbom-viewer-%s.html", normalized)))
 		if err != nil {
 			spinner.Fatalf(err, "Unable to create SBOM viewer file for image %s", tag.String())
 		}
@@ -78,35 +74,50 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 		defer sbomFile.Close()
 		defer sbomViewerFile.Close()
 
+		// Write the sbom json data to disk
 		enc := json.NewEncoder(sbomFile)
 		if err := enc.Encode(sbomAttestor); err != nil {
 			spinner.Fatalf(err, "Unable to write SBOM file for image %s", tag.String())
 		}
 
-		template, err := viewerAssets.ReadFile("viewer/template.html")
-		if err != nil {
-			spinner.Fatalf(err, "Unable to read SBOM Viewer template file")
-		}
-
-		if _, err = sbomViewerFile.Write(template); err != nil {
-			spinner.Fatalf(err, "Unable to write SBOM Viewer template file")
-		}
-
+		// Reset the file reader to the start of the file
 		if _, err = sbomFile.Seek(0, 0); err != nil {
 			spinner.Fatalf(err, "Unable to load generated SBOM file for image %s", tag.String())
 		}
 
+		// Read the sbom json data into memory (avoid JSON encoding large structs twice)
 		sbombViewerData, err := ioutil.ReadAll(sbomFile)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to load generated SBOM file for image %s", tag.String())
 		}
 
-		sbomViewerJS := fmt.Sprintf(`
-			ZARF_SBOM_IMAGE_LIST = %s;
-			ZARF_SBOM_DATA = %s;		
-		`, jsonImageList, sbombViewerData)
+		// Create the sbomviewer template data
+		tplData := struct {
+			ThemeCSS  template.CSS
+			ViewerCSS template.CSS
+			ImageList template.JS
+			Data      template.JS
+			LibraryJS template.JS
+			ViewerJS  template.JS
+		}{
+			ThemeCSS:  loadFileCSS("theme.css"),
+			ViewerCSS: loadFileCSS("styles.css"),
+			ImageList: template.JS(jsonImageList),
+			Data:      template.JS(sbombViewerData),
+			LibraryJS: loadFileJS("library.js"),
+			ViewerJS:  loadFileJS("viewer.js"),
+		}
 
-		utils.ReplaceText(sbomViewerFile.Name(), "//ZARF_JS_DATA", sbomViewerJS)
+		// Render the sbomviewer template
+		tpl, err := template.ParseFS(viewerAssets, "viewer/template.gohtml")
+		if err != nil {
+			spinner.Fatalf(err, "Unable to parse SBOM Viewer template file")
+		}
+
+		// Write the sbomviewer template to disk
+		if err := tpl.Execute(sbomViewerFile, tplData); err != nil {
+			spinner.Fatalf(err, "Unable to execute SBOM Viewer template file")
+		}
 
 		currImage++
 	}
@@ -114,12 +125,14 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	spinner.Success()
 }
 
-func copyViewerFile(sbomDir, name string) error {
-	data, err := viewerAssets.ReadFile("viewer/" + name)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(sbomDir, name), data, 0644)
+func loadFileCSS(name string) template.CSS {
+	data, _ := viewerAssets.ReadFile("viewer/" + name)
+	return template.CSS(data)
+}
+
+func loadFileJS(name string) template.JS {
+	data, _ := viewerAssets.ReadFile("viewer/" + name)
+	return template.JS(data)
 }
 
 // This could be optimized, but loop over all the images to create an image tag list

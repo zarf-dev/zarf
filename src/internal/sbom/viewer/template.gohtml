@@ -5,11 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zarf Image SBOM Viewer</title>
-    <link href="theme.css" rel="stylesheet" type="text/css">
-    <link href="styles.css" rel="stylesheet" type="text/css">
-    <script src="library.js" type="text/javascript"></script>
+    <style>
+        {{.ThemeCSS}}
+        {{.ViewerCSS}}
+    </style>
     <script type="text/javascript">
-        //ZARF_JS_DATA
+        ZARF_SBOM_IMAGE_LIST = {{.ImageList}};
+		ZARF_SBOM_DATA = {{.Data}};
+        {{.LibraryJS}};
     </script>
 </head>
 
@@ -254,6 +257,8 @@
     <div id="modal-fader"></div>
 </body>
 
-<script src="viewer.js" type="text/javascript"></script>
+<script type="text/javascript">
+    {{.ViewerJS}}
+</script>
 
 </html>

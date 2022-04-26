@@ -11,7 +11,7 @@ document.body.appendChild(artifactsTable)
 function initSelector() {
     window.location.href
 
-    const url = /(.*).html*$/gmi.exec(window.location.href)[1];
+    const url = /sbom-viewer-(.*).html*$/gmi.exec(window.location.href)[1];
 
     ZARF_SBOM_IMAGE_LIST.sort().forEach(image => {
         let selected = (url === image) ? 'selected' : '';
@@ -69,7 +69,6 @@ function fileList(metadata) {
 
     if (list.length > 0) {
         flatList = list.sort().join('<br>');
-        console.log(flatList);
         return `<a href="#" onClick="showModal('${metadata.package}','${flatList}')">${list.length} files</a>`
     }
 
@@ -77,7 +76,7 @@ function fileList(metadata) {
 }
 
 function choose(path) {
-    window.location.href = encodeURIComponent(`${path}.html`);
+    window.location.href = encodeURIComponent(`sbom-viewer-${path}.html`);
 }
 
 function showModal(title, list) {
