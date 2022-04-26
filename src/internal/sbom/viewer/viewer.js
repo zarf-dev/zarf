@@ -11,12 +11,11 @@ document.body.appendChild(artifactsTable)
 function initSelector() {
     window.location.href
 
-    const url = /sbom-viewer-(.*).html$/gmi.exec(window.location.href)[1];
+    const url = /(.*).html*$/gmi.exec(window.location.href)[1];
 
-    Object.keys(ZARF_SBOM_IMAGE_LIST).sort().forEach(image => {
-        let shasum = ZARF_SBOM_IMAGE_LIST[image]
-        let selected = (url === shasum) ? 'selected' : '';
-        sbomSelector.add(new Option(image, shasum, selected, selected));
+    ZARF_SBOM_IMAGE_LIST.sort().forEach(image => {
+        let selected = (url === image) ? 'selected' : '';
+        sbomSelector.add(new Option(image, image, selected, selected));
     });
 }
 
@@ -78,7 +77,7 @@ function fileList(metadata) {
 }
 
 function choose(path) {
-    window.location.href = encodeURIComponent(`sbom-viewer-${path}.html`);
+    window.location.href = encodeURIComponent(`${path}.html`);
 }
 
 function showModal(title, list) {

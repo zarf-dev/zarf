@@ -19,8 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var configCaImport bool
-
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
 	Aliases: []string{"t"},

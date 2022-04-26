@@ -1,14 +1,17 @@
 package sbom
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
-	"github.com/anchore/syft/syft/pkg"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -16,25 +19,15 @@ import (
 	"github.com/testifysec/witness/pkg/attestation/syft"
 )
 
-type SimplifiedSBOM struct {
-	Source    any
-	Distro    any
-	Artifacts []SimplifiedSBOMArtifact
-}
-type SimplifiedSBOMArtifact struct {
-	Type     string
-	Name     string
-	Version  string
-	Metadata any
-}
+//go:embed viewer/*
+var viewerAssets embed.FS
 
-// artifact.type,
-// artifact.name,
-// artifact.version,
-// fileList(artifact.metadata),
-// artifact.metadata.description || '-',
-// (artifact.metadata.maintainer || '-').replace(/\u003c(.*)\u003e/, '&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>'),
-// artifact.metadata.installedSize || '-',
+const JS_TEMPLATE = `
+ZARF_SBOM_IMAGE_LIST = [];
+ZARF_SBOM_DATA = 
+`
+
+var tranformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	imageCount := len(tagToImage)
@@ -47,11 +40,21 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	}
 
 	cachePath := config.GetImageCachePath()
-	viewerSBOM := make(map[string]SimplifiedSBOM)
 	currImage := 1
+
+	jsonImageList, err := generateImageListJSON(tagToImage)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to generate the SBOM image list")
+	}
+
+	copyViewerFile(sbomDir, "library.js")
+	copyViewerFile(sbomDir, "viewer.js")
+	copyViewerFile(sbomDir, "theme.css")
+	copyViewerFile(sbomDir, "styles.css")
 
 	for tag := range tagToImage {
 		spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
+
 		tarballImg, err := tarball.ImageFromPath(tarPath, &tag)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to open image %s", tag.String())
@@ -62,50 +65,71 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 			spinner.Fatalf(err, "Unable to build sbom for image %s", tag.String())
 		}
 
-		sbomFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("%s.json", sbomAttestor.SBOM.Source.ImageMetadata.ID)))
+		normalized := tranformRegex.ReplaceAllString(tag.String(), "_")
+		sbomFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("%s.json", normalized)))
 		if err != nil {
 			spinner.Fatalf(err, "Unable to create SBOM file for image %s", tag.String())
 		}
+		sbomViewerFile, err := os.Create(filepath.Join(sbomDir, fmt.Sprintf("%s.html", normalized)))
+		if err != nil {
+			spinner.Fatalf(err, "Unable to create SBOM viewer file for image %s", tag.String())
+		}
 
 		defer sbomFile.Close()
+		defer sbomViewerFile.Close()
+
 		enc := json.NewEncoder(sbomFile)
 		if err := enc.Encode(sbomAttestor); err != nil {
 			spinner.Fatalf(err, "Unable to write SBOM file for image %s", tag.String())
 		}
 
-		catalog := sbomAttestor.SBOM.Artifacts.PackageCatalog
-		sorted := catalog.Sorted()
-
-		var imageSBOM SimplifiedSBOM
-
-		for _, artifact := range sorted {
-
-			switch artifact.MetadataType {
-			case pkg.ApkMetadataType:
-				metadata, ok := artifact.Metadata.(pkg.ApkMetadata)
-				if !ok {
-					message.Debug("Unable to cast metadata to apk metadata")
-					continue
-				}
-				message.Debug(metadata)
-
-			}
-
-			imageSBOM.Artifacts = append(imageSBOM.Artifacts, SimplifiedSBOMArtifact{
-				Type:    string(artifact.Type),
-				Name:    artifact.Name,
-				Version: artifact.Version,
-				// Metadata: metadata.data,
-			})
+		template, err := viewerAssets.ReadFile("viewer/template.html")
+		if err != nil {
+			spinner.Fatalf(err, "Unable to read SBOM Viewer template file")
 		}
 
-		viewerSBOM[tag.Name()] = imageSBOM
+		if _, err = sbomViewerFile.Write(template); err != nil {
+			spinner.Fatalf(err, "Unable to write SBOM Viewer template file")
+		}
 
-		message.Debug(sorted)
+		if _, err = sbomFile.Seek(0, 0); err != nil {
+			spinner.Fatalf(err, "Unable to load generated SBOM file for image %s", tag.String())
+		}
+
+		sbombViewerData, err := ioutil.ReadAll(sbomFile)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to load generated SBOM file for image %s", tag.String())
+		}
+
+		sbomViewerJS := fmt.Sprintf(`
+			ZARF_SBOM_IMAGE_LIST = %s;
+			ZARF_SBOM_DATA = %s;		
+		`, jsonImageList, sbombViewerData)
+
+		utils.ReplaceText(sbomViewerFile.Name(), "//ZARF_JS_DATA", sbomViewerJS)
 
 		currImage++
 	}
-	message.Debug(viewerSBOM)
 
 	spinner.Success()
+}
+
+func copyViewerFile(sbomDir, name string) error {
+	data, err := viewerAssets.ReadFile("viewer/" + name)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(sbomDir, name), data, 0644)
+}
+
+// This could be optimized, but loop over all the images to create an image tag list
+func generateImageListJSON(tagToImage map[name.Tag]v1.Image) ([]byte, error) {
+	var imageList []string
+
+	for tag := range tagToImage {
+		normalized := tranformRegex.ReplaceAllString(tag.String(), "_")
+		imageList = append(imageList, normalized)
+	}
+
+	return json.Marshal(imageList)
 }
