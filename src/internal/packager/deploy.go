@@ -3,6 +3,7 @@ package packager
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -62,9 +63,31 @@ func Deploy() {
 
 	spinner.Success()
 
+	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+	// If SBOM files exist, temporary place them in the deploy directory
+	if len(sbomViewFiles) > 0 {
+		sbomDir := "zarf-sbom"
+		// Cleanup any failed prior removals
+		_ = os.RemoveAll(sbomDir)
+		// Create the directory again
+		utils.CreateDirectory(sbomDir, 0755)
+		for _, file := range sbomViewFiles {
+			// Our file copy lib explodes on these files for some reason...
+			data, err := ioutil.ReadFile(file)
+			if err != nil {
+				message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
+			}
+			dst := filepath.Join(sbomDir, filepath.Base(file))
+			err = ioutil.WriteFile(dst, data, 0644)
+			if err != nil {
+				message.Fatalf(err, "Unable to write the sbom-viewer file %s", dst)
+			}
+		}
+	}
+
 	// Confirm the overall package deployment
 	configPath := tempPath.base + "/zarf.yaml"
-	confirm := confirmAction(configPath, "Deploy")
+	confirm := confirmAction(configPath, "Deploy", sbomViewFiles)
 
 	// Don't continue unless the user says so
 	if !confirm {
@@ -144,9 +167,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 			}
 
 			// Replace temp target directories
-			if strings.Contains(file.Target, "###ZARF_TEMP###") {
-				file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
-			}
+			file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
 
 			// Copy the file to the destination
 			spinner.Updatef("Saving %s", file.Target)
