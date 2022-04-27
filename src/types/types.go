@@ -66,10 +66,11 @@ type ZarfComponent struct {
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
 type ZarfManifest struct {
-	Name             string   `yaml:"name"`
-	DefaultNamespace string   `yaml:"namespace,omitempty"`
-	Files            []string `yaml:"files,omitempty"`
-	Kustomizations   []string `yaml:"kustomizations,omitempty"`
+	Name             			string   	`yaml:"name"`
+	DefaultNamespace 			string   	`yaml:"namespace,omitempty"`
+	Files            			[]string 	`yaml:"files,omitempty"`
+	KustomizeAllowAnyDirectory 	bool		`yaml:"kustomizeAllowAnyDirectory,omitempty"`
+	Kustomizations   			[]string 	`yaml:"kustomizations,omitempty"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed

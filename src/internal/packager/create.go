@@ -157,7 +157,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				// Generate manifests from kustomizations and place in the package
 				spinner.Updatef("Building kustomization for %s", kustomization)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(kustomization, destination); err != nil {
+				if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					spinner.Fatalf(err, "unable to build the kustomization for %s", kustomization)
 				}
 			}
