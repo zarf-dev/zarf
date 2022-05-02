@@ -12,6 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -24,6 +25,12 @@ var viewerAssets embed.FS
 var tranformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
+	// Ignore SBOM creation if there the flag is set
+	if config.SkipSBOM {
+		message.Debug("Skipping SBOM processing per --skip-sbom flag")
+		return
+	}
+
 	imageCount := len(tagToImage)
 	spinner := message.NewProgressSpinner("Creating SBOMs for %d images.", imageCount)
 	defer spinner.Stop()
@@ -32,6 +39,9 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	if err != nil {
 		spinner.Fatalf(err, "Unable to make attestation context")
 	}
+
+	// Ensure the sbom directory exists
+	_ = utils.CreateDirectory(sbomDir, 0700)
 
 	cachePath := config.GetImageCachePath()
 	currImage := 1
