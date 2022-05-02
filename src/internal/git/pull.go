@@ -60,7 +60,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 
 		// If we can't clone with go-git, fallback to the host clone
 		// Only support "all tags" due to the azure clone url format including a username
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", gitUrl, targetFolder)
+		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, targetFolder)
 		spinner.Updatef(stdOut)
 		spinner.Debugf(stdErr)
 
