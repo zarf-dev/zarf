@@ -56,6 +56,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 	if err == git.ErrRepositoryAlreadyExists {
 		spinner.Debugf("Repo already cloned")
 	} else if err != nil {
+		spinner.Debugf("Failed to clone repo: %s", err)
 		message.Infof("Falling back to host git for %s", gitUrl)
 
 		// If we can't clone with go-git, fallback to the host clone
