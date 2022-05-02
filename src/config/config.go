@@ -49,6 +49,9 @@ var (
 
 	ZarfSeedPort string
 
+	// Do not process SBOM data
+	SkipSBOM bool
+
 	// Private vars
 	zarfImageCachePath = ZarfDefaultImageCachePath
 	active             types.ZarfPackage
