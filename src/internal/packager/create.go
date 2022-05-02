@@ -52,7 +52,6 @@ func Create() {
 	if seedImage != "" {
 		// Load seed images into their own happy little tarball for ease of import on init
 		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
-		_ = utils.CreateDirectory(tempPath.sboms, 0700)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
 	}
 
@@ -67,7 +66,6 @@ func Create() {
 	if len(combinedImageList) > 0 {
 		uniqueList := removeDuplicates(combinedImageList)
 		pulledImages := images.PullAll(uniqueList, tempPath.images)
-		_ = utils.CreateDirectory(tempPath.sboms, 0700)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.images)
 	}
 
