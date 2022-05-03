@@ -8,7 +8,7 @@ components:
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.0.0
+        version: 42.1.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -22,7 +22,7 @@ components:
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.0.0
+        version: 42.1.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
