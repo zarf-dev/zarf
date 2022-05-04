@@ -6,6 +6,10 @@ image:
   repository: "###ZARF_REGISTRY###/library/registry"
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
+  configData:
+    http:
+      secret: "###ZARF_REGISTRY_SECRET###"
+
 # https://github.com/containerd/containerd/blob/v1.5.8/pkg/cri/server/image_pull.go#L412
 # thx containerd *magic* :-D
 # tlsSecretName: tls-pem
