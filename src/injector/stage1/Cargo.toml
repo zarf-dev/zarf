@@ -6,7 +6,7 @@ panic = "abort"
 
 [package]
 name = "zarf-injector"
-version = "0.1.0"
+version = "0.4.3"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,3 +16,4 @@ glob = "0.3.0"
 flate2 = "1.0.22"
 tar = "0.4.38"
 sha2 = "0.10.2"
+hex = "0.4.3"

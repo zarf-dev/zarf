@@ -12,7 +12,7 @@
 ### Breaking it down
 
 
-**The Zarf Binary**   
+**The Zarf Binary**  
 See [README](../README.md) for more details about zarf. Add `zarf` binary to your path and make it executable for ease of use i.e. `export PATH=$PATH:/path/to/zarf/binary && chmod +x /path/to/zarf/binary/zarf`
 
 **zarf tools registry login...**  
@@ -35,13 +35,13 @@ You should see output similar to:
       - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
 ```
 
-If you inspect the zarf.yaml, you'll notice those two images are specified...   
+If you inspect the zarf.yaml, you'll notice those two images are specified...  
 No, we aren't cheating. Delete the `images:` block in the zarf.yaml and rerun `zarf prepare find-images -p /chart`...  
-The output is the same :)   
+The output is the same :)  
 Zarf is inspecting the helm chart specified by the directory `-p /chart` flag. The kafka image isn't even specified in the chart, but it's deployed by the operator.
 
 
-**The zarf.yaml** 
+**The zarf.yaml**
 The zarf.yaml file is used specify a zarf package configuration. For the find-images command, all we really need is a ZarfPackageConfig with a component specified.
 ```yaml
 kind: ZarfPackageConfig

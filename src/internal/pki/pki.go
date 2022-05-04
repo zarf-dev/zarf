@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -56,27 +55,6 @@ func GeneratePKI(host string) types.GeneratedPKI {
 	})
 
 	return results
-}
-
-func AddCAToTrustStore(caFilePath string) {
-	message.Info("Adding Ephemeral CA to the host root trust store")
-
-	rhelBinary := "update-ca-trust"
-	debianBinary := "update-ca-certificates"
-
-	if utils.VerifyBinary(rhelBinary) {
-		utils.CreatePathAndCopy(caFilePath, "/etc/pki/ca-trust/source/anchors/zarf-ca.crt")
-		_, err := utils.ExecCommand(true, nil, rhelBinary, "extract")
-		if err != nil {
-			message.Error(err, "Error adding the ephemeral CA to the RHEL root trust")
-		}
-	} else if utils.VerifyBinary(debianBinary) {
-		utils.CreatePathAndCopy(caFilePath, "/usr/local/share/ca-certificates/extra/zarf-ca.crt")
-		_, err := utils.ExecCommand(true, nil, debianBinary)
-		if err != nil {
-			message.Error(err, "Error adding the ephemeral CA to the trust store")
-		}
-	}
 }
 
 // newCertificate creates a new template

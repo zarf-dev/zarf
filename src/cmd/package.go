@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	"path/filepath"
+	"regexp"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -11,6 +14,7 @@ import (
 
 var insecureDeploy bool
 var shasum string
+var zarfImageCache string
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -23,6 +27,9 @@ var packageCreateCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   "Create an update package to push to the gitops server (runs online)",
 	Run: func(cmd *cobra.Command, args []string) {
+		if cmd.Flag("zarf-cache").Changed && cachePathClean(zarfImageCache) {
+			config.SetImageCachePath(zarfImageCache)
+		}
 		packager.Create()
 	},
 }
@@ -68,6 +75,15 @@ func choosePackage(args []string) string {
 	return path
 }
 
+func cachePathClean(cachePath string) bool {
+	var isCleanPath = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
+	if !isCleanPath(cachePath) {
+		message.Warn(fmt.Sprintf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath))
+		return false
+	}
+	return true
+}
+
 func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
@@ -75,6 +91,9 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
+	packageCreateCmd.Flags().StringVar(&zarfImageCache, "zarf-cache", config.ZarfDefaultImageCachePath, "Specify the location of the Zarf image cache")
+	packageCreateCmd.Flags().BoolVar(&config.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
+
 	packageDeployCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	packageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", false, "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")

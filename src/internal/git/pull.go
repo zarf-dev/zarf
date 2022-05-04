@@ -1,6 +1,8 @@
 package git
 
 import (
+	"context"
+
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/go-git/go-git/v5"
@@ -20,13 +22,13 @@ func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	return path
 }
 
-func Pull(gitUrl string, targetFolder string, spinner *message.Spinner) string {
+func Pull(gitUrl, targetFolder string, spinner *message.Spinner) string {
 	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
 	pull(gitUrl, path, spinner)
 	return path
 }
 
-func pull(gitUrl string, targetFolder string, spinner *message.Spinner) {
+func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 	spinner.Updatef("Processing git repo %s", gitUrl)
 
 	gitCred := FindAuthForHost(gitUrl)
@@ -54,7 +56,20 @@ func pull(gitUrl string, targetFolder string, spinner *message.Spinner) {
 	if err == git.ErrRepositoryAlreadyExists {
 		spinner.Debugf("Repo already cloned")
 	} else if err != nil {
-		spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		spinner.Debugf("Failed to clone repo: %s", err)
+		message.Infof("Falling back to host git for %s", gitUrl)
+
+		// If we can't clone with go-git, fallback to the host clone
+		// Only support "all tags" due to the azure clone url format including a username
+		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, targetFolder)
+		spinner.Updatef(stdOut)
+		spinner.Debugf(stdErr)
+
+		if err != nil {
+			spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		}
+
+		return
 	}
 
 	if !fetchAllTags {
@@ -80,6 +95,5 @@ func pull(gitUrl string, targetFolder string, spinner *message.Spinner) {
 
 		fetchTag(targetFolder, tag)
 		CheckoutTagAsBranch(targetFolder, tag, trunkBranchName)
-
 	}
 }

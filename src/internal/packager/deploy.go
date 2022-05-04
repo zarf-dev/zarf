@@ -1,7 +1,9 @@
 package packager
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -61,9 +63,31 @@ func Deploy() {
 
 	spinner.Success()
 
+	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+	// If SBOM files exist, temporary place them in the deploy directory
+	if len(sbomViewFiles) > 0 {
+		sbomDir := "zarf-sbom"
+		// Cleanup any failed prior removals
+		_ = os.RemoveAll(sbomDir)
+		// Create the directory again
+		utils.CreateDirectory(sbomDir, 0755)
+		for _, file := range sbomViewFiles {
+			// Our file copy lib explodes on these files for some reason...
+			data, err := ioutil.ReadFile(file)
+			if err != nil {
+				message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
+			}
+			dst := filepath.Join(sbomDir, filepath.Base(file))
+			err = ioutil.WriteFile(dst, data, 0644)
+			if err != nil {
+				message.Fatalf(err, "Unable to write the sbom-viewer file %s", dst)
+			}
+		}
+	}
+
 	// Confirm the overall package deployment
 	configPath := tempPath.base + "/zarf.yaml"
-	confirm := confirmAction(configPath, "Deploy")
+	confirm := confirmAction(configPath, "Deploy", sbomViewFiles)
 
 	// Don't continue unless the user says so
 	if !confirm {
@@ -103,6 +127,7 @@ func Deploy() {
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
 			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+			{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}).Render()
 	}
@@ -124,7 +149,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	for _, script := range component.Scripts.Before {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if len(component.Files) > 0 {
@@ -140,6 +165,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 				spinner.Updatef("Validating SHASUM for %s", file.Target)
 				utils.ValidateSha256Sum(file.Shasum, sourceFile)
 			}
+
+			// Replace temp target directories
+			file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
 
 			// Copy the file to the destination
 			spinner.Updatef("Saving %s", file.Target)
@@ -254,7 +282,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	for _, script := range component.Scripts.After {
-		loopScriptUntilSuccess(script, component.Scripts.Retry)
+		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if isSeedRegistry {
@@ -309,7 +337,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				}
 
 				// Do the actual data injection
-				_, err := utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 				if err != nil {
 					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
 					continue
@@ -317,7 +345,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					// Leave a marker in the target container for pods to track the sync action
 					cpPodExecArgs[3] = injectionCompletionMarker
 					cpPodExecArgs[4] = pod + ":" + data.Target.Path
-					_, err = utils.ExecCommand(true, nil, "kubectl", cpPodExecArgs...)
+					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 					if err != nil {
 						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
 					}

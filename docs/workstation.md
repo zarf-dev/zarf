@@ -10,7 +10,7 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
 ### Install
 
-1. Point your browser at the current list of [Zarf releases](https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf/-/releases).
+1. Point your browser at the current list of [Zarf releases](https://github.com/defenseunicorns/zarf/releases).
 
 1. Scroll to the version you want.
 

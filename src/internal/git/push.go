@@ -2,6 +2,8 @@ package git
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -29,9 +31,20 @@ func PushAllDirectories(localPath string) {
 	defer spinner.Stop()
 
 	for _, path := range paths {
-		spinner.Updatef("Pushing git repo %s", localPath)
+		basename := filepath.Base(path)
+		spinner.Updatef("Pushing git repo %s", basename)
 		if err := push(path, spinner); err != nil {
-			spinner.Fatalf(err, "Unable to push the git repo %s", localPath)
+			spinner.Fatalf(err, "Unable to push the git repo %s", basename)
+		}
+
+		// Add the read-only user to this repo
+		repoPathSplit := strings.Split(path, "/")
+		repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
+		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
+		err = addReadOnlyUserToRepo(repoName)
+		if err != nil {
+			message.Debug(err)
+			message.Warnf("Unable to add the read-only user to the repo: %v\n", repoName)
 		}
 	}
 

@@ -1,16 +1,20 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
 )
+
+const SGETProtocol = "sget://"
 
 func IsUrl(source string) bool {
 	parsedUrl, err := url.Parse(source)
@@ -32,7 +36,7 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
-func DownloadToFile(url string, target string) {
+func DownloadToFile(url string, target string, cosignKeyPath string) {
 
 	// Create the file
 	destinationFile, err := os.Create(target)
@@ -41,6 +45,15 @@ func DownloadToFile(url string, target string) {
 	}
 	defer destinationFile.Close()
 
+	// If the url start with the sget protocol use that, otherwise do a typical GET call
+	if strings.HasPrefix(url, SGETProtocol) {
+		sgetFile(url, destinationFile, cosignKeyPath)
+	} else {
+		httpGetFile(url, destinationFile)
+	}
+}
+
+func httpGetFile(url string, destinationFile *os.File) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -59,11 +72,20 @@ func DownloadToFile(url string, target string) {
 
 	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, counter)); err != nil {
 		_, _ = counter.progress.Stop()
-		message.Fatalf(err, "Unable to save the file %s", target)
+		message.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
 	_, _ = counter.progress.Stop()
 	pterm.Success.Println(text)
+}
+
+func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
+	// Remove the custom protocol header from the url
+	_, url, _ = strings.Cut(url, SGETProtocol)
+	err := Sget(url, cosignKeyPath, destinationFile, context.TODO())
+	if err != nil {
+		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
+	}
 }
 
 type WriteCounter struct {

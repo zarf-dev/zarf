@@ -38,13 +38,16 @@ vm-destroy: ## Destroy the VM
 clean: ## Clean the build dir
 	rm -rf build
 
-build-cli-linux: ## Build the Linux CLI
+build-cli-linux: build-injector-registry ## Build the Linux CLI
 	cd src && $(MAKE) build
 
-build-cli-mac: ## Build the Mac CLI
+build-cli-mac: build-injector-registry ## Build the Mac CLI
 	cd src && $(MAKE) build-mac
 
-build-cli: build-cli-linux build-cli-mac ## Build the CLI
+build-cli: build-injector-registry build-cli-linux build-cli-mac ## Build the CLI
+
+build-injector-registry:
+	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm --architecture amd64
@@ -65,6 +68,10 @@ ci-release: init-package ## Create the init package
 .PHONY: package-example-game
 package-example-game: ## Create the Doom example
 	cd examples/game && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
+.PHONY: package-example-component-scripts
+package-example-component-scripts: ## Create component script example
+	cd examples/component-scripts && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
 .PHONY: package-example-data-injection
 package-example-data-injection: ## create the Zarf package for the data injection example
@@ -98,6 +105,9 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	fi
 	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-game;\
+	fi
+	@if [ ! -f zarf-package-component-scripts-$(ARCH).tar.zst ]; then\
+		$(MAKE) package-example-component-scripts;\
 	fi
 	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
 		$(MAKE) package-example-data-injection;\

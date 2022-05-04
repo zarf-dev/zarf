@@ -25,3 +25,5 @@ terraform.tfstate.backup
 cosign.key
 .zarf*
 zarf-pki
+.scratch/
+zarf-sbom/

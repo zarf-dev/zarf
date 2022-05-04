@@ -130,6 +130,9 @@
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentImport"
+        },
+        "cosignKeyPath": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -152,6 +155,12 @@
     },
     "ZarfComponentScripts": {
       "properties": {
+        "showOutput": {
+          "type": "boolean"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        },
         "retry": {
           "type": "boolean"
         },
@@ -246,6 +255,9 @@
       "properties": {
         "name": {
           "type": "string"
+        },
+        "kustomizeAllowAnyDirectory": {
+          "type": "boolean"
         },
         "namespace": {
           "type": "string"

@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -38,6 +40,7 @@ type tempPaths struct {
 	seedImage        string
 	images           string
 	components       string
+	sboms            string
 }
 
 func createPaths() tempPaths {
@@ -50,12 +53,14 @@ func createPaths() tempPaths {
 		seedImage:        basePath + "/seed-image.tar",
 		images:           basePath + "/images.tar",
 		components:       basePath + "/components",
+		sboms:            basePath + "/sboms",
 	}
 }
 
 func (t tempPaths) clean() {
 	message.Debug("Cleaning up temp files")
 	_ = os.RemoveAll(t.base)
+	_ = os.RemoveAll("zarf-sbom")
 }
 
 func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
@@ -72,7 +77,7 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 	}
 }
 
-func confirmAction(configPath string, userMessage string) bool {
+func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool {
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
@@ -82,6 +87,13 @@ func confirmAction(configPath string, userMessage string) bool {
 	text := string(content)
 
 	utils.ColorPrintYAML(text)
+
+	if len(sbomViewFiles) > 0 {
+		cwd, _ := os.Getwd()
+		link := filepath.Join(cwd, "zarf-sbom", filepath.Base(sbomViewFiles[0]))
+		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
+		message.Note(msg)
+	}
 
 	// Display prompt if not auto-confirmed
 	var confirmFlag bool
@@ -223,7 +235,7 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func loopScriptUntilSuccess(script string, retry bool) {
+func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Stop()
 
@@ -235,38 +247,50 @@ func loopScriptUntilSuccess(script string, retry bool) {
 		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
 	}
 
-	// 2 minutes per script (60 * 2 second waits)
-	tries := 60
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	// Default timeout is 5 minutes
+	if scripts.TimeoutSeconds < 1 {
+		scripts.TimeoutSeconds = 300
+	}
+
+	duration := time.Duration(scripts.TimeoutSeconds) * time.Second
+	timeout := time.After(duration)
+
+	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
+
 	for {
-		scriptEnvVars := []string{
-			"ZARF_REGISTRY=" + config.ZarfRegistry,
-		}
-		// Try to silently run the script
-		output, err := utils.ExecCommand(false, scriptEnvVars, "sh", "-c", script)
+		select {
+		// On timeout abort
+		case <-timeout:
+			cancel()
+			spinner.Fatalf(nil, "Script \"%s\" timed out", script)
+		// Oherwise try running the script
+		default:
+			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+			defer cancel()
 
-		if err != nil {
-			message.Debug(err, output)
-
-			if retry {
-				tries--
-
-				// If there are no more tries left, we have failed
-				if tries < 1 {
-					spinner.Fatalf(nil, "Script timed out after 2 minutes")
-				} else {
-					// if retry is enabled, on error wait 2 seconds and try again
-					time.Sleep(time.Second * 2)
+			if err != nil {
+				message.Debug(err, output, errOut)
+				// If retry, let the script run again
+				if scripts.Retry {
 					continue
 				}
+				// Otherwise fatal
+				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
 			}
 
-			spinner.Fatalf(nil, "Script failed")
-		}
+			// Dump the script output in debug if output not already streamed
+			if !scripts.ShowOutput {
+				message.Debug(output, errOut)
+			}
 
-		// Script successful,continue
-		message.Debug(output)
-		spinner.Success()
-		break
+			// Close the function now that we are done
+			spinner.Success()
+			return
+		}
 	}
 }
 

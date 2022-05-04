@@ -7,6 +7,7 @@ use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 use tar::Archive;
+use hex::ToHex;
 
 // Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 
@@ -69,8 +70,8 @@ fn main() {
 
         // read hash digest and consume hasher
         let result = hasher.finalize();
-
-        assert_eq!(result[..], sha_sum.as_bytes()[..]);
+        let result_string = result.encode_hex::<String>();
+        assert_eq!(*sha_sum, result_string);
     }
 
     let tar = GzDecoder::new(&contents[..]);

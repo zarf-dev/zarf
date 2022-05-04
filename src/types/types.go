@@ -65,21 +65,27 @@ type ZarfComponent struct {
 
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `yaml:"import,omitempty"`
+
+	//Path to cosign publickey for signed online resources
+	CosignKeyPath string `yaml:"cosignKeyPath,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
 type ZarfManifest struct {
-	Name             string   `yaml:"name"`
-	DefaultNamespace string   `yaml:"namespace,omitempty"`
-	Files            []string `yaml:"files,omitempty"`
-	Kustomizations   []string `yaml:"kustomizations,omitempty"`
+	Name             			string   	`yaml:"name"`
+	DefaultNamespace 			string   	`yaml:"namespace,omitempty"`
+	Files            			[]string 	`yaml:"files,omitempty"`
+	KustomizeAllowAnyDirectory 	bool		`yaml:"kustomizeAllowAnyDirectory,omitempty"`
+	Kustomizations   			[]string 	`yaml:"kustomizations,omitempty"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed
 type ZarfComponentScripts struct {
-	Retry  bool     `yaml:"retry,omitempty"`
-	Before []string `yaml:"before,omitempty"`
-	After  []string `yaml:"after,omitempty"`
+	ShowOutput     bool     `yaml:"showOutput,omitempty"`
+	TimeoutSeconds int      `yaml:"timeoutSeconds,omitempty"`
+	Retry          bool     `yaml:"retry,omitempty"`
+	Before         []string `yaml:"before,omitempty"`
+	After          []string `yaml:"after,omitempty"`
 }
 
 // ZarfMetadata lists information about the current ZarfPackage
