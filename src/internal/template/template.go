@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
@@ -64,15 +65,15 @@ func (values Values) GetRegistry() string {
 	return values.registry
 }
 
-func (values Values) Apply(path string) {
-	message.Debugf("template.Apply(%s)", path)
+func (values Values) Apply(variables types.ZarfComponentVariables, path string) {
+	message.Debugf("template.Apply(%v, %s)", variables, path)
 
 	if !values.Ready() {
 		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage
 		message.Fatalf(nil, "template.Apply() called before template.Generate()")
 	}
 
-	mappings := map[string]string{
+	mappings := types.ZarfComponentVariables{
 		"STORAGE_CLASS":      values.state.StorageClass,
 		"SEED_REGISTRY":      values.seedRegistry,
 		"REGISTRY":           values.registry,
@@ -86,10 +87,16 @@ func (values Values) Apply(path string) {
 		"HTPASSWD":           values.secret.htpasswd,
 	}
 
+	// Iterate over any custom variables and add them to the mappings for templating
+	for key, value := range variables {
+		mappings[key] = value
+	}
+
 	message.Debug(mappings)
 
 	for template, value := range mappings {
-		template = fmt.Sprintf("###ZARF_%s###", template)
+		// Keys are always uppercase in the format ###ZARF_KEY###
+		template = strings.ToUpper(fmt.Sprintf("###ZARF_%s###", template))
 		utils.ReplaceText(path, template, value)
 	}
 }
