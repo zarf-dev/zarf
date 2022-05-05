@@ -4,7 +4,7 @@ metadata:
   description: "Test component to demonstrate script timeout feature"
 
 components:
-  # Demonstrates injecting cutom variables into a K8s resource, e.g. ###ZARF_DOG###
+  # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_DOG###
   - name: variable-example
     required: true
     variables:
