@@ -62,15 +62,21 @@ type ZarfComponent struct {
 
 	//Path to cosign publickey for signed online resources
 	CosignKeyPath string `yaml:"cosignKeyPath,omitempty"`
+
+	// Dynamic template values for K8s resources
+	Variables ZarfComponentVariables `yaml:"variables,omitempty"`
 }
+
+// ZarfComponentVariables are variables that can be used to dynaically template K8s resources
+type ZarfComponentVariables map[string]string
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
 type ZarfManifest struct {
-	Name             			string   	`yaml:"name"`
-	DefaultNamespace 			string   	`yaml:"namespace,omitempty"`
-	Files            			[]string 	`yaml:"files,omitempty"`
-	KustomizeAllowAnyDirectory 	bool		`yaml:"kustomizeAllowAnyDirectory,omitempty"`
-	Kustomizations   			[]string 	`yaml:"kustomizations,omitempty"`
+	Name                       string   `yaml:"name"`
+	DefaultNamespace           string   `yaml:"namespace,omitempty"`
+	Files                      []string `yaml:"files,omitempty"`
+	KustomizeAllowAnyDirectory bool     `yaml:"kustomizeAllowAnyDirectory,omitempty"`
+	Kustomizations             []string `yaml:"kustomizations,omitempty"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed

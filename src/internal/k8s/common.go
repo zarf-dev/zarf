@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/template"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-logr/logr/funcr"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
@@ -51,8 +52,8 @@ func GetContext() (string, error) {
 }
 
 // ProcessYamlFilesInPath iterates over all yaml files in a given path and performs Zarf templating + image swapping
-func ProcessYamlFilesInPath(path string, componentImages []string) []string {
-	message.Debugf("k8s.ProcessYamlFilesInPath(%s, %v)", path, componentImages)
+func ProcessYamlFilesInPath(path string, component types.ZarfComponent) []string {
+	message.Debugf("k8s.ProcessYamlFilesInPath(%s, %v)", path, component)
 
 	// Only pull in yml and yaml files
 	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
@@ -61,7 +62,7 @@ func ProcessYamlFilesInPath(path string, componentImages []string) []string {
 
 	// Match images in the given list and replace if found in the given files
 	var imageSwap []ImageSwap
-	for _, image := range componentImages {
+	for _, image := range component.Images {
 		imageSwap = append(imageSwap, ImageSwap{
 			find:    image,
 			replace: utils.SwapHost(image, valueTemplate.GetRegistry()),
@@ -74,7 +75,7 @@ func ProcessYamlFilesInPath(path string, componentImages []string) []string {
 		for _, swap := range imageSwap {
 			utils.ReplaceText(manifest, swap.find, swap.replace)
 		}
-		valueTemplate.Apply(manifest)
+		valueTemplate.Apply(component.Variables, manifest)
 	}
 
 	return manifests

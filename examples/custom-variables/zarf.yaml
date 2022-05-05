@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-variables
+  description: "Test component to demonstrate script timeout feature"
+
+components:
+  # Demonstrates injecting cutom variables into a K8s resource, e.g. ###ZARF_DOG###
+  - name: variable-example
+    required: true
+    variables:
+      dog: "woof"
+      cat: "meow"
+    manifests:
+      - name: variable-example-configmap
+        files:
+          - simple-configmap.yaml
