@@ -10,14 +10,10 @@ import (
 func TestE2eComponentScripts(t *testing.T) {
 	defer e2e.cleanupAfterTest(t)
 
-	//run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--confirm")
-	require.NoError(t, err, output)
-
 	path := fmt.Sprintf("../../../build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=passes")
+	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=passes")
 	require.NoError(t, err, output)
 
 	// Deploy the simple script that should fail the timeout
