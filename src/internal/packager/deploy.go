@@ -252,7 +252,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(chartValueName)
+			valueTemplate.Apply(component.Variables, chartValueName)
 		}
 
 		// Generate helm templates to pass to gitops engine

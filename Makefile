@@ -68,6 +68,10 @@ package-example-game: ## Create the Doom example
 package-example-component-scripts: ## Create component script example
 	cd examples/component-scripts && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
+.PHONY: package-example-component-variables
+package-example-component-variables: ## Create component script example
+	cd examples/component-variables && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
 .PHONY: package-example-data-injection
 package-example-data-injection: ## create the Zarf package for the data injection example
 	cd examples/data-injection && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
@@ -103,6 +107,9 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	fi
 	@if [ ! -f zarf-package-component-scripts-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-component-scripts;\
+	fi
+	@if [ ! -f zarf-package-component-variables-$(ARCH).tar.zst ]; then\
+		$(MAKE) package-example-component-variables;\
 	fi
 	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
 		$(MAKE) package-example-data-injection;\
