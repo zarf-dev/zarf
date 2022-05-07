@@ -28,10 +28,10 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, target
 		}
 
 		offlineName := utils.SwapHost(src, target)
+		err = crane.Push(img, offlineName, config.GetCraneAuthOption(config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush)))
 
-		err = crane.Push(img, offlineName, config.GetCraneOptions())
 		if err != nil {
-			spinner.Errorf(err, "Unable to push the image to the registry")
+			spinner.Fatalf(err, "Unable to push the image to the registry")
 		}
 	}
 
