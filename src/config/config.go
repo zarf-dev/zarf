@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"runtime"
 	"strings"
 	"time"
@@ -29,6 +28,8 @@ const (
 	ZarfRegistryPushUser   = "zarf-push"
 	ZarfRegistryPullUser   = "zarf-pull"
 	ZarfRegistry           = IPV4Localhost + ":45001"
+
+	ZarfAgentHost = "agent-hook.zarf.svc"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
@@ -167,7 +168,7 @@ func LoadConfig(path string) error {
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%v)", path)
 	now := time.Now()
-	currentUser, userErr := user.Current()
+	currentUser := os.Getenv("USER")
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
@@ -188,10 +189,8 @@ func BuildConfig(path string) error {
 		active.Build.Terminal = hostname
 	}
 
-	if userErr == nil {
-		// Record the name of the user creating the package
-		active.Build.User = currentUser.Username
-	}
+	// Record the name of the user creating the package
+	active.Build.User = currentUser
 
 	return utils.WriteYaml(path, active, 0400)
 }

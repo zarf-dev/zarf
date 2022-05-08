@@ -6,36 +6,29 @@ metadata:
 seed: library/registry:2.7.1
 
 components:
+  - name: k3s
+    import:
+      path: packages/distros/k3s
+
   - name: zarf-injector
     required: true
     import:
       path: packages/zarf-injector
 
-  - name: k3s
-    import:
-      path: packages/distros/k3s
-
-  - name: container-registry-seed
+  - name: zarf-seed-registry
     required: true
     import:
       path: packages/zarf-registry
 
-  - name: container-registry
+  - name: zarf-registry
     required: true
     import:
       path: packages/zarf-registry
 
-  - name: agent-hook
+  - name: zarf-agent
     required: true
-    images:
-      - defenseunicorns/zarf-agent:v0.15
-    manifests:
-      - name: agent-hook
-        files:
-          - assets/manifests/agent/service.yaml
-          - assets/manifests/agent/secret.yaml
-          - assets/manifests/agent/deployment.yaml
-          - assets/manifests/agent/webhook.yaml
+    import:
+      path: packages/zarf-agent
 
   - name: logging
     import:

@@ -31,7 +31,7 @@ func mutateCreate() operations.AdmitFunc {
 		}
 
 		// Add the zarf secret to the podspec
-		zarfSecret := []corev1.LocalObjectReference{{Name: "zarf-secret"}}
+		zarfSecret := []corev1.LocalObjectReference{{Name: "zarf-registry"}}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
 		// update the image host for each init container

@@ -39,9 +39,6 @@ type ZarfComponent struct {
 	// Required makes this component mandatory for package deployment
 	Required bool `yaml:"required,omitempty"`
 
-	// SecretName is the secret zarf will use for the registry, the default is "zarf-registry"
-	SecretName string `yaml:"secretName,omitempty"`
-
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `yaml:"files,omitempty"`
 
@@ -139,12 +136,13 @@ type ZarfPackage struct {
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data
 type ZarfState struct {
-	ZarfAppliance bool   `json:"zarfAppliance"`
-	Distro        string `json:"distro"`
-	Architecture  string `json:"architecture"`
-	StorageClass  string `json:"storageClass"`
-	Secret        string `json:"secret"`
-	NodePort      string `json:"nodePort"`
+	ZarfAppliance bool         `json:"zarfAppliance"`
+	Distro        string       `json:"distro"`
+	Architecture  string       `json:"architecture"`
+	StorageClass  string       `json:"storageClass"`
+	Secret        string       `json:"secret"`
+	NodePort      string       `json:"nodePort"`
+	AgentTLS      GeneratedPKI `json:"agentTLS"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment

@@ -5,7 +5,7 @@ persistence:
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
 imagePullSecrets:
-    - name: zarf-registry  
+  - name: zarf-registry
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:

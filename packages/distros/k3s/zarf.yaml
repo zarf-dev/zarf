@@ -1,6 +1,6 @@
 kind: ZarfInitConfig
 metadata:
-  name: "Zarf Init Package Component - K3s"
+  name: "distro-k3s"
   description: "Used to establish a new Zarf cluster"
   architecture: amd64
 

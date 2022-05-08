@@ -311,10 +311,11 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 	pod.Spec.InitContainers = []corev1.Container{
 		{
-			Name:       "init-injector",
-			Image:      image,
-			WorkingDir: "/zarf-stage1",
-			Command:    []string{"/zarf-stage1/zarf-injector", payloadShasum},
+			Name:            "init-injector",
+			Image:           image,
+			ImagePullPolicy: corev1.PullNever,
+			WorkingDir:      "/zarf-stage1",
+			Command:         []string{"/zarf-stage1/zarf-injector", payloadShasum},
 
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -345,9 +346,10 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 
 	pod.Spec.Containers = []corev1.Container{
 		{
-			Name:       "injector",
-			Image:      image,
-			WorkingDir: "/zarf-stage2",
+			Name:            "injector",
+			Image:           image,
+			ImagePullPolicy: corev1.PullNever,
+			WorkingDir:      "/zarf-stage2",
 			Command: []string{
 				"/zarf-stage2/zarf-registry",
 				"/zarf-stage2/seed-image.tar",

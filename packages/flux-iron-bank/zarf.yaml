@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: flux
+  name: "flux-iron-bank"
   description: "Zarf flux package."
   architecture: amd64
 
