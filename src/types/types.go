@@ -18,7 +18,7 @@ type ZarfFile struct {
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	Name        string   `yaml:"name"`
-	ReleaseName string   `yaml:"releaseName"`
+	ReleaseName string   `yaml:"releaseName,omitempty"`
 	Url         string   `yaml:"url"`
 	Version     string   `yaml:"version"`
 	Namespace   string   `yaml:"namespace"`
