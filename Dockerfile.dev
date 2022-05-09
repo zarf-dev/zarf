@@ -1,5 +1,7 @@
-FROM gcr.io/distroless/base
+FROM scratch
 COPY build/zarf /zarf
 EXPOSE 8443
+
+ENV USER=zarf
 
 CMD ["/zarf", "agent", "-l=trace"]
