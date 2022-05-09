@@ -12,7 +12,7 @@ on:
         default: "master"
 
 jobs:
-  build-injector:
+  build-agent:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repo"
@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: "Build and Publish the Image"
-        run: buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:${{ github.event.inputs.versionTag }} .
+        run: docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:${{ github.event.inputs.versionTag }} .
 
       - name: "Sign the Image"
         run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=${{ github.event.inputs.versionTag }} defenseunicorns/zarf-agent:${{ github.event.inputs.versionTag }}
