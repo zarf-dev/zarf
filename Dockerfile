@@ -1,17 +1,7 @@
-FROM golang:1.18 as build
-WORKDIR /app
-
-COPY go.mod .
-COPY go.sum .
-
-RUN go mod download
-
-COPY src src
-
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=container'" -o /zarf src/main.go
-
 FROM scratch
-COPY --from=build /zarf /
+ARG TARGETARCH
+
+ADD "build/zarf-linux-$TARGETARCH" /zarf
 EXPOSE 8443
 
 ENV USER=zarf
