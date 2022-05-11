@@ -14,12 +14,14 @@ func NewServer(port string) *http.Server {
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()
+	gitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
 
 	// Routers
 	ah := newAdmissionHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
-	mux.Handle("/mutate/pods", ah.Serve(podsMutation))
+	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
+	mux.Handle("/mutate/gitrepository", ah.Serve(gitRepositoryMutation))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

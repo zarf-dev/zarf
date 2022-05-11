@@ -49,6 +49,16 @@ build-cli: build-injector-registry build-cli-linux build-cli-mac ## Build the CL
 build-injector-registry:
 	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
 
+# Should have an existing deploying already running used to build and update a new image in the cluster
+# kind load docker-image zarf-agent:$(tag)
+dev-agent-image:
+	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
+	$(eval arch := $(shell uname -m))
+	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) src/main.go
+	docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
+	k3d image import $(tag) && \
+	kubectl -n zarf set image deployment/agent-hook server=$(tag)
+
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm --architecture amd64
 	$(ZARF_BIN) package create --confirm --architecture arm64

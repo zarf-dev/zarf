@@ -1,23 +1,19 @@
 package hooks
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	v1 "k8s.io/api/admission/v1"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
-// NewPodMutationHook creates a new instance of pods mutation hook
+// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook
 func NewGitRepositoryMutationHook() operations.Hook {
-	message.Debug("hooks.NewMutationHook()")
+	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			var patchOperations []operations.PatchOperation
+
+			message.Debug(r)
 
 			return &operations.Result{
 				Allowed:  true,

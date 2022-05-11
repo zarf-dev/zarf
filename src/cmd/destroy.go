@@ -62,8 +62,8 @@ var destroyCmd = &cobra.Command{
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			k8s.DeleteZarfNamespace()
 
-			// Delete the zarf-registry secret in the default namespace
-			defaultSecret, _ := k8s.GetSecret("default", "zarf-registry")
+			// Delete the private-registry secret in the default namespace
+			defaultSecret, _ := k8s.GetSecret("default", config.ZarfImagePullSecretName)
 			k8s.DeleteSecret(defaultSecret)
 		}
 	},

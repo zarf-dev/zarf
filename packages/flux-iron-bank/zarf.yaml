@@ -7,7 +7,6 @@ metadata:
 components:
   - name: flux
     required: true
-    secretName: "private-registry"
     manifests:
       - name: flux-installer
         # This will be built on the package create side and deployed as a regular manifest on package deploy

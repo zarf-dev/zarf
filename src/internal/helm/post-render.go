@@ -19,8 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var secretName = "zarf-registry"
-
 type renderer struct {
 	actionConfig   *action.Configuration
 	connectStrings ConnectStrings
@@ -161,11 +159,11 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// Create the secret
-		validSecret := k8s.GenerateRegistryPullCreds(name, secretName)
+		validSecret := k8s.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
 
 		// Try to get a valid existing secret
-		currentSecret, _ := k8s.GetSecret(name, secretName)
-		if currentSecret.Name != secretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
+		currentSecret, _ := k8s.GetSecret(name, config.ZarfImagePullSecretName)
+		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
 			// create/update the missing zarf secret
 			if err := k8s.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
@@ -34,7 +35,7 @@ func NewPodMutationHook() operations.Hook {
 			}
 
 			// Add the zarf secret to the podspec
-			zarfSecret := []corev1.LocalObjectReference{{Name: "zarf-registry"}}
+			zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 			patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
 			// update the image host for each init container

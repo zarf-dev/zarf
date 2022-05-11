@@ -13,7 +13,6 @@ components:
 
   - name: big-bang
     required: true
-    secretName: "private-registry"
     manifests:
       - name: big-bang-config
         kustomizations:

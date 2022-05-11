@@ -18,7 +18,7 @@ spec:
         zarf.dev/agent: ignore
     spec:
       imagePullSecrets:
-        - name: zarf-registry
+        - name: private-registry
       containers:
         - name: server
           image: "###ZARF_REGISTRY###/defenseunicorns/zarf-agent:###ZARF_TAG###"
