@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/defenseunicorns/zarf/src/internal/agent/pods"
+	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
@@ -13,7 +13,7 @@ func NewServer(port string) *http.Server {
 	message.Debugf("http.NewServer(%v)", port)
 
 	// Instances hooks
-	podsMutation := pods.NewMutationHook()
+	podsMutation := hooks.NewPodMutationHook()
 
 	// Routers
 	ah := newAdmissionHandler()

@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
-// Heavinly influenced by https://github.com/douglasmakey/admissioncontroller and
+// Heavily influenced by https://github.com/douglasmakey/admissioncontroller and
 // https://github.com/slackhq/simple-kubernetes-webhook
 
 // We can hard-code these because we control the entire thing anyway
