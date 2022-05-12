@@ -128,7 +128,7 @@ func FindImages(repoHelmChartPath string) {
 				for idx, kustomization := range manifest.Kustomizations {
 					// Generate manifests from kustomizations and place in the package
 					destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
-					if err := kustomize.BuildKustomization(kustomization, destination); err != nil {
+					if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						message.Errorf(err, "unable to build the kustomization for %s", kustomization)
 					} else {
 						manifest.Files = append(manifest.Files, destination)

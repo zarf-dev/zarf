@@ -25,3 +25,4 @@ terraform.tfstate.backup
 .zarf*
 zarf-pki
 .scratch/
+zarf-sbom/

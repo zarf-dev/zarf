@@ -12,6 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
@@ -49,6 +50,9 @@ var (
 
 	ZarfSeedPort string
 
+	// Do not process SBOM data
+	SkipSBOM bool
+
 	// Private vars
 	zarfImageCachePath = ZarfDefaultImageCachePath
 	active             types.ZarfPackage
@@ -82,6 +86,14 @@ func GetCraneOptions() crane.Option {
 		OS:           "linux",
 		Architecture: GetArch(),
 	})
+}
+
+func GetCraneAuthOption(username string, secret string) crane.Option {
+	return crane.WithAuth(
+		authn.FromConfig(authn.AuthConfig{
+			Username: username,
+			Password: secret,
+		}))
 }
 
 func GetSeedRegistry() string {

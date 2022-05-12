@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/mholt/archiver/v3"
 )
@@ -44,13 +45,14 @@ func Create() {
 	// Perform early package validation
 	validate.Run()
 
-	if !confirmAction(configFile, "Create") {
+	if !confirmAction(configFile, "Create", nil) {
 		os.Exit(0)
 	}
 
 	if seedImage != "" {
 		// Load seed images into their own happy little tarball for ease of import on init
-		images.PullAll([]string{seedImage}, tempPath.seedImage)
+		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
+		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
 	}
 
 	var combinedImageList []string
@@ -63,7 +65,8 @@ func Create() {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := removeDuplicates(combinedImageList)
-		images.PullAll(uniqueList, tempPath.images)
+		pulledImages := images.PullAll(uniqueList, tempPath.images)
+		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.images)
 	}
 
 	_ = os.RemoveAll(packageName)
@@ -152,7 +155,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				// Generate manifests from kustomizations and place in the package
 				spinner.Updatef("Building kustomization for %s", kustomization)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(kustomization, destination); err != nil {
+				if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					spinner.Fatalf(err, "unable to build the kustomization for %s", kustomization)
 				}
 			}

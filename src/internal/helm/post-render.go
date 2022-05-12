@@ -60,7 +60,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	k8s.ProcessYamlFilesInPath(tempDir, r.options.Component.Images)
+	k8s.ProcessYamlFilesInPath(tempDir, r.options.Component)
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)

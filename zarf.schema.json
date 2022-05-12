@@ -133,6 +133,14 @@
         },
         "cosignKeyPath": {
           "type": "string"
+        },
+        "variables": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
       "additionalProperties": false,
@@ -264,6 +272,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "kustomizeAllowAnyDirectory": {
+          "type": "boolean"
         },
         "kustomizations": {
           "items": {
