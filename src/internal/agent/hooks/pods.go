@@ -26,7 +26,7 @@ func NewPodMutationHook() operations.Hook {
 				return &operations.Result{Msg: err.Error()}, nil
 			}
 
-			if pod.Labels != nil && pod.Labels["zarf"] == "patched" {
+			if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
 				// We've already played with this pod, just keep swimming 🐟
 				return &operations.Result{
 					Allowed:  true,
@@ -60,7 +60,7 @@ func NewPodMutationHook() operations.Hook {
 			}
 
 			// Add a label noting the zarf mutation
-			patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/labels/zarf", "patched"))
+			patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
 			return &operations.Result{
 				Allowed:  true,

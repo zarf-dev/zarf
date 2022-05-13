@@ -21,7 +21,7 @@ func NewServer(port string) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
 	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
-	mux.Handle("/mutate/gitrepository", ah.Serve(gitRepositoryMutation))
+	mux.Handle("/mutate/flux-gitrepository", ah.Serve(gitRepositoryMutation))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

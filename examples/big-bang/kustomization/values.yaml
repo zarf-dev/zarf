@@ -153,7 +153,6 @@ istio:
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
   values:
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
     istiod:
       resources:
         requests:
@@ -167,10 +166,7 @@ istio:
    
 istiooperator:
   enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
   values:
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
     operator:
       resources:
         limits:
@@ -229,9 +225,6 @@ kiali:
             limits:
               cpu: "200m"
               memory: "368Mi"
-    svcPatchJob:
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/big-bang/base"
 
 clusterAuditor:
   enabled: true
@@ -357,8 +350,6 @@ monitoring:
           cpu: "100m"
     alertmanager:
       alertmanagerSpec:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus/alertmanager"
         resources:
           limits:
             cpu: "100m"
@@ -367,8 +358,6 @@ monitoring:
             cpu: "100m"
             memory: "50Mi"
     grafana:
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/grafana/grafana"
       resources:
         limits:
           cpu: "100m"
@@ -376,11 +365,7 @@ monitoring:
         requests:
           cpu: "50m"
           memory: "128Mi"
-      testFramework:
-        image: "###ZARF_REGISTRY###/ironbank/opensource/bats/bats"
       sidecar:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/kiwigrid/k8s-sidecar"
         resources:
           limits:
             cpu: "100m"
@@ -388,8 +373,6 @@ monitoring:
           requests:
             cpu: "50m"
             memory: "50Mi"
-      downloadDashboardsImage:
-        repository: "###ZARF_REGISTRY###/ironbank/big-bang/base"
       downloadDashboards:
         resources:
           limits:
@@ -399,8 +382,6 @@ monitoring:
             cpu: "20m"
             memory: "20Mi"
     kube-state-metrics:
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/kubernetes/kube-state-metrics"
       resources:
         limits:
           cpu: "100m"
@@ -409,8 +390,6 @@ monitoring:
           cpu: "50m"
           memory: "64Mi"
     prometheus-node-exporter:
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus/node-exporter"
       resources:
         limits:
           cpu: "200m"
@@ -421,8 +400,6 @@ monitoring:
     prometheusOperator:
       admissionWebhooks:
         patch:
-          image:
-            repository: "###ZARF_REGISTRY###/ironbank/opensource/ingress-nginx/kube-webhook-certgen"
           resources:
             limits:
               cpu: "50m"
@@ -431,8 +408,6 @@ monitoring:
               cpu: "50m"
               memory: "50Mi"
         cleanupProxy:
-          image:
-            repository: "###ZARF_REGISTRY###/ironbank/big-bang/base"
           resources:
             limits:
               cpu: "50m"
@@ -447,11 +422,7 @@ monitoring:
         requests:
           cpu: "100m"
           memory: "256Mi"
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus-operator/prometheus-operator"
       prometheusConfigReloader:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus-operator/prometheus-config-reloader"
         resources:
           requests:
             cpu: "50m"
@@ -459,14 +430,8 @@ monitoring:
           limits:
             cpu: "100m"
             memory: "50Mi"
-      thanosImage:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/thanos/thanos"
-      kubectlImage:
-        repository: "###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.20/kubectl-1.20"
     prometheus:
       prometheusSpec:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/opensource/prometheus/prometheus"
         resources:
           limits:
             cpu: "300m"
@@ -477,12 +442,7 @@ monitoring:
 
 twistlock:
   enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock.git
   values:
-    console:
-      image:
-        repository: "###ZARF_REGISTRY###/ironbank/twistlock/console/console"
     resources:
       limits:
         memory: "1Gi"
@@ -490,6 +450,3 @@ twistlock:
       requests:
         memory: "256Mi"
         cpu: "50m"
-    bbtests:
-      scripts:
-        image: "###ZARF_REGISTRY###/ironbank/stedolan/jq:1.6"

@@ -55,7 +55,7 @@ dev-agent-image:
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))
 	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) src/main.go
-	docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
+	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
 	k3d image import $(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
