@@ -7,7 +7,7 @@ webhooks:
     namespaceSelector:
       matchExpressions:
         # Ensure we don't mess with kube-sustem
-        - key: name
+        - key: "kubernetes.io/metadata.name"
           operator: NotIn
           values:
             - "kube-system"
@@ -48,7 +48,7 @@ webhooks:
     namespaceSelector:
       matchExpressions:
         # Ensure we don't mess with kube-sustem
-        - key: name
+        - key: "kubernetes.io/metadata.name"
           operator: NotIn
           values:
             - "kube-system"
