@@ -29,6 +29,7 @@ const (
 	ZarfRegistryPullUser    = "zarf-pull"
 	ZarfRegistry            = IPV4Localhost + ":45001"
 	ZarfImagePullSecretName = "private-registry"
+	ZarfGitServerSecretName = "private-git-server"
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 

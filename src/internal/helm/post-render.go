@@ -164,9 +164,15 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		// Try to get a valid existing secret
 		currentSecret, _ := k8s.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
-			// create/update the missing zarf secret
+			// create/update the missing zarf registry secret
 			if err := k8s.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
+			}
+			
+			// Create/update the git server secret
+			gitServerSecret := k8s.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			if err := k8s.ReplaceSecret(gitServerSecret); err != nil {
+				message.Errorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}
 

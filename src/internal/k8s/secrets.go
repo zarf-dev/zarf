@@ -31,10 +31,10 @@ func GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
-	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
+func GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
+	message.Debugf("k8s.GenerateSecret(%s, %s)", namespace, name)
 
-	secretDockerConfig := &corev1.Secret{
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
@@ -46,9 +46,15 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 				config.ZarfManagedByLabel: "zarf",
 			},
 		},
-		Type: corev1.SecretTypeDockerConfigJson,
+		Type: secretType,
 		Data: map[string][]byte{},
 	}
+}
+
+func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
+	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
+
+	secretDockerConfig := GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Auth field must be username:password and base64 encoded
 	credential := config.GetSecret(config.StateRegistryPull)
@@ -87,22 +93,7 @@ func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1
 		return nil, err
 	}
 
-	secretTLS := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				config.ZarfManagedByLabel: "zarf",
-			},
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{},
-	}
-
+	secretTLS := GenerateSecret(namespace, name, corev1.SecretTypeTLS)
 	secretTLS.Data[corev1.TLSCertKey] = conf.Cert
 	secretTLS.Data[corev1.TLSPrivateKeyKey] = conf.Key
 

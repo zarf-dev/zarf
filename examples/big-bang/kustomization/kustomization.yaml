@@ -7,17 +7,3 @@ configMapGenerator:
     behavior: merge
     files:
       - values.yaml
-
-resources:
-  - git-secret.yaml
-
-patchesStrategicMerge:
-  - |-
-    apiVersion: source.toolkit.fluxcd.io/v1beta1
-    kind: GitRepository
-    metadata:
-      name: bigbang
-      namespace: bigbang
-    spec:
-      secretRef:
-        name: zarf-git-secret

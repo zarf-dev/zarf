@@ -6,7 +6,7 @@ registryCredentials:
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 
 git:
-  existingSecret: "zarf-git-secret"
+  existingSecret: "private-git-server"
 
 networkPolicies:
   enabled: true
