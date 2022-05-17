@@ -52,6 +52,8 @@ build-cli-mac-intel: build-injector-registry
 build-cli-mac-apple: build-injector-registry
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple src/main.go
 
+build-cli-linux: build-cli-linux-amd build-cli-linux-arm 
+
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
 
 build-injector-registry:
