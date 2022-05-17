@@ -25,8 +25,8 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.49.0-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.4.0-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.7.1-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki@3.0.1-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail@3.11.0-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.0.1-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail.git@3.11.0-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@34.8.0-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.5.0-bb.0
 
