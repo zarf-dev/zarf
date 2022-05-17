@@ -170,13 +170,15 @@ func LoadConfig(path string) error {
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%v)", path)
 	now := time.Now()
+	// Just use $USER env variable to avoid CGO issue
+	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
 	currentUser := os.Getenv("USER")
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
 	arch := GetArch()
 
-	// normalize these for the package confirmation
+	// Normalize these for the package confirmation
 	active.Metadata.Architecture = arch
 	active.Build.Architecture = arch
 
