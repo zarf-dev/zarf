@@ -8,17 +8,8 @@ metadata:
 components:
   - name: flux
     required: true
-    manifests:
-      - name: flux-installer
-        # This will be built on the package create side and deployed as a regular manifest on package deploy
-        kustomizations:
-          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.17.0
-    images:
-      # Flux images
-      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.11.0
-      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.13.0
-      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.15.0
-      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.14.0
+    import:
+      path: ../../packages/flux-iron-bank
 
   - name: bb-core
     required: true
@@ -30,12 +21,11 @@ components:
     # 2. Add the actual bigbang repo as well
     # https://repo1.dso.mil/platform-one/big-bang/bigbang/-/tags/1.17.0
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.17.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.5.2-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.10.4-bb.3
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.10.4-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.39.0-bb.2
-
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.33.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.13.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.49.0-bb.0
+      
     images:
       # TODO: Figure out a better way to derive this list.
       # 1. Deploy Big Bang Core using some other method like https://repo1.dso.mil/platform-one/quick-start/big-bang
@@ -43,23 +33,19 @@ components:
       # 3. Move all 'registry1.dso.mil/ironbank/fluxcd' images to the 'local.images' section
       # 4. Add 'docker.io/' to any images that aren't fully qualified (example: rancher/metrics-server -> docker.io/rancher/metrics-server
       # OR go through each values.yaml file in each git repo specified above and pull out all the images
-
-      # common
-      - registry1.dso.mil/ironbank/big-bang/base:8.4
-
-      # policy
-      - registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.1
-      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.5.2
-
       # istio-controlplane
-      - registry1.dso.mil/ironbank/opensource/istio/istioctl:1.10.4
-      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.10.4
-      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.10.4
-      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.10.4
+      - registry1.dso.mil/ironbank/big-bang/base:1.0.0
+      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.13.2
+      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.13.2
+      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.13.2
 
       # istio-operator
-      - registry1.dso.mil/ironbank/opensource/istio/operator:1.10.4
+      - registry1.dso.mil/ironbank/opensource/istio/operator:1.13.2
 
       # kiali
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.39.0
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.39.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.49.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.49.0
+
+      # policy (OPA Gatekeeper)
+      - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.22.2
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.7.1

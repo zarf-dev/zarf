@@ -6,7 +6,7 @@ registryCredentials:
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 
 git:
-  existingSecret: "zarf-git-secret"
+  existingSecret: "private-git-server"
 
 flux:
   interval: 1m
@@ -21,19 +21,9 @@ networkPolicies:
 
 istio:
   enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-controlplane.git
   ingressGateways:
     public-ingressgateway:
       type: "LoadBalancer"
-      kubernetesResourceSpec:
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "512Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
   gateways:
     public:
       tls:
@@ -56,142 +46,19 @@ istio:
             tls:
               credentialName: public-cert-actual
               mode: SIMPLE
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
-    cni:
-      image:
-        hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
-    istiod:
-      hpaSpec:
-        maxReplicas: 1
-        minReplicas: 1
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "1Gi"
-        limits:
-          cpu: "500m"
-          memory: "1Gi"
     kiali:
       dashboard:
         auth:
           strategy: "anonymous"
 
-istiooperator:
-  enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__istio-operator.git
-  values:
-    hub: "###ZARF_REGISTRY###/ironbank/opensource/istio"
-    operator:
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "256Mi"
-        limits:
-          cpu: "500m"
-          memory: "256Mi"
-
 jaeger:
   enabled: false
-
-kiali:
-  enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__kiali.git
-  values:
-    image:
-      repo: ###ZARF_REGISTRY###/ironbank/opensource/kiali/kiali-operator
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "256Mi"
-    cr:
-      spec:
-        deployment:
-          image_name: ###ZARF_REGISTRY###/ironbank/opensource/kiali/kiali
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "368Mi"
-            limits:
-              cpu: "500m"
-              memory: "368Mi"
-    svcPatchJob:
-      image:
-        repository: ###ZARF_REGISTRY###/ironbank/big-bang/base
 
 clusterAuditor:
   enabled: false
 
 gatekeeper:
-  enabled: true
-  git:
-    repo: http://zarf-gitea-http.zarf.svc.cluster.local:3000/zarf-git-user/mirror__repo1.dso.mil__platform-one__big-bang__apps__core__policy.git
-  values:
-    postInstall:
-      labelNamespace:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.21/kubectl"
-    postUpgrade:
-      cleanupCRD:
-        image:
-          repository: "###ZARF_REGISTRY###/ironbank/opensource/kubernetes-1.21/kubectl"
-    image:
-      repository: "###ZARF_REGISTRY###/ironbank/opensource/openpolicyagent/gatekeeper"
-    replicas: 1
-    controllerManager:
-      resources:
-        requests:
-          cpu: "175m"
-          memory: "512Mi"
-        limits:
-          cpu: "1"
-          memory: "2Gi"
-    audit:
-      resources:
-        requests:
-          cpu: "200m"
-          memory: "768Mi"
-        limits:
-          cpu: "1.2"
-          memory: "2Gi"
-    violations:
-      allowedDockerRegistries:
-        parameters:
-          repos:
-            - "###ZARF_REGISTRY###"
-          excludedResources:
-            # K3s kube-system stuff, better than excluding the whole namespace
-            - "kube-system/coredns-.*"
-            - "kube-system/local-path-provisioner-.*"
-            - "kube-system/metrics-server-.*"
-            - "kube-system/svclb-.*"
-            - "kube-system/traefik-.*"
-            # K3s needs these due to how it creates services of type "LoadBalancer"
-            - "istio-system/lb-port-.*"
-            - "istio-system/svclb-.*"
-            # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
-            - ".*/helm-install-.*"
-            - ".*/helm"
-            # TODO: Get Gitea in Iron Bank
-            - "git/stuart-gitea-.*"
-            - "git/gitea"
-            - "git/init"
-      hostNetworking:
-        parameters:
-          excludedResources:
-            # K3s needs these due to how it creates services of type "LoadBalancer"
-            - "istio-system/svclb-.*"
-            - "istio-system/lb-port-.*"
-      httpsOnly:
-        parameters:
-          excludedResources:
-            # TODO: Fix these ingresses so they don't need to be excluded
-            - "git/git-ingress"
-            - "registry/registry-ingress"
+  enabled: false
 
 logging:
   enabled: false
@@ -207,31 +74,3 @@ monitoring:
 
 twistlock:
   enabled: false
-
-addons:
-  argocd:
-    enabled: false
-  authservice:
-    enabled: false
-  gitlab:
-    enabled: false
-  gitlabRunner:
-    enabled: false
-  anchore:
-    enabled: false
-  sonarqube:
-    enabled: false
-  minioOperator:
-    enabled: false
-  minio:
-    enabled: false
-  mattermostoperator:
-    enabled: false
-  mattermost:
-    enabled: false
-  nexus:
-    enabled: false
-  velero:
-    enabled: false
-  keycloak:
-    enabled: false

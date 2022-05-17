@@ -20,14 +20,7 @@ istio:
   ingressGateways:
     public-ingressgateway:
       type: "LoadBalancer"
-      kubernetesResourceSpec:
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
+
   gateways:
     public:
       tls:
@@ -152,110 +145,10 @@ istio:
           he8Y4IWS6wY7bCkjCWDcRQJMEhg76fsO3txE+FiYruq9RUWhiF1myv4Q6W+CyBFC
           Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
           -----END CERTIFICATE-----
-  values:
-    istiod:
-      resources:
-        requests:
-          cpu: "50m"
-          memory: "512Mi"
-        limits:
-          cpu: "500m"
-          memory: "1Gi"
-      hpaSpec:
-        maxReplicas: 1
-   
-istiooperator:
-  enabled: true
-  values:
-    operator:
-      resources:
-        limits:
-          cpu: "200m"
-          memory: "256Mi"
-        requests:
-          cpu: "50m"
-          memory: "128Mi"
-
-jaeger:
-  enabled: true
-  values:
-    jaeger:
-      spec:
-        allInOne:
-          resources:
-            requests:
-              cpu: "50m"
-              memory: "64Mi"
-            limits:
-              cpu: "200m"
-              memory: "128Mi"
-        collector:
-          resources:
-            requests:
-              cpu: "50m"
-              memory: "64Mi"
-            limits:
-              cpu: "200m"
-              memory: "128Mi"
-    resources:
-      limits:
-        cpu: "100m"
-        memory: "128Mi"
-      requests:
-        cpu: "50m"
-        memory: "64Mi"
-
-kiali:
-  enabled: true
-  values:
-    resources:
-      requests:
-        cpu: "50m"
-        memory: "256Mi"
-      limits:
-        cpu: "100m"
-        memory: "512Mi"
-    cr:
-      spec:
-        deployment:
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "200m"
-              memory: "368Mi"
-
-clusterAuditor:
-  enabled: true
-  values:
-    resources:
-      requests:
-        cpu: "50m"
-        memory: "150Mi"
-      limits:
-        cpu: "300m"
-        memory: "300Mi"
 
 gatekeeper:
   enabled: true
   values:
-    controllerManager:
-      resources:
-        limits:
-          cpu: "175m"
-          memory: "512Mi"
-        requests:
-          cpu: "50m"
-          memory: "256Mi"
-    audit:
-      resources:
-        limits:
-          cpu: "500m"
-          memory: "768Mi"
-        requests:
-          cpu: "50m"
-          memory: "256Mi"
     violations:
       allowedDockerRegistries:
         parameters:
@@ -284,169 +177,16 @@ gatekeeper:
             - "istio-system/lb-port-.*"
 
 logging:
-  enabled: true
-  values:
-    kibana:
-      count: 1
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "50m"
-        limits:
-          memory: "1Gi"
-          cpu: "500m"
-    elasticsearch:
-      master:
-        count: 1
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "3Gi"
-          requests:
-            cpu: "50m"
-            memory: "1Gi"
-      data:
-        count: 1
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "3Gi"
-          requests:
-            cpu: "50m"
-            memory: "1Gi"
+  enabled: false
 
 eckoperator:
-  enabled: true
-  values:
-    resources:
-      limits:
-        cpu: "200m"
-        memory: "256Mi"
-      requests:
-        cpu: "50m"
-        memory: "128Mi"
+  enabled: false
 
 fluentbit:
-  enabled: true
-  values:
-    resources:
-      limits:
-        cpu: "100m"
-        memory: "128Mi"
-      requests:
-        cpu: "50m"
-        memory: "64Mi"
+  enabled: false
 
-monitoring:
+loki:
   enabled: true
-  values:
-    cleanUpgrade:
-      resources:
-        requests:
-          memory: "128Mi"
-          cpu: "50m"
-        limits:
-          memory: "256Mi"
-          cpu: "100m"
-    alertmanager:
-      alertmanagerSpec:
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "100Mi"
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
-    grafana:
-      resources:
-        limits:
-          cpu: "100m"
-          memory: "256Mi"
-        requests:
-          cpu: "50m"
-          memory: "128Mi"
-      sidecar:
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "100Mi"
-          requests:
-            cpu: "50m"
-            memory: "50Mi"
-      downloadDashboards:
-        resources:
-          limits:
-            cpu: "20m"
-            memory: "20Mi"
-          requests:
-            cpu: "20m"
-            memory: "20Mi"
-    kube-state-metrics:
-      resources:
-        limits:
-          cpu: "100m"
-          memory: "128Mi"
-        requests:
-          cpu: "50m"
-          memory: "64Mi"
-    prometheus-node-exporter:
-      resources:
-        limits:
-          cpu: "200m"
-          memory: "50Mi"
-        requests:
-          cpu: "50m"
-          memory: "50Mi"
-    prometheusOperator:
-      admissionWebhooks:
-        patch:
-          resources:
-            limits:
-              cpu: "50m"
-              memory: "50Mi"
-            requests:
-              cpu: "50m"
-              memory: "50Mi"
-        cleanupProxy:
-          resources:
-            limits:
-              cpu: "50m"
-              memory: "50Mi"
-            requests:
-              cpu: "50m"
-              memory: "50Mi"
-      resources:
-        limits:
-          cpu: "200m"
-          memory: "512Mi"
-        requests:
-          cpu: "100m"
-          memory: "256Mi"
-      prometheusConfigReloader:
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "50Mi"
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-    prometheus:
-      prometheusSpec:
-        resources:
-          limits:
-            cpu: "300m"
-            memory: "5Gi"
-          requests:
-            cpu: "50m"
-            memory: "2Gi"
 
-twistlock:
+promtail:
   enabled: true
-  values:
-    resources:
-      limits:
-        memory: "1Gi"
-        cpu: "250m"
-      requests:
-        memory: "256Mi"
-        cpu: "50m"

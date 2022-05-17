@@ -168,9 +168,15 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			if err := k8s.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
-			
-			// Create/update the git server secret
+
+			// Generate the git server secret
 			gitServerSecret := k8s.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			gitServerSecret.StringData = map[string]string{
+				"username": config.ZarfGitReadUser,
+				"password": config.GetSecret(config.StateGitPull),
+			}
+
+			// Update the git server secret
 			if err := k8s.ReplaceSecret(gitServerSecret); err != nil {
 				message.Errorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
