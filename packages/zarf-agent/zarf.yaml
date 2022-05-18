@@ -7,9 +7,9 @@ components:
   - name: zarf-agent
     required: true
     images:
-      - "defenseunicorns/zarf-agent:v0.18.3-8"
+      - "defenseunicorns/zarf-agent:v0.19.0"
     variables:
-      tag: "v0.18.3-8"
+      tag: "v0.19.0"
     manifests:
       - name: zarf-agent
         namespace: zarf

@@ -2,11 +2,12 @@ package agent
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/defenseunicorns/zarf/src/internal/agent/http"
+	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
@@ -24,9 +25,9 @@ const (
 func StartWebhook() {
 	message.Debug("agent.StartWebhook()")
 
-	server := http.NewServer(httpPort)
+	server := agentHttp.NewServer(httpPort)
 	go func() {
-		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil {
+		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
 			message.Fatal(err, "Failed to start the web server")
 		}
 	}()
