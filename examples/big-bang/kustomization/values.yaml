@@ -151,30 +151,45 @@ gatekeeper:
   values:
     violations:
       allowedDockerRegistries:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
         parameters:
           repos:
             - "###ZARF_REGISTRY###"
           excludedResources:
-            # K3s kube-system stuff, better than excluding the whole namespace
-            - "kube-system/coredns-.*"
-            - "kube-system/local-path-provisioner-.*"
-            - "kube-system/metrics-server-.*"
-            - "kube-system/svclb-.*"
-            - "kube-system/traefik-.*"
             # K3s needs these due to how it creates services of type "LoadBalancer"
             - "istio-system/lb-port-.*"
             - "istio-system/svclb-.*"
             # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
             - ".*/helm-install-.*"
             - ".*/helm"
-            # TODO: Get Zarf images in Iron Bank and don't wildcard the whole namespace
-            - "zarf/.*"
+      allowedHostFilesystem:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
       hostNetworking:
         parameters:
           excludedResources:
             # K3s needs these due to how it creates services of type "LoadBalancer"
             - "istio-system/svclb-.*"
             - "istio-system/lb-port-.*"
+      restrictedTaint:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
+      volumeTypes:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
 
 logging:
   enabled: false
