@@ -4,6 +4,8 @@ persistence:
   size: 20Gi
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
+imagePullSecrets:
+  - name: private-registry
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:

@@ -1,10 +1,10 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "Zarf Init Package Component - Registry"
+  name: "init-package-zarf-registry"
   description: "Used to establish a new Zarf cluster"
 
 components:
-  - name: container-registry-seed
+  - name: zarf-seed-registry
     charts:
       - name: docker-registry
         url: https://github.com/defenseunicorns/docker-registry.helm.git
@@ -14,9 +14,10 @@ components:
           - registry-values.yaml
           - registry-values-seed.yaml
 
-  - name: container-registry
+  - name: zarf-registry
     manifests:
       - name: kep-1755-registry-annotation
+        namespace: zarf
         files:
           - configmap.yaml
     charts:

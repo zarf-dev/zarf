@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-hook
+  namespace: zarf
+  labels:
+    app: agent-hook
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agent-hook
+  template:
+    metadata:
+      labels:
+        app: agent-hook
+        # Don't mutate this pod, that would be sad times
+        zarf.dev/agent: ignore
+    spec:
+      imagePullSecrets:
+        - name: private-registry
+      containers:
+        - name: server
+          image: "###ZARF_REGISTRY###/defenseunicorns/zarf-agent:###ZARF_TAG###"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+          ports:
+            - containerPort: 8443
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: agent-hook-tls

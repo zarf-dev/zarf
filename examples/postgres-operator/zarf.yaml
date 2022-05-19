@@ -8,8 +8,6 @@ metadata:
 components:
   - name: baseline
     required: true
-    # Big Bang charts expect this
-    secretName: "private-registry"
 
     manifests:
       - name: postgres-example-config

@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: "init-package-zarf-agent"
+  description: "Install the zarf agent mutating webhook on a new cluster"
+
+components:
+  - name: zarf-agent
+    required: true
+    images:
+      - "defenseunicorns/zarf-agent:v0.19.0"
+    variables:
+      tag: "v0.19.0"
+    manifests:
+      - name: zarf-agent
+        namespace: zarf
+        files:
+          - manifests/service.yaml
+          - manifests/secret.yaml
+          - manifests/deployment.yaml
+          - manifests/webhook.yaml

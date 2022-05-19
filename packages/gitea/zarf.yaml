@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: Zarf Gitea Service for Gitops
+  name: "init-package-git-server"
 
 components:
   - name: git-server

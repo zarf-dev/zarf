@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,7 @@ type Values struct {
 	state        types.ZarfState
 	seedRegistry string
 	registry     string
+	agentTLS     types.GeneratedPKI
 	secret       struct {
 		htpasswd       string
 		registryPush   string
@@ -52,6 +54,8 @@ func Generate() Values {
 
 	generated.secret.logging = config.GetSecret(config.StateLogging)
 
+	generated.agentTLS = state.AgentTLS
+
 	message.Debugf("Template values: %v", generated)
 	return generated
 }
@@ -65,8 +69,8 @@ func (values Values) GetRegistry() string {
 	return values.registry
 }
 
-func (values Values) Apply(variables types.ZarfComponentVariables, path string) {
-	message.Debugf("template.Apply(%v, %s)", variables, path)
+func (values Values) Apply(component types.ZarfComponent, path string) {
+	message.Debugf("template.Apply(%v, %s)", component, path)
 
 	if !values.Ready() {
 		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage
@@ -75,20 +79,33 @@ func (values Values) Apply(variables types.ZarfComponentVariables, path string) 
 
 	mappings := types.ZarfComponentVariables{
 		"STORAGE_CLASS":      values.state.StorageClass,
-		"SEED_REGISTRY":      values.seedRegistry,
 		"REGISTRY":           values.registry,
 		"NODEPORT":           values.state.NodePort,
-		"REGISTRY_SECRET":    values.secret.registrySecret,
 		"REGISTRY_AUTH_PUSH": values.secret.registryPush,
 		"REGISTRY_AUTH_PULL": values.secret.registryPull,
 		"GIT_AUTH_PUSH":      values.secret.gitPush,
 		"GIT_AUTH_PULL":      values.secret.gitPull,
-		"LOGGING_AUTH":       values.secret.logging,
-		"HTPASSWD":           values.secret.htpasswd,
+	}
+
+	// Don't template component-specifric variables for every component
+	switch component.Name {
+	case "zarf-agent":
+		mappings["AGENT_CRT"] = base64.StdEncoding.EncodeToString(values.agentTLS.Cert)
+		mappings["AGENT_KEY"] = base64.StdEncoding.EncodeToString(values.agentTLS.Key)
+		mappings["AGENT_CA"] = base64.StdEncoding.EncodeToString(values.agentTLS.CA)
+
+	case "zarf-seed-registry", "zarf-registry":
+		mappings["SEED_REGISTRY"] = values.seedRegistry
+		mappings["HTPASSWD"] = values.secret.htpasswd
+		mappings["REGISTRY_SECRET"] = values.secret.registrySecret
+
+	case "logging":
+		mappings["LOGGING_AUTH"] = values.secret.logging
+
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating
-	for key, value := range variables {
+	for key, value := range component.Variables {
 		mappings[key] = value
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/images"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 )
 
@@ -61,6 +62,9 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
+
+		// Setup zarf agent PKI
+		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 	}
 
 	if clusterArch != state.Architecture {
@@ -76,6 +80,7 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	case k8s.DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
+
 	}
 
 	// CLI provided overrides that haven't been processed already
@@ -122,5 +127,5 @@ func postSeedRegistry(tempPath tempPaths) {
 	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
 
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, config.ZarfRegistry)
+	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
 }

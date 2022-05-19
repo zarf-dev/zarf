@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "Zarf Init Package Component - Injector"
+  name: "init-package-zarf-injector"
   description: "Used to bootstrap the seed registry without an external registry"
 
 components:

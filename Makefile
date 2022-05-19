@@ -16,6 +16,8 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
+CLI_VERSION := $(if $(shell git describe --tags), $(shell git describe --tags), "UnknownVersion")
+BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -38,16 +40,34 @@ vm-destroy: ## Destroy the VM
 clean: ## Clean the build dir
 	rm -rf build
 
-build-cli-linux: build-injector-registry ## Build the Linux CLI
-	cd src && $(MAKE) build
+build-cli-linux-amd: build-injector-registry
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf src/main.go
 
-build-cli-mac: build-injector-registry ## Build the Mac CLI
-	cd src && $(MAKE) build-mac
+build-cli-linux-arm: build-injector-registry
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm src/main.go
 
-build-cli: build-injector-registry build-cli-linux build-cli-mac ## Build the CLI
+build-cli-mac-intel: build-injector-registry
+	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel src/main.go
+
+build-cli-mac-apple: build-injector-registry
+	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple src/main.go
+
+build-cli-linux: build-cli-linux-amd build-cli-linux-arm 
+
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
 
 build-injector-registry:
 	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
+
+# Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
+# @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
+dev-agent-image:
+	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
+	$(eval arch := $(shell uname -m))
+	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) src/main.go
+	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
+	kind load docker-image zarf-agent:$(tag) && \
+	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	$(ZARF_BIN) package create --confirm --architecture amd64

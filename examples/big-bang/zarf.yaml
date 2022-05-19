@@ -13,88 +13,68 @@ components:
 
   - name: big-bang
     required: true
-    secretName: "private-registry"
     manifests:
       - name: big-bang-config
         kustomizations:
           - "kustomization"
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.28.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.11.5-bb.2
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.11.5-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.27.1-bb.4
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.45.0-bb.3
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.2.0-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.7.0-bb.9
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/elasticsearch-kibana.git@0.6.0-bb.2
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/eck-operator.git@1.9.1-bb.4
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/fluentbit.git@0.19.19-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@30.0.1-bb.8
-      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.4.0-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.33.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.13.2-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.29.0-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.49.0-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.4.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.7.1-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.0.1-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail.git@3.11.0-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@34.8.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.5.0-bb.0
 
     images:
       # istio-controlplane
       - registry1.dso.mil/ironbank/big-bang/base:1.0.0
-      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.11.5
-      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.11.5
-      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.11.5
+      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.13.2
+      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.13.2
+      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.13.2
 
       # istio-operator
-      - registry1.dso.mil/ironbank/opensource/istio/operator:1.11.5
+      - registry1.dso.mil/ironbank/opensource/istio/operator:1.13.2
 
       # jaeger
-      # - registry1.dso.mil/ironbank/big-bang/base:1.0.0 -- Already present in istio-controlplane section
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.29.1
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-es-index-cleaner:1.29.0
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.29.0
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-agent:1.29.0
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-ingester:1.29.0
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-query:1.29.0
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-collector:1.29.0
+      - registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.1.1
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.32.0
+      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.32.0
+      - registry1.dso.mil/ironbank/big-bang/base:1.0.0
 
       # kiali
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.45.0
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.45.0
-      - registry1.dso.mil/ironbank/big-bang/base:8.4
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.49.0
+      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.49.0
 
       # cluster-auditor
-      - registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.3
+      - registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.4
 
       # policy (OPA Gatekeeper)
       - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.22.2
-      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.7.0
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.7.1
 
-      # elasticsearch-kibana
-      - registry1.dso.mil/ironbank/elastic/kibana/kibana:7.16.2
-      - registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:7.16.2
-      # - registry1.dso.mil/ironbank/big-bang/base:8.4 -- Already present in kiali section
-      - registry1.dso.mil/ironbank/stedolan/jq:1.6
+      # loki
+      - registry1.dso.mil/ironbank/opensource/grafana/loki:2.4.2
 
-      # eck-operator
-      - registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:1.9.1
-      # - registry1.dso.mil/ironbank/big-bang/base:8.4 -- Already present in kiali section
-
-      # fluentbit
-      - registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:1.8.12
-      # - registry1.dso.mil/ironbank/stedolan/jq:1.6 -- Already present in elasticsearch-kibana section
+      # promtail
+      - registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.4.2
 
       # monitoring
-      # - registry1.dso.mil/ironbank/big-bang/base:1.0.0 -- Already present in istio-controlplane section
-      - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.23.0
-      - registry1.dso.mil/ironbank/opensource/grafana/grafana:8.3.3
-      - registry1.dso.mil/ironbank/opensource/bats/bats:1.5.0
-      - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.15.0
-      # - registry1.dso.mil/ironbank/big-bang/base:1.0.0 -- Already present in istio-controlplane section
-      - registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.3.0
-      - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.3.1
+      - registry1.dso.mil/ironbank/big-bang/base:1.0.0
+      - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.15.9
+      - registry1.dso.mil/ironbank/opensource/grafana/grafana:8.4.4
       - registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.1.1
-      # - registry1.dso.mil/ironbank/big-bang/base:1.0.0 -- Already present in istio-controlplane section
-      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.53.1
-      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.53.1
-      - registry1.dso.mil/ironbank/opensource/thanos/thanos:v0.24.0
-      - registry1.dso.mil/ironbank/opensource/kubernetes-1.20/kubectl-1.20:v1.20.11
-      - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.32.1
+      - registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.4.2
+      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.55.0
+      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.55.1
+      - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.23.0
+      - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.3.1
+      - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.34.0
 
       # twistlock
       - registry1.dso.mil/ironbank/twistlock/console/console:22.01.840
-      # - registry1.dso.mil/ironbank/stedolan/jq:1.6 -- Already present in elasticsearch-kibana section
+      - registry1.dso.mil/ironbank/twistlock/defender/defender:22.01.840
