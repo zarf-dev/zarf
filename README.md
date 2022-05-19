@@ -1,4 +1,4 @@
-# Zarf - DevSecOps for Air Gap Systems
+# Zarf - DevSecOps for AirGap Systems
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
