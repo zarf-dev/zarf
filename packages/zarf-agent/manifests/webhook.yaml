@@ -11,8 +11,6 @@ webhooks:
           values:
             # Ensure we don't mess with kube-sustem
             - "kube-system"
-            # Don't break Kind's use of Local Path Provisioner
-            - "local-path-storage"
         # Allow ignoring whole namespaces
         - key: zarf.dev/agent
           operator: NotIn

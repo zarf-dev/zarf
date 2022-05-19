@@ -18,6 +18,15 @@ func GetNamespaces() (*corev1.NamespaceList, error) {
 	return clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
+func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+	message.Debugf("k8s.UpdateNamespace(%v)", namespace)
+
+	clientset := getClientset()
+	updateOptions := metav1.UpdateOptions{}
+
+	return clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
+}
+
 func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	message.Debugf("k8s.CreateNamespace(%s)", name)
 
