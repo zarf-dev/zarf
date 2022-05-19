@@ -18,7 +18,7 @@ Zarf's work necessitates that some components are "always on" (a.k.a. required &
 |                         | Description                                                                                                          |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | container-seed-registry | Adds a container registry so Zarf can bootstrap itself into the cluster.                                             |
-| container-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
+| zarf-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
 &nbsp;
 

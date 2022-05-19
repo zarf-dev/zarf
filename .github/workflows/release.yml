@@ -13,18 +13,33 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.18.x
+      
       - name: Checkout Repo
         uses: actions/checkout@v2
+      
+      - name: "Setup caching"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-        
+     
       - name: Build Things For Release
         run: make build-cli init-package
+      
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
+      
       - name: Push Release Artifacts to S3 Bucket
         run: aws s3 cp build s3://zarf-public/release/${{ github.ref_name }} --region us-gov-west-1 --recursive
+      
       - name: Create a Release For This Tag
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

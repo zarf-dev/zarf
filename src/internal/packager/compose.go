@@ -41,7 +41,7 @@ func validateOrBail(component *types.ZarfComponent) {
 	}
 }
 
-// Sets Name, Default, Required, Description and SecretName to the original components values
+// Sets Name, Default, Required and Description to the original components values
 func mergeComponentOverrides(target *types.ZarfComponent, src types.ZarfComponent) {
 	target.Name = src.Name
 	target.Default = src.Default
@@ -49,10 +49,6 @@ func mergeComponentOverrides(target *types.ZarfComponent, src types.ZarfComponen
 
 	if src.Description != "" {
 		target.Description = src.Description
-	}
-
-	if src.SecretName != "" {
-		target.SecretName = src.SecretName
 	}
 }
 

@@ -8,8 +8,8 @@ components:
     required: true
     manifests:
       - name: multi-games
+        namespace: zarf
         files:
-          - manifests/ingress.yaml
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:

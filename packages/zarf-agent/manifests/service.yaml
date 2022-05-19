@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-hook
+  namespace: zarf
+  # labels:
+  #   zarf.dev/connect-name: agent-hook
+spec:
+  selector:
+    app: agent-hook
+  ports:
+    - port: 443
+      targetPort: 8443

@@ -1,5 +1,11 @@
 package types
 
+type GeneratedPKI struct {
+	CA   []byte
+	Cert []byte
+	Key  []byte
+}
+
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
 	Source     string   `yaml:"source"`
@@ -32,9 +38,6 @@ type ZarfComponent struct {
 
 	// Required makes this component mandatory for package deployment
 	Required bool `yaml:"required,omitempty"`
-
-	// SecretName is the secret zarf will use for the registry, the default is "zarf-registry"
-	SecretName string `yaml:"secretName,omitempty"`
 
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `yaml:"files,omitempty"`
@@ -133,19 +136,13 @@ type ZarfPackage struct {
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data
 type ZarfState struct {
-	ZarfAppliance bool   `json:"zarfAppliance"`
-	Distro        string `json:"distro"`
-	Architecture  string `json:"architecture"`
-	StorageClass  string `json:"storageClass"`
-	Secret        string `json:"secret"`
-	NodePort      string `json:"nodePort"`
-}
-
-// TLSConfig tracks the user-defined options for TLS cert generation
-type TLSConfig struct {
-	CertPublicPath  string `yaml:"certPublicPath"`
-	CertPrivatePath string `yaml:"certPrivatePath"`
-	Host            string `yaml:"host"`
+	ZarfAppliance bool         `json:"zarfAppliance"`
+	Distro        string       `json:"distro"`
+	Architecture  string       `json:"architecture"`
+	StorageClass  string       `json:"storageClass"`
+	Secret        string       `json:"secret"`
+	NodePort      string       `json:"nodePort"`
+	AgentTLS      GeneratedPKI `json:"agentTLS"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment

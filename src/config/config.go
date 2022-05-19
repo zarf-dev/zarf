@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"runtime"
 	"strings"
 	"time"
@@ -23,12 +22,16 @@ const (
 	PackagePrefix = "zarf-package"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength = 40
-	ZarfGitPushUser        = "zarf-git-user"
-	ZarfGitReadUser        = "zarf-git-read-user"
-	ZarfRegistryPushUser   = "zarf-push"
-	ZarfRegistryPullUser   = "zarf-pull"
-	ZarfRegistry           = IPV4Localhost + ":45001"
+	ZarfMaxChartNameLength  = 40
+	ZarfGitPushUser         = "zarf-git-user"
+	ZarfGitReadUser         = "zarf-git-read-user"
+	ZarfRegistryPushUser    = "zarf-push"
+	ZarfRegistryPullUser    = "zarf-pull"
+	ZarfRegistry            = IPV4Localhost + ":45001"
+	ZarfImagePullSecretName = "private-registry"
+	ZarfGitServerSecretName = "private-git-server"
+
+	ZarfAgentHost = "agent-hook.zarf.svc"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
@@ -167,13 +170,15 @@ func LoadConfig(path string) error {
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%v)", path)
 	now := time.Now()
-	currentUser, userErr := user.Current()
+	// Just use $USER env variable to avoid CGO issue
+	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
+	currentUser := os.Getenv("USER")
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
 	arch := GetArch()
 
-	// normalize these for the package confirmation
+	// Normalize these for the package confirmation
 	active.Metadata.Architecture = arch
 	active.Build.Architecture = arch
 
@@ -188,10 +193,8 @@ func BuildConfig(path string) error {
 		active.Build.Terminal = hostname
 	}
 
-	if userErr == nil {
-		// Record the name of the user creating the package
-		active.Build.User = currentUser.Username
-	}
+	// Record the name of the user creating the package
+	active.Build.User = currentUser
 
 	return utils.WriteYaml(path, active, 0400)
 }

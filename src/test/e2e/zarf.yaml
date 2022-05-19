@@ -4,11 +4,11 @@ metadata:
   description: "Used for Zarf e2e tests"
 seed: library/registry:2.7.1
 components:
-  - name: container-registry-seed
+  - name: zarf-seed-registry
     required: true
     import:
       path: ../../../packages/zarf-registry
-  - name: container-registry
+  - name: zarf-registry
     required: true
     import:
       path: ../../../packages/zarf-registry

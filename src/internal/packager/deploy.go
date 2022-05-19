@@ -139,7 +139,7 @@ func Deploy() {
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.Debugf("packager.deployComponents(%v, %v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
-	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "container-registry-seed"
+	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
@@ -240,7 +240,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if hasImages {
-		images.PushToZarfRegistry(tempPath.images, component.Images, config.ZarfRegistry)
+		images.PushToZarfRegistry(tempPath.images, component.Images)
 	}
 
 	if hasRepos {
@@ -252,7 +252,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(component.Variables, chartValueName)
+			valueTemplate.Apply(component, chartValueName)
 		}
 
 		// Generate helm templates to pass to gitops engine

@@ -60,22 +60,9 @@ func ProcessYamlFilesInPath(path string, component types.ZarfComponent) []string
 	manifests := utils.RecursiveFileList(path, pattern)
 	valueTemplate := template.Generate()
 
-	// Match images in the given list and replace if found in the given files
-	var imageSwap []ImageSwap
-	for _, image := range component.Images {
-		imageSwap = append(imageSwap, ImageSwap{
-			find:    image,
-			replace: utils.SwapHost(image, valueTemplate.GetRegistry()),
-		})
-	}
-
 	for _, manifest := range manifests {
 		message.Debugf("Processing k8s manifest files %s", manifest)
-		// Iterate over each image swap to see if it exists in the manifest
-		for _, swap := range imageSwap {
-			utils.ReplaceText(manifest, swap.find, swap.replace)
-		}
-		valueTemplate.Apply(component.Variables, manifest)
+		valueTemplate.Apply(component, manifest)
 	}
 
 	return manifests

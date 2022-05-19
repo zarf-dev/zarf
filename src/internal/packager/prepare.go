@@ -181,7 +181,7 @@ func FindImages(repoHelmChartPath string) {
 			}
 
 			if len(realImages) > 0 {
-				fmt.Println(fmt.Sprintf("      # Possible images - %s - %s", config.GetMetaData().Name, component.Name))
+				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, component.Name)
 				for _, image := range realImages {
 					fmt.Println("      - " + image)
 				}

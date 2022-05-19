@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 
@@ -31,7 +30,7 @@ var destroyCmd = &cobra.Command{
 		state := k8s.LoadZarfState()
 
 		// If Zarf deployed the cluster, burn it all down
-		if state.ZarfAppliance || (state == types.ZarfState{}) {
+		if state.ZarfAppliance || (state.Secret == "") {
 			// Check if we have the scripts to destory everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
@@ -63,8 +62,8 @@ var destroyCmd = &cobra.Command{
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			k8s.DeleteZarfNamespace()
 
-			// Delete the zarf-registry secret in the default namespace
-			defaultSecret, _ := k8s.GetSecret("default", "zarf-registry")
+			// Delete the private-registry secret in the default namespace
+			defaultSecret, _ := k8s.GetSecret("default", config.ZarfImagePullSecretName)
 			k8s.DeleteSecret(defaultSecret)
 		}
 	},

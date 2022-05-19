@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -19,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
-
-var secretName = "zarf-registry"
 
 type renderer struct {
 	actionConfig   *action.Configuration
@@ -38,6 +35,8 @@ func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *rend
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
 			options.Chart.Namespace: nil,
+			// Include the cluster default namespace
+			corev1.NamespaceDefault: nil,
 		},
 	}
 }
@@ -47,12 +46,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, _ := utils.MakeTempDir()
 	path := tempDir + "/chart.yaml"
-
-	if r.options.Component.SecretName != "" {
-		// A custom secret name was given for this component
-		secretName = r.options.Component.SecretName
-		message.Debugf("using custom zarf secret name %s", secretName)
-	}
 
 	// Write the context to a file for processing
 	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {
@@ -118,26 +111,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				// skip so we can strip namespaces from helms brain
 				continue
 
-			case "ServiceAccount":
-				var svcAccount corev1.ServiceAccount
-				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &svcAccount); err != nil {
-					message.Errorf(err, "could not parse service account %s", rawData.GetName())
-				} else {
-					message.Debugf("Matched helm svc account %s for zarf annotation", svcAccount.Name)
-
-					// Add the zarf image pull secret to the sa
-					svcAccount.ImagePullSecrets = append(svcAccount.ImagePullSecrets, corev1.LocalObjectReference{
-						Name: secretName,
-					})
-
-					if byteData, err := yaml.Marshal(svcAccount); err != nil {
-						message.Error(err, "unable to marshal svc account")
-					} else {
-						// Update the contents of the svc account
-						resource.Content = string(byteData)
-					}
-				}
-
 			case "Service":
 				// Check service resources for the zarf-connect label
 				labels := rawData.GetLabels()
@@ -186,30 +159,27 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// Create the secret
-		validSecret := k8s.GenerateRegistryPullCreds(name, secretName)
+		validSecret := k8s.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
 
 		// Try to get a valid existing secret
-		currentSecret, _ := k8s.GetSecret(name, secretName)
-		if currentSecret.Name != secretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
-			// create/update the missing zarf secret
+		currentSecret, _ := k8s.GetSecret(name, config.ZarfImagePullSecretName)
+		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
+			// create/update the missing zarf registry secret
 			if err := k8s.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
-		}
 
-		// Attempt to update the default service account
-		attemptsLeft := 5
-		for attemptsLeft > 0 {
-			err = updateDefaultSvcAccount(name)
-			if err == nil {
-				break
-			} else {
-				attemptsLeft--
-				time.Sleep(1 * time.Second)
+			// Generate the git server secret
+			gitServerSecret := k8s.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			gitServerSecret.StringData = map[string]string{
+				"username": config.ZarfGitReadUser,
+				"password": config.GetSecret(config.StateGitPull),
 			}
-		}
-		if err != nil {
-			message.Errorf(err, "Unable to update the default service account for the %s namespace", name)
+
+			// Update the git server secret
+			if err := k8s.ReplaceSecret(gitServerSecret); err != nil {
+				message.Errorf(err, "Problem creating git server secret for the %s namespace", name)
+			}
 		}
 
 	}
@@ -219,36 +189,4 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	// Send the bytes back to helm
 	return finalManifestsOutput, nil
-}
-
-func updateDefaultSvcAccount(namespace string) error {
-
-	// Get the default service account from the provided namespace
-	defaultSvcAccount, err := k8s.GetServiceAccount(namespace, corev1.NamespaceDefault)
-	if err != nil {
-		return fmt.Errorf("unable to get service accounts for namespace %s", namespace)
-	}
-
-	// Look to see if the service account needs to be patched
-	if defaultSvcAccount.Labels[config.ZarfManagedByLabel] != "zarf" {
-		// This service account needs the pull secret added
-		defaultSvcAccount.ImagePullSecrets = append(defaultSvcAccount.ImagePullSecrets, corev1.LocalObjectReference{
-			Name: secretName,
-		})
-
-		if defaultSvcAccount.Labels == nil {
-			// Ensure label map exists to avoid nil panic
-			defaultSvcAccount.Labels = make(map[string]string)
-		}
-
-		// Track this by zarf
-		defaultSvcAccount.Labels[config.ZarfManagedByLabel] = "zarf"
-
-		// Finally update the chnage on the server
-		if _, err := k8s.SaveServiceAccount(defaultSvcAccount); err != nil {
-			return fmt.Errorf("unable to update the default service account for the %s namespace: %w", defaultSvcAccount.Namespace, err)
-		}
-	}
-
-	return nil
 }
