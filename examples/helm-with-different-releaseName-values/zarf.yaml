@@ -1,0 +1,39 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-helm-releasename
+  description: "Deploys same chart with different names"
+components:
+  - name: etcd-1
+    required: true
+    charts:
+      - name: etcd # use the default name if releaseName not specified
+        url: https://charts.bitnami.com/bitnami
+        version: 8.1.2
+        namespace: etcd
+    images:
+      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
+  - name: etcd-2
+    required: true
+    charts:
+      - name: etcd
+        releaseName: etcd-2
+        url: https://charts.bitnami.com/bitnami
+        version: 8.1.2
+        namespace: etcd
+    images:
+      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
+  - name: etcd-3-4 # multiple charts in same component
+    required: true
+    charts:
+      - name: etcd
+        releaseName: etcd-3
+        url: https://charts.bitnami.com/bitnami
+        version: 8.1.2
+        namespace: etcd-three-four
+      - name: etcd
+        releaseName: etcd-4
+        url: https://charts.bitnami.com/bitnami
+        version: 8.1.2
+        namespace: etcd-three-four
+    images:
+      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
