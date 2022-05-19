@@ -10,7 +10,7 @@ import (
 )
 
 func TestE2eExampleHelm(t *testing.T) {
-	//defer e2e.cleanupAfterTest(t)
+	defer e2e.cleanupAfterTest(t)
 
 	//run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm")
@@ -19,7 +19,7 @@ func TestE2eExampleHelm(t *testing.T) {
 	path := fmt.Sprintf("../../../build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
 
 	// Deploy the charts
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "-l=trace")
 	require.NoError(t, err, output)
 
 	// Verify the configmap was properly templated
