@@ -18,6 +18,15 @@ func GetNamespaces() (*corev1.NamespaceList, error) {
 	return clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
+func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+	message.Debugf("k8s.UpdateNamespace(%v)", namespace)
+
+	clientset := getClientset()
+	updateOptions := metav1.UpdateOptions{}
+
+	return clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
+}
+
 func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	message.Debugf("k8s.CreateNamespace(%s)", name)
 
@@ -81,4 +90,26 @@ func DeleteZarfNamespace() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func StripZarfAgentLabelFromNamespaces() {
+	spinner := message.NewProgressSpinner("Removing zarf metadata from existing namespaces not managed by Zarf")
+	defer spinner.Stop()
+
+	if namespaces, err := GetNamespaces(); err != nil {
+		spinner.Errorf(err, "Unable to get k8s namespaces")
+	} else {
+		for _, namespace := range namespaces.Items {
+			if _, ok := namespace.Labels["zarf.dev/agent"]; ok {
+				spinner.Updatef("Removing Zarf Agent label for namespace %v", namespace.Name)
+				delete(namespace.Labels, "zarf.dev/agent")
+				if _, err = UpdateNamespace(&namespace); err != nil {
+					// This is not a hard failure, but we should log it
+					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
+				}
+			}
+		}
+	}
+
+	spinner.Success()
 }
