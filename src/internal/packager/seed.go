@@ -70,8 +70,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		if err != nil {
 			message.Fatalf(err, "Unable to get k8s namespaces")
 		}
-		// If this is a new Zarf cluster, mark existing namespaces as ignored for the zarf agent to prevent
-		// mutating resources we don't own
+		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own
 		for _, namespace := range namespaces.Items {
 			spinner.Updatef("Marking existing namespace %v as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
