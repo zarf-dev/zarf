@@ -35,8 +35,6 @@ func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *rend
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
 			options.Chart.Namespace: nil,
-			// Include the cluster default namespace
-			corev1.NamespaceDefault: nil,
 		},
 	}
 }

@@ -65,6 +65,26 @@ func preSeedRegistry(tempPath tempPaths) {
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+
+		namespaces, err := k8s.GetNamespaces()
+		if err != nil {
+			message.Fatalf(err, "Unable to get k8s namespaces")
+		}
+		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own
+		for _, namespace := range namespaces.Items {
+			spinner.Updatef("Marking existing namespace %v as ignored by Zarf Agent", namespace.Name)
+			if namespace.Labels == nil {
+				// Ensure label map exists to avoid nil panic
+				namespace.Labels = make(map[string]string)
+			}
+			// This label will tell the Zarf Agent to ignore this namespace
+			namespace.Labels["zarf.dev/agent"] = "ignore"
+			if _, err = k8s.UpdateNamespace(&namespace); err != nil {
+				// This is not a hard failure, but we should log it
+				message.Errorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
+			}
+		}
+
 	}
 
 	if clusterArch != state.Architecture {
