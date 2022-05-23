@@ -23,7 +23,7 @@ func TestE2eExampleHelm(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Verify the configmap was properly templated
-	kubectlOut, _ := exec.Command("kubectl", "-A", "get", "pods", "--selector=app.kubernetes.io/name=etcd", "--no-headers").Output()
+	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-A", "--selector=app.kubernetes.io/name=etcd", "--no-headers").Output()
 	assert.Contains(t, string(kubectlOut), "zarf-etcd-0")
 	assert.Contains(t, string(kubectlOut), "zarf-etcd-2-0")
 	assert.Contains(t, string(kubectlOut), "zarf-etcd-3-0")
