@@ -12,6 +12,7 @@ components:
 
   - name: second-choice
     choice: example-choice
+    default: true
     files:
       - source: blank-file.txt
         target: second-choice-file.txt

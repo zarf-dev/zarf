@@ -22,7 +22,16 @@ func TestE2eComponentChoice(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Verify the file was created
-	expectedFile := "first-choice.txt"
+	expectedFile := "first-choice-file.txt"
+	require.FileExists(t, expectedFile)
+	e2e.filesToRemove = append(e2e.filesToRemove, expectedFile)
+
+	// Deploy using default choice
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, output)
+
+	// Verify the file was created
+	expectedFile = "second-choice-file.txt"
 	require.FileExists(t, expectedFile)
 	e2e.filesToRemove = append(e2e.filesToRemove, expectedFile)
 }

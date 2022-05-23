@@ -138,6 +138,11 @@ func isRequiredOrRequested(component types.ZarfComponent, requestedComponentName
 
 // Confirm optional component
 func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+	// Confirm flag passed, just use defaults
+	if config.DeployOptions.Confirm {
+		return component.Default
+	}
+
 	pterm.Println(horizontalRule)
 
 	displayComponent := component
@@ -158,6 +163,21 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 }
 
 func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+	// Confirm flag passed, just use defaults
+	if config.DeployOptions.Confirm {
+		var componentNames []string
+		for _, component := range componentGroup {
+			// If the component is default, then return it
+			if component.Default {
+				return component
+			}
+			// Add each component name to the list
+			componentNames = append(componentNames, component.Name)
+		}
+		// If no default component was found, give up
+		message.Fatalf(nil, "You must specify at least one component from the group %v when using the --confirm flag.", componentNames)
+	}
+
 	pterm.Println(horizontalRule)
 
 	var chosen int
