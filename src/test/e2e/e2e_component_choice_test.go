@@ -24,6 +24,9 @@ func TestE2eComponentChoice(t *testing.T) {
 	// Verify the file was created
 	expectedFile := "first-choice-file.txt"
 	require.FileExists(t, expectedFile)
+	// Verify the second choice file was not created
+	expectedFile = "second-choice-file.txt"
+	require.NoFileExists(t, expectedFile)
 	e2e.filesToRemove = append(e2e.filesToRemove, expectedFile)
 
 	// Deploy using default choice
