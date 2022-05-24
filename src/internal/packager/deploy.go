@@ -123,13 +123,24 @@ func Deploy() {
 	pterm.Println()
 
 	if config.IsZarfInitConfig() {
-		_ = pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData{
+		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"},
-			{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
-			{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
 			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
-		}).Render()
+		}
+		for _, component := range componentsToDeploy {
+			// Show message if including logging stack
+			if component.Name == "logging" {
+				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"}}...)
+			}
+			// Show message if including git-server
+			if component.Name == "git-server" {
+				loginTable = append(loginTable, pterm.TableData{
+					{"     Git", config.ZarfGitPushUser, config.GetSecret(config.StateGitPush), "zarf connect git"},
+					{"     Git (read-only)", config.ZarfGitReadUser, config.GetSecret(config.StateGitPull), "zarf connect git"},
+				}...)
+			}
+		}
+		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
 	}
 
 	// All done

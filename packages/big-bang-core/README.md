@@ -1,6 +1,6 @@
 # Example: Big Bang Core
 
-This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
+This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
 
 ![pods](.images/pods.png)
 
@@ -8,15 +8,10 @@ This example shows a deployment of [Big Bang Core](https://repo1.dso.mil/platfor
 
 ## Known Issues
 
-- Inside the Vagrant VM the services are available on the standard port `443`. Outside the VM if you want to pull something up in your browser that traffic is being routed to port `8443` to avoid needing to be root when running the Vagrant box.
-- Due to issues with Elasticsearch this example doesn't work yet in some distros. It does work in the Vagrant VM detailed below. Upcoming work to update to the latest version of Big Bang and swap the EFK stack out for the PLG stack (Promtail, Loki, Grafana) should resolve this issue
-- Currently this example does the equivalent of `kustomize build | kubectl apply -f -`, which means Flux will be used to deploy everything, but it won't be watching a Git repository for changes. Upcoming work is planned to update the example so that you will be able to open up a Git repo in the private Gitea server inside the cluster, commit and push a change, and see that change get reflected in the deployment.
+- Currently this package does the equivalent of `kustomize build | kubectl apply -f -`, which means Flux will be used to deploy everything, but it won't be watching a Git repository for changes. Upcoming work is planned to update the package so that you will be able to open up a Git repo in the private Gitea server inside the cluster, commit and push a change, and see that change get reflected in the deployment.
 
-## Prerequisites
-
-1. Install [Vagrant](https://www.vagrantup.com/)
-1. Install `make`
-1. Install `sha256sum` (on Mac it's `brew install coreutils`)
+> NOTE:
+> Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
 
 ## Instructions
 
@@ -33,10 +28,6 @@ cd zarf/examples
 make fetch-release
 ```
 
-> NOTE:
->
-> If you have any issues with `make fetch-release` you can try `make build-release` instead. It will build the files instead of downloading them. You'll need Golang installed.
-
 ### Build the deploy package
 
 ```shell
@@ -50,10 +41,6 @@ make package-example-big-bang
 # Start the VM. You'll be dropped into a shell in the VM as the Root user
 make vm-init
 ```
-
-> NOTE:
->
-> All subsequent commands should be happening INSIDE the Vagrant VM
 
 ### Initialize Zarf
 
@@ -98,11 +85,6 @@ make vm-destroy
 | [Twistlock](https://twistlock.bigbang.dev:8443)       | n/a       | n/a                                                                                                                                                                                        | Twistlock has you create an admin account the first time you log in |
 
 ## Troubleshooting
-
-### Elasticsearch isn't working when I try to deploy the Big Bang package on KinD (or K3d, or any other distro other than K3s)
-That's a known issue. This example is only supported right now when using the K3s cluster that Zarf is able to deploy when running `zarf init`. Updating to the latest version of Big Bang and swapping the EFK stack out for the PLG stack should fix this issue. It's on the roadmap™.
-### I'm getting "Misdirected Request" when trying to get to any of the services in my browser
-Run the `kubectl delete` command documented above to delete the buggy EnvoyFilter. Updating to the latest version of Big Bang will fix this issue. It's on the roadmap™.
 
 ### My computer crashed!
 Close all those hundreds of chrome tabs, shut down all non-essential programs, and try again. Big Bang is a HOG. If you have less than 32GB of RAM you're in for a rough time.
