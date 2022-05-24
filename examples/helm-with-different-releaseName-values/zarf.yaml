@@ -3,37 +3,45 @@ metadata:
   name: test-helm-releasename
   description: "Deploys same chart with different names"
 components:
-  - name: etcd-1
+  - name: nginx-1
     required: true
     charts:
-      - name: etcd # use the default name if releaseName not specified
+      - name: nginx # use the default name if releaseName not specified
         url: https://charts.bitnami.com/bitnami
-        version: 8.1.2
-        namespace: etcd
+        version: 11.1.5
+        namespace: nginx
+        valuesFiles:
+          - values.yaml
     images:
-      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
-  - name: etcd-2
+      - docker.io/bitnami/nginx:1.21.6-debian-10-r114
+  - name: nginx-2
     required: true
     charts:
-      - name: etcd
-        releaseName: etcd-2
+      - name: nginx
+        releaseName: nginx-2
         url: https://charts.bitnami.com/bitnami
-        version: 8.1.2
-        namespace: etcd
+        version: 11.1.5
+        namespace: nginx
+        valuesFiles:
+          - values.yaml
     images:
-      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
-  - name: etcd-3-4 # multiple charts in same component
+      - docker.io/bitnami/nginx:1.21.6-debian-10-r114
+  - name: nginx-3-4 # multiple charts in same component
     required: true
     charts:
-      - name: etcd
-        releaseName: etcd-3
+      - name: nginx
+        releaseName: nginx-3
         url: https://charts.bitnami.com/bitnami
-        version: 8.1.2
-        namespace: etcd-three-four
-      - name: etcd
-        releaseName: etcd-4
+        version: 11.1.5
+        namespace: nginx-three-four
+        valuesFiles:
+          - values.yaml
+      - name: nginx
+        releaseName: nginx-4
         url: https://charts.bitnami.com/bitnami
-        version: 8.1.2
-        namespace: etcd-three-four
+        version: 11.1.5
+        namespace: nginx-three-four
+        valuesFiles:
+          - values.yaml
     images:
-      - docker.io/bitnami/etcd:3.5.4-debian-10-r21
+      - docker.io/bitnami/nginx:1.21.6-debian-10-r114
