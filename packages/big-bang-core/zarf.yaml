@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
-  description: "Demo Zarf basic deployment of Big Bang Core"
+  description: "Deploy Big Bang Core"
   # Big Bang / Iron Bank are only amd64
   architecture: amd64
 
@@ -11,12 +11,9 @@ components:
     import:
       path: ../../packages/flux-iron-bank
 
-  - name: big-bang
+  - name: big-bang-core-assets
+    description: "Git repositories and OCI images used by Big Bang Core"
     required: true
-    manifests:
-      - name: big-bang-config
-        kustomizations:
-          - "kustomization"
     repos:
       - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.33.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.2-bb.1
@@ -78,3 +75,19 @@ components:
       # twistlock
       - registry1.dso.mil/ironbank/twistlock/console/console:22.01.840
       - registry1.dso.mil/ironbank/twistlock/defender/defender:22.01.840
+
+  - name: big-bang-core-limited-resources
+    description: "Deploy a lightweight version of Big Bang Core using limited resources"
+    group: big-bang-variant
+    manifests:
+      - name: big-bang-config
+        kustomizations:
+          - "kustomization/core-light"
+
+  - name: big-bang-core-standard
+    description: "Deploy Big Bang Core with a standard configuration"
+    group: big-bang-variant
+    manifests:
+      - name: big-bang-config
+        kustomizations:
+          - "kustomization/core-standard"
