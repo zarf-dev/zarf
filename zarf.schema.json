@@ -139,7 +139,7 @@
           },
           "type": "object"
         },
-        "choice": {
+        "group": {
           "type": "string"
         }
       },

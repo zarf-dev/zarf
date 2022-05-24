@@ -76,18 +76,18 @@ components:
       - registry1.dso.mil/ironbank/twistlock/console/console:22.01.840
       - registry1.dso.mil/ironbank/twistlock/defender/defender:22.01.840
 
-  - name: big-bang-core-demo
-    description: "Deploy a lightweight demo version of Big Bang Core not intended for production use"
-    choice: big-bang-variant
+  - name: big-bang-core-limited-resources
+    description: "Deploy a lightweight version of Big Bang Core using limited resources"
+    group: big-bang-variant
     manifests:
       - name: big-bang-config
         kustomizations:
-          - "kustomization/core-demo"
+          - "kustomization/core-light"
 
-  - name: big-bang-core-production
-    description: "Deploy Big Bang Core sized for standard production use"
-    choice: big-bang-variant
+  - name: big-bang-core-standard
+    description: "Deploy Big Bang Core with a standard configuration"
+    group: big-bang-variant
     manifests:
       - name: big-bang-config
         kustomizations:
-          - "kustomization/core-prod"
+          - "kustomization/core-standard"

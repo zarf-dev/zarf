@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -24,7 +25,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 
 	// Break up components into choice groups
 	for _, component := range allComponents {
-		key := component.Choice
+		key := component.Group
 		// If not a choice group, then use the component name as the key
 		if key == "" {
 			key = component.Name
@@ -60,7 +61,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 
 			if requested {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
-				if component.Name == "k3s" && config.IsZarfInitConfig() {
+				if component.Name == k8s.DistroIsK3s && config.IsZarfInitConfig() {
 					config.DeployOptions.ApplianceMode = true
 				}
 				// Add the component to the list of valid components

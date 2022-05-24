@@ -69,9 +69,9 @@ type ZarfComponent struct {
 	// Dynamic template values for K8s resources
 	Variables ZarfComponentVariables `yaml:"variables,omitempty"`
 
-	// Key to match other components to produce a user selector field, used to create a BOOLEAN OR for a set of components
+	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
-	Choice string `yaml:"choice,omitempty"`
+	Group string `yaml:"group,omitempty"`
 }
 
 // ZarfComponentVariables are variables that can be used to dynaically template K8s resources

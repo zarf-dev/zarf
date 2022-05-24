@@ -5,13 +5,13 @@ metadata:
 
 components:
   - name: first-choice
-    choice: example-choice
+    group: example-choice
     files:
       - source: blank-file.txt
         target: first-choice-file.txt
 
   - name: second-choice
-    choice: example-choice
+    group: example-choice
     default: true
     files:
       - source: blank-file.txt

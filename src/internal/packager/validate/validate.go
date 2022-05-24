@@ -19,19 +19,26 @@ func Run() {
 		message.Fatalf(err, "Invalid package name")
 	}
 
+	uniqueNames := make(map[string]bool)
+
 	for _, component := range components {
+		// ensure component name is unique
+		if _, ok := uniqueNames[component.Name]; ok {
+			message.Fatalf(nil, "Component names must be unique")
+		}
+		uniqueNames[component.Name] = true
+
 		validateComponent(component)
 	}
 
 }
 
 func validateComponent(component types.ZarfComponent) {
-
 	if component.Required {
 		if component.Default {
 			message.Fatalf(nil, "Component %s cannot be required and default", component.Name)
 		}
-		if component.Choice != "" {
+		if component.Group != "" {
 			message.Fatalf(nil, "Component %s cannot be required and part of a choice group", component.Name)
 		}
 	}
