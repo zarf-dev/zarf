@@ -27,3 +27,4 @@ cosign.key
 zarf-pki
 .scratch/
 zarf-sbom/
+clidocs/
