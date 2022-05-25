@@ -12,11 +12,13 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
 var toolsCmd = &cobra.Command{
@@ -124,8 +126,20 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	},
 }
 
+var generateCLIDocs = &cobra.Command{
+	Use:    "generate-cli-docs",
+	Hidden: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		utils.CreateDirectory("clidocs", 0700)
+
+		//Generate markdown of the Zarf command (and all of its child commands)
+		doc.GenMarkdownTree(rootCmd, "./clidocs")
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
+	rootCmd.AddCommand(generateCLIDocs)
 
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
