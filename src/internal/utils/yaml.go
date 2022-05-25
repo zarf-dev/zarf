@@ -62,7 +62,7 @@ func ColorPrintYAML(text string) {
 		}
 	}
 	writer := colorable.NewColorableStdout()
-	_, err := writer.Write([]byte("\n" + p.PrintTokens(tokens) + "\n"))
+	_, err := writer.Write([]byte(p.PrintTokens(tokens) + "\n"))
 	if err != nil {
 		message.Error(err, "Unable to print the config yaml contents")
 	}

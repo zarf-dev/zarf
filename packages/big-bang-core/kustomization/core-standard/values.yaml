@@ -15,6 +15,9 @@ networkPolicies:
   nodeCidr: "0.0.0.0/0"
   vpcCidr: "0.0.0.0/0"
 
+kiali:
+  enabled: false
+
 istio:
   enabled: true
   ingressGateways:

@@ -19,19 +19,40 @@ func Run() {
 		message.Fatalf(err, "Invalid package name")
 	}
 
+	uniqueNames := make(map[string]bool)
+
 	for _, component := range components {
-		for _, chart := range component.Charts {
-			if err := validateChart(chart); err != nil {
-				message.Fatalf(err, "Invalid chart definition in the %s component: %s", component.Name, err)
-			}
+		// ensure component name is unique
+		if _, ok := uniqueNames[component.Name]; ok {
+			message.Fatalf(nil, "Component names must be unique")
 		}
-		for _, manifest := range component.Manifests {
-			if err := validateManifest(manifest); err != nil {
-				message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name, err)
-			}
+		uniqueNames[component.Name] = true
+
+		validateComponent(component)
+	}
+
+}
+
+func validateComponent(component types.ZarfComponent) {
+	if component.Required {
+		if component.Default {
+			message.Fatalf(nil, "Component %s cannot be required and default", component.Name)
+		}
+		if component.Group != "" {
+			message.Fatalf(nil, "Component %s cannot be required and part of a choice group", component.Name)
 		}
 	}
 
+	for _, chart := range component.Charts {
+		if err := validateChart(chart); err != nil {
+			message.Fatalf(err, "Invalid chart definition in the %s component: %s", component.Name)
+		}
+	}
+	for _, manifest := range component.Manifests {
+		if err := validateManifest(manifest); err != nil {
+			message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name)
+		}
+	}
 }
 
 func validatePackageName(subject string) error {
