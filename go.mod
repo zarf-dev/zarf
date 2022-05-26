@@ -43,8 +43,9 @@ require (
 	github.com/sigstore/cosign v1.7.1
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
-	github.com/testifysec/witness v0.1.7
+	github.com/testifysec/go-witness v0.1.10
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
+	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.8.1
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
@@ -253,7 +254,7 @@ require (
 	github.com/lib/pq v1.10.4 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/magiconair/properties v1.8.5 // indirect
+	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
@@ -308,7 +309,7 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7 // indirect
+	github.com/sigstore/fulcio v0.2.0 // indirect
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3 // indirect
 	github.com/sigstore/sigstore v1.2.1-0.20220401110139-0e610e39782f // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
@@ -369,7 +370,6 @@ require (
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	inet.af/netaddr v0.0.0-20211027220019-c74959edd3b6 // indirect
 	k8s.io/apiextensions-apiserver v0.23.5 // indirect
