@@ -41,6 +41,9 @@
         "name": {
           "type": "string"
         },
+        "releaseName": {
+          "type": "string"
+        },
         "url": {
           "type": "string"
         },
