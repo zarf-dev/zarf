@@ -1,7 +1,6 @@
 package packager
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -12,11 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
-
-	"github.com/goccy/go-yaml"
+	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -82,10 +79,11 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
 	}
-
+	
 	// Convert []byte to string and print to screen
 	text := string(content)
-
+	
+	pterm.Println()
 	utils.ColorPrintYAML(text)
 
 	if len(sbomViewFiles) > 0 {
@@ -94,6 +92,8 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
 		message.Note(msg)
 	}
+
+	pterm.Println()
 
 	// Display prompt if not auto-confirmed
 	var confirmFlag bool
@@ -108,68 +108,6 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 	}
 
 	return confirmFlag
-}
-
-func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
-	var validComponentsList []types.ZarfComponent
-	confirmedComponents := make([]bool, len(requestedComponentNames))
-	for _, component := range allComponents {
-		confirmComponent := component.Required
-
-		// If the component is not required check if the user wants it deployed
-		if !confirmComponent {
-			// Check if this is one of the components that has been requested
-			if len(requestedComponentNames) > 0 || config.DeployOptions.Confirm {
-				for index, requestedComponent := range requestedComponentNames {
-					if strings.ToLower(requestedComponent) == component.Name {
-						confirmComponent = true
-						confirmedComponents[index] = true
-					}
-				}
-			} else {
-				confirmComponent = ConfirmOptionalComponent(component)
-			}
-		}
-
-		if confirmComponent {
-			validComponentsList = append(validComponentsList, component)
-			// Make it easier to know we are running k3s
-			if config.IsZarfInitConfig() && component.Name == "k3s" {
-				config.DeployOptions.ApplianceMode = true
-			}
-		}
-	}
-
-	// Verify that we were able to successfully identify all the requested components
-	var nonMatchedComponents []string
-	for requestedComponentIndex, componentMatched := range confirmedComponents {
-		if !componentMatched {
-			nonMatchedComponents = append(nonMatchedComponents, requestedComponentNames[requestedComponentIndex])
-		}
-	}
-
-	if len(nonMatchedComponents) > 0 {
-		message.Fatalf(nil, "Unable to find these components to deploy: %v.", nonMatchedComponents)
-	}
-
-	return validComponentsList
-}
-
-// Confirm optional component
-func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
-	displayComponent := component
-	displayComponent.Description = ""
-	content, _ := yaml.Marshal(displayComponent)
-	utils.ColorPrintYAML(string(content))
-	message.Question(fmt.Sprintf("%s: %s", component.Name, component.Description))
-
-	// Since no requested components were provided, prompt the user
-	prompt := &survey.Confirm{
-		Message: "Deploy this component?",
-		Default: component.Default,
-	}
-	_ = survey.AskOne(prompt, &confirmComponent)
-	return confirmComponent
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -233,65 +171,6 @@ func isValidFileExtension(filename string) bool {
 	}
 
 	return false
-}
-
-func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
-	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
-	defer spinner.Stop()
-
-	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
-	binaryPath, err := os.Executable()
-	if err != nil {
-		spinner.Errorf(err, "Unable to determine the current zarf binary path")
-	} else {
-		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
-	}
-
-	var ctx context.Context
-	var cancel context.CancelFunc
-
-	// Default timeout is 5 minutes
-	if scripts.TimeoutSeconds < 1 {
-		scripts.TimeoutSeconds = 300
-	}
-
-	duration := time.Duration(scripts.TimeoutSeconds) * time.Second
-	timeout := time.After(duration)
-
-	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
-
-	for {
-		select {
-		// On timeout abort
-		case <-timeout:
-			cancel()
-			spinner.Fatalf(nil, "Script \"%s\" timed out", script)
-		// Oherwise try running the script
-		default:
-			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
-			defer cancel()
-
-			if err != nil {
-				message.Debug(err, output, errOut)
-				// If retry, let the script run again
-				if scripts.Retry {
-					continue
-				}
-				// Otherwise fatal
-				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
-			}
-
-			// Dump the script output in debug if output not already streamed
-			if !scripts.ShowOutput {
-				message.Debug(output, errOut)
-			}
-
-			// Close the function now that we are done
-			spinner.Success()
-			return
-		}
-	}
 }
 
 // removeDuplicates reduces a string slice to unique values only, https://www.dotnetperls.com/duplicates-go

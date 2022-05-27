@@ -138,6 +138,9 @@
             }
           },
           "type": "object"
+        },
+        "group": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
