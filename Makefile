@@ -108,6 +108,10 @@ package-example-single-big-bang-package: ## Create the Zarf package for single-b
 package-example-gitops-data:
 	cd examples/gitops-data && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
+.PHONY: package-example-helm-releasename
+package-example-helm-releasename:
+	cd examples/helm-with-different-releaseName-values && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+
 .PHONY: package-example-tiny-kafka
 package-example-tiny-kafka:
 	cd examples/tiny-kafka && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
@@ -143,6 +147,9 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	fi
 	@if [ ! -f ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-gitops-data;\
+	fi
+	@if [ ! -f ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst ]; then\
+		$(MAKE) package-example-helm-releasename;\
 	fi
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
