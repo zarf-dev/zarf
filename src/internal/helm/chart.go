@@ -45,7 +45,11 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 
 	var output *release.Release
 
-	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
+	if options.Chart.ReleaseName != "" {
+		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
+	} else {
+		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
+	}
 	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
 	postRender := NewRenderer(options, actionConfig)
 
@@ -132,7 +136,11 @@ func TemplateChart(options ChartOptions) (string, error) {
 	client.ClientOnly = true
 	client.IncludeCRDs = true
 
-	client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
+	if options.Chart.ReleaseName != "" {
+		client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
+	} else {
+		client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
+	}
 
 	// Namespace must be specified
 	client.Namespace = options.Chart.Namespace
