@@ -6,14 +6,14 @@ components:
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     images:
-      - grafana/grafana:8.1.6
-      - grafana/loki:2.4.1
-      - grafana/promtail:2.1.0
-      - quay.io/kiwigrid/k8s-sidecar:1.12.3
+      - docker.io/grafana/promtail:2.4.2
+      - grafana/grafana:8.3.5
+      - grafana/loki:2.5.0
+      - quay.io/kiwigrid/k8s-sidecar:1.15.6
     charts:
       - name: loki-stack
         url: https://grafana.github.io/helm-charts
-        version: 2.5.1
+        version: 2.6.4
         namespace: zarf
         valuesFiles:
           - pgl-values.yaml
