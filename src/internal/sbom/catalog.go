@@ -16,8 +16,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/testifysec/witness/pkg/attestation"
-	"github.com/testifysec/witness/pkg/attestation/syft"
+	"github.com/testifysec/go-witness/attestation"
+	"github.com/testifysec/go-witness/attestation/syft"
 )
 
 //go:embed viewer/*

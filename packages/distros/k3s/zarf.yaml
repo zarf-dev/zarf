@@ -24,8 +24,8 @@ components:
         - "systemctl enable --now k3s"
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s
-        shasum: 89eb5f3d12524d0a9d5b56ba3e2707b106e1731dd0e6d2e7b898ac585f4959df
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.6+k3s1/k3s
+        shasum: a60e039130faf2f0d349a79738e185616fd8e74ab9e0e356ce8127216fd8f9c4
         target: /usr/sbin/k3s
         executable: true
         # K3s magic provides these tools when symlinking
@@ -34,8 +34,8 @@ components:
           - /usr/sbin/ctr
           - /usr/sbin/crictl
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.21.6+k3s1/k3s-airgap-images-amd64.tar.zst
-        shasum: 772ae839f8c7718e2022d103076df53452d4f09d2a22afdf4b5796cf0cbce62c
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.6+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: c6b720bc0048d38a187236bc799ed7390422fb278ae7e8b119f81f4795ea33e5
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
       # K3s removal script
       - source: assets/zarf-clean-k3s.sh

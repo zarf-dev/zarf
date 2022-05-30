@@ -5,9 +5,6 @@ gitea:
     username: "zarf-git-user"
     password: "###ZARF_GIT_AUTH_PUSH###"
     email: "zarf@localhost"
-  cache:
-    builtIn:
-      enabled: false
   config:
     APP_NAME: "Zarf Gitops Service"
     server:
@@ -24,10 +21,6 @@ gitea:
     repository:
       ENABLE_PUSH_CREATE_USER: true
       FORCE_PRIVATE: true
-  database:
-    builtIn:
-      postgresql:
-        enabled: false
 resources:
   requests:
     cpu: "200m"
@@ -35,3 +28,9 @@ resources:
   limits:
     cpu: "1"
     memory: "2Gi"
+
+memcached:
+  enabled: false
+
+postgresql:
+  enabled: false
