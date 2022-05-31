@@ -2,11 +2,11 @@
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
-Zarf simplifies the setup & administration of Kubernetes clusters, cyber systems & workloads that support DevSecOps "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))."
+Zarf simplifies the setup and administration of Kubernetes clusters, cyber systems, and workloads that support DevSecOps "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))."
 
 It provides a static go binary (can run anywhere) CLI that can pull, package, and install all the things your clusters need to run and any necessary resources to standup infrastructure such as Terraform. Zarf also caches downloads (for speed), hashes packages (for security), and can _even install the Kubernetes cluster itself_ if needed.
 
-Zarf runs on [a bunch of operating systems](./docs/supported-oses.md). It aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters."
+Zarf runs on [a bunch of operating systems](./docs/supported-oses.md). It aims to support configurations ranging from "I want to run one, simple app" to "I need to support and dependency control a _bunch_ of internet-disconnected clusters."
 
 Zarf was theorized and initially demonstrated in Naval Postgraduate School research:
 
