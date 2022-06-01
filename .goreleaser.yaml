@@ -1,0 +1,61 @@
+# TODO @JPERRY REMOVE THESE LINES AND ENSURE THE 'GITHUB_TOKEN' token is populated in the repo.
+# .goreleaser.yaml
+env_files:
+  github_token: ~/.path/to/my/github_token
+
+
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    - go mod tidy
+
+universal_binaries:
+  - replace: false
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    dir: src
+    ldflags:
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Version}}
+    goarch:
+      - amd64
+      - arm64
+archives:
+  -
+    format: binary
+    replacements:
+      darwin: Darwin
+      linux: Linux
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  use: github-native
+
+release:
+  github:
+    owner: defenseunicorns
+    name: zarf
+  prerelease: auto
+  mode: append
+
+brews:
+  - name: zarf
+    tap:
+      owner: defenseunicorns
+      name: homebrew-tap
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://zarf.dev/"
+    description: "An airgap delivery tool!"
+
+blobs:
+  provider: s3
+  region: us-gov-west-1
+  bucket: zarf-public
+  folder: "release/{{.Version}}"
