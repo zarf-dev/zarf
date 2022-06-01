@@ -50,6 +50,7 @@ brews:
     tap:
       owner: defenseunicorns
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "An airgap delivery tool!"
