@@ -26,7 +26,7 @@ var tranformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	// Ignore SBOM creation if there the flag is set
-	if config.SkipSBOM {
+	if config.CreateOptions.SkipSBOM {
 		message.Debug("Skipping SBOM processing per --skip-sbom flag")
 		return
 	}
