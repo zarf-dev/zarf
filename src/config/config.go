@@ -84,11 +84,23 @@ func GetArch() string {
 	return runtime.GOARCH
 }
 
-func GetCraneOptions() crane.Option {
-	return crane.WithPlatform(&v1.Platform{
-		OS:           "linux",
-		Architecture: GetArch(),
-	})
+func GetCraneOptions() []crane.Option {
+	var options []crane.Option
+
+	// Handle insecure registry option
+	if CreateOptions.Insecure {
+		options = append(options, crane.Insecure)
+	}
+
+	// Add the image platform info
+	options = append(options,
+		crane.WithPlatform(&v1.Platform{
+			OS:           "linux",
+			Architecture: GetArch(),
+		}),
+	)
+
+	return options
 }
 
 func GetCraneAuthOption(username string, secret string) crane.Option {
