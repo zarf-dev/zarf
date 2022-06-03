@@ -24,7 +24,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
 
 	for _, src := range buildImageList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(imageTarballPath, src, config.GetCraneOptions())
+		img, err := crane.LoadTag(imageTarballPath, src, config.GetCraneOptions()...)
 		if err != nil {
 			spinner.Errorf(err, "Unable to load the image from the update package")
 			return

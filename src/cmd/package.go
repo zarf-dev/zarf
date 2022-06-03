@@ -92,7 +92,8 @@ func init() {
 
 	packageCreateCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&zarfImageCache, "zarf-cache", config.ZarfDefaultImageCachePath, "Specify the location of the Zarf image cache")
-	packageCreateCmd.Flags().BoolVar(&config.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
+	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
+	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.Insecure, "insecure", false, "Allow insecure registry connections when pulling OCI images")
 
 	packageDeployCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")

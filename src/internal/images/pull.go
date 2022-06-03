@@ -42,7 +42,7 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 
 	for idx, src := range buildImageList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
-		img, err := crane.Pull(src, config.GetCraneOptions())
+		img, err := crane.Pull(src, config.GetCraneOptions()...)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}

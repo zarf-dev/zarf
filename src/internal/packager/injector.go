@@ -221,7 +221,7 @@ func hasSeedImages(spinner *message.Spinner) bool {
 		// After delay, try running
 		default:
 			// Check for the existence of the image in the injection pod registry, on error continue
-			if _, err := crane.Manifest(ref, config.GetCraneOptions()); err != nil {
+			if _, err := crane.Manifest(ref, config.GetCraneOptions()...); err != nil {
 				message.Debugf("Could not get image ref %s: %v", ref, err)
 			} else {
 				// If not error, return true, there image is present
