@@ -10,13 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install GoLang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18.x
-      
+
       - name: Checkout Repo
-        uses: actions/checkout@v2
-      
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: "Setup caching"
         uses: actions/cache@v3
         with:
@@ -25,30 +27,28 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-        
-     
-      - name: Build Things For Release
-        run: make build-cli init-package
-      
+            ${{ runner.os }}-go-
+
+      # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
-      
-      - name: Push Release Artifacts to S3 Bucket
-        run: aws s3 cp build s3://zarf-public/release/${{ github.ref_name }} --region us-gov-west-1 --recursive
-      
-      - name: Create a Release For This Tag
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+
+      # Builds init packages since GoReleaser won't handle this for us
+      - name: "Build init-packages For Release"
+        run: |
+          make build-cli-linux-amd init-package
+
+      # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-actions@v3
         with:
-          generate_release_notes: true    # Generates basic release notes that we can edit later
-          files: |
-            build/zarf
-            build/zarf-mac-intel
-            build/zarf-mac-apple
-            build/zarf-init-amd64.tar.zst
-            build/zarf-init-arm64.tar.zst
-            build/zarf.sha256
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
