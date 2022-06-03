@@ -1,0 +1,79 @@
+before:
+  hooks:
+    - go mod tidy
+
+# Build a universal macOS binary
+universal_binaries:
+  - replace: false
+
+# Build the different combination of goos/arch binaries
+builds:
+  -
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    dir: src
+    ldflags:
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Version}}
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: linux
+        goarch: arm64
+
+
+# Save the built artifacts as binaries (instead of wrapping them in a tarball)
+archives:
+  -
+    format: binary
+    replacements:
+      darwin: Darwin
+      linux: Linux
+
+# generate a sha256 checksum of all release artifacts
+# NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
+checksum:
+  name_template: 'checksums.txt'
+  extra_files:
+    - glob: ./build/zarf-init-*
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-snapshot"
+
+# Use the auto-generated changlog github provides
+changelog:
+  use: github-native
+
+# Generate a GitHub release and publish the release for the tag
+# NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
+release:
+  github:
+    owner: defenseunicorns
+    name: zarf
+  prerelease: auto
+  mode: append
+  extra_files:
+    - glob: ./build/zarf-init-*
+
+# Create a brew tap recipe that uses the new binary artifacts and push it to our tap
+brews:
+  - name: zarf
+    tap:
+      owner: defenseunicorns
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://zarf.dev/"
+    description: "An airgap delivery tool!"
+
+# Upload artifact backups to s3
+blobs:
+  -
+    provider: s3
+    region: us-gov-west-1
+    bucket: zarf-public
+    folder: "release/{{.Version}}"

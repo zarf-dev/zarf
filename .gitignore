@@ -28,3 +28,5 @@ zarf-pki
 .scratch/
 zarf-sbom/
 clidocs/
+
+dist/
