@@ -44,7 +44,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-actions@v3
+        uses: goreleaser/goreleaser-action@v3
         with:
           distribution: goreleaser
           version: latest
