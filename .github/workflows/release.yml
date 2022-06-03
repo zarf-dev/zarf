@@ -37,6 +37,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
 
+      # Builds init packages since GoReleaser won't handle this for us
+      - name: "Build init-packages For Release"
+        run: |
+          make build-cli-linux-amd init-package
+
+      # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-actions@v3
         with:
