@@ -136,3 +136,17 @@ func CreatePathAndCopy(source string, destination string) {
 	}
 	pterm.Success.Printfln("Copying %s", source)
 }
+
+// GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way
+func GetFinalExecutablePath() (string, error) {
+	message.Debug("utils.GetExecutablePath()")
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	// In case the binary is symlinked somewhere else, get the final destination!!
+	linkedPath, err := filepath.EvalSymlinks(binaryPath)
+	return linkedPath, err
+}

@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -22,8 +25,19 @@ var initCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
 		// Continue running package deploy for all components like any other package
-		config.DeployOptions.PackagePath = fmt.Sprintf("zarf-init-%s.tar.zst", config.GetArch())
+		initPackageName := fmt.Sprintf("zarf-init-%s.tar.zst", config.GetArch())
+		config.DeployOptions.PackagePath = initPackageName
 
+		// Use an init-package in the executable directory if none exist in current working directory
+		if utils.InvalidPath(config.DeployOptions.PackagePath) {
+			executablePath, err := utils.GetFinalExecutablePath()
+			if err != nil {
+				message.Fatal(err, "Unable to get the directory where the zarf cli executable lives")
+			}
+
+			executableDir := path.Dir(executablePath)
+			config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+		}
 		// Run everything
 		packager.Deploy()
 	},
