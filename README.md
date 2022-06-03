@@ -297,7 +297,8 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 400Kb bin
   - An init container runs the rust binary to re-assemble and extract the zarf binary and registry image
   - The container then starts and runs the zarf binary to host the registry image in an embedded docker registry
   - After this, the main docker registry chart is deployed, pulls the image from the ephemeral pod, and finally destroys the created configmaps, pod, and service
-
+- We have published a [Homebrew Tap](https://github.com/defenseunicorns/homebrew-tap) for this project that you can install with `brew tap defenseunicorns/tap && brew install zarf`
+  - This recipe is updated with each new version release via [GoReleaser](https://goreleaser.com/customization/homebrew/) as part of the release pipeline that runs on GitHub Actions.
 &nbsp;
 ### Zarf Architecture
 ![Architecture Diagram](./docs/architecture.drawio.svg)
