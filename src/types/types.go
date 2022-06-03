@@ -165,6 +165,13 @@ type ZarfDeployOptions struct {
 	NodePort     string
 }
 
+// ZarfCreeateOptions tracks the user-defined options used to create the package
+type ZarfCreateOptions struct {
+	SkipSBOM       bool
+	ImageCachePath string
+	Insecure       bool
+}
+
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `yaml:"name,omitempty"`

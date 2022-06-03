@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -151,7 +150,7 @@ func init() {
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	cranePlatformOptions := []crane.Option{config.GetCraneOptions()}
+	cranePlatformOptions := config.GetCraneOptions()
 	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))

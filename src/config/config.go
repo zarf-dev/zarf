@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -46,6 +47,9 @@ var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
 
+	// CreeateOptions tracks the user-defined options used to create the package
+	CreateOptions types.ZarfCreateOptions
+
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
@@ -53,13 +57,9 @@ var (
 
 	ZarfSeedPort string
 
-	// Do not process SBOM data
-	SkipSBOM bool
-
 	// Private vars
-	zarfImageCachePath = ZarfDefaultImageCachePath
-	active             types.ZarfPackage
-	state              types.ZarfState
+	active types.ZarfPackage
+	state  types.ZarfState
 )
 
 func IsZarfInitConfig() bool {
@@ -84,11 +84,23 @@ func GetArch() string {
 	return runtime.GOARCH
 }
 
-func GetCraneOptions() crane.Option {
-	return crane.WithPlatform(&v1.Platform{
-		OS:           "linux",
-		Architecture: GetArch(),
-	})
+func GetCraneOptions() []crane.Option {
+	var options []crane.Option
+
+	// Handle insecure registry option
+	if CreateOptions.Insecure {
+		options = append(options, crane.Insecure)
+	}
+
+	// Add the image platform info
+	options = append(options,
+		crane.WithPlatform(&v1.Platform{
+			OS:           "linux",
+			Architecture: GetArch(),
+		}),
+	)
+
+	return options
 }
 
 func GetCraneAuthOption(username string, secret string) crane.Option {
@@ -200,16 +212,15 @@ func BuildConfig(path string) error {
 }
 
 func SetImageCachePath(cachePath string) {
-	zarfImageCachePath = cachePath
+	CreateOptions.ImageCachePath = cachePath
 }
 
 func GetImageCachePath() string {
 	homePath, _ := os.UserHomeDir()
-	if zarfImageCachePath == ZarfDefaultImageCachePath {
-		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath)
+
+	if CreateOptions.ImageCachePath == "" {
+		return filepath.Join(homePath, ZarfDefaultImageCachePath)
 	}
-	if string(zarfImageCachePath[0]) == "~" {
-		return fmt.Sprintf("%s/%s", homePath, zarfImageCachePath[len("~/"):])
-	}
-	return zarfImageCachePath
+
+	return strings.Replace(CreateOptions.ImageCachePath, "~", homePath, 1)
 }
