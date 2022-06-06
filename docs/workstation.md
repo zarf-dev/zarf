@@ -10,6 +10,14 @@ The simplest path to Zarf is to download a pre-built release and execute it on y
 
 ### Install
 
+#### Install via Homebrew
+
+1. ```brew tap defenseunicorns/tap```
+
+1. ```brew install zarf```
+
+#### Install via Web Browser
+
 1. Point your browser at the current list of [Zarf releases](https://github.com/defenseunicorns/zarf/releases).
 
 1. Scroll to the version you want.
