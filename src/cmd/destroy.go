@@ -23,6 +23,16 @@ var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Aliases: []string{"d"},
 	Short:   "Tear it all down, we'll miss you Zarf...",
+	Long: "Tear down Zarf.\n\n" +
+		"Deletes everything in the 'zarf' namespace within your connected k8s cluster.\n\n" +
+		"If Zarf deployed your k8s cluster, this command will also tear your cluster down by" +
+		"searching through /opt/zarf for any scripts that start with 'zarf-clean-' and executing them. " +
+		"Since this is a cleanup operation, Zarf will not stop the teardown if one of the scripts produce " +
+		"an error.\n\n" +
+		"If Zarf did not deploy your k8s cluster, this command will delete the Zarf namespace, delete secrets " +
+		"and labels that only Zarf cares about, and optionally uninstall components that Zarf deployed onto " +
+		"the cluster. Since this is a cleanup operation, Zarf will not stop the uninstalls if one of the " +
+		"resources produce an error while being deleted.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
@@ -41,7 +51,7 @@ var destroyCmd = &cobra.Command{
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
 			scripts := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern)
-			// Iterate over al matching zarf-clean scripts and exec them
+			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
 				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, script)
@@ -50,6 +60,8 @@ var destroyCmd = &cobra.Command{
 
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
+				} else if err != nil {
+					message.Debugf("Received error when trying to execute the script (%v): %v", script, err)
 				}
 
 				// Try to remove the script, but ignore any errors
@@ -75,7 +87,7 @@ var destroyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(destroyCmd)
 
-	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "Confirm the destroy action")
+	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "REQUIRED. Confirm the destroy action to prevent accidental deletions")
 	destroyCmd.Flags().BoolVar(&removeComponents, "remove-components", false, "Also remove any installed components outside the zarf namespace")
 	_ = destroyCmd.MarkFlagRequired("confirm")
 }
