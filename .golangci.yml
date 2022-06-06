@@ -16,3 +16,5 @@ linters:
     - wsl
 issues:
   exclude-use-default: false
+  new: true
+  new-from-rev: HEAD
