@@ -72,7 +72,8 @@ var prepareComputeFileSha256sum = &cobra.Command{
 var prepareFindImages = &cobra.Command{
 	Use:     "find-images",
 	Aliases: []string{"prep"},
-	Short:   "evaluates components in a zarf file to identify images specified in their helm charts and manifests",
+	Short: "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n" +
+		"Requires the `--repo-chart-path` flag to be provided.",
 	Run: func(cmd *cobra.Command, args []string) {
 		packager.FindImages(repoHelmChartPath)
 	},
