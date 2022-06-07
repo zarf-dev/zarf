@@ -51,17 +51,20 @@ var initCmd = &cobra.Command{
 					}
 				}
 
-				confirmDownload := false
+				confirmDownload := config.DeployOptions.Confirm
 				url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, initPackageName)
-				
+
 				// Give the user the choice to download the init-package and note that this does require an internet connection
 				message.Question("It seems the init package could not be found locally, Zarf can download this for you if you still have internet connectivity.")
 				message.Question(url)
 
-				prompt := &survey.Confirm{
-					Message: "Do you want to download this init package?",
+				// Prompt the user if --confirm not specified
+				if !confirmDownload {
+					prompt := &survey.Confirm{
+						Message: "Do you want to download this init package?",
+					}
+					_ = survey.AskOne(prompt, &confirmDownload)
 				}
-				_ = survey.AskOne(prompt, &confirmDownload)
 
 				// If the user wants to download the init-package, download it
 				if confirmDownload {
