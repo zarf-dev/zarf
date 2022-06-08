@@ -45,7 +45,7 @@ var initCmd = &cobra.Command{
 		if utils.InvalidPath(config.DeployOptions.PackagePath) {
 			executablePath, err := utils.GetFinalExecutablePath()
 			if err != nil {
-				message.Error(err, "Unable to get the directory where the zarf cli executable lives")
+				message.Errorf(err, "Unable to get the directory where the zarf cli is located.")
 			}
 
 			executableDir := path.Dir(executablePath)
@@ -53,6 +53,10 @@ var initCmd = &cobra.Command{
 
 			// If the init-package doesn't exist in the executable directory, suggest trying to download
 			if utils.InvalidPath(config.DeployOptions.PackagePath) {
+
+				if config.DeployOptions.Confirm {
+					message.Fatalf(nil, "This command requires a zarf-init package, but one was not found on the local system.")
+				}
 
 				// If no CLI version exists (should only occur in dev or CI), try to get the latest release tag from Githhub
 				if _, err := semver.StrictNewVersion(config.CLIVersion); err != nil {
@@ -62,12 +66,13 @@ var initCmd = &cobra.Command{
 					}
 				}
 
-				confirmDownload := config.DeployOptions.Confirm
+				var confirmDownload bool
 				url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, initPackageName)
 
 				// Give the user the choice to download the init-package and note that this does require an internet connection
-				message.Question("It seems the init package could not be found locally, Zarf can download this for you if you still have internet connectivity.")
-				message.Question(url)
+				message.Question(fmt.Sprintf("It seems the init package could not be found locally, but can be downloaded from %s", url))
+
+				message.Note("Note: This will require an internet connection.")
 
 				// Prompt the user if --confirm not specified
 				if !confirmDownload {
