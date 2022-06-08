@@ -45,7 +45,7 @@ var initCmd = &cobra.Command{
 		if utils.InvalidPath(config.DeployOptions.PackagePath) {
 			executablePath, err := utils.GetFinalExecutablePath()
 			if err != nil {
-				message.Errorf(err, "Unable to get the directory where the zarf cli is located.")
+				message.Error(err, "Unable to get the directory where the zarf cli is located.")
 			}
 
 			executableDir := path.Dir(executablePath)
