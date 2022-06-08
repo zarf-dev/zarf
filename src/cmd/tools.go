@@ -30,7 +30,7 @@ var toolsCmd = &cobra.Command{
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
-	Short:   "Compress/Decompress tools",
+	Short:   "Compress/Decompress tools for Zarf packages",
 }
 
 var archiverCompressCmd = &cobra.Command{
@@ -50,7 +50,7 @@ var archiverCompressCmd = &cobra.Command{
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress [ARCHIVE] [DESTINATION]",
 	Aliases: []string{"d"},
-	Short:   "Decompress an archive to a specified location.",
+	Short:   "Decompress an archive (package) to a specified location.",
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
@@ -112,6 +112,9 @@ var k9sCmd = &cobra.Command{
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:    "create-read-only-gitea-user",
 	Hidden: true,
+	Short:  "Creates a read-only user in Gitea",
+	Long: "Creates a read-only user in Gitea by using the Gitea API. " +
+		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
 		state := k8s.LoadZarfState()
@@ -127,6 +130,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 
 var generateCLIDocs = &cobra.Command{
 	Use:    "generate-cli-docs",
+	Short:  "Creates auto-generated markdown of all the commands for the CLI",
 	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.CreateDirectory("clidocs", 0700)
