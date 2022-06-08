@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"path/filepath"
 	"regexp"
+
+	"github.com/defenseunicorns/zarf/src/internal/message"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -26,6 +27,9 @@ var packageCreateCmd = &cobra.Command{
 	Use:     "create",
 	Aliases: []string{"c"},
 	Short:   "Create an update package to push to the gitops server (runs online)",
+	Long: "Builds a tarball of resources and dependencies defined by the 'zarf.yaml' located in the working directory.\n" +
+		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' " +
+		"and '~/.git-credentials'.\n",
 	Run: func(cmd *cobra.Command, args []string) {
 		if cmd.Flag("zarf-cache").Changed && cachePathClean(zarfImageCache) {
 			config.SetImageCachePath(zarfImageCache)
@@ -38,6 +42,7 @@ var packageDeployCmd = &cobra.Command{
 	Use:     "deploy [PACKAGE]",
 	Aliases: []string{"d"},
 	Short:   "Deploys an update package from a local file or URL (runs offline)",
+	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var done func()
@@ -51,8 +56,12 @@ var packageDeployCmd = &cobra.Command{
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [PACKAGE]",
 	Aliases: []string{"i"},
-	Short:   "lists the payload of an update package file (runs offline)",
-	Args:    cobra.MaximumNArgs(1),
+	Short:   "Lists the payload of a compiled package file (runs offline)",
+	Long: "Lists the payload of a compiled package file (runs offline)\n" +
+		"Unpacks the package tarball into a temp directory and displays the " +
+		"contents of the zarf.yaml package definition as well as the version " +
+		"of the Zarf CLI that was used to build the package.",
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
 		packager.Inspect(packageName)
