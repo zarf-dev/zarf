@@ -16,7 +16,7 @@ builds:
       - darwin
     dir: src
     ldflags:
-      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Version}}
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
     goarch:
       - amd64
       - arm64
