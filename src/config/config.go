@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	GithubProject = "defenseunicorns/zarf"
 	IPV4Localhost = "127.0.0.1"
 
 	PackagePrefix = "zarf-package"
