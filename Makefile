@@ -88,31 +88,31 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 		$(MAKE) build-cli;\
 	fi
 	@if [ ! -f ./build/zarf-init-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) zarf.yaml --confirm
+		$(ZARF_BIN) zarf.yaml --confirm;\
 	fi
 	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/game --confirm
+		$(ZARF_BIN) examples/game --confirm;\
 	fi
 	@if [ ! -f zarf-package-component-scripts-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/component-scripts --confirm
+		$(ZARF_BIN) examples/component-scripts --confirm;\
 	fi
 	@if [ ! -f zarf-package-component-choice-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/component-choice --confirm
+		$(ZARF_BIN) examples/component-choice --confirm;\
 	fi
 	@if [ ! -f zarf-package-component-variables-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/component-variables --confirm
+		$(ZARF_BIN) examples/component-variables --confirm;\
 	fi
 	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
-		$(ZARF_BIN) examples/data-injection --confirm
+		$(ZARF_BIN) examples/data-injection --confirm;\
 	fi
 	@if [ ! -f ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/gitops-data --confirm
+		$(ZARF_BIN) examples/gitops-data --confirm;\
 	fi
 	@if [ ! -f ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/helm-with-different-releaseName-values --confirm 
+		$(ZARF_BIN) examples/helm-with-different-releaseName-values --confirm;\
 	fi
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
-		$(ZARF_BIN) examples/composable-packages --confirm
+		$(ZARF_BIN) examples/composable-packages --confirm;\
 	fi
 
 	mv zarf-package-* build/
