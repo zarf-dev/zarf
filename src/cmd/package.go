@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 
@@ -24,17 +25,40 @@ var packageCmd = &cobra.Command{
 }
 
 var packageCreateCmd = &cobra.Command{
-	Use:     "create",
+	Use:     "create [DIRECTORY|FILE] [DESTINATION_DIRECTORY]",
 	Aliases: []string{"c"},
+	Args:    cobra.MaximumNArgs(2),
 	Short:   "Create an update package to push to the gitops server (runs online)",
 	Long: "Builds a tarball of resources and dependencies defined by the 'zarf.yaml' located in the working directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' " +
 		"and '~/.git-credentials'.\n",
 	Run: func(cmd *cobra.Command, args []string) {
-		if cmd.Flag("zarf-cache").Changed && cachePathClean(zarfImageCache) {
+
+		var baseDir string
+		var destination string
+
+		// If source arg is given, try to parse it
+		if len(args) > 0 {
+			fileArg := args[0]
+
+			// If this is a zarf.yaml, try to create the zarf package in the directory with the zarf.yaml
+			if strings.Contains(fileArg, "zarf.yaml") {
+				baseDir = filepath.Dir(fileArg)
+			} else {
+				baseDir = fileArg
+			}
+
+			// If a destination arg is given, pass it to package create
+			if len(args) > 1 {
+				destination = args[1]
+			}
+		}
+
+		if zarfImageCache != config.ZarfDefaultImageCachePath && cachePathClean(zarfImageCache) {
 			config.SetImageCachePath(zarfImageCache)
 		}
-		packager.Create()
+
+		packager.Create(baseDir, destination)
 	},
 }
 

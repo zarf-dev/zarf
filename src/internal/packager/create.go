@@ -23,7 +23,15 @@ import (
 )
 
 // Create generates a zarf package tarball for consumption by
-func Create() {
+func Create(baseDir, destination string) {
+	var originalDir string
+
+	// Change the working directory if this run has an alternate base dir
+	if baseDir != "" {
+		originalDir, _ = os.Getwd()
+		_ = os.Chdir(baseDir)
+	}
+
 	if err := config.LoadConfig("zarf.yaml"); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
@@ -31,7 +39,6 @@ func Create() {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	packageName := config.GetPackageName()
 	components := GetComposedComponents()
 	seedImage := config.GetSeedImage()
 
@@ -68,6 +75,13 @@ func Create() {
 		pulledImages := images.PullAll(uniqueList, tempPath.images)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.images)
 	}
+
+	// In case the directory was changed, reset to prevent breaking relative target paths
+	if originalDir != "" {
+		_ = os.Chdir(originalDir)
+	}
+
+	packageName := filepath.Join(destination, config.GetPackageName())
 
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)

@@ -46,6 +46,7 @@ func mergeComponentOverrides(target *types.ZarfComponent, src types.ZarfComponen
 	target.Name = src.Name
 	target.Default = src.Default
 	target.Required = src.Required
+	target.Group = src.Group
 
 	if src.Description != "" {
 		target.Description = src.Description

@@ -3,16 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
 
 	"github.com/spf13/cobra"
 )
 
+var packageConfirm bool
 var zarfLogLevel = ""
 var arch string
 
@@ -25,35 +24,18 @@ var rootCmd = &cobra.Command{
 		config.CliArch = arch
 	},
 	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Allow directly acting upon zarf assets
 		if len(args) > 0 {
-			fileArg := args[0]
-
-			// If this is a zarf package, try to deploy
-			if strings.Contains(fileArg, "zarf-package-") || strings.Contains(fileArg, "zarf-init") {
-				config.DeployOptions.PackagePath = fileArg
-				packager.Deploy()
-				return
+			config.DeployOptions.Confirm = packageConfirm
+			// Root-level arguments are shortcuts to package create or deploy
+			if strings.Contains(args[0], ".tar") {
+				packageDeployCmd.Run(cmd, args)
+			} else {
+				packageCreateCmd.Run(cmd, args)
 			}
-
-			// If this is a zarf.yaml, try to create the zarf package in the directory with the zarf.yaml
-			if strings.Contains(fileArg, "zarf.yaml") {
-				baseDir := filepath.Dir(fileArg)
-				_ = os.Chdir(baseDir)
-				packager.Create()
-				return
-			}
-
-			// If this is a directory and has a zarf.yaml, try to create the zarf package in that directory
-			dirTest := filepath.Join(fileArg, "zarf.yaml")
-			if _, err := os.Stat(dirTest); err == nil {
-				_ = os.Chdir(fileArg)
-				packager.Create()
-				return
-			}
-
+			return
 		}
 		_ = cmd.Help()
 	},
@@ -73,7 +55,7 @@ func init() {
 		// Re-add the original help function
 		originalHelp(c, s)
 	})
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolVar(&packageConfirm, "confirm", false, "Confirm package create/deploy operation without user prompts")
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
 }
