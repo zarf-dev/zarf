@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -26,16 +27,33 @@ var rootCmd = &cobra.Command{
 	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Allow directly acting upon zarf assets
 		if len(args) > 0 {
-			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
-				config.DeployOptions.PackagePath = args[0]
+			fileArg := args[0]
+
+			// If this is a zarf package, try to deploy
+			if strings.Contains(fileArg, "zarf-package-") || strings.Contains(fileArg, "zarf-init") {
+				config.DeployOptions.PackagePath = fileArg
 				packager.Deploy()
 				return
 			}
-			if args[0] == "zarf.yaml" {
+
+			// If this is a zarf.yaml, try to create the zarf package in the directory with the zarf.yaml
+			if strings.Contains(fileArg, "zarf.yaml") {
+				baseDir := filepath.Dir(fileArg)
+				_ = os.Chdir(baseDir)
 				packager.Create()
 				return
 			}
+
+			// If this is a directory and has a zarf.yaml, try to create the zarf package in that directory
+			dirTest := filepath.Join(fileArg, "zarf.yaml")
+			if _, err := os.Stat(dirTest); err == nil {
+				_ = os.Chdir(fileArg)
+				packager.Create()
+				return
+			}
+
 		}
 		_ = cmd.Help()
 	},
