@@ -27,12 +27,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Build CLI"
-        run: make build-cli-linux
-      
-      - name: "Make Packages"
-        run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
-      
       - name: "Run Tests"
         # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster
         #       rather than having the test suite do it. The K3d tests do a self-provisioned cluster and the K3s tests

@@ -80,46 +80,6 @@ build-test: build-cli init-package ## Build the CLI and create the init package
 
 ci-release: init-package ## Create the init package
 
-.PHONY: package-example-game
-package-example-game: ## Create the Doom example
-	cd examples/game && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-component-scripts
-package-example-component-scripts: ## Create component script example
-	cd examples/component-scripts && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-component-choice
-package-example-component-choice: ## Create component choice example
-	cd examples/component-choice && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-component-variables
-package-example-component-variables: ## Create component script example
-	cd examples/component-variables && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-data-injection
-package-example-data-injection: ## create the Zarf package for the data injection example
-	cd examples/data-injection && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-single-big-bang-package
-package-example-single-big-bang-package: ## Create the Zarf package for single-big-bang-package example
-	cd examples/single-big-bang-package && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-gitops-data
-package-example-gitops-data:
-	cd examples/gitops-data && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-helm-releasename
-package-example-helm-releasename:
-	cd examples/helm-with-different-releaseName-values && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-tiny-kafka
-package-example-tiny-kafka:
-	cd examples/tiny-kafka && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
-.PHONY: package-example-compose
-package-example-compose:
-	cd examples/composable-packages && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
-
 # TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-e2e
 test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
@@ -128,30 +88,33 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 		$(MAKE) build-cli;\
 	fi
 	@if [ ! -f ./build/zarf-init-$(ARCH).tar.zst ]; then\
-		$(MAKE) init-package;\
+		$(ZARF_BIN) zarf.yaml --confirm
 	fi
 	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-game;\
+		$(ZARF_BIN) examples/game --confirm
 	fi
 	@if [ ! -f zarf-package-component-scripts-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-component-scripts;\
+		$(ZARF_BIN) examples/component-scripts --confirm
 	fi
 	@if [ ! -f zarf-package-component-choice-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-component-choice;\
+		$(ZARF_BIN) examples/component-choice --confirm
 	fi
 	@if [ ! -f zarf-package-component-variables-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-component-variables;\
+		$(ZARF_BIN) examples/component-variables --confirm
 	fi
 	@if [ ! -f ./build/zarf-package-data-injection-demo-$(ARCH).tar ]; then\
-		$(MAKE) package-example-data-injection;\
+		$(ZARF_BIN) examples/data-injection --confirm
 	fi
 	@if [ ! -f ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-gitops-data;\
+		$(ZARF_BIN) examples/gitops-data --confirm
 	fi
 	@if [ ! -f ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-helm-releasename;\
+		$(ZARF_BIN) examples/helm-with-different-releaseName-values --confirm 
 	fi
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
-		$(MAKE) package-example-compose;\
+		$(ZARF_BIN) examples/composable-packages --confirm
 	fi
+
+	mv zarf-package-* build/
+
 	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
