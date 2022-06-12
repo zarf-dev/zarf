@@ -70,13 +70,9 @@ dev-agent-image:
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
-	$(ZARF_BIN) package create --confirm --architecture amd64
-	$(ZARF_BIN) package create --confirm --architecture arm64
-	mv zarf-init-*.tar.zst build
-	cd build && sha256sum -b zarf* > zarf.sha256
-	ls -lh build
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-build-test: build-cli init-package ## Build the CLI and create the init package
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) zarf.yaml build -a $(ARCH) --confirm 
 
 ci-release: init-package ## Create the init package
 
@@ -99,12 +95,6 @@ build-examples:
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) examples/composable-packages build -a $(ARCH) --confirm
 
-# TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-e2e
-test-e2e: build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
-	@#Check to make sure all the packages we need exist
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) zarf.yaml build -a $(ARCH) --confirm
-
+test-e2e: init-package build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]	
 	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
