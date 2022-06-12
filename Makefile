@@ -81,6 +81,8 @@ build-test: build-cli init-package ## Build the CLI and create the init package
 ci-release: init-package ## Create the init package
 
 build-examples:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+
 	@test -s ./build/zarf-package-dos-agmes-$(ARCH).tar.zst || $(ZARF_BIN) examples/game build -a $(ARCH) --confirm
 	
 	@test -s ./build/zarf-package-component-scripts-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-scripts build -a $(ARCH) --confirm
