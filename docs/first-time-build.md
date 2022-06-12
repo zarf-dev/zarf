@@ -1,31 +1,25 @@
-# Build Your First Zarf
+*These docs are for Zarf development, not usage.  For just using Zarf, go to [main website](https://www.zarf.dev)*
 
-Creating a Zarf release is a two-stage process:
-1. Build the zarf _binaries_.
-1. Build the zarf _distribution package_.
+# Building Zarf Assets
 
-Usually (during development) these two stages are accomplished with a single command, but doing so requires that you _already_ have a copy of zarf installed; that won't be the case **the first time** you try to build Zarf on a [fresh, development workstation](./workstation.md#i-need-a-dev-machine).
+Creating a Zarf release is a two-stage process, these assets are part of a normal [Zarf Release](https://github.com/defenseunicorns/zarf/releases), but in dev we'll need to build our own.
 
-To get a new workstation setup for that single-command workflow, see below!
-
-&nbsp;
-
-
-## 1. Build the CLI
-
-The first step toward Zarf development is to getting yourself a set of zarf binaries.  You can build them like so:
+1. Build the Zarf binary.
+1. Create the zarf init package.
+1. Create the Zarf example packages (optional)
 
 ```sh
-make build-cli
+# Purge existing build assets and re-create the packages
+make clean init-package build-examples ARCH=<amd64 | arm64>
 ```
-This command creates a `./build` directory and dumps the various zarf binaries into it.
+
+See the Makefile for additional make targets for when only needing to rebuild part of the assets above.
 
 &nbsp;
 
+## Log into Iron Bank (optional)
 
-## 2. Log into Iron Bank
-
-Zarf distribution packages are built on top of images from Platform One's container image repository, Iron Bank. To access them, you'll need to 1) secure Iron Bank pull credentials, and 2) configure Zarf to use them.
+Some Zarf packages are built on top of images from [Platform One's](https://p1.dso.mil) container image repository, Iron Bank. To access them, you'll need to 1) secure Iron Bank pull credentials, and 2) configure Zarf to use them.
 
 To use your new Zarf binaries to authenticate with Iron Bank:
 
@@ -50,44 +44,3 @@ To use your new Zarf binaries to authenticate with Iron Bank:
 And with that, you're ready to build your first Zarf distribution package.
 
 &nbsp;
-
-
-## 3. Build the distribution package
-
-The command to build your first Zarf distribution package looks like this:
-
-```sh
-make init-package
-```
-
-> _**Build failed?**_
->
-> If your build fails with a message like this:
-> ```sh
-> WARN[0010] Unable to pull the image   image="registry1.dso.mil/[...]"
-> ```
-> It is likely that you've forgotten to setup access to Iron Bank _or_ that your credentials have changed. In either case, you should go back through the steps to [Log into Iron Bank](#2-log-into-iron-bank) & try to build again!
-
-Assuming everything works out, you should see a shiny new `zarf-init-<arch>.tar.zst` in your `./build` directory.
-
-Congratulations!  You've just built yourself a Zarf!
-
-&nbsp;
-
-
-## &#8734;. Happily ever after
-
-After you've worked your way through steps 1-3 above you can use a simpler, single command to create a Zarf release:
-
-```sh
-make build-test
-```
-
-This will use the credentials you established [above](#2-log-into-iron-bank) to dump a fresh set of binaries + distribution package into your `./build` directory&mdash;an easy to use, simple to remember tool for your Zarf dev & test toolbox!
-
-&nbsp;
-
-
-## Next steps
-
-Now that you can build _your own_ Zarf, it's a great time to try using it to run our [Get Started - game](../examples/game/) example!
