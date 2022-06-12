@@ -16,7 +16,7 @@ func TestE2eExampleGame(t *testing.T) {
 	output, err := e2e.execZarfCommand("init", "--confirm")
 	require.NoError(t, err, output)
 
-	path := fmt.Sprintf("../../../build/zarf-package-appliance-demo-multi-games-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("../../../build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
 	// Deploy the game
 	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")

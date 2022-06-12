@@ -40,7 +40,8 @@ jobs:
       # Builds init packages since GoReleaser won't handle this for us
       - name: "Build init-packages For Release"
         run: |
-          make build-cli-linux-amd init-package
+          make build-cli-linux-amd init-package build-examples
+          make build-examples ARCH=arm64
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser

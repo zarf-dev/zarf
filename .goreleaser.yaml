@@ -40,6 +40,7 @@ checksum:
   name_template: 'checksums.txt'
   extra_files:
     - glob: ./build/zarf-init-*
+    - glob: ./build/zarf-package-dos-games-*
   algorithm: sha256
 
 snapshot:
@@ -59,6 +60,7 @@ release:
   mode: append
   extra_files:
     - glob: ./build/zarf-init-*
+    - glob: ./build/zarf-package-dos-games-*
 
 # Create a brew tap recipe that uses the new binary artifacts and push it to our tap
 brews:

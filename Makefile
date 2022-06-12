@@ -80,30 +80,29 @@ build-test: build-cli init-package ## Build the CLI and create the init package
 
 ci-release: init-package ## Create the init package
 
+build-examples:
+	@test -s ./build/zarf-package-dos-agmes-$(ARCH).tar.zst || $(ZARF_BIN) examples/game build -a $(ARCH) --confirm
+	
+	@test -s ./build/zarf-package-component-scripts-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-scripts build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-choice build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-component-variables-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-variables build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) examples/data-injection build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst || $(ZARF_BIN) examples/gitops-data build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) examples/helm-with-different-releaseName-values build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) examples/composable-packages build -a $(ARCH) --confirm
+
 # TODO: This can be cleaned up a little more when `zarf init` is able to provide the path to the `zarf-init-<arch>.tar.zst`
 .PHONY: test-e2e
-test-e2e: ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
+test-e2e: build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]
 	@#Check to make sure all the packages we need exist
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) zarf.yaml --confirm
-	
-	@test -s ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst  || $(ZARF_BIN) examples/game --confirm
-	
-	@test -s ./build/zarf-package-component-scripts-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-scripts --confirm
-
-	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-choice --confirm
-
-	@test -s ./build/zarf-package-component-variables-$(ARCH).tar.zst || $(ZARF_BIN) examples/component-variables --confirm
-
-	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) examples/data-injection --confirm
-
-	@test -s ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst || $(ZARF_BIN) examples/gitops-data --confirm
-
-	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) examples/helm-with-different-releaseName-values --confirm
-
-	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) examples/composable-packages --confirm
-
-	@mv zarf-*.tar* build/ 2>/dev/null; true
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) zarf.yaml build -a $(ARCH) --confirm
 
 	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
