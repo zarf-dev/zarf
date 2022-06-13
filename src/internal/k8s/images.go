@@ -63,22 +63,6 @@ func GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 	return result, nil
 }
 
-// GetImages returns all images for in pods in a given namespace.
-func GetImages(namespace string) ([]string, error) {
-	images := make(ImageMap)
-
-	pods, err := GetPods(namespace)
-	if err != nil {
-		return []string{}, fmt.Errorf("unable to get the list of pods in the cluster")
-	}
-
-	for _, pod := range pods.Items {
-		images = BuildImageMap(images, pod.Spec)
-	}
-
-	return SortImages(images, nil), nil
-}
-
 // BuildImageMap looks for init container, ephemeral and regular container images.
 func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	for _, container := range pod.InitContainers {
