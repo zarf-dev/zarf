@@ -53,6 +53,17 @@ var packageDeployCmd = &cobra.Command{
 	},
 }
 
+var packageGenerateCmd = &cobra.Command{
+	Use:     "generate [PACKAGE]",
+	Aliases: []string{"d"},
+	Short:   "Creates a Zarf package.",
+	Long:    "This command creates a Zarf package directory along with the common files and directories used in a Zarf package.",
+	Args:    cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		packager.Generate()
+	},
+}
+
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [PACKAGE]",
 	Aliases: []string{"i"},
@@ -97,6 +108,7 @@ func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
+	packageCmd.AddCommand(packageGenerateCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
