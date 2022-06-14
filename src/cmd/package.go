@@ -55,7 +55,7 @@ var packageDeployCmd = &cobra.Command{
 
 var packageGenerateCmd = &cobra.Command{
 	Use:     "generate [PACKAGE]",
-	Aliases: []string{"d"},
+	Aliases: []string{"g"},
 	Short:   "Creates a Zarf package.",
 	Long:    "This command creates a Zarf package directory along with the common files and directories used in a Zarf package.",
 	Args:    cobra.MaximumNArgs(1),
