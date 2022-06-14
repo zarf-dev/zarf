@@ -29,7 +29,7 @@ func runInjectionMadness(tempPath tempPaths) {
 	defer spinner.Stop()
 
 	var err error
-	var images []string
+	var images k8s.ImageNodeMap
 	var envVars []corev1.EnvVar
 	var payloadConfigmaps []string
 	var sha256sum string
@@ -72,19 +72,19 @@ func runInjectionMadness(tempPath tempPaths) {
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
 	// Try to create an injector pod using an existing image in the cluster
-	for _, image := range images {
+	for image, node := range images {
 		// Don't try to run against the seed image if this is a secondary zarf init run
 		if zarfImageRegex.MatchString(image) {
 			continue
 		}
 
-		spinner.Updatef("Attempting to bootstrap with the %s", image)
+		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 
-		// Update the podspec image path
-		pod := buildInjectionPod(image, envVars, payloadConfigmaps, sha256sum)
+		// Update the podspec image path and use the first node found
+		pod := buildInjectionPod(node[0], image, envVars, payloadConfigmaps, sha256sum)
 
 		// Create the pod in the cluster
 		pod, err = k8s.CreatePod(pod)
@@ -177,8 +177,8 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		// Add the configmap to the configmaps slice for later usage in the pod
 		configMaps = append(configMaps, fileName)
 
-		// Give the control plane a slight buffeer
-		time.Sleep(100 * time.Millisecond)
+		// Give the control plane a 250ms buffer between each configmap
+		time.Sleep(250 * time.Millisecond)
 	}
 
 	return configMaps, sha256sum, nil
@@ -301,21 +301,30 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
-func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) *corev1.Pod {
+func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) *corev1.Pod {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
 	seedImage := config.GetSeedImage()
 
 	pod.Labels["app"] = "zarf-injector"
 
+	// Bind the pod to the node the image was found on
+	pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": node}
+
+	// Do not try to restart the pod as it will be deleted/re-created instead
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
+
+	// Init container used to combine and decompress the split tarball into the stage2 directory for use in the main container
 	pod.Spec.InitContainers = []corev1.Container{
 		{
-			Name:            "init-injector",
-			Image:           image,
-			ImagePullPolicy: corev1.PullNever,
-			WorkingDir:      "/zarf-stage1",
-			Command:         []string{"/zarf-stage1/zarf-injector", payloadShasum},
+			Name: "init-injector",
+			// An existing image already present on the cluster
+			Image: image,
+			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			// This directory is filled via the configmap injections
+			WorkingDir: "/zarf-stage1",
+			Command:    []string{"/zarf-stage1/zarf-injector", payloadShasum},
 
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -329,6 +338,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 				},
 			},
 
+			// Keep resources as light as possible as we aren't actually running the container's other binaries
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse(".5"),
@@ -344,12 +354,16 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 		},
 	}
 
+	// Container definition for the injector pod
 	pod.Spec.Containers = []corev1.Container{
 		{
-			Name:            "injector",
-			Image:           image,
-			ImagePullPolicy: corev1.PullNever,
-			WorkingDir:      "/zarf-stage2",
+			Name: "injector",
+			// An existing image already present on the cluster
+			Image: image,
+			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			// This directory's contents come from the init container output
+			WorkingDir: "/zarf-stage2",
 			Command: []string{
 				"/zarf-stage2/zarf-registry",
 				"/zarf-stage2/seed-image.tar",
@@ -357,6 +371,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 				utils.SwapHost(seedImage, "127.0.0.1:5001"),
 			},
 
+			// Shared mount between the init and regular containers
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "stage2",
@@ -364,6 +379,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 				},
 			},
 
+			// Keep resources as light as possible as we aren't actually running the container's other binaries
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse(".5"),
@@ -380,7 +396,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 	}
 
 	pod.Spec.Volumes = []corev1.Volume{
-		// Bin volume hosts the injector binary and init script
+		// Stage1 contains the rust binary and collection of configmaps from the tarball (go binary + seed image)
 		{
 			Name: "stage1",
 			VolumeSource: corev1.VolumeSource{
@@ -392,6 +408,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 				},
 			},
 		},
+		// Stage2 is an emtpy directory shared between the containers
 		{
 			Name: "stage2",
 			VolumeSource: corev1.VolumeSource{
@@ -402,6 +419,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 
 	// Iterate over all the payload configmaps and add their mounts
 	for _, filename := range payloadConfigmaps {
+		// Create the configmap volume from the given filename
 		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
 			Name: filename,
 			VolumeSource: corev1.VolumeSource{
@@ -413,6 +431,7 @@ func buildInjectionPod(image string, envVars []corev1.EnvVar, payloadConfigmaps 
 			},
 		})
 
+		// Create the volume mount to place the new volume in the stage1 directory
 		pod.Spec.InitContainers[0].VolumeMounts = append(pod.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      filename,
 			MountPath: fmt.Sprintf("/zarf-stage1/%s", filename),
