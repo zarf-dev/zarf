@@ -6,8 +6,8 @@ show_usage() {
   echo "$0 [-h|--help] [--zarfversion <version>] [--components <zarfcomponents>]"
   echo ''
   echo ' Pre-requisites '
-  echo '  - Make sure you are logged in to az cli'
   echo '  - curl'
+  echo '  - shasum'
   echo ' '
   echo ' Arguments '
   echo ' '
