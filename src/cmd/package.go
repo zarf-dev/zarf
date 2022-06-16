@@ -60,7 +60,7 @@ var packageGenerateCmd = &cobra.Command{
 	Long:    "This command creates a Zarf package directory along with the common files and directories used in a Zarf package.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Generate()
+		packager.Generate("zarf.yaml", "zarf-package")
 	},
 }
 
