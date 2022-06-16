@@ -17,7 +17,7 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.18
 	github.com/distribution/distribution/v3 v3.0.0-20220526142353-ffbd94cbe269
-	github.com/docker/cli v20.10.16+incompatible
+	github.com/docker/cli v20.10.17+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v1.2.3
@@ -46,6 +46,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+require github.com/Masterminds/semver/v3 v3.1.1
+
 require (
 	bitbucket.org/creachadair/shell v0.0.6 // indirect
 	cloud.google.com/go v0.100.2 // indirect
@@ -66,7 +68,6 @@ require (
 	github.com/CycloneDX/cyclonedx-go v0.4.0 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/Masterminds/squirrel v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
