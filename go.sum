@@ -2263,6 +2263,8 @@ github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 h1:iGnD/q91
 github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613/go.mod h1:g6AnIpDSYMcphz193otpSIzN+11Rs+AAIIC6rm1enug=
 github.com/testifysec/go-witness v0.1.10 h1:2RdkzUSMxp9NXtQcqnCP3YyAy3JTDu+Nwcxhw9IJr6A=
 github.com/testifysec/go-witness v0.1.10/go.mod h1:H6BhjWIl7umaKTyyEYj52QoaIV58CovnE2QdqG+3Y4Y=
+github.com/testifysec/go-witness v0.1.11 h1:CK5I7g7yu+ObXraYN96KHZu9VmLLs4vKEvfcEi4E35E=
+github.com/testifysec/go-witness v0.1.11/go.mod h1:EGTMK84vV6/7kiCbJYonESTvaeOW2eMJVHh3mW/EWYU=
 github.com/tetafro/godot v1.4.11/go.mod h1:LR3CJpxDVGlYOWn3ZZg1PgNZdTUvzsZWu8xaEohUpn8=
 github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gtvVDbmPg=
 github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
