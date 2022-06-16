@@ -23,7 +23,7 @@ import (
 )
 
 // Create generates a zarf package tarball for consumption by
-func Create(baseDir, destination string) {
+func Create(baseDir string) {
 	var originalDir string
 
 	// Change the working directory if this run has an alternate base dir
@@ -81,7 +81,7 @@ func Create(baseDir, destination string) {
 		_ = os.Chdir(originalDir)
 	}
 
-	packageName := filepath.Join(destination, config.GetPackageName())
+	packageName := filepath.Join(config.CreateOptions.OutputDirectory, config.GetPackageName())
 
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 
@@ -21,51 +20,38 @@ var zarfImageCache string
 var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
-	Short:   "Pack and unpack updates for the Zarf gitops service.",
+	Short:   "Zarf package commands for creating, deploying, and inspecting packages",
 }
 
 var packageCreateCmd = &cobra.Command{
-	Use:     "create [DIRECTORY|FILE] [DESTINATION_DIRECTORY]",
+	Use:     "create [DIRECTORY]",
 	Aliases: []string{"c"},
-	Args:    cobra.MaximumNArgs(2),
-	Short:   "Create an update package to push to the gitops server (runs online)",
-	Long: "Builds a tarball of resources and dependencies defined by the 'zarf.yaml' located in the working directory.\n" +
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Use to create a Zarf package from a given directory or the current directory",
+	Long: "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' " +
 		"and '~/.git-credentials'.\n",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		var baseDir string
-		var destination string
 
-		// If source arg is given, try to parse it
+		// If a directory was provided, use that as the base directory
 		if len(args) > 0 {
-			fileArg := args[0]
-
-			// If this is a zarf.yaml, try to create the zarf package in the directory with the zarf.yaml
-			if strings.Contains(fileArg, "zarf.yaml") {
-				baseDir = filepath.Dir(fileArg)
-			} else {
-				baseDir = fileArg
-			}
-
-			// If a destination arg is given, pass it to package create
-			if len(args) > 1 {
-				destination = args[1]
-			}
+			baseDir = args[0]
 		}
 
 		if zarfImageCache != config.ZarfDefaultImageCachePath && cachePathClean(zarfImageCache) {
 			config.SetImageCachePath(zarfImageCache)
 		}
 
-		packager.Create(baseDir, destination)
+		packager.Create(baseDir)
 	},
 }
 
 var packageDeployCmd = &cobra.Command{
 	Use:     "deploy [PACKAGE]",
 	Aliases: []string{"d"},
-	Short:   "Deploys an update package from a local file or URL (runs offline)",
+	Short:   "Use to deploy a Zarf package from a local file or URL (runs offline)",
 	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -80,11 +66,10 @@ var packageDeployCmd = &cobra.Command{
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [PACKAGE]",
 	Aliases: []string{"i"},
-	Short:   "Lists the payload of a compiled package file (runs offline)",
+	Short:   "Lists the payload of a Zarf package (runs offline)",
 	Long: "Lists the payload of a compiled package file (runs offline)\n" +
 		"Unpacks the package tarball into a temp directory and displays the " +
-		"contents of the zarf.yaml package definition as well as the version " +
-		"of the Zarf CLI that was used to build the package.",
+		"contents of the archive.",
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
@@ -125,6 +110,7 @@ func init() {
 
 	packageCreateCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&zarfImageCache, "zarf-cache", config.ZarfDefaultImageCachePath, "Specify the location of the Zarf image cache")
+	packageCreateCmd.Flags().StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", "", "Specify the output directory for the created Zarf package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.Insecure, "insecure", false, "Allow insecure registry connections when pulling OCI images")
 

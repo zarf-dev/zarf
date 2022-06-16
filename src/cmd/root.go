@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -16,7 +15,7 @@ var zarfLogLevel = ""
 var arch string
 
 var rootCmd = &cobra.Command{
-	Use: "zarf [COMMAND]|[ZARF-PACKAGE]|[ZARF-YAML]",
+	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
@@ -24,19 +23,7 @@ var rootCmd = &cobra.Command{
 		config.CliArch = arch
 	},
 	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
-	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Allow directly acting upon zarf assets
-		if len(args) > 0 {
-			config.DeployOptions.Confirm = packageConfirm
-			// Root-level arguments are shortcuts to package create or deploy
-			if strings.Contains(args[0], ".tar") {
-				packageDeployCmd.Run(cmd, args)
-			} else {
-				packageCreateCmd.Run(cmd, args)
-			}
-			return
-		}
 		_ = cmd.Help()
 	},
 }
@@ -55,7 +42,6 @@ func init() {
 		// Re-add the original help function
 		originalHelp(c, s)
 	})
-	rootCmd.Flags().BoolVar(&packageConfirm, "confirm", false, "Confirm package create/deploy operation without user prompts")
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
 }
