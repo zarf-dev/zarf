@@ -13,7 +13,7 @@ replace (
 )
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.4
+	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.18
 	github.com/distribution/distribution/v3 v3.0.0-20220526142353-ffbd94cbe269
