@@ -32,7 +32,7 @@ require (
 	github.com/sigstore/cosign v1.8.1-0.20220529135101-46be4a674e67 // Temporary fix for sigstore/cosign dep vuln until v1.9.0
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.2
-	github.com/testifysec/go-witness v0.1.10
+	github.com/testifysec/go-witness v0.1.11
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.9.0
