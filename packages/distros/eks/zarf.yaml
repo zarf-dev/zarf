@@ -38,3 +38,5 @@ components:
         - "./eksctl create cluster --dry-run -f eks.yaml"
         - "sleep 15"
         - "./eksctl create cluster -f eks.yaml"
+      after:
+        - "./eksctl utils write-kubeconfig -c CHANGE_ME"
