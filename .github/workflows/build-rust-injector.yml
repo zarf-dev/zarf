@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.branchName }}
 
       - name: "Install cosign"
-        uses: sigstore/cosign-installer@v2.1.0
+        uses: sigstore/cosign-installer@v2.4.0
 
       - name: "Install Rust And Build"
         uses: gmiam/rust-musl-action@v1.1.1
