@@ -16,7 +16,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.18
-	github.com/distribution/distribution/v3 v3.0.0-20220526142353-ffbd94cbe269
+	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
@@ -29,7 +29,7 @@ require (
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.41
-	github.com/sigstore/cosign v1.9.0 // Temporary fix for sigstore/cosign dep vuln until v1.9.0
+	github.com/sigstore/cosign v1.9.0
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.2
 	github.com/testifysec/go-witness v0.1.11
