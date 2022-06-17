@@ -15,7 +15,7 @@ var (
 
 const defaultZarfFile = `kind: ZarfPackageConfig
 metadata:
-  name: "init-package-git-server"
+  name: "%s"
 
 components:
   - name: git-server
