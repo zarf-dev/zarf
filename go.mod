@@ -13,11 +13,11 @@ replace (
 )
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.4
+	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.18
 	github.com/distribution/distribution/v3 v3.0.0-20220526142353-ffbd94cbe269
-	github.com/docker/cli v20.10.16+incompatible
+	github.com/docker/cli v20.10.17+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v1.2.3
@@ -31,8 +31,8 @@ require (
 	github.com/pterm/pterm v0.12.41
 	github.com/sigstore/cosign v1.8.1-0.20220529135101-46be4a674e67 // Temporary fix for sigstore/cosign dep vuln until v1.9.0
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
-	github.com/testifysec/go-witness v0.1.10
+	github.com/stretchr/testify v1.7.2
+	github.com/testifysec/go-witness v0.1.11
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.9.0
@@ -45,6 +45,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.7
 	sigs.k8s.io/yaml v1.3.0
 )
+
+require github.com/Masterminds/semver/v3 v3.1.1
 
 require (
 	bitbucket.org/creachadair/shell v0.0.6 // indirect
@@ -66,7 +68,6 @@ require (
 	github.com/CycloneDX/cyclonedx-go v0.4.0 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/Masterminds/squirrel v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
@@ -391,7 +392,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	inet.af/netaddr v0.0.0-20211027220019-c74959edd3b6 // indirect
 	k8s.io/apiextensions-apiserver v0.24.0 // indirect
 	k8s.io/apiserver v0.24.1 // indirect
