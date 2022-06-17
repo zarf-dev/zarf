@@ -19,7 +19,7 @@ func Inspect(packageName string) {
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, "zarf.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.base)
 
 	content, err := ioutil.ReadFile(tempPath.base + "/zarf.yaml")
 	if err != nil {

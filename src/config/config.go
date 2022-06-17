@@ -42,6 +42,8 @@ const (
 	ZarfManagedByLabel        = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath    = "/opt/zarf"
 	ZarfDefaultImageCachePath = ".zarf-image-cache"
+
+	ZarfYAML = "zarf.yaml"
 )
 
 var (

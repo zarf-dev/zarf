@@ -5,49 +5,38 @@ metadata:
   architecture: amd64
 
 components:
-  - name: k3s
-    description: >
-      *** REQUIRES ROOT ***
-      Install K3s, certified Kubernetes distribution built for IoT & Edge computing.
-      K3s provides the cluster need for Zarf running in Appliance Mode as well as can
-      host a low-resource Gitops Service if not using an existing Kubernetes platform.
-    scripts:
-      retry: true
-      before:
-        # If running RHEL variant, disable firewalld
-        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
-        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
-        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
-      after:
-        # Configure K3s systemd service
-        - "systemctl daemon-reload"
-        - "systemctl enable --now k3s"
+  - name: k3s-amd64
+    import:
+      path: common
+      name: k3s
+    only:
+      archs:
+        - amd64
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.6+k3s1/k3s
-        shasum: a60e039130faf2f0d349a79738e185616fd8e74ab9e0e356ce8127216fd8f9c4
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s
+        shasum: 7a1fccf1b544b0b55133f1e0b36a69d111479b3ce5fb66c0dd9a5036bd82d500
         target: /usr/sbin/k3s
         executable: true
-        # K3s magic provides these tools when symlinking
-        symlinks:
-          - /usr/sbin/kubectl
-          - /usr/sbin/ctr
-          - /usr/sbin/crictl
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.6+k3s1/k3s-airgap-images-amd64.tar.zst
-        shasum: c6b720bc0048d38a187236bc799ed7390422fb278ae7e8b119f81f4795ea33e5
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: 7630c1ffff5c170d088913b1676713b7f589a3b5b045f4c2894de8ae5b7eaf08
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
-      # K3s removal script
-      - source: assets/zarf-clean-k3s.sh
-        target: /opt/zarf/zarf-clean-k3s.sh
+
+  - name: k3s-arm64
+    import:
+      path: common
+      name: k3s
+    only:
+      archs:
+        - arm64
+    files:
+      # Include the actual K3s binary
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-arm64
+        shasum: 3b8a3ac496244fb621f727cd59fd8228fd2a2c902b14b0fb703bf9089c9dbc11
+        target: /usr/sbin/k3s
         executable: true
-      # The K3s systemd service definition
-      - source: assets/k3s.service
-        target: /etc/systemd/system/k3s.service
-        symlinks:
-          - /etc/systemd/system/multi-user.target.wants/k3s.service
-      # Mock file for creating the kube config symlink
-      - source: assets/empty-file
-        target: /etc/rancher/k3s/k3s.yaml
-        symlinks:
-          - /root/.kube/config
+      # Transfer the K3s images for containerd to pick them up
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-airgap-images-arm64.tar.zst
+        shasum: a7aff4631a58b0c2978495395568635fa9a1d03c56c9061de1a162407b620d83
+        target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst

@@ -30,9 +30,10 @@ func Create(baseDir string) {
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
 		_ = os.Chdir(baseDir)
+		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if err := config.LoadConfig("zarf.yaml"); err != nil {
+	if err := config.LoadConfig(config.ZarfYAML); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 

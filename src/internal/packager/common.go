@@ -79,10 +79,10 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
 	}
-	
+
 	// Convert []byte to string and print to screen
 	text := string(content)
-	
+
 	pterm.Println()
 	utils.ColorPrintYAML(text)
 

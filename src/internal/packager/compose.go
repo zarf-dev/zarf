@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -42,15 +43,46 @@ func validateOrBail(component *types.ZarfComponent) {
 }
 
 // Sets Name, Default, Required and Description to the original components values
-func mergeComponentOverrides(target *types.ZarfComponent, src types.ZarfComponent) {
-	target.Name = src.Name
-	target.Default = src.Default
-	target.Required = src.Required
-	target.Group = src.Group
+func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
+	target.Name = override.Name
+	target.Default = override.Default
+	target.Required = override.Required
+	target.Group = override.Group
 
-	if src.Description != "" {
-		target.Description = src.Description
+	// Override description if it was provided.
+	if override.Description != "" {
+		target.Description = override.Description
 	}
+
+	// Override cosign key path if it was provided.
+	if override.CosignKeyPath != "" {
+		target.CosignKeyPath = override.CosignKeyPath
+	}
+
+	// Append slices where they exist.
+	target.Charts = append(target.Charts, override.Charts...)
+	target.DataInjections = append(target.DataInjections, override.DataInjections...)
+	target.Files = append(target.Files, override.Files...)
+	target.Images = append(target.Images, override.Images...)
+	target.Manifests = append(target.Manifests, override.Manifests...)
+	target.Repos = append(target.Repos, override.Repos...)
+
+	// Merge variables.
+	for key, variable := range override.Variables {
+		target.Variables[key] = variable
+	}
+
+	// Merge scripts.
+	target.Scripts.Before = append(target.Scripts.Before, override.Scripts.Before...)
+	target.Scripts.After = append(target.Scripts.After, override.Scripts.After...)
+	target.Scripts.ShowOutput = override.Scripts.ShowOutput
+	if override.Scripts.TimeoutSeconds > 0 {
+		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
+	}
+
+	// Merge Only filters
+	target.Only.Architectures = append(target.Only.Architectures, override.Only.Architectures...)
+	target.Only.OperatingSystems = append(target.Only.OperatingSystems, override.Only.OperatingSystems...)
 }
 
 // Get expanded components from imported component.
@@ -76,7 +108,8 @@ func getImportedComponent(importComponent types.ZarfComponent) (component types.
 
 // Reads the locally imported zarf.yaml
 func getSubPackage(component *types.ZarfComponent) (importedPackage types.ZarfPackage) {
-	utils.ReadYaml(component.Import.Path+"zarf.yaml", &importedPackage)
+	path := filepath.Join(component.Import.Path, config.ZarfYAML)
+	utils.ReadYaml(path, &importedPackage)
 	return importedPackage
 }
 
