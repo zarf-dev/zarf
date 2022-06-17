@@ -38,7 +38,7 @@ require (
 	helm.sh/helm/v3 v3.9.0
 	k8s.io/api v0.24.1
 	k8s.io/apimachinery v0.24.1
-	k8s.io/client-go v0.24.1
+	k8s.io/client-go v1.5.2
 	k8s.io/klog/v2 v2.60.1
 	sigs.k8s.io/kind v0.14.0
 	sigs.k8s.io/kustomize/api v0.11.5
