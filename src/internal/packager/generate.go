@@ -9,6 +9,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ZarfFileName = "zarf.yaml"
+)
+
 const defaultZarfFile = `kind: ZarfPackageConfig
 metadata:
   name: "init-package-git-server"
@@ -48,8 +52,8 @@ func Generate(name, dir string) (string, error) {
 	}{
 		{
 			// zarf.yaml
-			path:    filepath.Join(cdir),
-			content: []byte(fmt.Sprintf(defaultZarfFile)),
+			path:    filepath.Join(cdir, ZarfFileName),
+			content: []byte(fmt.Sprintf(defaultZarfFile, name)),
 		},
 	}
 

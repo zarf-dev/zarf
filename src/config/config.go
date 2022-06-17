@@ -54,6 +54,8 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
+	GenerateOptions types.ZarfGenerateOptions
+
 	CliArch string
 
 	ZarfSeedPort string

@@ -172,6 +172,10 @@ type ZarfCreateOptions struct {
 	Insecure       bool
 }
 
+type ZarfGenerateOptions struct {
+	PackageName string
+}
+
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `yaml:"name,omitempty"`
