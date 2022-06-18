@@ -10,7 +10,9 @@ import (
 )
 
 var (
-	ZarfFileName = "zarf.yaml"
+	ZarfFileName   = "zarf.yaml"
+	ValuesFileName = "gitea-values.yaml"
+	ReadMeFileName = "README.md"
 )
 
 const defaultZarfFile = `kind: ZarfPackageConfig
@@ -33,6 +35,52 @@ components:
       retry: true
       after:
         - "./zarf tools create-read-only-gitea-user"
+
+`
+
+const defaultValuesFile = `---
+persistence:
+  storageClass: "###ZARF_STORAGE_CLASS###"
+gitea:
+  admin:
+    username: "zarf-git-user"
+    password: "###ZARF_GIT_AUTH_PUSH###"
+    email: "zarf@localhost"
+  config:
+    APP_NAME: "Zarf Gitops Service"
+    server:
+      DISABLE_SSH: true
+      OFFLINE_MODE: true
+    database:
+      DB_TYPE: sqlite3
+      # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
+      HOST: zarf-docker-registry.zarf.svc.cluster.local:5000
+    security:
+      INSTALL_LOCK: true
+    service:
+      DISABLE_REGISTRATION: true
+    repository:
+      ENABLE_PUSH_CREATE_USER: true
+      FORCE_PRIVATE: true
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "2Gi"
+
+memcached:
+  enabled: false
+
+postgresql:
+  enabled: false
+
+`
+
+const defaultReadmeFile = `## Zarf Git Server
+
+This package contains the Zarf Git Server to enable more advanced gitops-based deployments such as the [gitops-data](../../examples/gitops-data/README.md) example.
 `
 
 func Generate(name, dir string) (string, error) {
@@ -54,6 +102,18 @@ func Generate(name, dir string) (string, error) {
 			// zarf.yaml
 			path:    filepath.Join(cdir, ZarfFileName),
 			content: []byte(fmt.Sprintf(defaultZarfFile, name)),
+		},
+
+		{
+			// gitea-values.yaml
+			path:    filepath.Join(cdir, ValuesFileName),
+			content: []byte(fmt.Sprintf(defaultValuesFile, name)),
+		},
+
+		{
+			// README.md
+			path:    filepath.Join(cdir, ReadMeFileName),
+			content: []byte(fmt.Sprintf(defaultReadmeFile, name)),
 		},
 	}
 
