@@ -27,7 +27,7 @@ jobs:
         uses: sigstore/cosign-installer@v2.4.0
 
       - name: "Install Rust And Build"
-        uses: gmiam/rust-musl-action@v1.1.2
+        uses: gmiam/rust-musl-action@v1.1.1
         with:
           args: cargo build --target x86_64-unknown-linux-musl --release --manifest-path src/injector/stage1/Cargo.toml
 
