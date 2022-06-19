@@ -2,7 +2,6 @@ package packager
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -117,9 +116,8 @@ func getImportedComponent(importComponent types.ZarfComponent, everGrowingCompos
 // Reads the locally imported zarf.yaml
 func getSubPackage(component *types.ZarfComponent, everGrowingComposePath string) (importedPackage types.ZarfPackage, err error) {
 	everGrowingComposePath = filepath.Join(everGrowingComposePath, component.Import.Path)
-	finalImportPath := fixRelativePathBacktracking(everGrowingComposePath)
 
-	path := filepath.Join(finalImportPath, config.ZarfYAML)
+	path := filepath.Join(everGrowingComposePath, config.ZarfYAML)
 	err = utils.ReadYaml(path, &importedPackage)
 	return importedPackage, err
 }
@@ -174,36 +172,6 @@ func getComposedFilePath(originalPath string, pathPrefix string) string {
 		return originalPath
 	}
 
-	if len(pathPrefix) > 0 && pathPrefix[len(pathPrefix)-1:] != "/" {
-		pathPrefix += "/"
-	}
-
 	// Add prefix for local files.
-	return fixRelativePathBacktracking(pathPrefix + originalPath)
-}
-
-func fixRelativePathBacktracking(path string) string {
-	var newPathBuilder []string
-	var hitRealPath = false // We might need to go back several directories at the begining
-
-	// Turn paths like `../../this/is/a/very/../silly/../path` into `../../this/is/a/path`
-	splitString := strings.Split(path, "/")
-	for _, dir := range splitString {
-		if dir == ".." {
-			if hitRealPath {
-				// Instead of going back a directory, just don't get here in the first place
-				newPathBuilder = newPathBuilder[:len(newPathBuilder)-1]
-			} else {
-				// We are still going back directories for the first time, keep going back
-				newPathBuilder = append(newPathBuilder, dir)
-			}
-		} else {
-			// This is a regular directory we want to travel through
-			hitRealPath = true
-			newPathBuilder = append(newPathBuilder, dir)
-		}
-	}
-
-	// NOTE: This assumes a relative path
-	return strings.Join(newPathBuilder, "/")
+	return filepath.Join(pathPrefix, originalPath)
 }
