@@ -26,5 +26,5 @@ type ZarfBuildData struct {
 	User         string `yaml:"user"`
 	Architecture string `yaml:"architecture"`
 	Timestamp    string `yaml:"timestamp"`
-	Version      string `yaml:"string"`
+	Version      string `yaml:"version"`
 }
