@@ -2,7 +2,6 @@ kind: ZarfInitConfig
 metadata:
   name: "distro-k3s"
   description: "Used to establish a new Zarf cluster"
-  architecture: amd64
 
 components:
   - name: k3s-amd64
@@ -32,11 +31,11 @@ components:
         - arm64
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-arm64
-        shasum: 3b8a3ac496244fb621f727cd59fd8228fd2a2c902b14b0fb703bf9089c9dbc11
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-arm64
+        shasum: bd8b87d215f7a073d0139a0ab70e3fbeaa76e1b9ce6c00cd8d471cb44ba80687
         target: /usr/sbin/k3s
         executable: true
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-airgap-images-arm64.tar.zst
-        shasum: a7aff4631a58b0c2978495395568635fa9a1d03c56c9061de1a162407b620d83
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-arm64.tar.zst
+        shasum: 12029e4bbfecfa16942345aeac798f4790e568a7202c2b85ee068d7b4756ba04
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
