@@ -14,13 +14,13 @@ components:
         - amd64
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s
-        shasum: 7a1fccf1b544b0b55133f1e0b36a69d111479b3ce5fb66c0dd9a5036bd82d500
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s
+        shasum: ca398d83fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7305c7b9a91448a
         target: /usr/sbin/k3s
         executable: true
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.23.7+k3s1/k3s-airgap-images-amd64.tar.zst
-        shasum: 7630c1ffff5c170d088913b1676713b7f589a3b5b045f4c2894de8ae5b7eaf08
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: 6736f9fa4d5754d60b0508bafb2f888170cb99a2d93a3a1617a919ca4ee74034
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
 
   - name: k3s-arm64
