@@ -2,7 +2,6 @@ package packager
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -20,8 +19,12 @@ func GetComposedComponents() (components []types.ZarfComponent) {
 		} else {
 			validateOrBail(&component)
 
+			// Track the composed components import path to build nestedily composed components
+			everGrowingComposePath := ""
+
 			// Expand and add components from imported package.
-			importedComponent := getImportedComponent(component)
+			importedComponent := getImportedComponent(component, everGrowingComposePath)
+
 			// Merge in parent component changes.
 			mergeComponentOverrides(&importedComponent, component)
 			// Add to the list of components for the package.
@@ -86,10 +89,13 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 }
 
 // Get expanded components from imported component.
-func getImportedComponent(importComponent types.ZarfComponent) (component types.ZarfComponent) {
-	// Read the imported package.
-	importedPackage := getSubPackage(&importComponent)
+func getImportedComponent(importComponent types.ZarfComponent, everGrowingComposePath string) (component types.ZarfComponent) {
 
+	// Read the imported package.
+	importedPackage, err := getSubPackage(&importComponent, everGrowingComposePath)
+	if err != nil {
+		message.Fatal(err, "Unable to get the package we're importing a component from")
+	}
 	componentName := importComponent.Import.ComponentName
 	// Default to the component name if a custom one was not provided
 	if componentName == "" {
@@ -99,7 +105,8 @@ func getImportedComponent(importComponent types.ZarfComponent) (component types.
 	// Loop over package components looking for a match the componentName
 	for _, componentToCompose := range importedPackage.Components {
 		if componentToCompose.Name == componentName {
-			return *prepComponentToCompose(&componentToCompose, importComponent)
+			everGrowingComposePath = filepath.Join(everGrowingComposePath, importComponent.Import.Path)
+			return *prepComponentToCompose(&componentToCompose, importComponent, everGrowingComposePath)
 		}
 	}
 
@@ -107,19 +114,27 @@ func getImportedComponent(importComponent types.ZarfComponent) (component types.
 }
 
 // Reads the locally imported zarf.yaml
-func getSubPackage(component *types.ZarfComponent) (importedPackage types.ZarfPackage) {
-	path := filepath.Join(component.Import.Path, config.ZarfYAML)
-	utils.ReadYaml(path, &importedPackage)
-	return importedPackage
+func getSubPackage(component *types.ZarfComponent, everGrowingComposePath string) (importedPackage types.ZarfPackage, err error) {
+	everGrowingComposePath = filepath.Join(everGrowingComposePath, component.Import.Path)
+
+	path := filepath.Join(everGrowingComposePath, config.ZarfYAML)
+	err = utils.ReadYaml(path, &importedPackage)
+	return importedPackage, err
 }
 
 // Updates the name and sets all local asset paths relative to the importing component.
-func prepComponentToCompose(child *types.ZarfComponent, parent types.ZarfComponent) *types.ZarfComponent {
-
+func prepComponentToCompose(child *types.ZarfComponent, parent types.ZarfComponent, everGrowingPath string) *types.ZarfComponent {
 	if child.Import.Path != "" {
 		// The component we are trying to compose is a composed component itself!
-		nestedComponent := getImportedComponent(*child)
-		child = prepComponentToCompose(&nestedComponent, *child)
+		nestedComponent := getImportedComponent(*child, everGrowingPath)
+
+		mergeComponentOverrides(child, nestedComponent)
+
+		if nestedComponent.Import.Path != "" {
+			// Keep going down the import paths until we reach the end via recursion
+			everGrowingPath = filepath.Join(everGrowingPath, nestedComponent.Import.Path)
+			prepComponentToCompose(&nestedComponent, *child, everGrowingPath)
+		}
 	}
 
 	// Prefix composed component file paths.
@@ -147,7 +162,6 @@ func prepComponentToCompose(child *types.ZarfComponent, parent types.ZarfCompone
 	if child.CosignKeyPath != "" {
 		child.CosignKeyPath = getComposedFilePath(child.CosignKeyPath, parent.Import.Path)
 	}
-
 	return child
 }
 
@@ -157,32 +171,7 @@ func getComposedFilePath(originalPath string, pathPrefix string) string {
 	if utils.IsUrl(originalPath) {
 		return originalPath
 	}
+
 	// Add prefix for local files.
-	return fixRelativePathBacktracking(pathPrefix + originalPath)
-}
-
-func fixRelativePathBacktracking(path string) string {
-	var newPathBuilder []string
-	var hitRealPath = false // We might need to go back several directories at the begining
-
-	// Turn paths like `../../this/is/a/very/../silly/../path` into `../../this/is/a/path`
-	splitString := strings.Split(path, "/")
-	for _, dir := range splitString {
-		if dir == ".." {
-			if hitRealPath {
-				// Instead of going back a directory, just don't get here in the first place
-				newPathBuilder = newPathBuilder[:len(newPathBuilder)-1]
-			} else {
-				// We are still going back directories for the first time, keep going back
-				newPathBuilder = append(newPathBuilder, dir)
-			}
-		} else {
-			// This is a regular directory we want to travel through
-			hitRealPath = true
-			newPathBuilder = append(newPathBuilder, dir)
-		}
-	}
-
-	// NOTE: This assumes a relative path
-	return strings.Join(newPathBuilder, "/")
+	return filepath.Join(pathPrefix, originalPath)
 }
