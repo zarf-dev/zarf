@@ -6,7 +6,6 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"helm.sh/helm/v3/cmd/helm/require"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -57,9 +56,9 @@ var packageDeployCmd = &cobra.Command{
 var packageGenerateCmd = &cobra.Command{
 	Use:     "generate [NAME]",
 	Aliases: []string{"g"},
-	Short:   "Creates a Zarf package.",
+	Short:   "Creates a Zarf package directory.",
 	Long:    "This command creates a Zarf package directory along with the common files and directories used in a Zarf package.",
-	Args:    require.ExactArgs(1),
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		o := config.GenerateOptions
 		o.PackageName = args[0]

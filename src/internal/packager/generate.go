@@ -35,10 +35,9 @@ components:
       retry: true
       after:
         - "./zarf tools create-read-only-gitea-user"
-
 `
 
-const defaultValuesFile = `---
+const defaultValuesFile = `--- # Values file for the Zarf package: "%s"
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
 gitea:
@@ -75,12 +74,11 @@ memcached:
 
 postgresql:
   enabled: false
-
 `
 
 const defaultReadmeFile = `## Zarf Git Server
 
-This package contains the Zarf Git Server to enable more advanced gitops-based deployments such as the [gitops-data](../../examples/gitops-data/README.md) example.
+The "%s" Zarf package contains the Zarf Git Server to enable more advanced gitops-based deployments such as the [gitops-data](../../examples/gitops-data/README.md) example.
 `
 
 func Generate(name, dir string) (string, error) {
@@ -123,7 +121,6 @@ func Generate(name, dir string) (string, error) {
 		}
 	}
 	return cdir, nil
-
 }
 
 func writeFile(name string, content []byte) error {
