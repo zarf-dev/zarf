@@ -23,7 +23,7 @@ zarf package deploy
 
 | Example                                                          |      Description      |
 |------------------------------------------------------------------|-------------|
-| [component-](./component-/README.md)           |  Demo building packages using components from other packages   |
+| [big-bang](../packages/big-bang-core/README.md)                        |  Demo BigBang v1.33.0 with all of its core services |
 | [composable-packages](./composable-packages/README.md)           |  Demo building packages using components from other packages   |
 | [data-injection](./data-injection/README.md)                     |  Demo injecting data into a pod running on cluster  |
 | [game](./game/README.md)                                         |  Demo deploying old-school DOS games |
