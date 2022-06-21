@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"gopkg.in/yaml.v2"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -75,7 +75,10 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 }
 
 func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool {
-	content, err := ioutil.ReadFile(configPath)
+
+	active := config.GetActiveConfig()
+
+	content, err := yaml.Marshal(active)
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
 	}

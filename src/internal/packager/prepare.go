@@ -27,7 +27,7 @@ var maybeImages k8s.ImageMap
 func FindImages(repoHelmChartPath string) {
 
 	// Load the given zarf package
-	if err := config.LoadConfig(config.ZarfYAML); err != nil {
+	if err := config.LoadConfig(config.ZarfYAML, false); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 

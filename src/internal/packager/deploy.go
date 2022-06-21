@@ -52,7 +52,7 @@ func Deploy() {
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+	if err := config.LoadConfig(tempPath.base + "/zarf.yaml", true); err != nil {
 		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
