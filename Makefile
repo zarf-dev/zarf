@@ -17,7 +17,7 @@ ifneq ($(UNAME_S),Linux)
 endif
 
 CLI_VERSION := $(if $(shell git describe --tags), $(shell git describe --tags), "UnknownVersion")
-BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
+BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'       # TODO: Add some way to pass the sget string as a value here too
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -52,7 +52,7 @@ build-cli-mac-intel: build-injector-registry
 build-cli-mac-apple: build-injector-registry
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple src/main.go
 
-build-cli-linux: build-cli-linux-amd build-cli-linux-arm 
+build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
 
