@@ -41,16 +41,16 @@ clean: ## Clean the build dir
 	rm -rf build
 
 build-cli-linux-amd: build-injector-registry
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf src/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
 build-cli-linux-arm: build-injector-registry
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm src/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
 build-cli-mac-intel: build-injector-registry
-	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel src/main.go
+	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
 build-cli-mac-apple: build-injector-registry
-	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple src/main.go
+	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
@@ -64,7 +64,7 @@ build-injector-registry:
 dev-agent-image:
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))
-	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) src/main.go
+	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
 	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
 	kind load docker-image zarf-agent:$(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
