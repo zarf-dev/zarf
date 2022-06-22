@@ -11,7 +11,7 @@ components:
       after:
         # Remove existing eksctl
         - "rm -f eksctl"
-        # Extract the correct linux or mac binary from the tarball 
+        # Extract the correct linux or mac binary from the tarball
         - "./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz ."
         # Cleanup temp files
         - "rm -fr archives"
@@ -19,7 +19,7 @@ components:
       - source: eks.yaml
         target: eks.yaml
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_amd64.tar.gz
-        target: archives/eksctl_Darwin_amd64.tar.gz
+        target: archives/eksctl_Darwin_x86_64.tar.gz
         shasum: 4ab4c9199ef4fcb26e3b536484773c0c4c648290e2341585c6bd5bfd79d44fb1
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_arm64.tar.gz
         target: archives/eksctl_Darwin_arm64.tar.gz
@@ -38,3 +38,5 @@ components:
         - "./eksctl create cluster --dry-run -f eks.yaml"
         - "sleep 15"
         - "./eksctl create cluster -f eks.yaml"
+      after:
+        - "./eksctl utils write-kubeconfig -c CHANGE_ME"

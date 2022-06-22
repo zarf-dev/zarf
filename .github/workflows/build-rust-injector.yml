@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.branchName }}
 
       - name: "Install cosign"
-        uses: sigstore/cosign-installer@v2.1.0
+        uses: sigstore/cosign-installer@v2.4.0
 
       - name: "Install Rust And Build"
         uses: gmiam/rust-musl-action@v1.1.1
@@ -35,13 +35,13 @@ jobs:
         run: sudo strip ${{ env.zarfInjectorPath }}
 
       - name: "Upload Rust Binary"
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: zarf-injector
           path: ${{ env.zarfInjectorPath }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
