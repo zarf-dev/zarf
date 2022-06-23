@@ -170,12 +170,12 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 }
 
 func handleSgetPackage(sgetPackagePath string) (string, func()) {
-	sgetPackageName := strings.Split(sgetPackagePath, "sget://")[1]
-	// Write the package to a local file
+	// Write the package to a local file in a temp path
 	tempPath := createPaths()
 
-	// Create the file
-	localPackagePath := tempPath.base + sgetPackageName
+	// Create the local file for the package
+	sgetPackagePathSplit := strings.Split(sgetPackagePath, "/")
+	localPackagePath := filepath.Join(tempPath.base, sgetPackagePathSplit[len(sgetPackagePathSplit)-1]) + ".tar.zst"
 	destinationFile, err := os.Create(localPackagePath)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
@@ -187,6 +187,11 @@ func handleSgetPackage(sgetPackagePath string) (string, func()) {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
 		config.DeployOptions.SGetKeyPath = "env://DU_SGET_KEY"
 	}
+
+	// Remove the 'sget://' header for the actual sget call
+	sgetPackagePath = strings.Split(sgetPackagePath, "sget://")[1]
+
+	// Sget the package
 	err = utils.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatal(err, "Unable to get the remote package via sget")
