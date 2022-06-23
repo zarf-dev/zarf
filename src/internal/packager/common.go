@@ -174,8 +174,7 @@ func handleSgetPackage(sgetPackagePath string) (string, func()) {
 	tempPath := createPaths()
 
 	// Create the local file for the package
-	sgetPackagePathSplit := strings.Split(sgetPackagePath, "/")
-	localPackagePath := filepath.Join(tempPath.base, sgetPackagePathSplit[len(sgetPackagePathSplit)-1]) + ".tar.zst"
+	localPackagePath := filepath.Join(tempPath.base, "remote.tar.zst")
 	destinationFile, err := os.Create(localPackagePath)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
