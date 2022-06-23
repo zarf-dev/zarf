@@ -189,7 +189,7 @@ func handleSgetPackage(sgetPackagePath string) (string, func()) {
 	}
 
 	// Remove the 'sget://' header for the actual sget call
-	sgetPackagePath = strings.Split(sgetPackagePath, "sget://")[1]
+	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
 
 	// Sget the package
 	err = utils.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())

@@ -17,7 +17,7 @@ ifneq ($(UNAME_S),Linux)
 endif
 
 CLI_VERSION := $(if $(shell git describe --tags), $(shell git describe --tags), "UnknownVersion")
-BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'       # TODO: Add some way to pass the sget string as a value here too
+BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
 .DEFAULT_GOAL := help
 
 .PHONY: help
