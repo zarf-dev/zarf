@@ -40,9 +40,9 @@ jobs:
       # Builds init packages since GoReleaser won't handle this for us
       - name: "Build init-packages For Release"
         run: |
-          make build-cli-linux-amd init-package
-          make build-examples ARCH=amd64
-          make build-examples ARCH=arm64
+          make build-cli-linux-amd init-package ARCH=amd64
+          ./build/zarf package create examples/game -o build -a amd64 --confirm
+          ./build/zarf package create examples/game -o build -a arm64 --confirm
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
