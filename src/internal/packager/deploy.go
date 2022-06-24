@@ -27,7 +27,7 @@ import (
 )
 
 var valueTemplate template.Values
-var connectStrings = make(helm.ConnectStrings)
+var connectStrings = make(types.ConnectStrings)
 
 func Deploy() {
 	message.Debug("packager.Deploy()")
@@ -52,7 +52,7 @@ func Deploy() {
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	if err := config.LoadConfig(tempPath.base + "/zarf.yaml", true); err != nil {
+	if err := config.LoadConfig(tempPath.base+"/zarf.yaml", true); err != nil {
 		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
@@ -107,17 +107,7 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	if len(connectStrings) > 0 {
-		list := pterm.TableData{{"     Connect Command", "Description"}}
-		// Loop over each connecStrings and convert to pterm.TableData
-		for name, connect := range connectStrings {
-			name = fmt.Sprintf("     zarf connect %s", name)
-			list = append(list, []string{name, connect.Description})
-		}
-
-		// Create the table output with the data
-		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
-	}
+	message.PrintConnectStringTable(connectStrings)
 
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()

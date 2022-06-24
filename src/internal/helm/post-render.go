@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +22,7 @@ import (
 
 type renderer struct {
 	actionConfig   *action.Configuration
-	connectStrings ConnectStrings
+	connectStrings types.ConnectStrings
 	options        ChartOptions
 	namespaces     map[string]*corev1.Namespace
 }
@@ -30,7 +31,7 @@ func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *rend
 	message.Debugf("helm.NewRenderer(%v)", options)
 	return &renderer{
 		actionConfig:   actionConfig,
-		connectStrings: make(ConnectStrings),
+		connectStrings: make(types.ConnectStrings),
 		options:        options,
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
@@ -119,7 +120,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 					message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
 
 					// Add the connectstring for processing later in the deployment
-					r.connectStrings[key] = ConnectString{
+					r.connectStrings[key] = types.ConnectString{
 						Description: annotations[config.ZarfConnectAnnotationDescription],
 						Url:         annotations[config.ZarfConnectAnnotationUrl],
 					}

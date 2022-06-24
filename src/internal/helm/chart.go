@@ -16,11 +16,7 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-type ConnectString struct {
-	Description string
-	Url         string
-}
-type ConnectStrings map[string]ConnectString
+
 type ChartOptions struct {
 	BasePath          string
 	Chart             types.ZarfChart
@@ -32,7 +28,7 @@ type ChartOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
+func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 	fromMessage := options.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -161,7 +157,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) ConnectStrings {
+func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) types.ConnectStrings {
 	message.Debugf("helm.GenerateChart(%s, %v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()

@@ -18,6 +18,7 @@ secrets:
 service:
   type: NodePort
   nodePort: "###ZARF_NODEPORT###"
+  
 resources:
   requests:
     cpu: "500m"

@@ -23,3 +23,9 @@ type ZarfCreateOptions struct {
 	Insecure        bool
 	OutputDirectory string
 }
+
+type ConnectString struct {
+	Description string
+	Url         string
+}
+type ConnectStrings map[string]ConnectString
