@@ -92,7 +92,6 @@ require (
 	github.com/anchore/syft v0.41.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/atomicgo/cursor v0.0.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-sdk-go v1.43.45 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.4 // indirect

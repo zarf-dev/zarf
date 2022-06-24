@@ -63,6 +63,8 @@ var (
 	// Private vars
 	active types.ZarfPackage
 	state  types.ZarfState
+
+	SGetPublicKey string
 )
 
 func IsZarfInitConfig() bool {
