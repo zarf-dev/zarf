@@ -12,6 +12,6 @@ components:
     required: true
     import:
       path: ../../../packages/zarf-registry
-  - name: k3s
+  - name: k3s-amd64
     import:
       path: ../../../packages/distros/k3s
