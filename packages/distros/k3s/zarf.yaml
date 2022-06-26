@@ -4,7 +4,7 @@ metadata:
   description: "Used to establish a new Zarf cluster"
 
 components:
-  - name: k3s-amd64
+  - name: k3s
     import:
       path: common
       name: k3s

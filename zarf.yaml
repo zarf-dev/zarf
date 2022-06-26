@@ -6,7 +6,7 @@ metadata:
 seed: library/registry:2.7.1
 
 components:
-  - name: k3s-amd64
+  - name: k3s
     import:
       path: packages/distros/k3s
       

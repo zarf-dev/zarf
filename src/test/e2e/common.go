@@ -121,7 +121,7 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname string, namespace string, cmd [
 }
 
 // execZarfCommand executes a Zarf command. It automatically knows which Zarf binary to use, and it has special logic
-// That adds the "k3s" component if the user wants to use the build-in K3s and `zarf init` is the command being run.
+// That adds the "k3s" component if the user wants to use the built-in K3s and `zarf init` is the command being run.
 // It requires
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
 	// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
