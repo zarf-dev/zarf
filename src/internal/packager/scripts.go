@@ -56,7 +56,7 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 					continue
 				}
 				// Otherwise fatal
-				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
+				spinner.Fatalf(err, "Script \"%s\" did complete sucessfully: %s", script, err.Error())
 			}
 
 			// Dump the script output in debug if output not already streamed

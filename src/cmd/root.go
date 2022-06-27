@@ -17,6 +17,8 @@ var arch string
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		message.Setup()
+
 		if zarfLogLevel != "" {
 			setLogLevel(zarfLogLevel)
 		}
