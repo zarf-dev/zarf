@@ -79,6 +79,9 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	target.Scripts.Before = append(target.Scripts.Before, override.Scripts.Before...)
 	target.Scripts.After = append(target.Scripts.After, override.Scripts.After...)
 	target.Scripts.ShowOutput = override.Scripts.ShowOutput
+	if override.Scripts.Retry {
+		target.Scripts.Retry = true
+	}
 	if override.Scripts.TimeoutSeconds > 0 {
 		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
 	}
