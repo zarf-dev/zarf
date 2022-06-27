@@ -23,6 +23,7 @@ var rootCmd = &cobra.Command{
 
 		// Disable progress bars for CI envs
 		if os.Getenv("CI") == "true" {
+			message.Note("CI environment detected, disabling progress bars")
 			message.NoProgress = true
 		}
 	},
