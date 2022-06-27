@@ -1,5 +1,11 @@
 package message
 
+import (
+	"os"
+
+	"github.com/mattn/go-isatty"
+)
+
 // GetLogo returns the awesome menu ascii logo
 func GetLogo() string {
 
@@ -52,5 +58,10 @@ func GetLogo() string {
 [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m [38;5;m
 [0m
 `
+	// We are unable to display the logo if we are not connected to a terminal
+	if !(isatty.IsCygwinTerminal(os.Stdout.Fd()) || isatty.IsTerminal(os.Stdout.Fd())) {
+		logo = ""
+	}
+
 	return logo
 }
