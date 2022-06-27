@@ -22,9 +22,14 @@ const (
 	TraceLevel
 )
 
+// NoProgress tracks whether spinner/progress bars show updates
 var NoProgress bool
 
 var logLevel = InfoLevel
+
+func init() {
+	Setup()
+}
 
 func Setup() {
 	// Help capture text cleaner
