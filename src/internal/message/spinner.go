@@ -12,12 +12,17 @@ type Spinner struct {
 }
 
 func NewProgressSpinner(format string, a ...any) *Spinner {
+	var spinner *pterm.SpinnerPrinter
 	text := fmt.Sprintf(format, a...)
-	spinner, _ := pterm.DefaultSpinner.
-		WithRemoveWhenDone(false).
-		// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
-		WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
-		Start(text)
+	if NoProgress {
+		Info(text)
+	} else {
+		spinner, _ = pterm.DefaultSpinner.
+			WithRemoveWhenDone(false).
+			// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
+			WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
+			Start(text)
+	}
 
 	return &Spinner{
 		spinner:   spinner,
@@ -31,6 +36,10 @@ func (p *Spinner) Write(text []byte) (int, error) {
 }
 
 func (p *Spinner) Updatef(format string, a ...any) {
+	if NoProgress {
+		return
+	}
+
 	text := fmt.Sprintf(format, a...)
 	p.spinner.UpdateText(text)
 }
@@ -38,12 +47,16 @@ func (p *Spinner) Updatef(format string, a ...any) {
 func (p *Spinner) Debugf(format string, a ...any) {
 	if logLevel >= DebugLevel {
 		text := fmt.Sprintf("Debug: "+format, a)
-		p.spinner.UpdateText(text)
+		if NoProgress {
+			Debug(text)
+		} else {
+			p.spinner.UpdateText(text)
+		}
 	}
 }
 
 func (p *Spinner) Stop() {
-	if p.spinner.IsActive {
+	if p.spinner != nil && p.spinner.IsActive {
 		// Only stop if not stopped to avoid extra line break injections in the CLI
 		_ = p.spinner.Stop()
 		Debug("Possible spinner leak detected")
@@ -56,12 +69,20 @@ func (p *Spinner) Success() {
 
 func (p *Spinner) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
-	p.spinner.Success(text)
+	if p.spinner != nil {
+		p.spinner.Success(text)
+	} else {
+		Info(text)
+	}
 }
 
 func (p *Spinner) Warnf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
-	p.spinner.Warning(text)
+	if p.spinner != nil {
+		p.spinner.Warning(text)
+	} else {
+		Warn(text)
+	}
 }
 
 func (p *Spinner) Errorf(err error, format string, a ...any) {
@@ -70,7 +91,9 @@ func (p *Spinner) Errorf(err error, format string, a ...any) {
 }
 
 func (p *Spinner) Fatalf(err error, format string, a ...any) {
-	p.spinner.RemoveWhenDone = true
-	_ = p.spinner.Stop()
+	if p.spinner != nil {
+		p.spinner.RemoveWhenDone = true
+		_ = p.spinner.Stop()
+	}
 	Fatalf(err, format, a...)
 }

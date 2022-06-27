@@ -14,7 +14,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/pterm/pterm"
 )
 
 func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.Image {
@@ -79,15 +78,13 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		_ = tarball.MultiWriteToFile(imageTarballPath, tagToImage, tarball.WithProgress(progress))
 	}()
 
-	var progressBar *pterm.ProgressbarPrinter
+	var progressBar *message.ProgressBar
 	var title string
 
 	for update := range progress {
 		switch {
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
-			_, _ = progressBar.Stop()
-			title = fmt.Sprintf("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
-			pterm.Success.Println(title)
+			progressBar.Success("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			return tagToImage
 		case update.Error != nil:
 			message.Fatal(update.Error, "error writing image tarball")
@@ -97,16 +94,9 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 				utils.ByteFormat(float64(update.Total), 2),
 			)
 			if progressBar == nil {
-				progressBar, _ = pterm.DefaultProgressbar.
-					WithTotal(int(update.Total)).
-					WithShowCount(false).
-					WithTitle(title).
-					WithRemoveWhenDone(true).
-					Start()
+				progressBar = message.NewProgressBar(update.Total, title)
 			}
-			progressBar.UpdateTitle(title)
-			chunk := int(update.Complete) - progressBar.Current
-			progressBar.Add(chunk)
+			progressBar.Update(update.Complete, title)
 		}
 	}
 

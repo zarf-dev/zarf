@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var packageConfirm bool
 var zarfLogLevel = ""
 var arch string
 
@@ -21,6 +20,11 @@ var rootCmd = &cobra.Command{
 			setLogLevel(zarfLogLevel)
 		}
 		config.CliArch = arch
+
+		// Disable progress bars for CI envs
+		if os.Getenv("CI") == "true" {
+			message.NoProgress = true
+		}
 	},
 	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -44,6 +48,7 @@ func init() {
 	})
 	rootCmd.PersistentFlags().StringVarP(&zarfLogLevel, "log-level", "l", "", "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", "", "Architecture for OCI images")
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", false, "Disable fancy UI progress bars, spinners, logos, etc.")
 }
 
 func setLogLevel(logLevel string) {

@@ -22,6 +22,8 @@ const (
 	TraceLevel
 )
 
+var NoProgress bool
+
 var logLevel = InfoLevel
 
 func init() {

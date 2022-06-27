@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/pterm/pterm"
 )
 
 const SGETProtocol = "sget://"
@@ -68,15 +67,14 @@ func httpGetFile(url string, destinationFile *os.File) {
 
 	// Writer the body to file
 	text := fmt.Sprintf("Downloading %s", url)
-	counter := NewWriteCounter(url, int(resp.ContentLength))
+	title := fmt.Sprintf("Downloading %s", path.Base(url))
+	progressBar := message.NewProgressBar(resp.ContentLength, title)
 
-	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, counter)); err != nil {
-		_, _ = counter.progress.Stop()
-		message.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
+	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
+		progressBar.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
-	_, _ = counter.progress.Stop()
-	pterm.Success.Println(text)
+	progressBar.Success(text)
 }
 
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
@@ -86,33 +84,4 @@ func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
 	if err != nil {
 		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
 	}
-}
-
-type WriteCounter struct {
-	Total    int
-	progress *pterm.ProgressbarPrinter
-}
-
-func NewWriteCounter(url string, total int) *WriteCounter {
-	// keep it brief to avoid a panic on smaller windows
-	title := fmt.Sprintf("Downloading %s", path.Base(url))
-	if total < 1 {
-		message.Debugf("invalid content length detected: %v", total)
-	}
-	progressBar, _ := pterm.DefaultProgressbar.
-		WithTotal(total).
-		WithShowCount(false).
-		WithTitle(title).
-		WithRemoveWhenDone(true).
-		Start()
-	return &WriteCounter{
-		Total:    total,
-		progress: progressBar,
-	}
-}
-
-func (wc *WriteCounter) Write(p []byte) (int, error) {
-	n := len(p)
-	wc.progress.Add(n)
-	return n, nil
 }
