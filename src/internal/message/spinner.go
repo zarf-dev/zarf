@@ -2,7 +2,9 @@ package message
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/mattn/go-isatty"
 	"github.com/pterm/pterm"
 )
 
@@ -18,6 +20,11 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 		// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
 		WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
 		Start(text)
+
+	// Disable the output of the spinner if we are running disconnected from a terminal (like in GitHub actions)
+	if !(isatty.IsCygwinTerminal(os.Stdout.Fd()) || isatty.IsTerminal(os.Stdout.Fd())) {
+		pterm.DisableOutput()
+	}
 
 	return &Spinner{
 		spinner:   spinner,
