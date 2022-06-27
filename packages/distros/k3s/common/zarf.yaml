@@ -5,8 +5,7 @@ metadata:
 components:
   - name: k3s
     only:
-      os:
-        - "linux"
+      localOS: linux
     description: >
       *** REQUIRES ROOT ***
       Install K3s, certified Kubernetes distribution built for IoT & Edge computing.

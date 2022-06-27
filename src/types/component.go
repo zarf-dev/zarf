@@ -16,7 +16,7 @@ type ZarfComponent struct {
 
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `yaml:"only,omitempty"`
-	
+
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
 	Group string `yaml:"group,omitempty"`
@@ -54,8 +54,8 @@ type ZarfComponent struct {
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
-	OperatingSystems []string `yaml:"os,omitempty"`
-	Architectures    []string `yaml:"archs,omitempty"`
+	LocalOS     string `yaml:"localOS,omitempty"`
+	ClusterArch string `yaml:"clusterArch,omitempty"`
 }
 
 // ZarfComponentVariables are variables that can be used to dynaically template K8s resources

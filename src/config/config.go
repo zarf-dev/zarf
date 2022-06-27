@@ -180,22 +180,22 @@ func GetRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
 }
 
-func LoadConfig(path string, filterByPlatform bool) error {
+// LoadConfig loads the config from the given path and removes
+// components not matching the current OS if filterByOS is set.
+func LoadConfig(path string, filterByOS bool) error {
 	if err := utils.ReadYaml(path, &active); err != nil {
 		return err
 	}
 
 	// Filter each component to only compatible platforms
-	if filterByPlatform {
-		filteredComponents := []types.ZarfComponent{}
-		for _, component := range active.Components {
-			if isCompatibleComponent(component) {
-				filteredComponents = append(filteredComponents, component)
-			}
+	filteredComponents := []types.ZarfComponent{}
+	for _, component := range active.Components {
+		if isCompatibleComponent(component, filterByOS) {
+			filteredComponents = append(filteredComponents, component)
 		}
-		// Update the active package with the filtered components
-		active.Components = filteredComponents
 	}
+	// Update the active package with the filtered components
+	active.Components = filteredComponents
 
 	return nil
 }
@@ -250,25 +250,20 @@ func GetImageCachePath() string {
 	return strings.Replace(CreateOptions.ImageCachePath, "~", homePath, 1)
 }
 
-func isCompatibleComponent(component types.ZarfComponent) bool {
+func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
 	// Ignore only filters that are empty
-	validArch := len(component.Only.Architectures) < 1
-	validOS := len(component.Only.OperatingSystems) < 1
+	var validArch, validOS bool
 
-	// Test for a valid architecture
-	for _, arch := range component.Only.Architectures {
-		if runtime.GOARCH == arch {
-			validArch = true
-			break
-		}
+	targetArch := GetArch()
+
+	// Test for valid architecture
+	if component.Only.ClusterArch == "" || component.Only.ClusterArch == targetArch {
+		validArch = true
 	}
 
 	// Test for a valid OS
-	for _, os := range component.Only.OperatingSystems {
-		if runtime.GOOS == os {
-			validOS = true
-			break
-		}
+	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
+		validOS = true
 	}
 
 	return validArch && validOS

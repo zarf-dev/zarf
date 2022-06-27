@@ -9,10 +9,6 @@ components:
   - name: k3s
     import:
       path: packages/distros/k3s
-      
-  - name: k3s-arm64
-    import:
-      path: packages/distros/k3s
 
   - name: zarf-injector
     required: true

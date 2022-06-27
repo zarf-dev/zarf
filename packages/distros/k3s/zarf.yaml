@@ -4,13 +4,13 @@ metadata:
   description: "Used to establish a new Zarf cluster"
 
 components:
+  # AMD-64 version of the K3s stack 
   - name: k3s
     import:
       path: common
       name: k3s
     only:
-      archs:
-        - amd64
+      clusterArch: amd64
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s
@@ -22,13 +22,13 @@ components:
         shasum: 6736f9fa4d5754d60b0508bafb2f888170cb99a2d93a3a1617a919ca4ee74034
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
 
-  - name: k3s-arm64
+  # ARM-64 version of the K3s stack 
+  - name: k3s
     import:
       path: common
       name: k3s
     only:
-      archs:
-        - arm64
+      clusterArch: arm64
     files:
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-arm64

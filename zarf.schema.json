@@ -8,7 +8,7 @@
         "user",
         "architecture",
         "timestamp",
-        "string"
+        "version"
       ],
       "properties": {
         "terminal": {
@@ -23,7 +23,7 @@
         "timestamp": {
           "type": "string"
         },
-        "string": {
+        "version": {
           "type": "string"
         }
       },
@@ -170,17 +170,11 @@
     },
     "ZarfComponentOnlyTarget": {
       "properties": {
-        "os": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "localOS": {
+          "type": "string"
         },
-        "archs": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "clusterArch": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
