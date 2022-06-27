@@ -6,6 +6,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/pterm/pterm"
 
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,7 @@ var rootCmd = &cobra.Command{
 
 		// Disable progress bars for CI envs
 		if os.Getenv("CI") == "true" {
-			message.Note("CI environment detected, disabling progress bars")
+			pterm.FgYellow.Println("CI environment detected, disabling progress bars")
 			message.NoProgress = true
 		}
 	},
@@ -62,7 +63,7 @@ func setLogLevel(logLevel string) {
 
 	if lvl, ok := match[logLevel]; ok {
 		message.SetLogLevel(lvl)
-		message.Note("Log level set to " + logLevel)
+		pterm.FgYellow.Println("Log level set to " + logLevel)
 	} else {
 		message.Warn("invalid log level setting")
 	}

@@ -17,6 +17,6 @@ func TestE2eComponentScripts(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Deploy the simple script that should fail the timeout
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=fails")
+	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=does-not-pass")
 	require.Error(t, err, output)
 }

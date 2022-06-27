@@ -11,7 +11,7 @@ components:
         - "sleep 1"
 
   # This script will fail after 1 seconds
-  - name: fails
+  - name: does-not-pass
     scripts:
       timeoutSeconds: 1
       before:
