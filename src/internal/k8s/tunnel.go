@@ -95,21 +95,53 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 	tunnel.spinner = spinner
 }
 
+func isPortClaimable(portNumber int) bool {
+	ln, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(portNumber))
+	if err != nil {
+		// Since we got an error, this port is not claimable
+		return false
+	}
+
+	// Since we didn't get an error, this port is claimable
+	_ = ln.Close()
+
+	return true
+}
+
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	message.Debugf("tunnel.Connect(%s, %v)", target, blocking)
+	var err error
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.localPort = PortRegistry
 		tunnel.remotePort = 5000
+
+		if !isPortClaimable(tunnel.localPort) {
+			if tunnel.localPort, err = GetAvailablePort(); err != nil {
+				message.Fatal(err, "Unable to get an available port to use to connect to the in-cluster docker registry")
+			}
+		}
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
 		tunnel.localPort = PortLogging
 		tunnel.remotePort = 3000
+
+		if !isPortClaimable(tunnel.localPort) {
+			if tunnel.localPort, err = GetAvailablePort(); err != nil {
+				message.Fatal(err, "Unable to get an available port to use to connect to the in-cluster grafana")
+			}
+		}
 	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
 		tunnel.localPort = PortGit
 		tunnel.remotePort = 3000
+
+		if !isPortClaimable(tunnel.localPort) {
+			if tunnel.localPort, err = GetAvailablePort(); err != nil {
+				message.Fatal(err, "Unable to get an available port to use to connect to the in-cluster gitea")
+			}
+		}
 	default:
 		if target != "" {
 			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
