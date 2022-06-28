@@ -74,9 +74,9 @@ webhooks:
         path: "/mutate/flux-gitrepository"
       caBundle: "###ZARF_AGENT_CA###"
     rules:
-      # Only create is valid for flux-gitrepository
       - operations:
           - "CREATE"
+          - "UPDATE"
         apiGroups:
           - "source.toolkit.fluxcd.io"
         apiVersions:
