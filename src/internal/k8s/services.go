@@ -13,7 +13,7 @@ import (
 func ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 	message.Debugf("k8s.ReplaceService(%v)", service)
 
-	if err :=DeleteService(service.Namespace, service.Name); err != nil {
+	if err := DeleteService(service.Namespace, service.Name); err != nil {
 		return nil, err
 	}
 
@@ -23,6 +23,7 @@ func ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 // GenerateService returns a K8s service struct without writing to the cluster
 func GenerateService(namespace, name string) *corev1.Service {
 	message.Debugf("k8s.GenerateService(%s, %s)", name, namespace)
+
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -67,11 +68,21 @@ func GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, er
 	message.Debugf("k8s.GetServicesByLabel(%s, %s)", namespace, label)
 	clientset := getClientset()
 
-	// Creat the selector and add the requirement
+	// Only add a matchLabel if an explicit value was provided to match against
+	matchLabels := map[string]string{}
+	if value != "" {
+		matchLabels[label] = value
+	}
+
+	// This matches the label key, even if no explicit value was provided
+	matchExpressions := []metav1.LabelSelectorRequirement{{
+		Key:      label,
+		Operator: metav1.LabelSelectorOpExists,
+	}}
+
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			label: value,
-		},
+		MatchLabels:      matchLabels,
+		MatchExpressions: matchExpressions,
 	})
 
 	// Run the query with the selector and return as a ServiceList

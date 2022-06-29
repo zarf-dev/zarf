@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -140,6 +142,53 @@ var generateCLIDocs = &cobra.Command{
 	},
 }
 
+// TODO: This currently doesn't show the connect options that come out of the `init` package since those aren't handled at service annotations..
+var getConnectOptions = &cobra.Command{
+	Use:   "get-connect-options [FILTER]",
+	Short: "Get all the connect options from the packages that have been deployed",
+	Run: func(cmd *cobra.Command, args []string) {
+
+		// Optional arg to filter the connect-name options
+		connectNameFilter := ""
+		if len(args) > 0 {
+			connectNameFilter = args[0]
+		}
+
+		// Get ALL the services in the cluster that have the connect-name label
+		allNamespaceFilter := ""
+		anyValueFilter := ""
+		serviceList, err := k8s.GetServicesByLabel(allNamespaceFilter, k8s.ZarfConnectLabelKey, anyValueFilter)
+		if err != nil {
+			message.Errorf(err, "Unable to get services that have the zarf-connect label key")
+		}
+
+		// Build up a pterm table of the resulting service connection commands
+		list := pterm.TableData{{"     Connect Command", "Description"}}
+
+		// Loop over each connecStrings and convert to pterm.TableData
+		for _, service := range serviceList.Items {
+
+			// Skip this connect option if it doesn't fit the optional name filter
+			connectName := service.Labels[k8s.ZarfConnectLabelKey]
+			if connectNameFilter != "" && !strings.Contains(connectName, connectNameFilter) {
+				continue
+			}
+
+			// Add this connect command to the list
+			connectCommand := fmt.Sprintf("     zarf connect %s", connectName)
+			connectDescription := service.Annotations[k8s.ZarfConnectDescriptionKey]
+			list = append(list, []string{connectCommand, connectDescription})
+		}
+
+		// Create the table output with the data if there are any matches
+		if len(list) == 1 {
+			message.Warn("Unable to find any connect command options in the cluster")
+		} else {
+			_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 	rootCmd.AddCommand(generateCLIDocs)
@@ -150,6 +199,7 @@ func init() {
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
 	toolsCmd.AddCommand(createReadOnlyGiteaUser)
+	toolsCmd.AddCommand(getConnectOptions)
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)

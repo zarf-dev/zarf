@@ -29,11 +29,13 @@ import (
 var globalMutex sync.Mutex
 
 const (
-	PodResource  = "pod"
-	SvcResource  = "svc"
-	ZarfRegistry = "REGISTRY"
-	ZarfLogging  = "LOGGING"
-	ZarfGit      = "GIT"
+	PodResource               = "pod"
+	SvcResource               = "svc"
+	ZarfRegistry              = "REGISTRY"
+	ZarfLogging               = "LOGGING"
+	ZarfGit                   = "GIT"
+	ZarfConnectLabelKey       = "zarf.dev/connect-name"
+	ZarfConnectDescriptionKey = "zarf.dev/connect-description"
 )
 
 const (
