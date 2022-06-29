@@ -17,14 +17,10 @@ func TestGitopsExample(t *testing.T) {
 	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
 	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
 
-	// run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--confirm", "--components=git-server")
-	require.NoError(t, err, output)
-
 	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
 
 	// Deploy the gitops example
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Create a tunnel to the git resources
