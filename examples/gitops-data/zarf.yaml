@@ -16,4 +16,4 @@ components:
         # Do a full Git Repo Mirror
       - https://github.com/stefanprodan/podinfo.git
         # Clone an azure repo that breaks in go-git and has to fall back to the host git
-      - https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test
+      - https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git
