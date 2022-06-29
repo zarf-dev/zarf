@@ -97,4 +97,4 @@ build-examples:
 
 .PHONY: test-e2e
 test-e2e: init-package build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]	
-	cd src/test/e2e &&go test -failfast -v -timeout 2400s
+	cd src/test/e2e && go test -failfast -v -timeout 2400s
