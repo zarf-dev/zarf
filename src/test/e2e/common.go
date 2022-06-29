@@ -8,12 +8,10 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/test/e2e/clusters"
 
-	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -22,11 +20,10 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
-	zarfBinPath   string
-	arch          string
-	distroToUse   clusters.DistroToUse
-	filesToRemove []string
-	cmdsToKill    []*exec.Cmd
+	zarfBinPath string
+	arch        string
+	distroToUse clusters.DistroToUse
+	cmdsToKill  []*exec.Cmd
 }
 
 // getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
@@ -44,38 +41,12 @@ func getCLIName() string {
 	return binaryName
 }
 
-// cleanupAfterTest cleans up after a test run so that the next test can run in a clean environment. It needs to be
-// deferred at the beginning of each test. Example:
-//
-// func TestE2eFooBarBaz(t *testing.T) {
-//     defer e2e.cleanupAfterTest(t)
-//     doAllTheOtherStuff...
-// }
-func (e2e *ZarfE2ETest) cleanupAfterTest(t *testing.T) {
-	// Check if cluster is running and use Zarf to perform chart uninstallation
-	err := clusters.TryValidateClusterIsRunning()
-	if err == nil {
-		output, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components", "-l=trace")
-		require.NoError(t, err, output)
-	}
-
-	// Remove files created for the test
-	for _, filePath := range e2e.filesToRemove {
-		err = os.RemoveAll(filePath)
-		require.NoError(t, err, "unable to remove file when cleaning up after a test")
-	}
-	e2e.filesToRemove = []string{}
-
+// cleanupAfterAllTests cleans up after all tests run
+func (e2e *ZarfE2ETest) cleanupAfterAllTests() {
 	// Kill background processes spawned during the test
-	e2e.killBackgroundProcesses(t)
-}
-
-// Kill background processes spawned during the test
-func (e2e *ZarfE2ETest) killBackgroundProcesses(t *testing.T) {
 	for _, cmd := range e2e.cmdsToKill {
 		if cmd.Process != nil {
-			err := cmd.Process.Kill()
-			require.NoError(t, err, "unable to kill background cmd when cleaning up after a test")
+			_ = cmd.Process.Kill()
 		}
 	}
 	e2e.cmdsToKill = []*exec.Cmd{}
@@ -120,28 +91,9 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname string, namespace string, cmd [
 	return stdoutBuffer.String(), stderrBuffer.String(), err
 }
 
-// execZarfCommand executes a Zarf command. It automatically knows which Zarf binary to use, and it has special logic
-// That adds the "k3s" component if the user wants to use the built-in K3s and `zarf init` is the command being run.
-// It requires
+// execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
 	// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
-
-	// Check if we need to deploy the k3s component
-	if e2e.distroToUse == clusters.DistroK3s && commandString[0] == "init" {
-		componentAdded := false
-		for idx, str := range commandString {
-			if strings.Contains(str, "components") {
-				commandString[idx] = str + ",k3s"
-				componentAdded = true
-				break
-			}
-		}
-
-		if !componentAdded {
-			commandString = append(commandString, "--components=k3s")
-		}
-	}
-
 	output, err := exec.Command(e2e.zarfBinPath, commandString...).CombinedOutput()
 	fmt.Println(string(output))
 	return string(output), err
@@ -173,4 +125,10 @@ func (e2e *ZarfE2ETest) getPodsFromNamespace(namespace string) (*v1.PodList, err
 	}
 
 	return nil, errors.New("unable to get a healthy pod from the namespace")
+}
+
+func (e2e *ZarfE2ETest) cleanFiles(files ...string) {
+	for _, file := range files {
+		_ = os.Remove(file)
+	}
 }

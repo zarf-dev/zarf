@@ -11,16 +11,10 @@ import (
 )
 
 func TestE2eExampleComposability(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
-
-	//run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--confirm")
-	require.NoError(t, err, output)
-
 	path := fmt.Sprintf("../../../build/zarf-package-compose-example-%s.tar.zst", e2e.arch)
 
 	// Deploy the composable game package
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the game service

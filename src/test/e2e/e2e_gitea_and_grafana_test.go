@@ -14,15 +14,9 @@ import (
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
-
-	// run `zarf init`
-	output, err := e2e.execZarfCommand("init", "--components=git-server,logging", "--confirm")
-	require.NoError(t, err, output)
-
 	// Deploy the gitops example
 	path := fmt.Sprintf("../../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
@@ -49,7 +43,7 @@ func TestGiteaAndGrafana(t *testing.T) {
 
 	// Get the repo as the readonly user
 	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
-	getRepoRequest, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/v1/repos/%v/%v", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repoName), nil)
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/v1/repos/%v/%v", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
 	assert.NoError(t, err)
 

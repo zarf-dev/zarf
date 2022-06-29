@@ -16,11 +16,13 @@ func TestGeneralCLI(t *testing.T) {
 	// TODO: There has to be a better way to pipe this output to the file.. For some reason exec.Command( ... > file ).Output() couldn't pipe to file
 	// output, err = exec.Command("bash", "-c", "\"echo 'random test data 🦄' > shasum-test-file\"").Output()
 	shasumTestFilePath := "shasum-test-file"
+
+	e2e.cleanFiles(shasumTestFilePath)
+
 	testfile, _ := os.Create(shasumTestFilePath)
 	cmd := exec.Command("echo", "random test data 🦄")
 	cmd.Stdout = testfile
 	_ = cmd.Run()
-	e2e.filesToRemove = append(e2e.filesToRemove, shasumTestFilePath)
 
 	output, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
 	assert.NoError(t, err, output)
@@ -44,21 +46,13 @@ func TestGeneralCLI(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test that changing the log level actually applies the requested level
-	output, _ = e2e.execZarfCommand("version", "--log-level=warn")
-	expectedOutString := "Log level set to warn"
-	require.Contains(t, output, expectedOutString, "The log level should be changed to 'warn'")
-
-}
-
-func TestInitZarf(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
-
-	// Initialize Zarf for the next set of tests
-	// This also confirms that using the `--confirm` flags does not hang when not also specifying the `--components` flag
-	output, err := e2e.execZarfCommand("init", "--confirm", "-l=trace")
-	assert.NoError(t, err, output)
+	output, _ = e2e.execZarfCommand("version", "--log-level=debug")
+	expectedOutString := "Log level set to debug"
+	require.Contains(t, output, expectedOutString, "The log level should be changed to 'debug'")
 
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
 	output, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm", "-l=trace")
 	assert.Error(t, err, output)
+
+	e2e.cleanFiles(shasumTestFilePath)
 }

@@ -28,10 +28,6 @@ var NoProgress bool
 var logLevel = InfoLevel
 
 func init() {
-	Setup()
-}
-
-func Setup() {
 	// Help capture text cleaner
 	pterm.SetDefaultOutput(os.Stderr)
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)

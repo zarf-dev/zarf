@@ -8,7 +8,12 @@ import (
 )
 
 func TestE2eComponentChoice(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
+	var (
+		firstFile  = "first-choice-file.txt"
+		secondFile = "second-choice-file.txt"
+	)
+
+	e2e.cleanFiles(firstFile, secondFile)
 
 	path := fmt.Sprintf("../../../build/zarf-package-component-choice-%s.tar.zst", e2e.arch)
 
@@ -22,19 +27,19 @@ func TestE2eComponentChoice(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Verify the file was created
-	expectedFile := "first-choice-file.txt"
+	expectedFile := firstFile
 	require.FileExists(t, expectedFile)
 	// Verify the second choice file was not created
-	expectedFile = "second-choice-file.txt"
+	expectedFile = secondFile
 	require.NoFileExists(t, expectedFile)
-	e2e.filesToRemove = append(e2e.filesToRemove, expectedFile)
 
 	// Deploy using default choice
 	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Verify the file was created
-	expectedFile = "second-choice-file.txt"
+	expectedFile = secondFile
 	require.FileExists(t, expectedFile)
-	e2e.filesToRemove = append(e2e.filesToRemove, expectedFile)
+
+	e2e.cleanFiles(firstFile, secondFile)
 }

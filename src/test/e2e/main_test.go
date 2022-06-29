@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"testing"
 
@@ -48,8 +49,8 @@ func doAllTheThings(m *testing.M) (int, error) {
 	e2e.zarfBinPath = path.Join("../../../build", getCLIName())
 	e2e.distroToUse, err = clusters.GetDistroToUseFromString(os.Getenv(testDistroEnvVarName))
 	if err != nil {
-		return 1, fmt.Errorf("unable to determine which k8s cluster to use. Env var TESTDISTRO must be present with "+
-			"value [provided|kind|k3d|k3s]: %v", err)
+		fmt.Println("Env var TESTDISTRO (provided|kind|k3d|k3s) not specified, using k3d")
+		e2e.distroToUse = clusters.DistroK3d
 	}
 
 	// Validate that the Zarf binary exists. If it doesn't that means the dev hasn't built it, usually by running
@@ -77,15 +78,27 @@ func doAllTheThings(m *testing.M) (int, error) {
 			if err != nil {
 				fmt.Println(fmt.Errorf("unable to delete cluster and temporary kubeconfig: %w", err)) //nolint:forbidigo
 			}
+
+			e2e.cleanupAfterAllTests()
 		}(tempKubeconfigFilePath)
 	}
 
+	initComponents := "k3s,logging,git-server"
+
 	// Final check to make sure we have a working k8s cluster, skipped if we are using K3s
 	if e2e.distroToUse != clusters.DistroK3s {
-		err = clusters.TryValidateClusterIsRunning()
-		if err != nil {
+		if err = clusters.TryValidateClusterIsRunning(); err != nil {
 			return 1, fmt.Errorf("unable to connect to a running k8s cluster: %w", err)
 		}
+		// Don't add k3s to the init arg
+		initComponents = "logging,git-server"
+	}
+
+	// run `zarf init`
+	output, err := exec.Command(e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm").CombinedOutput()
+	fmt.Println(string(output))
+	if err != nil {
+		return 1, fmt.Errorf("unable to run `zarf init`: %w", err)
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call

@@ -12,7 +12,8 @@ import (
 )
 
 func TestGitopsExample(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
+	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
+	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
 
 	// run `zarf init`
 	output, err := e2e.execZarfCommand("init", "--confirm", "--components=git-server")
@@ -35,13 +36,11 @@ func TestGitopsExample(t *testing.T) {
 	cloneCommand := fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git", strings.TrimSpace(string(adminPassword)))
 	gitOutput, err := exec.Command("git", "clone", cloneCommand).CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
-	e2e.filesToRemove = append(e2e.filesToRemove, "mirror__github.com__stefanprodan__podinfo")
 
 	// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.15.0
 	cloneCommand = fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git", strings.TrimSpace(string(adminPassword)))
 	gitOutput, err = exec.Command("git", "clone", cloneCommand).CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
-	e2e.filesToRemove = append(e2e.filesToRemove, "mirror__github.com__defenseunicorns__zarf")
 
 	// Check for correct tag
 	expectedTag := "v0.15.0\n"
@@ -66,4 +65,7 @@ func TestGitopsExample(t *testing.T) {
 
 	err = os.Chdir("..")
 	assert.NoError(t, err, "unable to change directories back to blah blah blah")
+
+	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
+	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
 }

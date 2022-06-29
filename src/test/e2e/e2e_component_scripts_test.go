@@ -8,8 +8,6 @@ import (
 )
 
 func TestE2eComponentScripts(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
-
 	path := fmt.Sprintf("../../../build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
