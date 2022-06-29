@@ -10,13 +10,13 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.18.x
-      
+
       - name: "Checkout Repo"
         uses: actions/checkout@v3
-      
+
       - name: "Create k8s Kind Cluster"
         uses: helm/kind-action@v1.3.0
-      
+
       - name: "Setup caching"
         uses: actions/cache@v3
         with:
@@ -26,6 +26,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: "Build CLI binary & init-packages"
+        run: make build-cli-linux-amd init-package ARCH=amd64
 
       - name: "Run Tests"
         # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster

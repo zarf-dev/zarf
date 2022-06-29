@@ -22,7 +22,10 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-        
+            ${{ runner.os }}-go-
+
+      - name: "Build CLI binary & init-packages"
+        run: make build-cli-linux-amd init-package ARCH=amd64
 
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
