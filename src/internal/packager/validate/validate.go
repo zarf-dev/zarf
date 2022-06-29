@@ -53,6 +53,12 @@ func validateComponent(component types.ZarfComponent) {
 			message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name)
 		}
 	}
+
+	for _, repoUrl := range component.Repos {
+		if !strings.Contains(repoUrl, ".git") {
+			message.Fatalf(nil, "Git repositories provided must have .git somewhere in the url path: %s", repoUrl)
+		}
+	}
 }
 
 func validatePackageName(subject string) error {
