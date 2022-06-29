@@ -10,6 +10,8 @@ import (
 
 func TestE2eZarfCreate(t *testing.T) {
 	t.Log("E2E: Testing zarf create")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	// run `zarf create` with a specified image cache location
 	imageCachePath := "/tmp/.image_cache-location"

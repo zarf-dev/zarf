@@ -11,6 +11,8 @@ import (
 
 func TestGeneralCLI(t *testing.T) {
 	t.Log("E2E: Testing general CLI")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	// Test `zarf prepare sha256sum` for a local asset
 	expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"

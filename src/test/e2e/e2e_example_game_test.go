@@ -11,6 +11,8 @@ import (
 
 func TestE2eExampleGame(t *testing.T) {
 	t.Log("E2E: Testing example game")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
 

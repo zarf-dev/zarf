@@ -13,6 +13,8 @@ import (
 
 func TestGitopsExample(t *testing.T) {
 	t.Log("E2E: Testing gitops example")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
 	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")

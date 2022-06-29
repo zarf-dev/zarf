@@ -10,6 +10,8 @@ import (
 
 func TestE2eInitCluster(t *testing.T) {
 	initComponents := "k3s,logging,git-server"
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	// Final check to make sure we have a working k8s cluster, skipped if we are using K3s
 	if e2e.distroToUse != clusters.DistroK3s {

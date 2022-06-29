@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/test/e2e/clusters"
@@ -41,8 +42,14 @@ func getCLIName() string {
 	return binaryName
 }
 
-// cleanupAfterAllTests cleans up after all tests run
-func (e2e *ZarfE2ETest) cleanupAfterAllTests() {
+// setup actions for each test
+func (e2e *ZarfE2ETest) setup(t *testing.T) {
+	t.Log("Test setup")
+}
+
+// teardown actions for each test
+func (e2e *ZarfE2ETest) teardown(t *testing.T) {
+	t.Log("Test teardown")
 	// Kill background processes spawned during the test
 	for _, cmd := range e2e.cmdsToKill {
 		if cmd.Process != nil {

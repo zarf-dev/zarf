@@ -9,6 +9,8 @@ import (
 
 func TestE2eComponentScripts(t *testing.T) {
 	t.Log("E2E: Testing component scripts")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 

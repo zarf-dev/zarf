@@ -77,8 +77,6 @@ func doAllTheThings(m *testing.M) (int, error) {
 			if err != nil {
 				fmt.Println(fmt.Errorf("unable to delete cluster and temporary kubeconfig: %w", err)) //nolint:forbidigo
 			}
-
-			e2e.cleanupAfterAllTests()
 		}(tempKubeconfigFilePath)
 	}
 

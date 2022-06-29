@@ -9,6 +9,8 @@ import (
 
 func TestE2eComponentChoice(t *testing.T) {
 	t.Log("E2E: Testing component choice")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	var (
 		firstFile  = "first-choice-file.txt"

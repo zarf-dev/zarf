@@ -11,6 +11,8 @@ import (
 
 func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Testing data injection")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.arch)
 

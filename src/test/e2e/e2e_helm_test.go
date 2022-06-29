@@ -11,6 +11,8 @@ import (
 
 func TestE2eExampleHelm(t *testing.T) {
 	t.Log("E2E: Testing example helm chart")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
 
