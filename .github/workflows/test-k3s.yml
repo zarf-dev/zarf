@@ -25,7 +25,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: "Build CLI binary & init-packages"
-        run: make build-cli-linux-amd init-package ARCH=amd64
+        run: make build-cli-linux-amd init-package build-examples ARCH=amd64
 
       - name: "Run Tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed

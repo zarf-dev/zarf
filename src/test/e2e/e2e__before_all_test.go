@@ -24,5 +24,5 @@ func TestE2eInitCluster(t *testing.T) {
 	// run `zarf init`
 	t.Log("Running `zarf init`")
 	output, err := exec.Command(e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm", "--no-progress").CombinedOutput()
-	require.NoError(t, err, output)
+	require.NoError(t, err, string(output))
 }
