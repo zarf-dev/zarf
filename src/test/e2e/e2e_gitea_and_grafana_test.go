@@ -14,8 +14,10 @@ import (
 )
 
 func TestGiteaAndGrafana(t *testing.T) {
+	t.Log("E2E: Testing gitea and grafana")
+
 	// Deploy the gitops example
-	path := fmt.Sprintf("../../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
 	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 

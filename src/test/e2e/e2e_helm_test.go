@@ -10,7 +10,9 @@ import (
 )
 
 func TestE2eExampleHelm(t *testing.T) {
-	path := fmt.Sprintf("../../../build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
+	t.Log("E2E: Testing example helm chart")
+
+	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
 
 	// Deploy the charts
 	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")

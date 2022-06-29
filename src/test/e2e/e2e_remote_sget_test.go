@@ -8,6 +8,8 @@ import (
 )
 
 func TestE2eRemoteSgete(t *testing.T) {
+	t.Log("E2E: Testing remote sget")
+
 	path := fmt.Sprintf("sget://defenseunicorns/zarf-hello-world:%s", e2e.arch)
 
 	// Deploy the game

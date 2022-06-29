@@ -10,7 +10,9 @@ import (
 )
 
 func TestE2eComponentVariables(t *testing.T) {
-	path := fmt.Sprintf("../../../build/zarf-package-component-variables-%s.tar.zst", e2e.arch)
+	t.Log("E2E: Testing component variables")
+
+	path := fmt.Sprintf("build/zarf-package-component-variables-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple configmap
 	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")

@@ -97,4 +97,4 @@ build-examples:
 
 .PHONY: test-e2e
 test-e2e: init-package build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]	
-	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -failfast -v -count=1 -timeout 2400s ; rm zarf-init-$(ARCH).tar.zst
+	cd src/test/e2e &&go test -failfast -v -timeout 2400s

@@ -12,6 +12,8 @@ import (
 )
 
 func TestGitopsExample(t *testing.T) {
+	t.Log("E2E: Testing gitops example")
+
 	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
 	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
 
@@ -19,7 +21,7 @@ func TestGitopsExample(t *testing.T) {
 	output, err := e2e.execZarfCommand("init", "--confirm", "--components=git-server")
 	require.NoError(t, err, output)
 
-	path := fmt.Sprintf("../../../build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
 
 	// Deploy the gitops example
 	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")

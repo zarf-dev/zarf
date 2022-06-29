@@ -3,12 +3,10 @@ package test
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/test/e2e/clusters"
 )
 
@@ -22,7 +20,8 @@ const (
 
 // TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc
 func TestMain(m *testing.M) {
-	message.Info("Running tests")
+	// Work from the root directory of the project
+	os.Chdir("../../../")
 
 	// K3d use the intern package, which requires this to be set in go 1.18
 	os.Setenv("ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH", "go1.18")
@@ -46,7 +45,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	// Set up constants in the global variable that all the tests are able to access
 	e2e.arch = config.GetArch()
 
-	e2e.zarfBinPath = path.Join("../../../build", getCLIName())
+	e2e.zarfBinPath = path.Join("build", getCLIName())
 	e2e.distroToUse, err = clusters.GetDistroToUseFromString(os.Getenv(testDistroEnvVarName))
 	if err != nil {
 		fmt.Println("Env var TESTDISTRO (provided|kind|k3d|k3s) not specified, using k3d")
@@ -81,24 +80,6 @@ func doAllTheThings(m *testing.M) (int, error) {
 
 			e2e.cleanupAfterAllTests()
 		}(tempKubeconfigFilePath)
-	}
-
-	initComponents := "k3s,logging,git-server"
-
-	// Final check to make sure we have a working k8s cluster, skipped if we are using K3s
-	if e2e.distroToUse != clusters.DistroK3s {
-		if err = clusters.TryValidateClusterIsRunning(); err != nil {
-			return 1, fmt.Errorf("unable to connect to a running k8s cluster: %w", err)
-		}
-		// Don't add k3s to the init arg
-		initComponents = "logging,git-server"
-	}
-
-	// run `zarf init`
-	output, err := exec.Command(e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm").CombinedOutput()
-	fmt.Println(string(output))
-	if err != nil {
-		return 1, fmt.Errorf("unable to run `zarf init`: %w", err)
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call

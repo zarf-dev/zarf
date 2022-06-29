@@ -10,7 +10,9 @@ import (
 )
 
 func TestE2eExampleGame(t *testing.T) {
-	path := fmt.Sprintf("../../../build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
+	t.Log("E2E: Testing example game")
+
+	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
 	// Deploy the game
 	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")

@@ -10,6 +10,8 @@ import (
 )
 
 func TestGeneralCLI(t *testing.T) {
+	t.Log("E2E: Testing general CLI")
+
 	// Test `zarf prepare sha256sum` for a local asset
 	expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 
@@ -51,7 +53,7 @@ func TestGeneralCLI(t *testing.T) {
 	require.Contains(t, output, expectedOutString, "The log level should be changed to 'debug'")
 
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
-	output, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm", "-l=trace")
+	output, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
 	assert.Error(t, err, output)
 
 	e2e.cleanFiles(shasumTestFilePath)

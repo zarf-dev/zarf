@@ -93,6 +93,8 @@ func (e2e *ZarfE2ETest) execCommandInPod(podname string, namespace string, cmd [
 
 // execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, error) {
+	// Always disable progress bars
+	commandString = append(commandString, "--no-progress")
 	// TODO: It might be a nice feature to read some flag/env and change the stdout and stderr to pipe to the terminal running the test
 	output, err := exec.Command(e2e.zarfBinPath, commandString...).CombinedOutput()
 	fmt.Println(string(output))

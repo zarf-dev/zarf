@@ -8,7 +8,9 @@ import (
 )
 
 func TestE2eComponentScripts(t *testing.T) {
-	path := fmt.Sprintf("../../../build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
+	t.Log("E2E: Testing component scripts")
+
+	path := fmt.Sprintf("build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
 	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=passes")

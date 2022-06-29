@@ -10,10 +10,12 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
-	path := fmt.Sprintf("../../../build/zarf-package-data-injection-demo-%s.tar", e2e.arch)
+	t.Log("E2E: Testing data injection")
+
+	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.arch)
 
 	// Deploy the data injection example
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "-l=trace")
+	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, output)
 
 	// Get the data injection pod
