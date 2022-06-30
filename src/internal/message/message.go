@@ -143,7 +143,10 @@ func HeaderInfof(format string, a ...any) {
 }
 
 func JsonValue(value any) string {
-	bytes, _ := json.MarshalIndent(value, "", "  ")
+	bytes, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		Debugf("ERROR marshalling json: %v", err)
+	}
 	return string(bytes)
 }
 

@@ -56,7 +56,6 @@ func Generate() Values {
 
 	generated.agentTLS = state.AgentTLS
 
-	message.Debugf("Template values: %s", message.JsonValue(generated))
 	return generated
 }
 
