@@ -205,7 +205,7 @@ func GetActiveConfig() types.ZarfPackage {
 }
 
 func BuildConfig(path string) error {
-	message.Debugf("config.BuildConfig(%#v)", path)
+	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84

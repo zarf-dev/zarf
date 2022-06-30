@@ -44,7 +44,7 @@ func PushAllDirectories(localPath string) {
 		err = addReadOnlyUserToRepo(repoName)
 		if err != nil {
 			message.Debug(err)
-			message.Warnf("Unable to add the read-only user to the repo: %#v\n", repoName)
+			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 		}
 	}
 

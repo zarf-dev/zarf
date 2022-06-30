@@ -19,7 +19,7 @@ func GetNamespaces() (*corev1.NamespaceList, error) {
 }
 
 func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	message.Debugf("k8s.UpdateNamespace(%#v)", namespace)
+	message.Debugf("k8s.UpdateNamespace(%s)", message.JsonValue(namespace))
 
 	clientset := getClientset()
 	updateOptions := metav1.UpdateOptions{}

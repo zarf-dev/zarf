@@ -102,7 +102,7 @@ func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1
 }
 
 func ReplaceTLSSecret(namespace, name string, conf types.GeneratedPKI) error {
-	message.Debugf("k8s.ReplaceTLSSecret(%s, %s, %#v)", namespace, name, conf)
+	message.Debugf("k8s.ReplaceTLSSecret(%s, %s, %s)", namespace, name, message.JsonValue(conf))
 
 	secret, err := GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
