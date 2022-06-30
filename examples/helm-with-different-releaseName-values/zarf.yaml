@@ -1,19 +1,8 @@
 kind: ZarfPackageConfig
 metadata:
   name: test-helm-releasename
-  description: "Deploys same chart with different names"
+  description: "Deploys a helm chart with custom release name"
 components:
-  - name: nginx-1
-    required: true
-    charts:
-      - name: nginx # use the default name if releaseName not specified
-        url: https://charts.bitnami.com/bitnami
-        version: 11.1.5
-        namespace: nginx
-        valuesFiles:
-          - values.yaml
-    images:
-      - docker.io/bitnami/nginx:1.21.6-debian-10-r114
   - name: nginx-2
     required: true
     charts:
@@ -22,25 +11,6 @@ components:
         url: https://charts.bitnami.com/bitnami
         version: 11.1.5
         namespace: nginx
-        valuesFiles:
-          - values.yaml
-    images:
-      - docker.io/bitnami/nginx:1.21.6-debian-10-r114
-  - name: nginx-3-4 # multiple charts in same component
-    required: true
-    charts:
-      - name: nginx
-        releaseName: nginx-3
-        url: https://charts.bitnami.com/bitnami
-        version: 11.1.5
-        namespace: nginx-three-four
-        valuesFiles:
-          - values.yaml
-      - name: nginx
-        releaseName: nginx-4
-        url: https://charts.bitnami.com/bitnami
-        version: 11.1.5
-        namespace: nginx-three-four
         valuesFiles:
           - values.yaml
     images:

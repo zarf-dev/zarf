@@ -23,6 +23,4 @@ func TestE2eExampleHelm(t *testing.T) {
 	// Verify multiple helm installs of different release names were deployed
 	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-A", "--selector=app.kubernetes.io/name=nginx", "--no-headers").Output()
 	assert.Contains(t, string(kubectlOut), "zarf-nginx-2")
-	assert.Contains(t, string(kubectlOut), "zarf-nginx-3")
-	assert.Contains(t, string(kubectlOut), "zarf-nginx-4")
 }
