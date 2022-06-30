@@ -257,7 +257,7 @@ func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool 
 	targetArch := GetArch()
 
 	// Test for valid architecture
-	if component.Only.ClusterArch == "" || component.Only.ClusterArch == targetArch {
+	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
 		validArch = true
 	}
 

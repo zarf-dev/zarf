@@ -54,8 +54,13 @@ type ZarfComponent struct {
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
-	LocalOS     string `yaml:"localOS,omitempty"`
-	ClusterArch string `yaml:"clusterArch,omitempty"`
+	LocalOS string                   `yaml:"localOS,omitempty"`
+	Cluster ZarfComponentOnlyCluster `yaml:"cluster,omitempty"`
+}
+
+type ZarfComponentOnlyCluster struct {
+	Architecture string   `yaml:"architecture,omitempty"`
+	Distros      []string `yaml:"distros,omitempty"`
 }
 
 // ZarfComponentVariables are variables that can be used to dynaically template K8s resources

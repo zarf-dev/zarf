@@ -87,8 +87,9 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	}
 
 	// Merge Only filters
-	if override.Only.ClusterArch != "" {
-		target.Only.ClusterArch = override.Only.ClusterArch
+	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)
+	if override.Only.Cluster.Architecture != "" {
+		target.Only.Cluster.Architecture = override.Only.Cluster.Architecture
 	}
 	if override.Only.LocalOS != "" {
 		target.Only.LocalOS = override.Only.LocalOS
@@ -115,7 +116,7 @@ func getImportedComponent(importComponent types.ZarfComponent, everGrowingCompos
 	for _, component := range importedPackage.Components {
 		if component.Name == componentName {
 			// Only add this component if it is valid for the target architecture.
-			if component.Only.ClusterArch == "" || component.Only.ClusterArch == targetArch {
+			if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
 				// Add the component to the list of components to compose.
 				everGrowingComposePath = filepath.Join(everGrowingComposePath, importComponent.Import.Path)
 				return *prepComponentToCompose(&component, importComponent, everGrowingComposePath)

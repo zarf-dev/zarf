@@ -100,7 +100,6 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	case k8s.DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
-
 	}
 
 	// CLI provided overrides that haven't been processed already
