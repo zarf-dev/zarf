@@ -112,6 +112,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
 				message.Debugf("Testing pod %s", pod.Name)
+				message.Debugf("%#v", pod)
 
 				// Handle container targetting
 				if target.Container != "" {

@@ -168,6 +168,9 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 			}
 		}
 
+		// Dump the tunnel URL to the console for other tools to use
+		fmt.Print(url)
+
 		// Since this blocking, set the defer now so it closes properly on sigterm
 		defer tunnel.Close()
 

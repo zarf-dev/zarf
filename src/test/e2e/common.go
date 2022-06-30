@@ -54,7 +54,9 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	// Kill background processes spawned during the test
 	for _, cmd := range e2e.cmdsToKill {
 		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+			if err := cmd.Process.Kill(); err != nil {
+				t.Logf("unable to kill process: %v", err)
+			}
 		}
 	}
 	e2e.cmdsToKill = []*exec.Cmd{}

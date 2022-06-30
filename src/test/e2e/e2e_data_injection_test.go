@@ -1,10 +1,12 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,8 +18,12 @@ func TestDataInjection(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.arch)
 
+	// Limit this deploy to 5 minutes
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	defer cancel()
+
 	// Deploy the data injection example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Get the data injection pod
