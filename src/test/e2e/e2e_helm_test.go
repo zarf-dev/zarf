@@ -17,10 +17,10 @@ func TestE2eExampleHelm(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
 
 	// Deploy the charts
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify multiple helm installs of different release names were deployed
-	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-A", "--selector=app.kubernetes.io/name=nginx", "--no-headers").Output()
-	assert.Contains(t, string(kubectlOut), "zarf-nginx-2")
+	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-releasename", "--no-headers").Output()
+	assert.Contains(t, string(kubectlOut), "zarf-cool-name-podinfo")
 }
