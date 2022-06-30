@@ -1,9 +1,11 @@
 package test
 
 import (
-	"os/exec"
+	"context"
 	"testing"
+	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/test/e2e/clusters"
 	"github.com/stretchr/testify/require"
 )
@@ -23,8 +25,11 @@ func TestE2eInitCluster(t *testing.T) {
 		initComponents = "logging,git-server"
 	}
 
+	t.Log("Running `zarf init`, limit to 10 minutes")
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
+	defer cancel()
+
 	// run `zarf init`
-	t.Log("Running `zarf init`")
-	output, err := exec.Command(e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm", "--no-progress").CombinedOutput()
-	require.NoError(t, err, string(output))
+	_, _, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm")
+	require.NoError(t, err)
 }

@@ -20,8 +20,8 @@ func TestGiteaAndGrafana(t *testing.T) {
 
 	// Deploy the gitops example
 	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Establish the port-forward into the gitea service; give the service a few seconds to come up since this is not a command we can retry
 	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")

@@ -17,8 +17,8 @@ func TestE2eComponentVariables(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-component-variables-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple configmap
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was properly templated
 	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()

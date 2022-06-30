@@ -28,35 +28,35 @@ func TestGeneralCLI(t *testing.T) {
 	cmd.Stdout = testfile
 	_ = cmd.Run()
 
-	output, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
-	assert.NoError(t, err, output)
-	assert.Equal(t, expectedShasum, output, "The expected SHASUM should equal the actual SHASUM")
+	stdOut, stdErr, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
 
 	// Test `zarf prepare sha256sum` for a remote asset
 	expectedShasum = "c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617\n"
 
-	output, err = e2e.execZarfCommand("prepare", "sha256sum", "https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
-	assert.NoError(t, err, output)
-	assert.Contains(t, output, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
+	stdOut, stdErr, err = e2e.execZarfCommand("prepare", "sha256sum", "https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 
 	// Test `zarf version`
-	output, err = e2e.execZarfCommand("version")
+	stdOut, _, err = e2e.execZarfCommand("version")
 	assert.NoError(t, err)
-	assert.NotEqual(t, len(output), 0, "Zarf version should not be an empty string")
-	assert.NotEqual(t, output, "UnknownVersion", "Zarf version should not be the default value")
+	assert.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
+	assert.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test for expected failure when given a bad componenet input
-	_, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
+	_, _, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
 
 	// Test that changing the log level actually applies the requested level
-	output, _ = e2e.execZarfCommand("version", "--log-level=debug")
+	_, stdErr, _ = e2e.execZarfCommand("version", "--log-level=debug")
 	expectedOutString := "Log level set to debug"
-	require.Contains(t, output, expectedOutString, "The log level should be changed to 'debug'")
+	require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
-	output, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
-	assert.Error(t, err, output)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
+	assert.Error(t, err, stdOut, stdErr)
 
 	e2e.cleanFiles(shasumTestFilePath)
 }

@@ -23,12 +23,12 @@ func TestE2eComponentChoice(t *testing.T) {
 
 	// Try to deploy both and expect failure due to only one component allowed at a time
 	// We currently don't have a pattern to actually test the interactive prompt, so just testing automation for now
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=first-choice,second-choice")
-	require.Error(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=first-choice,second-choice")
+	require.Error(t, err, stdOut, stdErr)
 
 	// Deploy a single choice and expect success
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=first-choice")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=first-choice")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the file was created
 	expectedFile := firstFile
@@ -38,8 +38,8 @@ func TestE2eComponentChoice(t *testing.T) {
 	require.NoFileExists(t, expectedFile)
 
 	// Deploy using default choice
-	output, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the file was created
 	expectedFile = secondFile

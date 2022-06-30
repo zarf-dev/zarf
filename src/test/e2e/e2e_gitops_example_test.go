@@ -22,15 +22,15 @@ func TestGitopsExample(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
 
 	// Deploy the gitops example
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Create a tunnel to the git resources
 	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")
 	assert.NoError(t, err, "unable to establish tunnel to git")
 
 	// Check for full git repo mirror (foo.git) from https://github.com/stefanprodan/podinfo.git
-	adminPassword, err := e2e.execZarfCommand("tools", "get-admin-password")
+	adminPassword, _, err := e2e.execZarfCommand("tools", "get-admin-password")
 	assert.NoError(t, err, "Unable to get admin password for gitea instance")
 
 	cloneCommand := fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git", strings.TrimSpace(string(adminPassword)))

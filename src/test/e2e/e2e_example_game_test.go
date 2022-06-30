@@ -17,8 +17,8 @@ func TestE2eExampleGame(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
 	// Deploy the game
-	output, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Establish the port-forward into the game service
 	err = e2e.execZarfBackgroundCommand("connect", "doom", "--local-port=22333", "--cli-only")

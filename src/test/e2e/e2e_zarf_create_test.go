@@ -17,8 +17,8 @@ func TestE2eZarfCreate(t *testing.T) {
 	imageCachePath := "/tmp/.image_cache-location"
 	e2e.cleanFiles(imageCachePath)
 
-	output, err := e2e.execZarfCommand("package", "create", "--confirm", "--zarf-cache", imageCachePath)
-	require.NoError(t, err, output)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "--confirm", "--zarf-cache", imageCachePath)
+	require.NoError(t, err, stdOut, stdErr)
 
 	files, err := ioutil.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")
