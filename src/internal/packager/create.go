@@ -116,7 +116,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	if len(component.Files) > 0 {
 		_ = utils.CreateDirectory(componentPath.files, 0700)
 		for index, file := range component.Files {
-			message.Debugf("Loading %v", file)
+			message.Debugf("Loading %#v", file)
 			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
@@ -180,7 +180,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 
 	// Load all specified git repos
 	if len(component.Repos) > 0 {
-		spinner := message.NewProgressSpinner("Loading %v git repos", len(component.Repos))
+		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Stop()
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string

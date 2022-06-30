@@ -10,7 +10,7 @@ import (
 
 // NewServer creates and return a http.Server
 func NewServer(port string) *http.Server {
-	message.Debugf("http.NewServer(%v)", port)
+	message.Debugf("http.NewServer(%#v)", port)
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()

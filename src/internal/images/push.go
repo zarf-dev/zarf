@@ -9,7 +9,7 @@ import (
 )
 
 func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
-	message.Debugf("images.PushToZarfRegistry(%v, %v)", imageTarballPath, buildImageList)
+	message.Debugf("images.PushToZarfRegistry(%#v, %#v)", imageTarballPath, buildImageList)
 
 	// Establish a registry tunnel to send the images to the zarf registry
 	tunnel := k8s.NewZarfTunnel()

@@ -58,7 +58,7 @@ func main() {
 }
 
 func startSeedRegistry(readOnly bool) {
-	log.Printf("packager.startSeedRegistry(%v)\n", readOnly)
+	log.Printf("packager.startSeedRegistry(%#v)\n", readOnly)
 	registryConfig := &configuration.Configuration{}
 
 	registryConfig.Log.Level = "debug"

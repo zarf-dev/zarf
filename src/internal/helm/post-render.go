@@ -28,7 +28,7 @@ type renderer struct {
 }
 
 func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *renderer {
-	message.Debugf("helm.NewRenderer(%v)", options)
+	message.Debugf("helm.NewRenderer(%#v)", options)
 	return &renderer{
 		actionConfig:   actionConfig,
 		connectStrings: make(types.ConnectStrings),
@@ -85,7 +85,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			// parse to unstructured to have access to more data than just the name
 			rawData := &unstructured.Unstructured{}
 			if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
+				return nil, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 			}
 
 			switch rawData.GetKind() {

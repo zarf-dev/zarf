@@ -300,7 +300,7 @@ func addReadOnlyUserToRepo(repo string) error {
 
 // Add http request boilerplate and perform the request, checking for a successful response
 func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, error) {
-	message.Debugf("Performing %v http request to %v", request.Method, request.URL)
+	message.Debugf("Performing %#v http request to %#v", request.Method, request.URL)
 
 	// Prep the request with boilerplate
 	client := &netHttp.Client{Timeout: time.Second * 10}
@@ -317,7 +317,7 @@ func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, er
 
 	// If we get a 'bad' status code we will have no error, create a useful one to return
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		err = errors.New(fmt.Sprintf("Got status code of %v during http request with body of: %v", response.StatusCode, string(responseBody)))
+		err = errors.New(fmt.Sprintf("Got status code of %#v during http request with body of: %#v", response.StatusCode, string(responseBody)))
 		return []byte{}, err
 	}
 

@@ -95,7 +95,7 @@ func PrintConnectTable() error {
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
-	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %v, %v)", namespace, resourceType, resourceName, local, remote)
+	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
 		out:          ioutil.Discard,
 		localPort:    local,
@@ -121,7 +121,7 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
-	message.Debugf("tunnel.Connect(%s, %v)", target, blocking)
+	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
@@ -316,8 +316,8 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
-		url := fmt.Sprintf("http://%s:%v%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
-		msg := fmt.Sprintf("Creating port forwarding tunnel available at %s", url)
+		url := fmt.Sprintf("http://%s:%d%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
+		msg := fmt.Sprintf("Creating port forwarding tunnel at %s", url)
 		if tunnel.spinner == nil {
 			spinner.Successf(msg)
 		} else {
