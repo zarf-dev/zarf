@@ -31,7 +31,7 @@ require (
 	github.com/pterm/pterm v0.12.42
 	github.com/sigstore/cosign v1.9.0
 	github.com/spf13/cobra v1.5.0
-	github.com/stretchr/testify v1.7.5
+	github.com/stretchr/testify v1.8.0
 	github.com/testifysec/go-witness v0.1.11
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	gopkg.in/yaml.v2 v2.4.0
