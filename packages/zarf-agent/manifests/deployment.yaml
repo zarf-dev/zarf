@@ -28,6 +28,11 @@ spec:
               path: /healthz
               port: 8443
               scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
           ports:
             - containerPort: 8443
           resources:
