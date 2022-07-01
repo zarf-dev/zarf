@@ -45,8 +45,7 @@ func getCLIName() string {
 // setup actions for each test
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
-
-	// utils.ExecCommandWithContext(context.TODO(), true, "kubectl")
+	utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
 }
 
 // teardown actions for each test
@@ -66,7 +65,7 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 		helm.RemoveChart(chart.namespace, chart.name, spinner)
 	}
 	spinner.Success()
-	
+
 	e2e.cmdsToKill = []*exec.Cmd{}
 	e2e.chartsToRemove = []ChartTarget{}
 }

@@ -14,9 +14,6 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Create k8s Kind Cluster"
-        uses: helm/kind-action@v1.3.0
-
       - name: "Setup caching"
         uses: actions/cache@v3
         with:
@@ -26,6 +23,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: "Use KIND"
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
+          chmod +x ./kind        
+          ./kind create cluster
 
       - name: "Build CLI binary & init-packages"
         run: make build-cli-linux-amd init-package build-examples ARCH=amd64

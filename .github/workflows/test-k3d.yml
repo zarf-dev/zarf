@@ -24,10 +24,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Install K3d and deploy a cluster"
+      - name: "Use K3D"
         run: |
           wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          k3d cluster create 
+          k3d cluster create
 
       - name: "Build CLI binary & init-packages"
         run: make build-cli-linux-amd init-package build-examples ARCH=amd64
