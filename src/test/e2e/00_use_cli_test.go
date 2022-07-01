@@ -1,6 +1,7 @@
 package test
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -9,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGeneralCLI(t *testing.T) {
-	t.Log("E2E: Testing general CLI")
+func TestUseCLI(t *testing.T) {
+	t.Log("E2E: Use CLI")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
@@ -21,7 +22,10 @@ func TestGeneralCLI(t *testing.T) {
 	// output, err = exec.Command("bash", "-c", "\"echo 'random test data 🦄' > shasum-test-file\"").Output()
 	shasumTestFilePath := "shasum-test-file"
 
-	e2e.cleanFiles(shasumTestFilePath)
+	// run `zarf create` with a specified image cache location
+	imageCachePath := "/tmp/.image_cache-location"
+
+	e2e.cleanFiles(shasumTestFilePath, imageCachePath)
 
 	testfile, _ := os.Create(shasumTestFilePath)
 	cmd := exec.Command("echo", "random test data 🦄")
@@ -58,5 +62,12 @@ func TestGeneralCLI(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
 	assert.Error(t, err, stdOut, stdErr)
 
-	e2e.cleanFiles(shasumTestFilePath)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	require.NoError(t, err, stdOut, stdErr)
+
+	files, err := ioutil.ReadDir(imageCachePath)
+	require.NoError(t, err, "Error when reading image cache path")
+	assert.Greater(t, len(files), 1)
+
+	e2e.cleanFiles(shasumTestFilePath, imageCachePath)
 }

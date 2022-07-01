@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eComponentVariables(t *testing.T) {
-	t.Log("E2E: Testing component variables")
+func TestComponentVariables(t *testing.T) {
+	t.Log("E2E: Component variables")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 

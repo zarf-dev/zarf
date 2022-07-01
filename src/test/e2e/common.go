@@ -8,15 +8,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/helm"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
-	zarfBinPath   string
-	arch          string
-	applianceMode bool
-	cmdsToKill    []*exec.Cmd
+	zarfBinPath    string
+	arch           string
+	applianceMode  bool
+	cmdsToKill     []*exec.Cmd
+	chartsToRemove []ChartTarget
+}
+
+type ChartTarget struct {
+	name      string
+	namespace string
 }
 
 // getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
@@ -37,6 +45,8 @@ func getCLIName() string {
 // setup actions for each test
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
+
+	// utils.ExecCommandWithContext(context.TODO(), true, "kubectl")
 }
 
 // teardown actions for each test
@@ -50,7 +60,15 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 			}
 		}
 	}
+
+	spinner := message.NewProgressSpinner("Remove test helm charts")
+	for _, chart := range e2e.chartsToRemove {
+		helm.RemoveChart(chart.namespace, chart.name, spinner)
+	}
+	spinner.Success()
+	
 	e2e.cmdsToKill = []*exec.Cmd{}
+	e2e.chartsToRemove = []ChartTarget{}
 }
 
 // execZarfCommand executes a Zarf command

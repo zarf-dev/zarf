@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eComponentScripts(t *testing.T) {
+func TestComponentScripts(t *testing.T) {
 	t.Log("E2E: Testing component scripts")
 	e2e.setup(t)
 	defer e2e.teardown(t)

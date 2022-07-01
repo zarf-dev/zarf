@@ -15,5 +15,6 @@ components:
         valuesFiles:
           - gitea-values.yaml
     scripts:
+      timeoutSeconds: 60
       after:
         - "./zarf tools create-read-only-gitea-user"

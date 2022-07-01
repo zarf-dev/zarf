@@ -8,7 +8,7 @@ gitea:
   config:
     APP_NAME: "Zarf Gitops Service"
     server:
-      ROOT_URL: "http://127.0.0.1:45003"
+      # ROOT_URL: "http://127.0.0.1:45003"
       DISABLE_SSH: true
       OFFLINE_MODE: true
     database:

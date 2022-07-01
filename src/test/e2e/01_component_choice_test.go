@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eComponentChoice(t *testing.T) {
-	t.Log("E2E: Testing component choice")
+func TestComponentChoice(t *testing.T) {
+	t.Log("E2E: Component choice")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
