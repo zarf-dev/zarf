@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-helm-releasename
+  description: "Deploys a helm chart with custom release name"
+components:
+  - name: demo-helm-releasename
+    required: true
+    charts:
+      - name: podinfo
+        releaseName: cool-name
+        url: https://stefanprodan.github.io/podinfo
+        version: 6.1.6
+        namespace: helm-releasename
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.1.6
