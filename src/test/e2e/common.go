@@ -46,6 +46,7 @@ func getCLIName() string {
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	utils.ExecCommandWithContext(context.TODO(), true, "lsof", "-iTCP", "-sTCP:LISTEN")
 }
 
 // teardown actions for each test
