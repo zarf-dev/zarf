@@ -9,15 +9,20 @@ import (
 )
 
 func TestE2eZarfCreate(t *testing.T) {
-	defer e2e.cleanupAfterTest(t)
+	t.Log("E2E: Testing zarf create")
+	e2e.setup(t)
+	defer e2e.teardown(t)
 
 	// run `zarf create` with a specified image cache location
 	imageCachePath := "/tmp/.image_cache-location"
-	output, err := e2e.execZarfCommand("package", "create", "--confirm", "--zarf-cache", imageCachePath)
-	require.NoError(t, err, output)
+	e2e.cleanFiles(imageCachePath)
+
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	require.NoError(t, err, stdOut, stdErr)
 
 	files, err := ioutil.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
-	e2e.filesToRemove = append(e2e.filesToRemove, imageCachePath)
+
+	e2e.cleanFiles(imageCachePath)
 }
