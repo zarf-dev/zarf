@@ -304,7 +304,7 @@ func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, er
 	message.Debugf("Performing %s http request to %#v", request.Method, request.URL)
 
 	// Prep the request with boilerplate
-	client := &netHttp.Client{Timeout: time.Second * 10}
+	client := &netHttp.Client{Timeout: time.Second * 20}
 	request.SetBasicAuth(username, secret)
 	request.Header.Add("accept", "application/json")
 	request.Header.Add("Content-Type", "application/json")
@@ -318,7 +318,7 @@ func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, er
 
 	// If we get a 'bad' status code we will have no error, create a useful one to return
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		err = fmt.Errorf("Got status code of %d during http request with body of: %s", response.StatusCode, string(responseBody))
+		err = fmt.Errorf("got status code of %d during http request with body of: %s", response.StatusCode, string(responseBody))
 		return []byte{}, err
 	}
 

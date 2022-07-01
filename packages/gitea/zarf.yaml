@@ -10,12 +10,10 @@ components:
     charts:
       - name: gitea
         url: https://dl.gitea.io/charts
-        version: 5.0.8
+        version: 5.0.9
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
     scripts:
-      showOutput: true
-      retry: true
       after:
-        - "./zarf tools create-read-only-gitea-user -l=trace"
+        - "./zarf tools create-read-only-gitea-user"
