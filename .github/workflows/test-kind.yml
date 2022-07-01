@@ -34,4 +34,4 @@ jobs:
         # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster
         #       rather than having the test suite do it. The K3d tests do a self-provisioned cluster and the K3s tests
         #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
-        run: TESTDISTRO=provided make test-e2e
+        run: make test-e2e ARCH=amd64

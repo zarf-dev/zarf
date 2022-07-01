@@ -2,7 +2,7 @@
 ZARF_BIN := ./build/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
-# Provide a default value for the operating system architecture used in tests, e.g. " TESTDISTRO=provided make test-e2e ARCH=arm64"
+# Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
 ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_S),Darwin)
@@ -95,6 +95,8 @@ build-examples:
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
+## Run e2e tests. Will automatically build any required dependencies that aren't present. 
+## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: init-package build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]	
+test-e2e: init-package build-examples 
 	cd src/test/e2e && go test -failfast -v -timeout 30m

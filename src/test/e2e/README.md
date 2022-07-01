@@ -9,31 +9,21 @@ The tests in this directory are also able to be run locally!
 Running the tests locally have the same prerequisites as running and building Zarf:
  1. GoLang >= `1.18.x`
  2. Make
- 3. (for the `kind` and `k3d` options only) Docker
+ 3. Access to a K8s cluster to test against or Linux with root priv if `APPLIANCE_MODE=true`
  4. (for the `k3s` cluster only) Linux with root privileges
-
-### Existing K8s Cluster
-If you have a cluster already running, and use the env var `TESTDISTRO=provided`, the test suite will use the `KUBECONFIG` env var and the cluster that is currently configured as the active context. To make sure you are running in the right cluster, run something like `kubectl get nodes` with no optional flags and if the nodes that appear are the ones you expect, then the tests will use that cluster as well.
-
-This means that you are able to run the tests against any remote distro you want, like EKS, AKS, GKE, RKE, etc.
-
-### No Existing K8s Cluster
-If you do not have a local cluster running, no worries! The e2e tests use the `sigs.k8s.io/kind` and `github.com/k3d-io/k3d/v5` libraries to stand up local clusters to test against. All you have to do is make sure Docker is running and set the `TESTDISTRO` env var to either `"kind"` or `"k3d"` and the test suite will automatically create the appropriate cluster before the test run, run the tests on it, then automatically destroy it to clean up.
-
-You can also use K3s by setting `TESTDISTRO=k3s` but note that there are extra requirements of being on Linux with root privileges.
 
 ### Actually Running The Test
 Here are a few different ways to run the tests, based on your specific situation:
 
 ```shell
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
-TESTDISTRO="[provided|kind|k3d|k3s]" make test-e2e
+APPLIANCE_MODE=true|false make test-e2e ARCH=arm64|amd64
 
 # If you already have everything build, you can run this inside this folder. This lets you customize the test run.
-TESTDISTRO=YourChoiceHere go test ./... -v
+go test ./... -v
 
 # Let's say you only want to run one test. You would run:
-TESTDISTRO=YourChoiceHere go test ./... -v -run TestFooBarBaz
+go test ./... -v -run TestFooBarBaz
 ```
 
 > NOTE: The zarf binary and built packages need to live in the ./build directory but if you're trying to run the tests locally with 'go test ./...' then the zarf-init package will need to be in this directory.
@@ -42,9 +32,9 @@ TESTDISTRO=YourChoiceHere go test ./... -v -run TestFooBarBaz
 There are a few requirements for all of our tests, that will need to be followed when new tests are added.
 
 1. Tests may not run in parallel, since they use the same kubernetes cluster to run them.
-2. Each test must begin with `defer e2e.cleanupAfterTest(t)` so that the cluster can be reset back to empty when finished.
-
-## Coming Soon
-1. More Linux distros tested
-2. More K8s distros tested, including cloud distros like EKS
-3. Make the tests that run in the CI pipeline more efficient by using more parallelization
+2. The following lines must be at the start of each test:
+   ```go
+    t.Log("E2E: Test description")
+	e2e.setup(t)
+	defer e2e.teardown(t)
+    ```
