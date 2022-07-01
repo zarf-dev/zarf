@@ -168,13 +168,29 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "ZarfComponentOnlyCluster": {
+      "properties": {
+        "architecture": {
+          "type": "string"
+        },
+        "distros": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfComponentOnlyTarget": {
       "properties": {
         "localOS": {
           "type": "string"
         },
-        "clusterArch": {
-          "type": "string"
+        "cluster": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentOnlyCluster"
         }
       },
       "additionalProperties": false,

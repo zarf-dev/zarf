@@ -82,6 +82,6 @@ func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
 	_, url, _ = strings.Cut(url, SGETProtocol)
 	err := Sget(url, cosignKeyPath, destinationFile, context.TODO())
 	if err != nil {
-		message.Fatalf(err, "Unable to download file with sget: %v\n", url)
+		message.Fatalf(err, "Unable to download file with sget: %s\n", url)
 	}
 }

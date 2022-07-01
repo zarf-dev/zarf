@@ -6,7 +6,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/pterm/pterm"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +23,7 @@ var rootCmd = &cobra.Command{
 
 		// Disable progress bars for CI envs
 		if os.Getenv("CI") == "true" {
-			pterm.FgYellow.Println("CI environment detected, disabling progress bars")
+			message.Debug("CI environment detected, disabling progress bars")
 			message.NoProgress = true
 		}
 	},
@@ -39,7 +38,6 @@ func Execute() {
 }
 
 func init() {
-	message.Setup()
 	// Store the original cobra help func
 	originalHelp := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
@@ -64,7 +62,7 @@ func setLogLevel(logLevel string) {
 
 	if lvl, ok := match[logLevel]; ok {
 		message.SetLogLevel(lvl)
-		pterm.FgYellow.Println("Log level set to " + logLevel)
+		message.Debug("Log level set to " + logLevel)
 	} else {
 		message.Warn("invalid log level setting")
 	}

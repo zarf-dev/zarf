@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -28,10 +29,6 @@ var NoProgress bool
 var logLevel = InfoLevel
 
 func init() {
-	Setup()
-}
-
-func Setup() {
 	// Help capture text cleaner
 	pterm.SetDefaultOutput(os.Stderr)
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
@@ -143,6 +140,14 @@ func HeaderInfof(format string, a ...any) {
 		WithTextStyle(pterm.NewStyle(pterm.FgLightWhite)).
 		WithMargin(2).
 		Printfln(message + strings.Repeat(" ", padding))
+}
+
+func JsonValue(value any) string {
+	bytes, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		Debugf("ERROR marshalling json: %v", err)
+	}
+	return string(bytes)
 }
 
 func paragraph(format string, a ...any) string {

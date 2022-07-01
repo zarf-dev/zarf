@@ -84,12 +84,12 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 	for update := range progress {
 		switch {
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
-			progressBar.Success("Pulling %v images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
+			progressBar.Success("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			return tagToImage
 		case update.Error != nil:
 			message.Fatal(update.Error, "error writing image tarball")
 		default:
-			title = fmt.Sprintf("Pulling %v images (%s of %s)", len(imageMap),
+			title = fmt.Sprintf("Pulling %d images (%s of %s)", len(imageMap),
 				utils.ByteFormat(float64(update.Complete), 2),
 				utils.ByteFormat(float64(update.Total), 2),
 			)

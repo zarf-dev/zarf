@@ -138,7 +138,7 @@ func Deploy() {
 }
 
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
-	message.Debugf("packager.deployComponents(%v, %v", tempPath, component)
+	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
 	hasImages := len(component.Images) > 0
@@ -154,7 +154,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if len(component.Files) > 0 {
-		spinner := message.NewProgressSpinner("Copying %v files", len(component.Files))
+		spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 		defer spinner.Stop()
 
 		for index, file := range component.Files {
@@ -309,7 +309,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 		// on timeout abort
 		case <-timeout:
-			message.Warnf("data injection into target %v timed out\n", data.Target.Namespace)
+			message.Warnf("data injection into target %s timed out\n", data.Target.Namespace)
 			return
 
 		default:
@@ -340,7 +340,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				// Do the actual data injection
 				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 				if err != nil {
-					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
+					message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
@@ -348,7 +348,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					cpPodExecArgs[4] = pod + ":" + data.Target.Path
 					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 					if err != nil {
-						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
+						message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 					}
 				}
 			}

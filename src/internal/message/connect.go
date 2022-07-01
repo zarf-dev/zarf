@@ -9,7 +9,7 @@ import (
 )
 
 func PrintConnectStringTable(connectStrings types.ConnectStrings) {
-	Debugf("message.PrintConnectStringTable(%v)", connectStrings)
+	Debugf("message.PrintConnectStringTable(%#v)", connectStrings)
 
 	if len(connectStrings) > 0 {
 		list := pterm.TableData{{"     Connect Command", "Description"}}

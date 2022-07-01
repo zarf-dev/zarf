@@ -17,11 +17,12 @@ func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 	if NoProgress {
 		Info(text)
 	} else {
-		progress = pterm.DefaultProgressbar.
+		progress, _ = pterm.DefaultProgressbar.
 			WithTotal(int(total)).
 			WithShowCount(false).
 			WithTitle(text).
-			WithRemoveWhenDone(true)
+			WithRemoveWhenDone(true).
+			Start()
 	}
 
 	return &ProgressBar{
@@ -33,9 +34,6 @@ func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {
 		return
-	}
-	if !p.progress.IsActive {
-		p.progress.Start()
 	}
 	p.progress.UpdateTitle(text)
 	chunk := int(complete) - p.progress.Current

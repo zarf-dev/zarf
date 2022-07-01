@@ -37,11 +37,3 @@ components:
         target: /etc/rancher/k3s/k3s.yaml
         symlinks:
           - /root/.kube/config
-      # Mock file for creating the k3s symlinks
-      - source: empty-file
-        target: /usr/sbin/k3s
-        # K3s magic provides these tools when symlinking
-        symlinks:
-          - /usr/sbin/kubectl
-          - /usr/sbin/ctr
-          - /usr/sbin/crictl          

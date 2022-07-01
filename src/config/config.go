@@ -167,7 +167,7 @@ func GetValidPackageExtensions() [3]string {
 }
 
 func InitState(tmpState types.ZarfState) {
-	message.Debugf("config.InitState(%v)", tmpState)
+	message.Debugf("config.InitState()")
 	state = tmpState
 	initSecrets()
 }
@@ -205,7 +205,7 @@ func GetActiveConfig() types.ZarfPackage {
 }
 
 func BuildConfig(path string) error {
-	message.Debugf("config.BuildConfig(%v)", path)
+	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
@@ -257,7 +257,7 @@ func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool 
 	targetArch := GetArch()
 
 	// Test for valid architecture
-	if component.Only.ClusterArch == "" || component.Only.ClusterArch == targetArch {
+	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
 		validArch = true
 	}
 

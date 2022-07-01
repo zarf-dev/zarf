@@ -22,8 +22,16 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-        
+            ${{ runner.os }}-go-
+
+      - name: "Use K3D"
+        run: |
+          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d cluster create
+
+      - name: "Build CLI binary & init-packages"
+        run: make build-cli-linux-amd init-package build-examples ARCH=amd64
 
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
-        run: TESTDISTRO=k3d make test-e2e
+        run: make test-e2e ARCH=amd64

@@ -32,7 +32,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 			// parse to simple struct to read the git url
 			gitRepo := &GenericGitRepo{}
 			if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
+				return nil, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 			}
 
 			message.Info(gitRepo.Spec.URL)

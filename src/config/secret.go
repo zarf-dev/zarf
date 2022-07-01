@@ -35,7 +35,7 @@ var selectors = map[SecretSelector]SecretMap{
 }
 
 func GetSecret(selector SecretSelector) string {
-	message.Debugf("config.GetSecret(%v)", selector)
+	message.Debugf("config.GetSecret(%s)", selector)
 	if match, ok := selectors[selector]; ok {
 		return match.computed
 	}
@@ -57,7 +57,7 @@ func initSecrets() {
 }
 
 func loadSecret(filter SecretSelector, length int) (string, error) {
-	message.Debugf("config.loadSecret(%v, %v)", filter, length)
+	message.Debugf("config.loadSecret(%s, %d)", filter, length)
 	if state.Secret == "" {
 		return "", fmt.Errorf("invalid root secret in the ZarfState")
 	}

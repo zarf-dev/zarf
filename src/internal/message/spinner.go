@@ -31,6 +31,10 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 }
 
 func (p *Spinner) Write(text []byte) (int, error) {
+	size := len(text)
+	if NoProgress {
+		return size, nil
+	}
 	Debug(string(text))
 	return len(text), nil
 }

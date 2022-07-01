@@ -2,7 +2,7 @@
 ZARF_BIN := ./build/zarf
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
-# Provide a default value for the operating system architecture used in tests, e.g. " TESTDISTRO=provided make test-e2e ARCH=arm64"
+# Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
 ifneq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_S),Darwin)
@@ -79,7 +79,7 @@ ci-release: init-package ## Create the init package
 build-examples:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-agmes-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/game -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/game -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-scripts-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-scripts -o build -a $(ARCH) --confirm
 
@@ -91,10 +91,12 @@ build-examples:
 
 	@test -s ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/gitops-data -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-with-different-releaseName-values -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
+## Run e2e tests. Will automatically build any required dependencies that aren't present. 
+## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: init-package build-examples ## Run e2e tests. Will automatically build any required dependencies that aren't present. Requires env var TESTDISTRO=[provided|kind|k3d|k3s]	
-	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
+test-e2e: init-package build-examples 
+	cd src/test/e2e && go test -failfast -v -timeout 30m

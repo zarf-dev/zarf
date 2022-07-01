@@ -87,7 +87,8 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 }
 
 func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1.Secret, error) {
-	message.Debugf("k8s.GenerateTLSSecret(%s, %s, %v", namespace, name, conf)
+	message.Debugf("k8s.GenerateTLSSecret(%s, %s", namespace, name)
+	message.Debug(message.JsonValue(conf))
 
 	if _, err := tls.X509KeyPair(conf.Cert, conf.Key); err != nil {
 		return nil, err
@@ -101,7 +102,7 @@ func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1
 }
 
 func ReplaceTLSSecret(namespace, name string, conf types.GeneratedPKI) error {
-	message.Debugf("k8s.ReplaceTLSSecret(%s, %s, %v)", namespace, name, conf)
+	message.Debugf("k8s.ReplaceTLSSecret(%s, %s, %s)", namespace, name, message.JsonValue(conf))
 
 	secret, err := GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
@@ -112,7 +113,7 @@ func ReplaceTLSSecret(namespace, name string, conf types.GeneratedPKI) error {
 }
 
 func ReplaceSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.ReplaceSecret(%v)", secret)
+	message.Debugf("k8s.ReplaceSecret(%s, %s)", secret.Namespace, secret.Name)
 
 	if _, err := CreateNamespace(secret.Namespace, nil); err != nil {
 		return fmt.Errorf("unable to create or read the namespace: %w", err)
@@ -126,7 +127,7 @@ func ReplaceSecret(secret *corev1.Secret) error {
 }
 
 func DeleteSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.DeleteSecret(%v)", secret)
+	message.Debugf("k8s.DeleteSecret(%s, %s)", secret.Namespace, secret.Name)
 	clientSet := getClientset()
 
 	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)
@@ -140,7 +141,7 @@ func DeleteSecret(secret *corev1.Secret) error {
 }
 
 func CreateSecret(secret *corev1.Secret) error {
-	message.Debugf("k8s.CreateSecret(%v)", secret)
+	message.Debugf("k8s.CreateSecret(%s, %s)", secret.Namespace, secret.Name)
 	clientSet := getClientset()
 
 	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)

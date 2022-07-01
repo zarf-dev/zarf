@@ -11,9 +11,9 @@ import (
 
 // ReplaceService deletes and re-creates a service
 func ReplaceService(service *corev1.Service) (*corev1.Service, error) {
-	message.Debugf("k8s.ReplaceService(%v)", service)
+	message.Debugf("k8s.ReplaceService(%#v)", service)
 
-	if err :=DeleteService(service.Namespace, service.Name); err != nil {
+	if err := DeleteService(service.Namespace, service.Name); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func DeleteService(namespace, name string) error {
 
 // CreateService creates the given service in the cluster.
 func CreateService(service *corev1.Service) (*corev1.Service, error) {
-	message.Debugf("k8s.CreateService(%v)", service)
+	message.Debugf("k8s.CreateService(%#v)", service)
 	clientset := getClientset()
 	createOptions := metav1.CreateOptions{}
 	return clientset.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)

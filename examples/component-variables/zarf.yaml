@@ -12,5 +12,6 @@ components:
       cat: "meow"
     manifests:
       - name: variable-example-configmap
+        namespace: demo
         files:
           - simple-configmap.yaml
