@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eExampleHelm(t *testing.T) {
-	t.Log("E2E: Testing example helm chart")
+func TestHelm(t *testing.T) {
+	t.Log("E2E: Helm chart")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
@@ -23,4 +23,9 @@ func TestE2eExampleHelm(t *testing.T) {
 	// Verify multiple helm installs of different release names were deployed
 	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-releasename", "--no-headers").Output()
 	assert.Contains(t, string(kubectlOut), "zarf-cool-name-podinfo")
+
+	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
+		namespace: "demo",
+		name:      "zarf-raw-example-data-injection-pod",
+	})
 }

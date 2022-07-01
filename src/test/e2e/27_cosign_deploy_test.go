@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eRemoteSgete(t *testing.T) {
-	t.Log("E2E: Testing remote sget")
+func TestCosignDeploy(t *testing.T) {
+	t.Log("E2E: Cosign deploy")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
@@ -17,4 +17,9 @@ func TestE2eRemoteSgete(t *testing.T) {
 	// Deploy the game
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
+		namespace: "zarf",
+		name:      "zarf-raw-multi-games",
+	})	
 }

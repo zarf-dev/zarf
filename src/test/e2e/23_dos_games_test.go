@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2eExampleGame(t *testing.T) {
-	t.Log("E2E: Testing example game")
+func TestDosGames(t *testing.T) {
+	t.Log("E2E: Dos games")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
@@ -33,4 +33,9 @@ func TestE2eExampleGame(t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d?doom", localPort))
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
+
+	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
+		namespace: "zarf",
+		name:      "zarf-raw-multi-games",
+	})
 }
