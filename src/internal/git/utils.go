@@ -262,7 +262,8 @@ func CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	_, err = DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err := DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	message.Debug(string(out))
 	if err != nil {
 		return err
 	}
@@ -276,7 +277,8 @@ func CreateReadOnlyUser() error {
 	updateUserData, _ := json.Marshal(updateUserBody)
 	updateUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	_, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	message.Debug(string(out))
 	return err
 }
 
