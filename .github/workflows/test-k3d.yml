@@ -24,16 +24,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Build CLI"
-        run: make build-cli-linux              
-
-      - name: "Make Packages"
-        run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
-
       - name: "Install K3d and deploy a cluster"
         run: |
           wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          k3d cluster create 
+          k3d cluster create
+
+      - name: "Build CLI"
+        run: make build-cli-linux
+
+      - name: "Make Packages"
+        run: make init-package package-example-game package-example-data-injection package-example-gitops-data package-example-compose
 
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
