@@ -46,6 +46,7 @@ func getCLIName() string {
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	utils.ExecCommandWithContext(context.TODO(), true, "lsof", "-iTCP", "-sTCP:LISTEN", "-n")
 }
 
 // teardown actions for each test
@@ -68,6 +69,9 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 	e2e.cmdsToKill = []*exec.Cmd{}
 	e2e.chartsToRemove = []ChartTarget{}
+
+	// Add small buffer after test cleanup for stability
+	time.Sleep(time.Second)
 }
 
 // execZarfCommand executes a Zarf command
@@ -88,6 +92,6 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {
 	for _, file := range files {
-		_ = os.Remove(file)
+		_ = os.RemoveAll(file)
 	}
 }
