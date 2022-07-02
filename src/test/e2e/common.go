@@ -45,7 +45,9 @@ func getCLIName() string {
 // setup actions for each test
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
+	// Output list of allocated cluster resources
 	utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	// List currently listening ports on the host
 	utils.ExecCommandWithContext(context.TODO(), true, "lsof", "-iTCP", "-sTCP:LISTEN", "-n")
 }
 

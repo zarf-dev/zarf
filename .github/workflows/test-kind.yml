@@ -24,11 +24,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Use KIND"
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
-          chmod +x ./kind        
-          ./kind create cluster            
+      - name: "Zarf Install Guide: Kind Cluster Init"
+        run: brew install kind && kind delete cluster && kind create cluster           
 
       - name: "Build CLI"
         run: make build-cli-linux
