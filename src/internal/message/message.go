@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -21,6 +22,9 @@ const (
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel
 )
+
+// NoProgress tracks whether spinner/progress bars show updates
+var NoProgress bool
 
 var logLevel = InfoLevel
 
@@ -136,6 +140,14 @@ func HeaderInfof(format string, a ...any) {
 		WithTextStyle(pterm.NewStyle(pterm.FgLightWhite)).
 		WithMargin(2).
 		Printfln(message + strings.Repeat(" ", padding))
+}
+
+func JsonValue(value any) string {
+	bytes, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		Debugf("ERROR marshalling json: %v", err)
+	}
+	return string(bytes)
 }
 
 func paragraph(format string, a ...any) string {
