@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -61,7 +60,6 @@ func TestGitServer(t *testing.T) {
 
 	// Check for correct tag
 	expectedTag := "v0.15.0\n"
-	err = os.Chdir(repoZarf)
 	assert.NoError(t, err)
 	gitOutput, _ = exec.Command("git", "-C="+repoZarf, "tag").Output()
 	assert.Equal(t, expectedTag, string(gitOutput), "Expected tag should match output")
