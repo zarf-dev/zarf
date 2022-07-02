@@ -110,7 +110,7 @@ package-example-gitops-data:
 
 .PHONY: package-example-helm-releasename
 package-example-helm-releasename:
-	cd examples/helm-with-different-releaseName-values && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
+	cd examples/helm-alt-release-name && ../../$(ZARF_BIN) package create --confirm && mv zarf-package-* ../../build/
 
 .PHONY: package-example-tiny-kafka
 package-example-tiny-kafka:
@@ -130,7 +130,7 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	@if [ ! -f ./build/zarf-init-$(ARCH).tar.zst ]; then\
 		$(MAKE) init-package;\
 	fi
-	@if [ ! -f ./build/zarf-package-appliance-demo-multi-games-$(ARCH).tar.zst ]; then\
+	@if [ ! -f ./build/zarf-package-dos-games-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-game;\
 	fi
 	@if [ ! -f zarf-package-component-scripts-$(ARCH).tar.zst ]; then\
@@ -154,4 +154,4 @@ test-e2e: ## Run e2e tests. Will automatically build any required dependencies t
 	@if [ ! -f ./build/zarf-package-compose-example-$(ARCH).tar.zst ]; then\
 		$(MAKE) package-example-compose;\
 	fi
-	cd src/test/e2e && cp ../../../build/zarf-init-$(ARCH).tar.zst . && go test ./... -v -count=1 -timeout 2400s && rm zarf-init-$(ARCH).tar.zst
+	cd src/test/e2e && go test -failfast -v -timeout 30m
