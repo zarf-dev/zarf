@@ -15,7 +15,7 @@ replace (
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/derailed/k9s v0.25.20
+	github.com/derailed/k9s v0.25.21
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/fatih/color v1.13.0
@@ -133,7 +133,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/derailed/popeye v0.10.1 // indirect
-	github.com/derailed/tview v0.6.6 // indirect
+	github.com/derailed/tview v0.7.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v20.10.16+incompatible // indirect
