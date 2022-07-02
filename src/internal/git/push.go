@@ -21,6 +21,7 @@ func PushAllDirectories(localPath string) {
 	// Establish a git tunnel to send the repos
 	tunnel := k8s.NewZarfTunnel()
 	tunnel.Connect(k8s.ZarfGit, false)
+	tunnelUrl := fmt.Sprintf("http://%s", tunnel.Endpoint())
 
 	paths, err := utils.ListDirectories(localPath)
 	if err != nil {
@@ -33,7 +34,7 @@ func PushAllDirectories(localPath string) {
 	for _, path := range paths {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
-		if err := push(path, spinner); err != nil {
+		if err := push(path, tunnelUrl, spinner); err != nil {
 			spinner.Fatalf(err, "Unable to push the git repo %s", basename)
 		}
 
@@ -41,7 +42,7 @@ func PushAllDirectories(localPath string) {
 		repoPathSplit := strings.Split(path, "/")
 		repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
 		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
-		err = addReadOnlyUserToRepo(repoName)
+		err = addReadOnlyUserToRepo(tunnelUrl, repoName)
 		if err != nil {
 			message.Debug(err)
 			message.Warnf("Unable to add the read-only user to the repo: %v\n", repoName)
@@ -52,7 +53,7 @@ func PushAllDirectories(localPath string) {
 	tunnel.Close()
 }
 
-func push(localPath string, spinner *message.Spinner) error {
+func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
 
 	// Open the given repo
 	repo, err := git.PlainOpen(localPath)
@@ -67,8 +68,7 @@ func push(localPath string, spinner *message.Spinner) error {
 
 	}
 	remoteUrl := remote.Config().URLs[0]
-	targetHost := fmt.Sprintf("http://%s:%d", config.IPV4Localhost, k8s.PortGit)
-	targetUrl := transformURL(targetHost, remoteUrl)
+	targetUrl := transformURL(tunnelUrl, remoteUrl)
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,

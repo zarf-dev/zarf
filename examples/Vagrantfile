@@ -18,9 +18,6 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 443, host: 8443
   config.vm.network "forwarded_port", guest: 9080, host: 9080
   config.vm.network "forwarded_port", guest: 9443, host: 9443
-  config.vm.network "forwarded_port", guest: 45001, host: 45001
-  config.vm.network "forwarded_port", guest: 45002, host: 45002
-  config.vm.network "forwarded_port", guest: 45003, host: 45003
 
   config.ssh.insert_key = false
   config.ssh.extra_args = [ "-t", "cd /examples; sudo su" ]

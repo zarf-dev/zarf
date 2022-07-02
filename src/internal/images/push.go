@@ -16,6 +16,8 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
 	tunnel.Connect(k8s.ZarfRegistry, false)
 	defer tunnel.Close()
 
+	tunnelUrl := tunnel.Endpoint()
+
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
@@ -30,7 +32,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
 			return
 		}
 
-		offlineName := utils.SwapHost(src, config.ZarfRegistry)
+		offlineName := utils.SwapHost(src, tunnelUrl)
 		err = crane.Push(img, offlineName, pushOptions)
 
 		if err != nil {

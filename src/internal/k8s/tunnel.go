@@ -36,12 +36,6 @@ const (
 	ZarfGit      = "GIT"
 )
 
-const (
-	PortRegistry = iota + 45001
-	PortLogging
-	PortGit
-)
-
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
 func makeLabels(labels map[string]string) string {
 	var out []string
@@ -100,15 +94,12 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
-		tunnel.localPort = PortRegistry
 		tunnel.remotePort = 5000
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
-		tunnel.localPort = PortLogging
 		tunnel.remotePort = 3000
 	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
-		tunnel.localPort = PortGit
 		tunnel.remotePort = 3000
 	default:
 		if target != "" {
@@ -125,10 +116,14 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
+	url, err := tunnel.Establish()
+
 	// On error abort
-	if url, err := tunnel.Establish(); err != nil {
+	if err != nil {
 		message.Fatal(err, "Unable to establish the tunnel")
-	} else if blocking {
+	}
+
+	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
 		if tunnel.autoOpen {
 			switch runtime.GOOS {
@@ -161,7 +156,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 // Endpoint returns the tunnel endpoint
 func (tunnel *Tunnel) Endpoint() string {
 	message.Debug("tunnel.Endpoint()")
-	return fmt.Sprintf("localhost:%d", tunnel.localPort)
+	return fmt.Sprintf("127.0.0.1:%d", tunnel.localPort)
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
