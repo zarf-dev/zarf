@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,12 +26,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
 )
-
-// ImageSwap Pre-compute all the replacements for the embedded registry
-type ImageSwap struct {
-	find    string
-	replace string
-}
 
 // GetContext returns the current k8s context
 func GetContext() (string, error) {
@@ -92,8 +85,8 @@ func WaitForHealthyCluster(timeout time.Duration) error {
 	message.Debugf("package.WaitForHealthyCluster(%v)", timeout)
 
 	var err error
-	var nodes *corev1.NodeList
-	var pods *corev1.PodList
+	var nodes *v1.NodeList
+	var pods *v1.PodList
 	expired := time.After(timeout)
 
 	for {

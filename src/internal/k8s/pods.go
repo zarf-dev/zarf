@@ -63,7 +63,7 @@ func DeletePod(namespace string, name string) error {
 
 // CreatePod inserts the given pod into the cluster
 func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
-	message.Debugf("k8s.CreatePod(%v)", pod)
+	message.Debugf("k8s.CreatePod(%#v)", pod)
 
 	clientset := getClientset()
 
@@ -87,7 +87,7 @@ func GetPods(namespace string) (*corev1.PodList, error) {
 
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
-	message.Debugf("k8s.WaitForPodsAndContainers(%v, %v)", target, waitForAllPods)
+	message.Debugf("k8s.WaitForPodsAndContainers(%#v, %#v)", target, waitForAllPods)
 
 	clientSet := getClientset()
 
@@ -112,6 +112,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
 				message.Debugf("Testing pod %s", pod.Name)
+				message.Debugf(message.JsonValue(pod))
 
 				// Handle container targetting
 				if target.Container != "" {
