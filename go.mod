@@ -17,7 +17,7 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.21
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
-	github.com/docker/cli v20.10.17+incompatible
+	github.com/docker/cli v20.10.16+incompatible // indirect
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v1.2.3
