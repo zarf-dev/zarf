@@ -24,6 +24,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: "Disable Docker"
+        run: sudo systemctl stop docker --now
+
       - name: "Build CLI"
         run: make build-cli-linux
       
