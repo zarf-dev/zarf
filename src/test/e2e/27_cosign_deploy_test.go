@@ -11,7 +11,10 @@ func TestCosignDeploy(t *testing.T) {
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", "sget://defenseunicorns/zarf-hello-world:$(uname -m)", "--confirm")
+	// Test with command from https://zarf.dev/install/
+	command := "zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm"
+
+	stdOut, stdErr, err := e2e.execZarfCommand("sh", "-c", command)
 	require.NoError(t, err, stdOut, stdErr)
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
