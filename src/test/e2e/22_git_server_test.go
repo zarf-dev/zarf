@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -59,9 +60,10 @@ func TestGitServer(t *testing.T) {
 	assert.NoError(t, err, string(gitOutput))
 
 	// Check for correct tag
+	_ = os.Chdir(repoZarf)
 	expectedTag := "v0.15.0\n"
 	assert.NoError(t, err)
-	gitOutput, _ = exec.Command("git", "-C="+repoZarf, "tag").Output()
+	gitOutput, _ = exec.Command("git", "tag").Output()
 	assert.Equal(t, expectedTag, string(gitOutput), "Expected tag should match output")
 
 	// Check for correct commits
@@ -69,12 +71,15 @@ func TestGitServer(t *testing.T) {
 	gitOutput, err = exec.Command("git", "log", "-3", "--oneline", "--pretty=format:%h").CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 	assert.Equal(t, expectedCommits, string(gitOutput), "Expected commits should match output")
+	_ = os.Chdir("..")
 
 	// Check for existence of tags without specifying them, signifying that not using '@1.2.3' syntax brought over the whole repo
+	_ = os.Chdir(repoPodInfo)
 	expectedTag = "0.2.2"
-	gitOutput, err = exec.Command("git", "-C="+repoPodInfo, "tag").CombinedOutput()
+	gitOutput, err = exec.Command("git", "tag").CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 	assert.Contains(t, string(gitOutput), expectedTag)
+	_ = os.Chdir("..")
 
 	// Make sure Gitea comes up cleanly
 	resp, err := http.Get(gitUrl + "/explore/repos")
