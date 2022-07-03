@@ -241,12 +241,31 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if hasImages {
-		images.PushToZarfRegistry(tempPath.images, component.Images)
+		// Try image push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			if err := images.PushToZarfRegistry(tempPath.images, component.Images); err != nil {
+				message.Errorf(err, "Unable to push images to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
+
 	}
 
 	if hasRepos {
-		// Push all the repos from the extracted archive
-		git.PushAllDirectories(componentPath.repos)
+		// Try repo push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			// Push all the repos from the extracted archive
+			if err := git.PushAllDirectories(componentPath.repos); err != nil {
+				message.Errorf(err, "Unable to push repos to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
 	}
 
 	for _, chart := range component.Charts {

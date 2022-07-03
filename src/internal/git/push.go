@@ -17,15 +17,18 @@ import (
 const offlineRemoteName = "offline-downstream"
 const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
-func PushAllDirectories(localPath string) {
+func PushAllDirectories(localPath string) error {
 	// Establish a git tunnel to send the repos
 	tunnel := k8s.NewZarfTunnel()
 	tunnel.Connect(k8s.ZarfGit, false)
+	defer tunnel.Close()
+
 	tunnelUrl := fmt.Sprintf("http://%s", tunnel.Endpoint())
 
 	paths, err := utils.ListDirectories(localPath)
 	if err != nil {
-		message.Fatalf(err, "unable to list the %s directory", localPath)
+		message.Warnf("Unable to list the %s directory", localPath)
+		return err
 	}
 
 	spinner := message.NewProgressSpinner("Processing %d git repos", len(paths))
@@ -35,7 +38,8 @@ func PushAllDirectories(localPath string) {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
 		if err := push(path, tunnelUrl, spinner); err != nil {
-			spinner.Fatalf(err, "Unable to push the git repo %s", basename)
+			spinner.Warnf("Unable to push the git repo %s", basename)
+			return err
 		}
 
 		// Add the read-only user to this repo
@@ -44,13 +48,13 @@ func PushAllDirectories(localPath string) {
 		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
 		err = addReadOnlyUserToRepo(tunnelUrl, repoName)
 		if err != nil {
-			message.Debug(err)
 			message.Warnf("Unable to add the read-only user to the repo: %v\n", repoName)
+			return err
 		}
 	}
 
 	spinner.Success()
-	tunnel.Close()
+	return nil
 }
 
 func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
