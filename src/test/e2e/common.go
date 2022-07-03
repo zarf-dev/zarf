@@ -71,9 +71,6 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 	e2e.cmdsToKill = []*exec.Cmd{}
 	e2e.chartsToRemove = []ChartTarget{}
-
-	// Add small buffer after test cleanup for stability
-	time.Sleep(time.Second)
 }
 
 // execZarfCommand executes a Zarf command
