@@ -25,7 +25,7 @@ func TestDataInjection(t *testing.T) {
 	defer cancel()
 
 	// Deploy the data injection example
-	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm", "-l=trace")
+	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Get the data injection pod

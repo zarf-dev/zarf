@@ -27,7 +27,7 @@ import (
 )
 
 var valueTemplate template.Values
-var connectStrings = make(helm.ConnectStrings)
+var connectStrings = make(types.ConnectStrings)
 
 func Deploy() {
 	message.Debug("packager.Deploy()")
@@ -107,17 +107,7 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	if len(connectStrings) > 0 {
-		list := pterm.TableData{{"     Connect Command", "Description"}}
-		// Loop over each connecStrings and convert to pterm.TableData
-		for name, connect := range connectStrings {
-			name = fmt.Sprintf("     zarf connect %s", name)
-			list = append(list, []string{name, connect.Description})
-		}
-
-		// Create the table output with the data
-		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
-	}
+	message.PrintConnectStringTable(connectStrings)
 
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
@@ -251,12 +241,31 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if hasImages {
-		images.PushToZarfRegistry(tempPath.images, component.Images)
+		// Try image push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			if err := images.PushToZarfRegistry(tempPath.images, component.Images); err != nil {
+				message.Errorf(err, "Unable to push images to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
+
 	}
 
 	if hasRepos {
-		// Push all the repos from the extracted archive
-		git.PushAllDirectories(componentPath.repos)
+		// Try repo push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			// Push all the repos from the extracted archive
+			if err := git.PushAllDirectories(componentPath.repos); err != nil {
+				message.Errorf(err, "Unable to push repos to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
 	}
 
 	for _, chart := range component.Charts {
