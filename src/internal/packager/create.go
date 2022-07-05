@@ -23,15 +23,23 @@ import (
 )
 
 // Create generates a zarf package tarball for consumption by
-func Create() {
-	if err := config.LoadConfig("zarf.yaml"); err != nil {
+func Create(baseDir string) {
+	var originalDir string
+
+	// Change the working directory if this run has an alternate base dir
+	if baseDir != "" {
+		originalDir, _ = os.Getwd()
+		_ = os.Chdir(baseDir)
+		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
+	}
+
+	if err := config.LoadConfig(config.ZarfYAML); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	packageName := config.GetPackageName()
 	components := GetComposedComponents()
 	seedImage := config.GetSeedImage()
 
@@ -69,6 +77,13 @@ func Create() {
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.images)
 	}
 
+	// In case the directory was changed, reset to prevent breaking relative target paths
+	if originalDir != "" {
+		_ = os.Chdir(originalDir)
+	}
+
+	packageName := filepath.Join(config.CreateOptions.OutputDirectory, config.GetPackageName())
+
 	_ = os.RemoveAll(packageName)
 	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
 	if err != nil {
@@ -101,7 +116,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	if len(component.Files) > 0 {
 		_ = utils.CreateDirectory(componentPath.files, 0700)
 		for index, file := range component.Files {
-			message.Debugf("Loading %v", file)
+			message.Debugf("Loading %#v", file)
 			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
@@ -165,7 +180,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 
 	// Load all specified git repos
 	if len(component.Repos) > 0 {
-		spinner := message.NewProgressSpinner("Loading %v git repos", len(component.Repos))
+		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Stop()
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
