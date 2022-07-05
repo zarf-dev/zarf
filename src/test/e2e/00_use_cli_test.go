@@ -1,11 +1,14 @@
 package test
 
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -62,8 +65,14 @@ func TestUseCLI(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
 	assert.Error(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	// Temporary chdir until #511 is merged
+	// TODO: remove this once #511 is merged
+	_ = os.Chdir("examples/game")
+	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
+	// Reset temp chdir
+	_ = os.Chdir("../..")
 
 	files, err := ioutil.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")

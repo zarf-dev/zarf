@@ -29,7 +29,6 @@ const (
 	ZarfGitReadUser         = "zarf-git-read-user"
 	ZarfRegistryPushUser    = "zarf-push"
 	ZarfRegistryPullUser    = "zarf-pull"
-	ZarfRegistry            = IPV4Localhost + ":45001"
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
 

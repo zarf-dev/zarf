@@ -125,12 +125,6 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	// Load state for the rest of the operations
 	config.InitState(state)
-
-	registrySecret := config.GetSecret(config.StateRegistryPush)
-	// Now that we have what the password will be, we should add the login entry to the system's registry config
-	if err := utils.DockerLogin(config.ZarfRegistry, config.ZarfRegistryPushUser, registrySecret); err != nil {
-		message.Fatal(err, "Unable to add login credentials for the gitops registry")
-	}
 }
 
 func postSeedRegistry(tempPath tempPaths) {

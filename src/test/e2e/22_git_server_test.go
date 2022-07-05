@@ -21,8 +21,12 @@ func TestGitServer(t *testing.T) {
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
-	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
-	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
+	repoPodInfo := "mirror__github.com__stefanprodan__podinfo"
+	repoZarf := "mirror__github.com__defenseunicorns__zarf"
+	gitUser := config.ZarfGitPushUser
+
+	e2e.cleanFiles(repoPodInfo)
+	e2e.cleanFiles(repoZarf)
 
 	path := fmt.Sprintf("build/zarf-package-gitops-service-data-%s.tar.zst", e2e.arch)
 
@@ -31,25 +35,33 @@ func TestGitServer(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Create a tunnel to the git resources
-	err = e2e.execZarfBackgroundCommand("connect", "git", "--cli-only")
-	assert.NoError(t, err, "unable to establish tunnel to git")
+	// Get a random local port for this instance
+	localPort, _ := k8s.GetAvailablePort()
+
+	// Establish the port-forward into the game service
+	err = e2e.execZarfBackgroundCommand("connect", "git", fmt.Sprintf("--local-port=%d", localPort), "--cli-only")
+	require.NoError(t, err, "unable to connect to the git port-forward")
 
 	// Check for full git repo mirror (foo.git) from https://github.com/stefanprodan/podinfo.git
 	adminPassword, _, err := e2e.execZarfCommand("tools", "get-admin-password")
 	assert.NoError(t, err, "Unable to get admin password for gitea instance")
+	pwdText := strings.TrimSpace(string(adminPassword))
 
-	cloneCommand := fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__stefanprodan__podinfo.git", strings.TrimSpace(string(adminPassword)))
-	gitOutput, err := exec.Command("git", "clone", cloneCommand).CombinedOutput()
+	gitUrl := fmt.Sprintf("http://127.0.0.1:%d", localPort)
+	gitAuthUrl := fmt.Sprintf("http://%s:%s@127.0.0.1:%d", gitUser, pwdText, localPort)
+
+	clone := fmt.Sprintf("%s/%s/%s.git", gitAuthUrl, gitUser, repoPodInfo)
+	gitOutput, err := exec.Command("git", "clone", clone).CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 
 	// Check for tagged git repo mirror (foo.git@1.2.3) from https://github.com/defenseunicorns/zarf.git@v0.15.0
-	cloneCommand = fmt.Sprintf("http://zarf-git-user:%s@127.0.0.1:45003/zarf-git-user/mirror__github.com__defenseunicorns__zarf.git", strings.TrimSpace(string(adminPassword)))
-	gitOutput, err = exec.Command("git", "clone", cloneCommand).CombinedOutput()
+	clone = fmt.Sprintf("%s/%s/%s.git", gitAuthUrl, gitUser, repoZarf)
+	gitOutput, err = exec.Command("git", "clone", clone).CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 
 	// Check for correct tag
+	_ = os.Chdir(repoZarf)
 	expectedTag := "v0.15.0\n"
-	err = os.Chdir("mirror__github.com__defenseunicorns__zarf")
 	assert.NoError(t, err)
 	gitOutput, _ = exec.Command("git", "tag").Output()
 	assert.Equal(t, expectedTag, string(gitOutput), "Expected tag should match output")
@@ -59,20 +71,18 @@ func TestGitServer(t *testing.T) {
 	gitOutput, err = exec.Command("git", "log", "-3", "--oneline", "--pretty=format:%h").CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 	assert.Equal(t, expectedCommits, string(gitOutput), "Expected commits should match output")
+	_ = os.Chdir("..")
 
 	// Check for existence of tags without specifying them, signifying that not using '@1.2.3' syntax brought over the whole repo
+	_ = os.Chdir(repoPodInfo)
 	expectedTag = "0.2.2"
-	err = os.Chdir("../mirror__github.com__stefanprodan__podinfo")
-	assert.NoError(t, err)
 	gitOutput, err = exec.Command("git", "tag").CombinedOutput()
 	assert.NoError(t, err, string(gitOutput))
 	assert.Contains(t, string(gitOutput), expectedTag)
-
-	err = os.Chdir("..")
-	assert.NoError(t, err, "unable to change directories back to blah blah blah")
+	_ = os.Chdir("..")
 
 	// Make sure Gitea comes up cleanly
-	resp, err := http.Get("http://127.0.0.1:45003/explore/repos")
+	resp, err := http.Get(gitUrl + "/explore/repos")
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
@@ -82,7 +92,7 @@ func TestGitServer(t *testing.T) {
 
 	// Get the repo as the readonly user
 	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/v1/repos/%v/%v", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repoName), nil)
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitUrl, gitUser, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
 	assert.NoError(t, err)
 
@@ -94,9 +104,9 @@ func TestGitServer(t *testing.T) {
 	assert.False(t, permissionsMap["push"].(bool))
 	assert.True(t, permissionsMap["pull"].(bool))
 
-	e2e.cleanFiles("mirror__github.com__stefanprodan__podinfo")
-	e2e.cleanFiles("mirror__github.com__defenseunicorns__zarf")
-	
+	e2e.cleanFiles(repoPodInfo)
+	e2e.cleanFiles(repoZarf)
+
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
 		namespace: "zarf",
 		name:      "zarf-gitea",
