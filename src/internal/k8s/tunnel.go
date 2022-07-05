@@ -134,10 +134,10 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 			case "darwin":
 				_ = exec.Command("open", url).Start()
 			}
+		} else {
+			// Dump the tunnel URL to the console for other tools if not auto-opening
+			fmt.Print(url)
 		}
-
-		// Dump the tunnel URL to the console for other tools to use
-		fmt.Print(url)
 
 		// Since this blocking, set the defer now so it closes properly on sigterm
 		defer tunnel.Close()
