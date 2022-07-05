@@ -39,7 +39,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	components := GetComposedComponents()
+	components := GetComponents()
 	tempPath := createPaths()
 	defer tempPath.clean()
 
