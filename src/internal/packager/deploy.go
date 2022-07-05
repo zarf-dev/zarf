@@ -125,7 +125,7 @@ func Deploy() {
 	if config.IsZarfInitConfig() {
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
+			{"     Registry", config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
