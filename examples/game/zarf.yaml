@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: appliance-demo-multi-games
-  description: "Demo Zarf appliance mode with some dos games"
+  name: dos-games
+  description: "Simple example to load classic DOS games into K8s in the airgap"
 
 components:
   - name: baseline

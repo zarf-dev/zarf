@@ -14,7 +14,6 @@ builds:
     goos:
       - linux
       - darwin
-    dir: src
     ldflags:
       - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
     goarch:
