@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/facebookgo/symwalk"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 )
@@ -96,7 +97,7 @@ func ReplaceText(path string, old string, new string) {
 func RecursiveFileList(root string, pattern *regexp.Regexp) []string {
 	var files []string
 
-	err := filepath.Walk(root,
+	err := symwalk.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -130,11 +131,16 @@ func CreatePathAndCopy(source string, destination string) {
 		message.Fatalf(err, "unable to copy the file %s", source)
 	}
 
-	// Copy the asset
-	if err := copy.Copy(source, destination); err != nil {
+	resolved, err := filepath.EvalSymlinks(source)
+	if err != nil {
 		message.Fatalf(err, "unable to copy the file %s", source)
 	}
-	pterm.Success.Printfln("Copying %s", source)
+
+	// Copy the asset
+	if err := copy.Copy(resolved, destination); err != nil {
+		message.Fatalf(err, "unable to copy the file %s", resolved)
+	}
+	pterm.Success.Printfln("Copying %s", resolved)
 }
 
 // GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way

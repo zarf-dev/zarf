@@ -790,6 +790,8 @@ github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d/go.mod h1:ZZM
 github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a h1:yDWHCSQ40h88yih2JAcL6Ls/kVkSE8GFACTGVnMPruw=
 github.com/facebookgo/limitgroup v0.0.0-20150612190941-6abd8d71ec01 h1:IeaD1VDVBPlx3viJT9Md8if8IxxJnO+x0JCGb054heg=
 github.com/facebookgo/muster v0.0.0-20150708232844-fd3d7953fd52 h1:a4DFiKFJiDRGFD1qIcqGLX/WlUMD9dyLSLDt+9QZgt8=
+github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222 h1:ivxAxcE9py2xLAqpcEwN7sN711aLfEWgh3cY0aha7uY=
+github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222/go.mod h1:PgrCjL2+FgkITqxQI+erRTONtAv4JkpOzun5ozKW/Jg=
 github.com/facebookincubator/nvdtools v0.1.4 h1:x1Ucw9+bSkMd8DJJN4jNQ1Lk4PSFlJarGOxp9D6WUMo=
 github.com/facebookincubator/nvdtools v0.1.4/go.mod h1:0/FIVnSEl9YHXLq3tKBPpKaI0iUceDhdSHPlIwIX44Y=
 github.com/fatih/camelcase v1.0.0 h1:hxNvNX/xYBp0ovncs8WyWZrOrpBNub/JfaMvbURyft8=
