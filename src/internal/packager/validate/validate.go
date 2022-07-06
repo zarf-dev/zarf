@@ -151,7 +151,5 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
 	}
 
-	// replace component path with doctored path
-	composedComponent.Import.Path = path
 	return nil
 }

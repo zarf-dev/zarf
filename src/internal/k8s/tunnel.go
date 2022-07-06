@@ -36,12 +36,6 @@ const (
 	ZarfGit      = "GIT"
 )
 
-const (
-	PortRegistry = iota + 45001
-	PortLogging
-	PortGit
-)
-
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
 func makeLabels(labels map[string]string) string {
 	var out []string
@@ -70,7 +64,7 @@ type Tunnel struct {
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
-	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %v, %v)", namespace, resourceType, resourceName, local, remote)
+	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
 		out:          ioutil.Discard,
 		localPort:    local,
@@ -96,19 +90,16 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 }
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
-	message.Debugf("tunnel.Connect(%s, %v)", target, blocking)
+	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
-		tunnel.localPort = PortRegistry
 		tunnel.remotePort = 5000
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
-		tunnel.localPort = PortLogging
 		tunnel.remotePort = 3000
 	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
-		tunnel.localPort = PortGit
 		tunnel.remotePort = 3000
 	default:
 		if target != "" {
@@ -125,10 +116,14 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
+	url, err := tunnel.Establish()
+
 	// On error abort
-	if url, err := tunnel.Establish(); err != nil {
+	if err != nil {
 		message.Fatal(err, "Unable to establish the tunnel")
-	} else if blocking {
+	}
+
+	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
 		if tunnel.autoOpen {
 			switch runtime.GOOS {
@@ -139,7 +134,13 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 			case "darwin":
 				_ = exec.Command("open", url).Start()
 			}
+		} else {
+			// Dump the tunnel URL to the console for other tools if not auto-opening
+			fmt.Print(url)
 		}
+
+		// Dump the tunnel URL to the console for other tools to use
+		fmt.Print(url)
 
 		// Since this blocking, set the defer now so it closes properly on sigterm
 		defer tunnel.Close()
@@ -161,7 +162,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 // Endpoint returns the tunnel endpoint
 func (tunnel *Tunnel) Endpoint() string {
 	message.Debug("tunnel.Endpoint()")
-	return fmt.Sprintf("localhost:%d", tunnel.localPort)
+	return fmt.Sprintf("127.0.0.1:%d", tunnel.localPort)
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
@@ -289,8 +290,8 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
-		url := fmt.Sprintf("http://%s:%v%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
-		msg := fmt.Sprintf("Creating port forwarding tunnel available at %s", url)
+		url := fmt.Sprintf("http://%s:%d%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
+		msg := fmt.Sprintf("Creating port forwarding tunnel at %s", url)
 		if tunnel.spinner == nil {
 			spinner.Successf(msg)
 		} else {
