@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -79,10 +80,10 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 	if err != nil {
 		message.Fatal(err, "Unable to open the package config file")
 	}
-	
+
 	// Convert []byte to string and print to screen
 	text := string(content)
-	
+
 	pterm.Println()
 	utils.ColorPrintYAML(text)
 
@@ -116,6 +117,11 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
 		return packagePath, func() {}
+	}
+
+	// Handle case where deploying remote package validated via sget
+	if strings.HasPrefix(packagePath, "sget://") {
+		return handleSgetPackage(packagePath)
 	}
 
 	if !insecureDeploy && shasum == "" {
@@ -158,6 +164,36 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 			_ = os.Remove(localPackagePath)
 			message.Fatalf(nil, "Provided shasum (%s) of the package did not match what was downloaded (%s)\n", shasum, value)
 		}
+	}
+
+	return localPackagePath, tempPath.clean
+}
+
+func handleSgetPackage(sgetPackagePath string) (string, func()) {
+	// Write the package to a local file in a temp path
+	tempPath := createPaths()
+
+	// Create the local file for the package
+	localPackagePath := filepath.Join(tempPath.base, "remote.tar.zst")
+	destinationFile, err := os.Create(localPackagePath)
+	if err != nil {
+		message.Fatal(err, "Unable to create the destination file")
+	}
+	defer destinationFile.Close()
+
+	// If this is a DefenseUnicorns package, use an internal sget public key
+	if strings.HasPrefix(sgetPackagePath, "sget://defenseunicorns") {
+		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
+		config.DeployOptions.SGetKeyPath = "env://DU_SGET_KEY"
+	}
+
+	// Remove the 'sget://' header for the actual sget call
+	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
+
+	// Sget the package
+	err = utils.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
+	if err != nil {
+		message.Fatal(err, "Unable to get the remote package via sget")
 	}
 
 	return localPackagePath, tempPath.clean

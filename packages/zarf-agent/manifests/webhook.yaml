@@ -34,6 +34,7 @@ webhooks:
     rules:
       - operations:
           - "CREATE"
+          - "UPDATE"
         apiGroups:
           - ""
         apiVersions:
@@ -75,6 +76,7 @@ webhooks:
     rules:
       - operations:
           - "CREATE"
+          - "UPDATE"
         apiGroups:
           - "source.toolkit.fluxcd.io"
         apiVersions:

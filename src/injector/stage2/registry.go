@@ -18,14 +18,11 @@ import (
 )
 
 const (
-	Version             = "0.1.0"
 	ZarfSeedReadPort    = "5000"
 	ZarfSeedWriteTarget = "127.0.0.1:5001"
 )
 
 func main() {
-	log.Printf("Zarf Injector Stage 2 version %s\n", Version)
-
 	path, seedImage, targetImage := os.Args[1], os.Args[2], os.Args[3]
 
 	// Launch the embedded registry to load the seed images (r/w mode)

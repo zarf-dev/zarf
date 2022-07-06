@@ -16,11 +16,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-type ConnectString struct {
-	Description string
-	Url         string
-}
-type ConnectStrings map[string]ConnectString
 type ChartOptions struct {
 	BasePath          string
 	Chart             types.ZarfChart
@@ -32,7 +27,7 @@ type ChartOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
+func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 	fromMessage := options.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -117,7 +112,7 @@ func InstallOrUpgradeChart(options ChartOptions) ConnectStrings {
 
 // TemplateChart generates a helm template from a given chart
 func TemplateChart(options ChartOptions) (string, error) {
-	message.Debugf("helm.TemplateChart(%v)", options)
+	message.Debugf("helm.TemplateChart(%#v)", options)
 	spinner := message.NewProgressSpinner("Templating helm chart %s", options.Chart.Name)
 	defer spinner.Stop()
 
@@ -161,8 +156,8 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) ConnectStrings {
-	message.Debugf("helm.GenerateChart(%s, %v, %s)", basePath, manifest, component.Name)
+func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) types.ConnectStrings {
+	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -214,7 +209,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 }
 
 func installChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.installChart(%v, %v, %v)", actionConfig, options, postRender)
+	message.Debugf("helm.installChart(%#v, %#v, %#v)", actionConfig, options, postRender)
 	// Bind the helm action
 	client := action.NewInstall(actionConfig)
 
@@ -245,7 +240,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 }
 
 func upgradeChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.upgradeChart(%v, %v, %v)", actionConfig, options, postRender)
+	message.Debugf("helm.upgradeChart(%#v, %#v, %#v)", actionConfig, options, postRender)
 	client := action.NewUpgrade(actionConfig)
 
 	// Let each chart run for 5 minutes
@@ -271,7 +266,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 }
 
 func rollbackChart(actionConfig *action.Configuration, name string) error {
-	message.Debugf("helm.rollbackChart(%v, %s)", actionConfig, name)
+	message.Debugf("helm.rollbackChart(%#v, %s)", actionConfig, name)
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
@@ -281,7 +276,7 @@ func rollbackChart(actionConfig *action.Configuration, name string) error {
 }
 
 func uninstallChart(actionConfig *action.Configuration, name string) (*release.UninstallReleaseResponse, error) {
-	message.Debugf("helm.uninstallChart(%v, %s)", actionConfig, name)
+	message.Debugf("helm.uninstallChart(%#v, %s)", actionConfig, name)
 	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
 	client.Timeout = 3 * time.Minute
@@ -290,7 +285,7 @@ func uninstallChart(actionConfig *action.Configuration, name string) (*release.U
 }
 
 func loadChartData(options ChartOptions) (*chart.Chart, map[string]any, error) {
-	message.Debugf("helm.loadChartData(%v)", options)
+	message.Debugf("helm.loadChartData(%#v)", options)
 	var (
 		loadedChart *chart.Chart
 		chartValues map[string]any
