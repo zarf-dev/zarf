@@ -2,8 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: kafka-strimzi-demo
   description: "Demo tiny Zarf Kafka deployment"
-  # Big Bang / Iron Bank are only amd64
-  architecture: amd64
 
 components:
   - name: baseline
@@ -16,13 +14,13 @@ components:
     charts:
       - name: strimzi-kafka-operator
         url: https://strimzi.io/charts/
-        version: 0.24.0
+        version: 0.29.0
         namespace: kafka-operator
         valuesFiles:
           - charts/strimzi-values.yaml
     images:
-      - registry1.dso.mil/ironbank/opensource/strimzi/operator:0.24.0
-      - registry1.dso.mil/ironbank/opensource/strimzi/kafka:0.24.0-kafka-2.8.0
+      - quay.io/strimzi/operator:0.29.0
+      - quay.io/strimzi/kafka:0.29.0-kafka-3.2.0
 
   - name: kafka-tools
     description: Helper tools for working with kafka

@@ -27,7 +27,7 @@ import (
 )
 
 var valueTemplate template.Values
-var connectStrings = make(helm.ConnectStrings)
+var connectStrings = make(types.ConnectStrings)
 
 func Deploy() {
 	message.Debug("packager.Deploy()")
@@ -107,17 +107,7 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	if len(connectStrings) > 0 {
-		list := pterm.TableData{{"     Connect Command", "Description"}}
-		// Loop over each connecStrings and convert to pterm.TableData
-		for name, connect := range connectStrings {
-			name = fmt.Sprintf("     zarf connect %s", name)
-			list = append(list, []string{name, connect.Description})
-		}
-
-		// Create the table output with the data
-		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
-	}
+	message.PrintConnectStringTable(connectStrings)
 
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
@@ -125,7 +115,7 @@ func Deploy() {
 	if config.IsZarfInitConfig() {
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", "zarf-push-user", config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
+			{"     Registry", config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
 		}
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
@@ -148,7 +138,7 @@ func Deploy() {
 }
 
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
-	message.Debugf("packager.deployComponents(%v, %v", tempPath, component)
+	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
 	hasImages := len(component.Images) > 0
@@ -164,7 +154,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if len(component.Files) > 0 {
-		spinner := message.NewProgressSpinner("Copying %v files", len(component.Files))
+		spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 		defer spinner.Stop()
 
 		for index, file := range component.Files {
@@ -251,12 +241,31 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	}
 
 	if hasImages {
-		images.PushToZarfRegistry(tempPath.images, component.Images)
+		// Try image push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			if err := images.PushToZarfRegistry(tempPath.images, component.Images); err != nil {
+				message.Errorf(err, "Unable to push images to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
+
 	}
 
 	if hasRepos {
-		// Push all the repos from the extracted archive
-		git.PushAllDirectories(componentPath.repos)
+		// Try repo push up to 3 times
+		for retry := 0; retry < 3; retry++ {
+			// Push all the repos from the extracted archive
+			if err := git.PushAllDirectories(componentPath.repos); err != nil {
+				message.Errorf(err, "Unable to push repos to the Zarf Registry, retrying in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
 	}
 
 	for _, chart := range component.Charts {
@@ -319,7 +328,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 		// on timeout abort
 		case <-timeout:
-			message.Warnf("data injection into target %v timed out\n", data.Target.Namespace)
+			message.Warnf("data injection into target %s timed out\n", data.Target.Namespace)
 			return
 
 		default:
@@ -350,7 +359,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				// Do the actual data injection
 				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 				if err != nil {
-					message.Warnf("Error copying data into the pod %v: %v\n", pod, err)
+					message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
@@ -358,7 +367,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					cpPodExecArgs[4] = pod + ":" + data.Target.Path
 					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
 					if err != nil {
-						message.Warnf("Error saving the zarf sync completion file after injection into pod %v\n", pod)
+						message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 					}
 				}
 			}

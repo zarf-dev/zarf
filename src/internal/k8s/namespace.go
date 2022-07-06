@@ -91,25 +91,3 @@ func DeleteZarfNamespace() {
 		time.Sleep(1 * time.Second)
 	}
 }
-
-func StripZarfAgentLabelFromNamespaces() {
-	spinner := message.NewProgressSpinner("Removing zarf metadata from existing namespaces not managed by Zarf")
-	defer spinner.Stop()
-
-	if namespaces, err := GetNamespaces(); err != nil {
-		spinner.Errorf(err, "Unable to get k8s namespaces")
-	} else {
-		for _, namespace := range namespaces.Items {
-			if _, ok := namespace.Labels["zarf.dev/agent"]; ok {
-				spinner.Updatef("Removing Zarf Agent label for namespace %v", namespace.Name)
-				delete(namespace.Labels, "zarf.dev/agent")
-				if _, err = UpdateNamespace(&namespace); err != nil {
-					// This is not a hard failure, but we should log it
-					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
-				}
-			}
-		}
-	}
-
-	spinner.Success()
-}

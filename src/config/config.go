@@ -29,7 +29,6 @@ const (
 	ZarfGitReadUser         = "zarf-git-read-user"
 	ZarfRegistryPushUser    = "zarf-push"
 	ZarfRegistryPullUser    = "zarf-pull"
-	ZarfRegistry            = IPV4Localhost + ":45001"
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
 
@@ -42,6 +41,8 @@ const (
 	ZarfManagedByLabel        = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath    = "/opt/zarf"
 	ZarfDefaultImageCachePath = ".zarf-image-cache"
+
+	ZarfYAML = "zarf.yaml"
 )
 
 var (
@@ -63,6 +64,8 @@ var (
 	// Private vars
 	active types.ZarfPackage
 	state  types.ZarfState
+
+	SGetPublicKey string
 )
 
 func IsZarfInitConfig() bool {
@@ -165,7 +168,7 @@ func GetValidPackageExtensions() [3]string {
 }
 
 func InitState(tmpState types.ZarfState) {
-	message.Debugf("config.InitState(%v)", tmpState)
+	message.Debugf("config.InitState()")
 	state = tmpState
 	initSecrets()
 }
@@ -183,7 +186,7 @@ func LoadConfig(path string) error {
 }
 
 func BuildConfig(path string) error {
-	message.Debugf("config.BuildConfig(%v)", path)
+	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84

@@ -45,12 +45,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 		// Filter on zarf releases
 		if zarfPrefix.MatchString(release.Name) {
 			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)
-			// Establish a new actionConfig for the namespace
-			actionConfig, _ = createActionConfig(release.Namespace, spinner)
-			// Perform the uninstall
-			response, err := uninstallChart(actionConfig, release.Name)
-			message.Debug(response)
-			if err != nil {
+			if err = RemoveChart(release.Namespace, release.Name, spinner); err != nil {
 				// Don't fatal since this is a removal action
 				spinner.Errorf(err, "Unable to uninstall the chart")
 			}
@@ -58,4 +53,13 @@ func Destroy(purgeAllZarfInstallations bool) {
 	}
 
 	spinner.Success()
+}
+
+func RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+	// Establish a new actionConfig for the namespace
+	actionConfig, _ := createActionConfig(namespace, spinner)
+	// Perform the uninstall
+	response, err := uninstallChart(actionConfig, name)
+	message.Debug(response)
+	return err
 }
