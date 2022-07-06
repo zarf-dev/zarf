@@ -40,7 +40,7 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	components := GetComposedComponents()
+	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
 	configFile := tempPath.base + "/zarf.yaml"
