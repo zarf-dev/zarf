@@ -21,7 +21,9 @@ var prepareCmd = &cobra.Command{
 
 var prepareTransformGitLinks = &cobra.Command{
 	Use:   "patch-git [HOST] [FILE]",
-	Short: "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE",
+	Aliases: []string{"p"},
+	Short: "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: \n" +
+	"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		host, fileName := args[0], args[1]
@@ -56,6 +58,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 var prepareComputeFileSha256sum = &cobra.Command{
 	Use:   "sha256sum [FILE|URL]",
+	Aliases: []string{"s"},
 	Short: "Generate a SHA256SUM for the given file",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -71,12 +74,20 @@ var prepareComputeFileSha256sum = &cobra.Command{
 
 var prepareFindImages = &cobra.Command{
 	Use:     "find-images",
-	Aliases: []string{"prep"},
+	Aliases: []string{"f"},
+	Args:   cobra.MaximumNArgs(1),
 	Short:   "Evaluates components in a zarf file to identify images specified in their helm charts and manifests",
 	Long: "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path.",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.FindImages(repoHelmChartPath)
+		var baseDir string
+
+		// If a directory was provided, use that as the base directory
+		if len(args) > 0 {
+			baseDir = args[0]
+		}
+
+		packager.FindImages(baseDir, repoHelmChartPath)
 	},
 }
 

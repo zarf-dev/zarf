@@ -10,6 +10,7 @@ components:
     required: true
     manifests:
       - name: example-data-injection-pod
+        namespace: demo
         files:
           - manifests/deployment.yaml
     images:

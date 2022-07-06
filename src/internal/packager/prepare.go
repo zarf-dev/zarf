@@ -24,16 +24,35 @@ var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
-func FindImages(repoHelmChartPath string) {
+func FindImages(baseDir, repoHelmChartPath string) {
 
-	// Load the given zarf package
-	if err := config.LoadConfig("zarf.yaml"); err != nil {
+	var originalDir string
+
+	// Change the working directory if this run has an alternate base dir
+	if baseDir != "" {
+		originalDir, _ = os.Getwd()
+		_ = os.Chdir(baseDir)
+		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
+	}
+
+	if err := config.LoadConfig(config.ZarfYAML); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	components := config.GetComponents()
+	components := GetComponents()
 	tempPath := createPaths()
 	defer tempPath.clean()
+
+	for _, component := range components {
+		if len(component.Repos) > 0 && repoHelmChartPath == "" {
+			message.Note("This Zarf package contains git repositories, " +
+				"if any repos contain helm charts you want to template and " +
+				"search for images, make sure to specify the helm chart path " +
+				"via the --repo-chart-path flag")
+		}
+	}
+
+	fmt.Printf("components:\n")
 
 	for _, component := range components {
 
@@ -159,7 +178,7 @@ func FindImages(repoHelmChartPath string) {
 
 		if sortedImages := k8s.SortImages(matchedImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
-			fmt.Printf("      # %s - %s\n", config.GetMetaData().Name, component.Name)
+			fmt.Printf("\n  - name: %s\n    images:\n", component.Name)
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
 				fmt.Println("      - " + image)
@@ -188,6 +207,12 @@ func FindImages(repoHelmChartPath string) {
 			}
 		}
 	}
+
+	// In case the directory was changed, reset to prevent breaking relative target paths
+	if originalDir != "" {
+		_ = os.Chdir(originalDir)
+	}
+
 }
 
 func processUnstructured(resource *unstructured.Unstructured) error {

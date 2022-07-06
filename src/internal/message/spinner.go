@@ -60,10 +60,8 @@ func (p *Spinner) Debugf(format string, a ...any) {
 }
 
 func (p *Spinner) Stop() {
-	if p.spinner != nil && p.spinner.IsActive {
-		// Only stop if not stopped to avoid extra line break injections in the CLI
+	if p.spinner != nil {
 		_ = p.spinner.Stop()
-		Debug("Possible spinner leak detected")
 	}
 }
 
