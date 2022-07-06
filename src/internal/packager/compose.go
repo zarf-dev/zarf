@@ -56,11 +56,22 @@ func getParentComponent(childComponent types.ZarfComponent, everGrowingComposePa
 		parentComponentName = childComponent.Name
 	}
 
+	targetArch := config.GetArch()
 	// Find the parent component from the imported package that matches our arch
 	for _, importedComponent := range importedPackage.Components {
 		if importedComponent.Name == parentComponentName {
-			parentComponent = importedComponent
-			break
+			filterArch := importedComponent.Only.Cluster.Architecture
+
+			// Override the filter if it is set by the child component
+			if childComponent.Only.Cluster.Architecture != "" {
+				filterArch = childComponent.Only.Cluster.Architecture
+			}
+
+			// Only add this component if it is valid for the target architecture.
+			if filterArch == "" || filterArch == targetArch {
+				parentComponent = importedComponent
+				break
+			}
 		}
 	}
 
@@ -162,6 +173,15 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 
 	if override.Scripts.TimeoutSeconds > 0 {
 		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
+	}
+
+	// Merge Only filters
+	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)
+	if override.Only.Cluster.Architecture != "" {
+		target.Only.Cluster.Architecture = override.Only.Cluster.Architecture
+	}
+	if override.Only.LocalOS != "" {
+		target.Only.LocalOS = override.Only.LocalOS
 	}
 }
 

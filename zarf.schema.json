@@ -8,7 +8,7 @@
         "user",
         "architecture",
         "timestamp",
-        "string"
+        "version"
       ],
       "properties": {
         "terminal": {
@@ -23,7 +23,7 @@
         "timestamp": {
           "type": "string"
         },
-        "string": {
+        "version": {
           "type": "string"
         }
       },
@@ -83,6 +83,32 @@
         "required": {
           "type": "boolean"
         },
+        "only": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentOnlyTarget"
+        },
+        "group": {
+          "type": "string"
+        },
+        "cosignKeyPath": {
+          "type": "string"
+        },
+        "import": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentImport"
+        },
+        "variables": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "scripts": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentScripts"
+        },
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -122,28 +148,6 @@
             "$ref": "#/definitions/ZarfDataInjection"
           },
           "type": "array"
-        },
-        "scripts": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentScripts"
-        },
-        "import": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentImport"
-        },
-        "cosignKeyPath": {
-          "type": "string"
-        },
-        "variables": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "group": {
-          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -159,6 +163,34 @@
         },
         "path": {
           "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentOnlyCluster": {
+      "properties": {
+        "architecture": {
+          "type": "string"
+        },
+        "distros": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentOnlyTarget": {
+      "properties": {
+        "localOS": {
+          "type": "string"
+        },
+        "cluster": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentOnlyCluster"
         }
       },
       "additionalProperties": false,

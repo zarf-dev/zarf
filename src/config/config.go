@@ -179,8 +179,28 @@ func GetRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
 }
 
-func LoadConfig(path string) error {
-	return utils.ReadYaml(path, &active)
+// LoadConfig loads the config from the given path and removes
+// components not matching the current OS if filterByOS is set.
+func LoadConfig(path string, filterByOS bool) error {
+	if err := utils.ReadYaml(path, &active); err != nil {
+		return err
+	}
+
+	// Filter each component to only compatible platforms
+	filteredComponents := []types.ZarfComponent{}
+	for _, component := range active.Components {
+		if isCompatibleComponent(component, filterByOS) {
+			filteredComponents = append(filteredComponents, component)
+		}
+	}
+	// Update the active package with the filtered components
+	active.Components = filteredComponents
+
+	return nil
+}
+
+func GetActiveConfig() types.ZarfPackage {
+	return active
 }
 
 func BuildConfig(path string) error {
@@ -227,4 +247,23 @@ func GetImageCachePath() string {
 	}
 
 	return strings.Replace(CreateOptions.ImageCachePath, "~", homePath, 1)
+}
+
+func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
+	// Ignore only filters that are empty
+	var validArch, validOS bool
+
+	targetArch := GetArch()
+
+	// Test for valid architecture
+	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
+		validArch = true
+	}
+
+	// Test for a valid OS
+	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
+		validOS = true
+	}
+
+	return validArch && validOS
 }

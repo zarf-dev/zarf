@@ -19,7 +19,7 @@ func Inspect(packageName string) {
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, "zarf.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.base)
 
 	content, err := ioutil.ReadFile(tempPath.base + "/zarf.yaml")
 	if err != nil {
@@ -32,7 +32,7 @@ func Inspect(packageName string) {
 	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
-	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+	if err := config.LoadConfig(tempPath.base + "/zarf.yaml", false); err != nil {
 		message.Fatalf(err, "Unable to read %s", tempPath.base)
 	}
 

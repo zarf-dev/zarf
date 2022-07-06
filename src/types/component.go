@@ -14,6 +14,9 @@ type ZarfComponent struct {
 	// Required makes this component mandatory for package deployment
 	Required bool `yaml:"required,omitempty"`
 
+	// Only include compatible components during package deployment
+	Only ZarfComponentOnlyTarget `yaml:"only,omitempty"`
+
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
 	Group string `yaml:"group,omitempty"`
@@ -47,6 +50,17 @@ type ZarfComponent struct {
 
 	// Data pacakges to push into a running cluster
 	DataInjections []ZarfDataInjection `yaml:"dataInjections,omitempty"`
+}
+
+// ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
+type ZarfComponentOnlyTarget struct {
+	LocalOS string                   `yaml:"localOS,omitempty"`
+	Cluster ZarfComponentOnlyCluster `yaml:"cluster,omitempty"`
+}
+
+type ZarfComponentOnlyCluster struct {
+	Architecture string   `yaml:"architecture,omitempty"`
+	Distros      []string `yaml:"distros,omitempty"`
 }
 
 // ZarfComponentVariables are variables that can be used to dynaically template K8s resources
