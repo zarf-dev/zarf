@@ -248,6 +248,8 @@ func CreateReadOnlyUser() error {
 	tunnel.Connect(k8s.ZarfGit, false)
 	defer tunnel.Close()
 
+	tunnelUrl := tunnel.Endpoint()
+
 	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
 		"username":             config.ZarfGitReadUser,
@@ -261,7 +263,7 @@ func CreateReadOnlyUser() error {
 	}
 
 	// Send API request to create the user
-	createUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users", config.IPV4Localhost, k8s.PortGit)
+	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
 	_, err = DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	if err != nil {
@@ -275,13 +277,13 @@ func CreateReadOnlyUser() error {
 		"allow_create_organization": false,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("http://%s:%d/api/v1/admin/users/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitReadUser)
+	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, config.ZarfGitReadUser)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	_, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	return err
 }
 
-func addReadOnlyUserToRepo(repo string) error {
+func addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 	// Add the readonly user to the repo
 	addColabBody := map[string]string{
 		"permission": "read",
@@ -292,7 +294,7 @@ func addReadOnlyUserToRepo(repo string) error {
 	}
 
 	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("http://%s:%d/api/v1/repos/%s/%s/collaborators/%s", config.IPV4Localhost, k8s.PortGit, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
+	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
 	_, err = DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
 	return err

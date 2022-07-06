@@ -8,13 +8,15 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 )
 
-func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
+func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error {
 	message.Debugf("images.PushToZarfRegistry(%v, %v)", imageTarballPath, buildImageList)
 
 	// Establish a registry tunnel to send the images to the zarf registry
 	tunnel := k8s.NewZarfTunnel()
 	tunnel.Connect(k8s.ZarfRegistry, false)
 	defer tunnel.Close()
+
+	tunnelUrl := tunnel.Endpoint()
 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
@@ -26,17 +28,15 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) {
 		spinner.Updatef("Updating image %s", src)
 		img, err := crane.LoadTag(imageTarballPath, src, config.GetCraneOptions()...)
 		if err != nil {
-			spinner.Errorf(err, "Unable to load the image from the update package")
-			return
+			return err
 		}
 
-		offlineName := utils.SwapHost(src, config.ZarfRegistry)
-		err = crane.Push(img, offlineName, pushOptions)
-
-		if err != nil {
-			spinner.Fatalf(err, "Unable to push the image to the registry")
+		offlineName := utils.SwapHost(src, tunnelUrl)
+		if err = crane.Push(img, offlineName, pushOptions); err != nil {
+			return err
 		}
 	}
 
 	spinner.Success()
+	return nil
 }
