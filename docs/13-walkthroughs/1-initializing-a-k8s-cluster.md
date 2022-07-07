@@ -30,7 +30,7 @@ zarf init       # Run the initialization command
 
 ### Confirming the Deployment
 Just like how we got a prompt when creating a package in the prior walkthrough, we will also get a prompt when deploying a package.
-![Confirm Package Deploy](../../static/img/walkthroughs/package_deploy_confirm.png)
+![Confirm Package Deploy](../.images/walkthroughs/package_deploy_confirm.png)
 Since there are container images within our init-package, we also get a notification about the [Software Bill of Materials (SBOM)](https://www.ntia.gov/SBOM) Zarf included for our package with a file location of where we could view the [SBOM Ddashoard](../dashboard-ui/sbom-dashboard) if interested incase we were interested in viewing it. 
 
 <br />
@@ -38,7 +38,7 @@ Since there are container images within our init-package, we also get a notifica
 ### Declining The Optional Components
 The init package comes with a few optional components that can be installed. For now we will ignore the optional components but more information about the init-package and its components can be found [here](../user-guide/zarf-packages/the-zarf-init-package).
 
-![Optional init Components](../../static/img/walkthroughs/optional_init_comonents.png)
+![Optional init Components](../.images/walkthroughs/optional_init_comonents.png)
 
 <br />
 

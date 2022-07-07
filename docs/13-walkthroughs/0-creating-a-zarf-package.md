@@ -26,7 +26,7 @@ This set of commands will create a zarf package in the current directory. In thi
 <br />
 
 When you execute the `zarf package create` command, Zarf will prompt you to confirm that you want to create the package by printout out the package definition and asking you to respond with either `y` or `n`.
-![Confirm Package Creation](../../static/img/walkthroughs/package_create_confirm.png)
+![Confirm Package Creation](../.images/walkthroughs/package_create_confirm.png)
 :::info
 You can skip this confirmation by adding the `--confirm` flag when running the command.
 This will look like: `zarf package create . --confirm`
