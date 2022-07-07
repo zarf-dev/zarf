@@ -1,19 +1,19 @@
 # Creating a Zarf Package
 <!-- Does the word 'Creating' make it seem like you're 'defining' the package vs running the 'zarf package create' command? -->
 
-In this walkthrough we will be demonstrating how to build a Zarf package. In fact, we will be building two packages: the first will be the zarf-init package (which will be very useful for nearly every other walkthrough) and the second will be a package that contains a handful of legacy DOS games that we will be using in the [deploying doom](./deploying-doom) walkthrough later. 
+In this walkthrough we will be demonstrating how to build a Zarf package. In fact, we will be building two packages: the first will be the zarf-init package (which will be very useful for nearly every other walkthrough) and the second will be a package that contains a handful of legacy DOS games that we will be using in the [deploying doom](./2-deploying-doom.md) walkthrough later.
 
 When creating a Zarf package, you will need to have internet connection out so that Zarf can fetch all the dependencies and resources necessary to build the package. If your package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine in order for Zarf to be able to fetch the resources.
 
 
 ## Walkthrough Prequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-2. Zarf binary installed on your $PATH: ([install instructions](../getting-started#installing-zarf))
+2. Zarf binary installed on your $PATH: ([install instructions](../3-getting-started.md#installing-zarf))
 
 
 
 ## Building the init-package
-Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../user-guide/the-zarf-cli/cli-commands/package/zarf_package_create). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../user-guide/zarf-packages/zarf-packages) page.
+Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/2-package/zarf_package_create.md). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down
@@ -46,5 +46,3 @@ cd examples/game
 zarf package create . --confirm
 ```
 This set of commands will create a zarf package in the current directory. In this case, the package name should look something like `zarf-package-dos-games-amd64.tar.zst`, although it might be slightly different depending on your system architecture.
-
-
