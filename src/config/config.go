@@ -49,6 +49,9 @@ var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
 
+	// GlobalOptions tracks user-defined values that apply across commands
+	GlobalOptions types.ZarfGlobalOptions
+
 	// CreeateOptions tracks the user-defined options used to create the package
 	CreateOptions types.ZarfCreateOptions
 

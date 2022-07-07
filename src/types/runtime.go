@@ -1,9 +1,14 @@
 package types
 
+// ZarfGlobalOptions tracks the user-defined preferences used across commands.
+type ZarfGlobalOptions struct {
+	Confirm       bool
+	TempDirectory string
+}
+
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment
 type ZarfDeployOptions struct {
 	PackagePath string
-	Confirm     bool
 	Components  string
 	SGetKeyPath string
 
