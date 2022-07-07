@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -22,6 +23,8 @@ func TestTempDirectoryDeploy(t *testing.T) {
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
+
+	_ = os.Mkdir(otherTmpPath, 0750)
 
 	// Deploy the game
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--tmpdir", otherTmpPath, "--log-level=debug")
