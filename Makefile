@@ -99,4 +99,4 @@ build-examples:
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: init-package build-examples 
-	cd src/test/e2e && go test -failfast -v -timeout 30m
+	cd src/test/e2e && go test -v -timeout 30m
