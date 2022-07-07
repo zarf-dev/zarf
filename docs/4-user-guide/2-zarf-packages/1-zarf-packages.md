@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Understanding Zarf Packages
 
-A Zarf package is a single binary Tarball that contains everything you need to deploy a system or capability while fully disconnected. Zarf packages are defined by a `zarf.yaml` file.
+A Zarf package is a single tarball archive that contains everything you need to deploy a system or capability while fully disconnected. Zarf packages are defined by a `zarf.yaml` file.
 
-Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are pulled from the internet and stored within the tarball package. Because all the dependencies are now within the tarball, the package can be deployed on to disconnected systems that don't have connection to the outside world.
+Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are downloaded and stored within the archive. Because all the dependencies are now within the tarball, the package can be deployed on to disconnected systems that don't have connection to the outside world.
 
 The `zarf.yaml` file, that the package builds from, defines declarative instructions on how capabilities of the package should be deployed. The declarative nature of the package means everything is represented by code and automatically runs as it is configured, instead of having to give manual steps that might not be reproducible on all systems.
 

@@ -3,19 +3,19 @@ package types
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
-	Name string `yaml:"name"`
+	Name string `yaml:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9\\-]+$"`
 
 	// Description is a message given to a user when deciding to enable this componenent or not
-	Description string `yaml:"description,omitempty"`
+	Description string `yaml:"description,omitempty" jsonschema:"description=Explanation of this component for package deployers"`
 
 	// Default changes the default option when deploying this component
-	Default bool `yaml:"default,omitempty"`
+	Default bool `yaml:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
 
 	// Required makes this component mandatory for package deployment
-	Required bool `yaml:"required,omitempty"`
+	Required bool `yaml:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy"`
 
 	// Only include compatible components during package deployment
-	Only ZarfComponentOnlyTarget `yaml:"only,omitempty"`
+	Only ZarfComponentOnlyTarget `yaml:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags

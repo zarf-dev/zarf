@@ -72,20 +72,26 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "pattern": "^[a-z0-9\\-]+$",
+          "type": "string",
+          "description": "The name of the component"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Explanation of this component for package deployers"
         },
         "default": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Determines the default Y/N state for installing this component on package deploy"
         },
         "required": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Do not prompt user to install this component"
         },
         "only": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentOnlyTarget"
+          "$ref": "#/definitions/ZarfComponentOnlyTarget",
+          "description": "Filter when this component is included in package creation or deployment"
         },
         "group": {
           "type": "string"
@@ -322,54 +328,76 @@
       "type": "object"
     },
     "ZarfMetadata": {
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
-          "type": "string"
+          "pattern": "^[a-z0-9\\-]+$",
+          "type": "string",
+          "description": "Name to identify this Zarf package"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Additional information about this package"
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Generic string to track the package version by a package author"
         },
         "url": {
-          "type": "string"
+          "type": "string",
+          "description": "Link to package information when online"
         },
         "image": {
-          "type": "string"
+          "type": "string",
+          "description": "An image URL to embed in this package for future Zarf UI listing"
         },
         "uncompressed": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Disable compression of this package"
         },
         "architecture": {
-          "type": "string"
+          "type": "string",
+          "description": "The target cluster architecture of this package"
         }
       },
       "additionalProperties": false,
       "type": "object"
     },
     "ZarfPackage": {
+      "required": [
+        "kind",
+        "components"
+      ],
       "properties": {
         "kind": {
-          "type": "string"
+          "pattern": "^ZarfInitConfig|ZarfPackageConfig$",
+          "type": "string",
+          "description": "The kind of Zarf package",
+          "default": "ZarfPackageConfig"
         },
         "metadata": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfMetadata"
+          "$ref": "#/definitions/ZarfMetadata",
+          "description": "Package metadata"
         },
         "build": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfBuildData"
+          "$ref": "#/definitions/ZarfBuildData",
+          "description": "Zarf-generated package build data"
         },
         "components": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfComponent"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of components to deploy in this package"
         },
         "seed": {
-          "type": "string"
+          "type": "string",
+          "description": "Special image only used for ZarfInitConfig packages when used with the Zarf Injector"
         }
       },
       "additionalProperties": false,
