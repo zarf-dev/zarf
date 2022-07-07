@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Modal from '$lib/components/modal.svelte';
-	import zarfLogo from '@images/zarf-bubbles.png';
+	import zarfLogo from '@images/zarf-bubbles-left.png';
 </script>
 
 <Modal open={true}>

@@ -9,6 +9,8 @@ type ZarfState struct {
 	Secret        string       `json:"secret"`
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
+
+	GitServerInfo GitServerInfo `json:"gitServerInfo"`
 }
 
 type DeployedPackage struct {
@@ -25,6 +27,13 @@ type DeployedComponent struct {
 type InstalledCharts struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`
+}
+
+type GitServerInfo struct {
+	GitAddress  string `json:"gitAddress"`
+	GitUsername string `json:"gitUsername"`
+	GitPassword string `json:"gitPassword"`
+	GitPort     int    `json:"gitPort"`
 }
 
 type GeneratedPKI struct {

@@ -13,16 +13,22 @@ type ZarfDeployOptions struct {
 	Components  string `json:"components"`
 	SGetKeyPath string `json:"sGetKeyPath"`
 
-	// Zarf init is installing the k3s component
-	ApplianceMode bool `json:"applianceMode"`
-
-	// Zarf init override options
-	StorageClass string `json:"storageClass"`
-	Secret       string `json:"secret"`
-	NodePort     string `json:"nodePort"`
+	GitServerInfo GitServerInfo
 }
 
-// ZarfCreateOptions tracks the user-defined options used to create the package.
+// Zarf InitOptions tracks the user-defined options during cluster initialization
+type ZarfInitOptions struct {
+	// Misc init overrides..
+	ApplianceMode bool   `json:"applianceMode"`
+	StorageClass  string `json:"storageClass"`
+	Secret        string `json:"secret"`
+	NodePort      string `json:"nodePort"`
+
+	// Using a remote git server
+	GitServerInfo GitServerInfo
+}
+
+// ZarfCreateOptions tracks the user-defined options used to create the package
 type ZarfCreateOptions struct {
 	SkipSBOM        bool   `json:"skipSBOM"`
 	ImageCachePath  string `json:"imageCachePath"`
