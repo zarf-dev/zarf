@@ -17,7 +17,7 @@ Collection of registry commands provided by Crane
 
 ### SEE ALSO
 
-* [zarf tools](../) - Collection of additional tools to make airgap easier
+* [zarf tools](../index.md) - Collection of additional tools to make airgap easier
 * [zarf tools registry catalog](zarf_tools_registry_catalog.md)	 - List the repos in a registry
 * [zarf tools registry copy](zarf_tools_registry_copy.md)	 - Efficiently copy a remote image from src to dst while retaining the digest value
 * [zarf tools registry login](zarf_tools_registry_login.md)	 - Log in to a registry
