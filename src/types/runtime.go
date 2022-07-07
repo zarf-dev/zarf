@@ -16,13 +16,21 @@ type ZarfDeployOptions struct {
 	// Zarf init is installing the k3s component
 	ApplianceMode bool
 
-	// Zarf init override options
+	GitServerInfo GitServerInfo
+}
+
+// Zarf InitOptions tracks the user-defined options during cluster initialization
+type ZarfInitOptions struct {
+	// Misc init overrides..
 	StorageClass string
 	Secret       string
 	NodePort     string
+
+	// Using a remote git server
+	GitServerInfo GitServerInfo
 }
 
-// ZarfCreeateOptions tracks the user-defined options used to create the package
+// ZarfCreateOptions tracks the user-defined options used to create the package
 type ZarfCreateOptions struct {
 	SkipSBOM        bool
 	ImageCachePath  string
