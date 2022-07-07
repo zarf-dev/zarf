@@ -13,6 +13,11 @@ type ZarfDeployOptions struct {
 	Components  string `json:"components"`
 	SGetKeyPath string `json:"sGetKeyPath"`
 
+	GitServerInfo GitServerInfo
+}
+
+// Zarf InitOptions tracks the user-defined options during cluster initialization
+type ZarfInitOptions struct {
 	// Zarf init is installing the k3s component
 	ApplianceMode bool `json:"applianceMode"`
 
@@ -20,6 +25,9 @@ type ZarfDeployOptions struct {
 	StorageClass string `json:"storageClass"`
 	Secret       string `json:"secret"`
 	NodePort     string `json:"nodePort"`
+
+	// Using a remote git server
+	GitServerInfo GitServerInfo
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
