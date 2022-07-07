@@ -18,9 +18,9 @@ Such packages also become highly distributable, as they can now run on edge, emb
 
 **Dependencies**
 
-- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../the-zarf-cli/building-your-own-cli))
-- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../the-zarf-cli/building-your-own-cli))
-- A Zarf Package (provided externally or [manually built](./zarf-packages#building-a-package))
+- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
+- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
+- A Zarf Package (provided externally or [manually built](./1-zarf-packages.md#building-a-package))
 - kube-context into a k8s cluster
 
   - (NOTE: Not needed if you plan on deploying the cluster with `zarf init` step)
