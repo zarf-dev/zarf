@@ -9,6 +9,16 @@ type ZarfState struct {
 	Secret        string       `json:"secret"`
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS"`
+
+	GitServerInfo GitServerInfo `json:"gitServerInfo"`
+}
+
+//TODO: Should the password for the GitServerINfo be a secret/encoded?
+type GitServerInfo struct {
+	GitAddress  string `json:"gitAddress"`
+	GitUsername string `json:"gitUsername"`
+	GitPassword string `json:"gitPassword"`
+	GitPort     int    `json:"gitPort"`
 }
 
 type GeneratedPKI struct {

@@ -41,7 +41,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
-		if config.DeployOptions.ApplianceMode {
+		if config.InitOptions.ApplianceMode {
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -103,14 +103,14 @@ func preSeedRegistry(tempPath tempPaths) {
 	}
 
 	// CLI provided overrides that haven't been processed already
-	if config.DeployOptions.NodePort != "" {
-		state.NodePort = config.DeployOptions.NodePort
+	if config.InitOptions.NodePort != "" {
+		state.NodePort = config.InitOptions.NodePort
 	}
-	if config.DeployOptions.Secret != "" {
-		state.Secret = config.DeployOptions.Secret
+	if config.InitOptions.Secret != "" {
+		state.Secret = config.InitOptions.Secret
 	}
-	if config.DeployOptions.StorageClass != "" {
-		state.StorageClass = config.DeployOptions.StorageClass
+	if config.InitOptions.StorageClass != "" {
+		state.StorageClass = config.InitOptions.StorageClass
 	}
 
 	spinner.Success()

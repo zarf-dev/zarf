@@ -113,7 +113,13 @@ func init() {
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
 	initCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
-	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
-	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
-	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&config.InitOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
+	initCmd.Flags().StringVar(&config.InitOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
+
+	// Flags for using an external Git server
+	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitAddress, "git-url", "", "External git server url to use for this Zarf cluster")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitUsername, "git-user", "", "Username to connect to the external git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPassword, "git-pass", "", "Password to connect to the external git server")
+	initCmd.Flags().IntVar(&config.InitOptions.GitServerInfo.GitPort, "git-port", 0, "Port to connect to the external git server")
 }
