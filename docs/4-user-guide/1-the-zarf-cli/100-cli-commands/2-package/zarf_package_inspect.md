@@ -9,7 +9,8 @@ zarf package inspect [PACKAGE] [flags]
 ### Options
 
 ```
-  -h, --help   help for inspect
+      --tmpdir      Specify the temporary directory to use for intermediate files
+  -h, --help        help for inspect
 ```
 
 ### Options inherited from parent commands
