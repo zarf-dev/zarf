@@ -10,7 +10,7 @@ Zarf packages are built while 'online' and connected to whatever is hosting the 
 
 The `zarf.yaml` file, that the package builds from, defines declarative instructions on how capabilities of the package should be deployed. The declarative nature of the package means everything is represented by code and automatically runs as it is configured, instead of having to give manual steps that might not be reproducible on all systems.
 
-Zarf Packages are made up of functionality blocks called components which are described more in the [Zarf Components page](./zarf-components). These components can be optional, giving more flexibility to how packages can be used.
+Zarf Packages are made up of functionality blocks called components which are described more in the [Zarf Components page](./2-zarf-components.md). These components can be optional, giving more flexibility to how packages can be used.
 
 <br />
 
@@ -31,7 +31,7 @@ For the remainder of the docs, we will often refer to the `ZarfInitConfig` as an
 
 ### ZarfInitConfig
 
-The init package is the package you use to initialize your cluster to be ready to deploy other Zarf packages on to. Because the init package is a special package, we have more documentation in the [Zarf 'init' Package page](./the-zarf-init-package) if you're still curious after reading this section.
+The init package is the package you use to initialize your cluster to be ready to deploy other Zarf packages on to. Because the init package is a special package, we have more documentation in the [Zarf 'init' Package page](./3-the-zarf-init-package.md) if you're still curious after reading this section.
 
 **The init package needs to be run once on every cluster you want to deploy another package onto, even if the clusters share the same host.**
 
@@ -62,7 +62,7 @@ When Zarf is deploying the package, it will use the infrastructure that was crea
 
 ## What Makes Up A Package
 
-Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./zarf-components) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package follows the following format:
+Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package follows the following format:
 
 ```yaml
 kind: <STRING> # Either ZarfPackageConfig or ZarfInitConfig
@@ -84,8 +84,8 @@ components: <OBJ LIST> # Components definitions are complex and broken down more
 **Dependencies** for Building a Zarf Package
 
 - A local k8s cluster to work with ([k3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[KinD](https://kind.sigs.k8s.io/docs/user/quick-start#installation))
-- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../the-zarf-cli/building-your-own-cli))
-- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../the-zarf-cli/building-your-own-cli))
+- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
+- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
 
 :::
 
