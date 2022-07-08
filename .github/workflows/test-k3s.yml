@@ -1,4 +1,4 @@
-name: e2e-k3s
+name: test-k3s
 on:
   pull_request:
     paths-ignore:
@@ -11,7 +11,7 @@ on:
       - 'docs/**'
 
 jobs:
-  build-and-test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: "Install GoLang"
