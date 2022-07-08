@@ -15,6 +15,7 @@ zarf init [flags]
 ```
       --components string      Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm                Confirm the install without prompting
+      --tmpdir                 Specify the temporary directory to use for intermediate files
   -h, --help                   help for init
       --nodeport string        Nodeport to access the Zarf container registry. Between [30000-32767]
       --secret string          Root secret value that is used to 'seed' other secrets
