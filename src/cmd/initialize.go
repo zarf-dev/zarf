@@ -54,7 +54,7 @@ var initCmd = &cobra.Command{
 			// If the init-package doesn't exist in the executable directory, suggest trying to download
 			if utils.InvalidPath(config.DeployOptions.PackagePath) {
 
-				if config.DeployOptions.Confirm {
+				if config.CommonOptions.Confirm {
 					message.Fatalf(nil, "This command requires a zarf-init package, but one was not found on the local system.")
 				}
 
@@ -100,7 +100,8 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-	initCmd.Flags().BoolVar(&config.DeployOptions.Confirm, "confirm", false, "Confirm the install without prompting")
+	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
+	initCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
 	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
 	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")

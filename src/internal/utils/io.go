@@ -17,8 +17,8 @@ import (
 
 var TempPathPrefix = "zarf-"
 
-func MakeTempDir() (string, error) {
-	tmp, err := ioutil.TempDir("", TempPathPrefix)
+func MakeTempDir(tmpDir string) (string, error) {
+	tmp, err := ioutil.TempDir(tmpDir, TempPathPrefix)
 	message.Debugf("Creating temp path %s", tmp)
 	return tmp, err
 }
