@@ -123,7 +123,7 @@ func isRequiredOrRequested(component types.ZarfComponent, requestedComponentName
 		return true
 	} else {
 		// Otherwise,check if this is one of the components that has been requested
-		if len(requestedComponentNames) > 0 || config.GlobalOptions.Confirm {
+		if len(requestedComponentNames) > 0 || config.CommonOptions.Confirm {
 			for _, requestedComponent := range requestedComponentNames {
 				// If the component name matches one of the requested components, then return true
 				if strings.ToLower(requestedComponent) == component.Name {
@@ -140,7 +140,7 @@ func isRequiredOrRequested(component types.ZarfComponent, requestedComponentName
 // Confirm optional component
 func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	// Confirm flag passed, just use defaults
-	if config.GlobalOptions.Confirm {
+	if config.CommonOptions.Confirm {
 		return component.Default
 	}
 
@@ -165,7 +165,7 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 
 func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
 	// Confirm flag passed, just use defaults
-	if config.GlobalOptions.Confirm {
+	if config.CommonOptions.Confirm {
 		var componentNames []string
 		for _, component := range componentGroup {
 			// If the component is default, then return it

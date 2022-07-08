@@ -15,7 +15,7 @@ import (
 const onlineRemoteName = "online-upstream"
 
 func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
-	path, _ := utils.MakeTempDir(config.GlobalOptions.TempDirectory)
+	path, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them

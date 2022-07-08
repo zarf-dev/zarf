@@ -15,6 +15,7 @@ linters:
     - wrapcheck
     - wsl
     - paralleltest
+    - gochecknoglobals
 issues:
   exclude-use-default: false
   new: true

@@ -43,7 +43,7 @@ func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *rend
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	message.Debugf("helm.Run(renderedManifests *bytes.Buffer)")
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, _ := utils.MakeTempDir(config.GlobalOptions.TempDirectory)
+	tempDir, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	path := tempDir + "/chart.yaml"
 
 	// Write the context to a file for processing

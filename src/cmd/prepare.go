@@ -99,5 +99,5 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
-	prepareFindImages.Flags().StringVar(&config.GlobalOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
+	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 }

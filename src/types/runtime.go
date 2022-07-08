@@ -1,7 +1,7 @@
 package types
 
-// ZarfGlobalOptions tracks the user-defined preferences used across commands.
-type ZarfGlobalOptions struct {
+// ZarfCommonOptions tracks the user-defined preferences used across commands.
+type ZarfCommonOptions struct {
 	Confirm       bool
 	TempDirectory string
 }
