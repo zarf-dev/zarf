@@ -1,4 +1,4 @@
-name: e2e-kind
+name: skip
 on:
   pull_request:
     paths:
@@ -11,7 +11,7 @@ on:
       - 'docs/**'
 
 jobs:
-  ignore:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "Not required, non-code changes only." '      
