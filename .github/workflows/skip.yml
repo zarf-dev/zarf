@@ -1,0 +1,17 @@
+name: skip
+on:
+  pull_request:
+    paths:
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - '**.gif'
+      - '**.svg'
+      - 'adr/**'
+      - 'docs/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Not required, non-code changes only." '      

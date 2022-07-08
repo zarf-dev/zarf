@@ -9,7 +9,7 @@ When creating a Zarf package, you will need to have internet connection out so t
 ## Walkthrough Prequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 2. Zarf binary installed on your $PATH: ([install instructions](../3-getting-started.md#installing-zarf))
-
+3. A copy of the injector's `zarf-registry` binary in the `build/` directory: ([build instructions](../3-getting-started.md#building-the-cli-from-scratch))
 
 
 ## Building the init-package

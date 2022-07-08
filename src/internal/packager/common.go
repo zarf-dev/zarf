@@ -42,7 +42,7 @@ type tempPaths struct {
 }
 
 func createPaths() tempPaths {
-	basePath, _ := utils.MakeTempDir()
+	basePath, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	return tempPaths{
 		base: basePath,
 
@@ -101,9 +101,10 @@ func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool 
 
 	// Display prompt if not auto-confirmed
 	var confirmFlag bool
-	if config.DeployOptions.Confirm {
+	if config.CommonOptions.Confirm {
 		message.Infof("%s Zarf package confirmed", userMessage)
-		return config.DeployOptions.Confirm
+
+		return config.CommonOptions.Confirm
 	} else {
 		prompt := &survey.Confirm{
 			Message: userMessage + " this Zarf package?",
