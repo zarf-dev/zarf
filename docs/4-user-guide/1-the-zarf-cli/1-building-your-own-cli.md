@@ -1,7 +1,7 @@
 # Building Your Own Zarf CLI
 
 :::note
-As mentioned in the [Getting Started page](../../getting-started), a pre-compiled binary is available for arm64 and amd64 machines under the 'Assets' tab of our latest releases on [GitHub](https://github.com/defenseunicorns/zarf/releases). If you don't want to build the CLI yourself you could always download it from there.
+As mentioned in the [Getting Started page](../../3-getting-started.md), a pre-compiled binary is available for arm64 and amd64 machines under the 'Assets' tab of our latest releases on [GitHub](https://github.com/defenseunicorns/zarf/releases). If you don't want to build the CLI yourself you could always download it from there.
 :::
 
 ## Dependencies
