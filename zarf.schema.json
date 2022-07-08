@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$ref": "#/definitions/ZarfPackage",
+  "$ref": "./zarf.schema.json/#/definitions/ZarfPackage",
+  "title": "Zarf Package",
   "definitions": {
     "ZarfBuildData": {
       "required": [
@@ -86,21 +87,21 @@
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfFile"
+            "$ref": "./zarf.schema.json/#/definitions/ZarfFile"
           },
           "type": "array"
         },
         "charts": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfChart"
+            "$ref": "./zarf.schema.json/#/definitions/ZarfChart"
           },
           "type": "array"
         },
         "manifests": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfManifest"
+            "$ref": "./zarf.schema.json/#/definitions/ZarfManifest"
           },
           "type": "array"
         },
@@ -119,17 +120,17 @@
         "dataInjections": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfDataInjection"
+            "$ref": "./zarf.schema.json/#/definitions/ZarfDataInjection"
           },
           "type": "array"
         },
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentScripts"
+          "$ref": "./zarf.schema.json/#/definitions/ZarfComponentScripts"
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentImport"
+          "$ref": "./zarf.schema.json/#/definitions/ZarfComponentImport"
         },
         "cosignKeyPath": {
           "type": "string"
@@ -225,7 +226,7 @@
         },
         "target": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfContainerTarget"
+          "$ref": "./zarf.schema.json/#/definitions/ZarfContainerTarget"
         }
       },
       "additionalProperties": false,
@@ -323,16 +324,16 @@
         },
         "metadata": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfMetadata"
+          "$ref": "./zarf.schema.json/#/definitions/ZarfMetadata"
         },
         "build": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfBuildData"
+          "$ref": "./zarf.schema.json/#/definitions/ZarfBuildData"
         },
         "components": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfComponent"
+            "$ref": "./zarf.schema.json/#/definitions/ZarfComponent"
           },
           "type": "array"
         },
