@@ -1,9 +1,17 @@
-name: e2e-kind
+name: test-kind
 on:
-  - pull_request
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - '**.gif'
+      - '**.svg'
+      - 'adr/**'
+      - 'docs/**'  
 
 jobs:
-  build-and-test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: "Install GoLang"

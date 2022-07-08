@@ -1,7 +1,7 @@
 # Building Your Own Zarf CLI
 
 :::note
-As mentioned in the [Getting Started page](../../getting-started), a pre-compiled binary is available for arm64 and amd64 machines under the 'Assets' tab of our latest releases on [GitHub](https://github.com/defenseunicorns/zarf/releases). If you don't want to build the CLI yourself you could always download it from there.
+As mentioned in the [Getting Started page](../../3-getting-started.md), a pre-compiled binary is available for arm64 and amd64 machines under the 'Assets' tab of our latest releases on [GitHub](https://github.com/defenseunicorns/zarf/releases). If you don't want to build the CLI yourself you could always download it from there.
 :::
 
 ## Dependencies
@@ -35,7 +35,8 @@ The `make build-cli` command builds a binary for each combinations of OS and arc
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
-  :::
+- `make build-injector-registry`
+:::
 
 #### Breaking Down Whats Happening
 
