@@ -25,10 +25,13 @@ func TestUseCLI(t *testing.T) {
 	// output, err = exec.Command("bash", "-c", "\"echo 'random test data 🦄' > shasum-test-file\"").Output()
 	shasumTestFilePath := "shasum-test-file"
 
-	// run `zarf create` with a specified image cache location
+	// run `zarf package create` with a specified image cache location
 	imageCachePath := "/tmp/.image_cache-location"
 
-	e2e.cleanFiles(shasumTestFilePath, imageCachePath)
+	// run `zarf package create` with a specified tmp location
+	otherTmpPath := "/tmp/othertmp"
+
+	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
 
 	testfile, _ := os.Create(shasumTestFilePath)
 	cmd := exec.Command("echo", "random test data 🦄")
@@ -69,7 +72,21 @@ func TestUseCLI(t *testing.T) {
 	// TODO: remove this once #511 is merged
 	_ = os.Chdir("examples/game")
 	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
+	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
+
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "inspect", pkgName)
+	require.NoError(t, err, stdOut, stdErr)
+
+	_ = os.Mkdir(otherTmpPath, 0750)
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "inspect", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
+	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 	// Reset temp chdir
 	_ = os.Chdir("../..")
@@ -78,5 +95,5 @@ func TestUseCLI(t *testing.T) {
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
 
-	e2e.cleanFiles(shasumTestFilePath, imageCachePath)
+	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
 }

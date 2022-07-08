@@ -10,6 +10,7 @@ zarf package create [flags]
 
 ```
       --confirm             Confirm package creation without prompting
+      --tmpdir              Specify the temporary directory to use for intermediate files
   -h, --help                help for create
       --skip-sbom           Skip generating SBOM for this package
       --zarf-cache string   Specify the location of the Zarf image cache (default ".zarf-image-cache")
