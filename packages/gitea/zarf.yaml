@@ -15,6 +15,7 @@ components:
         valuesFiles:
           - gitea-values.yaml
     scripts:
-      retry: true
+      timeoutSeconds: 60
+      showOutput: true
       after:
-        - "./zarf tools create-read-only-gitea-user"
+        - "./zarf tools create-read-only-gitea-user -l=trace"
