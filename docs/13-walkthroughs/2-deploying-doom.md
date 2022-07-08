@@ -6,7 +6,7 @@ In this walkthrough, we are going to deploy a fun application onto your cluster.
 ## Walkthrough Prequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
-1. An Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))
+1. A Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))
 1. kubectl: ([kubectl Install Instructions](https://kubernetes.io/docs/tasks/tools/#kubectl))
 
 

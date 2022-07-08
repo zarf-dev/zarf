@@ -43,7 +43,10 @@ The `make build-cli` command builds a binary for each combinations of OS and arc
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
-  :::
+- `make build-injector-registry`
+
+You can learn more about building [here](./4-user-guide/1-the-zarf-cli/1-building-your-own-cli.md).
+:::
 
 <br />
 
@@ -66,7 +69,7 @@ If you are not seeing that, then it's possible that Zarf was not installed onto 
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you!
 
-- If you want to dive straight into Zarf, you can find examples and guides in the [Walkthroughs](./walkthroughs) page.
+- If you want to dive straight into Zarf, you can find examples and guides in the [Walkthroughs](./13-walkthroughs/index.md) page.
 
 - More information about the Zarf CLI is available in the [Zarf CLI](./4-user-guide/1-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 
