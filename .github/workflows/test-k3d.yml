@@ -1,6 +1,14 @@
 name: e2e-k3d
 on:
-  - pull_request
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - '**.gif'
+      - '**.svg'
+      - 'adr/**'
+      - 'docs/**'
 
 jobs:
   build-and-test:
