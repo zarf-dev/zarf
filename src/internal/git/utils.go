@@ -272,7 +272,7 @@ func CreateReadOnlyUser() error {
 
 	// Make sure the user can't create their own repos or orgs
 	updateUserBody := map[string]interface{}{
-		"email":                     "zarf-reader@localhost.local",
+		"login_name":                config.ZarfGitReadUser,
 		"max_repo_creation":         0,
 		"allow_create_organization": false,
 	}
