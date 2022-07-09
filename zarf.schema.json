@@ -78,7 +78,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Explanation of this component for package deployers"
+          "description": "Message to include during package deploy describing the purpose of this component"
         },
         "default": {
           "type": "boolean",
@@ -94,14 +94,17 @@
           "description": "Filter when this component is included in package creation or deployment"
         },
         "group": {
-          "type": "string"
+          "type": "string",
+          "description": "Create a user selector field based on all components in the same group"
         },
         "cosignKeyPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Specify a path to a public key to validate signed online resources"
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentImport"
+          "$ref": "#/definitions/ZarfComponentImport",
+          "description": "Import a component from another Zarf package"
         },
         "variables": {
           "patternProperties": {
@@ -109,25 +112,29 @@
               "type": "string"
             }
           },
-          "type": "object"
+          "type": "object",
+          "description": "Dynamic template values for K8s resources"
         },
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentScripts"
+          "$ref": "#/definitions/ZarfComponentScripts",
+          "description": "Custom commands to run before or after package deployment"
         },
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfFile"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Files to place on disk during package deployment"
         },
         "charts": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfChart"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Helm charts to install during package deploy"
         },
         "manifests": {
           "items": {
@@ -140,20 +147,23 @@
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of OCI images to include in the package"
         },
         "repos": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of git repos to include in the package"
         },
         "dataInjections": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfDataInjection"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Datasets to inject into a pod in the target cluster"
         }
       },
       "additionalProperties": false,
@@ -177,13 +187,19 @@
     "ZarfComponentOnlyCluster": {
       "properties": {
         "architecture": {
-          "type": "string"
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string",
+          "description": "Only create and deploy to clusters of the given architecture"
         },
         "distros": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Future use"
         }
       },
       "additionalProperties": false,
@@ -192,11 +208,18 @@
     "ZarfComponentOnlyTarget": {
       "properties": {
         "localOS": {
-          "type": "string"
+          "enum": [
+            "linux",
+            "darwin",
+            "windows"
+          ],
+          "type": "string",
+          "description": "Only deploy component to specified OS"
         },
         "cluster": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentOnlyCluster"
+          "$ref": "#/definitions/ZarfComponentOnlyCluster",
+          "description": "Only deploy component to specified clusters"
         }
       },
       "additionalProperties": false,
@@ -372,7 +395,10 @@
       ],
       "properties": {
         "kind": {
-          "pattern": "^ZarfInitConfig|ZarfPackageConfig$",
+          "enum": [
+            "ZarfInitConfig",
+            "ZarfPackageConfig"
+          ],
           "type": "string",
           "description": "The kind of Zarf package",
           "default": "ZarfPackageConfig"

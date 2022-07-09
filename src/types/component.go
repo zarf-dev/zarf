@@ -6,7 +6,7 @@ type ZarfComponent struct {
 	Name string `yaml:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9\\-]+$"`
 
 	// Description is a message given to a user when deciding to enable this componenent or not
-	Description string `yaml:"description,omitempty" jsonschema:"description=Explanation of this component for package deployers"`
+	Description string `yaml:"description,omitempty" jsonschema:"description=Message to include during package deploy describing the purpose of this component"`
 
 	// Default changes the default option when deploying this component
 	Default bool `yaml:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
@@ -19,48 +19,48 @@ type ZarfComponent struct {
 
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
-	Group string `yaml:"group,omitempty"`
+	Group string `yaml:"group,omitempty" jsonschema:"description=Create a user selector field based on all components in the same group"`
 
 	//Path to cosign publickey for signed online resources
-	CosignKeyPath string `yaml:"cosignKeyPath,omitempty"`
+	CosignKeyPath string `yaml:"cosignKeyPath,omitempty" jsonschema:"description=Specify a path to a public key to validate signed online resources"`
 
 	// Import refers to another zarf.yaml package component.
-	Import ZarfComponentImport `yaml:"import,omitempty"`
+	Import ZarfComponentImport `yaml:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
 	// Dynamic template values for K8s resources
-	Variables ZarfComponentVariables `yaml:"variables,omitempty"`
+	Variables ZarfComponentVariables `yaml:"variables,omitempty" jsonschema:"description=Dynamic template values for K8s resources"`
 
 	// Scripts are custom commands that run before or after package deployment
-	Scripts ZarfComponentScripts `yaml:"scripts,omitempty"`
+	Scripts ZarfComponentScripts `yaml:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
 
 	// Files are files to place on disk during deploy
-	Files []ZarfFile `yaml:"files,omitempty"`
+	Files []ZarfFile `yaml:"files,omitempty" jsonschema:"description=Files to place on disk during package deployment"`
 
 	// Charts are helm charts to install during package deploy
-	Charts []ZarfChart `yaml:"charts,omitempty"`
+	Charts []ZarfChart `yaml:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
 
 	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
 	Manifests []ZarfManifest `yaml:"manifests,omitempty"`
 
 	// Images are the online images needed to be included in the zarf package
-	Images []string `yaml:"images,omitempty"`
+	Images []string `yaml:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
 
-	// Repos are any git repos that need to be pushed into the gitea server
-	Repos []string `yaml:"repos,omitempty"`
+	// Repos are any git repos that need to be pushed into the git server
+	Repos []string `yaml:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
 
 	// Data pacakges to push into a running cluster
-	DataInjections []ZarfDataInjection `yaml:"dataInjections,omitempty"`
+	DataInjections []ZarfDataInjection `yaml:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
-	LocalOS string                   `yaml:"localOS,omitempty"`
-	Cluster ZarfComponentOnlyCluster `yaml:"cluster,omitempty"`
+	LocalOS string                   `yaml:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
+	Cluster ZarfComponentOnlyCluster `yaml:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
 type ZarfComponentOnlyCluster struct {
-	Architecture string   `yaml:"architecture,omitempty"`
-	Distros      []string `yaml:"distros,omitempty"`
+	Architecture string   `yaml:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
+	Distros      []string `yaml:"distros,omitempty" jsonschema:"description=Future use"`
 }
 
 // ZarfComponentVariables are variables that can be used to dynaically template K8s resources

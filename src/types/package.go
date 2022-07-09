@@ -2,7 +2,7 @@ package types
 
 // ZarfPackage the top-level structure of a Zarf config file
 type ZarfPackage struct {
-	Kind       string          `yaml:"kind" jsonschema:"description=The kind of Zarf package,pattern=^ZarfInitConfig|ZarfPackageConfig$,default=ZarfPackageConfig"`
+	Kind       string          `yaml:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	Metadata   ZarfMetadata    `yaml:"metadata,omitempty" jsonschema:"description=Package metadata"`
 	Build      ZarfBuildData   `yaml:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
 	Components []ZarfComponent `yaml:"components" jsonschema:"description=List of components to deploy in this package"`
