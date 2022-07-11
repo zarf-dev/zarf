@@ -75,8 +75,7 @@ func createComponentPaths(basePath string, component types.ZarfComponent) compon
 	}
 }
 
-func confirmAction(configPath, userMessage string, sbomViewFiles []string) bool {
-
+func confirmAction(userMessage string, sbomViewFiles []string) bool {
 	active := config.GetActiveConfig()
 
 	content, err := yaml.Marshal(active)

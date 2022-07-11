@@ -53,7 +53,7 @@ func Create(baseDir string) {
 	// Perform early package validation
 	validate.Run()
 
-	if !confirmAction(configFile, "Create", nil) {
+	if !confirmAction("Create", nil) {
 		os.Exit(0)
 	}
 
