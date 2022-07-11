@@ -18,7 +18,7 @@ func NewPodMutationHook() operations.Hook {
 	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			message.Debugf("hooks.mutateCreate()(*v1.AdmissionRequest) - %v , %s/%s: %v", r.Kind, r.Namespace, r.Name, r.Operation)
+			message.Debugf("hooks.mutateCreate()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
 			var patchOperations []operations.PatchOperation
 			pod, err := parsePod(r.Object.Raw)

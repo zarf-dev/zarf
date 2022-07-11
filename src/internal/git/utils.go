@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	netHttp "net/http"
@@ -265,7 +264,8 @@ func CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	_, err = DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err := DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	message.Debug(string(out))
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,8 @@ func CreateReadOnlyUser() error {
 	updateUserData, _ := json.Marshal(updateUserBody)
 	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, config.ZarfGitReadUser)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	_, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	message.Debug(string(out))
 	return err
 }
 
@@ -302,10 +303,10 @@ func addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 
 // Add http request boilerplate and perform the request, checking for a successful response
 func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, error) {
-	message.Debugf("Performing %v http request to %v", request.Method, request.URL)
+	message.Debugf("Performing %s http request to %#v", request.Method, request.URL)
 
 	// Prep the request with boilerplate
-	client := &netHttp.Client{Timeout: time.Second * 10}
+	client := &netHttp.Client{Timeout: time.Second * 20}
 	request.SetBasicAuth(username, secret)
 	request.Header.Add("accept", "application/json")
 	request.Header.Add("Content-Type", "application/json")
@@ -319,7 +320,7 @@ func DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, er
 
 	// If we get a 'bad' status code we will have no error, create a useful one to return
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		err = errors.New(fmt.Sprintf("Got status code of %v during http request with body of: %v", response.StatusCode, string(responseBody)))
+		err = fmt.Errorf("got status code of %d during http request with body of: %s", response.StatusCode, string(responseBody))
 		return []byte{}, err
 	}
 
