@@ -34,7 +34,7 @@ func Inspect(packageName string) {
 	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
-	if err := config.LoadConfig(tempPath.base+"/zarf.yaml", false); err != nil {
+	if err := config.LoadConfig(configPath, false); err != nil {
 		message.Fatalf(err, "Unable to read %s", tempPath.base)
 	}
 
