@@ -6,7 +6,7 @@ metadata:
     # Enables "zarf connect logging"
     zarf.dev/connect-name: logging    
   annotations:
-    zarf.dev/connect-description: "Connect to the Zarf Logging Service (Grafana)"
+    zarf.dev/connect-description: "Zarf Cluster Logging Service (Grafana)"
 spec:
   ports:
   - port: 3000
