@@ -2,6 +2,7 @@ package packager
 
 import (
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -19,9 +20,10 @@ func Inspect(packageName string) {
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, "zarf.yaml", tempPath.base)
+	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.base)
 
-	content, err := ioutil.ReadFile(tempPath.base + "/zarf.yaml")
+	configPath := filepath.Join(tempPath.base, "zarf.yaml")
+	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the config file in the package")
 	}
@@ -32,7 +34,7 @@ func Inspect(packageName string) {
 	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
-	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+	if err := config.LoadConfig(configPath, false); err != nil {
 		message.Fatalf(err, "Unable to read %s", tempPath.base)
 	}
 

@@ -14,6 +14,7 @@ replace (
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/derailed/k9s v0.25.21
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
@@ -43,8 +44,6 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.7
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require github.com/Masterminds/semver/v3 v3.1.1
 
 require (
 	atomicgo.dev/cursor v0.1.1 // indirect
