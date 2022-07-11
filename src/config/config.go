@@ -253,6 +253,8 @@ func GetImageCachePath() string {
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
+	message.Debugf("config.isCompatibleComponent(%s, %v)", component.Name, filterByOS)
+
 	// Ignore only filters that are empty
 	var validArch, validOS bool
 
@@ -261,11 +263,15 @@ func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool 
 	// Test for valid architecture
 	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
 		validArch = true
+	} else {
+		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, targetArch)
 	}
 
 	// Test for a valid OS
 	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
 		validOS = true
+	} else {
+		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
 	}
 
 	return validArch && validOS
