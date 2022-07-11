@@ -11,6 +11,8 @@ import (
 )
 
 func GetComponents() (components []types.ZarfComponent) {
+	message.Debugf("packager.GetComponents()")
+
 	for _, component := range config.GetComponents() {
 		if component.Import.Path == "" {
 			components = append(components, component)
@@ -27,6 +29,8 @@ func GetComponents() (components []types.ZarfComponent) {
 }
 
 func GetComposedComponent(childComponent types.ZarfComponent) types.ZarfComponent {
+	message.Debugf("packager.GetComposedComponent(%+v)", childComponent)
+
 	// Make sure the component we're trying to import cant be accessed
 	validateOrBail(&childComponent)
 
@@ -44,6 +48,8 @@ func GetComposedComponent(childComponent types.ZarfComponent) types.ZarfComponen
 }
 
 func getParentComponent(childComponent types.ZarfComponent, everGrowingComposePath string) (parentComponent types.ZarfComponent) {
+	message.Debugf("packager.getParentComponent(%+v, %s)", childComponent, everGrowingComposePath)
+
 	importedPackage, err := getSubPackage(filepath.Join(everGrowingComposePath, childComponent.Import.Path))
 	if err != nil {
 		message.Fatal(err, "Unable to get the package that we're importing a component from")
@@ -75,6 +81,11 @@ func getParentComponent(childComponent types.ZarfComponent, everGrowingComposePa
 		}
 	}
 
+	// If we didn't find a parent component, bail
+	if parentComponent.Name == "" {
+		message.Fatalf(nil, "Unable to find the component %s in the imported package", parentComponentName)
+	}
+
 	// Check if we need to get more of the parents!!!
 	if parentComponent.Import.Path != "" {
 		// Set a temporary composePath so we can get future parents/grandparents from our current location
@@ -97,6 +108,8 @@ func getParentComponent(childComponent types.ZarfComponent, everGrowingComposePa
 }
 
 func fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
+	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", parentComponent, childComponent)
+
 	// Prefix composed component file paths.
 	for fileIdx, file := range parentComponent.Files {
 		parentComponent.Files[fileIdx].Source = getComposedFilePath(file.Source, childComponent.Import.Path)
@@ -128,6 +141,8 @@ func fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) t
 
 // Validates the sub component, exits program if validation fails.
 func validateOrBail(component *types.ZarfComponent) {
+	message.Debugf("packager.validateOrBail(%+v)", component)
+
 	if err := validate.ValidateImportPackage(component); err != nil {
 		message.Fatalf(err, "Invalid import definition in the %s component: %s", component.Name, err)
 	}
@@ -135,6 +150,8 @@ func validateOrBail(component *types.ZarfComponent) {
 
 // Sets Name, Default, Required and Description to the original components values
 func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
+	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
+
 	target.Name = override.Name
 	target.Default = override.Default
 	target.Required = override.Required
@@ -168,9 +185,11 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	target.Scripts.After = append(target.Scripts.After, override.Scripts.After...)
 	target.Scripts.ShowOutput = override.Scripts.ShowOutput
 	if override.Scripts.Retry {
-		target.Scripts.Retry = override.Scripts.Retry
+		target.Scripts.Retry = true
 	}
-
+	if override.Scripts.ShowOutput {
+		target.Scripts.ShowOutput = true
+	}
 	if override.Scripts.TimeoutSeconds > 0 {
 		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
 	}
@@ -187,6 +206,8 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 
 // Reads the locally imported zarf.yaml
 func getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
+	message.Debugf("packager.getSubPackage(%s)", packagePath)
+
 	path := filepath.Join(packagePath, config.ZarfYAML)
 	err = utils.ReadYaml(path, &importedPackage)
 	return importedPackage, err
@@ -194,6 +215,8 @@ func getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err e
 
 // Prefix file path with importPath if original file path is not a url.
 func getComposedFilePath(originalPath string, pathPrefix string) string {
+	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, pathPrefix)
+
 	// Return original if it is a remote file.
 	if utils.IsUrl(originalPath) {
 		return originalPath
