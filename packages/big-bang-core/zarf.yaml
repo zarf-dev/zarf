@@ -73,6 +73,7 @@ components:
       - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.36.0
 
       # twistlock
+      - registry1.dso.mil/ironbank/big-bang/base:1.18.0
       - registry1.dso.mil/ironbank/twistlock/console/console:22.06.179
       - registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.179
 
