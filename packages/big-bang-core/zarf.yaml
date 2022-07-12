@@ -9,7 +9,7 @@ components:
   - name: flux
     required: true
     import:
-      path: ../../packages/flux-iron-bank
+      path: ../flux-iron-bank
 
   - name: big-bang-core-assets
     description: "Git repositories and OCI images used by Big Bang Core"
