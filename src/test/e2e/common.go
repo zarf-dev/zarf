@@ -77,11 +77,13 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 // execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
+	commandString = append(commandString, "-l=trace")
 	return utils.ExecCommandWithContext(context.TODO(), true, e2e.zarfBinPath, commandString...)
 }
 
 // execZarfBackgroundCommand kills any background 'zarf connect ...' processes spawned during the tests
 func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
+	commandString = append(commandString, "-l=trace")
 	// Create a tunnel to the git resources
 	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
 	message.Debugf("Running the background command: (%s)", tunnelCmd)

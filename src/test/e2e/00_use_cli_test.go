@@ -60,9 +60,9 @@ func TestUseCLI(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test that changing the log level actually applies the requested level
-	_, stdErr, _ = e2e.execZarfCommand("version", "--log-level=debug")
-	expectedOutString := "Log level set to debug"
-	require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
+	// _, stdErr, _ = e2e.execZarfCommand("version", "--log-level=debug")
+	// expectedOutString := "Log level set to debug"
+	// require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")

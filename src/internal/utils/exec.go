@@ -19,6 +19,7 @@ const colorWhite = "\x1b[37;1m"
 
 //nolint
 func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, string, error) {
+	args = append(args, "-l=trace")
 	if showLogs {
 		fmt.Println()
 		fmt.Printf("  %s", colorGreen)

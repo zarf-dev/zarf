@@ -33,7 +33,7 @@ func TestGitAndFlux(t *testing.T) {
 
 	testGitServerConnect(t, localPort, gitUrl)
 	testGitServerReadOnly(t, gitUrl)
-	// waitFluxPodInfoDeployment(t)
+	waitFluxPodInfoDeployment(t)
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove,
 		ChartTarget{
