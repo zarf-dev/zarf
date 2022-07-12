@@ -84,6 +84,7 @@ func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string
 func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
 	// Create a tunnel to the git resources
 	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
+	message.Debugf("Running the background command: (%s)", tunnelCmd)
 	err := tunnelCmd.Start()
 	e2e.cmdsToKill = append(e2e.cmdsToKill, tunnelCmd)
 	time.Sleep(1 * time.Second)

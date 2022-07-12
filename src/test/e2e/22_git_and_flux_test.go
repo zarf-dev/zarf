@@ -85,7 +85,7 @@ func testGitServerReadOnly(t *testing.T, gitUrl string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.arch)
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	var kubectlOut []byte
