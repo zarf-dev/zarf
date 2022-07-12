@@ -202,14 +202,32 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 func (tunnel *Tunnel) Establish() (string, error) {
 	message.Debug("tunnel.Establish()")
 
+	var err error
 	var spinner *message.Spinner
 
-	spinnerMessage := fmt.Sprintf("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
+	// If the local-port is 0, get an available port before continuing. We do this here instead of relying on the
+	// underlying port-forwarder library, because the port-forwarder library does not expose the selected local port in a
+	// machine-readable manner.
+	// Synchronize on the global lock to avoid race conditions with concurrently selecting the same available port,
+	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
+	// is available for selection again.
+	if tunnel.localPort == 0 {
+		spinner.Debugf("Requested local port is 0. Selecting an open port on host system")
+		tunnel.localPort, err = GetAvailablePort()
+		if err != nil {
+			return "", fmt.Errorf("unable to find an available port: %w", err)
+		}
+		spinner.Debugf("Selected port %d", tunnel.localPort)
+		globalMutex.Lock()
+		defer globalMutex.Unlock()
+	}
+
+	spinnerMessage := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
+		tunnel.localPort,
+		tunnel.remotePort,
 		tunnel.resourceType,
 		tunnel.resourceName,
 		tunnel.namespace,
-		tunnel.localPort,
-		tunnel.remotePort,
 	)
 
 	if tunnel.spinner != nil {
@@ -250,23 +268,6 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		return "", fmt.Errorf("unable to create the spdy client %w", err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", portForwardCreateURL)
-
-	// If the local-port is 0, get an available port before continuing. We do this here instead of relying on the
-	// underlying port-forwarder library, because the port-forwarder library does not expose the selected local port in a
-	// machine-readable manner.
-	// Synchronize on the global lock to avoid race conditions with concurrently selecting the same available port,
-	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
-	// is available for selection again.
-	if tunnel.localPort == 0 {
-		spinner.Debugf("Requested local port is 0. Selecting an open port on host system")
-		tunnel.localPort, err = GetAvailablePort()
-		if err != nil {
-			return "", fmt.Errorf("unable to find an available port: %w", err)
-		}
-		spinner.Debugf("Selected port %d", tunnel.localPort)
-		globalMutex.Lock()
-		defer globalMutex.Unlock()
-	}
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel
 	ports := []string{fmt.Sprintf("%d:%d", tunnel.localPort, tunnel.remotePort)}
