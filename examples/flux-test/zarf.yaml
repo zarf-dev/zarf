@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: zarf-hello-world
+  name: flux-test
   description: "Deploy flux and then podinfo via flux"
 
 components:
@@ -28,7 +28,7 @@ components:
           - podinfo-source.yaml
           - podinfo-kustomization.yaml
     repos:
-      - https://github.com/stefanprodan/podinfo@6.1.6
+      - https://github.com/stefanprodan/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.1.6
 

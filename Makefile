@@ -95,6 +95,8 @@ build-examples:
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-flux-test-${ARCH}.tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+
 ## Run e2e tests. Will automatically build any required dependencies that aren't present. 
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
