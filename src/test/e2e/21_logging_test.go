@@ -18,7 +18,7 @@ func TestLogginga(t *testing.T) {
 	localPort, _ := k8s.GetAvailablePort()
 
 	// Establish the port-forward into the logging service
-	err := e2e.execZarfBackgroundCommand("connect", "logging", fmt.Sprintf("--local-port=%d", localPort), "--cli-only")
+	err := e2e.execZarfBackgroundCommand("connect", "logging", fmt.Sprintf("--local-port=%d", localPort), "--cli-only", "-l=trace")
 	assert.NoError(t, err, "unable to establish tunnel to logging")
 
 	// Make sure Grafana comes up cleanly

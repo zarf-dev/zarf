@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/stretchr/testify/require"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
@@ -58,7 +59,8 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	for _, cmd := range e2e.cmdsToKill {
 		if cmd.Process != nil {
 			if err := cmd.Process.Kill(); err != nil {
-				t.Logf("unable to kill process: %v", err)
+				require.NoError(t, err, "unable to kill process")
+				// t.Logf("unable to kill process: %v", err)
 			}
 		}
 	}

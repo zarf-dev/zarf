@@ -25,7 +25,7 @@ func TestDosGames(t *testing.T) {
 	localPort, _ := k8s.GetAvailablePort()
 
 	// Establish the port-forward into the game service
-	err = e2e.execZarfBackgroundCommand("connect", "doom", fmt.Sprintf("--local-port=%d", localPort), "--cli-only")
+	err = e2e.execZarfBackgroundCommand("connect", "doom", fmt.Sprintf("--local-port=%d", localPort), "--cli-only", "-l=trace")
 	require.NoError(t, err, "unable to connect to the doom port-forward")
 
 	// Check that 'curl' returns something.

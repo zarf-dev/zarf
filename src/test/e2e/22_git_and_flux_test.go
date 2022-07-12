@@ -53,7 +53,7 @@ func TestGitAndFlux(t *testing.T) {
 
 func testGitServerConnect(t *testing.T, localPort int, gitUrl string) {
 	// Establish the port-forward into the game service
-	err := e2e.execZarfBackgroundCommand("connect", "git", fmt.Sprintf("--local-port=%d", localPort), "--cli-only")
+	err := e2e.execZarfBackgroundCommand("connect", "git", fmt.Sprintf("--local-port=%d", localPort), "--cli-only", "-l=trace")
 	require.NoError(t, err, "unable to connect to the git port-forward")
 
 	// Make sure Gitea comes up cleanly
