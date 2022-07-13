@@ -439,6 +439,7 @@
           "description": "The name to be used for the variable"
         },
         "default": {
+          "pattern": "^(?!.*###ZARF_VAR_).*$",
           "type": "string",
           "description": "The default value to use for the variable"
         },

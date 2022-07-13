@@ -1259,6 +1259,10 @@ Must be one of:
 | Type | `string` |
 | ---- | -------- |
 
+| Restrictions                      |                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_VAR_%29.%2A%24) |
+
 </blockquote>
 </details>
 
@@ -1281,4 +1285,4 @@ Must be one of:
 </details>
 
 ----------------------------------------------------------------------------------------------------------------------------
-Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-13 at 20:23:40 +0000
+Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-13 at 21:05:52 +0000

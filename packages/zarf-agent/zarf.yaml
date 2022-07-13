@@ -5,14 +5,14 @@ metadata:
 
 
 variables:
-  - name: AGENT_TAG
-    default: "v0.19.5"
+  - name: AGENT_IMAGE
+    default: "defenseunicorns/zarf-agent:v0.19.5"
 
 components:
   - name: zarf-agent
     required: true
     images:
-      - "defenseunicorns/zarf-agent:v0.19.5"
+      - "###ZARF_VAR_AGENT_IMAGE###"
     manifests:
       - name: zarf-agent
         namespace: zarf
