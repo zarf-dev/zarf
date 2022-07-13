@@ -2,18 +2,21 @@ name: test-k3s
 on:
   pull_request:
     paths-ignore:
-      - '**.md'
-      - '**.jpg'
-      - '**.png'
-      - '**.gif'
-      - '**.svg'
-      - 'adr/**'
-      - 'docs/**'
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
 
 jobs:
   validate:
     runs-on: self-hosted
     steps:
+      - name: "Ensure workspace file ownership"
+        run: chown -R $USER "$GITHUB_WORKSPACE"
+
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
@@ -35,4 +38,4 @@ jobs:
         run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
 
       - name: "Cleanup"
-        run: make destroy
+        run: sudo env "PATH=$PATH" make destroy

@@ -2,18 +2,21 @@ name: test-k3d
 on:
   pull_request:
     paths-ignore:
-      - '**.md'
-      - '**.jpg'
-      - '**.png'
-      - '**.gif'
-      - '**.svg'
-      - 'adr/**'
-      - 'docs/**'
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
 
 jobs:
   validate:
     runs-on: self-hosted
     steps:
+      - name: "Ensure workspace file ownership"
+        run: chown -R $USER "$GITHUB_WORKSPACE"
+
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
