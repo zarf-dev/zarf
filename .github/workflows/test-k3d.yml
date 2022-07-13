@@ -32,8 +32,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Install K3d and init a cluster"
-        run: brew install k3d && k3d cluster delete && k3d cluster create
+      - name: "Create a K3d cluster"
+        run: k3d cluster delete && k3d cluster create
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64

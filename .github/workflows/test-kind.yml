@@ -32,8 +32,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: "Zarf Install Guide: Kind Cluster Init"
-        run: brew install kind && kind delete cluster && kind create cluster
+      - name: "Create a KinD cluster"
+        run: kind delete cluster && kind create cluster
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
