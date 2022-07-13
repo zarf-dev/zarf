@@ -44,3 +44,6 @@ jobs:
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
+
+      - name: "Cleanup"
+        run: make destroy

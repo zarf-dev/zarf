@@ -46,3 +46,6 @@ jobs:
         #       rather than having the test suite do it. The K3d tests do a self-provisioned cluster and the K3s tests
         #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
+
+      - name: "Cleanup"
+        run: make destroy

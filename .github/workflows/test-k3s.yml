@@ -43,3 +43,6 @@ jobs:
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
         run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+
+      - name: "Cleanup"
+        run: make destroy

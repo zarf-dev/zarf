@@ -40,6 +40,10 @@ vm-destroy: ## Destroy the VM
 clean: ## Clean the build dir
 	rm -rf build
 
+destroy:
+	$(ZARF_BIN) destroy --confirm --remove-components
+	rm -fr build
+
 build-cli-linux-amd: build-injector-registry
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
