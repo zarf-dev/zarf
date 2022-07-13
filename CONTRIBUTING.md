@@ -24,7 +24,7 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 1. Pick an outstanding issue to work on, set yourself as the assignee, and move it to "Doing Now" in the [Kanban Board](https://github.com/orgs/defenseunicorns/projects/1). The "Ready to Start" and "Planned" columns are mostly prioritized (rank order) according to feedback from our users and other inputs, but don't feel like you have to pick from the top of the pile if something else is jumping out at you.
 1. Write up a rough outline of what you plan to do in the issue so you can get early feedback. Clearly announce any breaking changes you think need to be made.
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
-   - ⚠️ *If you are an external third-party contributor you will need a core-member of the zarf project to re-sign your commits; you will still receive authorship for the work you have contributed however.*
+   > ⚠️ **NOTE:** *If you are an external third-party contributor you will need a core-member of the zarf project to re-sign your commits; you will still receive authorship for the work you have contributed however.*
 1. :key: Create a branch off the trunk, or a fork if you are an external contributor.
 1. Create a Draft Pull Request as soon as you are able to, even if it is just 5 minutes after you started working on it. Around here we aren't afraid to show unfinished work. It helps us get feedback more quickly.
 1. :key: Create a Pull Request (or mark it Ready for Review if you've been working in a Draft PR).
@@ -56,7 +56,7 @@ In this repo we use [pre-commit](https://pre-commit.com/) hooks for automated va
 
 Our E2E tests can be found in the `/test` folder and follow the journey of someone as they would use the Zarf CLI.  In CI these tests run against our currently supported cluster distros.  You can learn more about testing of Zarf [here](https://docs.zarf.dev/docs/developer-guide/testing).
 
-   - ⚠️ *If you are an external third-party contributor you will need a core-member of the zarf project to run the CI tests/checks for you.  It is strongly recommended to run the tests locally first as documented in the link above.*
+> ⚠️ **NOTE:** *If you are an external third-party contributor you will need a core-member of the zarf project to run the CI tests/checks for you.  It is strongly recommended to run the tests locally first as documented in the link above.*
 
 ## Documentation
 
