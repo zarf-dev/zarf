@@ -62,16 +62,7 @@ When Zarf is deploying the package, it will use the infrastructure that was crea
 
 ## What Makes Up A Package
 
-Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package follows the following format:
-
-```yaml
-kind: <STRING> # Either ZarfPackageConfig or ZarfInitConfig
-metadata:
-  name: <STRING> # The name of the package
-  description: <STRING> # A description of the package
-seed: <STRING> # Docker registry to seed the cluster with. Only used for init packages
-components: <OBJ LIST> # Components definitions are complex and broken down more in the 'Understanding Zarf Components' page
-```
+Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
 
 <br />
 <br />
