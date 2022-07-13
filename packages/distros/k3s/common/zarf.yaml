@@ -1,0 +1,39 @@
+kind: ZarfInitConfig
+metadata:
+  name: "distro-k3s"
+
+components:
+  - name: k3s
+    only:
+      localOS: linux
+    description: >
+      *** REQUIRES ROOT ***
+      Install K3s, certified Kubernetes distribution built for IoT & Edge computing.
+      K3s provides the cluster need for Zarf running in Appliance Mode as well as can
+      host a low-resource Gitops Service if not using an existing Kubernetes platform.
+    scripts:
+      retry: true
+      before:
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+      after:
+        # Configure K3s systemd service
+        - "systemctl daemon-reload"
+        - "systemctl enable --now k3s"
+    files:
+      # K3s removal script
+      - source: zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
+        executable: true
+      # The K3s systemd service definition
+      - source: k3s.service
+        target: /etc/systemd/system/k3s.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/k3s.service
+      # Mock file for creating the kube config symlink
+      - source: empty-file
+        target: /etc/rancher/k3s/k3s.yaml
+        symlinks:
+          - /root/.kube/config

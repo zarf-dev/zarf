@@ -69,6 +69,12 @@ components:
 
     required: <BOOLEAN> # If required, this component will always be deployed with the package
 
+    only: <OJB> # Filter components on package create / deploy to control when it is available 
+      localOS: <STRING> # Only present on package deploy if the OS matches 
+      cluster: <OBJ>
+        architecture: <STRING> # Filter on both package deploy & create for matching cluster architecture
+        distros: <STRING LIST> # Future use
+
     secretName: <STRING> # The secret Zarf will use for the registry; default is 'zarf-registry'>
                          # The secret lives in the 'zarf' namespace.
 
