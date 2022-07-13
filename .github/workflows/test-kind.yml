@@ -22,16 +22,6 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: "Create a KinD cluster"
         run: kind delete cluster && kind create cluster
 
