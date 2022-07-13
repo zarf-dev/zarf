@@ -235,7 +235,25 @@ func BuildConfig(path string) error {
 	// Record the name of the user creating the package
 	active.Build.User = currentUser
 
-	return utils.WriteYaml(path, active, 0400)
+	if err := utils.WriteYaml(path, active, 0600); err != nil {
+		return err
+	}
+
+	// Replace variables templated with ###ZARF_VAR_
+	mappings := map[string]string{}
+
+	for _, variable := range active.Variables {
+		// TODO: Don't just set this to the Default
+		mappings[variable.Name] = variable.Default
+	}
+
+	for template, value := range mappings {
+		// Keys are always uppercase in the format ###ZARF_VAR_KEY###
+		template = strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", template))
+		utils.ReplaceText(path, template, value, 0400)
+	}
+
+	return nil
 }
 
 func SetImageCachePath(cachePath string) {

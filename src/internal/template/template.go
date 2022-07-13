@@ -77,7 +77,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		message.Fatalf(nil, "template.Apply() called before template.Generate()")
 	}
 
-	mappings := types.ZarfComponentVariables{
+	mappings := map[string]string{
 		"STORAGE_CLASS":      values.state.StorageClass,
 		"REGISTRY":           values.registry,
 		"NODEPORT":           values.state.NodePort,
@@ -87,7 +87,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
 
-	// Don't template component-specifric variables for every component
+	// Don't template component-specific variables for every component
 	switch component.Name {
 	case "zarf-agent":
 		mappings["AGENT_CRT"] = base64.StdEncoding.EncodeToString(values.agentTLS.Cert)
@@ -105,15 +105,16 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating
-	for key, value := range component.Variables {
-		mappings[key] = value
-	}
+	// TODO: Pass in map[string]string
+	// for key, value := range component.Variables {
+	// 	mappings[key] = value
+	// }
 
 	message.Debug(mappings)
 
 	for template, value := range mappings {
 		// Keys are always uppercase in the format ###ZARF_KEY###
 		template = strings.ToUpper(fmt.Sprintf("###ZARF_%s###", template))
-		utils.ReplaceText(path, template, value)
+		utils.ReplaceText(path, template, value, 0600)
 	}
 }

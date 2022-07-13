@@ -1,6 +1,6 @@
 # Package Variables
 
-This example demonstrates how to define variables in your package that will be templated across the manifests and charts that your package uses.
+This example demonstrates how to define variables in your package that will be templated across the manifests and charts that your package uses during `zarf package deploy` or in the `zarf.yaml` itself during `zarf package create`.
 
 With the templating feature, you can define values in the zarf.yaml file without having to define them in every manifest and chart.
 This becomes useful when you are working with an upstream chart that is often changing, or a lot of the charts you use have slightly different conventions for their values. Now you can standardize all of that from your zarf.yaml file.
@@ -19,9 +19,9 @@ variables:
   name: DATABASE_USERNAME
 ```
 
-> ⚠️ **NOTE:** *You shouldn't include the `###ZARF_VAR` and `###` and the beginning and end*
+> ⚠️ **NOTE:** *You shouldn't include the `###ZARF_VAR` and `###` at the beginning and end of the name*
 
-You can also specify a `default` value for the variable to take in case a user does not provide one, and whether to `prompt` for the user for the variable when not using the `--confirm` flag.
+You can also specify a `default` value for the variable to take in case a user does not provide one, and whether to `prompt` the user during `zarf package deploy` for the variable when not using the `--confirm` flag.
 
 ```yaml
 variables:
@@ -29,3 +29,7 @@ variables:
   default: "postgres"
   prompt: true
 ```
+
+> ⚠️ **NOTE:** *`zarf package create` only templates the zarf.yaml file, not any other manifests or charts*
+
+> ‼️ **WARNING:** *Using variables (especially with `prompt`) across create and deploy could lead to divergent values and unexpected results*

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: component-variables
-  description: "Test component to demonstrate script timeout feature"
+  name: package-variables
+  description: "Test component to demonstrate package variables feature"
 
 variables:
   - name: "WOLF"
@@ -16,6 +16,7 @@ variables:
 components:
   # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
   - name: variable-example
+    description: "###ZARF_VAR_WOLF### is the ancestor of ###ZARF_VAR_DOG###"
     required: true
     manifests:
       - name: variable-example-configmap

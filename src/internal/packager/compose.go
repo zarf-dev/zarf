@@ -175,11 +175,6 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
 
-	// Merge variables.
-	for key, variable := range override.Variables {
-		target.Variables[key] = variable
-	}
-
 	// Merge scripts.
 	target.Scripts.Before = append(target.Scripts.Before, override.Scripts.Before...)
 	target.Scripts.After = append(target.Scripts.After, override.Scripts.After...)

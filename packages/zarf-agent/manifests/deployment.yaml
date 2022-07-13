@@ -21,7 +21,7 @@ spec:
         - name: private-registry
       containers:
         - name: server
-          image: "###ZARF_REGISTRY###/defenseunicorns/zarf-agent:###ZARF_TAG###"
+          image: "###ZARF_REGISTRY###/###ZARF_VAR_AGENT_IMAGE###"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
