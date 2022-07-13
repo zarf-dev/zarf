@@ -18,4 +18,4 @@ components:
       timeoutSeconds: 60
       showOutput: true
       after:
-        - "./zarf tools create-read-only-gitea-user -l=trace"
+        - "./zarf tools create-read-only-gitea-user"
