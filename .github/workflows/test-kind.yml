@@ -15,7 +15,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: "Ensure workspace file ownership"
-        run: chown -R $USER "$GITHUB_WORKSPACE"
+        run: sudo chown -R $USER "$GITHUB_WORKSPACE"
 
       - name: "Install GoLang"
         uses: actions/setup-go@v3
