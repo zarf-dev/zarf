@@ -3,9 +3,6 @@ module github.com/defenseunicorns/zarf
 go 1.18
 
 replace (
-	// Fix for K9s dep vuln
-	github.com/derailed/popeye => github.com/derailed/popeye v0.10.0
-
 	// Fix for sigstore/cosign imports
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v0.20.0
