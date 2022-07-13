@@ -27,9 +27,6 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `yaml:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// Dynamic template values for K8s resources
-	Variables ZarfComponentVariables `yaml:"variables,omitempty" jsonschema:"description=Dynamic template values for K8s resources"`
-
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
 
@@ -62,9 +59,6 @@ type ZarfComponentOnlyCluster struct {
 	Architecture string   `yaml:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
 	Distros      []string `yaml:"distros,omitempty" jsonschema:"description=Future use"`
 }
-
-// ZarfComponentVariables are variables that can be used to dynaically template K8s resources
-type ZarfComponentVariables map[string]string
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {

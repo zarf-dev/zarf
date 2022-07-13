@@ -6,7 +6,9 @@ metadata:
 data:
   templateme.properties: |
     horse=neigh
-    dog=###ZARF_DOG###
-    cat=###ZARF_CAT###
+    wolf=###ZARF_VAR_WOLF###
+    dog=###ZARF_VAR_DOG###
+    cat=###ZARF_VAR_CAT###
+    fox=###ZARF_VAR_FOX###
     cow=moo
-    zebra=###ZARF_ZEBRA###
+    zebra=###ZARF_VAR_ZEBRA###

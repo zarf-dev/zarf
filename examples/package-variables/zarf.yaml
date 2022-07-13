@@ -3,13 +3,20 @@ metadata:
   name: component-variables
   description: "Test component to demonstrate script timeout feature"
 
+variables:
+  - name: "WOLF"
+  - name: "DOG"
+    default: "woof"
+  - name: "CAT"
+    prompt: true
+  - name: "FOX"
+    default: "yuf"
+    prompt: true
+
 components:
-  # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_DOG###
+  # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
   - name: variable-example
     required: true
-    variables:
-      dog: "woof"
-      cat: "meow"
     manifests:
       - name: variable-example-configmap
         files:
