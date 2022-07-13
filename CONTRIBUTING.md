@@ -24,7 +24,9 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 1. Pick an outstanding issue to work on, set yourself as the assignee, and move it to "Doing Now" in the [Kanban Board](https://github.com/orgs/defenseunicorns/projects/1). The "Ready to Start" and "Planned" columns are mostly prioritized (rank order) according to feedback from our users and other inputs, but don't feel like you have to pick from the top of the pile if something else is jumping out at you.
 1. Write up a rough outline of what you plan to do in the issue so you can get early feedback. Clearly announce any breaking changes you think need to be made.
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
+
    > ⚠️ **NOTE:** *If you are an external third-party contributor you will need a core-member of the zarf project to re-sign your commits; you will still receive authorship for the work you have contributed however.*
+
 1. :key: Create a branch off the trunk, or a fork if you are an external contributor.
 1. Create a Draft Pull Request as soon as you are able to, even if it is just 5 minutes after you started working on it. Around here we aren't afraid to show unfinished work. It helps us get feedback more quickly.
 1. :key: Create a Pull Request (or mark it Ready for Review if you've been working in a Draft PR).
@@ -50,7 +52,7 @@ In this repo we use [pre-commit](https://pre-commit.com/) hooks for automated va
 1. Install [golangci-lint](https://github.com/golangci/golangci-lint)
 1. Run `pre-commit install` in the repo to install the pre-commit hooks. This will make the hooks run automatically each time you `git commit`. If you want to skip the hooks for any reason you can run `git commit --no-verify` to skip them.
 
-> **HINT:** *Consider [automatically enabling the hooks in every Git repository](https://pre-commit.com/#automatically-enabling-pre-commit-on-repositories)*
+> ℹ️ **HINT:** *Consider [automatically enabling the hooks in every Git repository](https://pre-commit.com/#automatically-enabling-pre-commit-on-repositories)*
 
 ### End2End Testing
 
