@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
@@ -34,6 +35,7 @@ const (
 	ZarfRegistry = "REGISTRY"
 	ZarfLogging  = "LOGGING"
 	ZarfGit      = "GIT"
+	ZarfInjector = "INJECTOR"
 )
 
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
@@ -55,6 +57,7 @@ type Tunnel struct {
 	resourceType string
 	resourceName string
 	urlSuffix    string
+	attempt      int
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 	spinner      *message.Spinner
@@ -91,16 +94,24 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 
 func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
+
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.remotePort = 5000
+
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
 		tunnel.remotePort = 3000
+
 	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
 		tunnel.remotePort = 3000
+
+	case ZarfInjector:
+		tunnel.resourceName = "zarf-injector"
+		tunnel.remotePort = 5000
+
 	default:
 		if target != "" {
 			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
@@ -116,11 +127,21 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 	}
 
-	url, err := tunnel.Establish()
+	url, err := tunnel.establish()
 
-	// On error abort
+	// Try to etablish the tunnel up to 3 times
 	if err != nil {
-		message.Fatal(err, "Unable to establish the tunnel")
+		tunnel.attempt++
+		// If we have exceeded the number of attempts, exit with an error
+		if tunnel.attempt > 3 {
+			message.Fatalf(err, "Unable to estbalish tunnel after 3 attempts")
+		} else {
+			// Otherwise, retry the connection but delay increasing intervals between attempts
+			delay := tunnel.attempt * 10
+			message.Errorf(err, "Unable to establish tunnel, retrying in %d seconds...", delay)
+			time.Sleep(time.Duration(delay) * time.Second)
+			tunnel.Connect(target, blocking)
+		}
 	}
 
 	if blocking {
@@ -198,18 +219,39 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 	return nil
 }
 
-// Establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
-func (tunnel *Tunnel) Establish() (string, error) {
+// establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
+func (tunnel *Tunnel) establish() (string, error) {
 	message.Debug("tunnel.Establish()")
 
+	var err error
 	var spinner *message.Spinner
 
-	spinnerMessage := fmt.Sprintf("Creating a port forwarding tunnel for resource %s/%s in namespace %s routing local port %d to remote port %d",
+	// Track this locally as we may need to retry if the tunnel fails
+	localPort := tunnel.localPort
+
+	// If the local-port is 0, get an available port before continuing. We do this here instead of relying on the
+	// underlying port-forwarder library, because the port-forwarder library does not expose the selected local port in a
+	// machine-readable manner.
+	// Synchronize on the global lock to avoid race conditions with concurrently selecting the same available port,
+	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
+	// is available for selection again.
+	if localPort == 0 {
+		message.Debugf("Requested local port is 0. Selecting an open port on host system")
+		localPort, err = GetAvailablePort()
+		if err != nil {
+			return "", fmt.Errorf("unable to find an available port: %w", err)
+		}
+		message.Debugf("Selected port %d", localPort)
+		globalMutex.Lock()
+		defer globalMutex.Unlock()
+	}
+
+	spinnerMessage := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
+		localPort,
+		tunnel.remotePort,
 		tunnel.resourceType,
 		tunnel.resourceName,
 		tunnel.namespace,
-		tunnel.localPort,
-		tunnel.remotePort,
 	)
 
 	if tunnel.spinner != nil {
@@ -251,25 +293,8 @@ func (tunnel *Tunnel) Establish() (string, error) {
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", portForwardCreateURL)
 
-	// If the local-port is 0, get an available port before continuing. We do this here instead of relying on the
-	// underlying port-forwarder library, because the port-forwarder library does not expose the selected local port in a
-	// machine-readable manner.
-	// Synchronize on the global lock to avoid race conditions with concurrently selecting the same available port,
-	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
-	// is available for selection again.
-	if tunnel.localPort == 0 {
-		spinner.Debugf("Requested local port is 0. Selecting an open port on host system")
-		tunnel.localPort, err = GetAvailablePort()
-		if err != nil {
-			return "", fmt.Errorf("unable to find an available port: %w", err)
-		}
-		spinner.Debugf("Selected port %d", tunnel.localPort)
-		globalMutex.Lock()
-		defer globalMutex.Unlock()
-	}
-
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel
-	ports := []string{fmt.Sprintf("%d:%d", tunnel.localPort, tunnel.remotePort)}
+	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
 	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, tunnel.out, tunnel.out)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the port forward: %w", err)
@@ -290,7 +315,9 @@ func (tunnel *Tunnel) Establish() (string, error) {
 		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
-		url := fmt.Sprintf("http://%s:%d%s", config.IPV4Localhost, tunnel.localPort, tunnel.urlSuffix)
+		// Store for endpoint output
+		tunnel.localPort = localPort
+		url := fmt.Sprintf("http://%s:%d%s", config.IPV4Localhost, localPort, tunnel.urlSuffix)
 		msg := fmt.Sprintf("Creating port forwarding tunnel at %s", url)
 		if tunnel.spinner == nil {
 			spinner.Successf(msg)
