@@ -18,7 +18,7 @@ variables:
 components:
   # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
   - name: variable-example
-    description: "###ZARF_VAR_WOLF### is the ancestor of ###ZARF_VAR_DOG### but not of a ###ZARF_VAR_CAT###"
+    description: "###ZARF_VAR_WOLF### is the ancestor of ###ZARF_VAR_DOG### but not of a ###ZARF_VAR_CAT### or a ###ZARF_VAR_FOX###"
     required: true
     manifests:
       - name: variable-example-configmap
