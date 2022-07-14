@@ -243,8 +243,8 @@ func BuildConfig(path string) error {
 	mappings := CommonOptions.SetVariables
 
 	for _, variable := range active.Variables {
-		if _, present := mappings[variable.Name]; !present {
-			mappings[variable.Name] = variable.Default
+		if _, present := mappings[variable.Name]; !present && variable.Default != nil {
+			mappings[variable.Name] = *variable.Default
 		}
 	}
 

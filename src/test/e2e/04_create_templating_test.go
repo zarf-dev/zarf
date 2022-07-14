@@ -38,7 +38,7 @@ func TestCreateTemplating(t *testing.T) {
 	file, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
 	require.NoError(t, err)
 	// TODO: Test that the config map exists
-	require.Contains(t, string(file), " is the ancestor of woof but not of a meow or a bark")
+	require.Contains(t, string(file), "###ZARF_VAR_WOLF### is the ancestor of woof but not of a meow or a bark")
 
 	// Reset temp chdir
 	_ = os.Chdir("../..")
