@@ -18,7 +18,6 @@ jobs:
         run: |
           sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
           sudo rm -fr ~/.kube
-          sudo rm -fr /root/.kube
 
       - name: "Install GoLang"
         uses: actions/setup-go@v3

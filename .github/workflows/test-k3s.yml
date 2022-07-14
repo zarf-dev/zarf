@@ -18,7 +18,6 @@ jobs:
         run: |
           sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
           sudo rm -fr ~/.kube
-          sudo rm -fr /root/.kube
 
       - name: "Install GoLang"
         uses: actions/setup-go@v3
@@ -38,7 +37,7 @@ jobs:
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
-        run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+        run: APPLIANCE_MODE=true sudo -E make test-e2e ARCH=amd64
 
       - name: "Cleanup"
-        run: sudo env "PATH=$PATH" make destroy
+        run: sudo -E make destroy
