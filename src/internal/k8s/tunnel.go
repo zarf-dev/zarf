@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
@@ -131,10 +132,15 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	// Try to etablish the tunnel up to 3 times
 	if err != nil {
 		tunnel.attempt++
+		// If we have exceeded the number of attempts, exit with an error
 		if tunnel.attempt > 3 {
 			message.Fatalf(err, "Unable to estbalish tunnel after 3 attempts")
 		} else {
-			message.Error(err, "Unable to establish tunnel, retrying...")
+			// Otherwise, retry the connection but delay increasing intervals between attempts
+			delay := tunnel.attempt * 10
+			message.Errorf(err, "Unable to establish tunnel, retrying in %d seconds...", delay)
+			time.Sleep(time.Duration(delay) * time.Second)
+			tunnel.Connect(target, blocking)
 		}
 	}
 
