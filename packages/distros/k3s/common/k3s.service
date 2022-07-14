@@ -1,5 +1,5 @@
 Description=Zarf K3s Runner
-Documentation=https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf
+Documentation=https://zarf.dev
 Wants=network-online.target
 After=network-online.target
 
