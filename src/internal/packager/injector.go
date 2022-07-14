@@ -187,29 +187,20 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 func hasSeedImages(spinner *message.Spinner) bool {
 	message.Debugf("packager.hasSeedImages()")
 
-	// Get an available local port for the tunnel connection
-	localPort, err := k8s.GetAvailablePort()
-	if err != nil {
-		message.Debug(err)
-		return false
-	}
-
-	time.Sleep(3 * time.Second)
-
 	// Establish the zarf connect tunnel
 	tunnel := k8s.NewZarfTunnel()
 	tunnel.AddSpinner(spinner)
 	tunnel.Connect(k8s.ZarfInjector, false)
 	defer tunnel.Close()
 
-	baseUrl := fmt.Sprintf("%s:%d", config.IPV4Localhost, localPort)
+	baseUrl := tunnel.Endpoint()
 	seedImage := config.GetSeedImage()
 	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
-	timeout := time.After(15 * time.Second)
+	timeout := time.After(20 * time.Second)
 
 	for {
-		// Delay check 3 seconds
-		time.Sleep(3 * time.Second)
+		// Delay check for one second
+		time.Sleep(1 * time.Second)
 		select {
 
 		// On timeout abort
