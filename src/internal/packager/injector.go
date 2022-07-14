@@ -197,10 +197,9 @@ func hasSeedImages(spinner *message.Spinner) bool {
 	time.Sleep(3 * time.Second)
 
 	// Establish the zarf connect tunnel
-	tunnel := k8s.NewTunnel(k8s.ZarfNamespace, k8s.SvcResource, "zarf-injector", localPort, 5000)
-	// Add the spinner to avoid spinner collisions in the CLI
+	tunnel := k8s.NewZarfTunnel()
 	tunnel.AddSpinner(spinner)
-	tunnel.Establish()
+	tunnel.Connect(k8s.ZarfInjector, false)
 	defer tunnel.Close()
 
 	baseUrl := fmt.Sprintf("%s:%d", config.IPV4Localhost, localPort)
