@@ -240,11 +240,12 @@ func BuildConfig(path string) error {
 	}
 
 	// Replace variables templated with ###ZARF_VAR_
-	mappings := map[string]string{}
+	mappings := CommonOptions.SetVariables
 
 	for _, variable := range active.Variables {
-		// TODO: Don't just set this to the Default
-		mappings[variable.Name] = variable.Default
+		if _, present := mappings[variable.Name]; !present {
+			mappings[variable.Name] = variable.Default
+		}
 	}
 
 	for template, value := range mappings {

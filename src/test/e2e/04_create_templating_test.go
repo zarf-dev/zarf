@@ -29,7 +29,7 @@ func TestCreateTemplating(t *testing.T) {
 	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
 	pkgName := fmt.Sprintf("zarf-package-package-variables-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/package-variables", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/package-variables", "--set", "CAT=meow", "--confirm", "--zarf-cache", imageCachePath, "--log-level=debug")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
@@ -37,8 +37,8 @@ func TestCreateTemplating(t *testing.T) {
 
 	file, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
 	require.NoError(t, err)
-	// TODO: Test for other permutations of default/not default
-	require.Contains(t, string(file), "woof")
+	// TODO: Test that the config map exists
+	require.Contains(t, string(file), " is the ancestor of woof but not of a meow")
 
 	// Reset temp chdir
 	_ = os.Chdir("../..")

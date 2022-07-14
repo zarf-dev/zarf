@@ -40,15 +40,20 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	components := GetComponents()
-	seedImage := config.GetSeedImage()
-
 	configFile := tempPath.base + "/zarf.yaml"
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
 		message.Fatalf(err, "Unable to write the %s file", configFile)
 	}
+
+	// Reload values from transformed config
+	if err := config.LoadConfig(configFile, false); err != nil {
+		message.Fatal(err, "Unable to read the built zarf.yaml file")
+	}
+
+	components := GetComponents()
+	seedImage := config.GetSeedImage()
 
 	// Perform early package validation
 	validate.Run()
