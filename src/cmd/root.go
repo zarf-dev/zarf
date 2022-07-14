@@ -21,10 +21,11 @@ var rootCmd = &cobra.Command{
 		}
 		config.CliArch = arch
 
-		// Disable progress bars for CI envs
+		// Disable progress bars and enable tracing for CI envs
 		if os.Getenv("CI") == "true" {
-			message.Debug("CI environment detected, disabling progress bars")
+			message.Debug("CI environment detected, disabling progress bars and enabling tracing")
 			message.NoProgress = true
+			message.SetLogLevel(message.TraceLevel)
 		}
 	},
 	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
