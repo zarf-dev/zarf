@@ -80,6 +80,11 @@ init-package: ## Create the zarf init package, macos "brew install coreutils" fi
 
 ci-release: init-package ## Create the init package
 
+ci-self-hosted-prepare:
+	sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
+	sudo rm -fr ~/.kube
+	sudo rm -fr /root/.kube
+
 build-examples:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
