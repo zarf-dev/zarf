@@ -35,10 +35,14 @@ func TestCreateTemplating(t *testing.T) {
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	file, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
+	// Check that the configmap exists and is readable
+	_, err = ioutil.ReadFile(decompressPath + "/components/variable-example/manifests/simple-configmap.yaml")
 	require.NoError(t, err)
-	// TODO: Test that the config map exists
-	require.Contains(t, string(file), "###ZARF_VAR_WOLF### is the ancestor of woof but not of a meow or a bark")
+
+	// Check variables in zarf.yaml are replaced correctly
+	builtConfig, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
+	require.NoError(t, err)
+	require.Contains(t, string(builtConfig), "###ZARF_VAR_WOLF### is the ancestor of woof but not of a meow or a bark")
 
 	// Reset temp chdir
 	_ = os.Chdir("../..")
