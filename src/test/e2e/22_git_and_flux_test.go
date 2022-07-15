@@ -26,13 +26,12 @@ func TestGitAndFlux(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Create a tunnel to the git resources
-	// Get a random local port for this instance
-	localPort, _ := k8s.GetAvailablePort()
-	gitUrl := fmt.Sprintf("http://127.0.0.1:%d", localPort)
+	tunnel := k8s.NewZarfTunnel()
+	tunnel.Connect(k8s.ZarfGit, false)
+	defer tunnel.Close()
 
-	testGitServerConnect(t, localPort, gitUrl)
-	testGitServerReadOnly(t, gitUrl)
+	testGitServerConnect(t, tunnel.HttpEndpoint())
+	testGitServerReadOnly(t, tunnel.HttpEndpoint())
 	waitFluxPodInfoDeployment(t)
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove,
@@ -51,11 +50,7 @@ func TestGitAndFlux(t *testing.T) {
 	)
 }
 
-func testGitServerConnect(t *testing.T, localPort int, gitUrl string) {
-	// Establish the port-forward into the game service
-	err := e2e.execZarfBackgroundCommand("connect", "git", fmt.Sprintf("--local-port=%d", localPort), "--cli-only")
-	require.NoError(t, err, "unable to connect to the git port-forward")
-
+func testGitServerConnect(t *testing.T, gitUrl string) {
 	// Make sure Gitea comes up cleanly
 	resp, err := http.Get(gitUrl + "/explore/repos")
 	assert.NoError(t, err)
