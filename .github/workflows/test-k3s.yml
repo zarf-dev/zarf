@@ -18,6 +18,7 @@ jobs:
         run: |
           sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
           sudo rm -fr /root/.kube
+          sudo rm -fr /tmp/zarf*
           sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
 
       - name: "Install GoLang"
