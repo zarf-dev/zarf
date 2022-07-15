@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: compose-variables-example
+  description: "Demo a complex composable Zarf package"
+
+variables:
+  - name: "IMPORTED_PACKAGE"
+    default: "../../package-variables"
+
+components:
+  - name: override
+    required: true
+    description: "Example of a composed package that overrides an imported middle package"
+    import:
+      path: sub-package
+      # Example optional custom name to point to in the imported package
+      name: override-example

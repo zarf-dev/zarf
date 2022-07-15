@@ -55,6 +55,8 @@ func Create(baseDir string) {
 	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
+	// TODO: Write the yaml file back here
+
 	// Perform early package validation
 	validate.Run()
 

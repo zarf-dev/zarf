@@ -28,115 +28,118 @@ func GetComponents() (components []types.ZarfComponent) {
 	return components
 }
 
-func GetComposedComponent(childComponent types.ZarfComponent) types.ZarfComponent {
-	message.Debugf("packager.GetComposedComponent(%+v)", childComponent)
+// GetComposedComponent recursively retrieves a composed zarf component
+func GetComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
+	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
 	// Make sure the component we're trying to import cant be accessed
-	validateOrBail(&childComponent)
+	validateOrBail(&parentComponent)
 
 	// Keep track of the composed components import path to build nestedily composed components
 	everGrowingComposePath := ""
 
 	// Get the component that we are trying to import
-	// NOTE: This function is recursive and will continue getting the parents until there are no more 'imported' components left
-	parentComponent := getParentComponent(childComponent, everGrowingComposePath)
+	// NOTE: This function is recursive and will continue getting the children until there are no more 'imported' components left
+	childComponent := getChildComponent(parentComponent, everGrowingComposePath)
 
-	// Merge the overrides from the parent that we just received with the child we were provided
-	mergeComponentOverrides(&parentComponent, childComponent)
+	// Merge the overrides from the child that we just received with the parent we were provided
+	mergeComponentOverrides(&childComponent, parentComponent)
 
-	return parentComponent
+	return childComponent
 }
 
-func getParentComponent(childComponent types.ZarfComponent, everGrowingComposePath string) (parentComponent types.ZarfComponent) {
-	message.Debugf("packager.getParentComponent(%+v, %s)", childComponent, everGrowingComposePath)
+func getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
+	message.Debugf("packager.getParentComponent(%+v, %s)", parentComponent, everGrowingComposePath)
 
-	importedPackage, err := getSubPackage(filepath.Join(everGrowingComposePath, childComponent.Import.Path))
+	importedPackage, err := getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
 	if err != nil {
 		message.Fatal(err, "Unable to get the package that we're importing a component from")
 	}
 
+	// TODO: Merge in child package variables (only if the variable does not exist)
+
 	// Figure out which component we are actually importing
 	// NOTE: Default to the component name if a custom one was not provided
-	parentComponentName := childComponent.Import.ComponentName
-	if parentComponentName == "" {
-		parentComponentName = childComponent.Name
+	childComponentName := parentComponent.Import.ComponentName
+	if childComponentName == "" {
+		childComponentName = parentComponent.Name
 	}
 
 	targetArch := config.GetArch()
-	// Find the parent component from the imported package that matches our arch
+	// Find the child component from the imported package that matches our arch
 	for _, importedComponent := range importedPackage.Components {
-		if importedComponent.Name == parentComponentName {
+		if importedComponent.Name == childComponentName {
 			filterArch := importedComponent.Only.Cluster.Architecture
 
-			// Override the filter if it is set by the child component
-			if childComponent.Only.Cluster.Architecture != "" {
-				filterArch = childComponent.Only.Cluster.Architecture
+			// Override the filter if it is set by the parent component
+			if parentComponent.Only.Cluster.Architecture != "" {
+				filterArch = parentComponent.Only.Cluster.Architecture
 			}
 
 			// Only add this component if it is valid for the target architecture.
 			if filterArch == "" || filterArch == targetArch {
-				parentComponent = importedComponent
+				childComponent = importedComponent
 				break
 			}
 		}
 	}
 
-	// If we didn't find a parent component, bail
-	if parentComponent.Name == "" {
-		message.Fatalf(nil, "Unable to find the component %s in the imported package", parentComponentName)
+	// If we didn't find a child component, bail
+	if childComponent.Name == "" {
+		message.Fatalf(nil, "Unable to find the component %s in the imported package", childComponentName)
 	}
 
-	// Check if we need to get more of the parents!!!
-	if parentComponent.Import.Path != "" {
-		// Set a temporary composePath so we can get future parents/grandparents from our current location
-		tempEverGrowingComposePath := filepath.Join(everGrowingComposePath, childComponent.Import.Path)
+	// Check if we need to get more of children
+	if childComponent.Import.Path != "" {
+		// Set a temporary composePath so we can get future children/grandchildren from our current location
+		tempEverGrowingComposePath := filepath.Join(everGrowingComposePath, parentComponent.Import.Path)
 
-		// Recursively call this function to get the next layer of parents
-		grandparentComponent := getParentComponent(parentComponent, tempEverGrowingComposePath)
+		// Recursively call this function to get the next layer of children
+		grandchildComponent := getChildComponent(childComponent, tempEverGrowingComposePath)
 
-		// Merge the grandparents values into the parent
-		mergeComponentOverrides(&grandparentComponent, parentComponent)
+		// Merge the grandchild values into the child
+		mergeComponentOverrides(&grandchildComponent, childComponent)
 
-		// Set the grandparent as the parent component now that we're done with recursively importing
-		parentComponent = grandparentComponent
+		// Set the grandchild as the child component now that we're done with recursively importing
+		childComponent = grandchildComponent
 	}
 
 	// Fix the filePaths of imported components to be accessible from our current location
-	parentComponent = fixComposedFilepaths(parentComponent, childComponent)
+	childComponent = fixComposedFilepaths(parentComponent, childComponent)
 
 	return
 }
 
 func fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
-	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", parentComponent, childComponent)
+	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", childComponent, parentComponent)
 
 	// Prefix composed component file paths.
-	for fileIdx, file := range parentComponent.Files {
-		parentComponent.Files[fileIdx].Source = getComposedFilePath(file.Source, childComponent.Import.Path)
+	for fileIdx, file := range childComponent.Files {
+		childComponent.Files[fileIdx].Source = getComposedFilePath(file.Source, parentComponent.Import.Path)
 	}
 
 	// Prefix non-url composed component chart values files.
-	for chartIdx, chart := range parentComponent.Charts {
+	for chartIdx, chart := range childComponent.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			parentComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, childComponent.Import.Path)
+			childComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, parentComponent.Import.Path)
 		}
 	}
 
 	// Prefix non-url composed manifest files and kustomizations.
-	for manifestIdx, manifest := range parentComponent.Manifests {
+	for manifestIdx, manifest := range childComponent.Manifests {
 		for fileIdx, file := range manifest.Files {
-			parentComponent.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, childComponent.Import.Path)
+			childComponent.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, parentComponent.Import.Path)
 		}
 		for kustomIdx, kustomization := range manifest.Kustomizations {
-			parentComponent.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, childComponent.Import.Path)
+			childComponent.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, parentComponent.Import.Path)
 		}
 	}
 
-	if parentComponent.CosignKeyPath != "" {
-		parentComponent.CosignKeyPath = getComposedFilePath(parentComponent.CosignKeyPath, childComponent.Import.Path)
+	if childComponent.CosignKeyPath != "" {
+		childComponent.CosignKeyPath = getComposedFilePath(childComponent.CosignKeyPath, parentComponent.Import.Path)
 	}
 
-	return parentComponent
+	return childComponent
 }
 
 // Validates the sub component, exits program if validation fails.
@@ -188,8 +191,6 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	if override.Scripts.TimeoutSeconds > 0 {
 		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
 	}
-
-	// TODO: Merge in child package variables
 
 	// Merge Only filters
 	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)
