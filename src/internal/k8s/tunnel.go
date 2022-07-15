@@ -187,6 +187,12 @@ func (tunnel *Tunnel) Endpoint() string {
 	return fmt.Sprintf("127.0.0.1:%d", tunnel.localPort)
 }
 
+// HttpEndpoint returns the tunnel endpoint as a HTTP URL string
+func (tunnel *Tunnel) HttpEndpoint() string {
+	message.Debug("tunnel.HttpEndpoint()")
+	return fmt.Sprintf("http://%s", tunnel.Endpoint())
+}
+
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
 	message.Debug("tunnel.Close()")
