@@ -138,7 +138,8 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		} else {
 			// Otherwise, retry the connection but delay increasing intervals between attempts
 			delay := tunnel.attempt * 10
-			message.Errorf(err, "Unable to establish tunnel, retrying in %d seconds...", delay)
+			message.Debug(err)
+			message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
 			time.Sleep(time.Duration(delay) * time.Second)
 			tunnel.Connect(target, blocking)
 		}

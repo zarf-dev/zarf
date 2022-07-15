@@ -2,18 +2,25 @@ name: test-k3d
 on:
   pull_request:
     paths-ignore:
-      - '**.md'
-      - '**.jpg'
-      - '**.png'
-      - '**.gif'
-      - '**.svg'
-      - 'adr/**'
-      - 'docs/**'
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
+      - name: "Ensure workspace file ownership"
+        run: |
+          sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
+          sudo rm -fr ~/.kube
+          sudo rm -fr /tmp/zarf*
+          sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
+
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
@@ -22,18 +29,8 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: "Install K3d and init a cluster"
-        run: brew install k3d && k3d cluster delete && k3d cluster create
+      - name: "Create a K3d cluster"
+        run: k3d cluster delete && k3d cluster create
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
@@ -44,3 +41,6 @@ jobs:
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
+
+      - name: "Cleanup"
+        run: make destroy

@@ -1,5 +1,5 @@
 Description=Zarf K3s Runner
-Documentation=https://repo1.dso.mil/platform-one/big-bang/apps/product-tools/zarf
+Documentation=https://zarf.dev
 Wants=network-online.target
 After=network-online.target
 
@@ -24,4 +24,4 @@ RestartSec=5s
 ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service'
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
-ExecStart=/usr/sbin/k3s server --write-kubeconfig-mode=700 --disable traefik
+ExecStart=/usr/sbin/k3s server --write-kubeconfig-mode=700 --write-kubeconfig /root/.kube/config --disable traefik

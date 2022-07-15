@@ -1,0 +1,6 @@
+{
+  "custom_template_path": ".hooks/zarf-jsfh-template/base.md",
+  "template_md_options": { "badge_as_image": true, "show_heading_numbers": false },
+  "show_toc": false,
+  "show_breadcrumbs": false
+}
