@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"runtime"
@@ -84,9 +85,26 @@ func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error
 	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
 	err := tunnelCmd.Start()
 	e2e.cmdsToKill = append(e2e.cmdsToKill, tunnelCmd)
-	time.Sleep(1 * time.Second)
 
-	return err
+	timeout := time.After(5 * time.Second)
+	for {
+		// Delay the first check by 1 second
+		time.Sleep(1 * time.Second)
+		select {
+
+		// on timeout abort
+		case <-timeout:
+			return errors.New("Timeout reached while waiting for background command to start")
+
+		default:
+			// Check if the command has started yet
+			// NOTE: ExitCode() returns -1 if the process hasn't started yet!
+			if tunnelCmd.Process != nil && tunnelCmd.ProcessState != nil && tunnelCmd.ProcessState.ExitCode() != -1 {
+				// The background process seems to be running..
+				return err
+			}
+		}
+	}
 }
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {
