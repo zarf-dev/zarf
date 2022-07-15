@@ -67,6 +67,8 @@ var (
 	state  types.ZarfState
 
 	SGetPublicKey string
+
+	VariableMap map[string]string
 )
 
 func IsZarfInitConfig() bool {
@@ -199,6 +201,14 @@ func LoadConfig(path string, filterByOS bool) error {
 	// Update the active package with the filtered components
 	active.Components = filteredComponents
 
+	VariableMap = CommonOptions.SetVariables
+
+	for _, variable := range active.Variables {
+		if _, present := VariableMap[variable.Name]; !present && variable.Default != nil {
+			VariableMap[variable.Name] = *variable.Default
+		}
+	}
+
 	return nil
 }
 
@@ -206,6 +216,37 @@ func GetActiveConfig() types.ZarfPackage {
 	return active
 }
 
+// WriteYaml writes the active config to the specified path
+func WriteYaml(path string) error {
+	return utils.WriteYaml(path, active, 0600)
+}
+
+// InjectImportedVariable determines if an imported package variable exists in the active config and adds it if not
+func InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
+	presentInActive := false
+	for _, configVariable := range active.Variables {
+		if configVariable.Name == importedVariable.Name {
+			presentInActive = true
+		}
+	}
+
+	if !presentInActive {
+		active.Variables = append(active.Variables, importedVariable)
+	}
+}
+
+// ApplyVariableTemplate applies the templated variables to the active config
+func ApplyVariableTemplate(path string) error {
+	templateMap := map[string]string{}
+	for key, value := range VariableMap {
+		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+	}
+
+	return utils.ReloadYamlTemplate(path, &active, templateMap)
+}
+
+// BuildConfig adds build information and writes the config to the given path
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()
@@ -235,28 +276,7 @@ func BuildConfig(path string) error {
 	// Record the name of the user creating the package
 	active.Build.User = currentUser
 
-	if err := utils.WriteYaml(path, active, 0600); err != nil {
-		return err
-	}
-
-	// Replace variables templated with ###ZARF_VAR_
-	variableMap := CommonOptions.SetVariables
-
-	for _, variable := range active.Variables {
-		if _, present := variableMap[variable.Name]; !present && variable.Default != nil {
-			variableMap[variable.Name] = *variable.Default
-		}
-	}
-
-	templateMap := map[string]string{}
-	for key, value := range variableMap {
-		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
-	}
-
-	utils.ReplaceTemplate(path, templateMap)
-
-	return nil
+	return WriteYaml(path)
 }
 
 func SetImageCachePath(cachePath string) {

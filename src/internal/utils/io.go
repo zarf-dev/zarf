@@ -79,8 +79,8 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
-// ReplaceTemplate loads a file from a given path, replaces text in it and writes it back in place
-func ReplaceTemplate(path string, mappings map[string]string) {
+// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place
+func ReplaceTextTemplate(path string, mappings map[string]string) {
 	text, err := ioutil.ReadFile(path)
 	if err != nil {
 		message.Fatalf(err, "Unable to load %s", path)

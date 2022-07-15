@@ -1,7 +1,9 @@
 package packager
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -51,12 +53,7 @@ func GetComposedComponent(parentComponent types.ZarfComponent) types.ZarfCompone
 func getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
 	message.Debugf("packager.getParentComponent(%+v, %s)", parentComponent, everGrowingComposePath)
 
-	importedPackage, err := getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
-	if err != nil {
-		message.Fatal(err, "Unable to get the package that we're importing a component from")
-	}
-
-	// TODO: Merge in child package variables (only if the variable does not exist)
+	importedPackage := getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
 
 	// Figure out which component we are actually importing
 	// NOTE: Default to the component name if a custom one was not provided
@@ -203,12 +200,34 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 }
 
 // Reads the locally imported zarf.yaml
-func getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
+func getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
-	err = utils.ReadYaml(path, &importedPackage)
-	return importedPackage, err
+	if err := utils.ReadYaml(path, &importedPackage); err != nil {
+		message.Fatalf(err, "Unable to read the %s file", path)
+	}
+
+	// Merge in child package variables (only if the variable does not exist in parent)
+	for _, importedVariable := range importedPackage.Variables {
+		config.InjectImportedVariable(importedVariable)
+
+		if _, present := config.VariableMap[importedVariable.Name]; !present && importedVariable.Default != nil {
+			config.VariableMap[importedVariable.Name] = *importedVariable.Default
+		}
+	}
+
+	templateMap := map[string]string{}
+	for key, value := range config.VariableMap {
+		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+	}
+
+	if err := utils.ReloadYamlTemplate(path, &importedPackage, templateMap); err != nil {
+		message.Fatalf(err, "Unable to reload the yaml template for %s", path)
+	}
+
+	return importedPackage
 }
 
 // Prefix file path with importPath if original file path is not a url.

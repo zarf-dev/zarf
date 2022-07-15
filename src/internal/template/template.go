@@ -105,13 +105,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 
 	// Iterate over any custom variables and add them to the mappings for templating
 	// TODO: Handle prompting
-	variableMap := config.CommonOptions.SetVariables
-
-	for _, variable := range config.GetActiveConfig().Variables {
-		if _, present := variableMap[variable.Name]; !present && variable.Default != nil {
-			variableMap[variable.Name] = *variable.Default
-		}
-	}
 
 	templateMap := map[string]string{}
 	for key, value := range builtinMap {
@@ -119,12 +112,12 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
 	}
 
-	for key, value := range variableMap {
+	for key, value := range config.VariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
 	}
 
 	message.Debug(templateMap)
 
-	utils.ReplaceTemplate(path, templateMap)
+	utils.ReplaceTextTemplate(path, templateMap)
 }

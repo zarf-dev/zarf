@@ -33,6 +33,7 @@ func Create(baseDir string) {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
+	// Load the initial config
 	if err := config.LoadConfig(config.ZarfYAML, false); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
@@ -42,20 +43,24 @@ func Create(baseDir string) {
 
 	configFile := tempPath.base + "/zarf.yaml"
 
-	// Save the transformed config
+	// Add build information to the config and save it to tempPath for manipulation
 	if err := config.BuildConfig(configFile); err != nil {
 		message.Fatalf(err, "Unable to write the %s file", configFile)
 	}
 
-	// Reload values from transformed config
-	if err := config.LoadConfig(configFile, false); err != nil {
-		message.Fatal(err, "Unable to read the built zarf.yaml file")
+	// Apply the current template variables to the config in tempPath
+	if err := config.ApplyVariableTemplate(configFile); err != nil {
+		message.Fatal(err, "Unable to apply variables to the zarf.yaml file")
 	}
 
+	// Get the components from the file now that variables have been resolved
 	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
-	// TODO: Write the yaml file back here
+	// Finalize the config yaml after loading in all components (which may themselves contain more variables)
+	if err := config.WriteYaml(configFile); err != nil {
+		message.Fatalf(err, "Unable to write the %s file", configFile)
+	}
 
 	// Perform early package validation
 	validate.Run()

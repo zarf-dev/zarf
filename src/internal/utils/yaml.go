@@ -3,6 +3,7 @@ package utils
 // fork from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -87,4 +88,18 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	}
 
 	return ioutil.WriteFile(path, content, perm)
+}
+
+// ReloadYamlTemplate loads a file from a given path, replaces strings in it and saves it to a destination
+func ReloadYamlTemplate(path string, destConfig any, mappings map[string]string) error {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	for template, value := range mappings {
+		file = bytes.ReplaceAll(file, []byte(template), []byte(value))
+	}
+
+	return yaml.Unmarshal(file, destConfig)
 }
