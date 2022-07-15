@@ -240,19 +240,21 @@ func BuildConfig(path string) error {
 	}
 
 	// Replace variables templated with ###ZARF_VAR_
-	mappings := CommonOptions.SetVariables
+	variableMap := CommonOptions.SetVariables
 
 	for _, variable := range active.Variables {
-		if _, present := mappings[variable.Name]; !present && variable.Default != nil {
-			mappings[variable.Name] = *variable.Default
+		if _, present := variableMap[variable.Name]; !present && variable.Default != nil {
+			variableMap[variable.Name] = *variable.Default
 		}
 	}
 
-	for template, value := range mappings {
-		// Keys are always uppercase in the format ###ZARF_VAR_KEY###
-		template = strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", template))
-		utils.ReplaceText(path, template, value, 0400)
+	templateMap := map[string]string{}
+	for key, value := range variableMap {
+		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
 	}
+
+	utils.ReplaceTemplate(path, templateMap)
 
 	return nil
 }

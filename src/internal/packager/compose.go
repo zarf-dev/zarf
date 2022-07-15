@@ -189,6 +189,8 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 		target.Scripts.TimeoutSeconds = override.Scripts.TimeoutSeconds
 	}
 
+	// TODO: Merge in child package variables
+
 	// Merge Only filters
 	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)
 	if override.Only.Cluster.Architecture != "" {

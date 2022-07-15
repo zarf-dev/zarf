@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -80,16 +79,18 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
-// ReplaceText loads a file from a given path, replaces text in it and writes it back in place
-func ReplaceText(path string, old string, new string, perm fs.FileMode) {
-	input, err := ioutil.ReadFile(path)
+// ReplaceTemplate loads a file from a given path, replaces text in it and writes it back in place
+func ReplaceTemplate(path string, mappings map[string]string) {
+	text, err := ioutil.ReadFile(path)
 	if err != nil {
 		message.Fatalf(err, "Unable to load %s", path)
 	}
 
-	output := bytes.Replace(input, []byte(old), []byte(new), -1)
+	for template, value := range mappings {
+		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
+	}
 
-	if err = ioutil.WriteFile(path, output, perm); err != nil {
+	if err = ioutil.WriteFile(path, text, 0600); err != nil {
 		message.Fatalf(err, "Unable to update %s", path)
 	}
 }

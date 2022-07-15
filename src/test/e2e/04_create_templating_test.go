@@ -29,7 +29,7 @@ func TestCreateTemplating(t *testing.T) {
 	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
 	pkgName := fmt.Sprintf("zarf-package-package-variables-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/package-variables", "--set", "CAT=meow", "--set", "FOX=bark", "--confirm", "--zarf-cache", imageCachePath, "--log-level=debug")
+	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/package-variables", "--set", "CAT=meow", "--set", "FOX=bark", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
@@ -47,5 +47,5 @@ func TestCreateTemplating(t *testing.T) {
 	// Reset temp chdir
 	_ = os.Chdir("../..")
 
-	e2e.cleanFiles(imageCachePath)
+	e2e.cleanFiles(imageCachePath, decompressPath)
 }
