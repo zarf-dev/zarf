@@ -9,6 +9,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,15 +30,16 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Get the data injection pod
-	pods, err := k8s.GetPods("demo")
-	require.NoError(t, err)
-	require.Equal(t, len(pods.Items), 1)
-	pod := pods.Items[0]
+	ns := "demo"
+	pods := k8s.WaitForPodsAndContainers(types.ZarfContainerTarget{
+		Namespace: ns,
+		Selector:  "app=data-injection",
+	}, true)
 
-	kubectlOut, _ := exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test").Output()
+	kubectlOut, _ := exec.Command("kubectl", "-n", ns, "exec", pods[0], "--", "ls", "/test").Output()
 	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
 
-	kubectlOut, _ = exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test/subdirectory-test").Output()
+	kubectlOut, _ = exec.Command("kubectl", "-n", ns, "exec", pods[0], "--", "ls", "/test/subdirectory-test").Output()
 	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
