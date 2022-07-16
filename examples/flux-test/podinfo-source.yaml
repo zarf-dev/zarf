@@ -1,0 +1,12 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: GitRepository
+metadata:
+  name: podinfo
+  namespace: flux-system
+spec:
+  interval: 30s
+  ref:
+    tag: 6.1.6
+  # Currently the Zarf Agent can only mutate urls that end in ".git"
+  url: https://github.com/stefanprodan/podinfo.git

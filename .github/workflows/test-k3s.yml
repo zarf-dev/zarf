@@ -2,18 +2,25 @@ name: test-k3s
 on:
   pull_request:
     paths-ignore:
-      - '**.md'
-      - '**.jpg'
-      - '**.png'
-      - '**.gif'
-      - '**.svg'
-      - 'adr/**'
-      - 'docs/**'
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
+      - name: "Ensure workspace file ownership"
+        run: |
+          sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
+          sudo rm -fr /root/.kube
+          sudo rm -fr /tmp/zarf*
+          sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
+
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
@@ -21,16 +28,6 @@ jobs:
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
-
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
@@ -43,3 +40,6 @@ jobs:
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
         run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+
+      - name: "Cleanup"
+        run: sudo make destroy
