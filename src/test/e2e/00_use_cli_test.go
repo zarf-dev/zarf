@@ -88,6 +88,9 @@ func TestUseCLI(t *testing.T) {
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "inspect", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
+
+	e2e.cleanFiles(pkgName)
+
 	// Reset temp chdir
 	_ = os.Chdir("../..")
 

@@ -1,0 +1,21 @@
+kind: ZarfPackageConfig
+metadata:
+  name: package-variables-1
+  description: "Test component to demonstrate package variables feature"
+
+variables:
+  - name: "PIG"
+  - name: "COW"
+    default: "moo"
+  - name: "CONFIG_MAP"
+    default: "one-configmap.yaml"
+
+components:
+  # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
+  - name: variable-example
+    description: "Meow meow meow goes the ###ZARF_VAR_COW### (###ZARF_VAR_PIG###)"
+    required: true
+    manifests:
+      - name: variable-example-configmap
+        files:
+          - "###ZARF_VAR_CONFIG_MAP###"

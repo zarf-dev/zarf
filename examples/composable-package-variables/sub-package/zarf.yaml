@@ -1,15 +1,16 @@
 kind: ZarfPackageConfig
 metadata:
-  name: package-variables
+  name: package-override-variables
   description: "Test component to demonstrate package variables feature"
 
 variables:
   - name: "IMPORTED_PACKAGE"
-    default: "../../game"
+    default: "package-variables-1"
 
 components:
-  # Demonstrates injecting custom packages
-  - name: override-example
+  # Demonstrates an intermediate (overrideable) component import
+  - name: intermediate-example
     required: true
     import:
       path: "###ZARF_VAR_IMPORTED_PACKAGE###"
+      name: variable-example

@@ -87,6 +87,8 @@ build-examples:
 
 	@test -s ./build/zarf-package-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/package-variables -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-composable-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-package-variables -o build -a $(ARCH) --confirm
+
 	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-gitops-service-data-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/gitops-data -o build -a $(ARCH) --confirm

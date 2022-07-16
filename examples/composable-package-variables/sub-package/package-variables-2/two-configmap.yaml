@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: two-configmap
+  namespace: zarf
+data:
+  templateme.properties: |
+    identity=package-2
+    dog=###ZARF_VAR_DOG###

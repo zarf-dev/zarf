@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: one-configmap
+  namespace: zarf
+data:
+  templateme.properties: |
+    identity=package-1
+    cow=###ZARF_VAR_COW###
