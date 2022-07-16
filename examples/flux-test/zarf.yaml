@@ -1,0 +1,35 @@
+kind: ZarfPackageConfig
+metadata:
+  name: flux-test
+  description: "Deploy flux and then podinfo via flux"
+
+components:
+  - name: flux
+    description: "Installs the flux CRDs / controllers to use flux-based deployments in the cluster"
+    required: true
+    manifests:
+      - name: flux-crds
+        namespace: flux
+        files:
+          - flux-install.yaml
+    images:
+      - ghcr.io/fluxcd/helm-controller:v0.22.1
+      - ghcr.io/fluxcd/kustomize-controller:v0.26.1
+      - ghcr.io/fluxcd/notification-controller:v0.24.0
+      - ghcr.io/fluxcd/source-controller:v0.25.8
+
+  - name: podinfo-via-flux
+    description: "Example deployment via flux using the famous podinfo example"
+    required: true
+    manifests:
+      - name: podinfo-via-flux
+        namespace: podinfo
+        files:
+          - podinfo-source.yaml
+          - podinfo-kustomization.yaml
+    repos:
+      - https://github.com/stefanprodan/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.1.6
+
+

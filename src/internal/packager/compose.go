@@ -183,7 +183,7 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 	// Merge scripts.
 	target.Scripts.Before = append(target.Scripts.Before, override.Scripts.Before...)
 	target.Scripts.After = append(target.Scripts.After, override.Scripts.After...)
-	target.Scripts.ShowOutput = override.Scripts.ShowOutput
+
 	if override.Scripts.Retry {
 		target.Scripts.Retry = true
 	}

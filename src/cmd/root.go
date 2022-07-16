@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/pterm/pterm"
 
 	"github.com/spf13/cobra"
 )
@@ -27,9 +29,19 @@ var rootCmd = &cobra.Command{
 			message.NoProgress = true
 		}
 	},
-	Short: "Small tool to bundle dependencies with K3s for air-gapped deployments",
+	Short: "DevSecOps Airgap Toolkit",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
+		if len(args) > 0 {
+			pterm.Println()
+			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
+				pterm.FgYellow.Printfln("Please use \"zarf package deploy %s\" to deploy this package.", args[0])
+			}
+			if args[0] == "zarf.yaml" {
+				pterm.FgYellow.Printfln("Please use \"zarf package create\" to create this package.")
+			}
+		}
 	},
 }
 
