@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"os"
-	"os/exec"
 	"runtime"
 	"testing"
 
@@ -17,7 +16,6 @@ type ZarfE2ETest struct {
 	zarfBinPath    string
 	arch           string
 	applianceMode  bool
-	cmdsToKill     []*exec.Cmd
 	chartsToRemove []ChartTarget
 }
 
@@ -51,14 +49,6 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 // teardown actions for each test
 func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	t.Log("Test teardown")
-	// Kill background processes spawned during the test
-	for _, cmd := range e2e.cmdsToKill {
-		if cmd.Process != nil {
-			if err := cmd.Process.Kill(); err != nil {
-				t.Logf("unable to kill process: %v", err)
-			}
-		}
-	}
 
 	spinner := message.NewProgressSpinner("Remove test helm charts")
 	for _, chart := range e2e.chartsToRemove {
@@ -66,7 +56,6 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	}
 	spinner.Success()
 
-	e2e.cmdsToKill = []*exec.Cmd{}
 	e2e.chartsToRemove = []ChartTarget{}
 }
 
