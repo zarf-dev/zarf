@@ -26,32 +26,35 @@ type GenericGitRepo struct {
 func NewGitRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			var patches []operations.PatchOperation
-
-			// parse to simple struct to read the git url
-			gitRepo := &GenericGitRepo{}
-			if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
-			}
-
-			message.Info(gitRepo.Spec.URL)
-
-			replacedURL := git.MutateGitUrlsInText("http://zarf-gitea-http.zarf.svc.cluster.local:3000", gitRepo.Spec.URL)
-			patches = append(patches, operations.ReplacePatchOperation("/spec/url", replacedURL))
-
-			// If a prior secret exists, replace it
-			if gitRepo.Spec.SecretRef.Name != "" {
-				patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
-			} else {
-				// Otherwise, add the new secret
-				patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfGitServerSecretName}))
-			}
-
-			return &operations.Result{
-				Allowed:  true,
-				PatchOps: patches,
-			}, nil
-		},
+		Create: mutateGitRepository,
+		Update: mutateGitRepository,
 	}
+}
+
+func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
+	var patches []operations.PatchOperation
+
+	// parse to simple struct to read the git url
+	gitRepo := &GenericGitRepo{}
+	if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
+	}
+
+	message.Info(gitRepo.Spec.URL)
+
+	replacedURL := git.MutateGitUrlsInText("http://zarf-gitea-http.zarf.svc.cluster.local:3000", gitRepo.Spec.URL)
+	patches = append(patches, operations.ReplacePatchOperation("/spec/url", replacedURL))
+
+	// If a prior secret exists, replace it
+	if gitRepo.Spec.SecretRef.Name != "" {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
+	} else {
+		// Otherwise, add the new secret
+		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfGitServerSecretName}))
+	}
+
+	return &operations.Result{
+		Allowed:  true,
+		PatchOps: patches,
+	}, nil
 }
