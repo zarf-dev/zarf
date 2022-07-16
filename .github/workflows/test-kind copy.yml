@@ -2,25 +2,18 @@ name: test-kind
 on:
   pull_request:
     paths-ignore:
-      - "**.md"
-      - "**.jpg"
-      - "**.png"
-      - "**.gif"
-      - "**.svg"
-      - "adr/**"
-      - "docs/**"
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - '**.gif'
+      - '**.svg'
+      - 'adr/**'
+      - 'docs/**'  
 
 jobs:
   validate:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - name: "Ensure workspace file ownership"
-        run: |
-          sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
-          sudo rm -fr ~/.kube
-          sudo rm -fr /tmp/zarf*
-          sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
-
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
@@ -29,8 +22,17 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Create a KinD cluster"
-        run: kind delete cluster && kind create cluster
+      - name: "Setup caching"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: "Zarf Install Guide: Kind Cluster Init"
+        run: brew install kind && kind delete cluster && kind create cluster
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
@@ -43,6 +45,3 @@ jobs:
         #       rather than having the test suite do it. The K3d tests do a self-provisioned cluster and the K3s tests
         #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
-
-      - name: "Cleanup"
-        run: make destroy

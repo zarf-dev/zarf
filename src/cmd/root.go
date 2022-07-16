@@ -27,7 +27,6 @@ var rootCmd = &cobra.Command{
 		if os.Getenv("CI") == "true" {
 			message.Debug("CI environment detected, disabling progress bars")
 			message.NoProgress = true
-			message.SetLogLevel(message.TraceLevel)
 		}
 	},
 	Short: "DevSecOps Airgap Toolkit",
