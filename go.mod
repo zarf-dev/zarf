@@ -33,9 +33,9 @@ require (
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.9.1
-	k8s.io/api v0.24.2
-	k8s.io/apimachinery v0.24.2
-	k8s.io/client-go v0.24.2
+	k8s.io/api v0.24.3
+	k8s.io/apimachinery v0.24.3
+	k8s.io/client-go v0.24.3
 	k8s.io/klog/v2 v2.70.1
 	sigs.k8s.io/kustomize/api v0.11.5
 	sigs.k8s.io/kustomize/kyaml v0.13.7
