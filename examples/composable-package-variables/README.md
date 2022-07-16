@@ -1,6 +1,6 @@
 # Zarf Composable Packages (w/Variables) Example
 
-This example demonstrates using Zarf to compose existing zarf packages into another package using variables to determining the package to import.
+This example demonstrates using Zarf to compose existing Zarf packages into another set of packages using variables to determine the package to import.
 
 > _**Note**_
 >
