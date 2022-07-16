@@ -33,7 +33,6 @@ func Create(baseDir string) {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	// Load the initial config
 	if err := config.LoadConfig(config.ZarfYAML, false); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
@@ -41,7 +40,6 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	// Get the components from the file now that variables have been resolved
 	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
