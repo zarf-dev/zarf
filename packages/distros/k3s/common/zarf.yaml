@@ -32,8 +32,3 @@ components:
         target: /etc/systemd/system/k3s.service
         symlinks:
           - /etc/systemd/system/multi-user.target.wants/k3s.service
-      # Mock file for creating the kube config symlink
-      - source: empty-file
-        target: /etc/rancher/k3s/k3s.yaml
-        symlinks:
-          - /root/.kube/config

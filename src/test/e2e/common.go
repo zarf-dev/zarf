@@ -3,10 +3,8 @@ package test
 import (
 	"context"
 	"os"
-	"os/exec"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -18,7 +16,6 @@ type ZarfE2ETest struct {
 	zarfBinPath    string
 	arch           string
 	applianceMode  bool
-	cmdsToKill     []*exec.Cmd
 	chartsToRemove []ChartTarget
 }
 
@@ -47,21 +44,11 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
 	utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
-	// List currently listening ports on the host
-	utils.ExecCommandWithContext(context.TODO(), true, "lsof", "-iTCP", "-sTCP:LISTEN", "-n")
 }
 
 // teardown actions for each test
 func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	t.Log("Test teardown")
-	// Kill background processes spawned during the test
-	for _, cmd := range e2e.cmdsToKill {
-		if cmd.Process != nil {
-			if err := cmd.Process.Kill(); err != nil {
-				t.Logf("unable to kill process: %v", err)
-			}
-		}
-	}
 
 	spinner := message.NewProgressSpinner("Remove test helm charts")
 	for _, chart := range e2e.chartsToRemove {
@@ -69,24 +56,12 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	}
 	spinner.Success()
 
-	e2e.cmdsToKill = []*exec.Cmd{}
 	e2e.chartsToRemove = []ChartTarget{}
 }
 
 // execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
 	return utils.ExecCommandWithContext(context.TODO(), true, e2e.zarfBinPath, commandString...)
-}
-
-// execZarfBackgroundCommand kills any background 'zarf connect ...' processes spawned during the tests
-func (e2e *ZarfE2ETest) execZarfBackgroundCommand(commandString ...string) error {
-	// Create a tunnel to the git resources
-	tunnelCmd := exec.Command(e2e.zarfBinPath, commandString...)
-	err := tunnelCmd.Start()
-	e2e.cmdsToKill = append(e2e.cmdsToKill, tunnelCmd)
-	time.Sleep(1 * time.Second)
-
-	return err
 }
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {
