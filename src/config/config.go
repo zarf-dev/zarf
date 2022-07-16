@@ -209,16 +209,17 @@ func LoadConfig(path string, filterByOS bool) error {
 		}
 	}
 
-	return nil
+	templateMap := map[string]string{}
+	for key, value := range VariableMap {
+		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+	}
+
+	return utils.ReloadYamlTemplate(path, &active, templateMap)
 }
 
 func GetActiveConfig() types.ZarfPackage {
 	return active
-}
-
-// WriteYaml writes the active config to the specified path
-func WriteYaml(path string) error {
-	return utils.WriteYaml(path, active, 0600)
 }
 
 // InjectImportedVariable determines if an imported package variable exists in the active config and adds it if not
@@ -233,17 +234,6 @@ func InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
 	if !presentInActive {
 		active.Variables = append(active.Variables, importedVariable)
 	}
-}
-
-// ApplyVariableTemplate applies the templated variables to the active config
-func ApplyVariableTemplate(path string) error {
-	templateMap := map[string]string{}
-	for key, value := range VariableMap {
-		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
-	}
-
-	return utils.ReloadYamlTemplate(path, &active, templateMap)
 }
 
 // BuildConfig adds build information and writes the config to the given path
@@ -276,7 +266,7 @@ func BuildConfig(path string) error {
 	// Record the name of the user creating the package
 	active.Build.User = currentUser
 
-	return WriteYaml(path)
+	return utils.WriteYaml(path, active, 0400)
 }
 
 func SetImageCachePath(cachePath string) {

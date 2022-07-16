@@ -41,24 +41,14 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	configFile := tempPath.base + "/zarf.yaml"
-
-	// Add build information to the config and save it to tempPath for manipulation
-	if err := config.BuildConfig(configFile); err != nil {
-		message.Fatalf(err, "Unable to write the %s file", configFile)
-	}
-
-	// Apply the current template variables to the config in tempPath
-	if err := config.ApplyVariableTemplate(configFile); err != nil {
-		message.Fatal(err, "Unable to apply variables to the zarf.yaml file")
-	}
-
 	// Get the components from the file now that variables have been resolved
 	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
-	// Finalize the config yaml after loading in all components (which may themselves contain more variables)
-	if err := config.WriteYaml(configFile); err != nil {
+	configFile := tempPath.base + "/zarf.yaml"
+
+	// Save the transformed config
+	if err := config.BuildConfig(configFile); err != nil {
 		message.Fatalf(err, "Unable to write the %s file", configFile)
 	}
 
