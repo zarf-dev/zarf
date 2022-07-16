@@ -51,7 +51,7 @@ func GetComposedComponent(parentComponent types.ZarfComponent) types.ZarfCompone
 }
 
 func getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
-	message.Debugf("packager.getParentComponent(%+v, %s)", parentComponent, everGrowingComposePath)
+	message.Debugf("packager.getChildComponent(%+v, %s)", parentComponent, everGrowingComposePath)
 
 	importedPackage := getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
 

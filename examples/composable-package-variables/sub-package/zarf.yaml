@@ -4,7 +4,7 @@ metadata:
   description: "Test component to demonstrate package variables feature"
 
 variables:
-  - name: "IMPORTED_PACKAGE"
+  - name: "NESTED_PACKAGE"
     default: "package-variables-1"
 
 components:
@@ -12,5 +12,5 @@ components:
   - name: intermediate-example
     required: true
     import:
-      path: "###ZARF_VAR_IMPORTED_PACKAGE###"
+      path: "###ZARF_VAR_NESTED_PACKAGE###"
       name: variable-example

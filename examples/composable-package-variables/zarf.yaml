@@ -4,12 +4,19 @@ metadata:
   description: "Demo a complex composable Zarf package"
 
 variables:
-  - name: "IMPORTED_PACKAGE"
+  - name: "NESTED_PACKAGE"
     default: "package-variables-2"
+  - name: "SINGLE_PACKAGE"
+    default: "sub-package/package-variables-1"
 
 components:
-  - name: override-example
+  - name: nested-example
     required: true
     import:
       path: sub-package
       name: intermediate-example
+  - name: single-example
+    required: true
+    import:
+      path: "###ZARF_VAR_SINGLE_PACKAGE###"
+      name: variable-example

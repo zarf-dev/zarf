@@ -7,7 +7,7 @@ variables:
   - name: "PIG"
   - name: "COW"
     default: "moo"
-  - name: "CONFIG_MAP"
+  - name: "ONE_CONFIG_MAP" # Variables are global and must be unique
     default: "one-configmap.yaml"
 
 components:
@@ -18,4 +18,4 @@ components:
     manifests:
       - name: variable-example-configmap
         files:
-          - "###ZARF_VAR_CONFIG_MAP###"
+          - "###ZARF_VAR_ONE_CONFIG_MAP###"

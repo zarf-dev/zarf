@@ -7,3 +7,5 @@ data:
   templateme.properties: |
     identity=package-2
     dog=###ZARF_VAR_DOG###
+
+image: "defenseunicorns/zarf-game:multi-tile-dark"

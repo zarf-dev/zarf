@@ -62,8 +62,10 @@ func TestCreateTemplating(t *testing.T) {
 	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Check that the configmap exists and is readable
-	_, err = ioutil.ReadFile(decompressPath + "/components/override-example/manifests/sub-package/package-variables-2/two-configmap.yaml")
+	// Check that the configmaps exist and are readable
+	_, err = ioutil.ReadFile(decompressPath + "/components/nested-example/manifests/sub-package/package-variables-2/two-configmap.yaml")
+	require.NoError(t, err)
+	_, err = ioutil.ReadFile(decompressPath + "/components/single-example/manifests/sub-package/package-variables-1/one-configmap.yaml")
 	require.NoError(t, err)
 
 	// Check variables in zarf.yaml are replaced correctly
