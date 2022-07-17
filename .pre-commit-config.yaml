@@ -37,7 +37,7 @@ repos:
         files: "src/types/types.go"
         types: [go]
         language: script
-        description: "Runs `zarf tools config-schema > zarf.schema.json` to ensure schema is up to date"
+        description: "Runs `zarf internal config-schema > zarf.schema.json` to ensure schema is up to date"
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
