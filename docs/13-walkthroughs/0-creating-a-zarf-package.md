@@ -13,7 +13,7 @@ When creating a Zarf package, you will need to have internet connection out so t
 
 
 ## Building the init-package
-Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/2-package/zarf_package_create.md). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_create.md). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down
