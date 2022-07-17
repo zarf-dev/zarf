@@ -52,7 +52,8 @@ func Deploy() {
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	if err := config.LoadConfig(tempPath.base + "/zarf.yaml"); err != nil {
+	configPath := filepath.Join(tempPath.base, "zarf.yaml")
+	if err := config.LoadConfig(configPath, true); err != nil {
 		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
 	}
 
@@ -86,8 +87,7 @@ func Deploy() {
 	}
 
 	// Confirm the overall package deployment
-	configPath := tempPath.base + "/zarf.yaml"
-	confirm := confirmAction(configPath, "Deploy", sbomViewFiles)
+	confirm := confirmAction("Deploy", sbomViewFiles)
 
 	// Don't continue unless the user says so
 	if !confirm {

@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Understanding Zarf Packages
 
-A Zarf package is a single binary Tarball that contains everything you need to deploy a system or capability while fully disconnected. Zarf packages are defined by a `zarf.yaml` file.
+A Zarf package is a single tarball archive that contains everything you need to deploy a system or capability while fully disconnected. Zarf packages are defined by a `zarf.yaml` file.
 
-Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are pulled from the internet and stored within the tarball package. Because all the dependencies are now within the tarball, the package can be deployed on to disconnected systems that don't have connection to the outside world.
+Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are downloaded and stored within the archive. Because all the dependencies are now within the tarball, the package can be deployed on to disconnected systems that don't have connection to the outside world.
 
 The `zarf.yaml` file, that the package builds from, defines declarative instructions on how capabilities of the package should be deployed. The declarative nature of the package means everything is represented by code and automatically runs as it is configured, instead of having to give manual steps that might not be reproducible on all systems.
 
@@ -62,16 +62,7 @@ When Zarf is deploying the package, it will use the infrastructure that was crea
 
 ## What Makes Up A Package
 
-Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package follows the following format:
-
-```yaml
-kind: <STRING> # Either ZarfPackageConfig or ZarfInitConfig
-metadata:
-  name: <STRING> # The name of the package
-  description: <STRING> # A description of the package
-seed: <STRING> # Docker registry to seed the cluster with. Only used for init packages
-components: <OBJ LIST> # Components definitions are complex and broken down more in the 'Understanding Zarf Components' page
-```
+Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
 
 <br />
 <br />
@@ -89,7 +80,7 @@ components: <OBJ LIST> # Components definitions are complex and broken down more
 
 :::
 
-The process of defining a package is covered in the [Creating Your Own Package](https://google.com) page. Assuming you have a package already defined, building the package itself is fairly simple.
+The process of defining a package is covered in the [Creating Your Own Package](../../13-walkthroughs/0-creating-a-zarf-package.md) page. Assuming you have a package already defined, building the package itself is fairly simple.
 
 `zarf package create` will look for a `zarf.yaml` file in the current directory and build the package from that file. Behind the scenes, this is pulling down all the resources it needs from the internet and placing them in a temporary directory, once all the necessary resources of retrieved, Zarf will create the tarball of the temp directory and clean up the temp directory.
 

@@ -35,7 +35,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err := config.LoadConfig(config.ZarfYAML); err != nil {
+	if err := config.LoadConfig(config.ZarfYAML, false); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
