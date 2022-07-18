@@ -1285,4 +1285,4 @@ Must be one of:
 </details>
 
 ----------------------------------------------------------------------------------------------------------------------------
-Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-18 at 16:49:30 +0000
+Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-18 at 20:47:28 +0000
