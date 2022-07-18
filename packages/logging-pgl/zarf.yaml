@@ -10,6 +10,11 @@ components:
       - grafana/grafana:8.3.5
       - grafana/loki:2.5.0
       - quay.io/kiwigrid/k8s-sidecar:1.15.6
+    manifests:
+      - name: logging-connect
+        namespace: zarf
+        files:
+          - connect.yaml
     charts:
       - name: loki-stack
         url: https://grafana.github.io/helm-charts

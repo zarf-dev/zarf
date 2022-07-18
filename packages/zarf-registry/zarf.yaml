@@ -16,6 +16,10 @@ components:
 
   - name: zarf-registry
     manifests:
+      - name: registry-connect
+        namespace: zarf
+        files:
+          - connect.yaml
       - name: kep-1755-registry-annotation
         namespace: zarf
         files:
