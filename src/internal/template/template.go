@@ -115,7 +115,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
 	}
 
-	message.Debug(templateMap)
-
+	message.Debugf("templateMap = %#v", templateMap)
 	utils.ReplaceTextTemplate(path, templateMap)
 }
