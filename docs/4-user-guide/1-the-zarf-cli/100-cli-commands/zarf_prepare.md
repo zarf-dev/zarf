@@ -18,7 +18,7 @@ Tools to help prepare assets for packaging
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - Small tool to bundle dependencies with K3s for air-gapped deployments
+* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
 * [zarf prepare find-images](zarf_prepare_find-images.md)	 - Evaluates components in a zarf file to identify images specified in their helm charts and manifests
 * [zarf prepare patch-git](zarf_prepare_patch-git.md)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: 
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.

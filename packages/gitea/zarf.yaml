@@ -24,4 +24,4 @@ components:
       showOutput: true
       timeoutSeconds: 60
       after:
-        - "./zarf tools create-read-only-gitea-user"
+        - "./zarf internal create-read-only-gitea-user"

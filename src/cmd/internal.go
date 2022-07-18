@@ -9,7 +9,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -26,8 +25,6 @@ var generateCLIDocs = &cobra.Command{
 	Use:   "generate-cli-docs",
 	Short: "Creates auto-generated markdown of all the commands for the CLI",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.CreateDirectory("clidocs", 0700)
-
 		//Generate markdown of the Zarf command (and all of its child commands)
 		doc.GenMarkdownTree(rootCmd, "./docs/4-user-guide/1-the-zarf-cli/100-cli-commands")
 	},

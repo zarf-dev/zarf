@@ -131,7 +131,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		// Start the logs with something useful
 		tunnel.urlSuffix = `/monitor/explore?orgId=1&left=%5B"now-12h","now","Loki",%7B"refId":"Zarf%20Logs","expr":"%7Bnamespace%3D%5C"zarf%5C"%7D"%7D%5D`
 
-  case ZarfGit:
+	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
 		tunnel.remotePort = 3000
 

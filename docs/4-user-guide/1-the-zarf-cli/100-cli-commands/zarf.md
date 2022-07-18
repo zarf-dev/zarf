@@ -1,6 +1,6 @@
 ## zarf
 
-Small tool to bundle dependencies with K3s for air-gapped deployments
+DevSecOps Airgap Toolkit
 
 ```
 zarf [COMMAND] [flags]

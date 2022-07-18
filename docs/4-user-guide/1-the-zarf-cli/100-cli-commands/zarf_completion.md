@@ -24,7 +24,7 @@ See each sub-command's help for details on how to use the generated script.
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - Small tool to bundle dependencies with K3s for air-gapped deployments
+* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
 * [zarf completion bash](zarf_completion_bash.md)	 - Generate the autocompletion script for bash
 * [zarf completion fish](zarf_completion_fish.md)	 - Generate the autocompletion script for fish
 * [zarf completion powershell](zarf_completion_powershell.md)	 - Generate the autocompletion script for powershell
