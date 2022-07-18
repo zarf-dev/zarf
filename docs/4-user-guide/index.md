@@ -6,7 +6,7 @@ This guide is intended for end users who are using Zarf in a disconnected enviro
 
 - Deploy Zarf [Packages](2-zarf-packages/1-zarf-packages.md) (Zpkg)
 - Maintain Zarf Packages in the cluster
-- A reference of all [CLI commands](1-the-zarf-cli/100-cli-commands/0-zarf.md)
+- A reference of all [CLI commands](1-the-zarf-cli/100-cli-commands/zarf.md)
 - Autogenerate and view a package SBOM
 - Add logging to your cluster
 - A list of [supported Zarf packages](2-zarf-packages/1-zarf-packages.md)

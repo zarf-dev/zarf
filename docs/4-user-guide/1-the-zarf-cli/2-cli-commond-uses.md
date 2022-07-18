@@ -7,7 +7,7 @@ Since the main priority of Zarf is to make deploying applications into disconnec
 
 
 ## Building Packages: `zarf package create`
-[`zarf package create`](./100-cli-commands/2-package/zarf_package_create.md) is used to create a tar.zst binary file that contains all the necessary dependencies and instructions to deploy a set of functionality onto another machine. We call this tar.zst file a 'package'. The 'package create' command looks for a file called `zarf.yaml` which describes all of the things that make up the package and then does all the work necessary to prepare the output tar.zst package, such as downloading required container images and git repositories. More information on what these Zarf packages are can be found in the [Zarf Packages](../2-zarf-packages/index.md) page.
+[`zarf package create`](./100-cli-commands/zarf_package_create.md) is used to create a tar.zst binary file that contains all the necessary dependencies and instructions to deploy a set of functionality onto another machine. We call this tar.zst file a 'package'. The 'package create' command looks for a file called `zarf.yaml` which describes all of the things that make up the package and then does all the work necessary to prepare the output tar.zst package, such as downloading required container images and git repositories. More information on what these Zarf packages are can be found in the [Zarf Packages](../2-zarf-packages/index.md) page.
 
 <br />
 
@@ -30,7 +30,7 @@ Depending on the permissions of your user, if you are installing k3s through the
 
 <!-- The most common use case (like 99.9% of the time) is deploying onto a k8s cluster.. but that doesn't HAVE to be the case.. How do I write the docs for this then? -->
 <!-- TODO: Write some docs (or reddirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
-As stated many times now, the entire purpose of Zarf is to make it easier to deploy applications onto air gapped environments. This is where that magic happens! [`zarf package deploy`](./100-cli-commands/2-package/zarf_package_deploy.md) is used to deploy an already built tar.zst package onto a machine, usually specifically into a k8s cluster. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few rare cases where this doesn't apply. 
+As stated many times now, the entire purpose of Zarf is to make it easier to deploy applications onto air gapped environments. This is where that magic happens! [`zarf package deploy`](./100-cli-commands/zarf_package_deploy.md) is used to deploy an already built tar.zst package onto a machine, usually specifically into a k8s cluster. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few rare cases where this doesn't apply. 
 
 Since the package has all of its dependencies built-in, it can be deployed onto any cluster, even without an external internet connection. The dependency resources are pushed onto the cluster in their respective places, such as an in-cluster Gitea Git server or Docker registry, and then the application is deployed as instructed in the `zarf.yaml` file (i.e. deploying a helm chart, deploying raw k8s manifests, or even just executing a series of shell commands).
 

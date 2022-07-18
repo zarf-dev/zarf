@@ -107,12 +107,14 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	message.PrintConnectStringTable(connectStrings)
-
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
 
-	if config.IsZarfInitConfig() {
+	// If not init config, print the application connection table
+	if !config.IsZarfInitConfig() {
+		message.PrintConnectStringTable(connectStrings)
+	} else {
+		// otherwise, print the init config connection and passwords
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Registry", config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
