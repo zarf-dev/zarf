@@ -17,6 +17,7 @@ zarf prepare find-images [flags]
 ```
   -h, --help                     help for find-images
   -p, --repo-chart-path string   If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
+      --set stringToString       Specify package variables to set on the command line (KEY=value) (default [])
       --tmpdir string            Specify the temporary directory to use for intermediate files
 ```
 
