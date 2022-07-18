@@ -56,7 +56,6 @@ func Generate() Values {
 
 	generated.agentTLS = state.AgentTLS
 
-	message.Debugf("Template values: %v", generated)
 	return generated
 }
 
@@ -70,7 +69,7 @@ func (values Values) GetRegistry() string {
 }
 
 func (values Values) Apply(component types.ZarfComponent, path string) {
-	message.Debugf("template.Apply(%v, %s)", component, path)
+	message.Debugf("template.Apply(%#v, %s)", component, path)
 
 	if !values.Ready() {
 		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage

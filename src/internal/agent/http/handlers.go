@@ -28,9 +28,9 @@ func newAdmissionHandler() *admissionHandler {
 
 // Serve returns a http.HandlerFunc for an admission webhook
 func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
-	message.Debugf("http.Serve(%v)", hook)
+	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
-		message.Debugf("http.Serve()(writer, %v)", r.URL)
+		message.Debugf("http.Serve()(writer, %#v)", r.URL)
 
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
@@ -45,13 +45,13 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("could not read request body: %v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("could not read request body: %#v", err), http.StatusBadRequest)
 			return
 		}
 
 		var review v1.AdmissionReview
 		if _, _, err := h.decoder.Decode(body, nil, &review); err != nil {
-			http.Error(w, fmt.Sprintf("could not deserialize request: %v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("could not deserialize request: %#v", err), http.StatusBadRequest)
 			return
 		}
 
@@ -85,7 +85,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
 				message.Error(err, "unable to marshall the json patch")
-				http.Error(w, fmt.Sprintf("could not marshal JSON patch: %v", err), http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf("could not marshal JSON patch: %#v", err), http.StatusInternalServerError)
 			}
 			admissionResponse.Response.Patch = patchBytes
 			admissionResponse.Response.PatchType = &jsonPatchType
@@ -94,7 +94,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 		jsonResponse, err := json.Marshal(admissionResponse)
 		if err != nil {
 			message.Error(err, "unable to marshal the admission response")
-			http.Error(w, fmt.Sprintf("could not marshal response: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("could not marshal response: %#v", err), http.StatusInternalServerError)
 			return
 		}
 

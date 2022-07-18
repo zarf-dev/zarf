@@ -14,13 +14,6 @@ jobs:
   validate:
     runs-on: self-hosted
     steps:
-      - name: "Ensure workspace file ownership"
-        run: |
-          sudo chown -R ${USER} "${GITHUB_WORKSPACE}"
-          sudo rm -fr ~/.kube
-          sudo rm -fr /tmp/zarf*
-          sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
-
       - name: "Install GoLang"
         uses: actions/setup-go@v3
         with:
@@ -29,7 +22,7 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Create a K3d cluster"
+      - name: "K3d cluster init"
         run: k3d cluster delete && k3d cluster create
 
       - name: "Build CLI"
