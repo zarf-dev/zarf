@@ -265,7 +265,7 @@ func CreateReadOnlyUser() error {
 	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
 	out, err := DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	message.Debug(string(out))
+	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func CreateReadOnlyUser() error {
 	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, config.ZarfGitReadUser)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	out, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
-	message.Debug(string(out))
+	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 	return err
 }
 
@@ -297,7 +297,8 @@ func addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 	// Send API request to add a user as a read-only collaborator to a repo
 	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	_, err = DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err := DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
 	return err
 }
 

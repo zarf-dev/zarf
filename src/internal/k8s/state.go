@@ -35,7 +35,7 @@ func LoadZarfState() types.ZarfState {
 		_ = json.Unmarshal(match.Data[ZarfStateDataKey], &state)
 	}
 
-	message.Debug(message.JsonValue(state))
+	message.Debugf("ZarfState = %s", message.JsonValue(state))
 
 	return state
 }

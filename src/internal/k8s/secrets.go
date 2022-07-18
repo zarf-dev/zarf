@@ -87,8 +87,7 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 }
 
 func GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1.Secret, error) {
-	message.Debugf("k8s.GenerateTLSSecret(%s, %s", namespace, name)
-	message.Debug(message.JsonValue(conf))
+	message.Debugf("k8s.GenerateTLSSecret(%s, %s, %s)", namespace, name, message.JsonValue(conf))
 
 	if _, err := tls.X509KeyPair(conf.Cert, conf.Key); err != nil {
 		return nil, err
