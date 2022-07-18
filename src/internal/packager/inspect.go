@@ -38,5 +38,10 @@ func Inspect(packageName string) {
 		message.Fatalf(err, "Unable to read %s", tempPath.base)
 	}
 
+	// Setup the variables in the active config's template
+	if err := config.SetActiveVariables(configPath, false); err != nil {
+		message.Fatalf(err, "Unable to set variables in template: %s", err.Error())
+	}
+
 	message.Infof("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
 }

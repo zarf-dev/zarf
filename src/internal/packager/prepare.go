@@ -39,6 +39,10 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
+	if err := config.SetActiveVariables(config.ZarfYAML, false); err != nil {
+		message.Fatalf(err, "Unable to set variables in template: %s", err.Error())
+	}
+
 	components := GetComponents()
 	tempPath := createPaths()
 	defer tempPath.clean()

@@ -1,13 +1,10 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,17 +20,13 @@ func TestCreateTemplating(t *testing.T) {
 
 	e2e.cleanFiles(imageCachePath, decompressPath)
 
-	// Temporary chdir until #511 is merged
-	// TODO: remove this once #511 is merged
-	_ = os.Chdir("examples/package-variables")
-	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
 	pkgName := fmt.Sprintf("zarf-package-package-variables-%s.tar.zst", e2e.arch)
 
 	// Test a simple package variable example
-	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/package-variables", "--set", "CAT=meow", "--set", "FOX=bark", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CAT=meow", "--set", "FOX=bark", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
+	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the configmap exists and is readable
@@ -47,19 +40,13 @@ func TestCreateTemplating(t *testing.T) {
 
 	e2e.cleanFiles(imageCachePath, decompressPath, pkgName)
 
-	// Reset temp chdir
-	_ = os.Chdir("../..")
-
-	// Temporary chdir until #511 is merged
-	// TODO: remove this once #511 is merged
-	_ = os.Chdir("examples/composable-package-variables")
 	pkgName = fmt.Sprintf("zarf-package-composable-package-variables-%s.tar.zst", e2e.arch)
 
 	// Test a composable package variable example
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/composable-package-variables", "--set", "CAT=meow", "--confirm", "--zarf-cache", imageCachePath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/composable-package-variables", "--set", "CAT=meow", "--confirm", "--zarf-cache", imageCachePath, "--log-level=debug")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "t", "archiver", "decompress", pkgName, decompressPath)
+	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the configmaps exist and are readable
@@ -74,7 +61,4 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, string(builtConfig), "Who let the woof's out? meow")
 
 	e2e.cleanFiles(imageCachePath, decompressPath, pkgName)
-
-	// Reset temp chdir
-	_ = os.Chdir("../..")
 }

@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
@@ -201,11 +203,22 @@ func LoadConfig(path string, filterByOS bool) error {
 	// Update the active package with the filtered components
 	active.Components = filteredComponents
 
+	return nil
+}
+
+// SetActiveVariables handles setting the active variables and reloading the base template
+func SetActiveVariables(path string, promptVariables bool) error {
 	VariableMap = CommonOptions.SetVariables
 
 	for _, variable := range active.Variables {
-		if _, present := VariableMap[variable.Name]; !present && variable.Default != nil {
-			VariableMap[variable.Name] = *variable.Default
+		if _, present := VariableMap[variable.Name]; !present {
+			if variable.Prompt && promptVariables && !CommonOptions.Confirm {
+				VariableMap[variable.Name] = promptVariable(variable)
+			} else if variable.Default != nil {
+				VariableMap[variable.Name] = *variable.Default
+			} else if variable.Prompt && promptVariables {
+				return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", variable.Name)
+			}
 		}
 	}
 
@@ -306,4 +319,22 @@ func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool 
 	}
 
 	return validArch && validOS
+}
+
+func promptVariable(variable types.ZarfPackageVariable) string {
+	var value string
+
+	pterm.Println()
+
+	prompt := &survey.Input{
+		Message: "Please provide a value for '" + variable.Name + "'",
+	}
+
+	if variable.Default != nil {
+		prompt.Default = *variable.Default
+	}
+
+	_ = survey.AskOne(prompt, &value)
+
+	return value
 }

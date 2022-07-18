@@ -1,14 +1,12 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,31 +66,24 @@ func TestUseCLI(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
 	assert.Error(t, err, stdOut, stdErr)
 
-	// Temporary chdir until #511 is merged
-	// TODO: remove this once #511 is merged
-	_ = os.Chdir("examples/game")
-	tmpBin := fmt.Sprintf("../../%s", e2e.zarfBinPath)
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "inspect", pkgName)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName)
 	require.NoError(t, err, stdOut, stdErr)
 
 	_ = os.Mkdir(otherTmpPath, 0750)
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, tmpBin, "package", "inspect", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 
 	e2e.cleanFiles(pkgName)
-
-	// Reset temp chdir
-	_ = os.Chdir("../..")
 
 	files, err := ioutil.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")
