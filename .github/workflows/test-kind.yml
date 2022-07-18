@@ -22,7 +22,7 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Create a KinD cluster"
+      - name: "Kind Cluster Init"
         run: kind delete cluster && kind create cluster
 
       - name: "Build CLI"

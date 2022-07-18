@@ -32,6 +32,7 @@ var (
 			if len(args) > 0 {
 				target = args[0]
 			}
+
 			tunnel := k8s.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
 			// If the cliOnly flag is false (default), enable auto-open
 			if !cliOnly {
@@ -40,10 +41,21 @@ var (
 			tunnel.Connect(target, true)
 		},
 	}
+
+	connectListCmd = &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"l"},
+		Short:   "List all available connection shortcuts.",
+		Run: func(cmd *cobra.Command, args []string) {
+			k8s.PrintConnectTable()
+		},
+	}
 )
 
 func init() {
 	rootCmd.AddCommand(connectCmd)
+	connectCmd.AddCommand(connectListCmd)
+
 	connectCmd.Flags().StringVar(&connectResourceName, "name", "docker-registry", "Specify the resource name.  E.g. name=unicorns or name=unicorn-pod-7448499f4d-b5bk6")
 	connectCmd.Flags().StringVar(&connectNamespace, "namespace", k8s.ZarfNamespace, "Specify the namespace.  E.g. namespace=default")
 	connectCmd.Flags().StringVar(&connectResourceType, "type", k8s.SvcResource, "Specify the resource type.  E.g. type=svc or type=pod")
