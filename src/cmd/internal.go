@@ -16,7 +16,7 @@ import (
 
 var internalCmd = &cobra.Command{
 	Use:     "internal",
-	Aliases: []string{"dev", "int"},
+	Aliases: []string{"dev"},
 	Hidden:  true,
 	Short:   "Internal tools used by zarf",
 }

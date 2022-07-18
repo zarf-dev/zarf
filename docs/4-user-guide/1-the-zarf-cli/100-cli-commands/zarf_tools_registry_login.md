@@ -6,13 +6,6 @@ Log in to a registry
 zarf tools registry login [OPTIONS] [SERVER] [flags]
 ```
 
-### Examples
-
-```
-  # Log in to reg.example.com
-  /var/folders/62/wn7zhxv91mxgmh4t9ssh600h0000gn/T/go-build1205028272/b001/exe/main login reg.example.com -u AzureDiamond -p hunter2
-```
-
 ### Options
 
 ```
