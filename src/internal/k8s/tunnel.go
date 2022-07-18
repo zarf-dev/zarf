@@ -22,6 +22,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 )
@@ -61,6 +62,30 @@ type Tunnel struct {
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 	spinner      *message.Spinner
+}
+
+// GenerateConnectionTable will print a table of all zarf connect matches found in the cluster
+func PrintConnectTable() error {
+	list, err := GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+	if err != nil {
+		return err
+	}
+
+	connections := make(types.ConnectStrings)
+
+	for _, svc := range list.Items {
+		name := svc.Labels[config.ZarfConnectLabelName]
+
+		// Add the connectstring for processing later in the deployment
+		connections[name] = types.ConnectString{
+			Description: svc.Annotations[config.ZarfConnectAnnotationDescription],
+			Url:         svc.Annotations[config.ZarfConnectAnnotationUrl],
+		}
+	}
+
+	message.PrintConnectStringTable(connections)
+
+	return nil
 }
 
 // NewTunnel will create a new Tunnel struct
@@ -103,6 +128,8 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
 		tunnel.remotePort = 3000
+		// Start the logs with something useful
+		tunnel.urlSuffix = `/monitor/explore?orgId=1&left=%5B"now-12h","now","Loki",%7B"refId":"Zarf%20Logs","expr":"%7Bnamespace%3D%5C"zarf%5C"%7D"%7D%5D`
 
 	case ZarfGit:
 		tunnel.resourceName = "zarf-gitea-http"
