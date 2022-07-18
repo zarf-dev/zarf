@@ -5,7 +5,7 @@ metadata:
 
 variables:
   - name: AGENT_IMAGE
-    default: "defenseunicorns/zarf-agent:v0.19.5"
+    default: "defenseunicorns/zarf-agent:992efd"
 
 components:
   - name: zarf-agent

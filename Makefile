@@ -40,6 +40,10 @@ vm-destroy: ## Destroy the VM
 clean: ## Clean the build dir
 	rm -rf build
 
+destroy:
+	$(ZARF_BIN) destroy --confirm --remove-components
+	rm -fr build
+
 build-cli-linux-amd: build-injector-registry
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
@@ -97,7 +101,9 @@ build-examples:
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
-## Run e2e tests. Will automatically build any required dependencies that aren't present.
+	@test -s ./build/zarf-package-flux-test-${ARCH}.tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+
+## Run e2e tests. Will automatically build any required dependencies that aren't present. 
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: init-package build-examples
