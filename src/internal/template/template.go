@@ -104,8 +104,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating
-	// TODO: Handle prompting
-
 	templateMap := map[string]string{}
 	for key, value := range builtinMap {
 		// Builtin keys are always uppercase in the format ###ZARF_KEY###

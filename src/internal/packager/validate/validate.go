@@ -16,7 +16,13 @@ func Run() {
 	components := config.GetComponents()
 
 	if err := validatePackageName(config.GetMetaData().Name); err != nil {
-		message.Fatalf(err, "Invalid package name")
+		message.Fatalf(err, "Invalid package name: %s", err.Error())
+	}
+
+	for _, variable := range config.GetActiveConfig().Variables {
+		if err := validatePackageVariable(variable); err != nil {
+			message.Fatalf(err, "Invalid package variable: %s", err.Error())
+		}
 	}
 
 	uniqueNames := make(map[string]bool)
@@ -58,10 +64,32 @@ func validateComponent(component types.ZarfComponent) {
 func validatePackageName(subject string) error {
 	// https://regex101.com/r/vpi8a8/1
 	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
-	if isValid(subject) {
-		return nil
+
+	if !isValid(subject) {
+		return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
 	}
-	return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
+
+	return nil
+}
+
+func validatePackageVariable(subject types.ZarfPackageVariable) error {
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+
+	// ensure the variable name is only capitals and underscores
+	if !isAllCapsUnderscore(subject.Name) {
+		return fmt.Errorf("variable name '%s' must be all uppercase and contain no special characters except _", subject.Name)
+	}
+
+	isTemplate := regexp.MustCompile(`###ZARF_VAR_`).MatchString
+
+	// ensure the variable default is not a zarf template
+	if subject.Default != nil {
+		if isTemplate(*subject.Default) {
+			return fmt.Errorf("variable default '%s' must not itself be a ZARF template", *subject.Default)
+		}
+	}
+
+	return nil
 }
 
 func validateChart(chart types.ZarfChart) error {

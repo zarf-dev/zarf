@@ -434,7 +434,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "[A-Z_]*",
+          "pattern": "^[A-Z_]+$",
           "type": "string",
           "description": "The name to be used for the variable"
         },

@@ -1240,9 +1240,9 @@ Must be one of:
 | Type | `string` |
 | ---- | -------- |
 
-| Restrictions                      |                                                                 |
-| --------------------------------- | --------------------------------------------------------------- |
-| **Must match regular expression** | ```[A-Z_]*``` [Test](https://regex101.com/?regex=%5BA-Z_%5D%2A) |
+| Restrictions                      |                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z_%5D%2B%24) |
 
 </blockquote>
 </details>
@@ -1285,4 +1285,4 @@ Must be one of:
 </details>
 
 ----------------------------------------------------------------------------------------------------------------------------
-Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-13 at 21:05:52 +0000
+Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-18 at 16:49:30 +0000
