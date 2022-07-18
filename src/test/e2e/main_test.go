@@ -51,7 +51,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	// `make build-cli`
 	_, err = os.Stat(e2e.zarfBinPath)
 	if err != nil {
-		return 1, fmt.Errorf("zarf binary %v not found", e2e.zarfBinPath)
+		return 1, fmt.Errorf("zarf binary %s not found", e2e.zarfBinPath)
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call

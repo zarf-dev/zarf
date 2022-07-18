@@ -17,6 +17,8 @@ import (
 const horizontalRule = "───────────────────────────────────────────────────────────────────────────────────────"
 
 func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
+	message.Debugf("packager.getValidComponents(%#v, %#v)", allComponents, requestedComponentNames)
+
 	var validComponentsList []types.ZarfComponent
 	var orderedKeys []string
 	var choiceComponents []string
@@ -90,6 +92,8 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 
 // Match on the first requested component that is not in the list of valid components and return the component name
 func validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
+	message.Debugf("packager.validateRequests(%#v, %#v, %#v)", validComponentsList, requestedComponentNames, choiceComponents)
+
 	// Loop through each requested component names
 	for _, componentName := range requestedComponentNames {
 		found := false
@@ -118,6 +122,8 @@ func validateRequests(validComponentsList []types.ZarfComponent, requestedCompon
 }
 
 func isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
+	message.Debugf("packager.isRequiredOrRequested(%#v, %#v)", component, requestedComponentNames)
+
 	// If the component is required, then just return true
 	if component.Required {
 		return true
@@ -139,6 +145,8 @@ func isRequiredOrRequested(component types.ZarfComponent, requestedComponentName
 
 // Confirm optional component
 func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+	message.Debugf("packager.confirmOptionalComponent(%#v)", component)
+
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		return component.Default
@@ -164,6 +172,8 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 }
 
 func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+	message.Debugf("packager.confirmChoiceGroup(%#v)", componentGroup)
+
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		var componentNames []string
@@ -176,7 +186,7 @@ func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 			componentNames = append(componentNames, component.Name)
 		}
 		// If no default component was found, give up
-		message.Fatalf(nil, "You must specify at least one component from the group %v when using the --confirm flag.", componentNames)
+		message.Fatalf(nil, "You must specify at least one component from the group %#v when using the --confirm flag.", componentNames)
 	}
 
 	pterm.Println(horizontalRule)
@@ -199,6 +209,8 @@ func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 }
 
 func appendIfNotExists(slice []string, item string) []string {
+	message.Debugf("packager.appendIfNotExists(%#v, %s)", slice, item)
+
 	for _, s := range slice {
 		if s == item {
 			return slice

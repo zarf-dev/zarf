@@ -35,14 +35,15 @@ func LoadZarfState() types.ZarfState {
 		_ = json.Unmarshal(match.Data[ZarfStateDataKey], &state)
 	}
 
-	message.Debug(state)
+	message.Debugf("ZarfState = %s", message.JsonValue(state))
 
 	return state
 }
 
 // SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret
 func SaveZarfState(state types.ZarfState) error {
-	message.Debugf("k8s.SaveZarfState(%v)", state)
+	message.Debugf("k8s.SaveZarfState()")
+	message.Debug(message.JsonValue(state))
 
 	// Convert the data back to JSON
 	data, err := json.Marshal(state)
@@ -70,8 +71,6 @@ func SaveZarfState(state types.ZarfState) error {
 		Type: corev1.SecretTypeOpaque,
 		Data: dataWrapper,
 	}
-
-	message.Debug(secret)
 
 	// Attempt to create or replace the secret and return
 	if err := ReplaceSecret(secret); err != nil {

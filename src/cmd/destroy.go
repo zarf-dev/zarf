@@ -44,7 +44,7 @@ var destroyCmd = &cobra.Command{
 			// Check if we have the scripts to destory everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
-				message.Warnf("Unable to find the folder (%v) which has the scripts to cleanup the cluster. Do you have the right kube-context?\n", config.ZarfCleanupScriptsPath)
+				message.Warnf("Unable to find the folder (%#v) which has the scripts to cleanup the cluster. Do you have the right kube-context?\n", config.ZarfCleanupScriptsPath)
 				return
 			}
 
@@ -56,12 +56,12 @@ var destroyCmd = &cobra.Command{
 				// Run the matched script
 				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, script)
 				if errors.Is(err, os.ErrPermission) {
-					message.Warnf("Got a 'permission denied' when trying to execute the script (%v). Are you the right user and/or do you have the right kube-context?\n", script)
+					message.Warnf("Got a 'permission denied' when trying to execute the script (%s). Are you the right user and/or do you have the right kube-context?\n", script)
 
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
 				} else if err != nil {
-					message.Debugf("Received error when trying to execute the script (%v): %v", script, err)
+					message.Debugf("Received error when trying to execute the script (%s): %#v", script, err)
 				}
 
 				// Try to remove the script, but ignore any errors
