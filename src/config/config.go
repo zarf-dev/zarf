@@ -213,7 +213,11 @@ func SetActiveVariables(path string, promptVariables bool) error {
 	for _, variable := range active.Variables {
 		if _, present := VariableMap[variable.Name]; !present {
 			if variable.Prompt && promptVariables && !CommonOptions.Confirm {
-				VariableMap[variable.Name] = promptVariable(variable)
+				if val, err := promptVariable(variable); err == nil {
+					VariableMap[variable.Name] = val
+				} else {
+					return err
+				}
 			} else if variable.Default != nil {
 				VariableMap[variable.Name] = *variable.Default
 			} else if variable.Prompt && promptVariables {
@@ -321,7 +325,7 @@ func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool 
 	return validArch && validOS
 }
 
-func promptVariable(variable types.ZarfPackageVariable) string {
+func promptVariable(variable types.ZarfPackageVariable) (string, error) {
 	var value string
 
 	pterm.Println()
@@ -334,7 +338,9 @@ func promptVariable(variable types.ZarfPackageVariable) string {
 		prompt.Default = *variable.Default
 	}
 
-	_ = survey.AskOne(prompt, &value)
+	if err := survey.AskOne(prompt, &value); err != nil {
+		return "", err
+	}
 
-	return value
+	return value, nil
 }
