@@ -27,7 +27,7 @@ type Hook struct {
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.
 func (h *Hook) Execute(r *admission.AdmissionRequest) (*Result, error) {
-	message.Debugf("operations.Execute(*admission.AdmissionRequest) - %v , %s/%s: %v", r.Kind, r.Namespace, r.Name, r.Operation)
+	message.Debugf("operations.Execute(*admission.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
 	switch r.Operation {
 	case admission.Create:

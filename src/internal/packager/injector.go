@@ -23,7 +23,7 @@ import (
 var payloadChunkSize = 1024 * 512
 
 func runInjectionMadness(tempPath tempPaths) {
-	message.Debugf("packager.runInjectionMadness(%v)", tempPath)
+	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
@@ -106,7 +106,7 @@ func runInjectionMadness(tempPath tempPaths) {
 }
 
 func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]string, string, error) {
-	message.Debugf("packager.tryInjectorPayloadDeploy(%v)", tempPath)
+	message.Debugf("packager.tryInjectorPayloadDeploy(%#v)", tempPath)
 	var (
 		err        error
 		tarFile    []byte
@@ -212,7 +212,7 @@ func hasSeedImages(spinner *message.Spinner) bool {
 		default:
 			// Check for the existence of the image in the injection pod registry, on error continue
 			if _, err := crane.Manifest(ref, config.GetCraneOptions()...); err != nil {
-				message.Debugf("Could not get image ref %s: %v", ref, err)
+				message.Debugf("Could not get image ref %s: %#v", ref, err)
 			} else {
 				// If not error, return true, there image is present
 				return true
