@@ -31,7 +31,7 @@ jobs:
         run: 'cp zarf.schema.json zarf.schema.json.bak'
 
       - name: "Regenerate Schema"
-        run: 'go run main.go tools config-schema > zarf.schema.json'
+        run: 'go run main.go internal config-schema > zarf.schema.json'
 
       - name: "Compare Schemas"
         run: 'cmp -s zarf.schema.json zarf.schema.json.bak'
