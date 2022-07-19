@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,9 +17,6 @@ func TestUseCLI(t *testing.T) {
 
 	// Test `zarf prepare sha256sum` for a local asset
 	expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
-
-	// TODO: There has to be a better way to pipe this output to the file.. For some reason exec.Command( ... > file ).Output() couldn't pipe to file
-	// output, err = exec.Command("bash", "-c", "\"echo 'random test data 🦄' > shasum-test-file\"").Output()
 	shasumTestFilePath := "shasum-test-file"
 
 	// run `zarf package create` with a specified image cache location
@@ -31,10 +27,8 @@ func TestUseCLI(t *testing.T) {
 
 	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
 
-	testfile, _ := os.Create(shasumTestFilePath)
-	cmd := exec.Command("echo", "random test data 🦄")
-	cmd.Stdout = testfile
-	_ = cmd.Run()
+	err := ioutil.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
+	assert.NoError(t, err)
 
 	stdOut, stdErr, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
 	assert.NoError(t, err, stdOut, stdErr)
