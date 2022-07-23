@@ -55,7 +55,7 @@ func TestUseCLI(t *testing.T) {
 	assert.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
 	assert.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
-	// Test for expected failure when given a bad componenet input
+	// Test for expected failure when given a bad component input
 	_, _, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
 
