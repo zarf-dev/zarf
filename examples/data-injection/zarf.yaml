@@ -34,9 +34,8 @@ components:
           - manifests/pod.yaml    
     # Add new data into the cluster, these will keep trying up until their timeout
     dataInjections:
-      # Injection in a sub-directory with an already running pod
       - source: sample-data
         target:
           namespace: demo
           selector: app=data-injection-pod
-          path: /etc/subdirectory-test
+          path: /pod-test
