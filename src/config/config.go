@@ -245,7 +245,6 @@ func FillActiveTemplate() error {
 func SetActiveVariables() error {
 	SetVariableMap = CommonOptions.SetVariables
 
-	// TODO: Simplify logic here (complex nested blocks)
 	for _, variable := range active.Variables {
 		if _, present := SetVariableMap[variable.Name]; !present {
 			if variable.Prompt && !CommonOptions.Confirm {
