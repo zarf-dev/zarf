@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: data-injection-container
+  name: data-injection
   namespace: demo
   labels:
-    app: data-injection-container
+    app: data-injection
 spec:
   selector:
     matchLabels:
-      app: data-injection-container
+      app: data-injection
   template:
     metadata:
       labels:
-        app: data-injection-container
+        app: data-injection
     spec:
       initContainers:
         - name: data-loader

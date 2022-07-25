@@ -37,9 +37,6 @@ func TestDataInjection(t *testing.T) {
 	kubectlOut, _ := exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test").Output()
 	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
 
-	kubectlOut, _ = exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/pod-test").Output()
-	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
-
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
 		namespace: "demo",
 		name:      "zarf-raw-example-data-injection-pod",
