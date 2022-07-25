@@ -9,10 +9,10 @@ components:
   - name: with-init-container
     required: true
     manifests:
-      - name: example-data-injection-pod
+      - name: example-data-injection-init-container
         namespace: demo
         files:
-          - manifests/deployment.yaml
+          - manifests/init-container.yaml
     images:
       - alpine:3.15
     # Add new data into the cluster, these will keep trying up until their timeout
@@ -21,17 +21,22 @@ components:
       - source: sample-data
         target:
           namespace: demo
-          selector: app=data-injection
+          selector: app=data-injection-container
           container: data-loader
           path: /test
 
   - name: pod-only
     required: true
+    manifests:
+      - name: example-data-injection-pod
+        namespace: demo
+        files:
+          - manifests/pod.yaml    
     # Add new data into the cluster, these will keep trying up until their timeout
     dataInjections:
       # Injection in a sub-directory with an already running pod
       - source: sample-data
         target:
           namespace: demo
-          selector: app=data-injection
-          path: /test/subdirectory-test
+          selector: app=data-injection-pod
+          path: /etc/subdirectory-test
