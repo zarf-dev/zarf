@@ -25,6 +25,12 @@ func Run() {
 		}
 	}
 
+	for _, constant := range config.GetActiveConfig().Constants {
+		if err := validatePackageConstant(constant); err != nil {
+			message.Fatalf(err, "Invalid package constant: %s", err.Error())
+		}
+	}
+
 	uniqueNames := make(map[string]bool)
 
 	for _, component := range components {
@@ -80,13 +86,15 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 		return fmt.Errorf("variable name '%s' must be all uppercase and contain no special characters except _", subject.Name)
 	}
 
-	isTemplate := regexp.MustCompile(`###ZARF_VAR_`).MatchString
+	return nil
+}
 
-	// ensure the variable default is not a zarf template
-	if subject.Default != nil {
-		if isTemplate(*subject.Default) {
-			return fmt.Errorf("variable default '%s' must not itself be a ZARF template", *subject.Default)
-		}
+func validatePackageConstant(subject types.ZarfPackageConstant) error {
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+
+	// ensure the constant name is only capitals and underscores
+	if !isAllCapsUnderscore(subject.Name) {
+		return fmt.Errorf("constant name '%s' must be all uppercase and contain no special characters except _", subject.Name)
 	}
 
 	return nil

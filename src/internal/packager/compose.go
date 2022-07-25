@@ -1,9 +1,7 @@
 package packager
 
 import (
-	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -12,8 +10,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func GetComponents() (components []types.ZarfComponent) {
-	message.Debugf("packager.GetComponents()")
+// ComposeComponents builds the composed components list for the current config.
+func ComposeComponents() {
+	message.Debugf("packager.ComposeComponents()")
+
+	components := []types.ZarfComponent{}
 
 	for _, component := range config.GetComponents() {
 		if component.Import.Path == "" {
@@ -26,8 +27,6 @@ func GetComponents() (components []types.ZarfComponent) {
 	// Update the parent package config with the expanded sub components.
 	// This is important when the deploy package is created.
 	config.SetComponents(components)
-
-	return components
 }
 
 // GetComposedComponent recursively retrieves a composed zarf component
@@ -211,20 +210,11 @@ func getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 	// Merge in child package variables (only if the variable does not exist in parent)
 	for _, importedVariable := range importedPackage.Variables {
 		config.InjectImportedVariable(importedVariable)
-
-		if _, present := config.VariableMap[importedVariable.Name]; !present && importedVariable.Default != nil {
-			config.VariableMap[importedVariable.Name] = *importedVariable.Default
-		}
 	}
 
-	templateMap := map[string]string{}
-	for key, value := range config.VariableMap {
-		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
-	}
-
-	if err := utils.ReloadYamlTemplate(path, &importedPackage, templateMap); err != nil {
-		message.Fatalf(err, "Unable to reload the yaml template for %s", path)
+	// Merge in child package variables (only if the variable does not exist in parent)
+	for _, importedConstant := range importedPackage.Constants {
+		config.InjectImportedConstant(importedConstant)
 	}
 
 	return importedPackage

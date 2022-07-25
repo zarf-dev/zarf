@@ -3,15 +3,15 @@ metadata:
   name: "init-package-zarf-agent"
   description: "Install the zarf agent mutating webhook on a new cluster"
 
-variables:
+constants:
   - name: AGENT_IMAGE
-    default: "defenseunicorns/zarf-agent:992efd"
+    value: "###ZARF_PKG_VAR_AGENT_IMAGE###"
 
 components:
   - name: zarf-agent
     required: true
     images:
-      - "###ZARF_VAR_AGENT_IMAGE###"
+      - "###ZARF_PKG_VAR_AGENT_IMAGE###"
     manifests:
       - name: zarf-agent
         namespace: zarf

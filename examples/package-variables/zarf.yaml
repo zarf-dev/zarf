@@ -3,6 +3,12 @@ metadata:
   name: package-variables
   description: "Test component to demonstrate package variables feature"
 
+# Demonstrates injecting custom constants into a K8s resource, e.g. ###ZARF_CONST_DINGO###
+constants:
+  - name: "DINGO"
+    value: "howl"
+
+# Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
 variables:
   - name: "WOLF"
   - name: "DOG"
@@ -10,17 +16,15 @@ variables:
   - name: "CAT"
     prompt: true
   - name: "FOX"
-    default: "yuf"
+    default: "###ZARF_PKG_VAR_CONFIG_MAP###"
     prompt: true
-  - name: "CONFIG_MAP"
-    default: "simple-configmap.yaml"
 
 components:
-  # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
+  # Note that you must specify the CONFIG_MAP i.e. `--set CONFIG_MAP=simple-configmap.yaml` during package create
   - name: variable-example
-    description: "###ZARF_VAR_WOLF### is the ancestor of ###ZARF_VAR_DOG### but not of a ###ZARF_VAR_CAT### or a ###ZARF_VAR_FOX###"
+    description: "This component will template variables within ###ZARF_PKG_VAR_CONFIG_MAP### during deploy"
     required: true
     manifests:
       - name: variable-example-configmap
         files:
-          - "###ZARF_VAR_CONFIG_MAP###"
+          - "###ZARF_PKG_VAR_CONFIG_MAP###"

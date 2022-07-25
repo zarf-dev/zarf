@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/fatih/color"
@@ -90,16 +91,38 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	return ioutil.WriteFile(path, content, perm)
 }
 
-// ReloadYamlTemplate loads a file from a given path, replaces strings in it and saves it to a destination
-func ReloadYamlTemplate(path string, destConfig any, mappings map[string]string) error {
-	file, err := ioutil.ReadFile(path)
+// ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.
+func ReloadYamlTemplate(config any, mappings map[string]string) error {
+	text, err := yaml.Marshal(config)
+
 	if err != nil {
 		return err
 	}
 
 	for template, value := range mappings {
-		file = bytes.ReplaceAll(file, []byte(template), []byte(value))
+		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
 	}
 
-	return yaml.Unmarshal(file, destConfig)
+	return yaml.Unmarshal(text, config)
+}
+
+// FindYamlTemplates finds strings with a given prefix in a config.
+func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*string, error) {
+	mappings := map[string]*string{}
+
+	text, err := yaml.Marshal(config)
+
+	if err != nil {
+		return mappings, err
+	}
+
+	// Find all strings that are between the given prefix and suffix
+	r := regexp.MustCompile(fmt.Sprintf("%s(.+)%s", prefix, suffix))
+	matches := r.FindAllStringSubmatch(string(text), -1)
+
+	for _, match := range matches {
+		mappings[match[1]] = nil
+	}
+
+	return mappings, nil
 }

@@ -37,14 +37,18 @@ func Create(baseDir string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	if err := config.SetActiveVariables(config.ZarfYAML, false); err != nil {
-		message.Fatalf(err, "Unable to set variables in template: %s", err.Error())
+	ComposeComponents()
+
+	// After components are composed, template the active package
+	if err := config.FillActiveTemplate(); err != nil {
+		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
 	}
+
+	components := config.GetComponents()
 
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
 	configFile := tempPath.base + "/zarf.yaml"

@@ -95,8 +95,8 @@ func Deploy() {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := config.SetActiveVariables(configPath, true); err != nil {
-		message.Fatalf(err, "Unable to set variables in template: %s", err.Error())
+	if err := config.SetActiveVariables(); err != nil {
+		message.Fatalf(err, "Unable to set variables in config: %s", err.Error())
 	}
 
 	// Verify the components requested all exist

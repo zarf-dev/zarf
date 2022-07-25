@@ -7,7 +7,8 @@ type ZarfPackage struct {
 	Build      ZarfBuildData         `yaml:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
 	Components []ZarfComponent       `yaml:"components" jsonschema:"description=List of components to deploy in this package"`
 	Seed       string                `yaml:"seed,omitempty" jsonschema:"description=Special image only used for ZarfInitConfig packages when used with the Zarf Injector"`
-	Variables  []ZarfPackageVariable `yaml:"variables,omitempty" jsonschema:"description=Dynamic template values for K8s resources"`
+	Variables  []ZarfPackageVariable `yaml:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
+	Constants  []ZarfPackageConstant `yaml:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
 }
 
 // ZarfMetadata lists information about the current ZarfPackage.
@@ -33,6 +34,12 @@ type ZarfBuildData struct {
 // ZarfPackageVariable are variables that can be used to dynaically template K8s resources.
 type ZarfPackageVariable struct {
 	Name    string  `yaml:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z_]+$"`
-	Default *string `yaml:"default,omitempty" jsonschema:"description=The default value to use for the variable,pattern=^(?!.*###ZARF_VAR_).*$"`
+	Default *string `yaml:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
 	Prompt  bool    `yaml:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+}
+
+// ZarfPackageConstant are constants that can be used to dynaically template K8s resources.
+type ZarfPackageConstant struct {
+	Name  string `yaml:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z_]+$"`
+	Value string `yaml:"value" jsonschema:"description=The value to set for the constant during deploy"`
 }

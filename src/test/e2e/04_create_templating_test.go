@@ -22,8 +22,13 @@ func TestCreateTemplating(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-package-variables-%s.tar.zst", e2e.arch)
 
+	// Test that not specifying a package variable results in an error
+	_, stdErr, _ := e2e.execZarfCommand("package", "create", "examples/package-variables", "--confirm", "--zarf-cache", imageCachePath)
+	expectedOutString := "variable 'CONFIG_MAP' must be '--set' when using the '--confirm' flag"
+	require.Contains(t, stdErr, "", expectedOutString)
+
 	// Test a simple package variable example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CAT=meow", "--set", "FOX=bark", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath)
@@ -36,29 +41,7 @@ func TestCreateTemplating(t *testing.T) {
 	// Check variables in zarf.yaml are replaced correctly
 	builtConfig, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
 	require.NoError(t, err)
-	require.Contains(t, string(builtConfig), "###ZARF_VAR_WOLF### is the ancestor of woof but not of a meow or a bark")
-
-	e2e.cleanFiles(imageCachePath, decompressPath, pkgName)
-
-	pkgName = fmt.Sprintf("zarf-package-composable-package-variables-%s.tar.zst", e2e.arch)
-
-	// Test a composable package variable example
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/composable-package-variables", "--set", "CAT=meow", "--confirm", "--zarf-cache", imageCachePath, "--log-level=debug")
-	require.NoError(t, err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath)
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Check that the configmaps exist and are readable
-	_, err = ioutil.ReadFile(decompressPath + "/components/nested-example/manifests/sub-package/package-variables-2/two-configmap.yaml")
-	require.NoError(t, err)
-	_, err = ioutil.ReadFile(decompressPath + "/components/single-example/manifests/sub-package/package-variables-1/one-configmap.yaml")
-	require.NoError(t, err)
-
-	// Check variables in zarf.yaml are replaced correctly
-	builtConfig, err = ioutil.ReadFile(decompressPath + "/zarf.yaml")
-	require.NoError(t, err)
-	require.Contains(t, string(builtConfig), "Who let the woof's out? meow")
+	require.Contains(t, string(builtConfig), "name: FOX\n  default: simple-configmap.yaml")
 
 	e2e.cleanFiles(imageCachePath, decompressPath, pkgName)
 }

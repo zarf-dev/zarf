@@ -422,7 +422,34 @@
             "$ref": "#/definitions/ZarfPackageVariable"
           },
           "type": "array",
-          "description": "Dynamic template values for K8s resources"
+          "description": "Variable template values applied on deploy for K8s resources"
+        },
+        "constants": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfPackageConstant"
+          },
+          "type": "array",
+          "description": "Constant template values applied on deploy for K8s resources"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfPackageConstant": {
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "pattern": "^[A-Z_]+$",
+          "type": "string",
+          "description": "The name to be used for the constant"
+        },
+        "value": {
+          "type": "string",
+          "description": "The value to set for the constant during deploy"
         }
       },
       "additionalProperties": false,
@@ -439,7 +466,6 @@
           "description": "The name to be used for the variable"
         },
         "default": {
-          "pattern": "^(?!.*###ZARF_VAR_).*$",
           "type": "string",
           "description": "The default value to use for the variable"
         },
