@@ -212,7 +212,7 @@ func getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 		config.InjectImportedVariable(importedVariable)
 	}
 
-	// Merge in child package variables (only if the variable does not exist in parent)
+	// Merge in child package constants (only if the constant does not exist in parent)
 	for _, importedConstant := range importedPackage.Constants {
 		config.InjectImportedConstant(importedConstant)
 	}
