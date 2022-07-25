@@ -43,6 +43,8 @@ const (
 	ZarfDefaultImageCachePath = ".zarf-image-cache"
 
 	ZarfYAML = "zarf.yaml"
+
+	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 )
 
 var (
