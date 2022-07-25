@@ -516,6 +516,10 @@ Must be one of:
 | Type | `string` |
 | ---- | -------- |
 
+| Restrictions                      |                                                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
+
 </blockquote>
 </details>
 

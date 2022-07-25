@@ -25,7 +25,7 @@ type ZarfComponent struct {
 	CosignKeyPath string `yaml:"cosignKeyPath,omitempty" jsonschema:"description=Specify a path to a public key to validate signed online resources"`
 
 	// Import refers to another zarf.yaml package component.
-	Import ZarfComponentImport `yaml:"import,omitempty" jsonschema:"description=Import a component from another Zarf package,pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	Import ZarfComponentImport `yaml:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
@@ -115,5 +115,5 @@ type ZarfDataInjection struct {
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `yaml:"name,omitempty"`
-	Path          string `yaml:"path"`
+	Path          string `yaml:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
 }

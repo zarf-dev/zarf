@@ -169,6 +169,7 @@
           "type": "string"
         },
         "path": {
+          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
           "type": "string"
         }
       },
