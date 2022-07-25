@@ -26,14 +26,14 @@ type Credential struct {
 	Auth http.BasicAuth
 }
 
-func MutateGitUrlsInText(host string, text string) string {
+func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		if strings.Contains(match, "/"+config.ZarfGitPushUser+"/") {
+		if strings.Contains(match, "/"+gitUser+"/") {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
-		return transformURL(host, match)
+		return transformURL(host, match, gitUser)
 	})
 	return output
 }
@@ -43,9 +43,9 @@ func transformURLtoRepoName(url string) string {
 	return "mirror" + replaceRegex.ReplaceAllString(url, "__")
 }
 
-func transformURL(baseUrl string, url string) string {
+func transformURL(baseUrl string, url string, username string) string {
 	replaced := transformURLtoRepoName(url)
-	output := baseUrl + "/" + config.ZarfGitPushUser + "/" + replaced
+	output := baseUrl + "/" + username + "/" + replaced
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output
 }
