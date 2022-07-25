@@ -79,13 +79,12 @@ dev-agent-image:
 	$(eval arch := $(shell uname -m))
 	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
 	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
-	kind load docker-image zarf-agent:$(tag) && \
+	kind load docker-image $(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) ---set AGENT_IMAGE=$(AGENT_IMAGE) -confirm .
 
 ci-release: init-package ## Create the init package
 
