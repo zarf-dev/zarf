@@ -16,6 +16,8 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
+AGENT_IMAGE ?= defenseunicorns/zarf-agent:992efd
+
 CLI_VERSION := $(if $(shell git describe --tags), $(shell git describe --tags), "UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
 .DEFAULT_GOAL := help
@@ -76,7 +78,7 @@ dev-agent-image:
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=defenseunicorns/zarf-agent:992efd --confirm .
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
 ci-release: init-package ## Create the init package
 

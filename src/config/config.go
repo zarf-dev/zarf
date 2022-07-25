@@ -234,7 +234,7 @@ func FillActiveTemplate() error {
 
 	templateMap := map[string]string{}
 	for key, value := range packageVariables {
-		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
+		// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
 	}
 

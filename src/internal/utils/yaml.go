@@ -3,11 +3,11 @@ package utils
 // fork from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/fatih/color"
@@ -100,7 +100,14 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	}
 
 	for template, value := range mappings {
-		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
+		// Prevent user input from escaping the trailing " during yaml marshaling
+		lastIdx := len(value) - 1
+		if lastIdx > -1 && string(value[lastIdx]) == "\\" {
+			value = fmt.Sprintf("%s\\", value)
+		}
+		// Properly escape " in the yaml text output
+		value = strings.ReplaceAll(value, "\"", "\\\"")
+		text = []byte(strings.ReplaceAll(string(text), template, value))
 	}
 
 	return yaml.Unmarshal(text, config)
