@@ -30,10 +30,11 @@ type InstalledCharts struct {
 }
 
 type GitServerInfo struct {
-	GitAddress  string `json:"gitAddress"`
-	GitUsername string `json:"gitUsername"`
-	GitPassword string `json:"gitPassword"`
-	GitPort     int    `json:"gitPort"`
+	GitAddress     string `json:"gitAddress"`
+	GitUsername    string `json:"gitUsername"`
+	GitPassword    string `json:"gitPassword"`
+	GitPort        int    `json:"gitPort"`
+	InternalServer bool   `json:"internalServer"`
 }
 
 type GeneratedPKI struct {
