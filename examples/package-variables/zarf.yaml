@@ -20,7 +20,7 @@ variables:
     prompt: true
 
 components:
-  # Note that you must specify the CONFIG_MAP i.e. `--set CONFIG_MAP=simple-configmap.yaml` during package create
+  # Note that you must specify the ACTION and CONFIG_MAP i.e. `--set ACTION=template --set CONFIG_MAP=simple-configmap.yaml` during package create
   - name: variable-example
     description: "This component will ###ZARF_PKG_VAR_ACTION### variables within ###ZARF_PKG_VAR_CONFIG_MAP### during deploy"
     required: true
