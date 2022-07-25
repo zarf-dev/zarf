@@ -28,7 +28,7 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--set", "ACTION=template", "--confirm", "--zarf-cache", imageCachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath)

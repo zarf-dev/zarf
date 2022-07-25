@@ -89,7 +89,7 @@ build-examples:
 
 	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-choice -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/package-variables --set CONFIG_MAP=simple-configmap.yaml -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/package-variables --set CONFIG_MAP=simple-configmap.yaml --set ACTION=template -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 

@@ -213,8 +213,8 @@ func FillActiveTemplate() error {
 		return err
 	}
 
-	for key, value := range CommonOptions.SetVariables {
-		// TODO: Remove G601: Implicit memory aliasing in for loop.
+	for key := range CommonOptions.SetVariables {
+		value := CommonOptions.SetVariables[key]
 		packageVariables[key] = &value
 	}
 

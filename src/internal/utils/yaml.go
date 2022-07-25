@@ -117,7 +117,7 @@ func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*st
 	}
 
 	// Find all strings that are between the given prefix and suffix
-	r := regexp.MustCompile(fmt.Sprintf("%s(.+)%s", prefix, suffix))
+	r := regexp.MustCompile(fmt.Sprintf("%s([A-Z_]+)%s", prefix, suffix))
 	matches := r.FindAllStringSubmatch(string(text), -1)
 
 	for _, match := range matches {
