@@ -6,9 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,10 +26,6 @@ func TestDataInjection(t *testing.T) {
 	// Deploy the data injection example
 	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	config.DeployOptions.PackagePath = path
-	config.CommonOptions.Confirm = true
-	packager.Deploy()
 
 	// Get the data injection pod
 	pods, err := k8s.GetPods("demo")

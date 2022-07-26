@@ -255,7 +255,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
-	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
+	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)k3
 	client.Wait = !options.NoWait
 
 	client.SkipCRDs = true
