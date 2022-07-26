@@ -29,7 +29,7 @@ When looking back at the list of 'important additions' we were considering above
 
 ## Consequences
 
-While it was not something we were doing before, testing directly on the GitHub Runner instead of using Terratest to test on an ec2 instance means that when we get around to adding automated testing of Zarf against different linux distrobutions we will want to have more discussions on if we want to use self-hosted runners of different OS's or if we want to go back to Terratest to stand up ec2 instances with different AMIs.
+While it was not something we were doing before, testing directly on the GitHub Runner instead of using Terratest to test on an ec2 instance means that when we get around to adding automated testing of Zarf against different linux distributions we will want to have more discussions on if we want to use self-hosted runners of different OS's or if we want to go back to Terratest to stand up ec2 instances with different AMIs.
 
 In the future, we will likely want to write E2E tests that use images that require repository secrets to access. When that happens we will want to bring back some form of 'maintainer action' to initiate the test workflow. Going back to [peter-evans/slash-command-dispatch@v2](https://github.com/peter-evans/slash-command-dispatch) might be the right answer for that but there will need to be more discussion to make sure the team agrees that's the best solution first.
 
