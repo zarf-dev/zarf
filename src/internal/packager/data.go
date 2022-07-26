@@ -26,6 +26,11 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 		return
 	}
 
+	tarCompressFlag := ""
+	if data.Compress {
+		tarCompressFlag = "z"
+	}
+
 	timeout := time.After(15 * time.Minute)
 	for {
 		// delay check 2 seconds
@@ -51,11 +56,13 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 			// Inject into all the pods
 			for _, pod := range pods {
-				cpPodExec := fmt.Sprintf("tar cz -C %s . | kubectl exec -i -n %s %s -c %s -- tar xzvf - -C %s",
+				cpPodExec := fmt.Sprintf("tar c%s -C %s . | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
+					tarCompressFlag,
 					source,
 					data.Target.Namespace,
 					pod,
 					data.Target.Container,
+					tarCompressFlag,
 					data.Target.Path,
 				)
 
@@ -66,11 +73,13 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
-					cpPodExec := fmt.Sprintf("tar cz -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar xzvf - -C %s",
+					cpPodExec := fmt.Sprintf("tar c%s -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
+						tarCompressFlag,
 						componentPath.dataInjections,
 						data.Target.Namespace,
 						pod,
 						data.Target.Container,
+						tarCompressFlag,
 						data.Target.Path,
 					)
 					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)

@@ -24,3 +24,4 @@ components:
           selector: app=data-injection
           container: data-loader
           path: /test
+        compress: true

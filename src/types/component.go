@@ -114,8 +114,9 @@ type ZarfContainerTarget struct {
 
 // ZarfDataInjection is a data-injection definition
 type ZarfDataInjection struct {
-	Source string              `yaml:"source"`
-	Target ZarfContainerTarget `yaml:"target"`
+	Source   string              `yaml:"source"`
+	Target   ZarfContainerTarget `yaml:"target"`
+	Compress bool                `yaml:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
 // ZarfImport structure for including imported zarf components
