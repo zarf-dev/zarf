@@ -166,7 +166,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 		time.Sleep(3 * time.Second)
 	}
 
-	message.Warn("Pod lookup timeout exceeded")
+	message.Debug("Pod lookup timeout exceeded")
 
 	return []string{}
 }
