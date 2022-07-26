@@ -44,7 +44,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
-		if config.DeployOptions.ApplianceMode {
+		if config.InitOptions.ApplianceMode {
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -119,11 +119,19 @@ func preSeedRegistry(tempPath tempPaths) {
 	if config.InitOptions.GitServerInfo.GitAddress != "" {
 		// The user has provided external git server info, just use what they gave!
 		state.GitServerInfo = config.InitOptions.GitServerInfo
+
+		if state.GitServerInfo.GitReadUsername == "" {
+			state.GitServerInfo.GitReadUsername = state.GitServerInfo.GitPushUsername
+			state.GitServerInfo.GitReadPassword = state.GitServerInfo.GitPushPassword
+		}
 	} else {
 		// Set the GitServerInfo for the internal Gitea server
 		state.GitServerInfo.GitAddress = "http://" + config.IPV4Localhost
 		state.GitServerInfo.GitPort = 3000
-		state.GitServerInfo.GitUsername = config.ZarfGitPushUser
+		state.GitServerInfo.GitPushUsername = config.ZarfGitPushUser
+		state.GitServerInfo.GitPushPassword = utils.RandomString(24)
+		state.GitServerInfo.GitReadUsername = config.ZarfGitReadUser
+		state.GitServerInfo.GitReadPassword = utils.RandomString(24)
 		state.GitServerInfo.InternalServer = true
 	}
 

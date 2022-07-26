@@ -252,7 +252,7 @@ func CreateReadOnlyUser() error {
 	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
 		"username":             config.ZarfGitReadUser,
-		"password":             config.GetSecret(config.StateGitPull),
+		"password":             config.GetState().GitServerInfo.GitReadPassword,
 		"email":                "zarf-reader@localhost.local",
 		"must_change_password": false,
 	}
@@ -264,7 +264,7 @@ func CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	out, err := DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err := DoHttpThings(createUserRequest, config.ZarfGitPushUser, config.GetState().GitServerInfo.GitPushPassword)
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func CreateReadOnlyUser() error {
 	updateUserData, _ := json.Marshal(updateUserBody)
 	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, config.ZarfGitReadUser)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	out, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err = DoHttpThings(updateUserRequest, config.ZarfGitPushUser, config.GetState().GitServerInfo.GitPushPassword)
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 	return err
 }
@@ -297,7 +297,7 @@ func addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 	// Send API request to add a user as a read-only collaborator to a repo
 	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, config.ZarfGitPushUser, repo, config.ZarfGitReadUser)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, err := DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetSecret(config.StateGitPush))
+	out, err := DoHttpThings(addColabRequest, config.ZarfGitPushUser, config.GetState().GitServerInfo.GitPushPassword)
 	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
 	return err
 }
