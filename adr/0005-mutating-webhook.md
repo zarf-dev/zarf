@@ -12,7 +12,7 @@ Currently Zarf leverages [Helm Post Rendering](https://helm.sh/docs/topics/advan
 
 ## Decision
 
-A [mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) is standard practice in K8s and there [are a lot of them](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#what-does-each-admission-controller-do). Using the normal Zarf componenet structure and deployment strategy we can leverage a mutating webhook to perform automatic imagePullSecret binding and image path updates as well as add additional as-needed mutations such as updating the [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/) CRD with the appropriate secret and custom URL for the git server if someone is using Flux.
+A [mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) is standard practice in K8s and there [are a lot of them](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#what-does-each-admission-controller-do). Using the normal Zarf component structure and deployment strategy we can leverage a mutating webhook to perform automatic imagePullSecret binding and image path updates as well as add additional as-needed mutations such as updating the [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/) CRD with the appropriate secret and custom URL for the git server if someone is using Flux.
 
 ## Consequences
 
