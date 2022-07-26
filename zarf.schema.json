@@ -256,20 +256,25 @@
       "required": [
         "namespace",
         "selector",
+        "container",
         "path"
       ],
       "properties": {
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "description": "The namespace to targer for data injection"
         },
         "selector": {
-          "type": "string"
+          "type": "string",
+          "description": "The K8s selector to target for data injection"
         },
         "container": {
-          "type": "string"
+          "type": "string",
+          "description": "The container to target for data injection"
         },
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path to copy the data to in the container"
         }
       },
       "additionalProperties": false,
