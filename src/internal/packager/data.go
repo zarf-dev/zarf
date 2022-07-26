@@ -51,7 +51,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 			// Inject into all the pods
 			for _, pod := range pods {
-				cpPodExec := fmt.Sprintf("tar c -C %s . | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
+				cpPodExec := fmt.Sprintf("tar cz -C %s . | kubectl exec -i -n %s %s -c %s -- tar xzvf - -C %s",
 					source,
 					data.Target.Namespace,
 					pod,
@@ -66,7 +66,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
-					cpPodExec := fmt.Sprintf("tar c -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
+					cpPodExec := fmt.Sprintf("tar cz -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar xzvf - -C %s",
 						componentPath.dataInjections,
 						data.Target.Namespace,
 						pod,
@@ -80,8 +80,14 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				}
 			}
 
+			// Do not look for a specific container after injection in case they are running an init container
+			podOnlyTarget := types.ZarfContainerTarget{
+				Namespace: data.Target.Namespace,
+				Selector:  data.Target.Selector,
+			}
+
 			// Block one final time to make sure at least one pod has come up and injected the data
-			_ = k8s.WaitForPodsAndContainers(data.Target, false)
+			_ = k8s.WaitForPodsAndContainers(podOnlyTarget, false)
 
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(source)

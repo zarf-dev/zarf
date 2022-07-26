@@ -224,6 +224,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
+	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
 	client.Wait = !options.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly
@@ -254,6 +255,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
+	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
 	client.Wait = !options.NoWait
 
 	client.SkipCRDs = true
