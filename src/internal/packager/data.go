@@ -41,7 +41,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 			return
 
 		default:
-			sourceFile := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path), "*")
+			source := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
 
 			// Wait until the pod we are injecting data into becomes available
 			pods := k8s.WaitForPodsAndContainers(data.Target, true)
@@ -51,8 +51,8 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 			// Inject into all the pods
 			for _, pod := range pods {
-				cpPodExec := fmt.Sprintf("tar cf - %s | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
-					sourceFile,
+				cpPodExec := fmt.Sprintf("tar c -C %s . | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
+					source,
 					data.Target.Namespace,
 					pod,
 					data.Target.Container,
@@ -66,7 +66,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 					continue
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
-					cpPodExec := fmt.Sprintf("tar cf - %s | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
+					cpPodExec := fmt.Sprintf("tar c -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
 						injectionCompletionMarker,
 						data.Target.Namespace,
 						pod,
@@ -81,7 +81,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 			}
 
 			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(sourceFile)
+			_ = os.RemoveAll(source)
 
 			// Return to stop the loop
 			return
