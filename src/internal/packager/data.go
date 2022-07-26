@@ -20,7 +20,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
-	injectionCompletionMarker := componentPath.dataInjections + "/.zarf-sync-complete"
+	injectionCompletionMarker := filepath.Join(componentPath.dataInjections, ".zarf-sync-complete")
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		message.Errorf(err, "Unable to create the data injection completion marker")
 		return
@@ -67,7 +67,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				} else {
 					// Leave a marker in the target container for pods to track the sync action
 					cpPodExec := fmt.Sprintf("tar c -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar xvf - -C %s",
-						injectionCompletionMarker,
+						componentPath.dataInjections,
 						data.Target.Namespace,
 						pod,
 						data.Target.Container,
