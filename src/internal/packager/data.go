@@ -80,6 +80,9 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 				}
 			}
 
+			// Block one final time to make sure at least one pod has come up and injected the data
+			_ = k8s.WaitForPodsAndContainers(data.Target, false)
+
 			// Cleanup now to reduce disk pressure
 			_ = os.RemoveAll(source)
 
