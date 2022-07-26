@@ -13,7 +13,7 @@ This guide is intended for end users who are using Zarf in a disconnected enviro
 
 ## Other Resources
 
-If you are looking for more advanced information on how to operate and custom configure Zarf to your specfic environment needs, check out these additional resources.
+If you are looking for more advanced information on how to operate and custom configure Zarf to your specific environment needs, check out these additional resources.
 
 - For information on how to create custom configuration of the Zarf CLI see the [Operator Manual](./../5-operator-manual/_category_.json)
 - For information on how to create your own custom Zarf Packages see the [Developer Guide](./../6-developer-guide/1-contributor-guide.md)
