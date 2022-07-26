@@ -18,12 +18,26 @@ const offlineRemoteName = "offline-downstream"
 const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
 func PushAllDirectories(localPath string) error {
-	// Establish a git tunnel to send the repos
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfGit, false)
-	defer tunnel.Close()
+	gitServerInfo := config.GetGitServerInfo()
+	gitServerURL := ""
 
-	tunnelUrl := fmt.Sprintf("http://%s", tunnel.Endpoint())
+	if gitServerInfo.InternalServer {
+		// This is an internal gitea server so we'll use what we normally do..
+		// Establish a git tunnel to the internal gitea pod to send the repos
+		tunnel := k8s.NewZarfTunnel()
+		tunnel.Connect(k8s.ZarfGit, false)
+		defer tunnel.Close()
+
+		gitServerURL = fmt.Sprintf("http://%s", tunnel.Endpoint())
+	} else {
+		// This is an external git server so we'll use whatever we were provided with
+		gitServerURL = gitServerInfo.GitAddress
+
+		// Add a port to the URL if it was provided
+		if gitServerInfo.GitPort != 0 {
+			gitServerURL = fmt.Sprintf("%s:%d", gitServerInfo.GitAddress, gitServerInfo.GitPort)
+		}
+	}
 
 	paths, err := utils.ListDirectories(localPath)
 	if err != nil {
@@ -37,55 +51,68 @@ func PushAllDirectories(localPath string) error {
 	for _, path := range paths {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
-		if err := push(path, tunnelUrl, spinner); err != nil {
+
+		repo, err := prepRepoForPush(path, gitServerURL, gitServerInfo.GitPushUsername)
+		if err != nil {
+			message.Warnf("error when preping the repo for push.. %v", err)
+			return err
+		}
+
+		if err := push(repo, path, spinner); err != nil {
 			spinner.Warnf("Unable to push the git repo %s", basename)
 			return err
 		}
 
 		// Add the read-only user to this repo
-		repoPathSplit := strings.Split(path, "/")
-		repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
-		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
-		err = addReadOnlyUserToRepo(tunnelUrl, repoName)
-		if err != nil {
-			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
-			return err
+		if gitServerInfo.InternalServer {
+			repoPathSplit := strings.Split(path, "/")
+			repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
+			repoName := strings.Split(repoNameWithGitTag, ".git")[0]
+			err = addReadOnlyUserToRepo(gitServerURL, repoName)
+			if err != nil {
+				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
+				return err
+			}
 		}
+
 	}
 
 	spinner.Success()
 	return nil
 }
 
-func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
-
+func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, error) {
 	// Open the given repo
 	repo, err := git.PlainOpen(localPath)
 	if err != nil {
-		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
+		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	// Get the upstream URL
 	remote, err := repo.Remote(onlineRemoteName)
 	if err != nil {
-		return fmt.Errorf("unable to find the git remote: %w", err)
-
+		return nil, fmt.Errorf("unable to find the git remote: %w", err)
 	}
+
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl := transformURL(tunnelUrl, remoteUrl)
+	targetUrl := transformURL(tunnelUrl, remoteUrl, username)
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetUrl},
 	})
-
 	if err != nil {
-		return fmt.Errorf("failed to create offline remote: %w", err)
+		return nil, fmt.Errorf("failed to create offline remote: %w", err)
 	}
 
+	return repo, nil
+}
+
+func push(repo *git.Repository, localPath string, spinner *message.Spinner) error {
+
 	gitCred := http.BasicAuth{
-		Username: config.ZarfGitPushUser,
-		Password: config.GetSecret(config.StateGitPush),
+		Username: config.GetState().GitServerInfo.GitPushUsername,
+		Password: config.GetState().GitServerInfo.GitPushPassword,
 	}
 
 	// Since we are pushing HEAD:refs/heads/master on deployment, leaving

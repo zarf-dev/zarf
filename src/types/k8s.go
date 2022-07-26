@@ -13,13 +13,14 @@ type ZarfState struct {
 	GitServerInfo GitServerInfo `json:"gitServerInfo"`
 }
 
-//TODO: Should the password for the GitServerINfo be a secret/encoded?
 type GitServerInfo struct {
-	GitAddress     string `json:"gitAddress"`
-	GitUsername    string `json:"gitUsername"`
-	GitPassword    string `json:"gitPassword"`
-	GitPort        int    `json:"gitPort"`
-	InternalServer bool   `json:"internalServer"`
+	GitAddress      string `json:"gitAddress"`
+	GitPushUsername string `json:"gitPushUsername"`
+	GitPushPassword string `json:"gitPushPassword"`
+	GitReadUsername string `json:"gitReadUsername"`
+	GitReadPassword string `json:"gitReadPassword"`
+	GitPort         int    `json:"gitPort"`
+	InternalServer  bool   `json:"internalServer"`
 }
 
 type GeneratedPKI struct {
