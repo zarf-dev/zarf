@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -36,13 +35,9 @@ var prepareTransformGitLinks = &cobra.Command{
 			message.Fatalf(err, "Unable to read the file %s", fileName)
 		}
 
-		// Get the GitUsername from the ZarfState so we can mutate git URLs propperly
-		zarfState := k8s.LoadZarfState()
-		zarfGitUser := zarfState.GitServerInfo.GitUsername
-
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text, zarfGitUser)
+		processedText := git.MutateGitUrlsInText(host, text, config.InitOptions.GitServerInfo.GitPushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false
@@ -108,4 +103,6 @@ func init() {
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
 	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
+
+	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushUsername, "git-username", config.ZarfGitPushUser, "Username for the git account that the repos are created under.")
 }
