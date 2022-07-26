@@ -24,6 +24,7 @@ type ChartOptions struct {
 	ChartOverride     *chart.Chart
 	ValueOverride     map[string]any
 	Component         types.ZarfComponent
+	NoWait            bool
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
@@ -45,6 +46,13 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 	} else {
 		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	}
+
+	// Do not wait for the chart to be ready if data injections are present
+	if len(options.Component.DataInjections) > 0 {
+		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
+		options.NoWait = true
+	}
+
 	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
 	postRender := NewRenderer(options, actionConfig)
 
@@ -216,7 +224,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Let each chart run for 5 minutes
 	client.Timeout = 15 * time.Minute
 
-	client.Wait = true
+	client.Wait = !options.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly
 	client.SkipCRDs = false
@@ -244,9 +252,9 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	client := action.NewUpgrade(actionConfig)
 
 	// Let each chart run for 5 minutes
-	client.Timeout = 10 * time.Minute
+	client.Timeout = 15 * time.Minute
 
-	client.Wait = true
+	client.Wait = !options.NoWait
 
 	client.SkipCRDs = true
 
