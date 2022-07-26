@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Understanding Zarf Components
 
-The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declaritive definition of how it should be deployed. Each package can have as many components as the package creator wants but a package really isn't anything without at least one component.
+The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how it should be deployed. Each package can have as many components as the package creator wants but a package really isn't anything without at least one component.
 
 Components can define a wide range of resources that it needs when the package it is a part of gets deployed. The schema for the components is linked below but a high level look at the things components can define include:
  * Files to move onto the host

@@ -16,4 +16,4 @@ Using Witness' Syft attestor functionality allows Zarf to continue to get more r
 
 ## Consequences
 
-Added depenencies of Witness and Syft which may inflate Zarf binary size.  Increased Zarf package size -- Jeff noted that uncompressed SBOMs for Big Bang Core came in at around 200MB.
+Added dependencies of Witness and Syft which may inflate Zarf binary size.  Increased Zarf package size -- Jeff noted that uncompressed SBOMs for Big Bang Core came in at around 200MB.
