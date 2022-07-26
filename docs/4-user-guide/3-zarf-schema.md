@@ -1161,6 +1161,8 @@ must respect the following conditions
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The namespace to targer for data injection
+
 | Type | `string` |
 | ---- | -------- |
 
@@ -1176,6 +1178,8 @@ must respect the following conditions
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The K8s selector to target for data injection
+
 | Type | `string` |
 | ---- | -------- |
 
@@ -1183,11 +1187,15 @@ must respect the following conditions
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container</strong>
+<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 
 </summary>
 &nbsp;
 <blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The container to target for data injection
 
 | Type | `string` |
 | ---- | -------- |
@@ -1204,11 +1212,28 @@ must respect the following conditions
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The path to copy the data to in the container
+
 | Type | `string` |
 | ---- | -------- |
 
 </blockquote>
 </details>
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
+
+| Type | `boolean` |
+| ---- | --------- |
 
 </blockquote>
 </details>
@@ -1235,4 +1260,4 @@ must respect the following conditions
 </details>
 
 ----------------------------------------------------------------------------------------------------------------------------
-Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-12 at 22:24:30 +0000
+Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) on 2022-07-26 at 23:34:41 +0000
