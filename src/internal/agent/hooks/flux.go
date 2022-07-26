@@ -65,7 +65,7 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	message.Info(gitRepo.Spec.URL)
 
-	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServerInfo.GitUsername)
+	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServerInfo.GitPushUsername)
 
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", replacedURL))
 

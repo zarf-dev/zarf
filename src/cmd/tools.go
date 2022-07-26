@@ -78,7 +78,7 @@ var readCredsCmd = &cobra.Command{
 		// Continue loading state data if it is valid
 		config.InitState(state)
 
-		fmt.Println(config.GetSecret(config.StateGitPush))
+		fmt.Println(state.GitServerInfo.GitPushPassword)
 	},
 }
 
