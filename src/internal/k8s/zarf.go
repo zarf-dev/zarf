@@ -23,7 +23,7 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 	} else {
 		for _, namespace := range namespaces.Items {
 			if _, ok := namespace.Labels["zarf.dev/agent"]; ok {
-				spinner.Updatef("Removing Zarf Agent label for namespace %v", namespace.Name)
+				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, "zarf.dev/agent")
 				if _, err = UpdateNamespace(&namespace); err != nil {
 					// This is not a hard failure, but we should log it
@@ -32,7 +32,7 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 			}
 
 			for _, namespace := range namespaces.Items {
-				spinner.Updatef("Removing Zarf secrets for namespace %v", namespace.Name)
+				spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
 				err := clientSet.CoreV1().
 					Secrets(namespace.Name).
 					DeleteCollection(context.TODO(), deleteOptions, listOptions)

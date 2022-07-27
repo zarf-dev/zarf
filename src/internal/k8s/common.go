@@ -46,7 +46,7 @@ func GetContext() (string, error) {
 
 // ProcessYamlFilesInPath iterates over all yaml files in a given path and performs Zarf templating + image swapping
 func ProcessYamlFilesInPath(path string, component types.ZarfComponent) []string {
-	message.Debugf("k8s.ProcessYamlFilesInPath(%s, %v)", path, component)
+	message.Debugf("k8s.ProcessYamlFilesInPath(%s, %#v)", path, component)
 
 	// Only pull in yml and yaml files
 	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
@@ -73,7 +73,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	for _, yml := range ymls {
 		u := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(yml), u); err != nil {
-			return objs, fmt.Errorf("failed to unmarshal manifest: %v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 		objs = append(objs, u)
 	}
@@ -82,7 +82,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
 func WaitForHealthyCluster(timeout time.Duration) error {
-	message.Debugf("package.WaitForHealthyCluster(%v)", timeout)
+	message.Debugf("package.WaitForHealthyCluster(%#v)", timeout)
 
 	var err error
 	var nodes *v1.NodeList
@@ -103,7 +103,7 @@ func WaitForHealthyCluster(timeout time.Duration) error {
 			// Make sure there is at least one running Node
 			nodes, err = GetNodes()
 			if err != nil || len(nodes.Items) < 1 {
-				message.Debugf("No nodes reporting healthy yet: %v\n", err)
+				message.Debugf("No nodes reporting healthy yet: %#v\n", err)
 				continue
 			}
 
@@ -183,7 +183,7 @@ func splitYAMLToString(yamlData []byte) ([]string, error) {
 			if err == io.EOF {
 				break
 			}
-			return objs, fmt.Errorf("failed to unmarshal manifest: %v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 		ext.Raw = bytes.TrimSpace(ext.Raw)
 		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {

@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -34,11 +33,9 @@ func TestDataInjection(t *testing.T) {
 	require.Equal(t, len(pods.Items), 1)
 	pod := pods.Items[0]
 
-	kubectlOut, _ := exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test").Output()
-	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
-
-	kubectlOut, _ = exec.Command("kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test/subdirectory-test").Output()
-	assert.Contains(t, string(kubectlOut), "this-is-an-example-file.txt")
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test")
+	require.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
 		namespace: "demo",

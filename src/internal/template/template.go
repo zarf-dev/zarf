@@ -56,7 +56,6 @@ func Generate() Values {
 
 	generated.agentTLS = state.AgentTLS
 
-	message.Debugf("Template values: %v", generated)
 	return generated
 }
 
@@ -70,7 +69,7 @@ func (values Values) GetRegistry() string {
 }
 
 func (values Values) Apply(component types.ZarfComponent, path string) {
-	message.Debugf("template.Apply(%v, %s)", component, path)
+	message.Debugf("template.Apply(%#v, %s)", component, path)
 
 	if !values.Ready() {
 		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage
@@ -87,6 +86,11 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
 
+	// Include the data injection marker template if the component has data injections
+	if len(component.DataInjections) > 0 {
+		mappings["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
+	}
+
 	// Don't template component-specifric variables for every component
 	switch component.Name {
 	case "zarf-agent":
@@ -101,7 +105,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 
 	case "logging":
 		mappings["LOGGING_AUTH"] = values.secret.logging
-
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating

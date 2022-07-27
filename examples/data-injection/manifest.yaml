@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-injection
+  namespace: demo
+  labels:
+    app: data-injection
+spec:
+  selector:
+    matchLabels:
+      app: data-injection
+  template:
+    metadata:
+      labels:
+        app: data-injection
+    spec:
+      initContainers:
+        - name: data-loader
+          image: alpine:3.15
+          command:
+            [
+              "sh",
+              "-c",
+              'while [ ! -f /test/###ZARF_DATA_INJECTON_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
+            ]
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - mountPath: /test
+              name: test
+      containers:
+        - name: data-injection
+          image: alpine:3.15
+          command:
+            ["/bin/sh", "-ec", "while :; do ls -lah /test ; sleep 2 ; done"]
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - mountPath: /test
+              name: test
+          readinessProbe:
+            exec:
+              command:
+                - "cat"
+                - "/test/###ZARF_DATA_INJECTON_MARKER###"
+            initialDelaySeconds: 1
+            periodSeconds: 1
+
+      volumes:
+        - name: test
+          emptyDir: {}

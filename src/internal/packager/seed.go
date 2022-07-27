@@ -12,7 +12,7 @@ import (
 )
 
 func preSeedRegistry(tempPath tempPaths) {
-	message.Debugf("package.preSeedRegistry(%v)", tempPath)
+	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
 		clusterArch string
@@ -54,7 +54,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		}
 
 		if distro != k8s.DistroIsUnknown {
-			spinner.Updatef("Detected K8s distro %v", distro)
+			spinner.Updatef("Detected K8s distro %s", distro)
 		}
 
 		// Defaults
@@ -72,7 +72,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own
 		for _, namespace := range namespaces.Items {
-			spinner.Updatef("Marking existing namespace %v as ignored by Zarf Agent", namespace.Name)
+			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
 				namespace.Labels = make(map[string]string)
@@ -100,7 +100,6 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	case k8s.DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
-
 	}
 
 	// CLI provided overrides that haven't been processed already
@@ -128,7 +127,7 @@ func preSeedRegistry(tempPath tempPaths) {
 }
 
 func postSeedRegistry(tempPath tempPaths) {
-	message.Debug("packager.postSeedRegistry(%v)", tempPath)
+	message.Debug("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
 	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")

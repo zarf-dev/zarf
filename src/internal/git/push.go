@@ -48,7 +48,7 @@ func PushAllDirectories(localPath string) error {
 		repoName := strings.Split(repoNameWithGitTag, ".git")[0]
 		err = addReadOnlyUserToRepo(tunnelUrl, repoName)
 		if err != nil {
-			message.Warnf("Unable to add the read-only user to the repo: %v\n", repoName)
+			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
 		}
 	}

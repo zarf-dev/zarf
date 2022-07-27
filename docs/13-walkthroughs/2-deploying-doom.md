@@ -3,7 +3,7 @@
 In this walkthrough, we are going to deploy a fun application onto your cluster. In some of the previous walkthroughs, we have figured out how to [create a package](./0-creating-a-zarf-package.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
 
 
-## Walkthrough Prequisites
+## Walkthrough Prerequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
 1. A Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))

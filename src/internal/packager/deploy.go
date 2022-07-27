@@ -1,7 +1,6 @@
 package packager
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -107,12 +106,14 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	message.PrintConnectStringTable(connectStrings)
-
 	pterm.Success.Println("Zarf deployment complete")
 	pterm.Println()
 
-	if config.IsZarfInitConfig() {
+	// If not init config, print the application connection table
+	if !config.IsZarfInitConfig() {
+		message.PrintConnectStringTable(connectStrings)
+	} else {
+		// otherwise, print the init config connection and passwords
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
 			{"     Registry", config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
@@ -145,6 +146,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
+	hasDataInjections := len(component.DataInjections) > 0
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -195,18 +197,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 			_ = os.RemoveAll(sourceFile)
 		}
 		spinner.Success()
-	}
-
-	// Start any data injection async
-	if len(component.DataInjections) > 0 {
-		var waitGroup sync.WaitGroup
-
-		message.Info("Loading data injections")
-		for _, data := range component.DataInjections {
-			waitGroup.Add(1)
-			go handleDataInjection(&waitGroup, data, componentPath)
-		}
-		defer waitGroup.Wait()
 	}
 
 	if isSeedRegistry {
@@ -268,6 +258,18 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		}
 	}
 
+	// Start any data injection async
+	if hasDataInjections {
+		var waitGroup sync.WaitGroup
+
+		message.Info("Loading data injections")
+		for _, data := range component.DataInjections {
+			waitGroup.Add(1)
+			go handleDataInjection(&waitGroup, data, componentPath)
+		}
+		defer waitGroup.Wait()
+	}
+
 	for _, chart := range component.Charts {
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
@@ -307,76 +309,5 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 	if isSeedRegistry {
 		postSeedRegistry(tempPath)
-	}
-}
-
-// Wait for the target pod(s) to come up and inject the data into them
-// todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath componentPaths) {
-	defer wg.Done()
-
-	injectionCompletionMarker := componentPath.dataInjections + "/.zarf-sync-complete"
-	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
-		return
-	}
-
-	timeout := time.After(15 * time.Minute)
-	for {
-		// delay check 2 seconds
-		time.Sleep(2 * time.Second)
-		select {
-
-		// on timeout abort
-		case <-timeout:
-			message.Warnf("data injection into target %s timed out\n", data.Target.Namespace)
-			return
-
-		default:
-			sourceFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-
-			// Wait until the pod we are injecting data into becomes available
-			pods := k8s.WaitForPodsAndContainers(data.Target, true)
-			if len(pods) < 1 {
-				continue
-			}
-
-			// Define injection destination
-			destination := data.Target.Path
-			if destination == "/"+filepath.Base(destination) {
-				// Handle top-level directory targets
-				destination = "/"
-			}
-
-			// Inject into all the pods
-			for _, pod := range pods {
-				cpPodExecArgs := []string{"-n", data.Target.Namespace, "cp", sourceFile, pod + ":" + destination}
-
-				if data.Target.Container != "" {
-					// Append the container args if they are specified
-					cpPodExecArgs = append(cpPodExecArgs, "-c", data.Target.Container)
-				}
-
-				// Do the actual data injection
-				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
-				if err != nil {
-					message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
-					continue
-				} else {
-					// Leave a marker in the target container for pods to track the sync action
-					cpPodExecArgs[3] = injectionCompletionMarker
-					cpPodExecArgs[4] = pod + ":" + data.Target.Path
-					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", cpPodExecArgs...)
-					if err != nil {
-						message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
-					}
-				}
-			}
-
-			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(sourceFile)
-
-			// Return to stop the loop
-			return
-		}
 	}
 }

@@ -6,14 +6,14 @@ In this walkthrough we will be demonstrating how to build a Zarf package. In fac
 When creating a Zarf package, you will need to have internet connection out so that Zarf can fetch all the dependencies and resources necessary to build the package. If your package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine in order for Zarf to be able to fetch the resources.
 
 
-## Walkthrough Prequisites
+## Walkthrough Prerequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 2. Zarf binary installed on your $PATH: ([install instructions](../3-getting-started.md#installing-zarf))
 3. A copy of the injector's `zarf-registry` binary in the `build/` directory: ([build instructions](../3-getting-started.md#building-the-cli-from-scratch))
 
 
 ## Building the init-package
-Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/2-package/zarf_package_create.md). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+Creating zarf packages is a simple process that can be completed in a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_create.md). This command looks for a `zarf.yaml` file in the current directory and creates a package containing all the resources the file defines. More information about what a Zarf package is can be found on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down

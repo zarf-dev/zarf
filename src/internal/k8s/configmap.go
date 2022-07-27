@@ -65,7 +65,7 @@ func DeleteConfigmap(namespace, name string) error {
 
 // DeleteConfigMapsByLabel deletes a configmap by label(s)
 func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
-	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %v)", namespace, labels)
+	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %#v)", namespace, labels)
 	clientSet := getClientset()
 
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
