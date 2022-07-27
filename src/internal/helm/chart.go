@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -169,15 +170,12 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
-	// Use timestamp to help make a valid semver
-	now := time.Now()
-
 	// Generate a new chart
 	tmpChart := new(chart.Chart)
 	tmpChart.Metadata = new(chart.Metadata)
 	tmpChart.Metadata.Name = fmt.Sprintf("raw-%s", manifest.Name)
 	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry
-	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", now.Unix())
+	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
 
 	// Add the manifest files so helm does its thing

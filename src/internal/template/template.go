@@ -86,6 +86,11 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
 
+	// Include the data injection marker template if the component has data injections
+	if len(component.DataInjections) > 0 {
+		mappings["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
+	}
+
 	// Don't template component-specifric variables for every component
 	switch component.Name {
 	case "zarf-agent":
@@ -100,7 +105,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 
 	case "logging":
 		mappings["LOGGING_AUTH"] = values.secret.logging
-
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating

@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
@@ -20,7 +20,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
-	injectionCompletionMarker := filepath.Join(componentPath.dataInjections, ".zarf-sync-complete")
+	injectionCompletionMarker := filepath.Join(componentPath.dataInjections, config.GetDataInjectionMarker())
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		message.Errorf(err, "Unable to create the data injection completion marker")
 		return
@@ -31,78 +31,66 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 		tarCompressFlag = "z"
 	}
 
-	timeout := time.After(15 * time.Minute)
+	// The eternal loop because some data injections can take a very long time
 	for {
-		// delay check 2 seconds
-		time.Sleep(2 * time.Second)
-
 		message.Debugf("Attempting to inject data into %s", data.Target)
+		source := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
 
-		select {
+		// Wait until the pod we are injecting data into becomes available
+		pods := k8s.WaitForPodsAndContainers(data.Target, true)
+		if len(pods) < 1 {
+			continue
+		}
 
-		// on timeout abort
-		case <-timeout:
-			message.Warnf("data injection into target %s timed out\n", data.Target.Namespace)
-			return
+		// Inject into all the pods
+		for _, pod := range pods {
+			cpPodExec := fmt.Sprintf("tar c%s -C %s . | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
+				tarCompressFlag,
+				source,
+				data.Target.Namespace,
+				pod,
+				data.Target.Container,
+				tarCompressFlag,
+				data.Target.Path,
+			)
 
-		default:
-			source := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
-
-			// Wait until the pod we are injecting data into becomes available
-			pods := k8s.WaitForPodsAndContainers(data.Target, true)
-			if len(pods) < 1 {
+			// Do the actual data injection
+			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
+			if err != nil {
+				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				continue
-			}
-
-			// Inject into all the pods
-			for _, pod := range pods {
-				cpPodExec := fmt.Sprintf("tar c%s -C %s . | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
+			} else {
+				// Leave a marker in the target container for pods to track the sync action
+				cpPodExec := fmt.Sprintf("tar c%s -C %s %s | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
 					tarCompressFlag,
-					source,
+					componentPath.dataInjections,
+					config.GetDataInjectionMarker(),
 					data.Target.Namespace,
 					pod,
 					data.Target.Container,
 					tarCompressFlag,
 					data.Target.Path,
 				)
-
-				// Do the actual data injection
-				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
+				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 				if err != nil {
-					message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
-					continue
-				} else {
-					// Leave a marker in the target container for pods to track the sync action
-					cpPodExec := fmt.Sprintf("tar c%s -C %s .zarf-sync-complete | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
-						tarCompressFlag,
-						componentPath.dataInjections,
-						data.Target.Namespace,
-						pod,
-						data.Target.Container,
-						tarCompressFlag,
-						data.Target.Path,
-					)
-					_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
-					if err != nil {
-						message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
-					}
+					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 				}
 			}
-
-			// Do not look for a specific container after injection in case they are running an init container
-			podOnlyTarget := types.ZarfContainerTarget{
-				Namespace: data.Target.Namespace,
-				Selector:  data.Target.Selector,
-			}
-
-			// Block one final time to make sure at least one pod has come up and injected the data
-			_ = k8s.WaitForPodsAndContainers(podOnlyTarget, false)
-
-			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(source)
-
-			// Return to stop the loop
-			return
 		}
+
+		// Do not look for a specific container after injection in case they are running an init container
+		podOnlyTarget := types.ZarfContainerTarget{
+			Namespace: data.Target.Namespace,
+			Selector:  data.Target.Selector,
+		}
+
+		// Block one final time to make sure at least one pod has come up and injected the data
+		_ = k8s.WaitForPodsAndContainers(podOnlyTarget, false)
+
+		// Cleanup now to reduce disk pressure
+		_ = os.RemoveAll(source)
+
+		// Return to stop the loop
+		return
 	}
 }
