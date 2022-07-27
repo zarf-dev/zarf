@@ -21,7 +21,7 @@ spec:
             [
               "sh",
               "-c",
-              'while [ ! -f /test/.zarf-sync-complete ]; do echo "waiting for zarf data sync" && sleep 5; done; echo "we are done waiting!"',
+              'while [ ! -f /test/###ZARF_DATA_INJECTON_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
             ]
           resources:
             requests:
@@ -37,11 +37,7 @@ spec:
         - name: data-injection
           image: alpine:3.15
           command:
-            [
-              "/bin/sh",
-              "-ec",
-              "while :; do ls -lah /test ; sleep 2 ; done",
-            ]
+            ["/bin/sh", "-ec", "while :; do ls -lah /test ; sleep 2 ; done"]
           resources:
             requests:
               memory: "16Mi"
@@ -55,8 +51,8 @@ spec:
           readinessProbe:
             exec:
               command:
-              - cat
-              - /test/.zarf-sync-complete
+                - "cat"
+                - "/test/###ZARF_DATA_INJECTON_MARKER###"
             initialDelaySeconds: 1
             periodSeconds: 1
 
