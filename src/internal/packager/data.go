@@ -31,6 +31,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 		tarCompressFlag = "z"
 	}
 
+	iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
@@ -44,32 +45,38 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 
 		// Inject into all the pods
 		for _, pod := range pods {
-			cpPodExec := fmt.Sprintf("tar c%s -C %s . | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
-				tarCompressFlag,
+			kubectlExec := fmt.Sprintf("kubectl exec -i -n %s %s -c %s ", data.Target.Namespace, pod, data.Target.Container)
+			tarExec := fmt.Sprintf("tar c%s", tarCompressFlag)
+			untarExec := fmt.Sprintf("tar x%svf - -C %s", tarCompressFlag, data.Target.Path)
+
+			// Must create the target directory before trying to change to it for untar
+			mkdirExec := fmt.Sprintf("%s -- mkdir -p %s", kubectlExec, data.Target.Path)
+			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", mkdirExec)
+			if err != nil {
+				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
+				break iterator
+			}
+
+			cpPodExec := fmt.Sprintf("%s -C %s . | %s -- %s",
+				tarExec,
 				source,
-				data.Target.Namespace,
-				pod,
-				data.Target.Container,
-				tarCompressFlag,
-				data.Target.Path,
+				kubectlExec,
+				untarExec,
 			)
 
 			// Do the actual data injection
-			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
+			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 			if err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
-				continue
+				break iterator
 			} else {
 				// Leave a marker in the target container for pods to track the sync action
-				cpPodExec := fmt.Sprintf("tar c%s -C %s %s | kubectl exec -i -n %s %s -c %s -- tar x%svf - -C %s",
-					tarCompressFlag,
+				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
+					tarExec,
 					componentPath.dataInjections,
 					config.GetDataInjectionMarker(),
-					data.Target.Namespace,
-					pod,
-					data.Target.Container,
-					tarCompressFlag,
-					data.Target.Path,
+					kubectlExec,
+					untarExec,
 				)
 				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 				if err != nil {
