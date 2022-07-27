@@ -1130,6 +1130,8 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The namespace to target for data injection
+
 | Type | `string` |
 | ---- | -------- |
 
@@ -1145,6 +1147,8 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The K8s selector to target for data injection
+
 | Type | `string` |
 | ---- | -------- |
 
@@ -1152,11 +1156,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container</strong>
+<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 
 </summary>
 &nbsp;
 <blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The container to target for data injection
 
 | Type | `string` |
 | ---- | -------- |
@@ -1173,11 +1181,28 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The path to copy the data to in the container
+
 | Type | `string` |
 | ---- | -------- |
 
 </blockquote>
 </details>
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
+
+| Type | `boolean` |
+| ---- | --------- |
 
 </blockquote>
 </details>

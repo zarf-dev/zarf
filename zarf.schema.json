@@ -248,20 +248,25 @@
       "required": [
         "namespace",
         "selector",
+        "container",
         "path"
       ],
       "properties": {
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "description": "The namespace to target for data injection"
         },
         "selector": {
-          "type": "string"
+          "type": "string",
+          "description": "The K8s selector to target for data injection"
         },
         "container": {
-          "type": "string"
+          "type": "string",
+          "description": "The container to target for data injection"
         },
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "The path to copy the data to in the container"
         }
       },
       "additionalProperties": false,
@@ -279,6 +284,10 @@
         "target": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfContainerTarget"
+        },
+        "compress": {
+          "type": "boolean",
+          "description": "Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."
         }
       },
       "additionalProperties": false,

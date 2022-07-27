@@ -68,8 +68,22 @@ var (
 
 	SGetPublicKey string
 
+	// Variables set by the user
 	SetVariableMap map[string]string
+
+	// Timestamp of when the CLI was started
+	operationStartTime  = time.Now().Unix()
+	dataInjectionMarker = ".zarf-injection-%d"
 )
+
+// Timestamp of when the CLI was started
+func GetStartTime() int64 {
+	return operationStartTime
+}
+
+func GetDataInjectionMarker() string {
+	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
+}
 
 func IsZarfInitConfig() bool {
 	message.Debug("config.IsZarfInitConfig")

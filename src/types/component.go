@@ -100,16 +100,17 @@ type ZarfComponentScripts struct {
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
-	Namespace string `yaml:"namespace"`
-	Selector  string `yaml:"selector"`
-	Container string `yaml:"container,omitempty"`
-	Path      string `yaml:"path"`
+	Namespace string `yaml:"namespace" jsonschema:"description=The namespace to target for data injection"`
+	Selector  string `yaml:"selector" jsonschema:"description=The K8s selector to target for data injection"`
+	Container string `yaml:"container" jsonschema:"description=The container to target for data injection"`
+	Path      string `yaml:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
 // ZarfDataInjection is a data-injection definition
 type ZarfDataInjection struct {
-	Source string              `yaml:"source"`
-	Target ZarfContainerTarget `yaml:"target"`
+	Source   string              `yaml:"source"`
+	Target   ZarfContainerTarget `yaml:"target"`
+	Compress bool                `yaml:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
 // ZarfImport structure for including imported zarf components

@@ -86,7 +86,12 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
 
-	// Don't template component-specific variables for every component
+	// Include the data injection marker template if the component has data injections
+	if len(component.DataInjections) > 0 {
+		builtinMap["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
+	}
+
+	// Don't template component-specifric variables for every component
 	switch component.Name {
 	case "zarf-agent":
 		builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(values.agentTLS.Cert)
