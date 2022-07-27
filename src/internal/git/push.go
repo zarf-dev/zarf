@@ -37,6 +37,18 @@ func PushAllDirectories(localPath string) error {
 		if gitServerInfo.GitPort != 0 {
 			gitServerURL = fmt.Sprintf("%s:%d", gitServerInfo.GitAddress, gitServerInfo.GitPort)
 		}
+
+		// If this URL points to a resource within the cluster, create a tunnel to it
+		if strings.Contains(gitServerURL, "svc.cluster.local") {
+			tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL)
+			if err != nil {
+				return err
+			}
+
+			tunnel.Connect("", false)
+			defer tunnel.Close()
+			gitServerURL = fmt.Sprintf("http://%s", tunnel.Endpoint())
+		}
 	}
 
 	paths, err := utils.ListDirectories(localPath)
