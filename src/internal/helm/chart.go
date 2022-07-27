@@ -219,7 +219,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	// Bind the helm action
 	client := action.NewInstall(actionConfig)
 
-	// Let each chart run for 5 minutes
+	// Let each chart run for 15 minutes
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
@@ -250,7 +250,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	message.Debugf("helm.upgradeChart(%#v, %#v, %#v)", actionConfig, options, postRender)
 	client := action.NewUpgrade(actionConfig)
 
-	// Let each chart run for 5 minutes
+	// Let each chart run for 15 minutes
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)k3

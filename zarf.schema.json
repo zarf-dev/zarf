@@ -262,7 +262,7 @@
       "properties": {
         "namespace": {
           "type": "string",
-          "description": "The namespace to targer for data injection"
+          "description": "The namespace to target for data injection"
         },
         "selector": {
           "type": "string",

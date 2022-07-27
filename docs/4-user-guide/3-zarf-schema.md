@@ -1161,7 +1161,7 @@ must respect the following conditions
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The namespace to targer for data injection
+**Description:** The namespace to target for data injection
 
 | Type | `string` |
 | ---- | -------- |
