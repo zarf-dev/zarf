@@ -87,6 +87,33 @@ func PrintConnectTable() error {
 	return nil
 }
 
+// NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
+func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
+
+	// Remove the protocol from the URL
+	serviceURL = strings.TrimPrefix(serviceURL, "http://")
+	serviceURL = strings.TrimPrefix(serviceURL, "https://")
+
+	// Get the port from the URL
+	splitByPort := strings.Split(serviceURL, ":") // Split by the port indicator
+	remotePort, err := strconv.Atoi(splitByPort[1])
+	if err != nil {
+		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %#v", serviceURL, err)
+	}
+
+	// Get the rest of the information from the remaining parts of the URL
+	splitByResourceInfo := strings.Split(splitByPort[0], ".")
+	if len(splitByResourceInfo) != 5 {
+		return nil, fmt.Errorf("splitting the service URL by '.' returned a length other than 5. unable to confidently get resourceName, namespace, and resrouceType")
+	}
+	resourceName := splitByResourceInfo[0]
+	namespace := splitByResourceInfo[1]
+	resourceType := splitByResourceInfo[2]
+
+	return NewTunnel(namespace, resourceType, resourceName, 0, remotePort), nil
+}
+
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.

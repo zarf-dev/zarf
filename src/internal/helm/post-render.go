@@ -171,7 +171,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			// Generate the git server secret
 			gitServerSecret := k8s.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
 			gitServerSecret.StringData = map[string]string{
-				"username": config.ZarfGitReadUser,
+				"username": config.GetGitServerInfo().GitReadUsername,
 				"password": config.GetGitServerInfo().GitReadPassword,
 			}
 
