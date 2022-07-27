@@ -135,7 +135,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 						continue
 					}
 
-					// Check the status of regular containers for a runing match
+					// Check the status of regular containers for a running match
 					for _, container := range pod.Status.ContainerStatuses {
 						isRunning := container.State.Running != nil
 						if isRunning && container.Name == target.Container {
@@ -166,7 +166,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 		time.Sleep(3 * time.Second)
 	}
 
-	message.Warn("Pod lookup timeout exceeded")
+	message.Debug("Pod lookup timeout exceeded")
 
 	return []string{}
 }
