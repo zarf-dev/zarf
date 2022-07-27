@@ -24,7 +24,7 @@ jobs:
           ref: ${{ github.event.inputs.branchName }}
 
       - name: "Install cosign"
-        uses: sigstore/cosign-installer@v2.4.1
+        uses: sigstore/cosign-installer@v2.5.0
 
       - name: "Install Rust And Build"
         uses: gmiam/rust-musl-action@v1.1.1
