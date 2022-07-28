@@ -117,10 +117,9 @@ func preSeedRegistry(tempPath tempPaths) {
 		// The user has provided external git server info, just use what they gave!
 		state.GitServerInfo = config.InitOptions.GitServerInfo
 
-		if state.GitServerInfo.GitReadUsername == "" {
-			state.GitServerInfo.GitReadUsername = state.GitServerInfo.GitPushUsername
-			state.GitServerInfo.GitReadPassword = state.GitServerInfo.GitPushPassword
-		}
+		// For external clusters, the read-user is the same as the push-user
+		state.GitServerInfo.GitReadUsername = state.GitServerInfo.GitPushUsername
+		state.GitServerInfo.GitReadPassword = state.GitServerInfo.GitPushPassword
 	} else {
 		// Set the GitServerInfo for the internal Gitea server
 		state.GitServerInfo.GitAddress = "http://" + config.IPV4Localhost

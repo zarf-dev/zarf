@@ -119,9 +119,7 @@ func init() {
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitAddress, "git-url", "", "External git server url to use for this Zarf cluster")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushUsername, "git-user", "", "Username to connect to the external git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushUsername, "git-user", "", "Username to connect to the external git server. User must be able to create repositories via 'git push'")
 	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushPassword, "git-password", "", "Password to connect to the external git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitReadUsername, "git-read-user", "", "Username for a read-only user to the external git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitReadPassword, "git-read-password", "", "Password for a read-only user to the external git server")
 	initCmd.Flags().IntVar(&config.InitOptions.GitServerInfo.GitPort, "git-port", 0, "Port to connect to the external git server")
 }
