@@ -56,24 +56,27 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
+	containerRegistryInfo := config.GetContainerRegistryInfo()
+
+	// TODO @JPERRY: This is where I need to use the config.GetContainerRegistryInfo().RegistryURL
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, "127.0.0.1:31999")
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, "127.0.0.1:31999")
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, "127.0.0.1:31999")
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 

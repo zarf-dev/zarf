@@ -1,6 +1,9 @@
 package images
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -11,18 +14,35 @@ import (
 func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error {
 	message.Debugf("images.PushToZarfRegistry(%s, %s)", imageTarballPath, buildImageList)
 
-	// Establish a registry tunnel to send the images to the zarf registry
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfRegistry, false)
-	defer tunnel.Close()
+	registryUrl := ""
+	if config.GetContainerRegistryInfo().InternalRegistry {
+		// Establish a registry tunnel to send the images to the zarf registry
+		tunnel := k8s.NewZarfTunnel()
+		tunnel.Connect(k8s.ZarfRegistry, false)
+		defer tunnel.Close()
 
-	tunnelUrl := tunnel.Endpoint()
+		registryUrl = tunnel.Endpoint()
+	} else {
+		registryUrl = config.GetContainerRegistryInfo().RegistryURL
+
+		// TODO @JPERRY: Do the same thing I did for the git-url in `src/internal/git/push.go#42` (better yet break this out into a util func)
+		if strings.Contains(registryUrl, "svc.cluster.local") {
+			tunnel, err := k8s.NewTunnelFromServiceURL(registryUrl)
+			if err != nil {
+				return err
+			}
+
+			tunnel.Connect("", false)
+			defer tunnel.Close()
+			registryUrl = fmt.Sprintf("http://%s", tunnel.Endpoint())
+		}
+	}
 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush))
-	message.Debug(pushOptions)
+	pushOptions := config.GetCraneAuthOption(config.GetContainerRegistryInfo().RegistryPushUser, config.GetContainerRegistryInfo().RegistryPushPassword)
+	message.Debugf("crane pushOptions = %#v", pushOptions)
 
 	for _, src := range buildImageList {
 		spinner.Updatef("Updating image %s", src)
@@ -31,7 +51,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error 
 			return err
 		}
 
-		offlineName := utils.SwapHost(src, tunnelUrl)
+		offlineName := utils.SwapHost(src, registryUrl)
 		if err = crane.Push(img, offlineName, pushOptions); err != nil {
 			return err
 		}
