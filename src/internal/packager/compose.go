@@ -30,6 +30,10 @@ func ComposeComponents() {
 }
 
 // GetComposedComponent recursively retrieves a composed zarf component
+// --------------------------------------------------------------------
+// For composed components, we build the tree of components starting at the root and adding children as we go;
+// this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
+// where 1 component parent is made up of 0...n composite or leaf children.
 func GetComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
