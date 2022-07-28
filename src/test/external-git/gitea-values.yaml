@@ -1,0 +1,34 @@
+persistence:
+  storageClass: "standard" # 'standard' is for kind
+gitea:
+  admin:
+    username: "git-user"
+    password: "superSecurePassword"
+    email: "zarf@localhost"
+  config:
+    APP_NAME: "Gitops Service"
+    server:
+      DISABLE_SSH: true
+      OFFLINE_MODE: true
+    database:
+      DB_TYPE: sqlite3
+    security:
+      INSTALL_LOCK: true
+    service:
+      DISABLE_REGISTRATION: true
+    repository:
+      ENABLE_PUSH_CREATE_USER: true
+      FORCE_PRIVATE: true
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "2Gi"
+
+memcached:
+  enabled: false
+
+postgresql:
+  enabled: false
