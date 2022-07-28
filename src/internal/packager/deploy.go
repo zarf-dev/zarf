@@ -144,7 +144,7 @@ func Deploy() {
 		// otherwise, print the init config connection and passwords
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush), "zarf connect registry"},
+			{"     Registry", config.GetContainerRegistryInfo().RegistryPushUser, config.GetContainerRegistryInfo().RegistryPushPassword, "zarf connect registry"},
 		}
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
@@ -181,6 +181,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 
 	// Toggles for general deploy operations
 	componentPath := createComponentPaths(tempPath.components, component)
+	injectRegistry := isSeedRegistry && config.InitOptions.ContainerRegistryInfo.RegistryURL == ""
+	doSeedThings := config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent"
+
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
@@ -189,7 +192,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-
 	for _, script := range component.Scripts.Before {
 		loopScriptUntilSuccess(script, component.Scripts)
 	}
@@ -238,8 +240,8 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		spinner.Success()
 	}
 
-	if isSeedRegistry {
-		preSeedRegistry(tempPath)
+	if isSeedRegistry || doSeedThings {
+		preSeedRegistry(tempPath, injectRegistry)
 		valueTemplate = template.Generate()
 	}
 
@@ -261,7 +263,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		// Continue loading state data if it is valid
 		config.InitState(state)
 		valueTemplate = template.Generate()
-
 		if hasImages && state.Architecture != config.GetArch() {
 			// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 			spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initialized with the %s architecture",

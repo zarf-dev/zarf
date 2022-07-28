@@ -151,6 +151,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.remotePort = 5000
+		tunnel.urlSuffix = `/v2/_catalog`
 
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"
