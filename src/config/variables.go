@@ -61,7 +61,7 @@ func SetActiveVariables() error {
 		SetVariableMap[variable.Name] = variable.Default
 
 		// Variable is set to prompt the user
-		if variable.Prompt {
+		if variable.Prompt && !CommonOptions.Confirm {
 			// Prompt the user for the variable
 			val, err := promptVariable(variable.Name, variable.Default)
 
