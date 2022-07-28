@@ -64,8 +64,8 @@ func SetActiveVariables() error {
 
 		// Variable is set to prompt the user
 		if variable.Prompt {
-			// Confirm is set alongside prompt and the variable doesn't have a value
-			if CommonOptions.Confirm {
+			// Confirm is set alongside prompt and the variable doesn't have a value set yet
+			if CommonOptions.Confirm && variable.Default == nil {
 				return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", variable.Name)
 			}
 
