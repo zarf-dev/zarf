@@ -24,7 +24,7 @@ func FillActiveTemplate() error {
 
 	for key, value := range packageVariables {
 		if value == nil && !CommonOptions.Confirm {
-			setVal, err := promptVariable(key, nil)
+			setVal, err := promptVariable(key, "")
 
 			if err == nil {
 				packageVariables[key] = &setVal
@@ -57,18 +57,11 @@ func SetActiveVariables() error {
 			continue
 		}
 
-		// First set default if it exists (may be overridden by prompt)
-		if variable.Default != nil {
-			SetVariableMap[variable.Name] = *variable.Default
-		}
+		// First set default (may be overridden by prompt)
+		SetVariableMap[variable.Name] = variable.Default
 
 		// Variable is set to prompt the user
 		if variable.Prompt {
-			// Confirm is set alongside prompt and the variable doesn't have a value set yet
-			if CommonOptions.Confirm && variable.Default == nil {
-				return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", variable.Name)
-			}
-
 			// Prompt the user for the variable
 			val, err := promptVariable(variable.Name, variable.Default)
 
@@ -111,17 +104,14 @@ func InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	}
 }
 
-func promptVariable(varName string, varDefault *string) (string, error) {
+func promptVariable(varName string, varDefault string) (string, error) {
 	var value string
 
 	pterm.Println()
 
 	prompt := &survey.Input{
 		Message: "Please provide a value for '" + varName + "'",
-	}
-
-	if varDefault != nil {
-		prompt.Default = *varDefault
+		Default: varDefault,
 	}
 
 	if err := survey.AskOne(prompt, &value); err != nil {

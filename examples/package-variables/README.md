@@ -22,6 +22,8 @@ variables:
 
 > ⚠️ **NOTE:** *You shouldn't include the `###ZARF_VAR` and `###` or `###ZARF_CONST` and `###` at the beginning and end of the `name`*
 
+> ⚠️ **NOTE:** *When not specifying `default` or `prompt` Zarf will default to `default: ""` and `prompt: false`*
+
 For variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
 
 ```yaml

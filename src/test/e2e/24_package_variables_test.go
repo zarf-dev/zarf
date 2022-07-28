@@ -28,7 +28,7 @@ func TestPackageVariables(t *testing.T) {
 	// Verify the configmap was properly templated
 	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
 	// wolf should remain unset because it was not set during deploy
-	assert.Contains(t, string(kubectlOut), "wolf=###ZARF_VAR_WOLF###")
+	assert.Contains(t, string(kubectlOut), "wolf=")
 	// dog should take the default value
 	assert.Contains(t, string(kubectlOut), "dog=woof")
 	// cat should take the set value
