@@ -28,6 +28,8 @@ type ZarfInitOptions struct {
 
 	// Using a remote git server
 	GitServer GitServerInfo
+
+	ContainerRegistryInfo ContainerRegistryInfo
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package

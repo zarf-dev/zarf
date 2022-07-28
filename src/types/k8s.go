@@ -7,10 +7,12 @@ type ZarfState struct {
 	Architecture  string       `json:"architecture"`
 	StorageClass  string       `json:"storageClass"`
 	Secret        string       `json:"secret"`
-	NodePort      string       `json:"nodePort"`
+	NodePort      string       `json:"nodePort"` // TODO @JPERRY: I think the nodeport should go into ContainerRegistryInfo{} too
 	AgentTLS      GeneratedPKI `json:"agentTLS"`
 
 	GitServer GitServerInfo `json:"gitServer"`
+
+	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
 }
 
 type GitServerInfo struct {
@@ -21,6 +23,20 @@ type GitServerInfo struct {
 	ReadPassword   string `json:"gitReadPassword"`
 	Port           int    `json:"gitPort"`
 	InternalServer bool   `json:"internalServer"`
+}
+
+type ContainerRegistryInfo struct {
+	RegistryPushUser     string
+	RegistryPushPassword string
+
+	RegistryPullUser     string
+	RegistryPullPassword string
+
+	RegistrySecret string // TODO: @JPERRY figure out what this is doing..
+
+	RegistryURL string
+
+	InternalRegistry bool
 }
 
 type GeneratedPKI struct {

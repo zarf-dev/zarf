@@ -10,16 +10,19 @@ components:
     import:
       path: packages/distros/k3s
 
+  # This package just moves the injector & registries binaries
   - name: zarf-injector
     required: true
     import:
       path: packages/zarf-injector
 
+  # Creates the temporary seed-registry
   - name: zarf-seed-registry
     required: true
     import:
       path: packages/zarf-registry
 
+  # Creates the permanent registry
   - name: zarf-registry
     required: true
     import:
