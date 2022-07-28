@@ -52,18 +52,31 @@ func SetActiveVariables() error {
 	for _, variable := range active.Variables {
 		_, present := SetVariableMap[variable.Name]
 
-		if !present && variable.Prompt && !CommonOptions.Confirm {
+		// Variable is present, no need to continue checking
+		if present {
+			continue
+		}
+
+		// First set default if it exists (may be overridden by prompt)
+		if variable.Default != nil {
+			SetVariableMap[variable.Name] = *variable.Default
+		}
+
+		// Variable is set to prompt the user
+		if variable.Prompt {
+			// Confirm is set alongside prompt and the variable doesn't have a value
+			if CommonOptions.Confirm {
+				return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", variable.Name)
+			}
+
+			// Prompt the user for the variable
 			val, err := promptVariable(variable.Name, variable.Default)
 
-			if err == nil {
-				SetVariableMap[variable.Name] = val
-			} else {
+			if err != nil {
 				return err
 			}
-		} else if !present && variable.Default != nil {
-			SetVariableMap[variable.Name] = *variable.Default
-		} else if !present && variable.Prompt {
-			return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", variable.Name)
+
+			SetVariableMap[variable.Name] = val
 		}
 	}
 

@@ -116,5 +116,6 @@ type ZarfDataInjection struct {
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `yaml:"name,omitempty"`
-	Path          string `yaml:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
+	Path string `yaml:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
 }
