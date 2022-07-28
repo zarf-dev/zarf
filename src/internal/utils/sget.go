@@ -19,7 +19,7 @@ import (
 	sigs "github.com/sigstore/cosign/pkg/signature"
 )
 
-// Sget performs a cosign signature verification on a given image using the specified public key. 
+// Sget performs a cosign signature verification on a given image using the specified public key.
 func Sget(image, key string, out io.Writer, ctx context.Context) error {
 	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
 
@@ -68,7 +68,15 @@ func Sget(image, key string, out io.Writer, ctx context.Context) error {
 	// was performed so we don't need to use this fragile logic here.
 	fulcioVerified := (co.SigVerifier == nil)
 
-	co.RootCerts = fulcio.GetRoots()
+	co.RootCerts, err = fulcio.GetRoots()
+	if err != nil {
+		return fmt.Errorf("getting Fulcio roots: %w", err)
+	}
+
+	co.IntermediateCerts, err = fulcio.GetIntermediates()
+	if err != nil {
+		return fmt.Errorf("getting Fulcio intermediates: %w", err)
+	}
 
 	verifyMsg := fmt.Sprintf("%s cosign verified: ", image)
 
@@ -101,7 +109,9 @@ func Sget(image, key string, out io.Writer, ctx context.Context) error {
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
 			spinner.Debugf("Certificate subject: ", sigs.CertSubject(cert))
-			if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
+
+			ce := cosign.CertExtensions{Cert: cert}
+			if issuerURL := ce.GetIssuer(); issuerURL != "" {
 				spinner.Debugf("Certificate issuer URL: ", issuerURL)
 			}
 		}
