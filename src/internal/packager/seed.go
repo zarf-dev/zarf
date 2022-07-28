@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -12,7 +13,21 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func preSeedRegistry(tempPath tempPaths) {
+// TODO @JPERRY: lots of stuff is going to need to change here...
+
+/*
+	preSeedRegistry does:
+	 - waits for the cluster to be healthy
+	 - gets the cluster architecture to use later to compare against the arch of the init package
+	 - attempts to load an existing zarf secret (when would this ever be here if we're only running this on init?)
+	 - Gets the cluster arch to use later to set the `state.StorageClass`
+	 - hardcodes default state values ()
+	 - gets a list of the current namespaces in the cluster and adds a label so that `zarf-agent` will ignore that namespace
+	 - sets cli flag overrides to state values
+	 - runs the injection maddness ()
+	 - Saves the state..
+*/
+func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -119,9 +134,24 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
 
+	if config.InitOptions.ContainerRegistryInfo.RegistryURL == "" {
+		// TODO: @JPERRY I imagine there's a cleaner way to do the defaults..
+		state.ContainerRegistryInfo.RegistryPushUser = config.ZarfRegistryPushUser
+		state.ContainerRegistryInfo.RegistryPushPassword = utils.RandomString(48)
+		state.ContainerRegistryInfo.RegistryPullUser = config.ZarfRegistryPullUser
+		state.ContainerRegistryInfo.RegistryPullPassword = utils.RandomString(48)
+		state.ContainerRegistryInfo.RegistrySecret = utils.RandomString(48)
+		state.ContainerRegistryInfo.InternalRegistry = true
+		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%s", config.IPV4Localhost, state.NodePort)
+	} else {
+		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
+	}
+
 	spinner.Success()
 
-	runInjectionMadness(tempPath)
+	if injectRegistry {
+		runInjectionMadness(tempPath)
+	}
 
 	// Save the state back to K8s
 	if err := k8s.SaveZarfState(state); err != nil {

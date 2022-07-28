@@ -138,4 +138,10 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-user", "", "Username to connect to the external git server. User must be able to create repositories via 'git push'")
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-password", "", "Password to connect to the external git server")
 	initCmd.Flags().IntVar(&config.InitOptions.GitServer.Port, "git-port", 0, "Port to connect to the external git server")
+
+	// Flags for using an external container registry
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistryPushUser, "registry-push-user", "", "")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistryPushPassword, "registry-push-password", "", "")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistrySecret, "registry-secret", "", "")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistryURL, "registry-url", "", "")
 }

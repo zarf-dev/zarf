@@ -11,6 +11,8 @@ type ZarfState struct {
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
 	GitServer GitServerInfo `json:"gitServer"`
+
+	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
 }
 
 type DeployedPackage struct {
@@ -37,6 +39,20 @@ type GitServerInfo struct {
 	ReadPassword   string `json:"gitReadPassword"`
 	Port           int    `json:"gitPort"`
 	InternalServer bool   `json:"internalServer"`
+}
+
+type ContainerRegistryInfo struct {
+	RegistryPushUser     string
+	RegistryPushPassword string
+
+	RegistryPullUser     string
+	RegistryPullPassword string
+
+	RegistrySecret string // TODO: @JPERRY figure out what this is doing..
+
+	RegistryURL string
+
+	InternalRegistry bool
 }
 
 type GeneratedPKI struct {

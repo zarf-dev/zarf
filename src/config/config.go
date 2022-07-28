@@ -234,6 +234,11 @@ func GetGitServerInfo() types.GitServerInfo {
 	return state.GitServer
 }
 
+// GetContainerRegistryInfo returns the ContainerRegistryInfo for the docker registry Zarf is configured to use from the state
+func GetContainerRegistryInfo() types.ContainerRegistryInfo {
+	return state.ContainerRegistryInfo
+}
+
 // BuildConfig adds build information and writes the config to the given path
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%s)", path)
