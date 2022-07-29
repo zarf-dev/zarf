@@ -79,15 +79,18 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
-func ReplaceText(path string, old string, new string) {
-	input, err := ioutil.ReadFile(path)
+// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place
+func ReplaceTextTemplate(path string, mappings map[string]string) {
+	text, err := ioutil.ReadFile(path)
 	if err != nil {
 		message.Fatalf(err, "Unable to load %s", path)
 	}
 
-	output := bytes.Replace(input, []byte(old), []byte(new), -1)
+	for template, value := range mappings {
+		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
+	}
 
-	if err = ioutil.WriteFile(path, output, 0600); err != nil {
+	if err = ioutil.WriteFile(path, text, 0600); err != nil {
 		message.Fatalf(err, "Unable to update %s", path)
 	}
 }
