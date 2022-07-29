@@ -41,7 +41,7 @@ func PushAllDirectories(localPath string) error {
 		}
 
 		// If this URL points to a resource within the cluster, create a tunnel to it
-		if strings.Contains(gitServerURL, "svc.cluster.local") {
+		if strings.Contains(gitServerURL, "svc.cluster.local:") || strings.HasSuffix(gitServerURL, "svc.cluster.local") {
 			tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL)
 			if err != nil {
 				return err
