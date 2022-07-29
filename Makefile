@@ -65,6 +65,10 @@ build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli
 build-injector-registry:
 	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
 
+docs-and-schema:
+	go run main.go internal generate-cli-docs
+	.hooks/verify-zarf-schema.sh
+
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
 dev-agent-image:
