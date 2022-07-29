@@ -1,9 +1,5 @@
 # Contributor Guide
 
-:::caution Hard Hat Area
-This page is still being developed. More content will be added soon!
-:::
-
 First off, thanks so much for wanting to help out! :tada:
 
 The following is a set of guidelines for contributing to Zarf. These are mostly guidelines, not rules. Use your best judgement, and feel free to propose changes to this document in a pull request.
@@ -17,7 +13,9 @@ Specifically:
 - We do trunk-based development with short-lived feature branches that originate from the trunk, get merged to the trunk, and are deleted after the merge
 - We don't merge code into the trunk that isn't releasable
 - We perform automated testing on all changes before they get merged to the trunk
+- We squash feature branches on merge to keep the trunk pretty
 - We create immutable release artifacts
+- Every commit _must be signed_ by a core team member
 
 ### Developer Workflow
 
@@ -35,9 +33,9 @@ Here's what a typical "day in the life" of a Zarf developer might look like. Kee
 1. Create a Draft Pull Request as soon as you are able to, even if it is just 5 minutes after you started working on it. Around here we aren't afraid to show unfinished work. It helps us get feedback more quickly.
 1. :key: Create a Pull Request (or mark it Ready for Review if you've been working in a Draft PR).
 1. :key: Automated tests will begin based on the paths you have edited in your Pull Request.  More information on these tests can be found [here](https://docs.zarf.dev/docs/developer-guide/testing).
-1. Clearly announce any breaking changes that have been made.
+1. Clearly announce any breaking changes that have been made (include the [break-change](https://github.com/defenseunicorns/zarf/labels/breaking-change) label)
 1. :key: Get at least 1 peer-review approval.
-1. :key: Merge the PR into the trunk. We tend to prefer "Squash and Merge" but if your commits are on-point and you want to preserve them in the Git history of the trunk that's fine too.
+1. :key: A team member will perform the merge after approval
 1. Delete the branch
 1. Close the issue if it got fully resolved by your PR. *Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged.*
 
@@ -66,7 +64,7 @@ Our E2E tests can be found in the `/test` folder and follow the journey of someo
 
 ## Documentation
 
-In this section you'll find documentation on documentation! Pun absolutely intended :smile:
+PRs should also include any needed documentation updates.  The cobra CLI docs and JSON schema docs are updated via `make docs-and-schema`.
 
 ### Architecture Decision Records (ADR)
 
@@ -74,7 +72,7 @@ We've chosen to use ADRs to document architecturally significant decisions. We p
 
 - The criteria for when an ADR is needed is undefined. The team will decide when the team needs an ADR.
 - We will use the tool [adr-tools](https://github.com/npryce/adr-tools) to make it easier on ourselves to create and maintain ADRs.
-- We will keep ADRs in the repository under `docs/adr/NNNN-name-of-adr.md`. `adr-tools` is configured with a dotfile to automatically use this directory and format.
+- We will keep ADRs in the repository under `adr/NNNN-name-of-adr.md`. `adr-tools` is configured with a dotfile to automatically use this directory and format.
 
 ### How to use `adr-tools`
 
