@@ -25,6 +25,8 @@ var generateCLIDocs = &cobra.Command{
 	Use:   "generate-cli-docs",
 	Short: "Creates auto-generated markdown of all the commands for the CLI",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Don't include the datestamp in the output
+		rootCmd.DisableAutoGenTag = true
 		//Generate markdown of the Zarf command (and all of its child commands)
 		doc.GenMarkdownTree(rootCmd, "./docs/4-user-guide/1-the-zarf-cli/100-cli-commands")
 	},

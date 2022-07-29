@@ -64,7 +64,7 @@ Our E2E tests can be found in the `/test` folder and follow the journey of someo
 
 ## Documentation
 
-PRs should also include any needed documentation updates.  The cobra CLI docs and JSON schema docs are updated via `zarf internal generate-cli-docs` and `zarf internal config-schema > zarf.schema.json`.
+PRs should also include any needed documentation updates.  The cobra CLI docs and JSON schema docs are updated via `make docs-and-schema`.
 
 ### Architecture Decision Records (ADR)
 
