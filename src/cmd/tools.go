@@ -100,7 +100,11 @@ func init() {
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
 	cranePlatformOptions := config.GetCraneOptions()
-	registryCmd.AddCommand(craneCmd.NewCmdAuthLogin())
+
+	craneLogin := craneCmd.NewCmdAuthLogin()
+	craneLogin.Example = ""
+
+	registryCmd.AddCommand(craneLogin)
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))

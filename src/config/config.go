@@ -68,6 +68,9 @@ var (
 
 	SGetPublicKey string
 
+	// Variables set by the user
+	SetVariableMap map[string]string
+
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
@@ -219,6 +222,7 @@ func GetActiveConfig() types.ZarfPackage {
 	return active
 }
 
+// BuildConfig adds build information and writes the config to the given path
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()
