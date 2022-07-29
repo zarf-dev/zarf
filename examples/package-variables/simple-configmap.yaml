@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simple-configmap
+  namespace: zarf
+data:
+  templateme.properties: |
+    horse=neigh
+    wolf=###ZARF_VAR_WOLF###
+    dingo=###ZARF_CONST_DINGO###
+    dog=###ZARF_VAR_DOG###
+    cat=###ZARF_VAR_CAT###
+    fox=###ZARF_VAR_FOX###
+    cow=moo
+    zebra=###ZARF_VAR_ZEBRA###
