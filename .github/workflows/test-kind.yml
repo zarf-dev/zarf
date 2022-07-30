@@ -28,9 +28,6 @@ jobs:
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
 
-      - name: "Make Packages"
-        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:${{ github.event.inputs.versionTag }}
-
       - name: "Set up Docker Buildx"
         id: buildx
         uses: docker/setup-buildx-action@v2
@@ -46,6 +43,9 @@ jobs:
 
       - name: "Build and Publish the Image"
         run: docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:${{ github.event.inputs.versionTag }} .
+
+      - name: "Make Packages"
+        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:${{ github.event.inputs.versionTag }}
 
       - name: "Run Tests"
         # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster
