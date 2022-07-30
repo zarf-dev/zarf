@@ -29,7 +29,23 @@ jobs:
         run: make build-cli-linux-amd ARCH=amd64
 
       - name: "Make Packages"
-        run: make init-package build-examples ARCH=amd64
+        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:${{ github.event.inputs.versionTag }}
+
+      - name: "Set up Docker Buildx"
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: "Login to Docker Hub"
+        uses: docker/login-action@v2
+        with:
+          username: zarfdev
+          password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
+
+      - name: "Copy binaries for packaging"
+        run: cp build/zarf build/zarf-linux-amd64
+
+      - name: "Build and Publish the Image"
+        run: docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:${{ github.event.inputs.versionTag }} .
 
       - name: "Run Tests"
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
