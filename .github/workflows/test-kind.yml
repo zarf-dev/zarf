@@ -14,35 +14,34 @@ jobs:
   validate:
     runs-on: self-hosted
     steps:
-      - name: "Install GoLang"
+      - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
         with:
           go-version: 1.18.x
 
+      - name: "Dependency: Install Docker Buildx"
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: "Dependency: Kind Cluster Init"
+        run: kind delete cluster && kind create cluster
+
       - name: "Checkout Repo"
         uses: actions/checkout@v3
-
-      - name: "Kind Cluster Init"
-        run: kind delete cluster && kind create cluster
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
 
-      - name: "Set up Docker Buildx"
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: "Login to Docker Hub"
+      - name: "Zarf Agent: Login to Docker Hub"
         uses: docker/login-action@v2
         with:
           username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
-      - name: "Copy binaries for packaging"
-        run: cp build/zarf build/zarf-linux-amd64
-
-      - name: "Build and Publish the Image"
-        run: docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .
+      - name: "Zarf Agent: Build and Publish the Image"
+        run: |
+          cp build/zarf build/zarf-linux-amd64
+          docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .
 
       - name: "Make Packages"
         run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
