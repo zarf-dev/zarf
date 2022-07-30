@@ -39,10 +39,10 @@ jobs:
         run: cp build/zarf build/zarf-linux-amd64
 
       - name: "Build and Publish the Image"
-        run: docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:${{ github.event.inputs.versionTag }} .
+        run: docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .
 
       - name: "Make Packages"
-        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:${{ github.event.inputs.versionTag }}
+        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
 
       - name: "Run Tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
