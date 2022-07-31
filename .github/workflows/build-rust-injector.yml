@@ -19,7 +19,7 @@ jobs:
         uses: sigstore/cosign-installer@v2.5.0
 
       - name: "Dependency: Setup rust toolchain"
-      - run: |
+        run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
           source "$HOME/.cargo/env"
 
