@@ -1,4 +1,4 @@
-name: Build and Publish Zarf Injector Stage I
+name: Publish Injector Stage I
 
 on:
   workflow_dispatch:
@@ -20,8 +20,8 @@ jobs:
 
       - name: "Dependency: Setup rust toolchain"
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: "Dependency: Setup musl for x86_64"
         run: |
