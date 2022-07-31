@@ -23,12 +23,6 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: "Dependency: Setup musl for aarch64"
-        run: |
-          rustup target add aarch64-unknown-linux-musl
-          curl https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz
-          echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
-
       - name: "Checkout Repo"
         uses: actions/checkout@v3
         with:
@@ -43,6 +37,9 @@ jobs:
       - name: "Build Rust Binary for aarch64"
         working-directory: src/injector/stage1
         run: |
+          rustup target add aarch64-unknown-linux-musl
+          curl https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz
+          export PATH="$PWD/aarch64-linux-musl-cross/bin:$PATH"
           cargo build --target aarch64-unknown-linux-musl --release
           aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
 
