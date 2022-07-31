@@ -13,7 +13,7 @@ on:
 
 jobs:
   build-injector:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: "Dependency: Install cosign"
         uses: sigstore/cosign-installer@v2.5.0
@@ -22,12 +22,6 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: "Dependency: Setup musl for x86_64"
-        run: |
-          rustup target add x86_64-unknown-linux-musl
-          curl https://musl.cc/x86_64-linux-musl-cross.tgz | tar -xz
-          echo "$PWD/x86_64-linux-musl-cross/bin" >> $GITHUB_PATH
 
       - name: "Dependency: Setup musl for aarch64"
         run: |
@@ -41,14 +35,16 @@ jobs:
           ref: ${{ github.event.inputs.branchName }}
 
       - name: "Build Rust Binary for x86_64"
+        working-directory: src/injector/stage1
         run: |
-          cargo build --target x86_64-unknown-linux-musl --release --manifest-path src/injector/stage1/Cargo.toml
-          x86_64-linux-musl-strip src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector
+          cargo build --target x86_64-unknown-linux-musl --release
+          strip target/x86_64-unknown-linux-musl/release/zarf-injector
 
       - name: "Build Rust Binary for aarch64"
+        working-directory: src/injector/stage1
         run: |
-          cargo build --target aarch64-unknown-linux-musl --release --manifest-path src/injector/stage1/Cargo.toml
-          aarch64-linux-musl-strip src/injector/stage1/target/aarch64-unknown-linux-musl/release/zarf-injector
+          cargo build --target aarch64-unknown-linux-musl --release
+          aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -57,9 +53,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: "Upload Binaries To DockerHub"
+        working-directory: src/injector/stage1/target
         run: |
-          cosign upload blob -f src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:amd64-${{ github.event.inputs.versionTag }}
-          cosign upload blob -f src/injector/stage1/target/aarch64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:arm64-${{ github.event.inputs.versionTag }}
+          cosign upload blob -f x86_64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:amd64-${{ github.event.inputs.versionTag }}
+          cosign upload blob -f aarch64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:arm64-${{ github.event.inputs.versionTag }}
 
       - name: "Sign the binaries"
         run: |
