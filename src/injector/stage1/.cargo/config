@@ -1,0 +1,12 @@
+# Due to an issue with linking when cross-compiling, specify the
+# linker and archiver for cross-compiled targets.
+#
+# More information: https://github.com/rust-lang/cargo/issues/4133
+
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-ld"
+ar = "x86_64-linux-musl-ar"
+
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-musl-ld"
+ar = "aarch64-linux-musl-ar"
