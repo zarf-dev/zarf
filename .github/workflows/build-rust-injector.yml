@@ -43,7 +43,7 @@ jobs:
       - name: "Build Rust Binary for x86_64"
         run: |
           cargo build --target x86_64-unknown-linux-musl --release --manifest-path src/injector/stage1/Cargo.toml
-          aarch64-linux-musl-strip src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector
+          x86_64-linux-musl-strip src/injector/stage1/target/x86_64-unknown-linux-musl/release/zarf-injector
 
       - name: "Build Rust Binary for aarch64"
         run: |
