@@ -10,6 +10,11 @@ on:
       - "adr/**"
       - "docs/**"
 
+# Abort prior jobs in the same workflow / PR
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: self-hosted

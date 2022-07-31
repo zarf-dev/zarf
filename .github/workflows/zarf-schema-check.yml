@@ -5,6 +5,11 @@ on:
       - "src/types/**"
       - "zarf.schema.json"
 
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -28,10 +33,10 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: "Backup Repo Schema Version"
-        run: 'cp zarf.schema.json zarf.schema.json.bak'
+        run: "cp zarf.schema.json zarf.schema.json.bak"
 
       - name: "Regenerate Schema"
-        run: 'go run main.go internal config-schema > zarf.schema.json'
+        run: "go run main.go internal config-schema > zarf.schema.json"
 
       - name: "Compare Schemas"
-        run: 'cmp -s zarf.schema.json zarf.schema.json.bak'
+        run: "cmp -s zarf.schema.json zarf.schema.json.bak"
