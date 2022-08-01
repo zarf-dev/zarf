@@ -35,7 +35,6 @@ The `make build-cli` command builds a binary for each combinations of OS and arc
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
-- `make build-injector-registry`
 :::
 
 #### Breaking Down Whats Happening

@@ -19,10 +19,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: linux
-        goarch: arm64
-
 
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
