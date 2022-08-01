@@ -46,24 +46,27 @@ destroy:
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-build-cli-linux-amd: build-injector-registry
+build-cli-linux-amd: build-injector-registry-amd
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry
+build-cli-linux-arm: build-injector-registry-arm
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry
+build-cli-mac-intel: build-injector-registry-amd
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry
+build-cli-mac-apple: build-injector-registry-arm
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
 
-build-injector-registry:
-	cd src/injector/stage2 && $(MAKE) build-bootstrap-registry
+build-injector-registry-amd:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
+
+build-injector-registry-arm:
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
 docs-and-schema:
 	go run main.go internal generate-cli-docs
