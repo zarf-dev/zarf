@@ -2,16 +2,21 @@ name: docs
 on:
   pull_request:
     paths:
-      - '**.md'
-      - '**.jpg'
-      - '**.png'
-      - '**.gif'
-      - '**.svg'
-      - 'adr/**'
-      - 'docs/**'
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Not required, non-code changes only." '      
+      - run: 'echo "Not required, non-code changes only." '
