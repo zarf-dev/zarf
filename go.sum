@@ -3631,6 +3631,8 @@ sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2/go.mod h1:B+TnT182UBxE84DiCz
 sigs.k8s.io/kustomize/api v0.11.4/go.mod h1:k+8RsqYbgpkIrJ4p9jcdPqe8DprLxFUUO0yNOq8C+xI=
 sigs.k8s.io/kustomize/api v0.11.5 h1:vLDp++YAX7iy2y2CVPJNy9pk9CY8XaUKgHkjbVtnWag=
 sigs.k8s.io/kustomize/api v0.11.5/go.mod h1:2UDpxS6AonWXow2ZbySd4AjUxmdXLeTlvGBC46uSiq8=
+sigs.k8s.io/kustomize/api v0.12.0 h1:9kDUe94bgFaTJwPaHC3mdlcw/PfWupSKov1iGcKSlSw=
+sigs.k8s.io/kustomize/api v0.12.0/go.mod h1:x/VlfVNU8ey7rqGuWFKJH2mx4zmAgcjNLSLIwqLZKmQ=
 sigs.k8s.io/kustomize/cmd/config v0.10.6/go.mod h1:/S4A4nUANUa4bZJ/Edt7ZQTyKOY9WCER0uBS1SW2Rco=
 sigs.k8s.io/kustomize/kustomize/v4 v4.5.4/go.mod h1:Zo/Xc5FKD6sHl0lilbrieeGeZHVYCA4BzxeAaLI05Bg=
 sigs.k8s.io/kustomize/kyaml v0.13.6/go.mod h1:yHP031rn1QX1lr/Xd934Ri/xdVNG8BE2ECa78Ht/kEg=
