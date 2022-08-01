@@ -35,7 +35,7 @@ jobs:
       - name: "Zarf Agent: Build and Publish the Image"
         run: |
           cp build/zarf build/zarf-linux-amd64 && cp build/zarf-arm build/zarf-linux-arm64
-          docker buildx build --push linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:$GITHUB_REF_NAME .
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:$GITHUB_REF_NAME .
 
       - name: "Zarf Agent: Sign the Image"
         run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME defenseunicorns/zarf-agent:$GITHUB_REF_NAME
