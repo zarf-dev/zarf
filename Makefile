@@ -116,7 +116,7 @@ dev-agent-image:
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	$(ZARF_BIN) package create -o build -a $(ARCH) ---set AGENT_IMAGE=$(AGENT_IMAGE) -confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
 ci-release: init-package ## Create the init package
 
