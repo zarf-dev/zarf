@@ -93,7 +93,6 @@ func runInjectionMadness(tempPath tempPaths) {
 		message.Debug(pod, err)
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		message.Note("@JPERRY waiting for a seed image to be present..")
 		if err == nil && hasSeedImages(spinner) {
 			return
 		}
