@@ -118,8 +118,8 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
 
 	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitAddress, "git-url", "", "External git server url to use for this Zarf cluster")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushUsername, "git-user", "", "Username to connect to the external git server. User must be able to create repositories via 'git push'")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServerInfo.GitPushPassword, "git-password", "", "Password to connect to the external git server")
-	initCmd.Flags().IntVar(&config.InitOptions.GitServerInfo.GitPort, "git-port", 0, "Port to connect to the external git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-user", "", "Username to connect to the external git server. User must be able to create repositories via 'git push'")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-password", "", "Password to connect to the external git server")
+	initCmd.Flags().IntVar(&config.InitOptions.GitServer.Port, "git-port", 0, "Port to connect to the external git server")
 }

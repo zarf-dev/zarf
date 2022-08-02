@@ -13,7 +13,7 @@ type ZarfDeployOptions struct {
 	Components  string `json:"components"`
 	SGetKeyPath string `json:"sGetKeyPath"`
 
-	GitServerInfo GitServerInfo
+	GitServer GitServerInfo
 }
 
 // Zarf InitOptions tracks the user-defined options during cluster initialization
@@ -25,7 +25,7 @@ type ZarfInitOptions struct {
 	NodePort      string `json:"nodePort"`
 
 	// Using a remote git server
-	GitServerInfo GitServerInfo
+	GitServer GitServerInfo
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package

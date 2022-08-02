@@ -29,12 +29,12 @@ func TestExternalDeploy(t *testing.T) {
 
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--git-user", "git-user", "--git-password", "superSecurePassword", "--git-url", "http://gitea-http.git-server.svc.cluster.local:3000", "--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "zarf", initArgs...)
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", initArgs...)
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
 	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "zarf", deployArgs...)
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", deployArgs...)
 	require.NoError(t, err, "unable to deploy flux example package")
 
 	// Verify flux was able to pulll from the 'external' registry
