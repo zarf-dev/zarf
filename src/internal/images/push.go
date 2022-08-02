@@ -1,7 +1,6 @@
 package images
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -34,7 +33,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error 
 
 			tunnel.Connect("", false)
 			defer tunnel.Close()
-			registryUrl = fmt.Sprintf("http://%s", tunnel.Endpoint())
+			registryUrl = tunnel.Endpoint() // TODO: @JEPRRY pre-pending "http://" will break this.. Try to understand why..
 		}
 	}
 
