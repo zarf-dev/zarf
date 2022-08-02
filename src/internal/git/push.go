@@ -19,36 +19,23 @@ const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
 func PushAllDirectories(localPath string) error {
 	gitServerInfo := config.GetGitServerInfo()
-	gitServerURL := ""
+	gitServerURL := gitServerInfo.Address
 
-	if gitServerInfo.InternalServer {
-		// This is an internal gitea server so we'll use what we normally do..
-		// Establish a git tunnel to the internal gitea pod to send the repos
-		tunnel := k8s.NewZarfTunnel()
-		tunnel.Connect(k8s.ZarfGit, false)
+	// Add a port to the URL if it was provided
+	if gitServerInfo.Port != 0 {
+		gitServerURL = fmt.Sprintf("%s:%d", gitServerInfo.Address, gitServerInfo.Port)
+	}
+
+	// If this URL points to a resource within the cluster, create a tunnel to it
+	if strings.Contains(gitServerURL, "svc.cluster.local:") || strings.HasSuffix(gitServerURL, "svc.cluster.local") {
+		tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL)
+		if err != nil {
+			return err
+		}
+
+		tunnel.Connect("", false)
 		defer tunnel.Close()
-
 		gitServerURL = fmt.Sprintf("http://%s", tunnel.Endpoint())
-	} else {
-		// This is an external git server so we'll use whatever we were provided with
-		gitServerURL = gitServerInfo.GitAddress
-
-		// Add a port to the URL if it was provided
-		if gitServerInfo.GitPort != 0 {
-			gitServerURL = fmt.Sprintf("%s:%d", gitServerInfo.GitAddress, gitServerInfo.GitPort)
-		}
-
-		// If this URL points to a resource within the cluster, create a tunnel to it
-		if strings.Contains(gitServerURL, "svc.cluster.local:") || strings.HasSuffix(gitServerURL, "svc.cluster.local") {
-			tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL)
-			if err != nil {
-				return err
-			}
-
-			tunnel.Connect("", false)
-			defer tunnel.Close()
-			gitServerURL = fmt.Sprintf("http://%s", tunnel.Endpoint())
-		}
 	}
 
 	paths, err := utils.ListDirectories(localPath)
@@ -64,7 +51,7 @@ func PushAllDirectories(localPath string) error {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
 
-		repo, err := prepRepoForPush(path, gitServerURL, gitServerInfo.GitPushUsername)
+		repo, err := prepRepoForPush(path, gitServerURL, gitServerInfo.PushUsername)
 		if err != nil {
 			message.Warnf("error when preping the repo for push.. %v", err)
 			return err
@@ -123,8 +110,8 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 func push(repo *git.Repository, localPath string, spinner *message.Spinner) error {
 
 	gitCred := http.BasicAuth{
-		Username: config.GetState().GitServerInfo.GitPushUsername,
-		Password: config.GetState().GitServerInfo.GitPushPassword,
+		Username: config.GetState().GitServer.PushUsername,
+		Password: config.GetState().GitServer.PushPassword,
 	}
 
 	// Since we are pushing HEAD:refs/heads/master on deployment, leaving

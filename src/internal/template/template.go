@@ -49,8 +49,8 @@ func Generate() Values {
 	generated.secret.registryPull = config.GetSecret(config.StateRegistryPull)
 	generated.secret.registrySecret = config.GetSecret(config.StateRegistrySecret)
 
-	generated.secret.gitPush = config.GetState().GitServerInfo.GitPushPassword
-	generated.secret.gitPull = config.GetState().GitServerInfo.GitReadPassword
+	generated.secret.gitPush = config.GetState().GitServer.PushPassword
+	generated.secret.gitPull = config.GetState().GitServer.ReadPassword
 
 	generated.secret.logging = config.GetSecret(config.StateLogging)
 

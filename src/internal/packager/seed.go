@@ -113,22 +113,22 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.StorageClass = config.InitOptions.StorageClass
 	}
 
-	if config.InitOptions.GitServerInfo.GitAddress != "" {
+	if config.InitOptions.GitServer.Address != "" {
 		// The user has provided external git server info, just use what they gave!
-		state.GitServerInfo = config.InitOptions.GitServerInfo
+		state.GitServer = config.InitOptions.GitServer
 
 		// For external clusters, the read-user is the same as the push-user
-		state.GitServerInfo.GitReadUsername = state.GitServerInfo.GitPushUsername
-		state.GitServerInfo.GitReadPassword = state.GitServerInfo.GitPushPassword
+		state.GitServer.ReadUsername = state.GitServer.PushUsername
+		state.GitServer.ReadPassword = state.GitServer.PushPassword
 	} else {
 		// Set the GitServerInfo for the internal Gitea server
-		state.GitServerInfo.GitAddress = "http://" + config.IPV4Localhost
-		state.GitServerInfo.GitPort = 3000
-		state.GitServerInfo.GitPushUsername = config.ZarfGitPushUser
-		state.GitServerInfo.GitPushPassword = utils.RandomString(24)
-		state.GitServerInfo.GitReadUsername = config.ZarfGitReadUser
-		state.GitServerInfo.GitReadPassword = utils.RandomString(24)
-		state.GitServerInfo.InternalServer = true
+		state.GitServer.Address = config.ZarfInClusterGitServiceURL
+		state.GitServer.Port = config.ZarfInClusterGitServicePort
+		state.GitServer.PushUsername = config.ZarfGitPushUser
+		state.GitServer.PushPassword = utils.RandomString(24)
+		state.GitServer.ReadUsername = config.ZarfGitReadUser
+		state.GitServer.ReadPassword = utils.RandomString(24)
+		state.GitServer.InternalServer = true
 	}
 
 	spinner.Success()
