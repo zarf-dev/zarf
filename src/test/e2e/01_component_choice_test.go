@@ -31,19 +31,16 @@ func TestComponentChoice(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the file was created
-	expectedFile := firstFile
-	require.FileExists(t, expectedFile)
+	require.FileExists(t, firstFile)
 	// Verify the second choice file was not created
-	expectedFile = secondFile
-	require.NoFileExists(t, expectedFile)
+	require.NoFileExists(t, secondFile)
 
 	// Deploy using default choice
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the file was created
-	expectedFile = secondFile
-	require.FileExists(t, expectedFile)
+	require.FileExists(t, secondFile)
 
 	e2e.cleanFiles(firstFile, secondFile)
 }
