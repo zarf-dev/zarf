@@ -4,22 +4,14 @@ on:
     types:
       - opened
 
-# map fields with customized labels
-env:
-  todo: New Requests
-
 jobs:
-  issue_opened:
-    name: issue_opened
+  add-to-project:
+    name: Add issue to project
     runs-on: ubuntu-latest
     if: github.event_name == 'issues' && github.event.action == 'opened'
     steps:
-      - name: Move issue to ${{ env.todo }}
-        uses: leonsteinhaeuser/project-beta-automations@v1.3.0
+      - name: Move issue to Zarf Project
+        uses: actions/add-to-project@v0.3.0
         with:
-          gh_token: ${{ secrets. ZARF_ORG_PROJECT_TOKEN }}
-          # user: sample-user
-          organization: defenseunicorns
-          project_id: 1
-          resource_node_id: ${{ github.event.issue.node_id }}
-          status_value: ${{ env.todo }} # Target status
+          project-url: https://github.com/orgs/defenseunicorns/projects/1
+          github-token: ${{ secrets. ZARF_ORG_PROJECT_TOKEN }}
