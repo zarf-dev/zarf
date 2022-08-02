@@ -57,8 +57,8 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 
 	// Get the repo as the readonly user
 	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().GitPushUsername, repoName), nil)
-	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().GitReadPassword)
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
+	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().ReadPassword)
 	assert.NoError(t, err)
 
 	// Make sure the only permissions are pull (read)

@@ -45,7 +45,8 @@ const (
 
 	ZarfYAML = "zarf.yaml"
 
-	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterGitServiceURL  = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterGitServicePort = 3000
 )
 
 var (
@@ -229,7 +230,7 @@ func GetActiveConfig() types.ZarfPackage {
 
 // GetGitServerInfo returns the GitServerInfo for the git server Zarf is configured to use from the state
 func GetGitServerInfo() types.GitServerInfo {
-	return state.GitServerInfo
+	return state.GitServer
 }
 
 // BuildConfig adds build information and writes the config to the given path

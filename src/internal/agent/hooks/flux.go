@@ -41,16 +41,10 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 		return nil, fmt.Errorf("failed to load zarf state from file: %v", err)
 	}
 
-	// Default to the InCluster gitURL
-	gitServerURL := config.ZarfInClusterGitServiceURL
-
-	// Check if we initialized with an external server
-	if !zarfState.GitServerInfo.InternalServer {
-		gitServerURL = zarfState.GitServerInfo.GitAddress
-
-		if zarfState.GitServerInfo.GitPort != 0 {
-			gitServerURL += fmt.Sprintf(":%d", zarfState.GitServerInfo.GitPort)
-		}
+	// Form the gitServerURL from the state
+	gitServerURL := zarfState.GitServer.Address
+	if zarfState.GitServer.Port != 0 {
+		gitServerURL += fmt.Sprintf(":%d", zarfState.GitServer.Port)
 	}
 
 	message.Debugf("Using the gitServerURL of (%s) to mutate the flux repository", gitServerURL)
@@ -63,7 +57,7 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	message.Infof("original URL of the gitRepo: %#v", gitRepo.Spec.URL)
 
-	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServerInfo.GitPushUsername)
+	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServer.PushUsername)
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", replacedURL))
 
 	// If a prior secret exists, replace it

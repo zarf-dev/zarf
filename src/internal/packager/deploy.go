@@ -154,8 +154,8 @@ func Deploy() {
 			// Show message if including git-server
 			if component.Name == "git-server" {
 				loginTable = append(loginTable, pterm.TableData{
-					{"     Git", config.ZarfGitPushUser, config.GetState().GitServerInfo.GitPushPassword, "zarf connect git"},
-					{"     Git (read-only)", config.ZarfGitReadUser, config.GetState().GitServerInfo.GitReadPassword, "zarf connect git"},
+					{"     Git", config.GetGitServerInfo().PushUsername, config.GetState().GitServer.PushPassword, "zarf connect git"},
+					{"     Git (read-only)", config.GetGitServerInfo().ReadUsername, config.GetState().GitServer.ReadPassword, "zarf connect git"},
 				}...)
 			}
 		}

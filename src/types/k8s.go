@@ -10,7 +10,7 @@ type ZarfState struct {
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServerInfo GitServerInfo `json:"gitServerInfo"`
+	GitServer GitServerInfo `json:"gitServerInfo"`
 }
 
 type DeployedPackage struct {
@@ -33,13 +33,13 @@ type InstalledCharts struct {
 
 // TODO: Should the password for the GitServerINfo be a secret/encoded?
 type GitServerInfo struct {
-	GitAddress      string `json:"gitAddress"`
-	GitPushUsername string `json:"gitPushUsername"`
-	GitPushPassword string `json:"gitPushPassword"`
-	GitReadUsername string `json:"gitReadUsername"`
-	GitReadPassword string `json:"gitReadPassword"`
-	GitPort         int    `json:"gitPort"`
-	InternalServer  bool   `json:"internalServer"`
+	Address        string `json:"gitAddress"`
+	PushUsername   string `json:"gitPushUsername"`
+	PushPassword   string `json:"gitPushPassword"`
+	ReadUsername   string `json:"gitReadUsername"`
+	ReadPassword   string `json:"gitReadPassword"`
+	Port           int    `json:"gitPort"`
+	InternalServer bool   `json:"internalServer"`
 }
 
 type GeneratedPKI struct {
