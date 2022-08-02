@@ -16,7 +16,7 @@ type ZarfDeployOptions struct {
 	// Zarf init is installing the k3s component
 	ApplianceMode bool
 
-	GitServerInfo GitServerInfo
+	GitServer GitServerInfo
 }
 
 // Zarf InitOptions tracks the user-defined options during cluster initialization
@@ -27,7 +27,7 @@ type ZarfInitOptions struct {
 	NodePort     string
 
 	// Using a remote git server
-	GitServerInfo GitServerInfo
+	GitServer GitServerInfo
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package
