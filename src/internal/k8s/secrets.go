@@ -72,7 +72,9 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	secretDockerConfig := GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Auth field must be username:password and base64 encoded
-	credential := config.GetContainerRegistryInfo().RegistryPullPassword
+
+	// credential := config.GetContainerRegistryInfo().RegistryPullPassword
+	credential := LoadZarfState().ContainerRegistryInfo.RegistryPullPassword
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
