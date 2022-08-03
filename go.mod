@@ -30,8 +30,8 @@ require (
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
 	k8s.io/klog/v2 v2.70.1
-	sigs.k8s.io/kustomize/api v0.12.0
-	sigs.k8s.io/kustomize/kyaml v0.13.8
+	sigs.k8s.io/kustomize/api v0.12.1
+	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
 
