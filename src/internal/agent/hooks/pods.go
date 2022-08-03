@@ -62,21 +62,21 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.RegistryURL)
+		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 

@@ -59,11 +59,11 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	// Auth field must be username:password and base64 encoded
 
 	// credential := config.GetContainerRegistryInfo().RegistryPullPassword
-	credential := LoadZarfState().ContainerRegistryInfo.RegistryPullPassword
+	credential := LoadZarfState().ContainerRegistryInfo.PullPassword
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
-	fieldValue := config.GetContainerRegistryInfo().RegistryPullUser + ":" + credential
+	fieldValue := config.GetContainerRegistryInfo().PullUser + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := config.GetRegistry()

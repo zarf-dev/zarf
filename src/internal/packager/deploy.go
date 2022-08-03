@@ -121,7 +121,7 @@ func Deploy() {
 		// otherwise, print the init config connection and passwords
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", config.GetContainerRegistryInfo().RegistryPushUser, config.GetContainerRegistryInfo().RegistryPushPassword, "zarf connect registry"},
+			{"     Registry", config.GetContainerRegistryInfo().PushUser, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"},
 		}
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
@@ -147,7 +147,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
 	componentPath := createComponentPaths(tempPath.components, component)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
-	injectRegistry := isSeedRegistry && config.InitOptions.ContainerRegistryInfo.RegistryURL == ""
+	injectRegistry := isSeedRegistry && config.InitOptions.ContainerRegistryInfo.URL == ""
 	doSeedThings := config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent"
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0

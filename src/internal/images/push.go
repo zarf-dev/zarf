@@ -22,7 +22,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error 
 
 		registryUrl = tunnel.Endpoint()
 	} else {
-		registryUrl = config.GetContainerRegistryInfo().RegistryURL
+		registryUrl = config.GetContainerRegistryInfo().URL
 
 		// TODO @JPERRY: Do the same thing I did for the git-url in `src/internal/git/push.go#42` (better yet break this out into a util func)
 		if strings.Contains(registryUrl, "svc.cluster.local") {
@@ -40,7 +40,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(config.GetContainerRegistryInfo().RegistryPushUser, config.GetContainerRegistryInfo().RegistryPushPassword)
+	pushOptions := config.GetCraneAuthOption(config.GetContainerRegistryInfo().PushUser, config.GetContainerRegistryInfo().PushPassword)
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
 	for _, src := range buildImageList {

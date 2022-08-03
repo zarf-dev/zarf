@@ -126,16 +126,16 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 
 	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
 
-	if config.InitOptions.ContainerRegistryInfo.RegistryURL == "" {
+	if config.InitOptions.ContainerRegistryInfo.URL == "" {
 		// TODO: @JPERRY I imagine there's a cleaner way to do the defaults..
-		state.ContainerRegistryInfo.RegistryPushUser = config.ZarfRegistryPushUser
-		state.ContainerRegistryInfo.RegistryPushPassword = utils.RandomString(48)
-		state.ContainerRegistryInfo.RegistryPullUser = config.ZarfRegistryPullUser
-		state.ContainerRegistryInfo.RegistryPullPassword = utils.RandomString(48)
-		state.ContainerRegistryInfo.RegistrySecret = utils.RandomString(48)
+		state.ContainerRegistryInfo.PushUser = config.ZarfRegistryPushUser
+		state.ContainerRegistryInfo.PushPassword = utils.RandomString(48)
+		state.ContainerRegistryInfo.PullUser = config.ZarfRegistryPullUser
+		state.ContainerRegistryInfo.PullPassword = utils.RandomString(48)
+		state.ContainerRegistryInfo.Secret = utils.RandomString(48)
 		state.ContainerRegistryInfo.InternalRegistry = true
-		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, 31999)
 		state.ContainerRegistryInfo.NodePort = 31999
+		state.ContainerRegistryInfo.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, state.ContainerRegistryInfo.NodePort)
 	} else {
 		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
 	}
