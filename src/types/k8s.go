@@ -45,17 +45,17 @@ type GitServerInfo struct {
 }
 
 type ContainerRegistryInfo struct {
-	RegistryPushUser     string
-	RegistryPushPassword string
+	RegistryPushUser     string `json:"registryPushUser"`
+	RegistryPushPassword string `json:"registryPushPassword"`
 
-	RegistryPullUser     string
-	RegistryPullPassword string
+	RegistryPullUser     string `json:"registryPullUser"`
+	RegistryPullPassword string `json:"registryPullPassword"`
 
-	RegistrySecret string // TODO: @JPERRY figure out what this is doing..
+	RegistrySecret string `json:"registrySecret"` // TODO: @JPERRY figure out what this is doing..
 
-	RegistryURL string
+	RegistryURL string `json:"registryURL"`
 
-	InternalRegistry bool
+	InternalRegistry bool `json:"internalRegistry"`
 }
 
 type GeneratedPKI struct {
