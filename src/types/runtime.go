@@ -24,7 +24,6 @@ type ZarfInitOptions struct {
 	// Misc init overrides..
 	StorageClass string
 	Secret       string
-	NodePort     string
 
 	// Using a remote git server
 	GitServer GitServerInfo
