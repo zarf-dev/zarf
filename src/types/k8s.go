@@ -25,15 +25,15 @@ type GitServerInfo struct {
 }
 
 type ContainerRegistryInfo struct {
-	RegistryPushUser     string `json:"registryPushUser"`
-	RegistryPushPassword string `json:"registryPushPassword"`
+	PushUser     string `json:"pushUser"`
+	PushPassword string `json:"pushPassword"`
 
-	RegistryPullUser     string `json:"registryPullUser"`
-	RegistryPullPassword string `json:"registryPullPassword"`
+	PullUser     string `json:"pullUser"`
+	PullPassword string `json:"pullPassword"`
 
-	RegistrySecret string `json:"registrySecret"` // TODO: @JPERRY figure out what this is doing..
+	Secret string `json:"secret"` // TODO: @JPERRY figure out what this is doing..
 
-	RegistryURL string `json:"registryURL"`
+	URL string `json:"URL"`
 
 	InternalRegistry bool `json:"internalRegistry"`
 
