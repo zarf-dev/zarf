@@ -77,7 +77,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		}
 
 		// Defaults
-		state.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
@@ -121,10 +120,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		state.StorageClass = "hostpath"
 	}
 
-	// CLI provided overrides that haven't been processed already
-	if config.InitOptions.NodePort != "" {
-		state.NodePort = config.InitOptions.NodePort
-	}
 	if config.InitOptions.Secret != "" {
 		state.Secret = config.InitOptions.Secret
 	}
@@ -142,7 +137,8 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		state.ContainerRegistryInfo.RegistryPullPassword = utils.RandomString(48)
 		state.ContainerRegistryInfo.RegistrySecret = utils.RandomString(48)
 		state.ContainerRegistryInfo.InternalRegistry = true
-		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%s", config.IPV4Localhost, state.NodePort)
+		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, 31999)
+		state.ContainerRegistryInfo.NodePort = 31999
 	} else {
 		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
 	}

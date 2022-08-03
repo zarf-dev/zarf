@@ -22,7 +22,6 @@ type ZarfInitOptions struct {
 	// Zarf init override options
 	StorageClass string `json:"storageClass"`
 	Secret       string `json:"secret"`
-	NodePort     string `json:"nodePort"`
 
 	// Using a remote git server
 	GitServer GitServerInfo
