@@ -78,11 +78,11 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	if err != nil {
 		message.Fatalf(err, "Unable to load the Zarf state")
 	}
-	credential := zarfState.ContainerRegistryInfo.RegistryPullPassword
+	credential := zarfState.ContainerRegistryInfo.PullPassword
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
-	fieldValue := config.GetContainerRegistryInfo().RegistryPullUser + ":" + credential
+	fieldValue := config.GetContainerRegistryInfo().PullUser + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := config.GetRegistry()
