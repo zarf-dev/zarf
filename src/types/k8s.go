@@ -7,7 +7,6 @@ type ZarfState struct {
 	Architecture  string       `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
 	StorageClass  string       `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
 	Secret        string       `json:"secret"`
-	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
 	GitServer GitServerInfo `json:"gitServer"`
@@ -53,6 +52,8 @@ type ContainerRegistryInfo struct {
 	RegistryURL string `json:"registryURL"`
 
 	InternalRegistry bool `json:"internalRegistry"`
+
+	NodePort int `json:"nodePort"` // TODO @JPERRY: Figure out the difference between this port and the one provided at the end of svc URL
 }
 
 type GeneratedPKI struct {

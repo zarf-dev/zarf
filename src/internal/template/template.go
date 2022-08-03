@@ -79,7 +79,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	builtinMap := map[string]string{
 		"STORAGE_CLASS":      values.state.StorageClass,
 		"REGISTRY":           values.registry,
-		"NODEPORT":           values.state.NodePort,
+		"NODEPORT":           fmt.Sprintf("%d", values.state.ContainerRegistryInfo.NodePort),
 		"REGISTRY_AUTH_PUSH": values.secret.registryPush,
 		"REGISTRY_AUTH_PULL": values.secret.registryPull,
 		"GIT_AUTH_PUSH":      values.secret.gitPush,

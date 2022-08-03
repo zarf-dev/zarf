@@ -131,7 +131,6 @@ func init() {
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
 	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
 	initCmd.Flags().StringVar(&config.InitOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
-	initCmd.Flags().StringVar(&config.InitOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
@@ -144,4 +143,5 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistryPushPassword, "registry-push-password", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistrySecret, "registry-secret", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.RegistryURL, "registry-url", "", "")
+	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", 0, "Nodeport to access the Zarf container registry. Between [30000-32767]")
 }

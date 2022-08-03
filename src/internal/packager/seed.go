@@ -16,16 +16,16 @@ import (
 // TODO @JPERRY: lots of stuff is going to need to change here...
 
 /*
-	preSeedRegistry does:
-	 - waits for the cluster to be healthy
-	 - gets the cluster architecture to use later to compare against the arch of the init package
-	 - attempts to load an existing zarf secret (when would this ever be here if we're only running this on init?)
-	 - Gets the cluster arch to use later to set the `state.StorageClass`
-	 - hardcodes default state values ()
-	 - gets a list of the current namespaces in the cluster and adds a label so that `zarf-agent` will ignore that namespace
-	 - sets cli flag overrides to state values
-	 - runs the injection maddness ()
-	 - Saves the state..
+preSeedRegistry does:
+  - waits for the cluster to be healthy
+  - gets the cluster architecture to use later to compare against the arch of the init package
+  - attempts to load an existing zarf secret (when would this ever be here if we're only running this on init?)
+  - Gets the cluster arch to use later to set the `state.StorageClass`
+  - hardcodes default state values ()
+  - gets a list of the current namespaces in the cluster and adds a label so that `zarf-agent` will ignore that namespace
+  - sets cli flag overrides to state values
+  - runs the injection maddness ()
+  - Saves the state..
 */
 func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
@@ -60,7 +60,7 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
-		if config.DeployOptions.ApplianceMode {
+		if config.InitOptions.ApplianceMode {
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -77,7 +77,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		}
 
 		// Defaults
-		state.NodePort = "31999"
 		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
@@ -121,10 +120,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		state.StorageClass = "hostpath"
 	}
 
-	// CLI provided overrides that haven't been processed already
-	if config.InitOptions.NodePort != "" {
-		state.NodePort = config.InitOptions.NodePort
-	}
 	if config.InitOptions.Secret != "" {
 		state.Secret = config.InitOptions.Secret
 	}
@@ -142,7 +137,8 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		state.ContainerRegistryInfo.RegistryPullPassword = utils.RandomString(48)
 		state.ContainerRegistryInfo.RegistrySecret = utils.RandomString(48)
 		state.ContainerRegistryInfo.InternalRegistry = true
-		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%s", config.IPV4Localhost, state.NodePort)
+		state.ContainerRegistryInfo.RegistryURL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, 31999)
+		state.ContainerRegistryInfo.NodePort = 31999
 	} else {
 		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
 	}
