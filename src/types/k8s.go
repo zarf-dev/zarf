@@ -10,7 +10,7 @@ type ZarfState struct {
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS"`
 
-	GitServer GitServerInfo `json:"gitServerInfo"`
+	GitServer GitServerInfo `json:"gitServer"`
 }
 
 type GitServerInfo struct {
