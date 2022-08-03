@@ -199,7 +199,7 @@ func GetState() types.ZarfState {
 }
 
 func GetRegistry() string {
-	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
+	return fmt.Sprintf("%s:%d", IPV4Localhost, state.ContainerRegistryInfo.NodePort)
 }
 
 // LoadConfig loads the config from the given path and removes
