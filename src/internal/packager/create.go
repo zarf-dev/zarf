@@ -103,6 +103,11 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	componentPath := createComponentPaths(tempPath.components, component)
 
+	// Loop through each component prepare script and execute it
+	for _, script := range component.Scripts.Prepare {
+		loopScriptUntilSuccess(script, component.Scripts)
+	}
+
 	if len(component.Charts) > 0 {
 		_ = utils.CreateDirectory(componentPath.charts, 0700)
 		_ = utils.CreateDirectory(componentPath.values, 0700)
@@ -196,4 +201,5 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		}
 		spinner.Success()
 	}
+
 }
