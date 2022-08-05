@@ -58,7 +58,6 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	containerRegistryInfo := config.GetContainerRegistryInfo()
 
-	// TODO @JPERRY: This is where I need to use the config.GetContainerRegistryInfo().RegistryURL
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)

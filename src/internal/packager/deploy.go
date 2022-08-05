@@ -177,18 +177,27 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 	var installedCharts []types.InstalledCharts
 
 	// Toggles for deploy operations on 'init'
+	// TODO @JPERRY: Clean this up. It can probably be much cleaner.. (at least remove state initialization out of the seed function)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
 
 	// Toggles for general deploy operations
-	componentPath := createComponentPaths(tempPath.components, component)
 	injectRegistry := isSeedRegistry && config.InitOptions.ContainerRegistryInfo.URL == ""
 	doSeedThings := config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent"
 
+	// Toggles for general deploy operations
+	componentPath := createComponentPaths(tempPath.components, component)
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
+
+	// Don't inject a registry if an external one has been provided
+	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
+	if (config.InitOptions.ContainerRegistryInfo.URL != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
+		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+		return installedCharts
+	}
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))

@@ -13,8 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// TODO @JPERRY: lots of stuff is going to need to change here...
-
 /*
 	preSeedRegistry does:
 	 - waits for the cluster to be healthy
@@ -130,7 +128,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
 
 	if config.InitOptions.ContainerRegistryInfo.URL == "" {
-		// TODO: @JPERRY I imagine there's a cleaner way to do the defaults..
 		state.ContainerRegistryInfo.PushUser = config.ZarfRegistryPushUser
 		state.ContainerRegistryInfo.PushPassword = utils.RandomString(48)
 		state.ContainerRegistryInfo.PullUser = config.ZarfRegistryPullUser
@@ -141,6 +138,10 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 		state.ContainerRegistryInfo.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, state.ContainerRegistryInfo.NodePort)
 	} else {
 		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
+
+		// For external registries, the pull-user is the same as the push-user
+		state.ContainerRegistryInfo.PullUser = state.ContainerRegistryInfo.PushUser
+		state.ContainerRegistryInfo.PullPassword = state.ContainerRegistryInfo.PushPassword
 	}
 
 	spinner.Success()
