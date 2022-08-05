@@ -7,7 +7,7 @@ components:
   - name: prepare
     required: true
     scripts:
-      # Note these files will be created in this directory, regardless of where the package create command is called from
+      # Note this file will be created in this directory, regardless of where the package create command is called from
       prepare:
         - "touch test-prepare.txt"
   # This script will pass after 1 second
