@@ -72,8 +72,6 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	secretDockerConfig := GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Auth field must be username:password and base64 encoded
-
-	// credential := config.GetContainerRegistryInfo().RegistryPullPassword
 	zarfState, err := LoadZarfState()
 	if err != nil {
 		message.Fatalf(err, "Unable to load the Zarf state")

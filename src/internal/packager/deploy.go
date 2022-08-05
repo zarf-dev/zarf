@@ -189,6 +189,13 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
+	// Don't inject a registry if an external one has been provided
+	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
+	if (config.InitOptions.ContainerRegistryInfo.URL != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
+		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+		return installedCharts
+	}
+
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	for _, script := range component.Scripts.Before {
