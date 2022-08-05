@@ -25,7 +25,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "Tear it all down, we'll miss you Zarf...",
 	Long: "Tear down Zarf.\n\n" +
 		"Deletes everything in the 'zarf' namespace within your connected k8s cluster.\n\n" +
-		"If Zarf deployed your k8s cluster, this command will also tear your cluster down by" +
+		"If Zarf deployed your k8s cluster, this command will also tear your cluster down by " +
 		"searching through /opt/zarf for any scripts that start with 'zarf-clean-' and executing them. " +
 		"Since this is a cleanup operation, Zarf will not stop the teardown if one of the scripts produce " +
 		"an error.\n\n" +
