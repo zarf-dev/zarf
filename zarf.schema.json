@@ -39,28 +39,35 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name of the chart to deploy"
         },
         "releaseName": {
-          "type": "string"
+          "type": "string",
+          "description": "The name of the release to create"
         },
         "url": {
-          "type": "string"
+          "type": "string",
+          "description": "The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "The version of the chart to deploy"
         },
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "description": "The namespace to deploy the chart to"
         },
         "valuesFiles": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of values files to include in the package"
         },
         "gitPath": {
-          "type": "string"
+          "type": "string",
+          "description": "If using a git repo"
         }
       },
       "additionalProperties": false,
@@ -220,25 +227,37 @@
     "ZarfComponentScripts": {
       "properties": {
         "showOutput": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Show the output of the script during package deployment"
         },
         "timeoutSeconds": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Timeout in seconds for the script"
         },
         "retry": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Retry the script if it fails"
+        },
+        "prepare": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Scripts to run before the component is added during package create"
         },
         "before": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Scripts to run before the component is deployed"
         },
         "after": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Scripts to run after the component successfully deploys"
         }
       },
       "additionalProperties": false,
@@ -279,11 +298,13 @@
       ],
       "properties": {
         "source": {
-          "type": "string"
+          "type": "string",
+          "description": "A path to a local folder or file to inject into the given target pod + container"
         },
         "target": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfContainerTarget"
+          "$ref": "#/definitions/ZarfContainerTarget",
+          "description": "The target pod + container to inject the data into"
         },
         "compress": {
           "type": "boolean",
@@ -300,22 +321,27 @@
       ],
       "properties": {
         "source": {
-          "type": "string"
+          "type": "string",
+          "description": "Local file path or remote URL to add to the package"
         },
         "shasum": {
-          "type": "string"
+          "type": "string",
+          "description": "SHA256 checksum of the file if the source is a URL"
         },
         "target": {
-          "type": "string"
+          "type": "string",
+          "description": "The absolute or relative path wher the file should be copied to during package deploy"
         },
         "executable": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Determines if the file should be made executable during package deploy"
         },
         "symlinks": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of symlinks to create during package deploy"
         }
       },
       "additionalProperties": false,
@@ -327,25 +353,30 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "A name to give this collection of manifests"
         },
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "description": "The namespace to deploy the manifests to"
         },
         "files": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of individual K8s YAML files to deploy (in order)"
         },
         "kustomizeAllowAnyDirectory": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Allow traversing directory above the current directory if needed for kustomization"
         },
         "kustomizations": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of kustomization paths to include in the package"
         }
       },
       "additionalProperties": false,
