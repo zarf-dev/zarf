@@ -60,7 +60,7 @@ func Generate() Values {
 }
 
 func (values Values) Ready() bool {
-	return values.secret.htpasswd != ""
+	return values.state.Distro != ""
 }
 
 func (values Values) GetRegistry() string {
