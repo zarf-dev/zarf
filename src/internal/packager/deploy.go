@@ -177,12 +177,10 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 	var installedCharts []types.InstalledCharts
 
 	// Toggles for deploy operations on 'init'
-	// TODO @JPERRY: Clean this up. It can probably be much cleaner.. (at least remove state initialization out of the seed function)
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
 
 	// Toggles for general deploy operations
-	injectRegistry := isSeedRegistry && config.InitOptions.ContainerRegistryInfo.URL == ""
-	doSeedThings := config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent"
+	createZarfState := isSeedRegistry || (config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent")
 
 	// Toggles for general deploy operations
 	componentPath := createComponentPaths(tempPath.components, component)
@@ -249,10 +247,14 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		spinner.Success()
 	}
 
-	if isSeedRegistry || doSeedThings {
-		preSeedRegistry(tempPath, injectRegistry)
-		valueTemplate = template.Generate()
+	if createZarfState {
+		seedZarfState(tempPath)
 	}
+	if isSeedRegistry {
+		runInjectionMadness(tempPath)
+	}
+
+	valueTemplate = template.Generate()
 
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
 		// If we are touching K8s, make sure we can talk to it once per deployment
