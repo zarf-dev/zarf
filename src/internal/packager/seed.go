@@ -25,7 +25,7 @@ preSeedRegistry does:
   - runs the injection maddness ()
   - Saves the state..
 */
-func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
+func seedZarfState(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -145,10 +145,6 @@ func preSeedRegistry(tempPath tempPaths, injectRegistry bool) {
 	}
 
 	spinner.Success()
-
-	if injectRegistry {
-		runInjectionMadness(tempPath)
-	}
 
 	// Save the state back to K8s
 	if err := k8s.SaveZarfState(state); err != nil {
