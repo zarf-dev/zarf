@@ -131,7 +131,6 @@ func init() {
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
 	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
 	initCmd.Flags().StringVar(&config.InitOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
-	// TODO @JPERRY: Should I keep the ability to set the 'nodeport' for an internal container registry... I feel like the answer is yes..
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")

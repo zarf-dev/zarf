@@ -7,17 +7,11 @@ imagePullSecrets:
 
 service:
   name: registry
-  type: ClusterIP
-  # sessionAffinity: None
-  # sessionAffinityConfig: {}
-  # clusterIP:
+  # type: ClusterIP
   port: 5000
-  # nodePort:
-  # loadBalancerIP:
-  # loadBalancerSourceRanges:
   annotations: {}
-  # foo.io/bar: "true"
-
+  type: NodePort
+  nodePort: 31999
 
 # Set this to name of secret for tls certs
 # tlsSecretName: registry.docker.example.com

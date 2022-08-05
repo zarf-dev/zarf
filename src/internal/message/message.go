@@ -130,6 +130,12 @@ func Note(text string) {
 	pterm.FgYellow.Println(message)
 }
 
+func Notef(text string, a ...any) {
+	pterm.Println()
+	message := paragraph(text, a)
+	pterm.FgYellow.Println(message)
+}
+
 func HeaderInfof(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	// Ensure the text is consistent for the header width
