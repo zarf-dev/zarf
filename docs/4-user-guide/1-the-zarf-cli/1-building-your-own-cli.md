@@ -12,7 +12,7 @@ If you want to built the CLI from scratch, you can easily do that! In order to b
 
 1. The Zarf repository cloned down:
    - `git clone git@github.com:defenseunicorns/zarf.git`
-2. Have Go 1.18.x installed on your PATH (instructions can be found [here](https://go.dev/doc/install))
+2. Have Go 1.19.x installed on your PATH (instructions can be found [here](https://go.dev/doc/install))
 3. `make` utility installed on your PATH (instructions to install w/ Homebrew can be found [here](https://formulae.brew.sh/formula/make))
 
 :::
