@@ -103,8 +103,8 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	componentPath := createComponentPaths(tempPath.components, component)
 
-	// Loop through each component before create script and execute it
-	for _, script := range component.Scripts.Create.Before {
+	// Loop through each component prepare script and execute it
+	for _, script := range component.Scripts.Prepare {
 		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
@@ -200,11 +200,6 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 			git.Pull(url, componentPath.repos, spinner)
 		}
 		spinner.Success()
-	}
-
-	// Loop through each component after create script and execute it
-	for _, script := range component.Scripts.Create.After {
-		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 }

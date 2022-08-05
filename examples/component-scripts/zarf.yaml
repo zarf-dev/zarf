@@ -4,15 +4,12 @@ metadata:
   description: "Test component to demonstrate script timeout feature"
 
 components:
-  - name: create
+  - name: prepare
     required: true
     scripts:
       # Note these files will be created in this directory, regardless of where the package create command is called from
-      create:
-        before:
-          - "touch test-create-before.txt"
-        after:
-          - "touch test-create-after.txt"
+      prepare:
+        - "touch test-prepare.txt"
   # This script will pass after 1 second
   - name: deploy
     required: true

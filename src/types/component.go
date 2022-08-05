@@ -91,18 +91,12 @@ type ZarfManifest struct {
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed
 type ZarfComponentScripts struct {
-	ShowOutput     bool                       `yaml:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
-	TimeoutSeconds int                        `yaml:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
-	Retry          bool                       `yaml:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
-	Before         []string                   `yaml:"before,omitempty" jsonschema:"description=Scripts to run before the component is deployed"`
-	After          []string                   `yaml:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
-	Create         ZarfComponentCreateScripts `yaml:"create,omitempty" jsonschema:"description=Scripts to run during package creation"`
-}
-
-// ZarfComponentCreateScripts are scripts that run during package creation
-type ZarfComponentCreateScripts struct {
-	Before []string `yaml:"before,omitempty" jsonschema:"description=Scripts to run after the component is added during package creation"`
-	After  []string `yaml:"after,omitempty" jsonschema:"description=Scripts to run before the component is added during package creation"`
+	ShowOutput     bool     `yaml:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
+	TimeoutSeconds int      `yaml:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
+	Retry          bool     `yaml:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
+	Prepare        []string `yaml:"prepare,omitempty" jsonschema:"description=Scripts to run before the component is added during package create"`
+	Before         []string `yaml:"before,omitempty" jsonschema:"description=Scripts to run before the component is deployed"`
+	After          []string `yaml:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

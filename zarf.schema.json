@@ -167,26 +167,6 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "ZarfComponentCreateScripts": {
-      "properties": {
-        "before": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Scripts to run after the component is added during package creation"
-        },
-        "after": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Scripts to run before the component is added during package creation"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
     "ZarfComponentImport": {
       "required": [
         "path"
@@ -258,6 +238,13 @@
           "type": "boolean",
           "description": "Retry the script if it fails"
         },
+        "prepare": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Scripts to run before the component is added during package create"
+        },
         "before": {
           "items": {
             "type": "string"
@@ -271,11 +258,6 @@
           },
           "type": "array",
           "description": "Scripts to run after the component successfully deploys"
-        },
-        "create": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentCreateScripts",
-          "description": "Scripts to run during package creation"
         }
       },
       "additionalProperties": false,
