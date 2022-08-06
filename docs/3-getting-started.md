@@ -27,7 +27,7 @@ mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
 
 ### Building the CLI from scratch
 
-If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.18.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
+If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.19.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
 
 ```bash
 git clone git@github.com:defenseunicorns/zarf.git
