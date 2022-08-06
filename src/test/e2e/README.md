@@ -7,7 +7,7 @@ The tests in this directory are also able to be run locally!
 
 ### Dependencies
 Running the tests locally have the same prerequisites as running and building Zarf:
- 1. GoLang >= `1.18.x`
+ 1. GoLang >= `1.19.x`
  2. Make
  3. Access to a K8s cluster to test against or Linux with root priv if `APPLIANCE_MODE=true`
  4. (for the `k3s` cluster only) Linux with root privileges
