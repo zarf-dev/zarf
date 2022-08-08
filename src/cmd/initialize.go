@@ -38,6 +38,11 @@ var initCmd = &cobra.Command{
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
+		err := validateInitFlags()
+		if err != nil {
+			message.Fatal(err, "Invalid command flags were provided.")
+		}
+
 		// Continue running package deploy for all components like any other package
 		initPackageName := fmt.Sprintf("zarf-init-%s.tar.zst", config.GetArch())
 		config.DeployOptions.PackagePath = initPackageName
@@ -106,6 +111,17 @@ var initCmd = &cobra.Command{
 		// Run everything
 		packager.Deploy()
 	},
+}
+
+func validateInitFlags() error {
+	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
+	if config.InitOptions.GitServer.Address != "" {
+		if config.InitOptions.GitServer.PushUsername == "" || config.InitOptions.GitServer.PushPassword == "" {
+			return fmt.Errorf("the 'git-user' and 'git-password' flags must be provided if the 'git-url' flag is provided")
+		}
+	}
+
+	return nil
 }
 
 func init() {
