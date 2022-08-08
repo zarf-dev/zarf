@@ -143,5 +143,5 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.Secret, "registry-secret", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.URL, "registry-url", "", "")
-	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", 0, "Nodeport to access the container registry. Between [30000-32767]")
+	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access the container registry. Between [30000-32767]")
 }

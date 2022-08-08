@@ -53,7 +53,7 @@ type ContainerRegistryInfo struct {
 
 	InternalRegistry bool `json:"internalRegistry"`
 
-	NodePort int `json:"nodePort"` // TODO @JPERRY: Figure out the difference between this port and the one provided at the end of svc URL
+	NodePort int `json:"nodePort"`
 }
 
 type GeneratedPKI struct {
