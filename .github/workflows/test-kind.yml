@@ -49,7 +49,7 @@ jobs:
           docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .
 
       - name: "Make Packages"
-        run: make build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
+        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
 
       - name: "Run Tests"
         # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster
