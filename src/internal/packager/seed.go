@@ -123,22 +123,7 @@ func seedZarfState(tempPath tempPaths) {
 	}
 
 	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
-
-	if config.InitOptions.ContainerRegistryInfo.URL == "" {
-		state.ContainerRegistryInfo.PushUser = config.ZarfRegistryPushUser
-		state.ContainerRegistryInfo.PushPassword = utils.RandomString(48)
-		state.ContainerRegistryInfo.PullUser = config.ZarfRegistryPullUser
-		state.ContainerRegistryInfo.PullPassword = utils.RandomString(48)
-		state.ContainerRegistryInfo.InternalRegistry = true
-		state.ContainerRegistryInfo.NodePort = config.InitOptions.ContainerRegistryInfo.NodePort
-		state.ContainerRegistryInfo.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, state.ContainerRegistryInfo.NodePort)
-	} else {
-		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
-
-		// For external registries, the pull-user is the same as the push-user
-		state.ContainerRegistryInfo.PullUser = state.ContainerRegistryInfo.PushUser
-		state.ContainerRegistryInfo.PullPassword = state.ContainerRegistryInfo.PushPassword
-	}
+	state.ContainerRegistryInfo = fillInEmptyContainerRegistryValues(config.InitOptions.ContainerRegistryInfo)
 
 	spinner.Success()
 
@@ -168,6 +153,21 @@ func postSeedRegistry(tempPath tempPaths) {
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
 }
 
+func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistryInfo) types.ContainerRegistryInfo {
+	// Set default url if necessary
+
+	if containerRegistry.URL == "" {
+		containerRegistry.InternalRegistry = true
+		containerRegistry.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+	} else {
+		// For now, if we are using an external registry, make the push and pull user the same
+		containerRegistry.PullUser = containerRegistry.PushUser
+		containerRegistry.PullPassword = containerRegistry.PushPassword
+	}
+
+	return containerRegistry
+}
+
 // Fill in empty GitServerInfo values with the defaults
 func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
 	// Set default svc url if necessary
@@ -177,7 +177,7 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 		gitServer.InternalServer = true
 	}
 
-	// Set default push username and auto-generate a password
+	// Set default push username and auto-generate a password if not already provided
 	if gitServer.PushUsername == "" {
 		gitServer.PushUsername = config.ZarfGitPushUser
 	}
