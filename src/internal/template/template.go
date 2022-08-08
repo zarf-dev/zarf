@@ -47,12 +47,12 @@ func Generate() Values {
 
 	generated.secret.registryPush = config.GetContainerRegistryInfo().PushPassword
 	generated.secret.registryPull = config.GetContainerRegistryInfo().PullPassword
-	generated.secret.registrySecret = config.GetContainerRegistryInfo().Secret
+	generated.secret.registrySecret = utils.RandomString(48)
 
 	generated.secret.gitPush = config.GetState().GitServer.PushPassword
 	generated.secret.gitPull = config.GetState().GitServer.ReadPassword
 
-	generated.secret.logging = config.GetSecret(config.StateLogging)
+	generated.secret.logging = config.GetState().LoggingPassword
 
 	generated.agentTLS = state.AgentTLS
 

@@ -6,12 +6,11 @@ type ZarfState struct {
 	Distro        string       `json:"distro"`
 	Architecture  string       `json:"architecture"`
 	StorageClass  string       `json:"storageClass"`
-	Secret        string       `json:"secret"`
 	AgentTLS      GeneratedPKI `json:"agentTLS"`
 
-	GitServer GitServerInfo `json:"gitServer"`
-
+	GitServer             GitServerInfo         `json:"gitServer"`
 	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
+	LoggingPassword       string                `json:"loggingPassword"`
 }
 
 type GitServerInfo struct {
@@ -30,8 +29,6 @@ type ContainerRegistryInfo struct {
 
 	PullUser     string `json:"pullUser"`
 	PullPassword string `json:"pullPassword"`
-
-	Secret string `json:"secret"` // TODO: @JPERRY figure out what this is doing..
 
 	URL string `json:"URL"`
 
