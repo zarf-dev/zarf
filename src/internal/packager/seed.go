@@ -53,8 +53,8 @@ func seedZarfState(tempPath tempPaths) {
 		spinner.Errorf(err, "Unable to load existing Zarf state")
 	}
 
-	// If the state is invalid, assume this is a new cluster
-	if state.Secret == "" {
+	// If the distro isn't populated in the state, assume this is a new cluster
+	if state.Distro == "" {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
@@ -75,9 +75,9 @@ func seedZarfState(tempPath tempPaths) {
 		}
 
 		// Defaults
-		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
+		state.LoggingPassword = utils.RandomString(24)
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
@@ -118,9 +118,6 @@ func seedZarfState(tempPath tempPaths) {
 		state.StorageClass = "hostpath"
 	}
 
-	if config.InitOptions.Secret != "" {
-		state.Secret = config.InitOptions.Secret
-	}
 	if config.InitOptions.StorageClass != "" {
 		state.StorageClass = config.InitOptions.StorageClass
 	}
@@ -132,7 +129,6 @@ func seedZarfState(tempPath tempPaths) {
 		state.ContainerRegistryInfo.PushPassword = utils.RandomString(48)
 		state.ContainerRegistryInfo.PullUser = config.ZarfRegistryPullUser
 		state.ContainerRegistryInfo.PullPassword = utils.RandomString(48)
-		state.ContainerRegistryInfo.Secret = utils.RandomString(48)
 		state.ContainerRegistryInfo.InternalRegistry = true
 		state.ContainerRegistryInfo.NodePort = config.InitOptions.ContainerRegistryInfo.NodePort
 		state.ContainerRegistryInfo.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, state.ContainerRegistryInfo.NodePort)

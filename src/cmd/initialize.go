@@ -141,7 +141,6 @@ func init() {
 	// Flags for using an external container registry
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUser, "registry-push-user", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.Secret, "registry-secret", "", "")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.URL, "registry-url", "", "")
 	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access the container registry. Between [30000-32767]")
 }
