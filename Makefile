@@ -18,7 +18,7 @@ endif
 
 AGENT_IMAGE ?= defenseunicorns/zarf-agent:992efd
 
-CLI_VERSION := $(if $(shell git describe --tags), $(shell git describe --tags), "UnknownVersion")
+CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
 .DEFAULT_GOAL := help
 

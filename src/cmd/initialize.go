@@ -5,9 +5,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
@@ -15,11 +16,6 @@ import (
 
 	"github.com/spf13/cobra"
 )
-
-// Semantic Versioning RegEx from semver.org prefixed with `v?` to check for leading v
-// https://semver.org/spec/v2.0.0.html#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
-var semverRegexStr = `^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
-var semverRegex = regexp.MustCompile(semverRegexStr)
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -63,16 +59,23 @@ var initCmd = &cobra.Command{
 					message.Fatalf(nil, "This command requires a zarf-init package, but one was not found on the local system.")
 				}
 
-				// If no CLI version exists (should only occur in dev or CI), try to get the latest release tag from Githhub
-				if !semverRegex.Match([]byte(config.CLIVersion)) {
-					config.CLIVersion, err = utils.GetLatestReleaseTag(config.GithubProject)
+				// Parse the CLI version and extract its parts
+				initPackageVersion := strings.TrimLeft(config.CLIVersion, "v")
+				version, err := semver.StrictNewVersion(initPackageVersion)
+
+				if err != nil {
+					// If no CLI version exists (should only occur in dev or CI), try to get the latest release tag from Githhub
+					initPackageVersion, err = utils.GetLatestReleaseTag(config.GithubProject)
 					if err != nil {
 						message.Fatal(err, "No CLI version found and unable to get the latest release tag for the zarf cli.")
 					}
+				} else {
+					// If CLI version exists then get the latest init package for the matching major, minor and patch
+					initPackageVersion = fmt.Sprintf("v%d.%d.%d", version.Major(), version.Minor(), version.Patch())
 				}
 
 				var confirmDownload bool
-				url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, initPackageName)
+				url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, initPackageVersion, initPackageName)
 
 				// Give the user the choice to download the init-package and note that this does require an internet connection
 				message.Question(fmt.Sprintf("It seems the init package could not be found locally, but can be downloaded from %s", url))
