@@ -9,9 +9,9 @@ type ZarfState struct {
 	Secret        string       `json:"secret"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServer GitServerInfo `json:"gitServer"`
-
+	GitServer             GitServerInfo         `json:"gitServer"`
 	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
+	LoggingPassword       string                `json:"loggingPassword"`
 }
 
 type DeployedPackage struct {
@@ -46,8 +46,6 @@ type ContainerRegistryInfo struct {
 
 	PullUser     string `json:"pullUser"`
 	PullPassword string `json:"pullPassword"`
-
-	Secret string `json:"secret"` // TODO: @JPERRY figure out what this is doing..
 
 	URL string `json:"URL"`
 

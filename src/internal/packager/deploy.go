@@ -149,7 +149,7 @@ func Deploy() {
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
 			if component.Name == "logging" {
-				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetSecret(config.StateLogging), "zarf connect logging"}}...)
+				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetState().LoggingPassword, "zarf connect logging"}}...)
 			}
 			// Show message if including git-server
 			if component.Name == "git-server" {
