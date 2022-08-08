@@ -167,7 +167,9 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
 		Default: component.Default,
 	}
-	_ = survey.AskOne(prompt, &confirmComponent)
+	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
+		message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+	}
 	return confirmComponent
 }
 
