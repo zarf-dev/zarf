@@ -104,5 +104,5 @@ func init() {
 	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
 
-	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-username", config.ZarfGitPushUser, "Username for the git account that the repos are created under.")
+	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
 }
