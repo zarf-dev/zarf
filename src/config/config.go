@@ -194,7 +194,6 @@ func GetValidPackageExtensions() [3]string {
 func InitState(tmpState types.ZarfState) {
 	message.Debugf("config.InitState()")
 	state = tmpState
-	initSecrets()
 }
 
 func GetState() types.ZarfState {
