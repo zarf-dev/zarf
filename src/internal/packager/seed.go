@@ -134,7 +134,7 @@ func seedZarfState(tempPath tempPaths) {
 		state.ContainerRegistryInfo.PullPassword = utils.RandomString(48)
 		state.ContainerRegistryInfo.Secret = utils.RandomString(48)
 		state.ContainerRegistryInfo.InternalRegistry = true
-		state.ContainerRegistryInfo.NodePort = 31999
+		state.ContainerRegistryInfo.NodePort = config.InitOptions.ContainerRegistryInfo.NodePort
 		state.ContainerRegistryInfo.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, state.ContainerRegistryInfo.NodePort)
 	} else {
 		state.ContainerRegistryInfo = config.InitOptions.ContainerRegistryInfo
