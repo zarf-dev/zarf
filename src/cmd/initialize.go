@@ -139,8 +139,8 @@ func init() {
 	initCmd.Flags().IntVar(&config.InitOptions.GitServer.Port, "git-port", 0, "Port to connect to the external git server")
 
 	// Flags for using an external container registry
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUser, "registry-push-user", "", "")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.URL, "registry-url", "", "")
-	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access the container registry. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUser, "registry-push-user", config.ZarfRegistryPushUser, "Username to connect to the container registry Zarf is configured to use")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", utils.RandomString(48), "DEFAULT VALUE IS CHANGED WITH EVERY RUN.  Password for the push-user to connect to the container registry")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.URL, "registry-url", "", "External container registry url to use for this Zarf cluster")
+	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access a container registry internall to the k8s cluster. Between [30000-32767]")
 }
