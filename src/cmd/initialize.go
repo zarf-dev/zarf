@@ -79,7 +79,9 @@ var initCmd = &cobra.Command{
 					prompt := &survey.Confirm{
 						Message: "Do you want to download this init package?",
 					}
-					_ = survey.AskOne(prompt, &confirmDownload)
+					if err := survey.AskOne(prompt, &confirmDownload); err != nil {
+						message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+					}
 				}
 
 				// If the user wants to download the init-package, download it

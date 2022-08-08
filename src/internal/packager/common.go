@@ -108,7 +108,9 @@ func confirmAction(userMessage string, sbomViewFiles []string) bool {
 		prompt := &survey.Confirm{
 			Message: userMessage + " this Zarf package?",
 		}
-		_ = survey.AskOne(prompt, &confirmFlag)
+		if err := survey.AskOne(prompt, &confirmFlag); err != nil {
+			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+		}
 	}
 
 	return confirmFlag

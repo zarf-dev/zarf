@@ -167,7 +167,9 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
 		Default: component.Default,
 	}
-	_ = survey.AskOne(prompt, &confirmComponent)
+	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
+		message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+	}
 	return confirmComponent
 }
 
@@ -203,7 +205,10 @@ func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 		Message: "Select a component to deploy:",
 		Options: options,
 	}
-	_ = survey.AskOne(prompt, &chosen)
+
+	if err := survey.AskOne(prompt, &chosen); err != nil {
+		message.Fatalf(nil, "Component selection canceled: %s", err.Error())
+	}
 
 	return componentGroup[chosen]
 }
