@@ -46,7 +46,7 @@ jobs:
           docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .
 
       - name: "Make Packages"
-        run: make build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
+        run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
 
       - name: "Run Tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
