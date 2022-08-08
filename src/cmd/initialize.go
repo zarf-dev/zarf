@@ -5,9 +5,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
@@ -15,6 +15,11 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// Semantic Versioning RegEx from semver.org prefixed with `v?` to check for leading v
+// https://semver.org/spec/v2.0.0.html#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+var semverRegexStr = `^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
+var semverRegex = regexp.MustCompile(semverRegexStr)
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -59,7 +64,7 @@ var initCmd = &cobra.Command{
 				}
 
 				// If no CLI version exists (should only occur in dev or CI), try to get the latest release tag from Githhub
-				if _, err := semver.StrictNewVersion(config.CLIVersion); err != nil {
+				if !semverRegex.Match([]byte(config.CLIVersion)) {
 					config.CLIVersion, err = utils.GetLatestReleaseTag(config.GithubProject)
 					if err != nil {
 						message.Fatal(err, "No CLI version found and unable to get the latest release tag for the zarf cli.")
