@@ -26,7 +26,6 @@ func NewPodMutationHook() operations.Hook {
 
 func parsePod(object []byte) (*corev1.Pod, error) {
 	message.Debugf("pods.parsePod(%s)", string(object))
-
 	var pod corev1.Pod
 	if err := json.Unmarshal(object, &pod); err != nil {
 		return nil, err
@@ -56,26 +55,27 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	containerRegistryInfo := config.GetContainerRegistryInfo()
+	zarfState, _ := getZarfStateFromFileWithinAgentPod(zarfStatePath)
+	containerRegistryURL := zarfState.ContainerRegistryInfo.URL
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
+		replacement := utils.SwapHost(container.Image, containerRegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
+		replacement := utils.SwapHost(container.Image, containerRegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryInfo.URL)
+		replacement := utils.SwapHost(container.Image, containerRegistryURL)
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
