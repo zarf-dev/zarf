@@ -9,6 +9,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func preSeedRegistry(tempPath tempPaths) {
@@ -116,23 +117,7 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.StorageClass = config.InitOptions.StorageClass
 	}
 
-	if config.InitOptions.GitServer.Address != "" {
-		// The user has provided external git server info, just use what they gave!
-		state.GitServer = config.InitOptions.GitServer
-
-		// For external clusters, the read-user is the same as the push-user
-		state.GitServer.ReadUsername = state.GitServer.PushUsername
-		state.GitServer.ReadPassword = state.GitServer.PushPassword
-	} else {
-		// Set the GitServerInfo for the internal Gitea server
-		state.GitServer.Address = config.ZarfInClusterGitServiceURL
-		state.GitServer.Port = config.ZarfInClusterGitServicePort
-		state.GitServer.PushUsername = config.ZarfGitPushUser
-		state.GitServer.PushPassword = utils.RandomString(24)
-		state.GitServer.ReadUsername = config.ZarfGitReadUser
-		state.GitServer.ReadPassword = utils.RandomString(24)
-		state.GitServer.InternalServer = true
-	}
+	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
 
 	spinner.Success()
 
@@ -162,4 +147,40 @@ func postSeedRegistry(tempPath tempPaths) {
 
 	// Push the seed images into to Zarf registry
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
+}
+
+// Fill in empty GitServerInfo values with the defaults
+func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
+	// Set default svc url if necessary
+	if gitServer.Address == "" {
+		gitServer.Address = config.ZarfInClusterGitServiceURL
+		gitServer.Port = config.ZarfInClusterGitServicePort
+		gitServer.InternalServer = true
+	}
+
+	// Set default push username and auto-generate a password
+	if gitServer.PushUsername == "" {
+		gitServer.PushUsername = config.ZarfGitPushUser
+	}
+	if gitServer.PushPassword == "" {
+		gitServer.PushPassword = utils.RandomString(24)
+	}
+
+	// Set read-user information if using an internal repository, otherwise copy from the push-user
+	if gitServer.ReadUsername == "" {
+		if gitServer.InternalServer {
+			gitServer.ReadUsername = config.ZarfGitReadUser
+		} else {
+			gitServer.ReadUsername = gitServer.PushUsername
+		}
+	}
+	if gitServer.ReadPassword == "" {
+		if gitServer.InternalServer {
+			gitServer.ReadPassword = utils.RandomString(24)
+		} else {
+			gitServer.ReadPassword = gitServer.PushPassword
+		}
+	}
+
+	return gitServer
 }
