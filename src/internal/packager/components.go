@@ -203,7 +203,10 @@ func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 		Message: "Select a component to deploy:",
 		Options: options,
 	}
-	_ = survey.AskOne(prompt, &chosen)
+
+	if err := survey.AskOne(prompt, &chosen); err != nil {
+		message.Fatalf(nil, "Component selection canceled: %s", err.Error())
+	}
 
 	return componentGroup[chosen]
 }
