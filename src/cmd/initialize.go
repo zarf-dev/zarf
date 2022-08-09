@@ -134,13 +134,19 @@ func init() {
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-user", config.ZarfGitPushUser, "Username to connect to the external git server. User must be able to create repositories via 'git push'")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-password", "", "Password to connect to the external git server")
 	initCmd.Flags().IntVar(&config.InitOptions.GitServer.Port, "git-port", config.ZarfInClusterGitServicePort, "Port to connect to the external git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-push-username", config.ZarfGitPushUser, "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-push-password", "", "Password for the push-user to access the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadUsername, "git-read-user", "", "Username for read-only access to the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadPassword, "git-read-password", "", "Password for the read-only user to access the git server")
 
 	// Flags for using an external container registry
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUsername, "registry-push-user", config.ZarfRegistryPushUser, "Username to connect to the container registry Zarf is configured to use")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the container registry")
 	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.Address, "registry-url", "", "External container registry url address to use for this Zarf cluster")
-	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access a container registry internall to the k8s cluster. Between [30000-32767]")
+	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", config.ZarfInClusterContainerRegistryNodePort, "Nodeport to access a container registry internal to the k8s cluster. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUsername, "registry-push-user", config.ZarfRegistryPushUser, "Username to access to the container registry Zarf is configured to use")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the container registry")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PullUsername, "registry-pull-user", "", "Username for pull-only access to the container registry")
+	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the container registry")
+
+	initCmd.Flags().SortFlags = true
 }
