@@ -9,8 +9,7 @@ spec:
   teamId: "acid"
   postgresql:
     version: "13"
-  numberOfInstances: 3
-  enableConnectionPooler: true
+  numberOfInstances: 2
   volume:
     size: "2Gi"
   users:
@@ -24,5 +23,5 @@ spec:
       cpu: 100m
       memory: 100Mi
     limits:
-      cpu: 500m
-      memory: 500Mi
+      cpu: 1000m
+      memory: 1Gi

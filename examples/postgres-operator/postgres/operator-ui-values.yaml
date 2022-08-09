@@ -3,8 +3,8 @@ resources:
     cpu: "100m"
     memory: "100Mi"
   limits:
-    cpu: "200m"
-    memory: "200Mi"
+    cpu: "500m"
+    memory: "500Mi"
 envs:
   # IMPORTANT: While operator chart and UI chart are idendependent, this is the interface between
   # UI and operator API. Insert the service name of the operator API here!
