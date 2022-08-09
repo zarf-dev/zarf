@@ -89,7 +89,11 @@ func choosePackage(args []string) string {
 			return files
 		},
 	}
-	_ = survey.AskOne(prompt, &path, survey.WithValidator(survey.Required))
+
+	if err := survey.AskOne(prompt, &path, survey.WithValidator(survey.Required)); err != nil {
+		message.Fatalf(nil, "Package path selection canceled: %s", err.Error())
+	}
+
 	return path
 }
 
