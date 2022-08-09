@@ -80,7 +80,7 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
-	fieldValue := config.GetContainerRegistryInfo().PullUser + ":" + credential
+	fieldValue := config.GetContainerRegistryInfo().PullUsername + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := config.GetRegistry()
