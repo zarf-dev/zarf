@@ -139,29 +139,32 @@ func postSeedRegistry(tempPath tempPaths) {
 }
 
 func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistryInfo) types.ContainerRegistryInfo {
-	// Set default url if necessary
 
+	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
 		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
 	}
 
+	// Generate a push-user password if not provided by init flag
 	if containerRegistry.PushPassword == "" {
 		containerRegistry.PushPassword = utils.RandomString(24)
 	}
 
+	// Set pull-username if not provided by init flag
 	if containerRegistry.PullUsername == "" {
 		if containerRegistry.InternalRegistry {
 			containerRegistry.PullUsername = config.ZarfRegistryPullUser
 		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
 			containerRegistry.PullUsername = containerRegistry.PushUsername
 		}
 	}
-
 	if containerRegistry.PullPassword == "" {
 		if containerRegistry.InternalRegistry {
 			containerRegistry.PullPassword = utils.RandomString(24)
 		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
 			containerRegistry.PullPassword = containerRegistry.PushPassword
 		}
 	}
@@ -171,14 +174,15 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistr
 
 // Fill in empty GitServerInfo values with the defaults
 func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
-	// Set default svc url if necessary
+	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {
 		gitServer.Address = config.ZarfInClusterGitServiceURL
 		gitServer.Port = config.ZarfInClusterGitServicePort
 		gitServer.InternalServer = true
+
 	}
 
-	// Set default push username and auto-generate a password if not already provided
+	// Generate a push-user password if not provided by init flag
 	if gitServer.PushPassword == "" {
 		gitServer.PushPassword = utils.RandomString(24)
 	}

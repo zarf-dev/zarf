@@ -2,7 +2,7 @@ persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
 gitea:
   admin:
-    username: "zarf-git-user"
+    username: "###ZARF_GIT_PUSH###"
     password: "###ZARF_GIT_AUTH_PUSH###"
     email: "zarf@localhost"
   config:
