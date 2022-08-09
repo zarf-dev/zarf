@@ -82,7 +82,7 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	}
 
 	// Auth field must be username:password and base64 encoded
-	fieldValue := config.GetContainerRegistryInfo().PullUser + ":" + credential
+	fieldValue := zarfState.ContainerRegistryInfo.PullUsername + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := config.GetRegistry()

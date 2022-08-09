@@ -13,18 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-/*
-	preSeedRegistry does:
-	 - waits for the cluster to be healthy
-	 - gets the cluster architecture to use later to compare against the arch of the init package
-	 - attempts to load an existing zarf secret (when would this ever be here if we're only running this on init?)
-	 - Gets the cluster arch to use later to set the `state.StorageClass`
-	 - hardcodes default state values ()
-	 - gets a list of the current namespaces in the cluster and adds a label so that `zarf-agent` will ignore that namespace
-	 - sets cli flag overrides to state values
-	 - runs the injection maddness ()
-	 - Saves the state..
-*/
 func seedZarfState(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
@@ -77,7 +65,7 @@ func seedZarfState(tempPath tempPaths) {
 		// Defaults
 		state.Distro = distro
 		state.Architecture = config.GetArch()
-		state.LoggingPassword = utils.RandomString(24)
+		state.LoggingSecret = utils.RandomString(24)
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
@@ -156,13 +144,29 @@ func postSeedRegistry(tempPath tempPaths) {
 func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistryInfo) types.ContainerRegistryInfo {
 	// Set default url if necessary
 
-	if containerRegistry.URL == "" {
+	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.URL = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
-	} else {
-		// For now, if we are using an external registry, make the push and pull user the same
-		containerRegistry.PullUser = containerRegistry.PushUser
-		containerRegistry.PullPassword = containerRegistry.PushPassword
+		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+	}
+
+	if containerRegistry.PushPassword == "" {
+		containerRegistry.PushPassword = utils.RandomString(24)
+	}
+
+	if containerRegistry.PullUsername == "" {
+		if containerRegistry.InternalRegistry {
+			containerRegistry.PullUsername = config.ZarfRegistryPullUser
+		} else {
+			containerRegistry.PullUsername = containerRegistry.PushUsername
+		}
+	}
+
+	if containerRegistry.PullPassword == "" {
+		if containerRegistry.InternalRegistry {
+			containerRegistry.PullPassword = utils.RandomString(24)
+		} else {
+			containerRegistry.PullPassword = containerRegistry.PushPassword
+		}
 	}
 
 	return containerRegistry
@@ -178,9 +182,6 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 	}
 
 	// Set default push username and auto-generate a password if not already provided
-	if gitServer.PushUsername == "" {
-		gitServer.PushUsername = config.ZarfGitPushUser
-	}
 	if gitServer.PushPassword == "" {
 		gitServer.PushPassword = utils.RandomString(24)
 	}

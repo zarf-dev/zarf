@@ -34,8 +34,8 @@ func Generate() Values {
 	state := config.GetState()
 
 	generated.state = state
-	pushUser, errPush := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PushUser, config.GetContainerRegistryInfo().PushPassword)
-	pullUser, errPull := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PullUser, config.GetContainerRegistryInfo().PullPassword)
+	pushUser, errPush := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword)
+	pullUser, errPull := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PullUsername, config.GetContainerRegistryInfo().PullPassword)
 	if errPush != nil || errPull != nil {
 		message.Debug(errPush, errPull)
 		message.Fatal(nil, "Unable to define `htpasswd` string for the Zarf user")
@@ -52,7 +52,7 @@ func Generate() Values {
 	generated.secret.gitPush = config.GetState().GitServer.PushPassword
 	generated.secret.gitPull = config.GetState().GitServer.ReadPassword
 
-	generated.secret.logging = config.GetState().LoggingPassword
+	generated.secret.logging = config.GetState().LoggingSecret
 
 	generated.agentTLS = state.AgentTLS
 
