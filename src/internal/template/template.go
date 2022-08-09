@@ -49,10 +49,10 @@ func Generate() Values {
 	generated.secret.registryPull = config.GetContainerRegistryInfo().PullPassword
 	generated.secret.registrySecret = utils.RandomString(48)
 
-	generated.secret.gitPush = config.GetState().GitServer.PushPassword
-	generated.secret.gitPull = config.GetState().GitServer.ReadPassword
+	generated.secret.gitPush = state.GitServer.PushPassword
+	generated.secret.gitPull = state.GitServer.ReadPassword
 
-	generated.secret.logging = config.GetState().LoggingSecret
+	generated.secret.logging = state.LoggingSecret
 
 	generated.agentTLS = state.AgentTLS
 
@@ -82,6 +82,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		"NODEPORT":           fmt.Sprintf("%d", values.state.ContainerRegistryInfo.NodePort),
 		"REGISTRY_AUTH_PUSH": values.secret.registryPush,
 		"REGISTRY_AUTH_PULL": values.secret.registryPull,
+		"GIT_PUSH":           values.state.GitServer.PushUsername,
 		"GIT_AUTH_PUSH":      values.secret.gitPush,
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
