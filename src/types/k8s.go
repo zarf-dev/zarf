@@ -10,31 +10,31 @@ type ZarfState struct {
 
 	GitServer             GitServerInfo         `json:"gitServer"`
 	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
-	LoggingPassword       string                `json:"loggingPassword"`
+	LoggingSecret         string                `json:"loggingSecret"`
 }
 
 type GitServerInfo struct {
-	Address        string `json:"gitAddress"`
-	PushUsername   string `json:"gitPushUsername"`
-	PushPassword   string `json:"gitPushPassword"`
-	ReadUsername   string `json:"gitReadUsername"`
-	ReadPassword   string `json:"gitReadPassword"`
-	Port           int    `json:"gitPort"`
-	InternalServer bool   `json:"internalServer"`
+	PushUsername string `json:"pushUsername"`
+	PushPassword string `json:"pushPassword"`
+	ReadUsername string `json:"readUsername"`
+	ReadPassword string `json:"readPassword"`
+
+	Address string `json:"address"`
+	Port    int    `json:"port"`
+
+	InternalServer bool `json:"internalServer"`
 }
 
 type ContainerRegistryInfo struct {
-	PushUser     string `json:"pushUser"`
+	PushUsername string `json:"pushUsername"`
 	PushPassword string `json:"pushPassword"`
-
-	PullUser     string `json:"pullUser"`
+	PullUsername string `json:"pullUsername"`
 	PullPassword string `json:"pullPassword"`
 
-	URL string `json:"URL"`
+	Address  string `json:"address"`
+	NodePort int    `json:"nodePort"`
 
 	InternalRegistry bool `json:"internalRegistry"`
-
-	NodePort int `json:"nodePort"`
 }
 
 type GeneratedPKI struct {

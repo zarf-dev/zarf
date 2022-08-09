@@ -121,12 +121,12 @@ func Deploy() {
 		// otherwise, print the init config connection and passwords
 		loginTable := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", config.GetContainerRegistryInfo().PushUser, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"},
+			{"     Registry", config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"},
 		}
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
 			if component.Name == "logging" {
-				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetState().LoggingPassword, "zarf connect logging"}}...)
+				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetState().LoggingSecret, "zarf connect logging"}}...)
 			}
 			// Show message if including git-server
 			if component.Name == "git-server" {
@@ -160,7 +160,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 
 	// Don't inject a registry if an external one has been provided
 	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
-	if (config.InitOptions.ContainerRegistryInfo.URL != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
+	if (config.InitOptions.ContainerRegistryInfo.Address != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return
 	}
