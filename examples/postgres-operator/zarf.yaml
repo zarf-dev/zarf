@@ -4,12 +4,7 @@ metadata:
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
 
 components:
-  - name: minio
-    required: true
-    import:
-      path: ../minio
-
-  - name: postgres
+  - name: postgres-operator
     required: true
     charts:
       - name: postgres-operator
@@ -25,21 +20,17 @@ components:
         valuesFiles:
           - postgres/operator-ui-values.yaml
     manifests:
-      - name: postgres-example-config
+      - name: zarf-connect
         files:
-          - postgres/patch-svc-accounts.yaml
-          - postgres/db-cluster.yaml
-          - postgres/operator.yaml
           - postgres/zarf-connect.yaml
     images:
       - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.8.2
       - registry.opensource.zalan.do/acid/postgres-operator:v1.8.2
-      - registry.opensource.zalan.do/acid/logical-backup:v1.8.0
-      - registry.opensource.zalan.do/acid/logical-backup:v1.8.2
       - registry.opensource.zalan.do/acid/pgbouncer:master-22
       - registry.opensource.zalan.do/acid/spilo-14:2.1-p6
 
   - name: pgadmin
+    required: true
     charts:
       - name: pgadmin4
         url: https://helm.runix.net
@@ -53,3 +44,9 @@ components:
           - pgadmin/zarf-connect.yaml
     images:
       - docker.io/dpage/pgadmin4:6.10
+
+  - name: example-db
+    manifests:
+      - name: example-db
+        files:
+          - postgres/demo-cluster.yaml
