@@ -25,6 +25,9 @@ webhooks:
           values:
             - "skip"
             - "ignore"
+        # Ignore K3s Klipper
+        - key: svccontroller.k3s.cattle.io/svcname
+          operator: DoesNotExist
     clientConfig:
       service:
         name: agent-hook
