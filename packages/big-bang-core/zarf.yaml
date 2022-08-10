@@ -27,7 +27,7 @@ components:
       - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.39.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.5-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.13.5-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.51.0-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.8.1-bb.5
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.4.0-bb.4
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@36.2.1-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.9.0-bb.3
@@ -42,12 +42,12 @@ components:
       # istiooperator:
       - "registry1.dso.mil/ironbank/opensource/istio/operator:1.13.5"
 
-      # kiali:
-      - "registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.51.0"
-      - "registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.51.0"
-
       # clusterAuditor:
       - "registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.4"
+
+      # policy (OPA Gatekeeper)
+      - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.22.2
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.8.1
 
       # monitoring:
       - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
@@ -78,17 +78,6 @@ components:
       - registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.5.0
       - registry1.dso.mil/ironbank/opensource/grafana/tempo-query:1.4.1
       - registry1.dso.mil/ironbank/opensource/grafana/tempo:1.4.1
-
-  - name: big-bang-core-kyverno-assets
-    description: "Git repositories and OCI images used by Kyverno"
-    required: true
-    repos:
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/kyverno.git@2.2.0-bb.3
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/kyverno-policies.git@1.0.1-bb.0
-    images:
-      - registry1.dso.mil/ironbank/nirmata/kyverno:v1.6.0
-      - registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.6.0
-      - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.22.2
 
   - name: big-bang-core-limited-resources
     description: "Deploy a lightweight version of Big Bang Core using limited resources"

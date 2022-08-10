@@ -151,10 +151,45 @@ istio:
           -----END CERTIFICATE-----
 
 gatekeeper:
-  enabled: false
-
-kyverno:
-  enabled: true
+  values:
+    violations:
+      allowedDockerRegistries:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "istio-system"
+            - "local-path-storage"
+        parameters:
+          repos:
+            - "###ZARF_REGISTRY###"
+          excludedResources:
+            # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
+            - ".*/helm-install-.*"
+            - ".*/helm"
+      allowedHostFilesystem:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
+      hostNetworking:
+        match:
+          excludedNamespaces:
+            - "kube-sytem"
+            - "istio-system"
+      restrictedTaint:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"
+      volumeTypes:
+        match:
+          # Make Kind/K3d happy
+          excludedNamespaces:
+            - "kube-sytem"
+            - "local-path-storage"          
 
 # EFK -> PLG, see https://repo1.dso.mil/platform-one/big-bang/bigbang/-/blob/1.39.0/docs/guides/using-bigbang/efk-plg-logging-migration.md
 logging:
