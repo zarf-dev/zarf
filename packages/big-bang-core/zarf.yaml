@@ -2,8 +2,17 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
   description: "Deploy Big Bang Core"
+  version: 1.39.0
+  url: https://p1.dso.mil/products/big-bang
+  image: https://p1.dso.mil/img/Big_Bang_Color_Logo_White_text.de14c793.webp
   # Big Bang / Iron Bank are only amd64
   architecture: amd64
+
+variables:
+  # Prompt user for the domain override
+  - name: DOMAIN
+    default: "bigbang.dev"
+    prompt: true
 
 components:
   - name: flux
@@ -11,71 +20,64 @@ components:
     import:
       path: ../flux-iron-bank
 
-  - name: big-bang-core-assets
+  - name: big-bang-core-standard-assets
     description: "Git repositories and OCI images used by Big Bang Core"
     required: true
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.37.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.4-bb.1
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.13.4-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/jaeger.git@2.32.2-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/kiali.git@1.51.0-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.39.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.13.5-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.13.5-bb.1
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.8.1-bb.5
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.4.0-bb.4
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.8.1-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.0.5-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail.git@4.2.0-bb.2
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@35.5.1-bb.2
-      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.9.0-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@36.2.1-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.9.0-bb.3
 
     images:
-      # istio-controlplane
-      - registry1.dso.mil/ironbank/big-bang/base:1.0.0
-      - registry1.dso.mil/ironbank/opensource/istio/pilot:1.13.4
-      - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.13.4
-      - registry1.dso.mil/ironbank/opensource/istio/install-cni:1.13.4
+      # istio:
+      - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
+      - "registry1.dso.mil/ironbank/opensource/istio/pilot:1.13.5"
+      - "registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.13.5"
+      - "registry1.dso.mil/ironbank/opensource/istio/install-cni:1.13.5"
 
-      # istio-operator
-      - registry1.dso.mil/ironbank/opensource/istio/operator:1.13.4
+      # istiooperator:
+      - "registry1.dso.mil/ironbank/opensource/istio/operator:1.13.5"
 
-      # jaeger
-      - registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.1.1
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.34.1
-      - registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.34.1
-      - registry1.dso.mil/ironbank/big-bang/base:1.17.0
-
-      # kiali
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.51.0
-      - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.51.0
-
-      # cluster-auditor
-      - registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.4
+      # clusterAuditor:
+      - "registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.4"
 
       # policy (OPA Gatekeeper)
       - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.22.2
       - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.8.1
 
-      # loki
+      # monitoring:
+      - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
+      - "registry1.dso.mil/ironbank/big-bang/grafana/grafana-plugins:9.0.1"
+      - "registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.19.2"
+      - "registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.1.1"
+      - "registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.5.0"
+      - "registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.57.0"
+      - "registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.57.0"
+      - "registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.24.0"
+      - "registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.3.1"
+      - "registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.36.2"
+
+      # twistlock:
+      - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
+      - "registry1.dso.mil/ironbank/twistlock/console/console:22.06.179"
+      - "registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.179"
+
+  - name: big-bang-core-plg-assets
+    description: "Git repositories and OCI images used by PLG"
+    required: true
+    repos:
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.0.5-bb.4
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail.git@4.2.0-bb.2
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/tempo.git@0.15.1-bb.7
+    images:
       - registry1.dso.mil/ironbank/opensource/grafana/loki:2.5.0
-
-      # promtail
       - registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.5.0
-
-      # monitoring
-      - registry1.dso.mil/ironbank/big-bang/base:1.17.0
-      - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.18.1
-      - registry1.dso.mil/ironbank/big-bang/grafana/grafana-plugins:8.6.2
-      - registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.1.1
-      - registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.5.0
-      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.57.0
-      - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.57.0
-      - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.24.0
-      - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.3.1
-      - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.36.0
-
-      # twistlock
-      - registry1.dso.mil/ironbank/big-bang/base:1.18.0
-      - registry1.dso.mil/ironbank/twistlock/console/console:22.06.179
-      - registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.179
+      - registry1.dso.mil/ironbank/opensource/grafana/tempo-query:1.4.1
+      - registry1.dso.mil/ironbank/opensource/grafana/tempo:1.4.1
 
   - name: big-bang-core-limited-resources
     description: "Deploy a lightweight version of Big Bang Core using limited resources"

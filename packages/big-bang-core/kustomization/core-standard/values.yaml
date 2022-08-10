@@ -1,4 +1,4 @@
-domain: bigbang.dev
+domain: "###ZARF_VAR_DOMAIN###"
 
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
@@ -56,6 +56,7 @@ istio:
           ZSiedu5LBQD9enuns5qja1JCLTczx4h9J4VC5dta2LwJEKdl3JFV0TtRLZem4vkw
           PMvLLr/bq/3meBHUPHFCbVI=
           -----END PRIVATE KEY-----
+
         cert: |
           -----BEGIN CERTIFICATE-----
           MIIFHzCCBAegAwIBAgISBJmTT+NKxDDIk28TBZXhUpGNMA0GCSqGSIb3DQEBCwUA
@@ -150,7 +151,6 @@ istio:
           -----END CERTIFICATE-----
 
 gatekeeper:
-  enabled: true
   values:
     violations:
       allowedDockerRegistries:
@@ -158,14 +158,12 @@ gatekeeper:
           # Make Kind/K3d happy
           excludedNamespaces:
             - "kube-sytem"
+            - "istio-system"
             - "local-path-storage"
         parameters:
           repos:
             - "###ZARF_REGISTRY###"
           excludedResources:
-            # K3s needs these due to how it creates services of type "LoadBalancer"
-            - "istio-system/lb-port-.*"
-            - "istio-system/svclb-.*"
             # K3s needs this if you are doing K3s-specific "HelmRelease"-type CRDs
             - ".*/helm-install-.*"
             - ".*/helm"
@@ -176,11 +174,10 @@ gatekeeper:
             - "kube-sytem"
             - "local-path-storage"
       hostNetworking:
-        parameters:
-          excludedResources:
-            # K3s needs these due to how it creates services of type "LoadBalancer"
-            - "istio-system/svclb-.*"
-            - "istio-system/lb-port-.*"
+        match:
+          excludedNamespaces:
+            - "kube-sytem"
+            - "istio-system"
       restrictedTaint:
         match:
           # Make Kind/K3d happy
@@ -194,17 +191,18 @@ gatekeeper:
             - "kube-sytem"
             - "local-path-storage"
 
+# EFK -> PLG, see https://repo1.dso.mil/platform-one/big-bang/bigbang/-/blob/1.39.0/docs/guides/using-bigbang/efk-plg-logging-migration.md
 logging:
   enabled: false
-
 eckoperator:
   enabled: false
-
 fluentbit:
   enabled: false
-
+jaeger:
+  enabled: false
 loki:
   enabled: true
-
 promtail:
+  enabled: true
+tempo:
   enabled: true

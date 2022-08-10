@@ -10,6 +10,7 @@ clusterAuditor:
 
 gatekeeper:
   values:
+    replicas: 1
     controllerManager:
       resources:
         limits:
