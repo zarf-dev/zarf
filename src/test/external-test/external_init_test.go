@@ -27,8 +27,26 @@ func TestExternalDeploy(t *testing.T) {
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", applyArgs...)
 	require.NoError(t, err, "unable to apply private-git-server secret ")
 
+	helmAddArgs := []string{"repo", "add", "twuni", "https://helm.twun.io"}
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmAddArgs...)
+	require.NoError(t, err, "unable to add the docker-registry chart repo")
+
+	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
+	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmInstallArgs...)
+	require.NoError(t, err, "unable to install the docker-registry chart")
+
 	// Use Zarf to initialize the cluster
-	initArgs := []string{"init", "--git-user", "git-user", "--git-password", "superSecurePassword", "--git-url", "http://gitea-http.git-server.svc.cluster.local:3000", "--confirm"}
+	initArgs := []string{"init",
+		"--git-push-username=git-user",
+		"--git-push-password=superSecurePassword",
+		"--git-url=http://gitea-http.git-server.svc.cluster.local",
+		"--git-port=3000",
+		"--registry-push-username=push-user",
+		"--registry-push-password=superSecurePassword",
+		"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
+		"--nodeport=31999",
+		"--confirm"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", initArgs...)
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
