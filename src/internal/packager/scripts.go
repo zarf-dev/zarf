@@ -11,10 +11,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-
 func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
-	defer spinner.Stop()
+	defer spinner.Success()
 
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
 	binaryPath, err := os.Executable()
@@ -65,7 +64,6 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 			}
 
 			// Close the function now that we are done
-			spinner.Success()
 			return
 		}
 	}
