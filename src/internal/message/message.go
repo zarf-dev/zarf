@@ -118,6 +118,11 @@ func Infof(format string, a ...any) {
 	}
 }
 
+func SuccessF(format string, a ...any) {
+	message := paragraph(format, a...)
+	pterm.Success.Println(message)
+}
+
 func Question(text string) {
 	pterm.Println()
 	message := paragraph(text)
