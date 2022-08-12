@@ -142,10 +142,15 @@ func Deploy() {
 		message.PrintConnectStringTable(connectStrings)
 	} else {
 		// otherwise, print the init config connection and passwords
-		loginTable := pterm.TableData{
+		loginTableHeader := pterm.TableData{
 			{"     Application", "Username", "Password", "Connect"},
-			{"     Registry", config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"},
 		}
+
+		loginTable := pterm.TableData{}
+		if config.GetContainerRegistryInfo().InternalRegistry {
+			loginTable = append(loginTable, pterm.TableData{{"     Registry", config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"}}...)
+		}
+
 		for _, component := range componentsToDeploy {
 			// Show message if including logging stack
 			if component.Name == "logging" {
@@ -159,7 +164,11 @@ func Deploy() {
 				}...)
 			}
 		}
-		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+
+		if len(loginTable) > 0 {
+			loginTable = append(loginTableHeader, loginTable...)
+			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+		}
 	}
 
 	// Not all packages need k8s so we need to check if k8s is being used before saving the metadata secret
