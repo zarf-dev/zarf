@@ -38,7 +38,7 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 		options.Chart.Name,
 		options.Chart.Version,
 		fromMessage)
-	defer spinner.Stop()
+	defer spinner.Success()
 
 	var output *release.Release
 
@@ -109,7 +109,6 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 			time.Sleep(10 * time.Second)
 		} else {
 			spinner.Debugf(output.Info.Description)
-			spinner.Success()
 			break
 		}
 
