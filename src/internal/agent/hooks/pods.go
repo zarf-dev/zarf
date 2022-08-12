@@ -56,7 +56,8 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
 	zarfState, _ := getZarfStateFromFileWithinAgentPod(zarfStatePath)
-	containerRegistryURL := zarfState.ContainerRegistryInfo.Address
+	config.InitState(zarfState)
+	containerRegistryURL := config.GetRegistry()
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
