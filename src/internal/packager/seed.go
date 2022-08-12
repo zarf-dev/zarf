@@ -143,6 +143,7 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistr
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
+		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
 		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
 	}
 
