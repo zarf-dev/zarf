@@ -8,7 +8,7 @@ This directory holds the tests that verify Zarf can initialize a cluster to use 
 
 ### Dependencies
 Running the tests locally have the same prerequisites as running and building Zarf:
- 1. GoLang >= `1.18.x`
+ 1. GoLang >= `1.19.x`
  2. Access to a K8s cluster to test against
     - (for the internal `k3s` cluster only) Linux with root privileges
 3. The Zarf binary to be on your path and aliased to `zarf`
