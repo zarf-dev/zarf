@@ -201,7 +201,12 @@ func GetState() types.ZarfState {
 }
 
 func GetRegistry() string {
-	return fmt.Sprintf("%s:%d", IPV4Localhost, state.ContainerRegistryInfo.NodePort)
+	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
+	if state.ContainerRegistryInfo.NodePort >= 30000 {
+		return fmt.Sprintf("%s:%d", IPV4Localhost, state.ContainerRegistryInfo.NodePort)
+	}
+
+	return state.ContainerRegistryInfo.Address
 }
 
 // LoadConfig loads the config from the given path and removes
