@@ -32,7 +32,7 @@ func PushAllDirectories(localPath string) error {
 	}
 
 	spinner := message.NewProgressSpinner("Processing %d git repos", len(paths))
-	defer spinner.Success()
+	defer spinner.Stop()
 
 	for _, path := range paths {
 		basename := filepath.Base(path)
@@ -53,6 +53,7 @@ func PushAllDirectories(localPath string) error {
 		}
 	}
 
+	spinner.Success()
 	return nil
 }
 
