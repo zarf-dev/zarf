@@ -1,7 +1,7 @@
-# Testing Initializing Zarf w/ An External Git Server
-> Note: In this case, the 'external' Git server is a server that already existed inside the k8s cluster
+# Test Initializing Zarf w/ An External Git Repository and A External Container Registry
+> Note: In this case, the 'external' Git server and container registry are both considered 'external' servers that already existed inside the k8s cluster before `zarf init` is executed
 
-This directory holds the tests that verify Zarf can initialize a cluster to use an already existing Git server that is external to the resources Zarf manages. The tests in this directory are currently only run when manually executed.
+This directory holds the tests that verify Zarf can initialize a cluster to use an already existing Git server and container registry that is external to the resources Zarf manages. The tests in this directory are currently only run when manually executed.
 
 
 ## Running Tests Locally
