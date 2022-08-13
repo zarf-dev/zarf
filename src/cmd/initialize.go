@@ -140,13 +140,13 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadUsername, "git-read-username", "", "Username for read-only access to the git server")
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadPassword, "git-read-password", "", "Password for the read-only user to access the git server")
 
-	// Flags for using an external container registry
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.Address, "registry-url", "", "External container registry url address to use for this Zarf cluster")
-	initCmd.Flags().IntVar(&config.InitOptions.ContainerRegistryInfo.NodePort, "nodeport", 0, "Nodeport to access a container registry internal to the k8s cluster. Between [30000-32767]")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushUsername, "registry-push-username", config.ZarfRegistryPushUser, "Username to access to the container registry Zarf is configured to use")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the container registry")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PullUsername, "registry-pull-username", "", "Username for pull-only access to the container registry")
-	initCmd.Flags().StringVar(&config.InitOptions.ContainerRegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the container registry")
+	// Flags for using an external registry
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Address, "registry-url", "", "External registry url address to use for this Zarf cluster")
+	initCmd.Flags().IntVar(&config.InitOptions.RegistryInfo.NodePort, "nodeport", 0, "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushUsername, "registry-push-username", config.ZarfRegistryPushUser, "Username to access to the registry Zarf is configured to use")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", "", "Username for pull-only access to the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the registry")
 
 	initCmd.Flags().SortFlags = true
 }
