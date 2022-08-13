@@ -76,7 +76,7 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 	if err != nil {
 		message.Fatalf(err, "Unable to load the Zarf state")
 	}
-	credential := zarfState.ContainerRegistryInfo.PullPassword
+	credential := zarfState.RegistryInfo.PullPassword
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
