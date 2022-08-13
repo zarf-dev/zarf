@@ -8,9 +8,9 @@ type ZarfState struct {
 	StorageClass  string       `json:"storageClass"`
 	AgentTLS      GeneratedPKI `json:"agentTLS"`
 
-	GitServer             GitServerInfo         `json:"gitServer"`
-	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
-	LoggingSecret         string                `json:"loggingSecret"`
+	GitServer     GitServerInfo `json:"gitServer"`
+	RegistryInfo  RegistryInfo  `json:"registryInfo"`
+	LoggingSecret string        `json:"loggingSecret"`
 }
 
 type GitServerInfo struct {
@@ -25,7 +25,7 @@ type GitServerInfo struct {
 	InternalServer bool `json:"internalServer"`
 }
 
-type ContainerRegistryInfo struct {
+type RegistryInfo struct {
 	PushUsername string `json:"pushUsername"`
 	PushPassword string `json:"pushPassword"`
 	PullUsername string `json:"pullUsername"`
