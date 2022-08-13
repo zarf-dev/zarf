@@ -173,6 +173,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		manifestCount := 0
 		for _, manifest := range component.Manifests {
 			manifestCount += len(manifest.Files)
+			manifestCount += len(manifest.Kustomizations)
 		}
 
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
