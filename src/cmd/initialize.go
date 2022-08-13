@@ -130,7 +130,6 @@ func init() {
 	initCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
 	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
-	initCmd.Flags().StringVar(&config.InitOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
@@ -147,6 +146,7 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the registry")
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", "", "Username for pull-only access to the registry")
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.Secret, "registry-secret", "", "Registry secret value")
 
 	initCmd.Flags().SortFlags = true
 }

@@ -38,10 +38,9 @@ type GitServerInfo struct {
 	ReadUsername string `json:"readUsername"`
 	ReadPassword string `json:"readPassword"`
 
-	Address string `json:"address"`
-	Port    int    `json:"port"`
-
-	InternalServer bool `json:"internalServer"`
+	Address        string `json:"address"`
+	Port           int    `json:"port"`
+	InternalServer bool   `json:"internalServer"`
 }
 
 type RegistryInfo struct {
@@ -50,10 +49,11 @@ type RegistryInfo struct {
 	PullUsername string `json:"pullUsername"`
 	PullPassword string `json:"pullPassword"`
 
-	Address  string `json:"address"`
-	NodePort int    `json:"nodePort"`
+	Address          string `json:"address"`
+	NodePort         int    `json:"nodePort"`
+	InternalRegistry bool   `json:"internalRegistry"`
 
-	InternalRegistry bool `json:"internalRegistry"`
+	Secret string `json:"secret"`
 }
 
 type GeneratedPKI struct {
