@@ -36,7 +36,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 	var patches []operations.PatchOperation
 
-	zarfState, err := getZarfStateFromFileWithinAgentPod(zarfStatePath)
+	zarfState, err := getStateFromAgentPod(zarfStatePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load zarf state from file: %v", err)
 	}
