@@ -13,8 +13,7 @@ service:
   type: NodePort
   nodePort: 31999
 
-# Set this to name of secret for tls certs
-# tlsSecretName: registry.docker.example.com
+# Note: Super fake and not real htpasswd for testing purposes
 secrets:
   haSharedSecret: ""
   htpasswd: "push-user:$2a$10$bnke4DeqY4qsAWIRsJCFluayx4v56mxhp/bfwubt.K83fudDzKAue"
