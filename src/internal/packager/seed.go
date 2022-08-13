@@ -111,7 +111,7 @@ func seedZarfState(tempPath tempPaths) {
 	}
 
 	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
-	state.ContainerRegistryInfo = fillInEmptyContainerRegistryValues(config.InitOptions.ContainerRegistryInfo)
+	state.RegistryInfo = fillInEmptyContainerRegistryValues(config.InitOptions.RegistryInfo)
 
 	spinner.Success()
 
@@ -141,7 +141,7 @@ func postSeedRegistry(tempPath tempPaths) {
 	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
 }
 
-func fillInEmptyContainerRegistryValues(containerRegistry types.ContainerRegistryInfo) types.ContainerRegistryInfo {
+func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
 
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {

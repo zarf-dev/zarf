@@ -8,9 +8,9 @@ type ZarfState struct {
 	StorageClass  string       `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServer             GitServerInfo         `json:"gitServer"`
-	ContainerRegistryInfo ContainerRegistryInfo `json:"containerRegistryInfo"`
-	LoggingSecret         string                `json:"loggingSecret"`
+	GitServer     GitServerInfo `json:"gitServer"`
+	RegistryInfo  RegistryInfo  `json:"registryInfo"`
+	LoggingSecret string        `json:"loggingSecret"`
 }
 
 type DeployedPackage struct {
@@ -44,7 +44,7 @@ type GitServerInfo struct {
 	InternalServer bool `json:"internalServer"`
 }
 
-type ContainerRegistryInfo struct {
+type RegistryInfo struct {
 	PushUsername string `json:"pushUsername"`
 	PushPassword string `json:"pushPassword"`
 	PullUsername string `json:"pullUsername"`

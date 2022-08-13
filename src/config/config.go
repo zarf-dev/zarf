@@ -204,11 +204,11 @@ func GetState() types.ZarfState {
 
 func GetRegistry() string {
 	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
-	if state.ContainerRegistryInfo.NodePort >= 30000 {
-		return fmt.Sprintf("%s:%d", IPV4Localhost, state.ContainerRegistryInfo.NodePort)
+	if state.RegistryInfo.NodePort >= 30000 {
+		return fmt.Sprintf("%s:%d", IPV4Localhost, state.RegistryInfo.NodePort)
 	}
 
-	return state.ContainerRegistryInfo.Address
+	return state.RegistryInfo.Address
 }
 
 // LoadConfig loads the config from the given path and removes
@@ -241,8 +241,8 @@ func GetGitServerInfo() types.GitServerInfo {
 }
 
 // GetContainerRegistryInfo returns the ContainerRegistryInfo for the docker registry Zarf is configured to use from the state
-func GetContainerRegistryInfo() types.ContainerRegistryInfo {
-	return state.ContainerRegistryInfo
+func GetContainerRegistryInfo() types.RegistryInfo {
+	return state.RegistryInfo
 }
 
 // BuildConfig adds build information and writes the config to the given path
