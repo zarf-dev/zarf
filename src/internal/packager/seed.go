@@ -173,6 +173,10 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) ty
 		}
 	}
 
+	if containerRegistry.Secret == "" {
+		containerRegistry.Secret = utils.RandomString(48)
+	}
+
 	return containerRegistry
 }
 
