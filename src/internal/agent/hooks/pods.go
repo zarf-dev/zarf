@@ -55,7 +55,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	zarfState, _ := getZarfStateFromFileWithinAgentPod(zarfStatePath)
+	zarfState, _ := getStateFromAgentPod(zarfStatePath)
 	config.InitState(zarfState)
 	containerRegistryURL := config.GetRegistry()
 
@@ -90,7 +90,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 }
 
 // Reads the state json file that was mounted into the agent pods
-func getZarfStateFromFileWithinAgentPod(zarfStatePath string) (zarfState types.ZarfState, err error) {
+func getStateFromAgentPod(zarfStatePath string) (zarfState types.ZarfState, err error) {
 	// Read the state file
 	stateFile, err := ioutil.ReadFile(zarfStatePath)
 	if err != nil {
@@ -101,7 +101,7 @@ func getZarfStateFromFileWithinAgentPod(zarfStatePath string) (zarfState types.Z
 	// Unmarshal the json file into a Go struct
 	err = json.Unmarshal([]byte(stateFile), &zarfState)
 	if err != nil {
-		message.Warnf("Unable to umarshal the zarfState file into a useable object.")
+		message.Warnf("Unable to unmarshal the zarfState file into a useable object.")
 		return zarfState, err
 	}
 
