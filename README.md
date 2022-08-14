@@ -2,7 +2,7 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-6d87c3)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
-[![Zarf Documentation](https://img.shields.io/badge/web-zarf.dev-b99cca)](https://zarf.dev/)
+[![Zarf Documentation](https://img.shields.io/badge/web-zarf.dev-775ba1)](https://zarf.dev/)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
@@ -12,7 +12,7 @@ It provides a static go binary (can run anywhere) CLI that can pull, package, an
 
 Zarf runs on [a bunch of operating systems](./docs/supported-oses.md), and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters."
 
-Zarf was theorized and initially demonstrated in Naval Postgraduate School research you can read about [here](https://calhoun.nps.edu/handle/10945/68688).
+Zarf was theorized and initially demonstrated in Naval Postgraduate School research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
 ## Demo
 
@@ -20,19 +20,38 @@ Zarf was theorized and initially demonstrated in Naval Postgraduate School resea
 
 ## Docs
 
-To learn more about Zarf... <!-- TODO -->
+To learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview).
 
-## Contributing
+From there you can learn about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
 
-To contribute to Zarf... <!-- TODO -->
+<!-- TODO Copy editing -->
 
-### Architecture
+## Developing
+
+To contribute to Zarf please see our [Contributor Guide](https://docs.zarf.dev/docs/developer-guide/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/developer-guide/nerd-notes).
+
 ![Architecture Diagram](./docs/architecture.drawio.svg)
 
 [Source DrawIO](docs/architecture.drawio.svg)
+
+<!-- TODO Copy editing -->
 
 ## Special Thanks
 
 Zarf would not be possible without the people behind these awesome libraries.
 
-<!-- TODO -->
+[pterm/pterm](https://github.com/pterm/pterm)
+
+[mholt/archiver](https://github.com/mholt/archiver)
+
+[spf13/cobra](https://github.com/spf13/cobra)
+
+[go-git/go-git](https://github.com/go-git/go-git)
+
+[sigstore/cosign](https://github.com/sigstore/cosign)
+
+[helm.sh/helm](https://github.com/helm/helm)
+
+[kubernetes](https://github.com/kubernetes)
+
+<!-- TODO Formatting/Finalizing -->
