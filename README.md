@@ -12,7 +12,7 @@ It provides a static go binary (can run anywhere) CLI that can pull, package, an
 
 Zarf runs on [a bunch of operating systems](./docs/supported-oses.md), and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters."
 
-Zarf was theorized and initially demonstrated in research from the Naval Postgraduate School which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
+Zarf was initially theorized and demonstrated in research from Naval Postgraduate School which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
 ## Demo
 
