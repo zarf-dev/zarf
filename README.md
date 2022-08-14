@@ -1,4 +1,4 @@
-# Zarf - DevSecOps for Air Gap Systems
+# Zarf - DevSecOps for Air Gap
 
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-6d87c3)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
