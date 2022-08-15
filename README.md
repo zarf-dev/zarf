@@ -25,8 +25,6 @@ To learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.za
 
 From there you can learn about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
 
-<!-- TODO Copy editing -->
-
 ## Developing
 
 To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/developer-guide/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/developer-guide/nerd-notes).
@@ -35,11 +33,9 @@ To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/dev
 
 [Source DrawIO](docs/architecture.drawio.svg)
 
-<!-- TODO Copy editing -->
-
 ## Special Thanks
 
-Zarf would not be possible without the people behind these awesome libraries and projects!
+We would also like to thank the following awesome libraries and projects without which Zarf would not be possible!
 
 [![pterm/pterm](https://img.shields.io/badge/pterm%2Fpterm-007d9c?logo=go&logoColor=white)](https://github.com/pterm/pterm)
 [![mholt/archiver](https://img.shields.io/badge/mholt%2Farchiver-007d9c?logo=go&logoColor=white)](https://github.com/mholt/archiver)
@@ -48,5 +44,3 @@ Zarf would not be possible without the people behind these awesome libraries and
 [![sigstore/cosign](https://img.shields.io/badge/sigstore%2Fcosign-2a1e71?logo=linuxfoundation&logoColor=white)](https://github.com/sigstore/cosign)
 [![helm.sh/helm](https://img.shields.io/badge/helm.sh%2Fhelm-0f1689?logo=helm&logoColor=white)](https://github.com/helm/helm)
 [![kubernetes](https://img.shields.io/badge/kubernetes-316ce6?logo=kubernetes&logoColor=white)](https://github.com/kubernetes)
-
-<!-- TODO Formatting/Finalizing -->
