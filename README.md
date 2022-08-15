@@ -3,7 +3,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-6d87c3)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
 [![Zarf Documentation](https://img.shields.io/badge/web-zarf.dev-775ba1)](https://zarf.dev/)
-[![Go version](https://img.shields.io/github/go-mod/go-version/:user/:repo?filename=go.mod)](https://go.dev/)
+[![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
