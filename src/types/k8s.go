@@ -6,12 +6,11 @@ type ZarfState struct {
 	Distro        string       `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
 	Architecture  string       `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
 	StorageClass  string       `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
-	Secret        string       `json:"secret"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServer     GitServerInfo `json:"gitServer"`
-	RegistryInfo  RegistryInfo  `json:"registryInfo"`
-	LoggingSecret string        `json:"loggingSecret"`
+	GitServer     GitServerInfo `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
+	RegistryInfo  RegistryInfo  `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is configured to use"`
+	LoggingSecret string        `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
 }
 
 type DeployedPackage struct {
@@ -31,27 +30,27 @@ type InstalledCharts struct {
 }
 
 type GitServerInfo struct {
-	PushUsername string `json:"pushUsername"`
-	PushPassword string `json:"pushPassword"`
-	ReadUsername string `json:"readUsername"`
-	ReadPassword string `json:"readPassword"`
+	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
+	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`
+	ReadUsername string `json:"readUsername" jsonschema:"description=Username of a user with read-only access to the git repository. If not provided for an external repository than the push-user is used"`
+	ReadPassword string `json:"readPassword" jsonschema:"description=Password of a user with read-only access to the git repository. If not provided for an external repository than the push-user is used"`
 
-	Address        string `json:"address"`
-	Port           int    `json:"port"`
-	InternalServer bool   `json:"internalServer"`
+	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
+	Port           int    `json:"port" jsonschema:"description=Port to access the git server"`
+	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
 type RegistryInfo struct {
-	PushUsername string `json:"pushUsername"`
-	PushPassword string `json:"pushPassword"`
-	PullUsername string `json:"pullUsername"`
-	PullPassword string `json:"pullPassword"`
+	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the registry"`
+	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the registry"`
+	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
+	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 
-	Address          string `json:"address"`
-	NodePort         int    `json:"nodePort"`
-	InternalRegistry bool   `json:"internalRegistry"`
+	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
+	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
+	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
-	Secret string `json:"secret"`
+	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
 }
 
 type GeneratedPKI struct {
