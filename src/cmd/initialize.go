@@ -146,7 +146,7 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the registry")
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", "", "Username for pull-only access to the registry")
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.Secret, "registry-secret", "", "Registry secret value")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Secret, "registry-secret", "", "Registry secret value")
 
 	initCmd.Flags().SortFlags = true
 }
