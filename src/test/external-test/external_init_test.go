@@ -55,7 +55,7 @@ func TestExternalDeploy(t *testing.T) {
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", deployArgs...)
 	require.NoError(t, err, "unable to deploy flux example package")
 
-	// Verify flux was able to pulll from the 'external' registry
+	// Verify flux was able to pull from the 'external' repository
 	kubectlOut := verifyPodinfoDeployment(t)
 	assert.Contains(t, string(kubectlOut), "condition met")
 }
