@@ -3,6 +3,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-6d87c3)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
 [![Zarf Documentation](https://img.shields.io/badge/web-zarf.dev-775ba1)](https://zarf.dev/)
+[![Go version](/github/go-mod/go-version/:user/:repo?filename=go.mod)](https://go.dev/)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
@@ -38,20 +39,14 @@ To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/dev
 
 ## Special Thanks
 
-Zarf would not be possible without the people behind these awesome libraries.
+Zarf would not be possible without the people behind these awesome libraries and projects!
 
-[pterm/pterm](https://github.com/pterm/pterm)
-
-[mholt/archiver](https://github.com/mholt/archiver)
-
-[spf13/cobra](https://github.com/spf13/cobra)
-
-[go-git/go-git](https://github.com/go-git/go-git)
-
-[sigstore/cosign](https://github.com/sigstore/cosign)
-
-[helm.sh/helm](https://github.com/helm/helm)
-
-[kubernetes](https://github.com/kubernetes)
+[![pterm/pterm](https://img.shields.io/badge/pterm%2Fpterm-007d9c?logo=go&logoColor=white)](https://github.com/pterm/pterm)
+[![mholt/archiver](https://img.shields.io/badge/mholt%2Farchiver-007d9c?logo=go&logoColor=white)](https://github.com/mholt/archiver)
+[![spf13/cobra](https://img.shields.io/badge/spf13%2Fcobra-007d9c?logo=go&logoColor=white)](https://github.com/spf13/cobra)
+[![go-git/go-git](https://img.shields.io/badge/go--git%2Fgo--git-007d9c?logo=go&logoColor=white)](https://github.com/go-git/go-git)
+[![sigstore/cosign](https://img.shields.io/badge/sigstore%2Fcosign-2a1e71?logo=linuxfoundation&logoColor=white)](https://github.com/sigstore/cosign)
+[![helm.sh/helm](https://img.shields.io/badge/helm.sh%helm-0f1689?logo=helm&logoColor=white)](https://github.com/helm/helm)
+[![kubernetes](https://img.shields.io/badge/kubernetes-316ce6?logo=kubernetes&logoColor=white)](https://github.com/kubernetes)
 
 <!-- TODO Formatting/Finalizing -->
