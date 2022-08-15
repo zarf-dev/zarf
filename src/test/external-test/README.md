@@ -9,8 +9,7 @@ This directory holds the tests that verify Zarf can initialize a cluster to use 
 ### Dependencies
 Running the tests locally have the same prerequisites as running and building Zarf:
  1. GoLang >= `1.19.x`
- 2. Access to a K8s cluster to test against
-    - (for the internal `k3s` cluster only) Linux with root privileges
+ 2. Access to a Kind cluster to test against
 3. The Zarf binary to be on your path and aliased to `zarf`
 4. The `zarf-init` package built (the `zarf.yaml` file at the root of this project)
 5. The `examples/flux-test/zarf.yaml` package built
