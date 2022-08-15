@@ -1,8 +1,9 @@
 # Zarf - DevSecOps for Air Gap
 
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
-[![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-6d87c3)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
-[![Zarf Documentation](https://img.shields.io/badge/web-zarf.dev-775ba1)](https://zarf.dev/)
+[![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
+[![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
+[![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
@@ -19,11 +20,11 @@ Zarf was initially theorized and demonstrated in research from Naval Postgraduat
 
 [![asciicast](https://asciinema.org/a/475530.svg)](https://asciinema.org/a/475530)
 
-## Docs
+## Getting Started
 
-To learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview).
+To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website, and if you want to learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview).
 
-From there you can learn about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
+From the docs you can learn more about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
 
 ## Developing
 
