@@ -30,7 +30,7 @@ Zarf simplifies the setup & administration of Kubernetes clusters, cyber systems
 - Composable packages to include multiple sub-packages/components
 - Filters to select the correct architectures/operating systems for packages
 
-Zarf was initially theorized and demonstrated in research from Naval Postgraduate School which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
+> Zarf was initially theorized and demonstrated in research from Naval Postgraduate School which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
 ## Demo
 
