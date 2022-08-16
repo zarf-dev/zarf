@@ -5,14 +5,30 @@
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
+[![Build Status](https://img.shields.io/github/workflow/status/defenseunicorns/zarf/Publish%20Zarf%20Packages%20on%20Tag)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
 Zarf simplifies the setup & administration of Kubernetes clusters, cyber systems & workloads that support DevSecOps "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))."
 
-It provides a static go binary (can run anywhere) CLI that can pull, package, and install everything a cluster needs to run alongside any necessary infrastructure resources like Terraform. Zarf also caches downloads (for speed), hashes packages (for security), and can _even install the Kubernetes cluster itself_ if you needed.
+📦 Out of the Box Features
 
-Zarf runs on [a bunch of operating systems](./docs/supported-oses.md), and aims to support configurations ranging from "I want to run one, simple app" to "I need to support & dependency control a _bunch_ of internet-disconnected clusters."
+- Automate Kubernetes deployments in disconnected environments
+- Automate Software Bill of Materials (SBOM) generation
+- Provide HTML Dashboards for viewing SBOM output
+- Deploy a new cluster while fully disconnected (using K3s)
+- Deploy pre-built tar.zst package into any existing cluster (using the kubernetes context)
+- Builtin logging (PLG) and seedable git repository (gitea) and docker registry
+- Automatically update pod's ImagePullSecrets so resources use the NodePort (See the Zarf Agent)
+- Builtin K9s Dashboard for visualizing containers and clusters
+- Builtin command to find images and resources from a helm chart
+- Create secure tunnel ports for deployments
+
+🛠️ Configurable Features
+
+- Customizable packages variables with defaults and user prompting
+- Composable packages to include multiple sub-packages/components
+- Filters to select the correct architectures/operating systems for packages
 
 Zarf was initially theorized and demonstrated in research from Naval Postgraduate School which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
