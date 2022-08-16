@@ -17,7 +17,7 @@ Zarf simplifies the setup & administration of Kubernetes clusters, cyber systems
 - Automate Software Bill of Materials (SBOM) generation
 - Provide HTML Dashboards for viewing SBOM output
 - Deploy a new cluster while fully disconnected (using K3s)
-- Deploy pre-built tar.zst package into any existing cluster (using the kubernetes context)
+- Deploy pre-built tar.zst package into any existing cluster (using the kube context)
 - Builtin logging (PLG) and seedable git repository (gitea) and docker registry
 - Automatically update pod's ImagePullSecrets so resources use the NodePort (See the Zarf Agent)
 - Builtin K9s Dashboard for visualizing containers and clusters
