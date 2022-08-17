@@ -1,4 +1,4 @@
-# Zarf Tiny Kafka Example
+# Tiny Kafka
 
 This example demonstrates using Zarf to deploy a simple operator example, in this case [Strimzi Kafka Operator](https://strimzi.io/).
 
@@ -30,7 +30,7 @@ Before the magic can happen you have to do a few things:
 
 3. Clone the Zarf project &mdash; for the example configuration files.
 
-4. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
+4. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf). <!-- TODO: non-existent -->
 
 &nbsp;
 
@@ -55,9 +55,7 @@ Follow the prompts, answering "no" to each of the optional components, since we 
 
 Congratulations! Your machine is now running a single-node Kubernetes cluster powered by Zarf!
 
-> _**Note**_
->
-> Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
+> ⚠️ **NOTE:** *Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.*
 
 **Troubleshooting:**
 

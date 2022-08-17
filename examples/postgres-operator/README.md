@@ -1,4 +1,4 @@
-# Zarf Postgres Operator Example
+# Postgres Operator
 
 This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
 
@@ -14,7 +14,7 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
-1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf).
+1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf). <!-- TODO: non-existent -->
 
 1. Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
 
@@ -50,7 +50,7 @@ Wait a couple of minutes. You'll know it is done when Zarf exits and you get the
 
 The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
 
-> If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.
+> ⚠️ **NOTE:** *If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.*
 
 ### Set up a server in PGAdmin:
   - General // Name: `acid-zarf-test`

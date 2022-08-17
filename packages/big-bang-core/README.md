@@ -1,4 +1,4 @@
-# Example: Big Bang Core
+# Big Bang Core
 
 This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
 

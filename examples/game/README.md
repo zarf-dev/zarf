@@ -4,9 +4,7 @@ This example demonstrates using Zarf to kill time (and evil).
 
 More specifically, you'll be running a copy of the 1993, mega-hit video game _**Doom**_ in a Zarf-enabled Kubernetes (k8s) cluster&mdash;_right on your local machine_.
 
-> _**Note**_
->
-> In this example there is no "GitOps" service&mdash;Zarf is only showing off it's ability to act as a standard means of packaging, distribution, and runtime.
+> ⚠️ **NOTE**: In this example there is no "GitOps" service&mdash;Zarf is only showing off it's ability to act as a standard means of packaging, distribution, and runtime.
 
 &nbsp;
 
@@ -72,9 +70,7 @@ Follow the prompts, answering "no" to each of the optional components, since we 
 
 Congratulations!  Your machine is now running a single-node Kubernetes cluster powered by Zarf!
 
- > _**Note**_
- >
- > Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
+ > ⚠️ **NOTE**: Zarf supports non-interactive installs too! Give `zarf init --confirm --components logging` a try next time.
 
 **Troubleshooting:**
 
@@ -121,9 +117,7 @@ Watch the terminal scroll for a while. Once things are downloaded & zipped up an
 
 It's time to feed the package you built into your cluster.
 
-> _**Note**_
->
-> If you were an evil genius trying to get _**Doom**_ to run in your internet-isolated, evil underground super-base _this_ is where you would burn the zarf release + game package to removable media for shipment "across the airgap"... probably via evil FedEx.
+> ⚠️ **NOTE**: If you were an evil genius trying to get _**Doom**_ to run in your internet-isolated, evil underground super-base _this_ is where you would burn the zarf release + game package to removable media for shipment "across the airgap"... probably via evil FedEx.
 
 Since you're running a Zarf cluster directly on your local machine&mdash;where the game package & `zarf` binary _already are_&mdash;deploying the game is very simple:
 
