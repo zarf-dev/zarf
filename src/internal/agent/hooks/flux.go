@@ -43,10 +43,6 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	// Form the gitServerURL from the state
 	gitServerURL := zarfState.GitServer.Address
-	if zarfState.GitServer.Port != 0 {
-		gitServerURL += fmt.Sprintf(":%d", zarfState.GitServer.Port)
-	}
-
 	message.Debugf("Using the gitServerURL of (%s) to mutate the flux repository", gitServerURL)
 
 	// parse to simple struct to read the git url
