@@ -185,9 +185,7 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {
 		gitServer.Address = config.ZarfInClusterGitServiceURL
-		gitServer.Port = config.ZarfInClusterGitServicePort
 		gitServer.InternalServer = true
-
 	}
 
 	// Generate a push-user password if not provided by init flag
