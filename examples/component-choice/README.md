@@ -4,6 +4,32 @@ This example demonstrates how to define packages that can be chosen by the user 
 
 A package creator can also use the `default` key to specify which component will be chosen if a user uses the `--confirm` flag.
 
-> ⚠️ **NOTE:** *A user can only select a single component in a component group and a package creator can specify only a single default*
+[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/component-choice)
 
-> ⚠️ **NOTE:** *A component in a component `group` cannot be marked as being `required`*
+```
+components:
+  - name: first-choice
+    group: example-choice
+    files:
+      - source: blank-file.txt
+        target: first-choice-file.txt
+
+  - name: second-choice
+    group: example-choice
+    default: true
+    files:
+      - source: blank-file.txt
+        target: second-choice-file.txt
+```
+
+:::note
+
+A user can only select a single component in a component group and a package creator can specify only a single default
+
+:::
+
+:::note
+
+A component in a component `group` cannot be marked as being `required`
+
+:::

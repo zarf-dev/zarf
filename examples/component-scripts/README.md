@@ -2,6 +2,8 @@
 
 This example demonstrates how to define scripts within your package that can run either on `zarf package create` or `zarf package deploy`.  These scripts will be executed with the context that the Zarf binary is executed with.
 
+[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/component-scripts)
+
 ## Prepare Scripts
 
 `prepare` scripts run on `zarf package create` and allow a package creator to retrieve or manipulate files that they want to include in their Zarf package.  For example if you have a large data file that you need to include in your package you could include something like the following (replacing the url as needed):
@@ -39,4 +41,8 @@ components:
     - "rm my-temp-file.txt"
 ```
 
-> ⚠️ **NOTE:** *Any binaries you execute in your scripts must exist on the machine you are running `zarf package create/deploy` on*
+:::note
+
+Any binaries you execute in your scripts must exist on the machine you are running `zarf package create/deploy` on
+
+:::

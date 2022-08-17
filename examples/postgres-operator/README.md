@@ -2,9 +2,15 @@
 
 This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
 
-## Tool Choice
+[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/postgres-operator)
 
-After looking at several alternatives, Zalando's postgres operator felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).
+:::note
+
+This example uses Zalando's postgres operator as after looking at several alternatives, this felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).
+
+:::
+
+&nbsp;
 
 ## Prerequisites
 
@@ -14,17 +20,21 @@ After looking at several alternatives, Zalando's postgres operator felt like the
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
-1. Download a Zarf release &mdash; you need a binary _**and**_ an init package, [here](../../docs/workstation.md#just-gimmie-zarf). <!-- TODO: non-existent -->
+1. Log into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
 
-1. Log `zarf` into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
+1. Build the package using `zarf package create examples/postgres-operator`
 
-1. (Optional) Put `zarf` on your path &mdash; _technically_ optional but makes running commands simpler. Make sure you are picking the right binary that matches your system architecture. `zarf` for x86 Linux, `zarf-mac-intel` for x86 MacOS, `zarf-mac-apple` for M1 MacOS.
+1. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)
 
-1. Create a Zarf cluster as described in the [Doom example docs](../game/README.md)
+&nbsp;
 
 ## Instructions
 
+&nbsp;
+
 ### Deploy the package
+
+Run the following commands to deploy the created package to the cluster
 
 ```sh
 # Open the directory
@@ -39,6 +49,9 @@ zarf package deploy
 
 Wait a couple of minutes. You'll know it is done when Zarf exits and you get the 3 connect commands.
 
+
+&nbsp;
+
 ### Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
 
 1. Run `zarf connect minio` to navigate to the web console.
@@ -46,11 +59,19 @@ Wait a couple of minutes. You'll know it is done when Zarf exits and you get the
 1. Buckets -> Create Bucket
    - Bucket Name: `postgres-operator-backups`
 
+&nbsp;
+
 ### Open the UI
 
 The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
 
-> ⚠️ **NOTE:** *If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.*
+:::note
+
+If you want to run other commands after/during the browsing of the postgres tools, you can add a `&` character at the end of the connect command to run the command in the background ie) `./zarf connect pgadmin &`.
+
+:::
+
+&nbsp;
 
 ### Set up a server in PGAdmin:
   - General // Name: `acid-zarf-test`
@@ -62,11 +83,7 @@ The Postgres Operator UI will be available by running `./zarf connect postgres-o
   - Connection // Password: (run the command in the table below)
   - SSL // SSL mode: `Require`
 
-### Clean Up
-
-```sh
-kind delete cluster
-```
+&nbsp;
 
 ## Logins
 

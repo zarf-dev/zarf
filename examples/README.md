@@ -15,23 +15,24 @@ zarf package create
 zarf package deploy
 ```
 
-> ⚠️ **NOTE**: Examples are for demo purposes only and not meant for production use, they exist to demonstrate how to use Zarf in various ways. Modifying examples to fit production use is possible but will require additional configuration, time, and Kubernetes knowledge. Also, examples utilize software pulled from multiple sources and _some_ of them require authenticated access. Check the examples themselves for the specific accounts / logins required.
+:::note
 
+Examples are for demo purposes only and not meant for production use, they exist to demonstrate how to use Zarf in various ways. Modifying examples to fit production use is possible but will require additional configuration, time, and Kubernetes knowledge. Also, examples utilize software pulled from multiple sources and _some_ of them require authenticated access. Check the examples themselves for the specific accounts / logins required.
+
+:::
 
 &nbsp;
 
-
-| Example                                                          |      Description      |
-|------------------------------------------------------------------|-----------------------|
-
-| [component-choice](./component-choice/README.md)                 |  Demo deploying packages with selectable components   |
-| [component-scripts](./component-scripts/README.md)               |  Demo building/deploying packages that contain custom scripts   |
-| [composable-packages](./composable-packages/README.md)           |  Demo building packages using components from other packages   |
-| [data-injection](./data-injection/README.md)                     |  Demo injecting data into a pod running on cluster  |
-| [flux-test](./flux-test/README.md)                               |  Demo deploying flux into a cluster to implement GitOps |
-| [game](./game/README.md)                                         |  Demo deploying old-school DOS games |
-| [git-data](./git-data/README.md)                                 |  Demo deploying git repos into a git server across the air gap   |
-| [helm-alt-release-name](./helm-alt-release-name/README.md)       |  Demo specifying an alternate relase name for a helm chart   |
-| [package-variables](./package-variables/README.md)               |  Demo specifying variables within a package   |
-| [postgres-operator](./postgres-operator/README.md)               |  Demo Postgres database deployment |
-| [tiny-kafka](./tiny-kafka/README.md)                             |  Demo Kafka cluster deployment  |
+| Example                                                 |      Description      |
+|---------------------------------------------------------|-----------------------|
+| [component-choice](./component-choice/)                 |  Demo deploying packages with selectable components   |
+| [component-scripts](./component-scripts/)               |  Demo building/deploying packages that contain custom scripts   |
+| [composable-packages](./composable-packages/)           |  Demo building packages using components from other packages   |
+| [data-injection](./data-injection/)                     |  Demo injecting data into a pod running on cluster  |
+| [flux-test](./flux-test/)                               |  Demo deploying flux into a cluster to implement GitOps |
+| [game](./game/)                                         |  Demo deploying old-school DOS games |
+| [git-data](./git-data/)                                 |  Demo deploying git repos into a git server across the air gap   |
+| [helm-alt-release-name](./helm-alt-release-name/)       |  Demo specifying an alternate relase name for a helm chart   |
+| [package-variables](./package-variables/)               |  Demo specifying variables within a package   |
+| [postgres-operator](./postgres-operator/)               |  Demo Postgres database deployment |
+| [tiny-kafka](./tiny-kafka/)                             |  Demo Kafka cluster deployment  |
