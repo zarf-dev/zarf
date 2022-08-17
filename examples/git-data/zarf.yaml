@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: gitops-service-data
+  name: git-data
   description: "Demo Zarf loading resources into a gitops service"
 
 components:
