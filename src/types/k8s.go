@@ -39,7 +39,6 @@ type GitServerInfo struct {
 	ReadPassword string `json:"readPassword" jsonschema:"description=Password of a user with read-only access to the git repository. If not provided for an external repository than the push-user is used"`
 
 	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
-	Port           int    `json:"port" jsonschema:"description=Port to access the git server"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
