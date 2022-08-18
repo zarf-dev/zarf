@@ -9,7 +9,7 @@ import (
 )
 
 func StripZarfLabelsAndSecretsFromNamespaces() {
-	spinner := message.NewProgressSpinner("Removing zarf metadata & secrtets from existing namespaces not managed by Zarf")
+	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()
 
 	clientSet := getClientset()
