@@ -1,6 +1,8 @@
 package helm
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -29,7 +31,8 @@ type ChartOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
+func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) {
+	var installedChartName string
 	fromMessage := options.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -42,11 +45,11 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 
 	var output *release.Release
 
+	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	if options.Chart.ReleaseName != "" {
 		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
-	} else {
-		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
 	}
+	installedChartName = options.ReleaseName
 
 	// Do not wait for the chart to be ready if data injections are present
 	if len(options.Component.DataInjections) > 0 {
@@ -100,7 +103,7 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 
 		default:
 			// 😭 things aren't working
-			spinner.Fatalf(err, "Unable to verify the chart installation status")
+			spinner.Fatalf(histErr, "Unable to verify the chart installation status")
 		}
 
 		if err != nil {
@@ -116,7 +119,7 @@ func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 	}
 
 	// return any collected connect strings for zarf connect
-	return postRender.connectStrings
+	return postRender.connectStrings, installedChartName
 }
 
 // TemplateChart generates a helm template from a given chart
@@ -165,7 +168,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) types.ConnectStrings {
+func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) (types.ConnectStrings, string) {
 	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
@@ -173,7 +176,16 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	// Generate a new chart
 	tmpChart := new(chart.Chart)
 	tmpChart.Metadata = new(chart.Metadata)
-	tmpChart.Metadata.Name = fmt.Sprintf("raw-%s", manifest.Name)
+
+	// Generate a hashed chart name
+	rawChartName := fmt.Sprintf("raw-%s-%s-%s", config.GetActiveConfig().Metadata.Name, component.Name, manifest.Name)
+	hasher := sha1.New()
+	hasher.Write([]byte(rawChartName))
+	tmpChart.Metadata.Name = rawChartName
+	sha1ReleaseName := hex.EncodeToString(hasher.Sum(nil))
+	// tmpChart.Metadata.Name = hex.EncodeToString(hasher.Sum(nil))
+	// tmpChart.Metadata.
+
 	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry
 	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
@@ -198,9 +210,10 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	options := ChartOptions{
 		BasePath: basePath,
 		Chart: types.ZarfChart{
-			Name:      tmpChart.Metadata.Name,
-			Version:   tmpChart.Metadata.Version,
-			Namespace: manifest.DefaultNamespace,
+			Name:        tmpChart.Metadata.Name,
+			ReleaseName: sha1ReleaseName,
+			Version:     tmpChart.Metadata.Version,
+			Namespace:   manifest.DefaultNamespace,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently
