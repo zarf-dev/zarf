@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 
@@ -21,6 +22,23 @@ var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
 	Short:   "Zarf package commands for creating, deploying, and inspecting packages",
+}
+
+var packageUninstallCmd = &cobra.Command{
+	Use:     "uninstall [PACKAGE]",
+	Aliases: []string{"u"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Use to uninstall a Zarf package that has been deployed already",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			fmt.Println("for now the argument must be the path to the zarf package")
+			os.Exit(0)
+		}
+
+		config.DeployOptions.PackagePath = args[0]
+
+		packager.Uninstall()
+	},
 }
 
 var packageCreateCmd = &cobra.Command{
@@ -111,6 +129,7 @@ func init() {
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
+	packageCmd.AddCommand(packageUninstallCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")

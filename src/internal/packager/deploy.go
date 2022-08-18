@@ -152,7 +152,7 @@ func Deploy() {
 	os.Exit(0)
 }
 
-func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
+func deployComponents(tempPath tempPaths, component types.ZarfComponent) (installedCharts []string) {
 	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
 
 	// Toggles for deploy operations on 'init'
@@ -298,37 +298,73 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		defer waitGroup.Wait()
 	}
 
-	for _, chart := range component.Charts {
-		// zarf magic for the value file
-		for idx := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(component, chartValueName)
+	if len(component.Charts) > 0 || len(component.Manifests) > 0 {
+		zarfState := k8s.LoadZarfState()
+		installedPackage, ok := zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name]
+		// installedPackage, ok := zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name]
+		if ok {
+			// This package has already been installed onto the cluster, this is very likely an 'upgrade'
+			// TODO: @JPERRY I think I will have to do something special here (like clearing the installedPacakge.InstalledCharts list..)
+		} else {
+			installedPackage.InstalledComponents = make(map[string]types.InstalledComponent)
+		}
+		installedPackage.PackageVersion = config.GetActiveConfig().Build.Version
+		installedPackage.CLIVersion = config.CLIVersion
+
+		installedComponent, _ := installedPackage.InstalledComponents[component.Name]
+		installedCharts := installedComponent.InstalledCharts
+
+		for _, chart := range component.Charts {
+			// zarf magic for the value file
+			for idx := range chart.ValuesFiles {
+				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+				valueTemplate.Apply(component, chartValueName)
+			}
+
+			// Generate helm templates to pass to gitops engine
+			addedConnectStrings, installedChartName := helm.InstallOrUpgradeChart(helm.ChartOptions{
+				BasePath:  componentPath.base,
+				Chart:     chart,
+				Component: component,
+			})
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: chart.Namespace, ChartName: installedChartName})
+
+			// Iterate over any connectStrings and add to the main map
+			for name, description := range addedConnectStrings {
+				connectStrings[name] = description
+			}
 		}
 
-		// Generate helm templates to pass to gitops engine
-		addedConnectStrings := helm.InstallOrUpgradeChart(helm.ChartOptions{
-			BasePath:  componentPath.base,
-			Chart:     chart,
-			Component: component,
-		})
+		for _, manifest := range component.Manifests {
+			for idx := range manifest.Kustomizations {
+				// Move kustomizations to files now
+				destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				manifest.Files = append(manifest.Files, destination)
+			}
 
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
-		}
-	}
-
-	for _, manifest := range component.Manifests {
-		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
+			// Iterate over any connectStrings and add to the main map
+			addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
+			for name, description := range addedConnectStrings {
+				connectStrings[name] = description
+			}
 		}
 
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component) {
-			connectStrings[name] = description
+		// Fetch the state again (incase it change while we were installing the charts somehow)
+		// TODO: @JPERRY do some exploration to see if this is actually needed.. just doing this to be safe for now
+		// installedPackages := zarfState.InstalledPackages
+		zarfState = k8s.LoadZarfState()
+		installedComponent, _ = installedPackage.InstalledComponents[component.Name]
+		installedComponent.InstalledCharts = installedCharts
+
+		installedPackage.InstalledComponents[component.Name] = installedComponent
+		zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name] = installedPackage
+
+		err := k8s.SaveZarfState(zarfState)
+		if err != nil {
+			message.Errorf(err, "something went wrong when saving the zarf state with the installed packages.. :(")
 		}
+		message.Warnf("All done saving the state back.. hopefully with the installedPackage map %#v", installedPackage)
 	}
 
 	for _, script := range component.Scripts.After {
@@ -338,4 +374,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	if isSeedRegistry {
 		postSeedRegistry(tempPath)
 	}
+
+	return
 }

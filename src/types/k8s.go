@@ -11,6 +11,25 @@ type ZarfState struct {
 	GitServer     GitServerInfo `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
 	RegistryInfo  RegistryInfo  `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is configured to use"`
 	LoggingSecret string        `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
+
+	InstalledPackages map[string]InstalledPackage `json:"installedPackages" jsonschema:"description=Map of all the things Zarf has installed so far.."`
+}
+
+type InstalledPackage struct {
+	// InstalledCharts     map[string]InstalledComponent // key={package_name}
+	PackageVersion string
+	CLIVersion     string
+	// InstalledCharts []string
+	InstalledComponents map[string]InstalledComponent
+}
+
+type InstalledComponent struct {
+	InstalledCharts []InstalledCharts
+}
+
+type InstalledCharts struct {
+	Namespace string
+	ChartName string
 }
 
 type GitServerInfo struct {

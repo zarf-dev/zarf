@@ -37,6 +37,7 @@ func seedZarfState(tempPath tempPaths) {
 	// Attempt to load an existing state prior to init
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state := k8s.LoadZarfState()
+	state.InstalledPackages = make(map[string]types.InstalledPackage)
 
 	// If the distro isn't populated in the state, assume this is a new cluster
 	if state.Distro == "" {

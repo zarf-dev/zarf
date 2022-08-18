@@ -90,9 +90,20 @@ var k9sCmd = &cobra.Command{
 	},
 }
 
+var listInstalledThings = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"l"},
+	Short:   "Launch K9s tool for managing K8s clusters",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Hack to make k9s think it's all alone
+		zarfState := k8s.LoadZarfState()
+		fmt.Printf("%#v", zarfState.InstalledPackages)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
-
+	toolsCmd.AddCommand(listInstalledThings)
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(k9sCmd)
