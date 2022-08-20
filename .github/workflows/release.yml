@@ -19,7 +19,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.5.0
+        uses: sigstore/cosign-installer@v2.5.1
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
