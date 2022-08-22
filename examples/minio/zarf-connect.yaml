@@ -4,7 +4,7 @@ metadata:
   name: minio-console-zarf-connect
   namespace: minio-operator
   annotations:
-    zarf.dev/connect-description: "Launch the minio console, to get a JWT run:\n\n     kubectl -n minio-operator get secret $(kubectl -n minio-operator get serviceaccount console-sa -o jsonpath=\"{.secrets[0].name}\") -o jsonpath=\"{.data.token}\" | base64 --decode\n"
+    zarf.dev/connect-description: "Launch the minio console, to get a JWT run:\n\n     kubectl -n minio-operator get secrets console-sa-secret -o jsonpath=\"{.data.token}\" | base64 --decode\n"
   labels:
     zarf.dev/connect-name: minio
 spec:

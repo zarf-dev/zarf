@@ -111,7 +111,7 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	pterm.Success.Println("Zarf deployment complete")
+	message.SuccessF("Zarf deployment complete")
 	pterm.Println()
 
 	// If not init config, print the application connection table

@@ -10,5 +10,5 @@ resources:
     cpu: "500m"
     memory: "512Mi"
 env:
-  email: "zarf@example.local"
+  email: "admin@zarf.dev"
   password: "###ZARF_VAR_PGADMIN_PASSWORD###"

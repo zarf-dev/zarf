@@ -26,7 +26,7 @@ func runInjectionMadness(tempPath tempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer spinner.Stop()
+	defer spinner.Success()
 
 	var err error
 	var images k8s.ImageNodeMap
@@ -37,35 +37,35 @@ func runInjectionMadness(tempPath tempPaths) {
 	// Try to create the zarf namespace
 	spinner.Updatef("Creating the Zarf namespace")
 	if _, err := k8s.CreateNamespace(k8s.ZarfNamespace, nil); err != nil {
-		message.Fatal(err, "Unable to create the zarf namespace")
+		spinner.Fatalf(err, "Unable to create the zarf namespace")
 	}
 
 	// Get all the images from the cluster
 	spinner.Updatef("Getting the list of existing cluster images")
 	if images, err = k8s.GetAllImages(); err != nil {
-		message.Fatal(err, "Unable to generate a list of candidate images to perform the registry injection")
+		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
 	spinner.Updatef("Generating bootstrap payload SHASUMs")
 	if envVars, err = buildEnvVars(tempPath); err != nil {
-		message.Fatal(err, "Unable to build the injection pod environment variables")
+		spinner.Fatalf(err, "Unable to build the injection pod environment variables")
 	}
 
 	spinner.Updatef("Creating the injector configmap")
 	if err = createInjectorConfigmap(tempPath); err != nil {
-		message.Fatal(err, "Unable to create the injector configmap")
+		spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
 	spinner.Updatef("Creating the injector service")
 	if service, err := createService(); err != nil {
-		message.Fatal(err, "Unable to create the injector service")
+		spinner.Fatalf(err, "Unable to create the injector service")
 	} else {
 		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
 	if payloadConfigmaps, sha256sum, err = createPayloadConfigmaps(tempPath, spinner); err != nil {
-		message.Fatal(err, "Unable to generate the injector payload configmaps")
+		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 
 	// https://regex101.com/r/eLS3at/1
@@ -94,7 +94,6 @@ func runInjectionMadness(tempPath tempPaths) {
 
 		// if no error, try and wait for a seed image to be present, return if successful
 		if err == nil && hasSeedImages(spinner) {
-			spinner.Success()
 			return
 		}
 

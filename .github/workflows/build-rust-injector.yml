@@ -16,7 +16,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.5.0
+        uses: sigstore/cosign-installer@v2.5.1
 
       - name: "Dependency: Setup rust toolchain"
         run: |

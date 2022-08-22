@@ -3,6 +3,10 @@ metadata:
   name: postgres-operator-demo
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
 
+variables:
+  - name: PGADMIN_PASSWORD
+    prompt: true
+
 components:
   - name: postgres-operator
     required: true
@@ -49,4 +53,4 @@ components:
     manifests:
       - name: example-db
         files:
-          - postgres/demo-cluster.yaml
+          - example-db/demo-cluster.yaml

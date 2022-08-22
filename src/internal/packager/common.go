@@ -101,7 +101,7 @@ func confirmAction(userMessage string, sbomViewFiles []string) bool {
 	// Display prompt if not auto-confirmed
 	var confirmFlag bool
 	if config.CommonOptions.Confirm {
-		message.Infof("%s Zarf package confirmed", userMessage)
+		message.SuccessF("%s Zarf package confirmed", userMessage)
 
 		return config.CommonOptions.Confirm
 	} else {
