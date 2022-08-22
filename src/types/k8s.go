@@ -18,8 +18,9 @@ type ZarfState struct {
 type InstalledPackage struct {
 	// InstalledCharts     map[string]InstalledComponent // key={package_name}
 	PackageVersion string
+	PackageYaml    string
 	CLIVersion     string
-	// InstalledCharts []string
+
 	InstalledComponents map[string]InstalledComponent
 }
 
