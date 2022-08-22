@@ -149,4 +149,6 @@ func init() {
 
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
+
+	packageUninstallCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
 }
