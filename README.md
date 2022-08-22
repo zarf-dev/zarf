@@ -21,7 +21,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Builtin git server with [Gitea](https://gitea.com/)
 - Builtin docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
-- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pods image path and pull secrets as well as [Flux Git Repositories](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
+- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pods image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
 - Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
 - Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
@@ -33,7 +33,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 > Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
-## Demo 
+## Demo
 
 [![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
 
