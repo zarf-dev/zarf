@@ -9,32 +9,34 @@
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
-Zarf simplifies the setup & administration of Kubernetes clusters, cyber systems & workloads that support DevSecOps "across the [air gap](https://en.wikipedia.org/wiki/Air_gap_(networking))."
+Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate Software Bill of Materials (SBOM) generation
-- Provide HTML Dashboards for viewing SBOM output
-- Deploy a new cluster while fully disconnected (using K3s)
-- Deploy pre-built tar.zst package into any existing cluster (using the kube context)
-- Builtin logging (PLG) and seedable git repository (gitea) and docker registry
-- Automatically update pod's ImagePullSecrets so resources use the NodePort (See the Zarf Agent)
-- Builtin K9s Dashboard for visualizing containers and clusters
-- Builtin command to find images and resources from a helm chart
-- Create secure tunnel ports for deployments
+- Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
+- Provide a [web dashboard](https://docs.zarf.dev/docs/dashboard-ui/sbom-dashboard) for viewing SBOM output
+- Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
+- Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
+- Builtin git server with [Gitea](https://gitea.com/)
+- Builtin docker registry
+- Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
+- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pods image path and pull secrets as well as [Flux Git Repositories](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
+- Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
+- Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
 🛠️ Configurable Features
 
-- Customizable packages variables with defaults and user prompting
-- Composable packages to include multiple sub-packages/components
+- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting
+- [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Filters to select the correct architectures/operating systems for packages
 
-> Zarf was initially theorized and demonstrated in Naval Postgraduate School research which you can read [here](https://calhoun.nps.edu/handle/10945/68688).
+> Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
-## Demo
+## Demo 
 
-[![asciicast](https://asciinema.org/a/475530.svg)](https://asciinema.org/a/475530)
+[![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
+_https://www.youtube.com/watch?v=WnOYlFVVKDE_
 
 ## Getting Started
 
