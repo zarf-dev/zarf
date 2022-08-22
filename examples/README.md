@@ -1,3 +1,6 @@
+import DocCardList from '@theme/DocCardList';
+import {useCurrentSidebarCategory} from '@docusaurus/theme-common';
+
 # Zarf Examples
 
 The Zarf examples demonstrate different ways to utilize Zarf in your environment.  All of these examples follow the same general release pattern and assume an offline / air-gapped deployment target.
@@ -23,16 +26,4 @@ Examples are for demo purposes only and not meant for production use, they exist
 
 &nbsp;
 
-| Example                                                 |      Description      |
-|---------------------------------------------------------|-----------------------|
-| [component-choice](./component-choice/)                 |  Demo deploying packages with selectable components   |
-| [component-scripts](./component-scripts/)               |  Demo building/deploying packages that contain custom scripts   |
-| [composable-packages](./composable-packages/)           |  Demo building packages using components from other packages   |
-| [data-injection](./data-injection/)                     |  Demo injecting data into a pod running on cluster  |
-| [flux-test](./flux-test/)                               |  Demo deploying flux into a cluster to implement GitOps |
-| [game](./game/)                                         |  Demo deploying old-school DOS games |
-| [git-data](./git-data/)                                 |  Demo deploying git repos into a git server across the air gap   |
-| [helm-alt-release-name](./helm-alt-release-name/)       |  Demo specifying an alternate relase name for a helm chart   |
-| [package-variables](./package-variables/)               |  Demo specifying variables within a package   |
-| [postgres-operator](./postgres-operator/)               |  Demo Postgres database deployment |
-| [tiny-kafka](./tiny-kafka/)                             |  Demo Kafka cluster deployment  |
+<DocCardList items={useCurrentSidebarCategory().items}/>
