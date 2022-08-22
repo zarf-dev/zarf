@@ -6,4 +6,4 @@ It uses a vanilla configuration of flux with upstream containers.  For a version
 
 If you want to learn more about how Zarf handles `git` repositories, see the [git-data](../git-data/) example.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/data-injection)
+[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/flux-test)

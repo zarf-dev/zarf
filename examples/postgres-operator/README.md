@@ -20,7 +20,7 @@ This example uses Zalando's postgres operator as after looking at several altern
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
-1. Log into Iron Bank if you haven't already &mdash; instructions [here](../../docs/ironbank.md#2-configure-zarf-the-use-em). Optional for this specific example since the container comes from GitHub rather than Iron Bank but a good practice and needed for most of the other examples.
+1. Log into [Iron Bank](https://registry1.dso.mil) if you haven't already. (Required for the `minio` images in this example)
 
 1. Build the package using `zarf package create examples/postgres-operator`
 
