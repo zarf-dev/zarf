@@ -17,4 +17,4 @@ If you are looking for more advanced information on how to operate and custom co
 
 - For information on how to create custom configuration of the Zarf CLI see the [Operator Manual](./../5-operator-manual/_category_.json)
 - For information on how to create your own custom Zarf Packages see the [Developer Guide](./../6-developer-guide/1-contributor-guide.md)
-- To see some of the ways our community is using Zarf to deploy code onto AirGap systems see the Zarf [Examples](./../7-examples/_category_.json)
+- To see some of the ways our community is using Zarf to deploy code onto AirGap systems see the Zarf [Examples](./../../examples/README.md)
