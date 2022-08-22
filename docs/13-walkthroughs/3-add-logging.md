@@ -20,7 +20,7 @@ To install the logging component, follow the [Initializing a Cluster Instruction
 
 Review the `zarf init` command output for the following:
 
-![logging-creds](../.images/logging_credentials.png)
+![logging-creds](../.images/walkthroughs/logging_credentials.png)
 
 You should see a section for `Logging`.  You will need these credentials later on.
 
