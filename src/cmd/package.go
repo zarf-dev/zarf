@@ -129,4 +129,5 @@ func init() {
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.SGetKeyPath, "sget", "", "Path to public sget key file for remote packages signed via cosign")
 
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
+	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
 }
