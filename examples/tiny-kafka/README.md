@@ -4,7 +4,7 @@ This example demonstrates using Zarf to deploy a simple operator example, in thi
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 

@@ -6,7 +6,7 @@ A package creator can also use the `default` key to specify which component will
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 

@@ -6,7 +6,7 @@ Data injections are declared using the `dataInjections` key within a component, 
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 

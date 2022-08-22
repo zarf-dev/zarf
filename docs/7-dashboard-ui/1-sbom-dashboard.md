@@ -5,7 +5,7 @@ A 'Software Bill of Materials' (SBOM) is a document that contains a detailed lis
 
 
 ## SBOMs Built Into Packages
-Zarf treats security as a first class concern and builds SBOM capabilities into packages by default! Unless explicitly skipped with the `--skip-sbom` flag, whenever a package is created, Zarf generates an SBOM for it and adds it into the package itself. This means that wherever you end up moving your package to, you will always be able to take a peek inside to see what it contains. All of the packages sbom information exists within a `sboms` directory at the root of the tarball. 
+Zarf treats security as a first class concern and builds SBOM capabilities into packages by default! Unless explicitly skipped with the `--skip-sbom` flag, whenever a package is created, Zarf generates an SBOM for it and adds it into the package itself. This means that wherever you end up moving your package to, you will always be able to take a peek inside to see what it contains. All of the packages sbom information exists within a `sboms` directory at the root of the tarball.
 
 You can view these files by decompressing the package tarball and navigating to the `sboms` directory. If there are any containers included in the package definition, the `sboms` directory will contain a `.html` and .`.json` file for each container. Both of these files contain the same information but the `.html` files are a lightweight representation of the SBOM and the `.json` files in a more human readable format.
 ``` bash
@@ -18,7 +18,7 @@ ls
 
 ## Viewing SBOMs When Deploying
 :::note
-Zarf does not prompt you to view the SBOM if you are deploying a package with the `--confirm` flag 
+Zarf does not prompt you to view the SBOM if you are deploying a package with the `--confirm` flag
 :::
 When deploying a package, Zarf will output the yaml definition of the package, the zarf.yaml file that defined the package that got created. If there are any containers included in the package, Zarf will also output a note saying how many images are going to be getting deployed and links to a lightweight html viewer that you can use to get a visual overview of the images and what they contain.
 

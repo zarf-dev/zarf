@@ -4,7 +4,7 @@ This example demonstrates deploying a performant and highly available PostgreSQL
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 

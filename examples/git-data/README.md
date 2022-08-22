@@ -4,7 +4,7 @@ This examples shows how to package `git` repositories to be bundled and pushed a
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 

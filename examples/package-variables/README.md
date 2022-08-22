@@ -8,7 +8,7 @@ This becomes useful when you are working with an upstream chart that is often ch
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article.
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 
