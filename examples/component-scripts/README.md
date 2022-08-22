@@ -2,7 +2,11 @@
 
 This example demonstrates how to define scripts within your package that can run either on `zarf package create` or `zarf package deploy`.  These scripts will be executed with the context that the Zarf binary is executed with.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/component-scripts)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 ## Prepare Scripts
 

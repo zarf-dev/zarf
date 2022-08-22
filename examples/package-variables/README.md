@@ -6,7 +6,11 @@ With this templating feature, you can define values in the zarf.yaml file withou
 
 This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your zarf.yaml file.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/package-variables)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 &nbsp;
 

@@ -13,12 +13,12 @@ zarf package create # This will create the zarf package
 zarf package deploy # This will prompt you to deploy the created zarf package
 ```
 
+&nbsp;
+
+<DocCardList items={useCurrentSidebarCategory().items}/>
+
 :::note
 
 Examples are for demo purposes only and not meant for production use, they exist to demonstrate how to use Zarf in various ways. Modifying examples to fit production use is possible but will require additional configuration, time, and Kubernetes knowledge. Also, examples utilize software pulled from multiple sources and _some_ of them require authenticated access. Check the examples themselves for the specific accounts / logins required.
 
 :::
-
-&nbsp;
-
-<DocCardList items={useCurrentSidebarCategory().items}/>

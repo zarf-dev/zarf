@@ -2,7 +2,11 @@
 
 This examples shows how to package `git` repositories to be bundled and pushed across the airgap.  This package does not deploy anything itself, but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, their are tow main ways to include `git` reposisotries as desribed below.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/git-data)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 &nbsp;
 

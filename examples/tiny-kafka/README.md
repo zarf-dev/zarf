@@ -2,7 +2,11 @@
 
 This example demonstrates using Zarf to deploy a simple operator example, in this case [Strimzi Kafka Operator](https://strimzi.io/).
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/tiny-kafka)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 &nbsp;
 

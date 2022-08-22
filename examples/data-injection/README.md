@@ -4,7 +4,11 @@ This example shows Zarf's ability to inject data into a container running in a p
 
 Data injections are declared using the `dataInjections` key within a component, and once the specified container is started, Zarf will copy the files and folders from the specified source into the specified container and path.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/data-injection)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 ```
 dataInjections:

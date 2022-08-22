@@ -8,4 +8,8 @@ In this example there is no "GitOps" service&mdash;Zarf is only showing off it's
 
 :::
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/game)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::

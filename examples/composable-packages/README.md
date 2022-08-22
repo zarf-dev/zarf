@@ -2,7 +2,11 @@
 
 This example demonstrates using Zarf to compose existing zarf packages into another package.  It uses the existing [zarf game](../game/) example by simply adding an `import` and `path` in the new [zarf.yaml](zarf.yaml).
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/composable-packages)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 ```
 components:

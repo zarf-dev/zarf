@@ -2,7 +2,11 @@
 
 This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/postgres-operator)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 :::note
 

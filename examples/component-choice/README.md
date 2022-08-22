@@ -4,7 +4,11 @@ This example demonstrates how to define packages that can be chosen by the user 
 
 A package creator can also use the `default` key to specify which component will be chosen if a user uses the `--confirm` flag.
 
-[Full Example](https://github.com/defenseunicorns/zarf/tree/master/examples/component-choice)
+:::info
+
+To view the example source code, select the `Edit this page` link below the article.
+
+:::
 
 ```
 components:
