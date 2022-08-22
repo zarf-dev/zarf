@@ -24,7 +24,7 @@ components:
         valuesFiles:
           - postgres/operator-ui-values.yaml
     manifests:
-      - name: zarf-connect
+      - name: postgres-operator-zarf-connect
         files:
           - postgres/zarf-connect.yaml
     images:
@@ -43,7 +43,7 @@ components:
         valuesFiles:
           - pgadmin/values.yaml
     manifests:
-      - name: zarf-connect
+      - name: pgadmin-zarf-connect
         files:
           - pgadmin/zarf-connect.yaml
     images:
