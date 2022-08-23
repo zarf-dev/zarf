@@ -4,12 +4,12 @@ metadata:
   name: minio-console-zarf-connect
   namespace: minio-operator
   annotations:
-    zarf.dev/connect-description: "Launch the minio console"
+    zarf.dev/connect-description: "Launch the minio console, to get a JWT run:\n\n     kubectl -n minio-operator get secrets console-sa-secret -o jsonpath=\"{.data.token}\" | base64 --decode\n"
   labels:
     zarf.dev/connect-name: minio
 spec:
   selector:
-    v1.min.io/tenant: zarf-minio-instance
+    app.kubernetes.io/instance: zarf-minio-operator-console
   ports:
     - name: http-console
       port: 9090
