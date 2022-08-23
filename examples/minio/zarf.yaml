@@ -1,0 +1,38 @@
+kind: ZarfPackageConfig
+metadata:
+  name: minio
+  description: "Deploy minio"
+  version: 4.3.7
+  url: https://operator.min.io/
+  image: https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg?sanitize=true
+
+components:
+  - name: minio
+    required: true
+    charts:
+      - name: operator
+        releaseName: minio-operator
+        url: https://operator.min.io/
+        version: 4.4.28
+        namespace: minio-operator
+        valuesFiles:
+          - operator-values.yaml
+      - name: tenant
+        releaseName: minio-tenant
+        url: https://operator.min.io/
+        version: 4.4.28
+        namespace: minio-operator
+        valuesFiles:
+          - tenant-values.yaml
+    manifests:
+      - name: zarf-connect
+        files:
+          - zarf-connect.yaml
+    images:
+      - minio/console:v0.19.4
+      - minio/operator:v4.4.28
+      - quay.io/minio/minio:RELEASE.2022-05-26T05-48-41Z
+      - library/postgres:13
+      - busybox:1.33.1
+      - alpine
+      - quay.io/prometheus/prometheus:latest
