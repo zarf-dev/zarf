@@ -7,14 +7,13 @@ In this walkthrough, we are going to deploy a fun application onto your cluster.
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
 1. A Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))
-1. kubectl: ([kubectl Install Instructions](https://kubernetes.io/docs/tasks/tools/#kubectl))
 
 
 ## Deploying The Games
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down
-cd examples/games         # Enter the games directory, this is where the zarf.yaml for the game package is located
+cd examples/game         # Enter the games directory, this is where the zarf.yaml for the game package is located
 
 zarf package create . --confirm    # Create the games package
 
