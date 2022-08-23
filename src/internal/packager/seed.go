@@ -9,6 +9,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func preSeedRegistry(tempPath tempPaths) {
