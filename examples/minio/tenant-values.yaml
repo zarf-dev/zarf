@@ -1,0 +1,26 @@
+tenant:
+  pools:
+    ## Servers specifies the number of MinIO Tenant Pods / Servers in this pool.
+    ## For standalone mode, supply 1. For distributed mode, supply 4 or more.
+    ## Note that the operator does not support upgrading from standalone to distributed mode.
+    - servers: 1
+      ## volumesPerServer specifies the number of volumes attached per MinIO Tenant Pod / Server.
+      volumesPerServer: 4
+      ## size specifies the capacity per volume
+      size: 1Gi
+      ## storageClass specifies the storage class name to be used for this pool
+      storageClassName: "###ZARF_STORAGE_CLASS###"
+      ## Configure resource requests and limits for MinIO containers
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "1Gi"
+  ## LogSearch API setup for MinIO Tenant.
+  log:
+    ## Postgres setup for LogSearch API
+    db:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "###ZARF_STORAGE_CLASS###"
+  prometheus:
+    storageClassName: "###ZARF_STORAGE_CLASS###"
