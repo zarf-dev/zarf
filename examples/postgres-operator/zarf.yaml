@@ -2,63 +2,55 @@ kind: ZarfPackageConfig
 metadata:
   name: postgres-operator-demo
   description: "Demo of prod-like Postgres database(s) on an edge cluster"
-  # Big Bang / Iron Bank are only amd64
-  architecture: amd64
+
+variables:
+  - name: PGADMIN_PASSWORD
+    prompt: true
 
 components:
-  - name: baseline
+  - name: postgres-operator
     required: true
-
-    manifests:
-      - name: postgres-example-config
-        files:
-          - manifests/patch-svc-accounts.yaml
-          - manifests/minio-instance-zarf-connect.yaml
-          - manifests/pgadmin-zarf-connect.yaml
-          - manifests/postgres-cluster.yaml
-          - manifests/postgres-operator.yaml
-          - manifests/postgres-operator-ui-zarf-connect.yaml
     charts:
       - name: postgres-operator
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
-        version: 1.7.0
+        version: 1.8.2
         namespace: postgres-operator
         valuesFiles:
-          - values/postgres-operator.yaml
+          - postgres/operator-values.yaml
       - name: postgres-operator-ui
         url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
-        version: 1.7.0
+        version: 1.8.2
         namespace: postgres-operator
         valuesFiles:
-          - values/postgres-operator-ui.yaml
+          - postgres/operator-ui-values.yaml
+    manifests:
+      - name: postgres-operator-zarf-connect
+        files:
+          - postgres/zarf-connect.yaml
+    images:
+      - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.8.2
+      - registry.opensource.zalan.do/acid/postgres-operator:v1.8.2
+      - registry.opensource.zalan.do/acid/pgbouncer:master-22
+      - registry.opensource.zalan.do/acid/spilo-14:2.1-p6
+
+  - name: pgadmin
+    required: true
+    charts:
       - name: pgadmin4
         url: https://helm.runix.net
-        version: 1.7.2
+        version: 1.11.0
         namespace: postgres-operator
         valuesFiles:
-          - values/pgadmin.yaml
-      - name: minio-operator
-        url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio-operator.git
-        version: 4.2.3-bb.1
-        namespace: minio-operator
-        gitPath: chart
-        valuesFiles:
-          - values/minio-operator.yaml
-      - name: minio-instance
-        url: https://repo1.dso.mil/platform-one/big-bang/apps/application-utilities/minio.git
-        version: 4.2.3-bb.1
-        namespace: minio-operator
-        gitPath: chart
-        valuesFiles:
-          - values/minio-instance.yaml
-
+          - pgadmin/values.yaml
+    manifests:
+      - name: pgadmin-zarf-connect
+        files:
+          - pgadmin/zarf-connect.yaml
     images:
-      - registry.opensource.zalan.do/acid/postgres-operator:v1.7.0
-      - registry.opensource.zalan.do/acid/spilo-13:2.1-p1
-      - registry.opensource.zalan.do/acid/logical-backup:v1.7.0
-      - registry.opensource.zalan.do/acid/pgbouncer:master-18
-      - registry.opensource.zalan.do/acid/postgres-operator-ui:v1.7.0
-      - docker.io/dpage/pgadmin4:5.5
-      - docker.io/rancher/pause:3.1
-      - registry1.dso.mil/ironbank/opensource/minio/operator:v4.2.3
-      - registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2021-08-31T05-46-54Z
+      - docker.io/dpage/pgadmin4:6.10
+
+  - name: example-db
+    manifests:
+      - name: example-db
+        files:
+          - example-db/demo-cluster.yaml

@@ -1,0 +1,19 @@
+resources:
+  requests:
+    cpu: "100m"
+    memory: "100Mi"
+  limits:
+    cpu: "500m"
+    memory: "500Mi"
+envs:
+  # IMPORTANT: While operator chart and UI chart are idendependent, this is the interface between
+  # UI and operator API. Insert the service name of the operator API here!
+  operatorApiUrl: "http://postgres-operator:8080"
+  operatorClusterNameLabel: "cluster-name"
+  resourcesVisible: "False"
+  targetNamespace: "postgres-operator"
+  teams:
+    - "acid"
+# We are defining our own Ingress manifest
+ingress:
+  enabled: false
