@@ -16,7 +16,7 @@ type ZarfState struct {
 }
 
 type InstalledPackage struct {
-	// InstalledCharts     map[string]InstalledComponent // key={package_name}
+	PackageName    string
 	PackageVersion string
 	PackageYaml    string
 	CLIVersion     string
@@ -25,6 +25,7 @@ type InstalledPackage struct {
 }
 
 type InstalledComponent struct {
+	ComponentName   string
 	InstalledCharts []InstalledCharts
 }
 

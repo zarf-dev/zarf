@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
+	"gopkg.in/yaml.v2"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
@@ -23,6 +25,7 @@ import (
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var valueTemplate template.Values
@@ -93,6 +96,22 @@ func Deploy() {
 		os.Exit(0)
 	}
 
+	// @JPERRY set up installed package secret state info
+	secretName := fmt.Sprintf("zarf-package-%s", config.GetActiveConfig().Metadata.Name)
+	deployedPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque) //TODO: @JPERRY Check out the secretType..
+	deployedPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
+	deployedPackageSecret.StringData = make(map[string]string)
+
+	content, _ := yaml.Marshal(config.GetActiveConfig())
+
+	installedZarfPackage := types.InstalledPackage{
+		PackageVersion:      config.GetActiveConfig().Build.Version,
+		PackageName:         config.GetActiveConfig().Metadata.Name,
+		CLIVersion:          config.CLIVersion,
+		PackageYaml:         string(content),
+		InstalledComponents: make(map[string]types.InstalledComponent),
+	}
+
 	// Set variables and prompt if --confirm is not set
 	if err := config.SetActiveVariables(); err != nil {
 		message.Fatalf(err, "Unable to set variables in config: %s", err.Error())
@@ -108,7 +127,15 @@ func Deploy() {
 
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
-		deployComponents(tempPath, component)
+		installedCharts := deployComponents(tempPath, component)
+
+		// Get information about what we just installed so we can save it to a secret later
+		installedComponent := types.InstalledComponent{ComponentName: component.Name}
+		if len(installedCharts) > 0 {
+			installedComponent.InstalledCharts = installedCharts
+		}
+
+		installedZarfPackage.InstalledComponents[component.Name] = installedComponent
 	}
 
 	pterm.Success.Println("Zarf deployment complete")
@@ -147,13 +174,19 @@ func Deploy() {
 			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
 		}
 	}
+	stateData, _ := json.Marshal(installedZarfPackage)
+	deployedPackageSecret.Data = make(map[string][]byte)
+	deployedPackageSecret.Data["data"] = stateData
+	k8s.ReplaceSecret(deployedPackageSecret)
 
 	// All done
 	os.Exit(0)
 }
 
-func deployComponents(tempPath tempPaths, component types.ZarfComponent) (installedCharts []string) {
+func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types.InstalledCharts {
 	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
+
+	var installedCharts []types.InstalledCharts
 
 	// Toggles for deploy operations on 'init'
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
@@ -171,7 +204,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) (instal
 	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
 	if (config.InitOptions.RegistryInfo.Address != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-		return
+		return installedCharts
 	}
 
 	// All components now require a name
@@ -299,21 +332,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) (instal
 	}
 
 	if len(component.Charts) > 0 || len(component.Manifests) > 0 {
-		zarfState := k8s.LoadZarfState()
-		installedPackage, ok := zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name]
-		// installedPackage, ok := zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name]
-		if ok {
-			// This package has already been installed onto the cluster, this is very likely an 'upgrade'
-			// TODO: @JPERRY I think I will have to do something special here (like clearing the installedPacakge.InstalledCharts list..)
-		} else {
-			installedPackage.InstalledComponents = make(map[string]types.InstalledComponent)
-		}
-		installedPackage.PackageVersion = config.GetActiveConfig().Build.Version
-		installedPackage.CLIVersion = config.CLIVersion
-
-		installedComponent, _ := installedPackage.InstalledComponents[component.Name]
-		installedCharts := installedComponent.InstalledCharts
-
 		for _, chart := range component.Charts {
 			// zarf magic for the value file
 			for idx := range chart.ValuesFiles {
@@ -349,22 +367,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) (instal
 				connectStrings[name] = description
 			}
 		}
-
-		// Fetch the state again (incase it change while we were installing the charts somehow)
-		// TODO: @JPERRY do some exploration to see if this is actually needed.. just doing this to be safe for now
-		// installedPackages := zarfState.InstalledPackages
-		zarfState = k8s.LoadZarfState()
-		installedComponent, _ = installedPackage.InstalledComponents[component.Name]
-		installedComponent.InstalledCharts = installedCharts
-
-		installedPackage.InstalledComponents[component.Name] = installedComponent
-		zarfState.InstalledPackages[config.GetActiveConfig().Metadata.Name] = installedPackage
-
-		err := k8s.SaveZarfState(zarfState)
-		if err != nil {
-			message.Errorf(err, "something went wrong when saving the zarf state with the installed packages.. :(")
-		}
-		message.Warnf("All done saving the state back.. hopefully with the installedPackage map %#v", installedPackage)
 	}
 
 	for _, script := range component.Scripts.After {
@@ -375,5 +377,5 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) (instal
 		postSeedRegistry(tempPath)
 	}
 
-	return
+	return installedCharts
 }

@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/types"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/mholt/archiver/v3"
@@ -96,8 +99,23 @@ var listInstalledThings = &cobra.Command{
 	Short:   "Launch K9s tool for managing K8s clusters",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
-		zarfState := k8s.LoadZarfState()
-		fmt.Printf("%#v", zarfState.InstalledPackages)
+		namespace := "zarf"
+		labelSelector := "package-deploy-info"
+		secrets, err := k8s.GetSecretsWithLabel(namespace, labelSelector)
+		if err != nil {
+			message.Fatalf(err, "unable to get secrets with the label selector")
+		}
+
+		for _, secret := range secrets.Items {
+			installedPackage := types.InstalledPackage{}
+			err := json.Unmarshal(secret.Data["data"], &installedPackage)
+			if err != nil {
+				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
+			}
+
+			message.Question(fmt.Sprintf("The package (%s) has been installed with the following components: %v\n", installedPackage.PackageName, reflect.ValueOf(installedPackage.InstalledComponents).MapKeys()))
+
+		}
 	},
 }
 
