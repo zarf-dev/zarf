@@ -24,8 +24,6 @@ This example uses Zalando's postgres operator as after looking at several altern
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
-1. Log into [Iron Bank](https://registry1.dso.mil) if you haven't already. (Required for the `minio` images in this example)
-
 1. Build the package using `zarf package create examples/postgres-operator`
 
 1. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)

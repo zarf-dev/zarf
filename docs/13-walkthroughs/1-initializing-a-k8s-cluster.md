@@ -8,7 +8,7 @@ Before you're able to deploy an application package to a cluster, you need to in
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
 1. An init-package built/downloaded: ([init-package Build Instructions](./0-creating-a-zarf-package.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 1. A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
-2. kubectl: ([kubectl Install Instructions](https://kubernetes.io/docs/tasks/tools/#kubectl))
+2. kubectl: ([kubectl Install Instructions](https://kubernetes.io/docs/tasks/tools/#kubectl)) (Optional, used for [Validating the Deployment](./1-initializing-a-k8s-cluster.md#validating-the-deployment))
 
 ## Running the init Command
 <!-- TODO: Should add a note about user/pass combos that get printed out when done (and how to get those values again later) -->

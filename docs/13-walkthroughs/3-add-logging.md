@@ -8,7 +8,6 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 ## Walkthrough Prerequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
-1. kubectl: ([kubectl Install Instructions](https://kubernetes.io/docs/tasks/tools/#kubectl))
 
 
 ## Install the logging component
