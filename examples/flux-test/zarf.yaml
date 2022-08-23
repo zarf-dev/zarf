@@ -31,5 +31,3 @@ components:
       - https://github.com/stefanprodan/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.1.6
-
-
