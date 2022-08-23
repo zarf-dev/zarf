@@ -6,6 +6,12 @@ With this templating feature, you can define values in the zarf.yaml file withou
 
 This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your zarf.yaml file.
 
+:::info
+
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
 &nbsp;
 
 ## How to Use Deploy-Time Variables and Constants
@@ -20,9 +26,17 @@ variables:
   name: DATABASE_USERNAME
 ```
 
-> ⚠️ **NOTE:** *You shouldn't include the `###ZARF_VAR` and `###` or `###ZARF_CONST` and `###` at the beginning and end of the `name`*
+:::note
 
-> ⚠️ **NOTE:** *When not specifying `default` or `prompt` Zarf will default to `default: ""` and `prompt: false`*
+You shouldn't include the `###ZARF_VAR` and `###` or `###ZARF_CONST` and `###` at the beginning and end of the `name`
+
+:::
+
+:::note
+
+When not specifying `default` or `prompt` Zarf will default to `default: ""` and `prompt: false`
+
+:::
 
 For variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
 
@@ -33,7 +47,11 @@ variables:
   prompt: true
 ```
 
-> ⚠️ **NOTE:** *Variables that do not have a default, are not `--set` and are not prompted for during deploy will be left as their template strings in the manifests/charts*
+:::note
+
+Variables that do not have a default, are not `--set` and are not prompted for during deploy will be left as their template strings in the manifests/charts
+
+:::
 
 For constants, you must specify the value they will use at package create.  These values cannot be overridden with `--set` during `zarf package deploy`, but you can use package variables (described below) to variablize them during create.
 
@@ -43,7 +61,11 @@ constants:
   value: "users"
 ```
 
-> ⚠️ **NOTE:** *`zarf package create` only templates the zarf.yaml file, and `zarf package deploy` only templates other manifests and charts*
+::note
+
+`zarf package create` only templates the zarf.yaml file, and `zarf package deploy` only templates other manifests and charts
+
+:::
 
 ## How to Use Create-Time Package Variables
 
@@ -66,8 +88,20 @@ components:
       - "###ZARF_PKG_VAR_PROMPT_ON_CREATE###"
 ```
 
-> ⚠️ **NOTE:** *You can only template string values in this way as non-string values will not marshal/unmarshal properly*
+:::note
 
-> ⚠️ **NOTE:** *If you use `--confirm` and do not `--set` all of the varaibles you will receive an error*
+You can only template string values in this way as non-string values will not marshal/unmarshal properly
 
-> ⚠️ **NOTE:** *You cannot template the component import path using package variables*
+:::
+
+:::note
+
+If you use `--confirm` and do not `--set` all of the varaibles you will receive an error
+
+:::
+
+:::note
+
+You cannot template the component import path using package variables
+
+:::

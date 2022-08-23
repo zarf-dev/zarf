@@ -49,9 +49,9 @@ From the docs you can learn more about [installation](https://docs.zarf.dev/docs
 
 To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/developer-guide/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/developer-guide/nerd-notes).
 
-![Architecture Diagram](./docs/architecture.drawio.svg)
+![Architecture Diagram](./docs/.images/architecture.drawio.svg)
 
-[Source DrawIO](docs/architecture.drawio.svg)
+[Source DrawIO](docs/.images/architecture.drawio.svg)
 
 ## Special Thanks
 

@@ -80,8 +80,8 @@ Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following 
 
 Zarf is intended for use in a software deployment process that looks something like this:
 
-<a href="../.images/what-is-zarf/how-to-use-it.png">
-  <img alt="how it works" src="../.images/what-is-zarf/how-to-use-it.png" heigth="262" />
+<a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
+  <img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
 </a>
 
 ### (0) - Connect to Internet
@@ -94,7 +94,7 @@ Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local file
 
 This part of the process requires access to the internet. You feed the `zarf` binary a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
 
-Find out more about what that looks like in the [Building a package](.//13-walkthroughs/0-creating-a-zarf-package.md) section.
+Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-creating-a-zarf-package.md) section.
 
 ### (2) - Ship the Package to system location
 
@@ -114,13 +114,13 @@ Zarf allows the package to either deploy to an existing K8's cluster or can spin
 
 ### Appliance Cluster Mode
 
-![Appliance Mode Diagram](../.images/what-is-zarf/appliance-mode.png)
+![Appliance Mode Diagram](.images/what-is-zarf/appliance-mode.png)
 
 In the simplest usage scenario, your package consists of a single application (plus dependencies) and you configure the Zarf cluster to serve your application directly to end users. This mode of operation is called "Appliance Mode"— because it's small & self-contained like a kitchen appliance—and it is intended for use in environments where you want to run k8s-native tooling but need to keep a small footprint (i.e. single-purpose / constrained / "edge" environments).
 
 ### Utility Cluster Mode
 
-![Appliance Mode Diagram](../.images/what-is-zarf/utility-mode.png)
+![Appliance Mode Diagram](.images/what-is-zarf/utility-mode.png)
 
 In the more complex use case, your package consists of updates for many apps / systems and you configure the Zarf cluster to propagate updates to downstream systems rather than to serve users directly. This mode of operation is called "Utility Mode"—as it's main job is to add utility to other clusters—and it is intended for use in places where you want to run independent, full-service production environments (ex. your own Big Bang cluster) but you need help tracking, caching & disseminating system / dependency updates.
 
