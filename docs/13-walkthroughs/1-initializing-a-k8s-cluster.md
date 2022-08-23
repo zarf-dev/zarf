@@ -44,9 +44,11 @@ The init package comes with a few optional components that can be installed. For
 
 ### Validating the Deployment
 <!-- TODO: Would a screenshot be helpful here? -->
-After the `zarf init` command is done running, you should see a few new pods in the Kubernetes cluster.
+After the `zarf init` command is done running, you should see a few new `zarf` pods in the Kubernetes cluster.
 ```bash
-zarf tools monitor # Press `0` to see all namespaces and CTRL-C to exit
+zarf tools monitor
+
+# Note you can press `0` if you want to see all namespaces and CTRL-C to exit
 ```
 
 <br />
