@@ -1,0 +1,10 @@
+operator:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+      ephemeral-storage: 500Mi
+  env:
+    # Disable TLS for this demo
+    - name: MINIO_OPERATOR_TLS_ENABLE
+      value: "off"

@@ -1,0 +1,24 @@
+configPostgresPodResources:
+  default_cpu_request: "100m"
+  default_memory_request: "100Mi"
+  default_cpu_limit: "500m"
+  default_memory_limit: "500Mi"
+  min_cpu_limit: "250m"
+  min_memory_limit: "250Mi"
+configConnectionPooler:
+  connection_pooler_default_cpu_request: "100m"
+  connection_pooler_default_cpu_limit: "1000m"
+  connection_pooler_default_memory_request: "100Mi"
+  connection_pooler_default_memory_limit: "500Mi"
+resources:
+  requests:
+    cpu: "100m"
+    memory: "250Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+securityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
