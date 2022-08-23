@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	test "github.com/defenseunicorns/zarf/src/test/e2e"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExternalDeploy(t *testing.T) {
+
+	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
 	giteaChartURL := "https://dl.gitea.io/charts/gitea-5.0.8.tgz"
@@ -47,12 +51,12 @@ func TestExternalDeploy(t *testing.T) {
 		"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
 		"--nodeport=31999",
 		"--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", initArgs...)
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, initArgs...)
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
 	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "../../../build/zarf-mac-intel", deployArgs...)
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, deployArgs...)
 	require.NoError(t, err, "unable to deploy flux example package")
 
 	// Verify flux was able to pull from the 'external' repository
