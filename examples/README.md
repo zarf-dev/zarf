@@ -23,4 +23,4 @@ Examples also utilize software pulled from multiple sources and _some_ of them r
 
 &nbsp;
 
-<DocCardList items={useCurrentSidebarCategory().items}/>
+<DocCardList items={useCurrentSidebarCategory().items.slice(1)}/>
