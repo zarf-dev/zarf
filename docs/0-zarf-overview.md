@@ -80,8 +80,8 @@ Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following 
 
 Zarf is intended for use in a software deployment process that looks something like this:
 
-<a href=".images/what-is-zarf/how-to-use-it.png">
-  <img alt="how it works" src=".images/what-is-zarf/how-to-use-it.png" heigth="262" />
+<a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
+  <img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
 </a>
 
 ### (0) - Connect to Internet

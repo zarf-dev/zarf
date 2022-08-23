@@ -15,8 +15,8 @@ This guide is intended for end users who are using Zarf in a disconnected enviro
 
 ### Create a package
 
-<a href="../.images/what-is-zarf/build-the-package.png">
-  <img alt="how it works" src="../.images/what-is-zarf/build-the-package.png" height="290" />
+<a target="\_blank" href={require('../.images/what-is-zarf/build-the-package.png').default}>
+  <img alt="diagram showing the process to build a package" src={require('../.images/what-is-zarf/build-the-package.png').default} height="290" />
 </a>
 
 #### (0) - Identify software to-be-moved
@@ -47,8 +47,8 @@ Find out more about that by calling the CLI for help, or check out an example pa
 
 ### Ship Package
 
-<a href="../.images/what-is-zarf/ship-the-package.png">
-  <img alt="how it works" src="../.images/what-is-zarf/ship-the-package.png" height="255" />
+<a target="\_blank" href={require('../.images/what-is-zarf/ship-the-package.png').default}>
+  <img alt="diagram showing the process to ship a package" src={require('../.images/what-is-zarf/ship-the-package.png').default} height="255" />
 </a>
 
 What this activity looks like is _very_ situationally specific so Zarf tries not to have an opinion&mdash;transfer Zarf packages between production & operating locations using whatever mechanisms are available.
