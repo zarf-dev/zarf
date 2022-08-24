@@ -1,0 +1,12 @@
+{
+  "name": "Zarf",
+  "outputfilename": "wails-app",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Jeff McCoy",
+    "email": "code@jeffm.us"
+  }
+}
