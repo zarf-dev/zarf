@@ -1,4 +1,4 @@
-package k8s
+package ui
 
 import (
 	"time"
@@ -8,11 +8,16 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ListPods() {
-
+// App struct
+type K8s struct {
 }
 
-func ViewState() types.ZarfState {
+// NewApp creates a new App application struct
+func NewK8s() *K8s {
+	return &K8s{}
+}
+
+func (k *K8s) ViewState() types.ZarfState {
 	spinner := message.NewProgressSpinner("Gathering cluster information")
 	defer spinner.Stop()
 
@@ -20,5 +25,5 @@ func ViewState() types.ZarfState {
 		spinner.Fatalf(err, "The cluster we are using never reported 'healthy'")
 	}
 
-	return types.ZarfState{}
+	return k8s.LoadZarfState()
 }

@@ -12,9 +12,11 @@
      * Note that setting allowJs false does not prevent the use
      * of JS in `.svelte` files.
      */
-    "allowJs": true,
-    "checkJs": true,
-    "isolatedModules": true
+    "allowJs": false,
+    "isolatedModules": true,
+    "paths": {
+      "@api/*": ["wailsjs/go/ui/*"]
+    }
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "wailsjs/**/*.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

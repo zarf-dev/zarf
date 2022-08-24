@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GetZarfState } from "../wailsjs/go/ui/App";
+  import { ViewState } from "@api/K8s";
   import logo from "./assets/images/zarf-logo.png";
 </script>
 
@@ -8,10 +8,10 @@
 
   <hr />
 
-  {#await GetZarfState() then state}
-  <pre>
-    {JSON.stringify(state, null, 2)}
-  </pre>
+  {#await ViewState() then state}
+    <pre>
+      {JSON.stringify(state, null, 2)}
+    </pre>
   {/await}
 </main>
 
