@@ -1,7 +1,7 @@
 import DocCardList from '@theme/DocCardList';
 import {useCurrentSidebarCategory} from '@docusaurus/theme-common';
 
-# Overview
+# Package Examples
 
 The Zarf examples demonstrate different ways to utilize Zarf in your environment.  All of these examples follow the same general release pattern and assume an offline / air-gapped deployment target.
 
@@ -13,7 +13,7 @@ zarf package create # This will create the zarf package
 zarf package deploy # This will prompt you to deploy the created zarf package
 ```
 
-:::note
+:::caution
 
 Examples are for demo purposes only and are not meant for production use, they exist to demo various ways to use Zarf. Modifying examples to fit production use is possible but requires additional configuration, time, and Kubernetes knowledge.
 
