@@ -25,7 +25,7 @@ require (
 	github.com/testifysec/go-witness v0.1.12
 	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.9.3
+	helm.sh/helm/v3 v3.9.4
 	k8s.io/api v0.24.4
 	k8s.io/apimachinery v0.24.4
 	k8s.io/client-go v0.24.4
