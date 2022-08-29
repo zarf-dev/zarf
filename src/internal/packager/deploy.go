@@ -160,7 +160,7 @@ func Deploy() {
 			if component.Name == "git-server" {
 				loginTable = append(loginTable, pterm.TableData{
 					{"     Git", config.GetGitServerInfo().PushUsername, config.GetState().GitServer.PushPassword, "zarf connect git"},
-					{"     Git (read-only)", config.GetGitServerInfo().ReadUsername, config.GetState().GitServer.ReadPassword, "zarf connect git"},
+					{"     Git (read-only)", config.GetGitServerInfo().PullUsername, config.GetState().GitServer.PullPassword, "zarf connect git"},
 				}...)
 			}
 		}

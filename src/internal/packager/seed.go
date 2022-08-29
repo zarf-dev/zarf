@@ -194,18 +194,18 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 	}
 
 	// Set read-user information if using an internal repository, otherwise copy from the push-user
-	if gitServer.ReadUsername == "" {
+	if gitServer.PullUsername == "" {
 		if gitServer.InternalServer {
-			gitServer.ReadUsername = config.ZarfGitReadUser
+			gitServer.PullUsername = config.ZarfGitReadUser
 		} else {
-			gitServer.ReadUsername = gitServer.PushUsername
+			gitServer.PullUsername = gitServer.PushUsername
 		}
 	}
-	if gitServer.ReadPassword == "" {
+	if gitServer.PullPassword == "" {
 		if gitServer.InternalServer {
-			gitServer.ReadPassword = utils.RandomString(24)
+			gitServer.PullPassword = utils.RandomString(24)
 		} else {
-			gitServer.ReadPassword = gitServer.PushPassword
+			gitServer.PullPassword = gitServer.PushPassword
 		}
 	}
 
