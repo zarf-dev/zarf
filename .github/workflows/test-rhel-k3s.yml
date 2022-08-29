@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: [self-hosted, linux, amd64, ubuntu]
+    runs-on: [self-hosted, linux, amd64, rhel]
     steps:
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
