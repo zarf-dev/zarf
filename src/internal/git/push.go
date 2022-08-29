@@ -61,9 +61,14 @@ func PushAllDirectories(localPath string) error {
 
 		// Add the read-only user to this repo
 		if gitServerInfo.InternalServer {
-			repoPathSplit := strings.Split(path, "/")
-			repoNameWithGitTag := repoPathSplit[len(repoPathSplit)-1]
-			repoName := strings.Split(repoNameWithGitTag, ".git")[0]
+			// Get the upstream URL
+			remote, err := repo.Remote(onlineRemoteName)
+			if err != nil {
+				message.Warn("unable to get the information needed to add the read-only user to the repo")
+				return err
+			}
+			remoteUrl := remote.Config().URLs[0]
+			repoName := transformURLtoRepoName(remoteUrl)
 			err = addReadOnlyUserToRepo(gitServerURL, repoName)
 			if err != nil {
 				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
