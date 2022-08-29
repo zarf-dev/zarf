@@ -50,7 +50,7 @@ func Generate() Values {
 	generated.secret.registrySecret = config.GetContainerRegistryInfo().Secret
 
 	generated.secret.gitPush = state.GitServer.PushPassword
-	generated.secret.gitPull = state.GitServer.ReadPassword
+	generated.secret.gitPull = state.GitServer.PullPassword
 
 	generated.secret.logging = state.LoggingSecret
 

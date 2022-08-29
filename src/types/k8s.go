@@ -16,8 +16,8 @@ type ZarfState struct {
 type GitServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`
-	ReadUsername string `json:"readUsername" jsonschema:"description=Username of a user with read-only access to the git repository. If not provided for an external repository than the push-user is used"`
-	ReadPassword string `json:"readPassword" jsonschema:"description=Password of a user with read-only access to the git repository. If not provided for an external repository than the push-user is used"`
+	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the git repository. If not provided for an external repository than the push-user is used"`
+	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the git repository. If not provided for an external repository than the push-user is used"`
 
 	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`

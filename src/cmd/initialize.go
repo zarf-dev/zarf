@@ -135,8 +135,8 @@ func init() {
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-push-username", config.ZarfGitPushUser, "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
 	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-push-password", "", "Password for the push-user to access the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadUsername, "git-read-username", "", "Username for read-only access to the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.ReadPassword, "git-read-password", "", "Password for the read-only user to access the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullUsername, "git-pull-username", "", "Username for pull-only access to the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullPassword, "git-pull-password", "", "Password for the pull-only user to access the git server")
 
 	// Flags for using an external registry
 	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Address, "registry-url", "", "External registry url address to use for this Zarf cluster")
