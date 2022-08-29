@@ -16,7 +16,7 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
-AGENT_IMAGE ?= defenseunicorns/zarf-agent:v0.21.1
+AGENT_IMAGE ?= defenseunicorns/zarf-agent:v0.21.1-ext-reg
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -90,13 +90,15 @@ test-docs-and-schema:
 	.hooks/check-zarf-docs-and-schema.sh
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
-# @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
+# @todo: find a clean way to dynamiically support Kind or k3d:
+#        when using kind: kind load docker-image $(tag)
+#        when using k3d: k3d imagei mport $(tag)
 dev-agent-image:
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))
 	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
 	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
-	kind load docker-image $(tag) && \
+	k3d image import $(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
