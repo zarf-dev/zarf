@@ -262,7 +262,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		// Try image push up to 3 times
 		for retry := 0; retry < 3; retry++ {
 			if err := images.PushToZarfRegistry(tempPath.images, component.Images); err != nil {
-				message.Errorf(err, "Unable to push images to the Zarf Registry, retrying in 5 seconds...")
+				message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
 				time.Sleep(5 * time.Second)
 				continue
 			} else {
@@ -277,7 +277,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		for retry := 0; retry < 3; retry++ {
 			// Push all the repos from the extracted archive
 			if err := git.PushAllDirectories(componentPath.repos); err != nil {
-				message.Errorf(err, "Unable to push repos to the Zarf Registry, retrying in 5 seconds...")
+				message.Errorf(err, "Unable to push repos to the Git Server, retrying in 5 seconds...")
 				time.Sleep(5 * time.Second)
 				continue
 			} else {
