@@ -3,6 +3,8 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,11 +42,21 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 
 func transformURLtoRepoName(url string) string {
 	replaceRegex := regexp.MustCompile(`(https?://|[^\w\-.])+`)
-	return "mirror" + replaceRegex.ReplaceAllString(url, "__")
+
+	// append md5 or sha1
+	repoName := replaceRegex.ReplaceAllString(url, "")
+
+	// Add md5 hash of the repoName to the end of the repo
+	hasher := md5.New()
+	io.WriteString(hasher, repoName)
+	md5Hash := hex.EncodeToString(hasher.Sum(nil))
+	newRepoName := "mirror" + repoName + "-" + md5Hash
+	return newRepoName
 }
 
 func transformURL(baseUrl string, url string, username string) string {
 	replaced := transformURLtoRepoName(url)
+
 	output := baseUrl + "/" + username + "/" + replaced
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output

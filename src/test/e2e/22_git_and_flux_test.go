@@ -55,7 +55,7 @@ func testGitServerReadOnly(t *testing.T, gitUrl string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
+	repoName := "mirrorrepo1.dso.milplatform-onebig-bangappssecurity-toolstwistlock.git-aacf48990f336efa0edd40dca118eb9b"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitUrl, config.GetGitServerInfo().PushUsername, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
