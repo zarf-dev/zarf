@@ -252,8 +252,8 @@ func CreateReadOnlyUser() error {
 
 	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
-		"username":             zarfState.GitServer.ReadUsername,
-		"password":             zarfState.GitServer.ReadPassword,
+		"username":             zarfState.GitServer.PullUsername,
+		"password":             zarfState.GitServer.PullPassword,
 		"email":                "zarf-reader@localhost.local",
 		"must_change_password": false,
 	}
@@ -278,7 +278,7 @@ func CreateReadOnlyUser() error {
 		"allow_create_organization": false,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, zarfState.GitServer.ReadUsername)
+	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, zarfState.GitServer.PullUsername)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	out, err = DoHttpThings(updateUserRequest, zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
@@ -296,7 +296,7 @@ func addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 	}
 
 	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, config.GetState().GitServer.PushUsername, repo, config.GetState().GitServer.ReadUsername)
+	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, config.GetState().GitServer.PushUsername, repo, config.GetState().GitServer.PullUsername)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
 	out, err := DoHttpThings(addColabRequest, config.GetState().GitServer.PushUsername, config.GetState().GitServer.PushPassword)
 	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
