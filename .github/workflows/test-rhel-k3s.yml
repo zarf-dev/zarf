@@ -1,4 +1,4 @@
-name: test-k3s
+name: test-k3s-rhel
 on:
   pull_request:
     paths-ignore:
