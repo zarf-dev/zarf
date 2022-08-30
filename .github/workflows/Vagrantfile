@@ -115,9 +115,8 @@ EOF
         dnf install -y docker-ce docker-ce-cli containerd.io make
 
         # Configure docker
+        systemctl enable docker --now
         usermod -aG docker vagrant
-        
-        # Docker login to avoid pull limits
         docker login -u zarfdev -p #{ENV['DOCKER_LOGIN']}
         
 
