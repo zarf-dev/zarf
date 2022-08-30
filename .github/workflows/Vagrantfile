@@ -103,6 +103,24 @@ EOF
     
       # Setup for Rocky (k3s test only)
       subconfig.vm.provision "shell", inline: <<-SHELL
+
+        # Grow the disk
+        dnf install -y cloud-utils-growpart
+        growpart /dev/sda 1
+        xfs_growfs /dev/sda1
+
+        # Install docker
+        dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+        dnf update -y
+        dnf install -y docker-ce docker-ce-cli containerd.io make
+
+        # Configure docker
+        usermod -aG docker vagrant
+        
+        # Docker login to avoid pull limits
+        docker login -u zarfdev -p #{ENV['DOCKER_LOGIN']}
+        
+
         # Tell github to use the cleanup script and allow sudo
         export ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/vagrant/runner-cleanup.sh
         export ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/vagrant/runner-cleanup.sh
