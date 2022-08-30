@@ -3,31 +3,59 @@ name: Publish Zarf Packages on Tag
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   push-resources:
     runs-on: self-hosted
     steps:
-      - name: Install GoLang
+      - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18.x
+          go-version: 1.19.x
 
-      - name: Checkout Repo
+      - name: "Dependency: Install Docker Buildx"
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: "Dependency: Install cosign"
+        uses: sigstore/cosign-installer@v2.5.1
+
+      - name: "Checkout Repo"
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: "Setup caching"
-        uses: actions/cache@v3
+      - name: "Build CLI"
+        run: make build-cli-linux
+
+      - name: "Zarf Agent: Login to Docker Hub"
+        uses: docker/login-action@v2
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: "Zarf Agent: Build and Publish the Image"
+        run: |
+          cp build/zarf build/zarf-linux-amd64 && cp build/zarf-arm build/zarf-linux-arm64
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:$GITHUB_REF_NAME .
+
+      - name: "Zarf Agent: Sign the Image"
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME defenseunicorns/zarf-agent:$GITHUB_REF_NAME
+        env:
+          COSIGN_EXPERIMENTAL: 1
+          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
+
+      # Builds init packages since GoReleaser won't handle this for us
+      - name: "Build init-packages For Release"
+        run: |
+          make init-package ARCH=amd64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
+          make init-package ARCH=arm64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
+
+      - name: "Run Tests"
+        run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
@@ -36,12 +64,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
-
-      # Builds init packages since GoReleaser won't handle this for us
-      - name: "Build init-packages For Release"
-        run: |
-          make build-cli-linux-amd init-package ARCH=amd64
-          make init-package ARCH=arm64
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
@@ -53,3 +75,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
+
+      - name: "Cleanup"
+        run: sudo make destroy

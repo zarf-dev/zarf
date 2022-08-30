@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,15 +26,11 @@ func TestDataInjection(t *testing.T) {
 	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Get the data injection pod
-	pods, err := k8s.GetPods("demo")
-	require.NoError(t, err)
-	require.Equal(t, len(pods.Items), 1)
-	pod := pods.Items[0]
-
-	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", "-n", pod.Namespace, "exec", pod.Name, "--", "ls", "/test")
+	// verify the file and injection marker were created
+	stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection")
 	require.NoError(t, err, stdOut, stdErr)
 	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
+	assert.Contains(t, stdOut, ".zarf-injection-")
 
 	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
 		namespace: "demo",

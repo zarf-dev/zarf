@@ -51,7 +51,7 @@ function initData() {
         window.dt.destroy()
     }
 
-    distroInfo.innerHTML = payload.distro.prettyName
+    distroInfo.innerHTML = payload.distro.prettyName || 'No Base Image Detected'
 
     window.dt = new simpleDatatables.DataTable(artifactsTable, {
         data,

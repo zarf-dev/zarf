@@ -44,7 +44,9 @@ var prepareTransformGitLinks = &cobra.Command{
 		prompt := &survey.Confirm{
 			Message: "Overwrite the file " + fileName + " with these changes?",
 		}
-		_ = survey.AskOne(prompt, &confirm)
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+		}
 
 		if confirm {
 			// Overwrite the file
@@ -100,4 +102,5 @@ func init() {
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
 	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
+	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
 }

@@ -27,7 +27,7 @@ mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
 
 ### Building the CLI from scratch
 
-If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.18.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
+If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.19.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
 
 ```bash
 git clone git@github.com:defenseunicorns/zarf.git
@@ -43,7 +43,6 @@ The `make build-cli` command builds a binary for each combinations of OS and arc
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
-- `make build-injector-registry`
 
 You can learn more about building [here](./4-user-guide/1-the-zarf-cli/1-building-your-own-cli.md).
 :::

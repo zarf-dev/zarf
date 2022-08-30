@@ -37,10 +37,18 @@ func Create(baseDir string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
+	ComposeComponents()
+
+	// After components are composed, template the active package
+	if err := config.FillActiveTemplate(); err != nil {
+		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
+	}
+
+	components := config.GetComponents()
+
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	components := GetComponents()
 	seedImage := config.GetSeedImage()
 
 	configFile := tempPath.base + "/zarf.yaml"
@@ -95,6 +103,11 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	componentPath := createComponentPaths(tempPath.components, component)
 
+	// Loop through each component prepare script and execute it
+	for _, script := range component.Scripts.Prepare {
+		loopScriptUntilSuccess(script, component.Scripts)
+	}
+
 	if len(component.Charts) > 0 {
 		_ = utils.CreateDirectory(componentPath.charts, 0700)
 		_ = utils.CreateDirectory(componentPath.values, 0700)
@@ -108,7 +121,9 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 			}
 			for idx, path := range chart.ValuesFiles {
 				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-				utils.CreatePathAndCopy(path, chartValueName)
+				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
+					message.Fatalf(err, "Unable to copy values file %s", path)
+				}
 			}
 		}
 	}
@@ -121,7 +136,9 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
-				utils.CreatePathAndCopy(file.Source, destinationFile)
+				if err := utils.CreatePathAndCopy(file.Source, destinationFile); err != nil {
+					message.Fatalf(err, "Unable to copy %s", file.Source)
+				}
 			}
 
 			// Abort packaging on invalid shasum (if one is specified)
@@ -141,18 +158,26 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 
 	if len(component.DataInjections) > 0 {
 		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
+		defer spinner.Success()
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			destinationFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
-			utils.CreatePathAndCopy(data.Source, destinationFile)
+			if err := utils.CreatePathAndCopy(data.Source, destinationFile); err != nil {
+				spinner.Fatalf(err, "Unable to copy data injection %s", data.Source)
+			}
 		}
-		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
-		spinner := message.NewProgressSpinner("Loading %d manifests", len(component.Manifests))
-		defer spinner.Stop()
+		// Get the proper count of total manifests to add
+		manifestCount := 0
+		for _, manifest := range component.Manifests {
+			manifestCount += len(manifest.Files)
+			manifestCount += len(manifest.Kustomizations)
+		}
+
+		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
+		defer spinner.Success()
 
 		if err := utils.CreateDirectory(componentPath.manifests, 0700); err != nil {
 			spinner.Fatalf(err, "Unable to create the manifest path %s", componentPath.manifests)
@@ -164,7 +189,9 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				// Copy manifests without any processing
 				spinner.Updatef("Copying manifest %s", file)
 				destination := fmt.Sprintf("%s/%s", componentPath.manifests, file)
-				utils.CreatePathAndCopy(file, destination)
+				if err := utils.CreatePathAndCopy(file, destination); err != nil {
+					spinner.Fatalf(err, "Unable to copy the manifest %s", file)
+				}
 			}
 			for idx, kustomization := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
@@ -175,17 +202,16 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				}
 			}
 		}
-		spinner.Success()
 	}
 
 	// Load all specified git repos
 	if len(component.Repos) > 0 {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Stop()
+		defer spinner.Success()
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
 			git.Pull(url, componentPath.repos, spinner)
 		}
-		spinner.Success()
 	}
+
 }

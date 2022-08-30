@@ -17,7 +17,7 @@ Almost all walkthroughs will have the follow prerequisites/assumptions:
 <br />
 
 ## Setting Up a Local Kubernetes Cluster
-While Zarf is able to deploy a local k3s Kubernetes cluster for you, (as you'll find out more in the [Creating a K8s Cluster with Zarf](./3-creating-a-k8s-cluster-with-zarf.md) walkthrough), that k3s cluster will only work if you are on a root user on a Linux machine. If you are on a Mac, or you're on Linux but don't have root access, you'll need to setup a local dockerized Kubernetes cluster manually. We provide instructions on how to quickly set up a local k3d cluster that you can use for the majority of the walkthroughs.
+While Zarf is able to deploy a local k3s Kubernetes cluster for you, (as you'll find out more in the [Creating a K8s Cluster with Zarf](./4-creating-a-k8s-cluster-with-zarf.md) walkthrough), that k3s cluster will only work if you are on a root user on a Linux machine. If you are on a Mac, or you're on Linux but don't have root access, you'll need to setup a local dockerized Kubernetes cluster manually. We provide instructions on how to quickly set up a local k3d cluster that you can use for the majority of the walkthroughs.
 
 
 ### Install k3d

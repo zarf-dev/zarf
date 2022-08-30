@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -12,13 +11,12 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/otiai10/copy"
-	"github.com/pterm/pterm"
 )
 
 var TempPathPrefix = "zarf-"
 
 func MakeTempDir(tmpDir string) (string, error) {
-	tmp, err := ioutil.TempDir(tmpDir, TempPathPrefix)
+	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
 	message.Debugf("Creating temp path %s", tmp)
 	return tmp, err
 }
@@ -79,15 +77,18 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
-func ReplaceText(path string, old string, new string) {
-	input, err := ioutil.ReadFile(path)
+// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place
+func ReplaceTextTemplate(path string, mappings map[string]string) {
+	text, err := os.ReadFile(path)
 	if err != nil {
 		message.Fatalf(err, "Unable to load %s", path)
 	}
 
-	output := bytes.Replace(input, []byte(old), []byte(new), -1)
+	for template, value := range mappings {
+		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
+	}
 
-	if err = ioutil.WriteFile(path, output, 0600); err != nil {
+	if err = os.WriteFile(path, text, 0600); err != nil {
 		message.Fatalf(err, "Unable to update %s", path)
 	}
 }
@@ -125,16 +126,16 @@ func CreateFilePath(destination string) error {
 	return CreateDirectory(parentDest, 0700)
 }
 
-func CreatePathAndCopy(source string, destination string) {
+func CreatePathAndCopy(source string, destination string) error {
 	if err := CreateFilePath(destination); err != nil {
-		message.Fatalf(err, "unable to copy the file %s", source)
+		return err
 	}
 
-	// Copy the asset
 	if err := copy.Copy(source, destination); err != nil {
-		message.Fatalf(err, "unable to copy the file %s", source)
+		return err
 	}
-	pterm.Success.Printfln("Copying %s", source)
+
+	return nil
 }
 
 // GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way

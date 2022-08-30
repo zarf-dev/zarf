@@ -13,7 +13,7 @@ type ProgressBar struct {
 
 func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
-	text := fmt.Sprintf(format, a...)
+	text := fmt.Sprintf("     "+format, a...)
 	if NoProgress {
 		Info(text)
 	} else {
@@ -35,7 +35,7 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {
 		return
 	}
-	p.progress.UpdateTitle(text)
+	p.progress.UpdateTitle("     " + text)
 	chunk := int(complete) - p.progress.Current
 	p.progress.Add(chunk)
 }

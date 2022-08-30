@@ -22,8 +22,8 @@ func TestMain(m *testing.M) {
 	// Work from the root directory of the project
 	os.Chdir("../../../")
 
-	// K3d use the intern package, which requires this to be set in go 1.18
-	os.Setenv("ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH", "go1.18")
+	// K3d use the intern package, which requires this to be set in go 1.19
+	os.Setenv("ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH", "go1.19")
 
 	retCode, err := doAllTheThings(m)
 	if err != nil {

@@ -39,7 +39,15 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	components := GetComponents()
+	ComposeComponents()
+
+	// After components are composed, template the active package
+	if err := config.FillActiveTemplate(); err != nil {
+		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
+	}
+
+	components := config.GetComponents()
+
 	tempPath := createPaths()
 	defer tempPath.clean()
 
@@ -110,7 +118,9 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 				for idx, path := range chart.ValuesFiles {
 					chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-					utils.CreatePathAndCopy(path, chartValueName)
+					if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
+						message.Fatalf(err, "Unable to copy values file %s", path)
+					}
 				}
 
 				var override string

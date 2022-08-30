@@ -4,6 +4,7 @@ package types
 type ZarfCommonOptions struct {
 	Confirm       bool
 	TempDirectory string
+	SetVariables  map[string]string
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment

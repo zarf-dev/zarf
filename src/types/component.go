@@ -27,9 +27,6 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `yaml:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// Dynamic template values for K8s resources
-	Variables ZarfComponentVariables `yaml:"variables,omitempty" jsonschema:"description=Dynamic template values for K8s resources"`
-
 	// Scripts are custom commands that run before or after package deployment
 	Scripts ZarfComponentScripts `yaml:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
 
@@ -63,45 +60,43 @@ type ZarfComponentOnlyCluster struct {
 	Distros      []string `yaml:"distros,omitempty" jsonschema:"description=Future use"`
 }
 
-// ZarfComponentVariables are variables that can be used to dynaically template K8s resources
-type ZarfComponentVariables map[string]string
-
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `yaml:"source"`
-	Shasum     string   `yaml:"shasum,omitempty"`
-	Target     string   `yaml:"target"`
-	Executable bool     `yaml:"executable,omitempty"`
-	Symlinks   []string `yaml:"symlinks,omitempty"`
+	Source     string   `yaml:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
+	Shasum     string   `yaml:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
+	Target     string   `yaml:"target" json:"target" jsonschema:"description=The absolute or relative path wher the file should be copied to during package deploy"`
+	Executable bool     `yaml:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
+	Symlinks   []string `yaml:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
-	Name        string   `yaml:"name"`
-	ReleaseName string   `yaml:"releaseName,omitempty"`
-	Url         string   `yaml:"url"`
-	Version     string   `yaml:"version"`
-	Namespace   string   `yaml:"namespace"`
-	ValuesFiles []string `yaml:"valuesFiles,omitempty"`
-	GitPath     string   `yaml:"gitPath,omitempty"`
+	Name        string   `yaml:"name" jsonschema:"description=The name of the chart to deploy, this should be the name of the chart as it is installed in the helm repo"`
+	ReleaseName string   `yaml:"releaseName,omitempty" jsonschema:"description=The name of the release to create, defaults to the name of the chart"`
+	Url         string   `yaml:"url" jsonschema:"description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
+	Version     string   `yaml:"version" jsonschema:"description=The version of the chart to deploy, for git-based charts this is also the tag of the git repo"`
+	Namespace   string   `yaml:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
+	ValuesFiles []string `yaml:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package, these will be merged together"`
+	GitPath     string   `yaml:"gitPath,omitempty" jsonschema:"description=If using a git repo, the path to the chart in the repo"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
 type ZarfManifest struct {
-	Name                       string   `yaml:"name"`
-	DefaultNamespace           string   `yaml:"namespace,omitempty"`
-	Files                      []string `yaml:"files,omitempty"`
-	KustomizeAllowAnyDirectory bool     `yaml:"kustomizeAllowAnyDirectory,omitempty"`
-	Kustomizations             []string `yaml:"kustomizations,omitempty"`
+	Name                       string   `yaml:"name" jsonschema:"description=A name to give this collection of manifests, this will become the name of the dynamically-created helm chart"`
+	DefaultNamespace           string   `yaml:"namespace,omitempty" jsonschema:"description=The namespace to deploy the manifests to"`
+	Files                      []string `yaml:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
+	KustomizeAllowAnyDirectory bool     `yaml:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
+	Kustomizations             []string `yaml:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed
 type ZarfComponentScripts struct {
-	ShowOutput     bool     `yaml:"showOutput,omitempty"`
-	TimeoutSeconds int      `yaml:"timeoutSeconds,omitempty"`
-	Retry          bool     `yaml:"retry,omitempty"`
-	Before         []string `yaml:"before,omitempty"`
-	After          []string `yaml:"after,omitempty"`
+	ShowOutput     bool     `yaml:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
+	TimeoutSeconds int      `yaml:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
+	Retry          bool     `yaml:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
+	Prepare        []string `yaml:"prepare,omitempty" jsonschema:"description=Scripts to run before the component is added during package create"`
+	Before         []string `yaml:"before,omitempty" jsonschema:"description=Scripts to run before the component is deployed"`
+	After          []string `yaml:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
@@ -114,13 +109,14 @@ type ZarfContainerTarget struct {
 
 // ZarfDataInjection is a data-injection definition
 type ZarfDataInjection struct {
-	Source   string              `yaml:"source"`
-	Target   ZarfContainerTarget `yaml:"target"`
+	Source   string              `yaml:"source" jsonschema:"description=A path to a local folder or file to inject into the given target pod + container"`
+	Target   ZarfContainerTarget `yaml:"target" jsonschema:"description=The target pod + container to inject the data into"`
 	Compress bool                `yaml:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
 // ZarfImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `yaml:"name,omitempty"`
-	Path          string `yaml:"path"`
+	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
+	Path string `yaml:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
 }

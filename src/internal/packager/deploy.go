@@ -93,6 +93,11 @@ func Deploy() {
 		os.Exit(0)
 	}
 
+	// Set variables and prompt if --confirm is not set
+	if err := config.SetActiveVariables(); err != nil {
+		message.Fatalf(err, "Unable to set variables in config: %s", err.Error())
+	}
+
 	// Verify the components requested all exist
 	components := config.GetComponents()
 	var requestedComponents []string
@@ -106,7 +111,7 @@ func Deploy() {
 		deployComponents(tempPath, component)
 	}
 
-	pterm.Success.Println("Zarf deployment complete")
+	message.SuccessF("Zarf deployment complete")
 	pterm.Println()
 
 	// If not init config, print the application connection table
