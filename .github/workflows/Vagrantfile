@@ -5,7 +5,7 @@
 GITHUB_RUNNER_VERSION = "2.296.0"
 GITHUB_RUNNER_SHASUM = "d1fa9768ef81de108db24645cba174096dfb59b4dbb883016192384827f29e43"
 UBUNTU_NODE_COUNT = 6
-RHEL_NODE_COUNT = 2
+ROCKY_NODE_COUNT = 2
 
 require 'securerandom'
 
@@ -84,7 +84,7 @@ EOF
         export RUNNER_ALLOW_RUNASROOT=1
   
         # Create the runner and start the configuration, allow sudo due to k3s tests
-        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels amd64,linux,ubuntu
+        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels ubuntu
     
         # Start the runner
         ./actions-runner/run.sh &
@@ -93,15 +93,15 @@ EOF
   end
 
   #####################################################################
-  #                  RHEL-specific configs                          #
+  #                  Rocky-specific configs                          #
   #####################################################################
-  (1..RHEL_NODE_COUNT).each do |i|
-    config.vm.define "rhel-#{i}" do |subconfig|
-      subconfig.vm.hostname = "rhel-#{i}-dallas-#{SecureRandom.hex(6)}"
+  (1..ROCKY_NODE_COUNT).each do |i|
+    config.vm.define "rocky-#{i}" do |subconfig|
+      subconfig.vm.hostname = "rocky-#{i}-dallas-#{SecureRandom.hex(6)}"
 
-      subconfig.vm.box = "generic/rhel8"
+      subconfig.vm.box = "rockylinux/8"
     
-      # Setup for RHEL (k3s test only)
+      # Setup for Rocky (k3s test only)
       subconfig.vm.provision "shell", inline: <<-SHELL
         # Tell github to use the cleanup script and allow sudo
         export ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/vagrant/runner-cleanup.sh
@@ -109,7 +109,7 @@ EOF
         export RUNNER_ALLOW_RUNASROOT=1
         
          # Create the runner and start the configuration, allow sudo due to k3s tests
-        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels amd64,linux,rhel
+        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels rhel,rocky
   
         # Start the runner
         ./actions-runner/run.sh &
