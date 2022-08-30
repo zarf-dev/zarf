@@ -112,7 +112,8 @@ EOF
         # Install docker
         dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
         dnf update -y
-        dnf install -y docker-ce docker-ce-cli containerd.io make
+        dnf install -y docker-ce docker-ce-cli containerd.io
+        dnf groupinstall "Development Tools" -y
 
         # Configure docker
         systemctl enable docker --now
