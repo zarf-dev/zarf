@@ -3,7 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
-	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -31,35 +31,51 @@ type Credential struct {
 func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
+		//TODO: This might be less valid of a check now that people can specify the git username
 		if strings.Contains(match, "/"+gitUser+"/") {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
 		}
-		return transformURL(host, match, gitUser)
+
+		output, err := transformURL(host, match, gitUser)
+		if err != nil {
+			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
+			output = match
+		}
+		return output
 	})
 	return output
 }
 
-func transformURLtoRepoName(url string) string {
-	replaceRegex := regexp.MustCompile(`(https?://|[^\w\-.])+`)
+func transformURLtoRepoName(url string) (string, error) {
+	findRegex := regexp.MustCompile(`\/([\w\-]+)(.git)?(@([\w\-\.]+))?$`)
+	substrings := findRegex.FindStringSubmatch(url)
+	if len(substrings) == 0 {
+		// the first element in the return substrings is
+		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
+	}
 
-	// append md5 or sha1
-	repoName := replaceRegex.ReplaceAllString(url, "")
+	// NOTE: The first element in the returned substrings is the combination of all the rest of the substrings....
+	//       So just skip the first element so we can get a hash without the version tag
+	repoName := substrings[1]
 
-	// Add md5 hash of the repoName to the end of the repo
-	hasher := md5.New()
-	io.WriteString(hasher, repoName)
-	md5Hash := hex.EncodeToString(hasher.Sum(nil))
-	newRepoName := "mirror" + repoName + "-" + md5Hash
-	return newRepoName
+	// Add sha1 hash of the repoName to the end of the repo
+	hasher := sha1.New()
+	io.WriteString(hasher, url)
+	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
+	newRepoName := repoName + "-" + sha1Hash
+
+	return newRepoName, nil
 }
 
-func transformURL(baseUrl string, url string, username string) string {
-	replaced := transformURLtoRepoName(url)
-
+func transformURL(baseUrl string, url string, username string) (string, error) {
+	replaced, err := transformURLtoRepoName(url)
+	if err != nil {
+		return "", err
+	}
 	output := baseUrl + "/" + username + "/" + replaced
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
-	return output
+	return output, nil
 }
 
 func credentialFilePath() string {
