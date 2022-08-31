@@ -7,7 +7,7 @@ on:
 
 jobs:
   push-resources:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, x64, ubuntu]
     steps:
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
