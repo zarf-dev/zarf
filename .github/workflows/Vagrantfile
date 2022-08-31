@@ -1,0 +1,138 @@
+# Github self-hosted runner config
+# Usage:
+# DOCKER_LOGIN="REPLACE_ME_DOCKER_TOKEN_FOR_PULL_LIMIT" GITHUB_TOKEN="REPLACE_ME_GITHUB_ACTION_TOKEN" vagrant up --provision
+
+GITHUB_RUNNER_VERSION = "2.296.0"
+GITHUB_RUNNER_SHASUM = "d1fa9768ef81de108db24645cba174096dfb59b4dbb883016192384827f29e43"
+UBUNTU_NODE_COUNT = 6
+ROCKY_NODE_COUNT = 2
+
+require 'securerandom'
+
+Vagrant.configure("2") do |config|
+
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.ssh.insert_key = false
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.check_guest_additions = false
+    vb.cpus = 6
+    vb.memory = 16384
+  end
+
+  config.disksize.size = '200GB'
+
+  #####################################################################
+  #                  Common setup scripts                             #
+  #####################################################################
+  config.vm.provision "shell", inline: <<-SHELL
+    # Elasticsearch needs this
+    sysctl -w vm.max_map_count=262144
+    
+    # Write the runner pre/posts scripts
+    cat > /home/vagrant/runner-cleanup.sh << EOF
+#!/bin/bash
+set +e
+
+sudo chown -R vagrant /home/vagrant || echo ''
+sudo /opt/zarf/zarf-clean-k3s.sh || echo ''
+sudo rm -fr ~/.kube
+sudo rm -fr /root/.kube
+sudo rm -fr /tmp/zarf*
+EOF
+      
+    # Make it executable
+    chmod 755 /home/vagrant/runner-cleanup.sh
+
+    # Create a folder
+    mkdir -p actions-runner && cd actions-runner
+
+    # Download the latest runner package & validate the shasum
+    curl -o actions-runner-linux-x64-#{GITHUB_RUNNER_VERSION}.tar.gz -L https://github.com/actions/runner/releases/download/v#{GITHUB_RUNNER_VERSION}/actions-runner-linux-x64-#{GITHUB_RUNNER_VERSION}.tar.gz
+    echo "#{GITHUB_RUNNER_SHASUM}  actions-runner-linux-x64-#{GITHUB_RUNNER_VERSION}.tar.gz" | sha256sum -c
+
+    # Extract the installer
+    tar xzf ./actions-runner-linux-x64-#{GITHUB_RUNNER_VERSION}.tar.gz
+
+    ./bin/installdependencies.sh
+  SHELL
+
+
+  #####################################################################
+  #                  Ubuntu-specific configs                          #
+  #####################################################################
+  (1..UBUNTU_NODE_COUNT).each do |i|
+    config.vm.define "ubuntu-#{i}" do |subconfig|
+      subconfig.vm.hostname = "ubuntu-#{i}-dallas-#{SecureRandom.hex(6)}"
+
+      subconfig.vm.box = "ubuntu/focal64"
+
+      subconfig.vm.provision "shell", inline: <<-SHELL
+        # Install tools
+        apt-get update -y
+        apt-get install docker.io make build-essential curl -y
+    
+        # Grant vagrant docker access without sudo
+        usermod -aG docker vagrant
+        
+        # Docker login to avoid pull limits
+        docker login -u zarfdev -p #{ENV['DOCKER_LOGIN']}
+  
+        # Tell github to use the cleanup script and allow sudo
+        export ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/vagrant/runner-cleanup.sh
+        export ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/vagrant/runner-cleanup.sh
+        export RUNNER_ALLOW_RUNASROOT=1
+  
+        # Create the runner and start the configuration, allow sudo due to k3s tests
+        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels ubuntu
+    
+        # Start the runner
+        ./actions-runner/run.sh &
+      SHELL
+    end
+  end
+
+  #####################################################################
+  #                  Rocky-specific configs                          #
+  #####################################################################
+  (1..ROCKY_NODE_COUNT).each do |i|
+    config.vm.define "rocky-#{i}" do |subconfig|
+      subconfig.vm.hostname = "rocky-#{i}-dallas-#{SecureRandom.hex(6)}"
+
+      subconfig.vm.box = "rockylinux/8"
+    
+      # Setup for Rocky (k3s test only)
+      subconfig.vm.provision "shell", inline: <<-SHELL
+
+        # Grow the disk
+        dnf install -y cloud-utils-growpart
+        growpart /dev/sda 1
+        xfs_growfs /dev/sda1
+
+        # Install docker
+        dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+        dnf update -y
+        dnf install -y docker-ce docker-ce-cli containerd.io
+        dnf groupinstall "Development Tools" -y
+
+        # Configure docker
+        systemctl enable docker --now
+        usermod -aG docker vagrant
+        docker login -u zarfdev -p #{ENV['DOCKER_LOGIN']}
+        
+
+        # Tell github to use the cleanup script and allow sudo
+        export ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/vagrant/runner-cleanup.sh
+        export ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/vagrant/runner-cleanup.sh
+        export RUNNER_ALLOW_RUNASROOT=1
+        
+         # Create the runner and start the configuration, allow sudo due to k3s tests
+        ./actions-runner/config.sh --url https://github.com/defenseunicorns/zarf --token #{ENV['GITHUB_TOKEN']} --unattended --labels rhel,rocky
+  
+        # Start the runner
+        ./actions-runner/run.sh &
+      SHELL
+    end
+  end
+
+end
