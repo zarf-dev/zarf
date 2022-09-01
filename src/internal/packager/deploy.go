@@ -203,17 +203,22 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 	// Generate a value template
 	valueTemplate = template.Generate()
 	valueTemplate = someSortOfValidation(valueTemplate, component)
+	waitGroup := sync.WaitGroup{}
+	defer waitGroup.Wait()
 
 	// Install all the parts of the component
 	pushImagesToRegistry(tempPath, component.Images)
 	pushReposToRepository(componentPath.repos, component.Repos)
-	performDataInjections(componentPath, component.DataInjections)
+	performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	installChartAndManifests(componentPath, component)
 	runComponentScripts(component.Scripts.After, component.Scripts)
 
 	return installedCharts
 }
 
+// TODO: @JPERRY The only difference between this function and `deployComponent()` is that we are trying to push images without a shasum.
+//
+//	We can probably just remove this new function and be more clean with how we determine if we need the shasum..
 func deploySeedRegistryComponent(tempPath tempPaths, component types.ZarfComponent) {
 	if config.InitOptions.RegistryInfo.Address != "" {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
@@ -231,11 +236,13 @@ func deploySeedRegistryComponent(tempPath tempPaths, component types.ZarfCompone
 	// Generate a value template
 	valueTemplate = template.Generate()
 	valueTemplate = someSortOfValidation(valueTemplate, component)
+	waitGroup := sync.WaitGroup{}
+	defer waitGroup.Wait()
 
 	// Install all the parts of the component
 	pushSeedImagesToRegistry(tempPath, component.Images)
 	pushReposToRepository(componentPath.repos, component.Repos)
-	performDataInjections(componentPath, component.DataInjections)
+	performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	installChartAndManifests(componentPath, component)
 	runComponentScripts(component.Scripts.After, component.Scripts)
 }
@@ -387,18 +394,15 @@ func pushReposToRepository(reposPath string, repos []string) {
 	}
 }
 
-func performDataInjections(componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
+func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")
 	}
 
-	// Start any data injection async
-	var waitGroup sync.WaitGroup
 	for _, data := range dataInjections {
 		waitGroup.Add(1)
-		go handleDataInjection(&waitGroup, data, componentPath)
+		go handleDataInjection(waitGroup, data, componentPath)
 	}
-	defer waitGroup.Wait()
 }
 
 func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) {
