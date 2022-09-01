@@ -221,11 +221,13 @@ func deployComponent(tempPath tempPaths, component types.ZarfComponent) []types.
 	// Generate a value template
 	valueTemplate = template.Generate()
 	valueTemplate = someSortOfValidation(valueTemplate, component)
+	waitGroup := sync.WaitGroup{}
+	defer waitGroup.Wait()
 
 	// Install all the parts of the component
 	pushImagesToRegistry(tempPath, component.Images)
 	pushReposToRepository(componentPath.repos, component.Repos)
-	performDataInjections(componentPath, component.DataInjections)
+	performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	installedCharts = installChartAndManifests(componentPath, component)
 	runComponentScripts(component.Scripts.After, component.Scripts)
 
@@ -252,11 +254,13 @@ func deploySeedRegistryComponent(tempPath tempPaths, component types.ZarfCompone
 	// Generate a value template
 	valueTemplate = template.Generate()
 	valueTemplate = someSortOfValidation(valueTemplate, component)
+	waitGroup := sync.WaitGroup{}
+	defer waitGroup.Wait()
 
 	// Install all the parts of the component
 	pushSeedImagesToRegistry(tempPath, component.Images)
 	pushReposToRepository(componentPath.repos, component.Repos)
-	performDataInjections(componentPath, component.DataInjections)
+	performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	installedCharts = installChartAndManifests(componentPath, component)
 	runComponentScripts(component.Scripts.After, component.Scripts)
 
@@ -414,18 +418,15 @@ func pushReposToRepository(reposPath string, repos []string) {
 	}
 }
 
-func performDataInjections(componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
+func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")
 	}
 
-	// Start any data injection async
-	var waitGroup sync.WaitGroup
 	for _, data := range dataInjections {
 		waitGroup.Add(1)
-		go handleDataInjection(&waitGroup, data, componentPath)
+		go handleDataInjection(waitGroup, data, componentPath)
 	}
-	defer waitGroup.Wait()
 }
 
 func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) []types.InstalledCharts {

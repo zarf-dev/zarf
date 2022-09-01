@@ -11,7 +11,7 @@ import (
 )
 
 // For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
-var hostParser = regexp.MustCompile(`(?im)([a-z0-9\-\_.]+)(\/[a-z0-9\-.]+)(:[\w\.\-\_]+)?$`)
+var hostParser = regexp.MustCompile(`(?im)([a-z0-9\-\_.]+)?(\/[a-z0-9\-.]+)?(:[\w\.\-\_]+)?$`)
 
 // SwapHost Perform base url replacement and adds a sha1sum of the original url to the end of the src
 func SwapHost(src string, targetHost string) string {
