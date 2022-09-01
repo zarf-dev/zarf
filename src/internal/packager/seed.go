@@ -135,7 +135,7 @@ func postSeedRegistry(tempPath tempPaths) {
 	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
 
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
+	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, false)
 }
 
 func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {

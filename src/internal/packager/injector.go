@@ -357,7 +357,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 				"/zarf-stage2/zarf-registry",
 				"/zarf-stage2/seed-image.tar",
 				seedImage,
-				utils.SwapHost(seedImage, "127.0.0.1:5001"),
+				utils.SwapHostWithoutSha(seedImage, "127.0.0.1:5001"),
 			},
 
 			// Shared mount between the init and regular containers
