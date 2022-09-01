@@ -16,7 +16,7 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:b17ad2a63be002a2cfd467af2865e465bb13f59d
+AGENT_IMAGE ?= zarfdev/agent:a57bb136f21441c66630403412c6f03fc7f9cd49
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
