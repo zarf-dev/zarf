@@ -6,7 +6,7 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "Jeff McCoy",
-    "email": "code@jeffm.us"
+    "name": "Defense Unicorns",
+    "email": "zarf@defenseunicorns.com"
   }
 }
