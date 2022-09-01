@@ -28,8 +28,21 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: "Dependency: Install K3d"
+        run: "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | sudo bash"
+
       - name: "Dependency: K3d cluster init"
         run: k3d cluster delete && k3d cluster create
+
+      - name: "Dependency: Install Helm"
+        run: "curl -s https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"
+
+      - name: "Install Kubectl"
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+          install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
