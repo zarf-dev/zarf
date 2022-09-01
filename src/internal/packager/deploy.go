@@ -112,13 +112,12 @@ func Deploy() {
 		switch component.Name {
 		case "zarf-seed-registry":
 			// Do specific things for the seed registry
-			seedZarfState(tempPath)
-			runInjectionMadness(tempPath)
-
-			deploySeedRegistryComponent(tempPath, component)
-
-			// do specific things for the seed registry
-			postSeedRegistry(tempPath)
+			if config.InitOptions.RegistryInfo.Address == "" {
+				seedZarfState(tempPath)
+				runInjectionMadness(tempPath)
+				deploySeedRegistryComponent(tempPath, component)
+				postSeedRegistry(tempPath)
+			}
 
 		case "zarf-agent":
 			if !config.GetContainerRegistryInfo().InternalRegistry {
