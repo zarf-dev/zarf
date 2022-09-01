@@ -26,6 +26,7 @@ type DeployedComponent struct {
 	InstalledCharts []InstalledCharts `json:"installedCharts"`
 }
 
+// TODO: @JPERRY This name should be singular
 type InstalledCharts struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`

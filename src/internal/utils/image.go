@@ -13,7 +13,7 @@ import (
 // For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
 var hostParser = regexp.MustCompile(`(?im)([a-z0-9\-\_.]+)(\/[a-z0-9\-.]+)(:[\w\.\-\_]+)?$`)
 
-// SwapHost Perform base url replacment without the docker libs
+// SwapHost Perform base url replacement and adds a sha1sum of the original url to the end of the src
 func SwapHost(src string, targetHost string) string {
 	targetImage := getTargetImageFromURL(src)
 	return targetHost + "/" + targetImage
@@ -48,4 +48,14 @@ func getTargetImageFromURL(src string) string {
 	}
 
 	return targetImage
+}
+
+// SwapHostWithoutSha Perform base url replacement but avoids adding a sha1sum of the original url
+func SwapHostWithoutSha(src string, targetHost string) string {
+	submatches := hostParser.FindStringSubmatch(src)
+	if len(submatches) == 0 {
+		message.Warnf("Unable to get the targetImage from the provided source: %s", src)
+		return src //TODO: This should probably return an err
+	}
+	return targetHost + "/" + submatches[0]
 }

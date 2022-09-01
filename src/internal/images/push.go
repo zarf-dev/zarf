@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 )
 
-func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error {
+func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addShasumToImg bool) error {
 	message.Debugf("images.PushToZarfRegistry(%s, %s)", imageTarballPath, buildImageList)
 
 	registryUrl := ""
@@ -49,8 +49,12 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string) error 
 		if err != nil {
 			return err
 		}
-
-		offlineName := utils.SwapHost(src, registryUrl)
+		offlineName := ""
+		if addShasumToImg {
+			offlineName = utils.SwapHost(src, registryUrl)
+		} else {
+			offlineName = utils.SwapHostWithoutSha(src, registryUrl)
+		}
 		if err = crane.Push(img, offlineName, pushOptions); err != nil {
 			return err
 		}
