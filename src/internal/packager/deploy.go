@@ -185,84 +185,125 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 
 	var installedCharts []types.InstalledCharts
 
-	// Toggles for deploy operations on 'init'
-	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
-	createZarfState := isSeedRegistry || (config.IsZarfInitConfig() && !config.GetContainerRegistryInfo().InternalRegistry && component.Name == "zarf-agent")
-
-	// Toggles for general deploy operations
-	componentPath := createComponentPaths(tempPath.components, component)
-	hasImages := len(component.Images) > 0
-	hasCharts := len(component.Charts) > 0
-	hasManifests := len(component.Manifests) > 0
-	hasRepos := len(component.Repos) > 0
-	hasDataInjections := len(component.DataInjections) > 0
-
 	// Don't inject a registry if an external one has been provided
 	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
-	if (config.InitOptions.RegistryInfo.Address != "") && (component.Name == "zarf-injector" || component.Name == "zarf-seed-registry" || component.Name == "zarf-registry") {
+	if (config.InitOptions.RegistryInfo.Address != "") && (component.Name == "zarf-injector" || component.Name == "zarf-registry") {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return installedCharts
 	}
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-	for _, script := range component.Scripts.Before {
-		loopScriptUntilSuccess(script, component.Scripts)
-	}
+	componentPath := createComponentPaths(tempPath.components, component)
 
-	if len(component.Files) > 0 {
-		spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
-		defer spinner.Stop()
+	// Run the 'before' scripts and move files before we do anything else
+	runComponentScripts(component.Scripts.Before, component.Scripts)
+	processComponentFiles(component.Files, componentPath.files, tempPath.base)
 
-		for index, file := range component.Files {
-			spinner.Updatef("Loading %s", file.Target)
-			sourceFile := componentPath.files + "/" + strconv.Itoa(index)
-
-			// If a shasum is specified check it again on deployment as well
-			if file.Shasum != "" {
-				spinner.Updatef("Validating SHASUM for %s", file.Target)
-				utils.ValidateSha256Sum(file.Shasum, sourceFile)
-			}
-
-			// Replace temp target directories
-			file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPath.base, 1)
-
-			// Copy the file to the destination
-			spinner.Updatef("Saving %s", file.Target)
-			err := copy.Copy(sourceFile, file.Target)
-			if err != nil {
-				spinner.Fatalf(err, "Unable to copy the contents of %s", file.Target)
-			}
-
-			// Loop over all symlinks and create them
-			for _, link := range file.Symlinks {
-				spinner.Updatef("Adding symlink %s->%s", link, file.Target)
-				// Try to remove the filepath if it exists
-				_ = os.RemoveAll(link)
-				// Make sure the parent directory exists
-				_ = utils.CreateFilePath(link)
-				// Create the symlink
-				err := os.Symlink(file.Target, link)
-				if err != nil {
-					spinner.Fatalf(err, "Unable to create the symbolic link %s -> %s", link, file.Target)
-				}
-			}
-
-			// Cleanup now to reduce disk pressure
-			_ = os.RemoveAll(sourceFile)
-		}
-		spinner.Success()
-	}
-
-	if createZarfState {
-		seedZarfState(tempPath)
-	}
-	if isSeedRegistry {
-		runInjectionMadness(tempPath)
-	}
-
+	// Generate a value template
 	valueTemplate = template.Generate()
+	valueTemplate = someSortOfValidation(valueTemplate, component)
 
+	// Install all the parts of the component
+	pushImagesToRegistry(tempPath, component.Images)
+	pushReposToRepository(componentPath.repos, component.Repos)
+	performDataInjections(componentPath, component.DataInjections)
+	installChartAndManifests(componentPath, component)
+	runComponentScripts(component.Scripts.After, component.Scripts)
+
+	return installedCharts
+}
+
+func deploySeedRegistryComponent(tempPath tempPaths, component types.ZarfComponent) {
+	if config.InitOptions.RegistryInfo.Address != "" {
+		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+		return
+	}
+
+	// All components now require a name
+	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	componentPath := createComponentPaths(tempPath.components, component)
+
+	// Run the 'before' scripts and move files before we do anything else
+	runComponentScripts(component.Scripts.Before, component.Scripts)
+	processComponentFiles(component.Files, componentPath.files, tempPath.base)
+
+	// Generate a value template
+	valueTemplate = template.Generate()
+	valueTemplate = someSortOfValidation(valueTemplate, component)
+
+	// Install all the parts of the component
+	pushSeedImagesToRegistry(tempPath, component.Images)
+	pushReposToRepository(componentPath.repos, component.Repos)
+	performDataInjections(componentPath, component.DataInjections)
+	installChartAndManifests(componentPath, component)
+	runComponentScripts(component.Scripts.After, component.Scripts)
+}
+
+func runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) {
+	for _, script := range scripts {
+		loopScriptUntilSuccess(script, componentScript)
+	}
+	return
+}
+
+func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, tempPathBase string) {
+	var spinner message.Spinner
+	if len(componentFiles) > 0 {
+		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+		defer spinner.Stop()
+	}
+
+	for index, file := range componentFiles {
+		spinner.Updatef("Loading %s", file.Target)
+		// sourceFile := componentPath.files + "/" + strconv.Itoa(index)
+		sourceFile := sourceLocation + "/" + strconv.Itoa(index)
+
+		// If a shasum is specified check it again on deployment as well
+		if file.Shasum != "" {
+			spinner.Updatef("Validating SHASUM for %s", file.Target)
+			utils.ValidateSha256Sum(file.Shasum, sourceFile)
+		}
+
+		// Replace temp target directories
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPathBase, 1)
+
+		// Copy the file to the destination
+		spinner.Updatef("Saving %s", file.Target)
+		err := copy.Copy(sourceFile, file.Target)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to copy the contents of %s", file.Target)
+		}
+
+		// Loop over all symlinks and create them
+		for _, link := range file.Symlinks {
+			spinner.Updatef("Adding symlink %s->%s", link, file.Target)
+			// Try to remove the filepath if it exists
+			_ = os.RemoveAll(link)
+			// Make sure the parent directory exists
+			_ = utils.CreateFilePath(link)
+			// Create the symlink
+			err := os.Symlink(file.Target, link)
+			if err != nil {
+				spinner.Fatalf(err, "Unable to create the symbolic link %s -> %s", link, file.Target)
+			}
+		}
+
+		// Cleanup now to reduce disk pressure
+		_ = os.RemoveAll(sourceFile)
+	}
+	spinner.Success()
+
+}
+
+// TODO: Rename this function to something more clear..
+func someSortOfValidation(valueTemplate template.Values, component types.ZarfComponent) template.Values {
+	hasImages := len(component.Images) > 0
+	hasCharts := len(component.Charts) > 0
+	hasManifests := len(component.Manifests) > 0
+	hasRepos := len(component.Repos) > 0
+
+	//TODO: @JPERRY what does it mean if the valueTemplate is not ready yet (why are we checking that?)
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
 		// If we are touching K8s, make sure we can talk to it once per deployment
 		spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
@@ -291,66 +332,81 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		spinner.Success()
 	}
 
-	if hasImages {
-		// Try image push up to 3 times
-		for retry := 0; retry < 3; retry++ {
-			if err := images.PushToZarfRegistry(tempPath.images, component.Images); err != nil {
-				message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
-				time.Sleep(5 * time.Second)
-				continue
-			} else {
-				break
-			}
-		}
+	return valueTemplate
+}
 
+func pushSeedImagesToRegistry(tempPath tempPaths, componentImages []string) {
+	if len(componentImages) == 0 {
+		return
 	}
 
-	if hasRepos {
-		// Try repo push up to 3 times
-		for retry := 0; retry < 3; retry++ {
-			// Push all the repos from the extracted archive
-			if err := git.PushAllDirectories(componentPath.repos); err != nil {
-				message.Errorf(err, "Unable to push repos to the Git Server, retrying in 5 seconds...")
-				time.Sleep(5 * time.Second)
-				continue
-			} else {
-				break
-			}
+	// Try image push up to 3 times
+	for retry := 0; retry < 3; retry++ {
+		if err := images.PushToZarfRegistry(tempPath.images, componentImages, false); err != nil {
+			message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
 		}
+	}
+}
+
+func pushImagesToRegistry(tempPath tempPaths, componentImages []string) {
+	if len(componentImages) == 0 {
+		return
+	}
+
+	// Try image push up to 3 times
+	for retry := 0; retry < 3; retry++ {
+		if err := images.PushToZarfRegistry(tempPath.images, componentImages, true); err != nil {
+			message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
+		}
+	}
+}
+
+func pushReposToRepository(reposPath string, repos []string) {
+	if len(repos) == 0 {
+		return
+	}
+
+	// Try repo push up to 3 times
+	for retry := 0; retry < 3; retry++ {
+		// Push all the repos from the extracted archive
+		if err := git.PushAllDirectories(reposPath); err != nil {
+			message.Errorf(err, "Unable to push repos to the Git Server, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
+		}
+	}
+}
+
+func performDataInjections(componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
+	if len(dataInjections) > 0 {
+		message.Info("Loading data injections")
 	}
 
 	// Start any data injection async
-	if hasDataInjections {
-		var waitGroup sync.WaitGroup
-
-		message.Info("Loading data injections")
-		for _, data := range component.DataInjections {
-			waitGroup.Add(1)
-			go handleDataInjection(&waitGroup, data, componentPath)
-		}
-		defer waitGroup.Wait()
+	var waitGroup sync.WaitGroup
+	for _, data := range dataInjections {
+		waitGroup.Add(1)
+		go handleDataInjection(&waitGroup, data, componentPath)
 	}
+	defer waitGroup.Wait()
+}
 
-	if len(component.Charts) > 0 || len(component.Manifests) > 0 {
-		for _, chart := range component.Charts {
-			// zarf magic for the value file
-			for idx := range chart.ValuesFiles {
-				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-				valueTemplate.Apply(component, chartValueName)
-			}
-
-			// Generate helm templates to pass to gitops engine
-			addedConnectStrings, installedChartName := helm.InstallOrUpgradeChart(helm.ChartOptions{
-				BasePath:  componentPath.base,
-				Chart:     chart,
-				Component: component,
-			})
-			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: chart.Namespace, ChartName: installedChartName})
-
-			// Iterate over any connectStrings and add to the main map
-			for name, description := range addedConnectStrings {
-				connectStrings[name] = description
-			}
+func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) {
+	for _, chart := range component.Charts {
+		// zarf magic for the value file
+		for idx := range chart.ValuesFiles {
+			chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+			valueTemplate.Apply(component, chartValueName)
 		}
 
 		for _, manifest := range component.Manifests {
@@ -361,8 +417,8 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 			}
 
 			// Iterate over any connectStrings and add to the main map
-			addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
-			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
+			addedConnectStrings, _ := helm.GenerateChart(componentPath.manifests, manifest, component)
+			// installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
 			for name, description := range addedConnectStrings {
 				connectStrings[name] = description
 			}
@@ -373,11 +429,6 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		loopScriptUntilSuccess(script, component.Scripts)
 	}
 
-	if isSeedRegistry {
-		postSeedRegistry(tempPath)
-	}
-
-	return installedCharts
 }
 
 func packageUsesK8s(zarfPackage types.ZarfPackage) bool {
