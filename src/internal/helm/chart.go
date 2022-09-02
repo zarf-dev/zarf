@@ -31,8 +31,7 @@ type ChartOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) {
-	var installedChartName string
+func InstallOrUpgradeChart(options ChartOptions) types.ConnectStrings {
 	fromMessage := options.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -49,7 +48,6 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 	if options.Chart.ReleaseName != "" {
 		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
 	}
-	installedChartName = options.ReleaseName
 
 	// Do not wait for the chart to be ready if data injections are present
 	if len(options.Component.DataInjections) > 0 {
@@ -119,7 +117,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 	}
 
 	// return any collected connect strings for zarf connect
-	return postRender.connectStrings, installedChartName
+	return postRender.connectStrings
 }
 
 // TemplateChart generates a helm template from a given chart
@@ -168,7 +166,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
-func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) (types.ConnectStrings, string) {
+func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) types.ConnectStrings {
 	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
