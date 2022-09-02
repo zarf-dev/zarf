@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -23,8 +22,8 @@ func PushAllDirectories(localPath string) error {
 	gitServerInfo := config.GetGitServerInfo()
 	gitServerURL := gitServerInfo.Address
 
-	// If this URL points to a resource within the cluster, create a tunnel to it
-	if strings.Contains(gitServerURL, "svc.cluster.local:") || strings.HasSuffix(gitServerURL, "svc.cluster.local") {
+	// If this is a serviceURL, create a port-forward tunnel to that resource
+	if k8s.IsServiceURL(gitServerURL) {
 		tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL)
 		if err != nil {
 			return err

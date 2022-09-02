@@ -10,7 +10,7 @@ components:
     import:
       path: packages/distros/k3s
 
-  # This package just moves the injector & registries binaries
+  # This package moves the injector & registries binaries
   - name: zarf-injector
     required: true
     import:

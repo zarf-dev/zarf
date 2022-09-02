@@ -88,6 +88,14 @@ func PrintConnectTable() error {
 	return nil
 }
 
+func IsServiceURL(url string) bool {
+	if strings.Contains(url, "svc.cluster.local:") || strings.HasSuffix(url, "svc.cluster.local") {
+		return true
+	}
+
+	return false
+}
+
 // NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
 // Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
 func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
