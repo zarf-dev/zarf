@@ -32,7 +32,13 @@ var initCmd = &cobra.Command{
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
-		"that the Zarf binary is located in.\n",
+		"that the Zarf binary is located in.\n\n\n\n" +
+
+		"Example Usage:\n" +
+		"Initializing without any optional components:\n`zarf init`\n\n" +
+		"Initializing w/ Zarfs internal git server:\n`zarf init --components=git-server`\n\n" +
+		"Initializing w/ an external registry:\n`zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
+		"Initializing w/ an external git server:\n`zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}`\n\n",
 
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
