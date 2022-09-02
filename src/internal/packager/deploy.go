@@ -180,37 +180,38 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
-
 		deployedComponent := types.DeployedComponent{Name: component.Name}
+		installedCharts := []types.InstalledCharts{}
 
-		// Handle 'special' components
+		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
+		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
+		if (config.IsZarfInitConfig() && config.InitOptions.RegistryInfo.Address != "") &&
+			(component.Name == "zarf-seed-registry" || component.Name == "zarf-injector" || component.Name == "zarf-registry") {
+			message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+			continue
+		}
+
+		// Do somewhat custom deploys for the seed and agent components
 		switch component.Name {
-		case "zarf-seed-registry", "zarf-injector", "zarf-registry":
-			// Skip this component if we are using an external registry
-			// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
-			if config.InitOptions.RegistryInfo.Address != "" {
-				message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-				continue
-			}
-
+		case "zarf-seed-registry":
 			// If this is the seed component; seed the state and inject a container registry into the cluster
 			if component.Name == "zarf-seed-registry" && config.InitOptions.RegistryInfo.Address == "" {
 				seedZarfState(tempPath)
 				runInjectionMadness(tempPath)
-				defer postSeedRegistry(tempPath)
-				addShasumToImg = false
+				installedCharts = deployComponent(tempPath, component, !addShasumToImg)
+				postSeedRegistry(tempPath)
 			}
 		case "zarf-agent":
 			// Seed the state if we are using an external registry
 			if !config.GetContainerRegistryInfo().InternalRegistry {
 				seedZarfState(tempPath)
 			}
-			addShasumToImg = false
-
+			installedCharts = deployComponent(tempPath, component, !addShasumToImg)
+		default:
+			installedCharts = deployComponent(tempPath, component, addShasumToImg)
 		}
 
 		// Deploy the component
-		installedCharts := deployComponent(tempPath, component, addShasumToImg)
 		deployedComponent.InstalledCharts = installedCharts
 		deployedComponents = append(deployedComponents, deployedComponent)
 	}
