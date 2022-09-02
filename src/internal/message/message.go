@@ -137,7 +137,7 @@ func Note(text string) {
 
 func Notef(text string, a ...any) {
 	pterm.Println()
-	message := paragraph(text, a)
+	message := paragraph(text, a...)
 	pterm.FgYellow.Println(message)
 }
 

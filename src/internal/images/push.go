@@ -1,8 +1,6 @@
 package images
 
 import (
-	"strings"
-
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -24,8 +22,8 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addSha
 	} else {
 		registryUrl = config.GetContainerRegistryInfo().Address
 
-		// TODO @JPERRY: Do the same thing I did for the git-url in `src/internal/git/push.go#42` (better yet break this out into a util func)
-		if strings.Contains(registryUrl, "svc.cluster.local") {
+		// If this is a serviceURL, create a port-forward tunnel to that resource
+		if k8s.IsServiceURL(registryUrl) {
 			tunnel, err := k8s.NewTunnelFromServiceURL(registryUrl)
 			if err != nil {
 				return err
@@ -33,7 +31,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addSha
 
 			tunnel.Connect("", false)
 			defer tunnel.Close()
-			registryUrl = tunnel.Endpoint() // TODO: @JEPRRY pre-pending "http://" will break this.. Try to understand why..
+			registryUrl = tunnel.Endpoint()
 		}
 	}
 

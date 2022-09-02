@@ -51,9 +51,8 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 		return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
 	}
 
-	message.Infof("original URL of the gitRepo: %#v", gitRepo.Spec.URL)
-
 	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServer.PushUsername)
+	message.Debugf("original git URL of (%s) got mutated to (%s)", gitRepo.Spec.URL, replacedURL)
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", replacedURL))
 
 	// If a prior secret exists, replace it
