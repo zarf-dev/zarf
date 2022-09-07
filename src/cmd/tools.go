@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -109,4 +110,13 @@ func init() {
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
+
+	syftCmd, err := cli.New()
+	if err != nil {
+		message.Fatal(err, "Unable to create syft CLI")
+	}
+	syftCmd.Use = "syft"
+	syftCmd.Short = "SBOM tools provided by Anchore Syft"
+	syftCmd.Aliases = []string{"s"}
+	toolsCmd.AddCommand(syftCmd)
 }
