@@ -11,7 +11,7 @@ on:
       - "docs/**"
 
 # Abort prior jobs in the same workflow / PR
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -24,25 +24,8 @@ jobs:
         with:
           go-version: 1.19.x
 
-      - name: "Dependency: Install Docker Buildx"
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: "Dependency: Install Kind"
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-
       - name: "Dependency: Kind Cluster Init"
         run: kind delete cluster && kind create cluster
-
-      - name: "Install Kubectl"
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-          install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl  
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
@@ -73,4 +56,3 @@ jobs:
       - name: "Cleanup"
         run: |
           make destroy
-          kind delete cluster
