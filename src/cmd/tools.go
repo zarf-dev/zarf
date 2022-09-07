@@ -57,7 +57,7 @@ var archiverDecompressCmd = &cobra.Command{
 
 var registryCmd = &cobra.Command{
 	Use:     "registry",
-	Aliases: []string{"r"},
+	Aliases: []string{"r", "crane"},
 	Short:   "Collection of registry commands provided by Crane",
 }
 
@@ -115,8 +115,8 @@ func init() {
 	if err != nil {
 		message.Fatal(err, "Unable to create syft CLI")
 	}
-	syftCmd.Use = "syft"
+	syftCmd.Use = "sbom"
 	syftCmd.Short = "SBOM tools provided by Anchore Syft"
-	syftCmd.Aliases = []string{"s"}
+	syftCmd.Aliases = []string{"s", "syft"}
 	toolsCmd.AddCommand(syftCmd)
 }
