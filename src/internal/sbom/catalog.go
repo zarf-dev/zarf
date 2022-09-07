@@ -30,7 +30,7 @@ type Builder struct {
 
 //go:embed viewer/*
 var viewerAssets embed.FS
-var tranformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
+var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	// Ignore SBOM creation if there the flag is set
@@ -137,7 +137,7 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 }
 
 func (builder *Builder) getNormalizedTag(tag name.Tag) string {
-	return tranformRegex.ReplaceAllString(tag.String(), "_")
+	return transformRegex.ReplaceAllString(tag.String(), "_")
 }
 
 func (builder *Builder) createSBOMFile(name string, tag name.Tag) (*os.File, error) {
