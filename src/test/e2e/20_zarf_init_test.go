@@ -30,5 +30,5 @@ func TestZarfInit(t *testing.T) {
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
-	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "set", "resources", "deploy", "-n", "zarf", "zarf-docker-registry", "--limits=cpu=200m")
+	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "set", "resources", "deploy", "-n", "zarf", "zarf-docker-registry", "--requests=cpu=200m")
 }
