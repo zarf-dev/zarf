@@ -23,4 +23,5 @@ Collection of additional tools to make airgap easier
 * [zarf tools get-admin-password](zarf_tools_get-admin-password.md)	 - Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace
 * [zarf tools monitor](zarf_tools_monitor.md)	 - Launch K9s tool for managing K8s clusters
 * [zarf tools registry](zarf_tools_registry.md)	 - Collection of registry commands provided by Crane
+* [zarf tools sbom](zarf_tools_sbom.md)	 - SBOM tools provided by Anchore Syft
 
