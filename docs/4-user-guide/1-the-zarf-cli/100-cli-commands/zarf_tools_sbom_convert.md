@@ -10,14 +10,6 @@ Convert between SBOM formats
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ```
 
-### Examples
-
-```
-  syft convert img.syft.json -o spdx-json                      convert a syft SBOM to spdx-json, output goes to stdout in table format, by default
-  syft convert img.syft.json -o cyclonedx-json=img.cdx.json    convert a syft SBOM to CycloneDX, output goes to a file named img.cdx.json
-
-```
-
 ### Options
 
 ```

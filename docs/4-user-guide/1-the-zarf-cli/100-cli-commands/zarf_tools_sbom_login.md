@@ -6,13 +6,6 @@ Log in to a registry
 zarf tools sbom login [OPTIONS] [SERVER] [flags]
 ```
 
-### Examples
-
-```
-  # Log in to reg.example.com
-  syft login reg.example.com -u AzureDiamond -p hunter2
-```
-
 ### Options
 
 ```

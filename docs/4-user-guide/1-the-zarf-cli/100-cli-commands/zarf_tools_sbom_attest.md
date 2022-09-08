@@ -10,24 +10,6 @@ Generate a packaged-based Software Bill Of Materials (SBOM) from a container ima
 zarf tools sbom attest --output [FORMAT] --key [KEY] [SOURCE] [flags]
 ```
 
-### Examples
-
-```
-  syft attest --output [FORMAT] --key [KEY] alpine:latest
-  Supports the following image sources:
-    syft attest --key [KEY] yourrepo/yourimage:tag     defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry.
-    syft attest --key [KEY] path/to/a/file/or/dir      only for OCI tar or OCI directory
-
-  You can also explicitly specify the scheme to use:
-    syft attest docker:yourrepo/yourimage:tag          explicitly use the Docker daemon
-    syft attest podman:yourrepo/yourimage:tag        	 explicitly use the Podman daemon
-    syft attest registry:yourrepo/yourimage:tag        pull image directly from a registry (no container runtime required)
-    syft attest docker-archive:path/to/yourimage.tar   use a tarball from disk for archives created from "docker save"
-    syft attest oci-archive:path/to/yourimage.tar      use a tarball from disk for OCI archives (from Skopeo or otherwise)
-    syft attest oci-dir:path/to/yourimage              read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
-
-```
-
 ### Options
 
 ```
