@@ -64,6 +64,12 @@ jobs:
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
 
+      - name: "Save test debug logs"
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-log
+          path: /tmp/zarf-*.log
+
       - name: "Cleanup"
         run: |
           make destroy

@@ -60,5 +60,11 @@ jobs:
         #       used for each test
         run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
 
+      - name: "Save test debug logs"
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-log
+          path: /tmp/zarf-*.log
+
       - name: "Cleanup"
         run: sudo make destroy

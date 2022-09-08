@@ -38,5 +38,11 @@ jobs:
       - name: "Regenerate Schema"
         run: "go run main.go internal config-schema > zarf.schema.json"
 
+      - name: "Save test debug logs"
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-log
+          path: /tmp/zarf-*.log
+
       - name: "Compare Schemas"
         run: "cmp -s zarf.schema.json zarf.schema.json.bak"

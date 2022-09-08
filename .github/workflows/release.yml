@@ -53,6 +53,12 @@ jobs:
       - name: "Run Tests"
         run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
 
+      - name: "Save test debug logs"
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-log
+          path: /tmp/zarf-*.log
+
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
