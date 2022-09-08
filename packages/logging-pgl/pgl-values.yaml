@@ -4,7 +4,7 @@ grafana:
   adminPassword: "###ZARF_LOGGING_AUTH###"
   # K8s 1.25+ compatibilty until loki stack upgrades the grafana chart to 6.36.1
   rbac:
-    pspEnabled: true
+    pspEnabled: false
   grafana.ini:
     server:
       root_url: "%(protocol)s://%(domain)s/monitor"
