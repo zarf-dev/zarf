@@ -25,7 +25,9 @@ jobs:
           go-version: 1.19.x
 
       - name: "Dependency: Kind Cluster Init"
-        run: kind delete cluster && kind create cluster
+        run: |
+          kind delete cluster && kind create cluster
+          kubectl scale deploy -n kube-system coredns --replicas=1
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
