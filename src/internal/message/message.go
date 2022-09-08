@@ -31,22 +31,10 @@ var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logfile generation
 var logFile *os.File
-var logStream io.Writer
 
 func init() {
 	var err error
 
-	// Setup the zarf log file
-	if logFile, err = os.CreateTemp("", "zarf-*.log"); err != nil {
-		Errorf(err, "Error opening log file: %s", logFile.Name())
-		logStream = os.Stderr
-	} else {
-		pterm.FgYellow.Printfln("Log file available at %s", logFile.Name())
-		logStream = io.MultiWriter(os.Stderr, logFile)
-	}
-
-	// Help capture text cleaner
-	pterm.SetDefaultOutput(logStream)
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -62,6 +50,16 @@ func init() {
 	}
 
 	pterm.DefaultProgressbar.MaxWidth = 85
+
+	// Setup the zarf log file
+	if logFile, err = os.CreateTemp("", "zarf-*.log"); err != nil {
+		pterm.SetDefaultOutput(os.Stderr)
+		Errorf(err, "Error opening log file: %s", logFile.Name())
+	} else {
+		logStream := io.MultiWriter(os.Stderr, logFile)
+		pterm.SetDefaultOutput(logStream)
+		Infof("Log file available at %s", logFile.Name())
+	}
 }
 
 func debugPrinter(offset int, a ...any) {
