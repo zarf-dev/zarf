@@ -58,7 +58,9 @@ jobs:
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
-        run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+        run: |
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo chmod 644 /tmp/zarf-*.log
 
       - name: "Save test debug logs"
         uses: actions/upload-artifact@v3
