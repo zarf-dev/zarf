@@ -65,9 +65,6 @@ jobs:
         #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
 
-      - name: "Debug Log Dump"
-        run: cat /tmp/zarf-*.log
-
       - name: "Cleanup"
         run: |
           make destroy
