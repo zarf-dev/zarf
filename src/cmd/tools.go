@@ -141,5 +141,9 @@ func init() {
     zarf tools sbom packages dir:path/to/yourproject                read directly from a path on disk (any directory)
     zarf tools sbom packages file:path/to/yourproject/file          read directly from a path on disk (any single file)`
 
+	for _, subCmd := range syftCmd.Commands() {
+		subCmd.Example = ""
+	}
+
 	toolsCmd.AddCommand(syftCmd)
 }
