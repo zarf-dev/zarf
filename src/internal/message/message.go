@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -51,14 +52,19 @@ func init() {
 
 	pterm.DefaultProgressbar.MaxWidth = 85
 
-	// Setup the zarf log file
-	if logFile, err = os.CreateTemp("", "zarf-*.log"); err != nil {
+	// Prepend the log filename with a timestampe
+	ts := time.Now().Format("2006-01-02-15-04-05")
+
+	// Try to create a temp log file
+	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		pterm.SetDefaultOutput(os.Stderr)
-		Errorf(err, "Error opening log file: %s", logFile.Name())
+		Error(err, "Error saving a log file")
 	} else {
+		// Otherwise fallback to stderr
 		logStream := io.MultiWriter(os.Stderr, logFile)
 		pterm.SetDefaultOutput(logStream)
-		Infof("Log file available at %s", logFile.Name())
+		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
+		Note(message)
 	}
 }
 
