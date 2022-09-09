@@ -3,8 +3,10 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -28,9 +30,12 @@ var NoProgress bool
 
 var logLevel = InfoLevel
 
+// Write logs to stderr and a buffer for logfile generation
+var logFile *os.File
+
 func init() {
-	// Help capture text cleaner
-	pterm.SetDefaultOutput(os.Stderr)
+	var err error
+
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -46,10 +51,36 @@ func init() {
 	}
 
 	pterm.DefaultProgressbar.MaxWidth = 85
+
+	// Prepend the log filename with a timestampe
+	ts := time.Now().Format("2006-01-02-15-04-05")
+
+	// Try to create a temp log file
+	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+		pterm.SetDefaultOutput(os.Stderr)
+		Error(err, "Error saving a log file")
+	} else {
+		// Otherwise fallback to stderr
+		logStream := io.MultiWriter(os.Stderr, logFile)
+		pterm.SetDefaultOutput(logStream)
+		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
+		Note(message)
+	}
 }
 
-func debugPrinter(offset int) *pterm.PrefixPrinter {
-	return pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
+func debugPrinter(offset int, a ...any) {
+	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
+	printer.Println(a...)
+
+	// Always write to the log file
+	if logFile != nil && !pterm.PrintDebugMessages {
+		pterm.Debug.
+			WithShowLineNumber(true).
+			WithLineNumberOffset(offset).
+			WithDebugger(false).
+			WithWriter(logFile).
+			Println(a...)
+	}
 }
 
 func errorPrinter(offset int) *pterm.PrefixPrinter {
@@ -68,20 +99,21 @@ func GetLogLevel() LogLevel {
 }
 
 func Debug(payload ...any) {
-	debugPrinter(1).Println(payload...)
+	debugPrinter(1, payload...)
 }
 
 func Debugf(format string, a ...any) {
-	debugPrinter(2).Printfln(format, a...)
+	message := fmt.Sprintf(format, a...)
+	debugPrinter(2, message)
 }
 
 func Error(err any, message string) {
-	debugPrinter(1).Println(err)
+	debugPrinter(1, err)
 	Warnf(message)
 }
 
 func Errorf(err any, format string, a ...any) {
-	debugPrinter(1).Println(err)
+	debugPrinter(1, err)
 	Warnf(format, a...)
 }
 
@@ -95,13 +127,13 @@ func Warnf(format string, a ...any) {
 }
 
 func Fatal(err any, message string) {
-	debugPrinter(1).Println(err)
+	debugPrinter(1, err)
 	errorPrinter(1).Println(message)
 	os.Exit(1)
 }
 
 func Fatalf(err any, format string, a ...any) {
-	debugPrinter(1).Println(err)
+	debugPrinter(1, err)
 	message := paragraph(format, a...)
 	errorPrinter(1).Println(message)
 	os.Exit(1)
@@ -156,7 +188,7 @@ func HeaderInfof(format string, a ...any) {
 func JsonValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
-		Debugf("ERROR marshalling json: %w", err)
+		Debug(err, "ERROR marshalling json")
 	}
 	return string(bytes)
 }
