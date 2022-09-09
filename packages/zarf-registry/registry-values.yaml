@@ -20,7 +20,7 @@ service:
   nodePort: "###ZARF_NODEPORT###"
 resources:
   requests:
-    cpu: "500m"
+    cpu: "100m"
     memory: "256Mi"
   limits:
     cpu: "3"

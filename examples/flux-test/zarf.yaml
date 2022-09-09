@@ -13,10 +13,8 @@ components:
         files:
           - flux-install.yaml
     images:
-      - ghcr.io/fluxcd/helm-controller:v0.22.1
-      - ghcr.io/fluxcd/kustomize-controller:v0.26.1
-      - ghcr.io/fluxcd/notification-controller:v0.24.0
-      - ghcr.io/fluxcd/source-controller:v0.25.8
+      - ghcr.io/fluxcd/kustomize-controller:v0.27.1
+      - ghcr.io/fluxcd/source-controller:v0.28.0
 
   - name: podinfo-via-flux
     description: "Example deployment via flux using the famous podinfo example"
