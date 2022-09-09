@@ -11,41 +11,36 @@ on:
       - "docs/**"
 
 # Abort prior jobs in the same workflow / PR
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    runs-on: [self-hosted, linux, x64, ubuntu]
+    runs-on: ubuntu-latest
     steps:
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
         with:
           go-version: 1.19.x
 
-      - name: "Dependency: Install Docker Buildx"
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: "Dependency: Install Kind"
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-
       - name: "Dependency: Kind Cluster Init"
-        run: kind delete cluster && kind create cluster
-
-      - name: "Install Kubectl"
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-          install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl  
+          kind delete cluster && kind create cluster
+          kubectl scale deploy -n kube-system coredns --replicas=1
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
+
+      - name: "Setup caching"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
@@ -70,7 +65,12 @@ jobs:
         #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
         run: make test-e2e ARCH=amd64
 
+      - name: "Save test debug logs"
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-log
+          path: /tmp/zarf-*.log
+
       - name: "Cleanup"
         run: |
           make destroy
-          kind delete cluster
