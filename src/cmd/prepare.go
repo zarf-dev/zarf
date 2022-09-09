@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
@@ -30,7 +30,7 @@ var prepareTransformGitLinks = &cobra.Command{
 		host, fileName := args[0], args[1]
 
 		// Read the contents of the given file
-		content, err := ioutil.ReadFile(fileName)
+		content, err := os.ReadFile(fileName)
 		if err != nil {
 			message.Fatalf(err, "Unable to read the file %s", fileName)
 		}
@@ -50,7 +50,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		if confirm {
 			// Overwrite the file
-			err = ioutil.WriteFile(fileName, []byte(processedText), 0640)
+			err = os.WriteFile(fileName, []byte(processedText), 0640)
 			if err != nil {
 				message.Fatal(err, "Unable to write the changes back to the file")
 			}
