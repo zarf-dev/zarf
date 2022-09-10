@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "svelte-kit sync && svelte-package",
-    "build:web": "vite build",
+    "build": "vite build",
     "test": "playwright test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:component": "jest",
@@ -18,7 +17,7 @@
     "@material/data-table": "^14.0.0",
     "@material/theme": "^14.0.0",
     "@playwright/test": "^1.25.0",
-    "@sveltejs/adapter-auto": "next",
+    "@sveltejs/adapter-static": "next",
     "@sveltejs/kit": "next",
     "@sveltejs/package": "next",
     "@testing-library/svelte": "^3.2.1",

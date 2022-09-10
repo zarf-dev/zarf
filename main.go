@@ -4,6 +4,7 @@ package main
 
 import (
 	"embed"
+	"os"
 
 	"github.com/defenseunicorns/zarf/src/cmd"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -13,7 +14,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 )
 
-//go:embed frontend/dist
+//go:embed frontend/build/*
 var assets embed.FS
 
 //go:embed cosign.pub
@@ -24,7 +25,10 @@ func main() {
 	config.SGetPublicKey = cosignPublicKeyUI
 	cmd.Execute()
 
-	Launch()
+	// No args, launch Zarf UI
+	if len(os.Args) < 2 {
+		Launch()
+	}
 }
 
 func Launch() {
