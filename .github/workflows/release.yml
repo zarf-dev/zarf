@@ -51,7 +51,9 @@ jobs:
           make init-package ARCH=arm64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
 
       - name: "Run Tests"
-        run: sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+        run: |
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo chown $USER /tmp/zarf-*.log
 
       - name: "Save test debug logs"
         uses: actions/upload-artifact@v3
