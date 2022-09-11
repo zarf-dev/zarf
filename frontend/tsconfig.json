@@ -18,7 +18,6 @@
 			"$lib/*": ["src/lib/*"],
 			"@assets/*": ["src/assets/*"],
 			"@images/*": ["src/assets/images/*"],
-			"@api/*": ["wailsjs/go/ui/*"],
 			"@ui": ["node_modules/@defense-unicorns/unicorn-ui"],
 			"@ui/*": ["node_modules/@defense-unicorns/unicorn-ui/*"]
 		}
@@ -28,7 +27,6 @@
 		"src/**/*.ts",
 		"src/**/*.js",
 		"src/**/*.svelte",
-		"wailsjs/**/*.ts",
 		"jest.config.js"
 	]
 }

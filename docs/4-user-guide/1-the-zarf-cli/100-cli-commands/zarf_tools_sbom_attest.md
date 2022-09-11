@@ -17,6 +17,7 @@ zarf tools sbom attest --output [FORMAT] --key [KEY] [SOURCE] [flags]
       --cert string                path to the x.509 certificate in PEM format to include in the OCI Signature
   -d, --dockerfile string          include dockerfile for upload to Anchore Enterprise
       --exclude stringArray        exclude paths from being scanned using a glob expression
+      --external-sources-enabled   shut off any use of external sources during sbom generation (default false
       --file string                file to write the default report output to (default is STDOUT)
       --force                      skip warnings and confirmations
       --fulcio-url string          address of sigstore PKI server (default "https://fulcio.sigstore.dev")

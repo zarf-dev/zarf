@@ -11,7 +11,6 @@ const config: UserConfig = {
   resolve: {
     alias: {
       "@images": __dirname + "/src/assets/images",
-      "@api": __dirname + "/wailsjs/go/ui",
       "@ui": __dirname + "/node_modules/@defense-unicorns/unicorn-ui",
     }
   }

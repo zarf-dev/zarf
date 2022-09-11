@@ -1,6 +1,7 @@
 package config
 
 import (
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,6 +68,7 @@ var (
 	state  types.ZarfState
 
 	SGetPublicKey string
+	UIAssets      embed.FS
 
 	// Variables set by the user
 	SetVariableMap map[string]string

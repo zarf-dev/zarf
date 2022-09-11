@@ -71,6 +71,7 @@ build-injector-registry-arm:
 docs-and-schema:
 	go run main.go internal generate-cli-docs
 	.hooks/verify-zarf-schema.sh
+	npx quicktype -s schema  zarf.schema.json -o frontend/src/lib/api-types.ts  
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
