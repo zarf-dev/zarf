@@ -3,30 +3,24 @@
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"target": "ESNext",
-		"useDefineForClassFields": true,
-		"module": "ESNext",
-		"resolveJsonModule": true,
-		"baseUrl": ".",
-		"allowJs": false,
-		"isolatedModules": true,
 		"paths": {
-			"$lib": ["src/lib"],
-			"$lib/*": ["src/lib/*"],
-			"@assets/*": ["src/assets/*"],
-			"@images/*": ["src/assets/images/*"],
+			"$lib": ["src/ui/lib"],
+			"$lib/*": ["src/ui/lib/*"],
+			"@assets/*": ["src/ui/static/*"],
+			"@images/*": ["src/ui/static/images/*"],
 			"@ui": ["node_modules/@defense-unicorns/unicorn-ui"],
 			"@ui/*": ["node_modules/@defense-unicorns/unicorn-ui/*"]
 		}
 	},
 	"include": [
-		"src/**/*.d.ts",
-		"src/**/*.ts",
-		"src/**/*.js",
-		"src/**/*.svelte",
+		"src/ui/**/*.d.ts",
+		"src/ui/**/*.ts",
+		"src/ui/**/*.js",
+		"src/ui/**/*.svelte",
 		"jest.config.js"
 	]
 }

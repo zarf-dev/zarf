@@ -1,10 +1,10 @@
 {
-  "name": "frontend",
+  "name": "zarf-ui",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite dev\" \"nodemon -e go -x 'go run ../main.go -l=trace || exit 1'\"",
+    "dev": "concurrently \"vite dev\" \"nodemon -e go -x 'go run main.go -l=trace || exit 1'\"",
     "build": "vite build",
     "test": "playwright test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -14,7 +14,7 @@
   "nodemonConfig": {
     "delay": 5000,
     "watch": [
-      "../src"
+      "src"
     ],
     "signal": "SIGKILL",
     "extensions": [

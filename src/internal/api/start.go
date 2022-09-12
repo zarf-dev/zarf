@@ -1,9 +1,11 @@
 package api
 
 import (
+	"io/fs"
 	"net/http"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 
@@ -15,23 +17,25 @@ import (
 func LaunchAPIServer() {
 	message.Debug("api.LaunchAPIServer()")
 
-	rotuer := chi.NewRouter()
+	router := chi.NewRouter()
 
-	rotuer.Use(middleware.Logger)
-	rotuer.Use(middleware.Recoverer)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
 	// processing should be stopped.
-	rotuer.Use(middleware.Timeout(60 * time.Second))
+	router.Use(middleware.Timeout(60 * time.Second))
 
-	rotuer.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hi"))
-	})
-
-	rotuer.Route("/api/cluster", func(r chi.Router) {
+	router.Route("/api/cluster", func(r chi.Router) {
 		r.Get("/state", cluster.GetState)
 	})
 
-	http.ListenAndServe(":3333", rotuer)
+	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
+		message.Error(err, "Unable to load the embedded ui assets")
+	} else {
+		router.Handle("/*", http.FileServer(http.FS(sub)))
+	}
+
+	http.ListenAndServe(":3333", router)
 }

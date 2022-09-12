@@ -46,21 +46,25 @@ destroy:
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-build-cli-linux-amd: build-injector-registry-amd
+build-ui:
+	npm ci
+	npm run build
+
+build-cli-linux-amd: build-injector-registry-amd build-ui
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm
+build-cli-linux-arm: build-injector-registry-arm build-ui
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd
+build-cli-mac-intel: build-injector-registry-amd build-ui
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm
+build-cli-mac-apple: build-injector-registry-arm build-ui
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm b build-cli-mac-inteluild-cli-mac-apple ## Build the CLI
 
 build-injector-registry-amd:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
@@ -71,7 +75,7 @@ build-injector-registry-arm:
 docs-and-schema:
 	go run main.go internal generate-cli-docs
 	.hooks/verify-zarf-schema.sh
-	npx quicktype -s schema  zarf.schema.json -o frontend/src/lib/api-types.ts  
+	npx quicktype -s schema  zarf.schema.json -o src/ui/src/lib/api-types.ts  
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
