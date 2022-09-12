@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/pterm/pterm"
 
@@ -31,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Short: "DevSecOps Airgap Toolkit",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pterm.FgYellow.Println("For command line help, type \"zarf --help\"")
+		message.Note("For command line help, type \"zarf --help\"")
 		if len(args) > 0 {
 			pterm.Println()
 			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
@@ -40,6 +41,8 @@ var rootCmd = &cobra.Command{
 			if args[0] == "zarf.yaml" {
 				pterm.FgYellow.Printfln("Please use \"zarf package create\" to create this package.")
 			}
+		} else {
+			api.LaunchAPIServer()
 		}
 	},
 }

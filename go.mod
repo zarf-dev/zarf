@@ -11,6 +11,7 @@ require (
 	github.com/derailed/k9s v0.26.3
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/fatih/color v1.13.0
+	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v1.2.3
 	github.com/goccy/go-yaml v1.9.5

@@ -1,5 +1,6 @@
 import type { ZarfState } from "./api-types";
 
+const BASE_URL = "api";
 const MAGIC = "MAGIC";
 
 const Cluster = {
@@ -15,7 +16,7 @@ export { Cluster, Packages };
 
 async function request<Response>(url: string, method: string = "GET", body?: any): Promise<Response> {
     try {
-        const response = await fetch(`/${url}`, {
+        const response = await fetch(`/${BASE_URL}/${url}`, {
             method,
             headers: {
                 'Authorization': `Bearer ${MAGIC}`,
@@ -27,6 +28,6 @@ async function request<Response>(url: string, method: string = "GET", body?: any
         return json as Response
     } catch (error) {
         console.error(error);
-        return Promise.reject(error);
+        return {} as Response;
     }
 }

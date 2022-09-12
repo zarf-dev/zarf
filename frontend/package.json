@@ -4,12 +4,22 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite dev\" \"nodemon -e go -x 'go run ../main.go -l=trace || exit 1'\"",
     "build": "vite build",
     "test": "playwright test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:component": "jest",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+  },
+  "nodemonConfig": {
+    "delay": 5000,
+    "watch": [
+      "../src"
+    ],
+    "signal": "SIGKILL",
+    "extensions": [
+      "go"
+    ]
   },
   "devDependencies": {
     "@defense-unicorns/unicorn-ui": "^0.0.4",
@@ -24,9 +34,11 @@
     "@tsconfig/svelte": "^3.0.0",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
+    "concurrently": "^7.4.0",
     "eslint": "^8.16.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-svelte3": "^4.0.0",
+    "nodemon": "^2.0.19",
     "prettier": "^2.6.2",
     "prettier-plugin-svelte": "^2.7.0",
     "sass": "^1.54.8",
