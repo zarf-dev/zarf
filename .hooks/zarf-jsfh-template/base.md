@@ -14,3 +14,5 @@
 {% if config.with_footer -%}
 Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json){% if config.footer_show_time %} on {{ get_local_time() }}{% endif %}
 {%- endif -%}
+
+{{ "\n" }}

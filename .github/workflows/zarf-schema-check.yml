@@ -1,9 +1,13 @@
+
 name: zarf-schema-check
 on:
   pull_request:
     paths:
       - "src/types/**"
       - "zarf.schema.json"
+      - "docs/4-user-guide/1-the-zarf-cli/3-zarf-schema.md"
+      - "src/cmd/**"
+      - "docs/4-user-guide/1-the-zarf-cli/100-cli-commands/**"
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
@@ -31,18 +35,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: "Backup Repo Schema Version"
-        run: "cp zarf.schema.json zarf.schema.json.bak"
-
-      - name: "Regenerate Schema"
-        run: "go run main.go internal config-schema > zarf.schema.json"
+      - name: "Regenerate Schema and Check that it Matches Generated"
+        run: "make test-docs-and-schema"
 
       - name: "Save test debug logs"
         uses: actions/upload-artifact@v3
         with:
           name: debug-log
           path: /tmp/zarf-*.log
-
-      - name: "Compare Schemas"
-        run: "cmp -s zarf.schema.json zarf.schema.json.bak"
