@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -77,6 +78,14 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	},
 }
 
+var uiCmd = &cobra.Command{
+	Use:   "ui",
+	Short: "Launch the experimental Zarf UI",
+	Run: func(cmd *cobra.Command, args []string) {
+		api.LaunchAPIServer()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(internalCmd)
 
@@ -84,4 +93,5 @@ func init() {
 	internalCmd.AddCommand(configSchemaCmd)
 	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
+	internalCmd.AddCommand(uiCmd)
 }
