@@ -46,6 +46,19 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
+var apiSchemaCmd = &cobra.Command{
+	Use:   "api-schema",
+	Short: "Generates a JSON schema from the API stypes",
+	Run: func(cmd *cobra.Command, args []string) {
+		schema := jsonschema.Reflect(&types.RestAPI{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			message.Fatal(err, "Unable to generate the zarf api schema")
+		}
+		fmt.Print(string(output) + "\n")
+	},
+}
+
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: "Creates a read-only user in Gitea",
@@ -69,5 +82,6 @@ func init() {
 
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
+	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 }

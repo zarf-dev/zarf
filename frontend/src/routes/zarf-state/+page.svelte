@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { ViewState } from '@api/K8s';
+	import { Cluster } from '$lib/api';
 </script>
 
-{#await ViewState()}
+{#await Cluster.getState}
 	<h3>Loading the Zarf State from the cluster...</h3>
 {:then state}
 	<div class="mdc-card">
