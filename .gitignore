@@ -4,6 +4,7 @@
 *.tar.gz
 *.tar
 *.tgz
+*.bak
 .vagrant
 zarf
 build

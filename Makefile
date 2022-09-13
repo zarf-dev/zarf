@@ -77,6 +77,15 @@ docs-and-schema: build-ui
 	.hooks/verify-zarf-schema.sh
 	npx quicktype -s schema  zarf.schema.json -o src/ui/src/lib/api-types.ts  
 
+test-docs-and-schema:
+	.hooks/backup-zarf-docs-and-schema.sh
+	$(MAKE) docs-and-schema
+	.hooks/check-zarf-docs-and-schema.sh
+	$(MAKE) clean-docs-and-schema
+
+clean-docs-and-schema:
+	rm -r zarf.schema.json.bak docs/4-user-guide/3-zarf-schema.md.bak docs/4-user-guide/1-the-zarf-cli/100-cli-commands.bak/
+
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
 dev-agent-image:
