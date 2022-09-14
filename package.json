@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite dev\" \"nodemon -e go -x 'go run main.go -l=trace || exit 1'\"",
+    "dev": "concurrently \"vite dev\" \"nodemon -e go -x 'go run main.go dev ui -l=trace || exit 1'\"",
     "build": "vite build",
     "test": "playwright test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
