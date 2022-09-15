@@ -77,6 +77,11 @@ docs-and-schema: build-ui
 	npx quicktype -s schema  zarf.schema.json -o src/ui/lib/api-types.ts 
 	.hooks/create-zarf-schema.sh
 
+dev:
+	go mod download
+	npm ci
+	npm run dev
+
 test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	.hooks/check-zarf-docs-and-schema.sh
