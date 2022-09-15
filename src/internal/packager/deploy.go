@@ -95,13 +95,11 @@ func Deploy() {
 		os.Exit(0)
 	}
 
-	// @JPERRY set up installed package secret state info
+	// Generate a secret that describes the package that is being deployed
 	secretName := fmt.Sprintf("zarf-package-%s", config.GetActiveConfig().Metadata.Name)
-	deployedPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque) //TODO: @JPERRY Check out the secretType..
+	deployedPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
 	deployedPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
 	deployedPackageSecret.StringData = make(map[string]string)
-
-	// content, _ := yaml.Marshal(config.GetActiveConfig())
 
 	installedZarfPackage := types.DeployedPackage{
 		PackageName:        config.GetActiveConfig().Metadata.Name,
@@ -163,10 +161,15 @@ func Deploy() {
 		}
 		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
 	}
-	stateData, _ := json.Marshal(installedZarfPackage)
-	deployedPackageSecret.Data = make(map[string][]byte)
-	deployedPackageSecret.Data["data"] = stateData
-	k8s.ReplaceSecret(deployedPackageSecret)
+
+	// Not all packages need k8s so we need to check if k8s is being used before saving the metadata secret
+	if packageUsesK8s(config.GetActiveConfig()) {
+		stateData, _ := json.Marshal(installedZarfPackage)
+		deployedPackageSecret.Data = make(map[string][]byte)
+		deployedPackageSecret.Data["data"] = stateData
+		k8s.ReplaceSecret(deployedPackageSecret)
+		k8s.DetectDistro()
+	}
 
 	// All done
 	os.Exit(0)
@@ -357,4 +360,17 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 	}
 
 	return installedCharts
+}
+
+func packageUsesK8s(zarfPackage types.ZarfPackage) bool {
+	for _, component := range zarfPackage.Components {
+		// If the component is using anything that depends on the cluster, return true
+		if len(component.Charts) > 0 ||
+			len(component.Images) > 0 ||
+			len(component.Repos) > 0 ||
+			len(component.Manifests) > 0 {
+			return true
+		}
+	}
+	return false
 }
