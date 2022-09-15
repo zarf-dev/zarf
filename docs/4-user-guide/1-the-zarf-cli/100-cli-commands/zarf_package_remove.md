@@ -1,15 +1,16 @@
-## zarf package list
+## zarf package remove
 
-List out all of the packages that have been deployed to the cluster
+Use to remove a Zarf package that has been deployed already
 
 ```
-zarf package list [flags]
+zarf package remove {PACKAGE_NAME} [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+      --components string   Comma-separated list of components to uninstall
+  -h, --help                help for remove
 ```
 
 ### Options inherited from parent commands
