@@ -30,7 +30,6 @@
 	#zarf-logo {
 		-webkit-transform: scaleX(-1);
 		transform: scaleX(-1);
-		margin-bottom: 1rem;
 	}
 	.hero {
 		position: relative;
@@ -54,5 +53,11 @@
 	}
 	.hero-subtitle {
 		font-size: large;
+	}
+	.hero-text {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin: 1rem 0;
 	}
 </style>
