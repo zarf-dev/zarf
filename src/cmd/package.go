@@ -48,7 +48,7 @@ var packageCreateCmd = &cobra.Command{
 	},
 }
 
-var packageDeployCmd = &cobra.Command{
+var PackageDeployCmd = &cobra.Command{
 	Use:     "deploy [PACKAGE]",
 	Aliases: []string{"d"},
 	Short:   "Use to deploy a Zarf package from a local file or URL (runs offline)",
@@ -109,7 +109,7 @@ func cachePathClean(cachePath string) bool {
 func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
-	packageCmd.AddCommand(packageDeployCmd)
+	packageCmd.AddCommand(PackageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
@@ -120,13 +120,13 @@ func init() {
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.Insecure, "insecure", false, "Allow insecure registry connections when pulling OCI images")
 
-	packageDeployCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
-	packageDeployCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	packageDeployCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify deployment variables to set on the command line (KEY=value)")
-	packageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
-	packageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", false, "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
-	packageDeployCmd.Flags().StringVar(&shasum, "shasum", "", "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
-	packageDeployCmd.Flags().StringVar(&config.DeployOptions.SGetKeyPath, "sget", "", "Path to public sget key file for remote packages signed via cosign")
+	PackageDeployCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
+	PackageDeployCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
+	PackageDeployCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify deployment variables to set on the command line (KEY=value)")
+	PackageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
+	PackageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", false, "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
+	PackageDeployCmd.Flags().StringVar(&shasum, "shasum", "", "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
+	PackageDeployCmd.Flags().StringVar(&config.DeployOptions.SGetKeyPath, "sget", "", "Path to public sget key file for remote packages signed via cosign")
 
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
