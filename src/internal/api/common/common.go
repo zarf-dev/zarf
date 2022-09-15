@@ -7,6 +7,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
+type EMPTY struct{}
+
 func WriteJSONResponse(w http.ResponseWriter, data any) {
 	message.Debug("api.WriteJSONResponse()")
 	message.JsonValue(data)
