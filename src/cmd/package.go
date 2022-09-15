@@ -81,10 +81,10 @@ var packageInspectCmd = &cobra.Command{
 	},
 }
 
-var listInstalledThings = &cobra.Command{
+var packageListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"l"},
-	Short:   "Launch K9s tool for managing K8s clusters",
+	Short:   "List out all of the packages that have been deployed to the cluster",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
 		namespace := "zarf"
@@ -101,23 +101,23 @@ var listInstalledThings = &cobra.Command{
 				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
 			}
 
-			message.Question(fmt.Sprintf("The package (%s) has been installed with the following components: %v\n", installedPackage.PackageName, reflect.ValueOf(installedPackage.DeployedComponents).MapKeys()))
+			message.Question(fmt.Sprintf("The package (%s) has been installed with the following components: %v\n", installedPackage.Name, reflect.ValueOf(installedPackage.DeployedComponents).MapKeys()))
 
 		}
 	},
 }
 
-var packageUninstallCmd = &cobra.Command{
-	Use:     "uninstall {PACKAGE_NAME}",
+var packageRemoveCmd = &cobra.Command{
+	Use:     "remove {PACKAGE_NAME}",
 	Aliases: []string{"u"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Use to uninstall a Zarf package that has been deployed already",
+	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			message.Fatalf(nil, "Package name must be an argument to the uninstall command")
+			message.Fatalf(nil, "Package name must be an argument to the remove command")
 		}
 
-		packager.Uninstall(args[0])
+		packager.Remove(args[0])
 	},
 }
 
@@ -155,8 +155,8 @@ func init() {
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
-	packageCmd.AddCommand(packageUninstallCmd)
-	packageCmd.AddCommand(listInstalledThings)
+	packageCmd.AddCommand(packageRemoveCmd)
+	packageCmd.AddCommand(packageListCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
@@ -177,5 +177,5 @@ func init() {
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
 
-	packageUninstallCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
+	packageRemoveCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
 }

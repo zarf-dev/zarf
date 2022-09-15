@@ -5,16 +5,16 @@ type ZarfState struct {
 	ZarfAppliance bool         `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 	Distro        string       `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
 	Architecture  string       `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
-	StorageClass  string       `json:"storageClass" jsonschema:"StorageClass of the k8s cluster Zarf was deployed to"`
+	StorageClass  string       `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
 	Secret        string       `json:"secret"`
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 }
 
 type DeployedPackage struct {
-	PackageName string
-	PackageYaml ZarfPackage
-	CLIVersion  string
+	Name       string
+	Data       ZarfPackage
+	CLIVersion string
 
 	DeployedComponents map[string]DeployedComponent
 }

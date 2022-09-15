@@ -13,26 +13,27 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-func Uninstall(packageName string) {
+// Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
+func Remove(packageName string) {
 	// Create temp paths to temporarily extract the package into
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	spinner := message.NewProgressSpinner("Uninstalling zarf package %s", packageName)
+	spinner := message.NewProgressSpinner("Removinging zarf package %s", packageName)
 	defer spinner.Stop()
 
 	// Get the secret for the deployed package
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
 	packageSecret, err := k8s.GetSecret("zarf", secretName)
 	if err != nil {
-		message.Fatalf(err, "Unable to get the secret for the package we are attempting to uninstall")
+		message.Fatalf(err, "Unable to get the secret for the package we are attempting to remove")
 	}
 
 	// Get the list of components the package had deployed
 	deployedPackage := types.DeployedPackage{}
 	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
 
-	// If components were provided; just uninstall the things we were asked to uninstall and return
+	// If components were provided; just remove the things we were asked to remove and return
 	requestedComponents := strings.Split(config.DeployOptions.Components, ",")
 	if len(requestedComponents) > 0 && requestedComponents[0] != "" {
 		for componentName, installedComponent := range deployedPackage.DeployedComponents {
@@ -41,7 +42,7 @@ func Uninstall(packageName string) {
 					helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				}
 
-				// Remove the component we just uninstalled from the map
+				// Remove the component we just removed from the map
 				delete(deployedPackage.DeployedComponents, componentName)
 			}
 
@@ -56,9 +57,9 @@ func Uninstall(packageName string) {
 			}
 		}
 	} else {
-		// Loop through all the installed components and uninstall them
+		// Loop through all the installed components and remove them
 		for componentName, nativeComponent := range deployedPackage.DeployedComponents {
-			// This component was installed onto the cluster. Prompt the user to see if they would like to uninstall it!
+			// This component was installed onto the cluster. Prompt the user to see if they would like to remove it!
 			for _, installedChart := range nativeComponent.InstalledCharts {
 				fmt.Printf("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
 				helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)

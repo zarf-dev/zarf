@@ -102,9 +102,9 @@ func Deploy() {
 	deployedPackageSecret.StringData = make(map[string]string)
 
 	installedZarfPackage := types.DeployedPackage{
-		PackageName:        config.GetActiveConfig().Metadata.Name,
+		Name:               config.GetActiveConfig().Metadata.Name,
 		CLIVersion:         config.CLIVersion,
-		PackageYaml:        config.GetActiveConfig(),
+		Data:               config.GetActiveConfig(),
 		DeployedComponents: make(map[string]types.DeployedComponent),
 	}
 
