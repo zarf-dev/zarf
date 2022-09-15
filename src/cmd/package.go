@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -22,23 +25,6 @@ var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
 	Short:   "Zarf package commands for creating, deploying, and inspecting packages",
-}
-
-var packageUninstallCmd = &cobra.Command{
-	Use:     "uninstall [PACKAGE]",
-	Aliases: []string{"u"},
-	Args:    cobra.MaximumNArgs(1),
-	Short:   "Use to uninstall a Zarf package that has been deployed already",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			fmt.Println("for now the argument must be the path to the zarf package")
-			os.Exit(0)
-		}
-
-		config.DeployOptions.PackagePath = args[0]
-
-		packager.Uninstall()
-	},
 }
 
 var packageCreateCmd = &cobra.Command{
@@ -95,6 +81,46 @@ var packageInspectCmd = &cobra.Command{
 	},
 }
 
+var listInstalledThings = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"l"},
+	Short:   "Launch K9s tool for managing K8s clusters",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Hack to make k9s think it's all alone
+		namespace := "zarf"
+		labelSelector := "package-deploy-info"
+		secrets, err := k8s.GetSecretsWithLabel(namespace, labelSelector)
+		if err != nil {
+			message.Fatalf(err, "unable to get secrets with the label selector")
+		}
+
+		for _, secret := range secrets.Items {
+			installedPackage := types.DeployedPackage{}
+			err := json.Unmarshal(secret.Data["data"], &installedPackage)
+			if err != nil {
+				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
+			}
+
+			message.Question(fmt.Sprintf("The package (%s) has been installed with the following components: %v\n", installedPackage.PackageName, reflect.ValueOf(installedPackage.DeployedComponents).MapKeys()))
+
+		}
+	},
+}
+
+var packageUninstallCmd = &cobra.Command{
+	Use:     "uninstall {PACKAGE_NAME}",
+	Aliases: []string{"u"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Use to uninstall a Zarf package that has been deployed already",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			message.Fatalf(nil, "Package name must be an argument to the uninstall command")
+		}
+
+		packager.Uninstall(args[0])
+	},
+}
+
 func choosePackage(args []string) string {
 	if len(args) > 0 {
 		return args[0]
@@ -130,6 +156,7 @@ func init() {
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageUninstallCmd)
+	packageCmd.AddCommand(listInstalledThings)
 
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")

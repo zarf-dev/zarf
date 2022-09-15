@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
-	"gopkg.in/yaml.v2"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
@@ -102,14 +101,13 @@ func Deploy() {
 	deployedPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
 	deployedPackageSecret.StringData = make(map[string]string)
 
-	content, _ := yaml.Marshal(config.GetActiveConfig())
+	// content, _ := yaml.Marshal(config.GetActiveConfig())
 
-	installedZarfPackage := types.InstalledPackage{
-		PackageVersion:      config.GetActiveConfig().Build.Version,
-		PackageName:         config.GetActiveConfig().Metadata.Name,
-		CLIVersion:          config.CLIVersion,
-		PackageYaml:         string(content),
-		InstalledComponents: make(map[string]types.InstalledComponent),
+	installedZarfPackage := types.DeployedPackage{
+		PackageName:        config.GetActiveConfig().Metadata.Name,
+		CLIVersion:         config.CLIVersion,
+		PackageYaml:        config.GetActiveConfig(),
+		DeployedComponents: make(map[string]types.DeployedComponent),
 	}
 
 	// Set variables and prompt if --confirm is not set
@@ -130,12 +128,12 @@ func Deploy() {
 		installedCharts := deployComponents(tempPath, component)
 
 		// Get information about what we just installed so we can save it to a secret later
-		installedComponent := types.InstalledComponent{ComponentName: component.Name}
+		installedComponent := types.DeployedComponent{}
 		if len(installedCharts) > 0 {
 			installedComponent.InstalledCharts = installedCharts
 		}
 
-		installedZarfPackage.InstalledComponents[component.Name] = installedComponent
+		installedZarfPackage.DeployedComponents[component.Name] = installedComponent
 	}
 
 	message.SuccessF("Zarf deployment complete")

@@ -1,95 +1,69 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/mholt/archiver/v3"
-	"gopkg.in/yaml.v2"
+	"github.com/defenseunicorns/zarf/src/types"
 	"k8s.io/utils/strings/slices"
 )
 
-func Uninstall() {
+func Uninstall(packageName string) {
 	// Create temp paths to temporarily extract the package into
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	spinner := message.NewProgressSpinner("Preparing zarf package %s", config.DeployOptions.PackagePath)
+	spinner := message.NewProgressSpinner("Uninstalling zarf package %s", packageName)
 	defer spinner.Stop()
 
-	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
-	err := archiver.Unarchive(config.DeployOptions.PackagePath, tempPath.base)
+	// Get the secret for the deployed package
+	secretName := fmt.Sprintf("zarf-package-%s", packageName)
+	packageSecret, err := k8s.GetSecret("zarf", secretName)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to extract the package contents")
+		message.Fatalf(err, "Unable to get the secret for the package we are attempting to uninstall")
 	}
 
-	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(tempPath.base, "zarf.yaml")
-	if err := config.LoadConfig(configPath, false); err != nil {
-		spinner.Fatalf(err, "Invalid or unreadable zarf.yaml file in %s", tempPath.base)
-	}
-
-	// Get the list of installed packages/charts from the state
-	zarfState := k8s.LoadZarfState()
-	installedPackages := zarfState.InstalledPackages
-	installedPackage, ok := installedPackages[config.GetActiveConfig().Metadata.Name]
-	if !ok {
-		message.Fatalf(nil, "We are unable to uninstall %s because it does not appear to have been installed yet", config.DeployOptions.PackagePath)
-	}
+	// Get the list of components the package had deployed
+	deployedPackage := types.DeployedPackage{}
+	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
 
 	// If components were provided; just uninstall the things we were asked to uninstall and return
 	requestedComponents := strings.Split(config.DeployOptions.Components, ",")
-	if len(requestedComponents) > 0 {
-		for componentName, installedComponent := range installedPackage.InstalledComponents {
+	if len(requestedComponents) > 0 && requestedComponents[0] != "" {
+		for componentName, installedComponent := range deployedPackage.DeployedComponents {
 			if slices.Contains(requestedComponents, componentName) {
 				for _, installedChart := range installedComponent.InstalledCharts {
 					helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				}
 
-				// Remove the component we just delete from the state
-				delete(installedPackage.InstalledComponents, componentName)
+				// Remove the component we just uninstalled from the map
+				delete(deployedPackage.DeployedComponents, componentName)
 			}
 
-			if len(installedPackage.InstalledComponents) == 0 {
-				delete(installedPackages, config.GetActiveConfig().Metadata.Name)
+			if len(deployedPackage.DeployedComponents) == 0 {
+				// All the installed components were deleted, there for this package is no longer actually deployed
+				k8s.DeleteSecret(packageSecret)
+			} else {
+				// Save the new secret with the removed components removed from the secret
+				newPackageSecretData, _ := json.Marshal(deployedPackage)
+				packageSecret.Data["data"] = newPackageSecretData
+				k8s.ReplaceSecret(packageSecret)
 			}
 		}
-	}
-
-	// Go through all the components of the package and prompt if we have that component installed
-	nativePackageComponents := config.GetComponents()
-	for _, nativeComponent := range nativePackageComponents {
-		installedComponent, ok := installedPackage.InstalledComponents[nativeComponent.Name]
-		if ok {
+	} else {
+		// Loop through all the installed components and uninstall them
+		for componentName, nativeComponent := range deployedPackage.DeployedComponents {
 			// This component was installed onto the cluster. Prompt the user to see if they would like to uninstall it!
-			content, _ := yaml.Marshal(nativeComponent)
-			utils.ColorPrintYAML(string(content))
-			// TODO: @JPERRY Jeff displayed the description as a question here. maybe I should do that too
-
-			confirmUninstall := false
-			prompt := &survey.Confirm{
-				Message: fmt.Sprintf("Uninstall the %s component?", nativeComponent.Name),
-				Default: false,
-			}
-			if err := survey.AskOne(prompt, &confirmUninstall); err != nil {
-				message.Fatalf(err, "Confirm selection canceled")
-			}
-
-			if confirmUninstall {
-				for _, installedChart := range installedComponent.InstalledCharts {
-					fmt.Printf("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, nativeComponent.Name)
-					helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
-				}
+			for _, installedChart := range nativeComponent.InstalledCharts {
+				fmt.Printf("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
+				helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 			}
 		}
+		k8s.DeleteSecret(packageSecret)
 	}
 }

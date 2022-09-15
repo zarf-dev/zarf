@@ -9,21 +9,17 @@ type ZarfState struct {
 	Secret        string       `json:"secret"`
 	NodePort      string       `json:"nodePort"`
 	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
-
-	InstalledPackages map[string]InstalledPackage `json:"installedPackages" jsonschema:"description=Map of all the things Zarf has installed so far.."`
 }
 
-type InstalledPackage struct {
-	PackageName    string
-	PackageVersion string
-	PackageYaml    string
-	CLIVersion     string
+type DeployedPackage struct {
+	PackageName string
+	PackageYaml ZarfPackage
+	CLIVersion  string
 
-	InstalledComponents map[string]InstalledComponent
+	DeployedComponents map[string]DeployedComponent
 }
 
-type InstalledComponent struct {
-	ComponentName   string
+type DeployedComponent struct {
 	InstalledCharts []InstalledCharts
 }
 

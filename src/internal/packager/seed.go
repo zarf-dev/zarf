@@ -9,7 +9,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func preSeedRegistry(tempPath tempPaths) {
@@ -36,7 +35,6 @@ func preSeedRegistry(tempPath tempPaths) {
 	// Attempt to load an existing state prior to init
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state := k8s.LoadZarfState()
-	state.InstalledPackages = make(map[string]types.InstalledPackage)
 
 	// If the state is invalid, assume this is a new cluster
 	if state.Secret == "" {
