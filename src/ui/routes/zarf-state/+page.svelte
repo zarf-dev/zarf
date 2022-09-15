@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Cluster } from '$lib/api';
+	import { getClusterState } from '$lib/api';
+	const clusterState = getClusterState();
 </script>
 
-{#await Cluster.getState}
+{#await clusterState}
 	<h3>Loading the Zarf State from the cluster...</h3>
 {:then state}
 	<div class="mdc-card">

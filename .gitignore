@@ -49,3 +49,6 @@ build
 .DS_Store
 bundle/
 .vscode/
+/test-results/
+/playwright-report/
+/playwright/.cache/

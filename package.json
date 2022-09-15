@@ -25,7 +25,7 @@
     "@material/circular-progress": "^14.0.0",
     "@material/data-table": "^14.0.0",
     "@material/theme": "^14.0.0",
-    "@playwright/test": "^1.25.0",
+    "@playwright/test": "^1.25.2",
     "@sveltejs/adapter-static": "next",
     "@sveltejs/kit": "next",
     "@sveltejs/package": "next",
