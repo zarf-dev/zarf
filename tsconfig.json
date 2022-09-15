@@ -11,7 +11,7 @@
 			"$lib": ["src/ui/lib"],
 			"$lib/*": ["src/ui/lib/*"],
 			"@assets/*": ["src/ui/static/*"],
-			"@images/*": ["src/ui/static/images/*"],
+			"@images/*": ["src/ui/images/*"],
 			"@ui": ["node_modules/@defense-unicorns/unicorn-ui"],
 			"@ui/*": ["node_modules/@defense-unicorns/unicorn-ui/*"]
 		}

@@ -7,7 +7,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
-type EMPTY struct{}
+func WriteEmpty(w http.ResponseWriter) {
+	message.Debug("api.WriteEmpty()")
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func WriteJSONResponse(w http.ResponseWriter, data any) {
 	message.Debug("api.WriteJSONResponse()")
