@@ -2,7 +2,7 @@
 	import logo from '@images/zarf-logo.png';
 </script>
 
-<header class="header">
+<header class="header mdc-elevation--z8">
 	<div class="header-start">
 		<a href="/"><img alt="Zarf logo" id="logo" src={logo} width="100" /></a>
 		<div>
@@ -21,7 +21,10 @@
 	</div>
 </header>
 
-<style>
+<style lang="scss">
+	@use '@material/elevation';
+	@include elevation.core-styles;
+
 	#logo {
 		display: block;
 		background-repeat: no-repeat;
