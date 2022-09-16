@@ -15,7 +15,7 @@ zarf package inspect [PACKAGE] [flags]
 
 ```
   -h, --help            help for inspect
-  -s, --sbom            View SBOM contents while inspecting the package.
+  -s, --sbom            View SBOM contents while inspecting the package
       --tmpdir string   Specify the temporary directory to use for intermediate files
 ```
 

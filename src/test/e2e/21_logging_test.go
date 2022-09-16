@@ -6,6 +6,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogging(t *testing.T) {
@@ -22,8 +23,6 @@ func TestLogging(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
-		namespace: "zarf",
-		name:      "zarf-loki-stack",
-	})
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
