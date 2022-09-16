@@ -21,7 +21,7 @@
     ]
   },
   "devDependencies": {
-    "@defense-unicorns/unicorn-ui": "^0.0.4",
+    "@defense-unicorns/unicorn-ui": "^0.0.8",
     "@material/circular-progress": "^14.0.0",
     "@material/data-table": "^14.0.0",
     "@material/theme": "^14.0.0",
@@ -49,6 +49,7 @@
     "vite": "^3.1.0"
   },
   "dependencies": {
+    "@fontsource/roboto": "^4.5.8",
     "@material/card": "^14.0.0",
     "@material/layout-grid": "^14.0.0",
     "@material/linear-progress": "^14.0.0"
