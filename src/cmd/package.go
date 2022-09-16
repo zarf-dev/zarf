@@ -86,7 +86,7 @@ var packageListCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   "List out all of the packages that have been deployed to the cluster",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Hack to make k9s think it's all alone
+		// Get all secrets for the deployed packages
 		namespace := "zarf"
 		labelSelector := "package-deploy-info"
 		secrets, err := k8s.GetSecretsWithLabel(namespace, labelSelector)
@@ -94,6 +94,7 @@ var packageListCmd = &cobra.Command{
 			message.Fatalf(err, "unable to get secrets with the label selector")
 		}
 
+		// Parse through all the secrets and output relevant information to the terminal
 		for _, secret := range secrets.Items {
 			installedPackage := types.DeployedPackage{}
 			err := json.Unmarshal(secret.Data["data"], &installedPackage)

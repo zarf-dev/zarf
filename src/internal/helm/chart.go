@@ -183,8 +183,6 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	hasher.Write([]byte(rawChartName))
 	tmpChart.Metadata.Name = rawChartName
 	sha1ReleaseName := hex.EncodeToString(hasher.Sum(nil))
-	// tmpChart.Metadata.Name = hex.EncodeToString(hasher.Sum(nil))
-	// tmpChart.Metadata.
 
 	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry
 	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
