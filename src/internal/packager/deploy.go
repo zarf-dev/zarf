@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var valueTemplate template.Values
@@ -93,6 +95,19 @@ func Deploy() {
 		os.Exit(0)
 	}
 
+	// Generate a secret that describes the package that is being deployed
+	secretName := fmt.Sprintf("zarf-package-%s", config.GetActiveConfig().Metadata.Name)
+	deployedPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+	deployedPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
+	deployedPackageSecret.StringData = make(map[string]string)
+
+	installedZarfPackage := types.DeployedPackage{
+		Name:               config.GetActiveConfig().Metadata.Name,
+		CLIVersion:         config.CLIVersion,
+		Data:               config.GetActiveConfig(),
+		DeployedComponents: make(map[string]types.DeployedComponent),
+	}
+
 	// Set variables and prompt if --confirm is not set
 	if err := config.SetActiveVariables(); err != nil {
 		message.Fatalf(err, "Unable to set variables in config: %s", err.Error())
@@ -108,7 +123,15 @@ func Deploy() {
 
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
-		deployComponents(tempPath, component)
+		installedCharts := deployComponents(tempPath, component)
+
+		// Get information about what we just installed so we can save it to a secret later
+		installedComponent := types.DeployedComponent{}
+		if len(installedCharts) > 0 {
+			installedComponent.InstalledCharts = installedCharts
+		}
+
+		installedZarfPackage.DeployedComponents[component.Name] = installedComponent
 	}
 
 	message.SuccessF("Zarf deployment complete")
@@ -139,14 +162,28 @@ func Deploy() {
 		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
 	}
 
+	// Not all packages need k8s so we need to check if k8s is being used before saving the metadata secret
+	if packageUsesK8s(config.GetActiveConfig()) {
+		stateData, _ := json.Marshal(installedZarfPackage)
+		deployedPackageSecret.Data = make(map[string][]byte)
+		deployedPackageSecret.Data["data"] = stateData
+		k8s.ReplaceSecret(deployedPackageSecret)
+	}
+
 	// All done
 	os.Exit(0)
 }
 
-func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
+func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types.InstalledCharts {
 	message.Debugf("packager.deployComponents(%#v, %#v", tempPath, component)
-	componentPath := createComponentPaths(tempPath.components, component)
+
+	var installedCharts []types.InstalledCharts
+
+	// Toggles for deploy operations on 'init'
 	isSeedRegistry := config.IsZarfInitConfig() && component.Name == "zarf-seed-registry"
+
+	// Toggles for general deploy operations
+	componentPath := createComponentPaths(tempPath.components, component)
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
@@ -275,36 +312,41 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 		defer waitGroup.Wait()
 	}
 
-	for _, chart := range component.Charts {
-		// zarf magic for the value file
-		for idx := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(component, chartValueName)
+	if len(component.Charts) > 0 || len(component.Manifests) > 0 {
+		for _, chart := range component.Charts {
+			// zarf magic for the value file
+			for idx := range chart.ValuesFiles {
+				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+				valueTemplate.Apply(component, chartValueName)
+			}
+
+			// Generate helm templates to pass to gitops engine
+			addedConnectStrings, installedChartName := helm.InstallOrUpgradeChart(helm.ChartOptions{
+				BasePath:  componentPath.base,
+				Chart:     chart,
+				Component: component,
+			})
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: chart.Namespace, ChartName: installedChartName})
+
+			// Iterate over any connectStrings and add to the main map
+			for name, description := range addedConnectStrings {
+				connectStrings[name] = description
+			}
 		}
 
-		// Generate helm templates to pass to gitops engine
-		addedConnectStrings := helm.InstallOrUpgradeChart(helm.ChartOptions{
-			BasePath:  componentPath.base,
-			Chart:     chart,
-			Component: component,
-		})
+		for _, manifest := range component.Manifests {
+			for idx := range manifest.Kustomizations {
+				// Move kustomizations to files now
+				destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				manifest.Files = append(manifest.Files, destination)
+			}
 
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
-		}
-	}
-
-	for _, manifest := range component.Manifests {
-		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
-		}
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range helm.GenerateChart(componentPath.manifests, manifest, component) {
-			connectStrings[name] = description
+			// Iterate over any connectStrings and add to the main map
+			addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
+			for name, description := range addedConnectStrings {
+				connectStrings[name] = description
+			}
 		}
 	}
 
@@ -315,4 +357,19 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) {
 	if isSeedRegistry {
 		postSeedRegistry(tempPath)
 	}
+
+	return installedCharts
+}
+
+func packageUsesK8s(zarfPackage types.ZarfPackage) bool {
+	for _, component := range zarfPackage.Components {
+		// If the component is using anything that depends on the cluster, return true
+		if len(component.Charts) > 0 ||
+			len(component.Images) > 0 ||
+			len(component.Repos) > 0 ||
+			len(component.Manifests) > 0 {
+			return true
+		}
+	}
+	return false
 }

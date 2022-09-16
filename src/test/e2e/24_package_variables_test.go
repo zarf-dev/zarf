@@ -39,4 +39,7 @@ func TestPackageVariables(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), "dingo=howl")
 	// zebra should remain unset as it is not a component variable
 	assert.Contains(t, string(kubectlOut), "zebra=###ZARF_VAR_ZEBRA###")
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "package-variables", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
