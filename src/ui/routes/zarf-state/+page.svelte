@@ -43,6 +43,11 @@
 	@use '@material/card';
 	@use '@material/data-table/data-table';
 
+	pre {
+		max-width: 56rem;
+		overflow: scroll;
+	}
+
 	@include card.core-styles;
 	@include data-table.core-styles;
 	@include data-table.theme-baseline;
