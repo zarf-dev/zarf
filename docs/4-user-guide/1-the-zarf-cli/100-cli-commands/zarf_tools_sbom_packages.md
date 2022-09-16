@@ -16,7 +16,6 @@ zarf tools sbom packages [SOURCE] [flags]
       --catalogers stringArray     enable one or more package catalogers
   -d, --dockerfile string          include dockerfile for upload to Anchore Enterprise
       --exclude stringArray        exclude paths from being scanned using a glob expression
-      --external-sources-enabled   shut off any use of external sources during sbom generation (default false
       --file string                file to write the default report output to (default is STDOUT)
   -h, --help                       help for packages
   -H, --host string                the hostname or URL of the Anchore Enterprise instance to upload to

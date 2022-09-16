@@ -8,12 +8,19 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
+    clusterSummary:    ClusterSummary;
     connectStrings:    { [key: string]: ConnectString };
     zarfCommonOptions: ZarfCommonOptions;
     zarfCreateOptions: ZarfCreateOptions;
     zarfDeployOptions: ZarfDeployOptions;
     zarfPackage:       ZarfPackage;
     zarfState:         ZarfState;
+}
+
+export interface ClusterSummary {
+    distro:    string;
+    hasZarf:   boolean;
+    reachable: boolean;
 }
 
 export interface ConnectString {
@@ -575,12 +582,18 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
+        { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
         { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "ClusterSummary": o([
+        { json: "distro", js: "distro", typ: "" },
+        { json: "hasZarf", js: "hasZarf", typ: true },
+        { json: "reachable", js: "reachable", typ: true },
     ], false),
     "ConnectString": o([
         { json: "Description", js: "Description", typ: "" },
