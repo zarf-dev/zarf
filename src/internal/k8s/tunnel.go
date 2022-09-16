@@ -66,9 +66,20 @@ type Tunnel struct {
 
 // GenerateConnectionTable will print a table of all zarf connect matches found in the cluster
 func PrintConnectTable() error {
-	list, err := GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+	connections, err := GetConnectStrings()
 	if err != nil {
 		return err
+	}
+
+	message.PrintConnectStringTable(connections)
+
+	return nil
+}
+
+func GetConnectStrings() (types.ConnectStrings, error) {
+	list, err := GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+	if err != nil {
+		return nil, err
 	}
 
 	connections := make(types.ConnectStrings)
@@ -82,10 +93,7 @@ func PrintConnectTable() error {
 			Url:         svc.Annotations[config.ZarfConnectAnnotationUrl],
 		}
 	}
-
-	message.PrintConnectStringTable(connections)
-
-	return nil
+	return connections, nil
 }
 
 // NewTunnel will create a new Tunnel struct

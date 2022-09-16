@@ -12,13 +12,14 @@ func WriteEmpty(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func WriteJSONResponse(w http.ResponseWriter, data any) {
+func WriteJSONResponse(w http.ResponseWriter, statusCode int, data any) {
 	message.Debug("api.WriteJSONResponse()")
-	message.JsonValue(data)
 	encoded, err := json.Marshal(data)
 	if err != nil {
 		message.Error(err, "Error marshalling JSON")
 		panic(err)
 	}
+
+	w.WriteHeader(statusCode)
 	w.Write(encoded)
 }

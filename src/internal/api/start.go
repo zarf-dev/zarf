@@ -29,6 +29,19 @@ func LaunchAPIServer() {
 
 	router.Route("/api/cluster", func(r chi.Router) {
 		r.Get("/state", cluster.GetState)
+		r.Put("/init", cluster.InitializeCluster)
+		r.Put("/git-password", cluster.GetGitPassword)
+		r.Get("/connections", cluster.GetConnectionOptions)
+	})
+
+	router.Route("/api/packages", func(r chi.Router) {
+		r.Get("/", cluster.GetDeployedPackages)
+		r.Put("/deploy", cluster.DeployPackage)
+		r.Delete("/remove", cluster.RemovePackage)
+	})
+
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/version", cluster.GetVersion)
 	})
 
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
