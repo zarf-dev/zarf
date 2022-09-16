@@ -52,6 +52,7 @@
     "@fontsource/roboto": "^4.5.8",
     "@material/card": "^14.0.0",
     "@material/layout-grid": "^14.0.0",
-    "@material/linear-progress": "^14.0.0"
+    "@material/linear-progress": "^14.0.0",
+    "sanitize.css": "^13.0.0"
   }
 }

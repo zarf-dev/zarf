@@ -1,23 +1,19 @@
 <script>
 	import logo from '@images/zarf-logo.png';
+	import Icon from './icon.svelte';
 </script>
 
 <header class="header mdc-elevation--z8">
 	<div class="header-start">
 		<a href="/"><img alt="Zarf logo" id="logo" src={logo} width="100" /></a>
 		<div>
-			<input list="cluster-select" />
-			<datalist id="cluster-select">
-				<option value="cluster-1" /><option value="cluster-2" /><option
-					value="cluster-3"
-				/></datalist
-			>
+			<pre>> cluster</pre>
 		</div>
 	</div>
 
 	<div class="header-end">
-		<div class="header-end-icon">☀️</div>
-		<div class="header-end-icon">☁️</div>
+		<div class="header-end-icon"><Icon variant="sun" /></div>
+		<div class="header-end-icon"><Icon variant="cancelCloud" /></div>
 	</div>
 </header>
 

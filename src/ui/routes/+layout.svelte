@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Header from '$lib/components/header.svelte';
 	import '@fontsource/roboto';
+	import 'sanitize.css';
 </script>
 
 <Header />
