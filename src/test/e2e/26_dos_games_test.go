@@ -30,8 +30,6 @@ func TestDosGames(t *testing.T) {
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
-		namespace: "zarf",
-		name:      "zarf-raw-multi-games",
-	})
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }

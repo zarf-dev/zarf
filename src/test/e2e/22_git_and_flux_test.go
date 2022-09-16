@@ -34,20 +34,11 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerReadOnly(t, tunnel.HttpEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	e2e.chartsToRemove = append(e2e.chartsToRemove,
-		ChartTarget{
-			namespace: "podinfo",
-			name:      "zarf-raw-podinfo-via-flux",
-		},
-		ChartTarget{
-			namespace: "flux",
-			name:      "zarf-raw-flux-crds",
-		},
-		ChartTarget{
-			namespace: "zarf",
-			name:      "zarf-gitea",
-		},
-	)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
 
 func testGitServerConnect(t *testing.T, gitUrl string) {

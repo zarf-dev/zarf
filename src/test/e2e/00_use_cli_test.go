@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -27,7 +26,7 @@ func TestUseCLI(t *testing.T) {
 
 	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
 
-	err := ioutil.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
+	err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
 	assert.NoError(t, err)
 
 	stdOut, stdErr, err := e2e.execZarfCommand("prepare", "sha256sum", shasumTestFilePath)
@@ -79,7 +78,7 @@ func TestUseCLI(t *testing.T) {
 
 	e2e.cleanFiles(pkgName)
 
-	files, err := ioutil.ReadDir(imageCachePath)
+	files, err := os.ReadDir(imageCachePath)
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
 

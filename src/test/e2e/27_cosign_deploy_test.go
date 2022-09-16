@@ -20,8 +20,6 @@ func TestCosignDeploy(t *testing.T) {
 	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", command)
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
-		namespace: "zarf",
-		name:      "zarf-raw-multi-games",
-	})
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
