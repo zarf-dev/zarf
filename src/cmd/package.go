@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"regexp"
 
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -77,6 +82,51 @@ var packageInspectCmd = &cobra.Command{
 	},
 }
 
+var packageListCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"l"},
+	Short:   "List out all of the packages that have been deployed to the cluster",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Get all secrets for the deployed packages
+		namespace := "zarf"
+		labelSelector := "package-deploy-info"
+		secrets, err := k8s.GetSecretsWithLabel(namespace, labelSelector)
+		if err != nil {
+			message.Fatalf(err, "unable to get secrets with the label selector")
+		}
+
+		packageTable := pterm.TableData{
+			{"     Package ", "Components"},
+		}
+
+		// Parse through all the secrets and output relevant information to the terminal
+		for _, secret := range secrets.Items {
+			installedPackage := types.DeployedPackage{}
+			err := json.Unmarshal(secret.Data["data"], &installedPackage)
+			if err != nil {
+				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
+			}
+
+			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", installedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(installedPackage.DeployedComponents).MapKeys())}}...)
+
+		}
+		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+	},
+}
+
+var packageRemoveCmd = &cobra.Command{
+	Use:     "remove {PACKAGE_NAME}",
+	Aliases: []string{"u"},
+	Args:    cobra.ExactArgs(1),
+	Short:   "Use to remove a Zarf package that has been deployed already",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := packager.Remove(args[0])
+		if err != nil {
+			message.Warnf("Unable to remove the package with an error of: %#v", err)
+		}
+	},
+}
+
 func choosePackage(args []string) string {
 	if len(args) > 0 {
 		return args[0]
@@ -100,7 +150,7 @@ func choosePackage(args []string) string {
 func cachePathClean(cachePath string) bool {
 	var isCleanPath = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
 	if !isCleanPath(cachePath) {
-		message.Warn(fmt.Sprintf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath))
+		message.Warnf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath)
 		return false
 	}
 	return true
@@ -111,6 +161,8 @@ func init() {
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
+	packageCmd.AddCommand(packageRemoveCmd)
+	packageCmd.AddCommand(packageListCmd)
 
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
@@ -129,5 +181,9 @@ func init() {
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.SGetKeyPath, "sget", "", "Path to public sget key file for remote packages signed via cosign")
 
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
+	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
+
+	packageRemoveCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
+	packageRemoveCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
+	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }

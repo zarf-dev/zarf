@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,11 +35,11 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the configmap exists and is readable
-	_, err = ioutil.ReadFile(decompressPath + "/components/variable-example/manifests/simple-configmap.yaml")
+	_, err = os.ReadFile(decompressPath + "/components/variable-example/manifests/simple-configmap.yaml")
 	require.NoError(t, err)
 
 	// Check variables in zarf.yaml are replaced correctly
-	builtConfig, err := ioutil.ReadFile(decompressPath + "/zarf.yaml")
+	builtConfig, err := os.ReadFile(decompressPath + "/zarf.yaml")
 	require.NoError(t, err)
 	require.Contains(t, string(builtConfig), "name: FOX\n  default: simple-configmap.yaml")
 
