@@ -1,35 +1,19 @@
-import type { ZarfState } from './api-types';
+import type { ClusterSummary, ZarfState } from './api-types';
+import { HTTP } from './http';
 
-const BASE_URL = 'api';
-const MAGIC = 'MAGIC';
+const http = new HTTP();
 
 const Cluster = {
-	getState: request<ZarfState>('cluster/state'),
-	updateState: async (body: ZarfState) => request<ZarfState>('cluster/state', 'PUT', body)
+	summary: () => http.get<ClusterSummary>('/cluster'),
+	reachable: () => http.get<ZarfState>('/cluster/reachable'),
+	hasZarf: () => http.get<ZarfState>('/cluster/has-zarf')
+};
+
+const State = {
+	read: () => http.get<ZarfState>('/state'),
+	update: (body: ZarfState) => http.patch<ZarfState>('/state', body)
 };
 
 const Packages = {};
 
-export { Cluster, Packages };
-
-async function request<Response>(
-	url: string,
-	method: string = 'GET',
-	body?: any
-): Promise<Response> {
-	try {
-		const response = await fetch(`/${BASE_URL}/${url}`, {
-			method,
-			headers: {
-				Authorization: `Bearer ${MAGIC}`,
-				'Content-Type': 'application/json'
-			},
-			body
-		});
-		const json = await response.json();
-		return json as Response;
-	} catch (error) {
-		console.error(error);
-		return {} as Response;
-	}
-}
+export { Cluster, Packages, State };

@@ -7,4 +7,11 @@ type RestAPI struct {
 	ZarfCreateOptions ZarfCreateOptions `json:"zarfCreateOptions"`
 	ZarfDeployOptions ZarfDeployOptions `json:"zarfDeployOptions"`
 	ConnectStrings    ConnectStrings    `json:"connectStrings"`
+	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
+}
+
+type ClusterSummary struct {
+	Reachable bool   `json:"reachable"`
+	HasZarf   bool   `json:"hasZarf"`
+	Distro    string `json:"distro"`
 }
