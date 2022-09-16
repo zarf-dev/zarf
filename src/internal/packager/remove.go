@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -54,9 +55,14 @@ func Remove(packageName string) {
 				_ = k8s.DeleteSecret(packageSecret)
 			} else {
 				// Save the new secret with the removed components removed from the secret
+				newPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+				newPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
 				newPackageSecretData, _ := json.Marshal(deployedPackage)
-				packageSecret.Data["data"] = newPackageSecretData
-				_ = k8s.ReplaceSecret(packageSecret)
+				newPackageSecret.Data["data"] = newPackageSecretData
+				err = k8s.ReplaceSecret(newPackageSecret)
+				if err != nil {
+					message.Warnf("Unable to replace the %s package secret: %#v", secretName, err)
+				}
 			}
 		}
 	} else {

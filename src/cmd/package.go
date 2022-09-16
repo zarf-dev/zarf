@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -94,6 +95,10 @@ var packageListCmd = &cobra.Command{
 			message.Fatalf(err, "unable to get secrets with the label selector")
 		}
 
+		packageTable := pterm.TableData{
+			{"     Package ", "Components"},
+		}
+
 		// Parse through all the secrets and output relevant information to the terminal
 		for _, secret := range secrets.Items {
 			installedPackage := types.DeployedPackage{}
@@ -102,9 +107,10 @@ var packageListCmd = &cobra.Command{
 				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
 			}
 
-			message.Question(fmt.Sprintf("The package (%s) has been installed with the following components: %v\n", installedPackage.Name, reflect.ValueOf(installedPackage.DeployedComponents).MapKeys()))
+			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", installedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(installedPackage.DeployedComponents).MapKeys())}}...)
 
 		}
+		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
 	},
 }
 

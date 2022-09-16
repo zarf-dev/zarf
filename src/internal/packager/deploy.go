@@ -168,7 +168,6 @@ func Deploy() {
 		deployedPackageSecret.Data = make(map[string][]byte)
 		deployedPackageSecret.Data["data"] = stateData
 		k8s.ReplaceSecret(deployedPackageSecret)
-		k8s.DetectDistro()
 	}
 
 	// All done
