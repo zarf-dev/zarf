@@ -31,9 +31,7 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
 	assert.Contains(t, stdOut, ".zarf-injection-")
-
-	e2e.chartsToRemove = append(e2e.chartsToRemove, ChartTarget{
-		namespace: "demo",
-		name:      "zarf-raw-example-data-injection-pod",
-	})
+													
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "data-injection-demo", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }

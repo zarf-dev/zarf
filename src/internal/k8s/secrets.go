@@ -31,6 +31,13 @@ func GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
+func GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
+	message.Debugf("k8s.getSecretsWithLabel(%s, %s)", namespace, labelSelector)
+	clientSet := getClientset()
+	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
+	return clientSet.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
+}
+
 func GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
 	message.Debugf("k8s.GenerateSecret(%s, %s)", namespace, name)
 

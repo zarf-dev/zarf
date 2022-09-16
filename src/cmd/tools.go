@@ -91,7 +91,6 @@ var k9sCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(toolsCmd)
-
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(k9sCmd)

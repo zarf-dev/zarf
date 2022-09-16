@@ -25,3 +25,5 @@ resources:
   limits:
     cpu: "3"
     memory: "2Gi"
+
+fullnameOverride: "zarf-docker-registry"
