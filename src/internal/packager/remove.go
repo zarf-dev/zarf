@@ -19,19 +19,22 @@ func Remove(packageName string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	spinner := message.NewProgressSpinner("Removinging zarf package %s", packageName)
+	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
 	// Get the secret for the deployed package
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
 	packageSecret, err := k8s.GetSecret("zarf", secretName)
 	if err != nil {
-		message.Fatalf(err, "Unable to get the secret for the package we are attempting to remove")
+		spinner.Fatalf(err, "Unable to get the secret for the package we are attempting to remove")
 	}
 
 	// Get the list of components the package had deployed
 	deployedPackage := types.DeployedPackage{}
 	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to load the secret for the package we are attempting to remove")
+	}
 
 	// If components were provided; just remove the things we were asked to remove and return
 	requestedComponents := strings.Split(config.DeployOptions.Components, ",")
@@ -48,12 +51,12 @@ func Remove(packageName string) {
 
 			if len(deployedPackage.DeployedComponents) == 0 {
 				// All the installed components were deleted, there for this package is no longer actually deployed
-				k8s.DeleteSecret(packageSecret)
+				_ = k8s.DeleteSecret(packageSecret)
 			} else {
 				// Save the new secret with the removed components removed from the secret
 				newPackageSecretData, _ := json.Marshal(deployedPackage)
 				packageSecret.Data["data"] = newPackageSecretData
-				k8s.ReplaceSecret(packageSecret)
+				_ = k8s.ReplaceSecret(packageSecret)
 			}
 		}
 	} else {
@@ -61,8 +64,8 @@ func Remove(packageName string) {
 		for componentName, nativeComponent := range deployedPackage.DeployedComponents {
 			// This component was installed onto the cluster. Prompt the user to see if they would like to remove it!
 			for _, installedChart := range nativeComponent.InstalledCharts {
-				fmt.Printf("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
-				helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
+				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
+				_ = helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 			}
 		}
 		k8s.DeleteSecret(packageSecret)

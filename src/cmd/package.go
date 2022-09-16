@@ -111,13 +111,9 @@ var packageListCmd = &cobra.Command{
 var packageRemoveCmd = &cobra.Command{
 	Use:     "remove {PACKAGE_NAME}",
 	Aliases: []string{"u"},
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.ExactArgs(1),
 	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			message.Fatalf(nil, "Package name must be an argument to the remove command")
-		}
-
 		packager.Remove(args[0])
 	},
 }
@@ -145,7 +141,7 @@ func choosePackage(args []string) string {
 func cachePathClean(cachePath string) bool {
 	var isCleanPath = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
 	if !isCleanPath(cachePath) {
-		message.Warn(fmt.Sprintf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath))
+		message.Warnf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath)
 		return false
 	}
 	return true
@@ -176,7 +172,9 @@ func init() {
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.SGetKeyPath, "sget", "", "Path to public sget key file for remote packages signed via cosign")
 
 	packageInspectCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package.")
+	packageInspectCmd.Flags().BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
 
+	packageRemoveCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
 	packageRemoveCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
+	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
