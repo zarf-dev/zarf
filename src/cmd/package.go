@@ -120,7 +120,10 @@ var packageRemoveCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
-		packager.Remove(args[0])
+		err := packager.Remove(args[0])
+		if err != nil {
+			message.Warnf("Unable to remove the package with an error of: %#v", err)
+		}
 	},
 }
 

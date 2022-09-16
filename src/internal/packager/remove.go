@@ -15,7 +15,7 @@ import (
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
-func Remove(packageName string) {
+func Remove(packageName string) error {
 	// Create temp paths to temporarily extract the package into
 	tempPath := createPaths()
 	defer tempPath.clean()
@@ -27,14 +27,18 @@ func Remove(packageName string) {
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
 	packageSecret, err := k8s.GetSecret("zarf", secretName)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to get the secret for the package we are attempting to remove")
+		spinner.Errorf(err, "Unable to get the secret for the package we are attempting to remove")
+
+		return err
 	}
 
 	// Get the list of components the package had deployed
 	deployedPackage := types.DeployedPackage{}
 	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to load the secret for the package we are attempting to remove")
+		spinner.Errorf(err, "Unable to load the secret for the package we are attempting to remove")
+
+		return err
 	}
 
 	// If components were provided; just remove the things we were asked to remove and return
@@ -71,9 +75,16 @@ func Remove(packageName string) {
 			// This component was installed onto the cluster. Prompt the user to see if they would like to remove it!
 			for _, installedChart := range nativeComponent.InstalledCharts {
 				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
-				_ = helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
+				err = helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
+				if err != nil {
+					message.Errorf(err, "Unable to remove the installed helm chart %s from the namespace", installedChart.ChartName, installedChart.Namespace)
+
+					return err
+				}
 			}
 		}
 		k8s.DeleteSecret(packageSecret)
 	}
+
+	return nil
 }
