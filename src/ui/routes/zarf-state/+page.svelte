@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getClusterState } from '$lib/api';
-	const clusterState = getClusterState();
+	import { Cluster } from '$lib/api';
+	const clusterState = Cluster.getState();
 </script>
 
 {#await clusterState}
@@ -20,7 +20,7 @@
 						{#each Object.entries(state) as [key, data]}
 							<tr class="mdc-data-table__row">
 								<th class="mdc-data-table__cell" scope="row">{key}</th>
-								<td class="mdc-data-table__cell">{JSON.stringify(data, null, 2)}</td>
+								<td class="mdc-data-table__cell"><pre>{JSON.stringify(data, null, 2)}</pre></td>
 							</tr>
 						{/each}
 					</tbody>
@@ -28,11 +28,18 @@
 			</div>
 		</div>
 	</div>
+{:catch error}
+	<p style="color: red">{error.message}</p>
 {/await}
 
 <style lang="scss">
 	@use '@material/card';
 	@use '@material/data-table/data-table';
+
+	pre {
+		max-width: 56rem;
+		overflow: scroll;
+	}
 
 	@include card.core-styles;
 	@include data-table.core-styles;
