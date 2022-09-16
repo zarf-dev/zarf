@@ -10,6 +10,7 @@ zarf package remove {PACKAGE_NAME} [flags]
 
 ```
       --components string   Comma-separated list of components to uninstall
+      --confirm             REQUIRED. Confirm the removal action to prevent accidental deletions
   -h, --help                help for remove
 ```
 
