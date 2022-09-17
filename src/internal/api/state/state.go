@@ -13,7 +13,12 @@ import (
 func Read(w http.ResponseWriter, r *http.Request) {
 	message.Debug("state.Read()")
 
-	if data := k8s.LoadZarfState(); data.Distro == "" {
+	data, err := k8s.LoadZarfState()
+	if err != nil {
+		message.ErrorWebf(err, w, "unable to load zarf state")
+	}
+
+	if data.Distro == "" {
 		common.WriteEmpty(w)
 	} else {
 		common.WriteJSONResponse(w, data, http.StatusOK)

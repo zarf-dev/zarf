@@ -5,7 +5,6 @@ package k8s
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -94,7 +93,7 @@ func PrintConnectTable() error {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
-		out:          ioutil.Discard,
+		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
 		namespace:    namespace,
@@ -303,7 +302,10 @@ func (tunnel *Tunnel) establish() (string, error) {
 	}
 	spinner.Debugf("Selected pod %s to open port forward to", podName)
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return "", fmt.Errorf("unable to get clientset: %w", err)
+	}
 
 	// Build url to the port forward endpoint
 	// example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward
@@ -318,7 +320,10 @@ func (tunnel *Tunnel) establish() (string, error) {
 
 	spinner.Debugf("Using URL %s to create portforward", portForwardCreateURL)
 
-	restConfig := getRestConfig()
+	restConfig, err := getRestConfig()
+	if err != nil {
+		return "", fmt.Errorf("unable to get rest config: %w", err)
+	}
 
 	// Construct the spdy client required by the client-go portforward library
 	transport, upgrader, err := spdy.RoundTripperFor(restConfig)

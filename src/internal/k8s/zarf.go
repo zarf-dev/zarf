@@ -44,7 +44,11 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()
 
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		spinner.Errorf(err, "unable to get k8s clientset")
+	}
+
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
 		LabelSelector: config.ZarfManagedByLabel + "=zarf",

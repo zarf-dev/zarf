@@ -50,7 +50,8 @@ func testGitServerConnect(t *testing.T, gitUrl string) {
 
 func testGitServerReadOnly(t *testing.T, gitUrl string) {
 	// Init the state variable
-	state := k8s.LoadZarfState()
+	state, err := k8s.LoadZarfState()
+	require.NoError(t, err)
 	config.InitState(state)
 
 	// Get the repo as the readonly user

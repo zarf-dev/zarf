@@ -37,7 +37,10 @@ var destroyCmd = &cobra.Command{
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			message.Error(err, "Failed to load Zarf state from cluster")
+		}
 
 		// If Zarf deployed the cluster, burn it all down
 		if state.ZarfAppliance || (state.Secret == "") {

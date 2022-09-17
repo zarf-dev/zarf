@@ -34,7 +34,10 @@ func preSeedRegistry(tempPath tempPaths) {
 
 	// Attempt to load an existing state prior to init
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state := k8s.LoadZarfState()
+	state, err := k8s.LoadZarfState()
+	if err != nil {
+		spinner.Errorf(err, "Unable to load existing Zarf state")
+	}
 
 	// If the state is invalid, assume this is a new cluster
 	if state.Secret == "" {
