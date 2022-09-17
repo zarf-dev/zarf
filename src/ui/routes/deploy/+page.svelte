@@ -4,25 +4,45 @@
 	import PackageCard from '$lib/components/package-card.svelte';
 	import { Stepper } from '@ui';
 	import initConfig from '../packages/sample.json';
+	let currentStep = 1;
+
+	const incrementStep = () => {
+		currentStep++;
+	};
+	const decrementStep = () => {
+		currentStep--;
+	};
 </script>
 
 <svelte:head>
 	<title>Deploy</title>
 </svelte:head>
 
-<Container>
-	<Stepper
-		orientation="horizontal"
-		steps={[
-			{ title: 'Configure', iconContent: '1', disabled: false, variant: 'primary' },
-			{ title: 'Review', iconContent: '2', disabled: true },
-			{ title: 'Deploy', iconContent: '3', disabled: true }
-		]}
-	/>
-	<h1>Configure Package Deployment</h1>
-	<h2><Icon variant="package" /> Package Details</h2>
-	<PackageCard pkg={initConfig} />
-</Container>
+{#if currentStep < 4}
+	<Container>
+		<Stepper
+			orientation="horizontal"
+			steps={[
+				{ title: 'Configure', iconContent: '1', disabled: currentStep !== 1, variant: 'primary' },
+				{ title: 'Review', iconContent: '2', disabled: currentStep !== 2, variant: 'primary' },
+				{ title: 'Deploy', iconContent: '3', disabled: currentStep !== 3, variant: 'primary' }
+			]}
+		/>
+		<h1>Configure Package Deployment</h1>
+		<h2><Icon variant="package" /> Package Details</h2>
+
+		<PackageCard pkg={initConfig} />
+
+		<div style="display: flex; justify-content:space-between; margin-top: 2rem;">
+			<Button href="/" variant="outlined">cancel deployment</Button>
+			<Button on:click={incrementStep} variant="flat" disabled={currentStep === 3}
+				>review deployment</Button
+			>
+		</div>
+	</Container>
+{:else}
+	succcess!
+{/if}
 
 <style>
 	h1 {

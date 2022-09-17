@@ -34,12 +34,10 @@
 						</h2>
 					</div>
 
-					<Button variant="raised" color="secondary">Initialize Cluster</Button>
-				</div>
-			</section>
-		{/if}
-	{/if}
-{/await}
+			<Button variant="raised" color="primary" href="/deploy">Initialize Cluter</Button>
+		</div>
+	</section>
+{/if}
 
 <style>
 	#zarf-logo {
