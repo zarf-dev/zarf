@@ -4,10 +4,9 @@
 	import PackageCard from '$lib/components/package-card.svelte';
 	import Icon from '$lib/components/icon.svelte';
 	import pkgConfig from '../packages/sample.json';
-	import Header from '$lib/components/header.svelte';
-	import Layout from '../+layout.svelte';
+	import zarfLogo from '@images/zarf-bubbles.png';
 	import Modal from '$lib/components/modal.svelte';
-	let currentStep = 3;
+	let currentStep = 1;
 
 	type Step = {
 		title: string;
@@ -57,6 +56,7 @@
 	let deploymentStatus: string;
 	const triggerFakeDeploy = async () => {
 		const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
+		currentStep++;
 		await sleep(1000);
 		for (let i = 0; i < componentsStepperList.length; i++) {
 			componentsStepperList[i].iconContent = undefined;
@@ -65,6 +65,8 @@
 		}
 		currentStep++;
 		deploymentStatus = 'succeeded';
+		await sleep(5000);
+		window.location.pathname = '/';
 	};
 	$: componentsToDeploy = componentsToDeploy.sort();
 </script>
@@ -159,24 +161,26 @@
 			</ul>
 			<div class="actionButtonsContainer">
 				<Button on:click={decrementStep} variant="outlined">configure</Button>
-				<Button on:click={incrementStep} variant="flat">deploy</Button>
+				<Button on:click={triggerFakeDeploy} variant="flat">deploy</Button>
 			</div>
 		{:else}
 			<h1>Deploy Package - {pkgConfig.PackageName}</h1>
 			<div style="display:flex;justify-content:center;">
 				<Stepper orientation="vertical" steps={[...[defaultStep1], ...componentsStepperList]} />
 			</div>
-			<div class="actionButtonsContainer">
-				<Button on:click={decrementStep} variant="outlined">review</Button>
-				<Button on:click={triggerFakeDeploy}>FAKE START DEPLOY</Button>
-			</div>
 		{/if}
 	</Container>
 {:else if deploymentStatus === 'succeeded'}
-	<Modal />
+	<Modal open={true}>
+		<div style="text-align:center;">
+			<img src={zarfLogo} alt="zarf" width="60px" />
+			<h3 style="font-size: 20px; color: #000000DE;">Package Successfully Deployed</h3>
+			<p style="color: gray; font-size: 14px;">
+				You will be redirected to the deployment details page
+			</p>
+		</div>
+	</Modal>
 {/if}
-
-<Modal />
 
 <style>
 	h1 {
