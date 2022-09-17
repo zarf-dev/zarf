@@ -72,9 +72,8 @@ build-injector-registry-amd:
 build-injector-registry-arm:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
-docs-and-schema: build-ui
+docs-and-schema: 
 	go run main.go internal generate-cli-docs
-	npx quicktype -s schema  zarf.schema.json -o src/ui/lib/api-types.ts 
 	.hooks/create-zarf-schema.sh
 
 dev:
