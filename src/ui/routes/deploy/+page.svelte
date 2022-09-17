@@ -87,6 +87,8 @@
 			<h2><Icon variant="package" /> Package Details</h2>
 
 			<PackageCard pkg={pkgConfig} />
+			<h2><Icon variant="component" /> Package Components</h2>
+
 			{#each pkgConfig.PackageYaml.Components as componentConfig, idx}
 				accordion
 			{/each}
