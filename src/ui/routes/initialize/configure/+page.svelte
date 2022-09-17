@@ -26,42 +26,45 @@
 
 <h2><Icon variant="component" /> Package Components</h2>
 
-{#each $pkgStore.components as component, idx}
-	<Accordion id={`component-accordion-${idx}`}>
-		<div slot="headerContent" class="component-accordion-header">
-			<div style="display:flex;width: 60%;justify-content:space-between;">
-				<div>
-					{component.name}
-					{#if component.required}
-						<span style="color:gray;">(Required)</span>
-					{:else}
-						<span style="color:skyblue;">(Optional)</span>
-					{/if}
+<div style="width: 100%;gap: 2px; display: flex; flex-direction: column;">
+	{#each $pkgStore.components as component, idx}
+		<Accordion id={`component-accordion-${idx}`}>
+			<div slot="headerContent" class="component-accordion-header">
+				<div style="display:flex;width: 60%;justify-content:space-between;">
+					<div>
+						{component.name}
+						{#if component.required}
+							<span style="color:gray;">(Required)</span>
+						{:else}
+							<span style="color:skyblue;">(Optional)</span>
+						{/if}
+					</div>
+					<div
+						style="max-width: 250px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis"
+					>
+						{component.description || ' '}
+					</div>
 				</div>
-				<div style="max-width: 250px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis">
-					{component.description || ' '}
-				</div>
-			</div>
 
-			<div>
-				<input
-					disabled={component.required}
-					checked={component.required || $pkgComponentDeployStore.includes(idx)}
-					type="checkbox"
-					id={`deploy-component-${idx}`}
-					on:change={() => toggleComponentDeployment($pkgComponentDeployStore, idx)}
-				/>
-				<label style={component.required ? 'color: #b1b1b1;' : ''} for={`deploy-component-${idx}`}
-					>Deploy</label
-				>
+				<div>
+					<input
+						disabled={component.required}
+						checked={component.required || $pkgComponentDeployStore.includes(idx)}
+						type="checkbox"
+						id={`deploy-component-${idx}`}
+						on:change={() => toggleComponentDeployment($pkgComponentDeployStore, idx)}
+					/>
+					<label style={component.required ? 'color: #b1b1b1;' : ''} for={`deploy-component-${idx}`}
+						>Deploy</label
+					>
+				</div>
 			</div>
-		</div>
-		<div slot="content">
-			<pre>{JSON.stringify(component, null, 2)}</pre>
-		</div>
-	</Accordion>
-	<br />
-{/each}
+			<div slot="content">
+				<pre>{JSON.stringify(component, null, 2)}</pre>
+			</div>
+		</Accordion>
+	{/each}
+</div>
 <div class="actionButtonsContainer">
 	<Button href="/" variant="outlined">cancel deployment</Button>
 	<Button href="/initialize/review" variant="flat">review deployment</Button>
