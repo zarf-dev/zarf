@@ -18,8 +18,16 @@
 		<div class="col-header">Build</div>
 		<div class="col-content">
 			<table>
-				<tr><td>User:</td><td>{pkg.PackageYaml.Build.User}</td></tr>
-				<tr><td>Version:</td><td>{pkg.PackageYaml.Build.Version}</td></tr>
+				<tr
+					><td>User:</td><td>{pkg.PackageYaml.Build.User}</td><td>Terminal:</td><td
+						>{pkg.PackageYaml.Build.Terminal}</td
+					></tr
+				>
+				<tr
+					><td>Version:</td><td>{pkg.PackageYaml.Build.Version}</td><td>Timestamp:</td><td
+						>{pkg.PackageYaml.Build.Timestamp}</td
+					></tr
+				>
 				<tr><td>Architecture:</td><td>{pkg.PackageYaml.Build.Architecture}</td></tr>
 			</table>
 		</div>
