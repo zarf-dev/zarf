@@ -132,32 +132,25 @@ func init() {
 
 // getRestConfig uses the K8s "client-go" library to get the currently active kube context, in the same way that
 // "kubectl" gets it if no extra config flags like "--kubeconfig" are passed
-func getRestConfig() *rest.Config {
+func getRestConfig() (*rest.Config, error) {
 	message.Debug("k8s.getRestConfig()")
 
 	// Build the config from the currently active kube context in the default way that the k8s client-go gets it, which
 	// is to look at the KUBECONFIG env var
-	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		message.Fatalf(err, "Unable to connect to the K8s cluster")
-	}
-
-	return config
 }
 
-func getClientset() *kubernetes.Clientset {
+func getClientset() (*kubernetes.Clientset, error) {
 	message.Debug("k8s.getClientSet()")
 
-	config := getRestConfig()
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	config, err := getRestConfig()
 	if err != nil {
-		message.Fatal(err, "Unable to connect to the K8s cluster")
+		return nil, err
 	}
-
-	return clientset
+	// create the clientset
+	return kubernetes.NewForConfig(config)
 }
 
 func generateLogShim() logr.Logger {

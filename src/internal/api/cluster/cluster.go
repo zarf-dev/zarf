@@ -45,7 +45,11 @@ func reachable() bool {
 }
 
 func hasZarf() bool {
-	data := k8s.LoadZarfState()
+	data, err := k8s.LoadZarfState()
+	if err != nil {
+		return false
+	}
+
 	// If this is an empty zarf state, then the cluster hasn't been initialized yet
 	return data.Distro != ""
 }

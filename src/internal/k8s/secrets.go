@@ -27,13 +27,21 @@ type DockerConfigEntryWithAuth struct {
 
 func GetSecret(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.getSecret(%s, %s)", namespace, name)
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
+
 	return clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
 func GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
 	message.Debugf("k8s.getSecretsWithLabel(%s, %s)", namespace, labelSelector)
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
+
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
 	return clientSet.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 }
@@ -134,11 +142,14 @@ func ReplaceSecret(secret *corev1.Secret) error {
 
 func DeleteSecret(secret *corev1.Secret) error {
 	message.Debugf("k8s.DeleteSecret(%s, %s)", secret.Namespace, secret.Name)
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		return err
+	}
 
 	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)
 
-	err := namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
+	err = namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error deleting the secret: %w", err)
 	}
@@ -148,7 +159,10 @@ func DeleteSecret(secret *corev1.Secret) error {
 
 func CreateSecret(secret *corev1.Secret) error {
 	message.Debugf("k8s.CreateSecret(%s, %s)", secret.Namespace, secret.Name)
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		return err
+	}
 
 	namespaceSecrets := clientSet.CoreV1().Secrets(secret.Namespace)
 

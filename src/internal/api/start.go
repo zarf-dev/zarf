@@ -7,6 +7,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/internal/api/state"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -20,7 +21,6 @@ import (
 func LaunchAPIServer() {
 	message.Debug("api.LaunchAPIServer()")
 
-	// Token used to communicate with the API server
 	token := utils.RandomString(96)
 
 	// Init the Chi router
@@ -30,7 +30,7 @@ func LaunchAPIServer() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.NoCache)
 	// @todo: bypass auth flow for now until we can make dev easier
-	// router.Use(common.ValidateToken(token))
+	router.Use(common.ValidateToken(token))
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
@@ -63,7 +63,7 @@ func LaunchAPIServer() {
 		})
 	})
 
-	message.Infof("Zarf UI connection: http://127.0.0.1:3333", token)
+	message.Infof("Zarf UI connection: http://127.0.0.1:3333")
 
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")

@@ -34,7 +34,7 @@
 						</h2>
 					</div>
 
-					<Button variant="raised" color="primary" href="/initialize/configure">Initialize Cluter</Button>
+					<Button variant="raised" color="primary" href="/initialize/configure">Initialize Cluster</Button>
 				</div>
 			</section>
 		{/if}

@@ -169,9 +169,6 @@ func Deploy() {
 		deployedPackageSecret.Data["data"] = stateData
 		k8s.ReplaceSecret(deployedPackageSecret)
 	}
-
-	// All done
-	os.Exit(0)
 }
 
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types.InstalledCharts {
@@ -251,7 +248,10 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 		defer spinner.Stop()
 
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			spinner.Fatalf(err, "Unable to load the Zarf State from the Kubernetes cluster")
+		}
 
 		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly

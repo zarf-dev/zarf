@@ -40,10 +40,14 @@ func GeneratePod(name, namespace string) *corev1.Pod {
 func DeletePod(namespace string, name string) error {
 	message.Debugf("k8s.DeletePod(%s, %s)", namespace, name)
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return err
+	}
+
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
-	err := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{
+	err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{
 		GracePeriodSeconds: &deleteGracePeriod,
 		PropagationPolicy:  &deletePolicy,
 	})
@@ -65,7 +69,10 @@ func DeletePod(namespace string, name string) error {
 func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	message.Debugf("k8s.CreatePod(%#v)", pod)
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	createOptions := metav1.CreateOptions{}
 	return clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
@@ -79,7 +86,10 @@ func GetAllPods() (*corev1.PodList, error) {
 // GetPods returns a list of pods from the cluster by namespace
 func GetPods(namespace string) (*corev1.PodList, error) {
 	message.Debugf("k8s.GetPods(%s)", namespace)
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.ListOptions{}
 	return clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
@@ -89,7 +99,10 @@ func GetPods(namespace string) (*corev1.PodList, error) {
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
 	message.Debugf("k8s.WaitForPodsAndContainers(%#v, %#v)", target, waitForAllPods)
 
-	clientSet := getClientset()
+	clientSet, err := getClientset()
+	if err != nil {
+		return []string{}
+	}
 
 	message.Debugf("Waiting for ready pod %s/%s", target.Namespace, target.Selector)
 	for count := 0; count < waitLimit; count++ {

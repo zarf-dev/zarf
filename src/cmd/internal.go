@@ -67,11 +67,14 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			message.Error(err, "Unable to load the Zarf state")
+		}
 		config.InitState(state)
 
 		// Create the non-admin user
-		err := git.CreateReadOnlyUser()
+		err = git.CreateReadOnlyUser()
 		if err != nil {
 			message.Error(err, "Unable to create a read-only user in the Gitea service.")
 		}
