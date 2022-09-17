@@ -15,6 +15,10 @@ const State = {
 	update: (body: ZarfState) => http.patch<ZarfState>('/state', body)
 };
 
-const Packages = {};
+const Packages = {
+	find: () => http.get<string[]>('/packages/find'),
+	findInHome: () => http.get<string[]>('/packages/find-in-home'),
+	read: (name: string) => http.get<string>(`/packages/read/${encodeURIComponent(name)}`)
+};
 
 export { Cluster, Packages, State };

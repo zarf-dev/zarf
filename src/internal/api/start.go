@@ -7,6 +7,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/internal/api/state"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
@@ -42,6 +43,12 @@ func LaunchAPIServer() {
 			r.Get("/", cluster.Summary)
 			r.Get("/reachable", cluster.Reachable)
 			r.Get("/has-zarf", cluster.HasZarf)
+		})
+
+		r.Route("/packages", func(r chi.Router) {
+			r.Get("/find", packages.Find)
+			r.Get("/find-in-home", packages.FindInHome)
+			r.Get("/read/{path}", packages.Read)
 		})
 
 		r.Route("/state", func(r chi.Router) {
