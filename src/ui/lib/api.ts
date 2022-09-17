@@ -18,8 +18,9 @@ const State = {
 const Packages = {
 	find: () => http.get<string[]>('/packages/find'),
 	findInHome: () => http.get<string[]>('/packages/find-in-home'),
-	read: (name: string) => http.get<string>(`/packages/read/${encodeURIComponent(name)},`),
-  	getDeployedPackages: () => http.get<ZarfPackage[]>('/packages/list'),
+	read: (name: string) => http.get<ZarfPackage>(`/packages/read/${encodeURIComponent(name)},`),
+	readInit: () => http.get<ZarfPackage>('/packages/read/init'),
+	getDeployedPackages: () => http.get<ZarfPackage[]>('/packages/list'),
 	deploy: (body: ZarfDeployOptions) => http.put<boolean>('/packages/deploy', body),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
