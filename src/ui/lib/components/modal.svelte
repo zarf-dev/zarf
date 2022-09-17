@@ -1,24 +1,19 @@
 <script>
-	// Get the modal
 	let modal;
-
-	// When the user clicks anywhere outside of the modal, close it
+	export let open;
+	if (open === false) {
+		modal.style.display = 'none';
+	}
 	window.onclick = function (event) {
-		if (event.target == modal) {
+		if (event.target == modal && open == false) {
 			modal.style.display = 'none';
 		}
 	};
 </script>
 
-<div class="modal" bind:this={modal}>
-	<div class="modal-content mdc-elevation--z8">
-		<div class="modal-body">
-			<p>Some text in the Modal Body</p>
-			<p>Some other text...</p>
-		</div>
-		<div class="modal-footer">
-			<h3>Modal Footer</h3>
-		</div>
+<div class="modal" bind:this={modal} on:closeModal>
+	<div class="modal-container mdc-elevation--z8">
+		<slot />
 	</div>
 </div>
 
@@ -36,11 +31,11 @@
 		height: 100%; /* Full height */
 		overflow: auto; /* Enable scroll if needed */
 		background-color: rgb(0, 0, 0); /* Fallback color */
-		background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+		background-color: rgba(0, 0, 0, 0.7); /* Black w/ opacity */
 	}
 
 	/* Modal Content/Box */
-	.modal-content {
+	.modal-container {
 		background-color: #fefefe;
 		margin: 15% auto; /* 15% from the top and centered */
 		padding: 20px;
