@@ -18,5 +18,5 @@
 </ul>
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined">configure</Button>
-	<Button variant="flat">deploy</Button>
+	<Button href="/initialize/deploy" variant="flat">deploy</Button>
 </div>
