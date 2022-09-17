@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Stepper, Accordion, StepIcon } from '@ui';
+	import { Button, Stepper, Accordion } from '@ui';
 	import Container from '$lib/components/container.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
 	import Icon from '$lib/components/icon.svelte';
@@ -13,13 +13,6 @@
 		iconContent: string | undefined;
 		disabled: boolean;
 		variant: 'primary' | 'secondary';
-	};
-
-	const defaultStep1: Step = {
-		title: 'Validate Config',
-		iconContent: '1',
-		disabled: false,
-		variant: 'primary'
 	};
 
 	let componentsStepperList: Step[];
@@ -57,6 +50,13 @@
 	const triggerFakeDeploy = async () => {
 		const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
 		currentStep++;
+		const defaultStep1: Step = {
+			title: 'Validate Config',
+			iconContent: '1',
+			disabled: false,
+			variant: 'primary'
+		};
+		componentsStepperList = [defaultStep1].concat(componentsStepperList);
 		await sleep(1000);
 		for (let i = 0; i < componentsStepperList.length; i++) {
 			componentsStepperList[i].iconContent = undefined;
@@ -166,7 +166,7 @@
 		{:else}
 			<h1>Deploy Package - {pkgConfig.PackageName}</h1>
 			<div style="display:flex;justify-content:center;">
-				<Stepper orientation="vertical" steps={[...[defaultStep1], ...componentsStepperList]} />
+				<Stepper orientation="vertical" steps={componentsStepperList} />
 			</div>
 		{/if}
 	</Container>
