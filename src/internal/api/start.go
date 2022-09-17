@@ -58,6 +58,7 @@ func LaunchAPIServer() {
 
 		r.Route("/package", func(r chi.Router) {
 			r.Get("/list", cluster.ListDeployedPackages)
+			r.Put("/initialize", cluster.InitializeCluster)
 		})
 	})
 

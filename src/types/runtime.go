@@ -22,7 +22,7 @@ type ZarfDeployOptions struct {
 	NodePort     string
 }
 
-// ZarfCreeateOptions tracks the user-defined options used to create the package
+// ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM        bool
 	ImageCachePath  string
