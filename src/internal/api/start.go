@@ -63,7 +63,7 @@ func LaunchAPIServer() {
 		})
 	})
 
-	message.Infof("Zarf UI connection: http://127.0.0.1:3333/auth?token=%s", token)
+	message.Infof("Zarf UI connection: http://127.0.0.1:3333", token)
 
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")
