@@ -1,8 +1,8 @@
 <script>
-  import { Cluster } from '$lib/api';
-  import bigZarf from '@images/zarf-bubbles.png';
-  import { Button } from '@ui';
-  import Spinner from '$lib/components/spinner.svelte';
+	import { Cluster } from '$lib/api';
+	import bigZarf from '@images/zarf-bubbles.png';
+	import { Button } from '@ui';
+	import Spinner from '$lib/components/spinner.svelte';
 </script>
 
 <svelte:head>
@@ -10,17 +10,17 @@
 </svelte:head>
 
 {#await Cluster.summary()}
-<section class="hero">
-	<div class="hero-content">
-		<Spinner />
-	</div>
-</section>
+	<section class="hero">
+		<div class="hero-content">
+			<Spinner />
+		</div>
+	</section>
 {:then summary}
 	{#if summary.reachable}
 		{#if summary.hasZarf}
-		<section class="hero">
-			<div class="hero-content">REPLACE_ME_HAZ_CLUSTER</div>
-		</section>
+			<section class="hero">
+				<div class="hero-content">REPLACE_ME_HAZ_CLUSTER</div>
+			</section>
 		{:else}
 			<section class="hero">
 				<div class="hero-content">
@@ -34,10 +34,12 @@
 						</h2>
 					</div>
 
-			<Button variant="raised" color="primary" href="/deploy">Initialize Cluter</Button>
-		</div>
-	</section>
-{/if}
+					<Button variant="raised" color="primary" href="/deploy">Initialize Cluter</Button>
+				</div>
+			</section>
+		{/if}
+	{/if}
+{/await}
 
 <style>
 	#zarf-logo {
