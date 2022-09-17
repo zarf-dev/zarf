@@ -12,7 +12,7 @@
 </script>
 
 <div class="modal" bind:this={modal} on:closeModal>
-	<div class="modal-container mdc-elevation--z8">
+	<div class="modal-container mdc-elevation--z15">
 		<slot />
 	</div>
 </div>
