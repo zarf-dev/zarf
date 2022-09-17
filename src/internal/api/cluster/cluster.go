@@ -61,13 +61,12 @@ func distro() string {
 // InitializeCluster initializes the connected k8s cluster with Zarf
 // This is equivalent to running the `zarf init` command.
 func InitializeCluster(w http.ResponseWriter, r *http.Request) {
-	common.WriteJSONResponse(w, "Not Implemented", http.StatusNotImplemented)
-
 	var initializeClusterRequest = types.ZarfDeployOptions{}
 	err := json.NewDecoder(r.Body).Decode(&initializeClusterRequest)
 	if err != nil {
-		message.Errorf(err, "Unable to decode the request to initialize the cluster")
-		common.WriteJSONResponse(w, nil, http.StatusBadRequest)
+		message.ErrorWebf(err, w, "Unable to decode the request to initialize the cluster")
+
+		return
 	}
 
 	config.DeployOptions = initializeClusterRequest

@@ -7,8 +7,7 @@ const Cluster = {
 	summary: () => http.get<ClusterSummary>('/cluster'),
 	reachable: () => http.get<ZarfState>('/cluster/reachable'),
 	hasZarf: () => http.get<ZarfState>('/cluster/has-zarf'),
-	getDeployedPackages: () => http.get<ZarfPackage[]>('/package/list'),
-  initialize: (body: ZarfDeployOptions) => http.put<boolean>('/package/initialize', body)
+	initialize: (body: ZarfDeployOptions) => http.put<boolean>('/packages/initialize', body)
 };
 
 const State = {
@@ -19,7 +18,10 @@ const State = {
 const Packages = {
 	find: () => http.get<string[]>('/packages/find'),
 	findInHome: () => http.get<string[]>('/packages/find-in-home'),
-	read: (name: string) => http.get<string>(`/packages/read/${encodeURIComponent(name)}`)
+	read: (name: string) => http.get<string>(`/packages/read/${encodeURIComponent(name)},`),
+  	getDeployedPackages: () => http.get<ZarfPackage[]>('/packages/list'),
+	deploy: (body: ZarfDeployOptions) => http.put<boolean>('/packages/deploy', body),
+	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 
 export { Cluster, Packages, State };
