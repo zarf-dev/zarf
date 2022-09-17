@@ -64,7 +64,7 @@ build-cli-mac-apple: build-injector-registry-arm build-ui
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
-build-cli: build-cli-linux-amd build-cli-linux-arm b build-cli-mac-inteluild-cli-mac-apple ## Build the CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
 
 build-injector-registry-amd:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go

@@ -2,8 +2,6 @@
 	import Container from '$lib/components/container.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
 	import { Button } from '@ui';
-	import pkg from './sample.json';
-	const data = [pkg, pkg, pkg];
 </script>
 
 <svelte:head>
