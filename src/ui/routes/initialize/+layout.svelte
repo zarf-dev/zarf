@@ -2,10 +2,11 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import Container from '$lib/components/container.svelte';
-	import { pkgStore } from '$lib/store';
+	import { pkgStore, pkgPath } from '$lib/store';
 	import { Stepper } from '@ui';
 
 	Packages.readInit().then(pkgStore.set);
+  Packages.findInit().then(pkgPath.set)
 </script>
 
 <Container>
