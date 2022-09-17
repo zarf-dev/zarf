@@ -19,6 +19,7 @@
 	}
 	:global(:root) {
 		--mdc-theme-primary: #4adede;
+		--mdx-theme-secondary: #4053c2;
 		--mdc-theme-on-primary: #171717;
 		--mdc-theme-secondary: green;
 		--mdc-theme-on-secondary: white;
