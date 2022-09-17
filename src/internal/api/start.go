@@ -51,6 +51,8 @@ func LaunchAPIServer() {
 			r.Get("/find-in-home", packages.FindInHome)
 			r.Get("/read/{path}", packages.Read)
 			r.Get("/list", packages.ListDeployedPackages)
+			r.Put("/deploy", packages.DeployPackage)
+			r.Delete("/remove/{name}", packages.RemovePackage)
 		})
 
 		r.Route("/state", func(r chi.Router) {
