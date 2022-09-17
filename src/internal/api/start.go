@@ -43,22 +43,19 @@ func LaunchAPIServer() {
 			r.Get("/", cluster.Summary)
 			r.Get("/reachable", cluster.Reachable)
 			r.Get("/has-zarf", cluster.HasZarf)
+			r.Put("/initialize", cluster.InitializeCluster)
 		})
 
 		r.Route("/packages", func(r chi.Router) {
 			r.Get("/find", packages.Find)
 			r.Get("/find-in-home", packages.FindInHome)
 			r.Get("/read/{path}", packages.Read)
+			r.Get("/list", packages.ListDeployedPackages)
 		})
 
 		r.Route("/state", func(r chi.Router) {
 			r.Get("/", state.Read)
 			r.Put("/", state.Update)
-		})
-
-		r.Route("/package", func(r chi.Router) {
-			r.Get("/list", cluster.ListDeployedPackages)
-			r.Put("/initialize", cluster.InitializeCluster)
 		})
 	})
 

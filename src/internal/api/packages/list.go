@@ -1,4 +1,4 @@
-package cluster
+package packages
 
 import (
 	"net/http"
