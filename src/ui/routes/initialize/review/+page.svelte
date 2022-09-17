@@ -17,6 +17,10 @@
 	{/each}
 </ul>
 <div class="actionButtonsContainer">
-	<Button href="/initialize/configure" variant="outlined">configure</Button>
-	<Button variant="flat">deploy</Button>
+	<Button href="/" shape="square" variant="outlined">cancel deployment</Button>
+
+	<div style="display:flex;gap:1rem;">
+		<Button href="/initialize/configure" shape="square" variant="outlined">edit deployment</Button>
+		<Button shape="square" variant="raised">deploy</Button>
+	</div>
 </div>
