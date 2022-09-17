@@ -39,7 +39,7 @@
 					{/if}
 				</div>
 				<div style="max-width: 250px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis">
-					{component.description}
+					{component.description || ' '}
 				</div>
 			</div>
 
