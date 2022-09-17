@@ -2,12 +2,44 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
+// We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
+func GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
+	var deployedPackages = []types.DeployedPackage{}
+
+	// Get the secrets that describe the deployed packages
+	namespace := "zarf"
+	labelSelector := "package-deploy-info"
+	secrets, err := GetSecretsWithLabel(namespace, labelSelector)
+	if err != nil {
+		message.Fatalf(err, "unable to get secrets with the label selector")
+	}
+
+	// Process the k8s secret into our internal structs
+	for _, secret := range secrets.Items {
+		var deployedPackage types.DeployedPackage
+		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		if err != nil {
+			message.Warnf("Unable to unmarshal package secret")
+
+			return deployedPackages, err
+		}
+
+		deployedPackages = append(deployedPackages, deployedPackage)
+	}
+
+	return deployedPackages, nil
+}
+
+// StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
 func StripZarfLabelsAndSecretsFromNamespaces() {
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()

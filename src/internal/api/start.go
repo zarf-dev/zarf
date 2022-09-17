@@ -48,6 +48,10 @@ func LaunchAPIServer() {
 			r.Get("/", state.Read)
 			r.Put("/", state.Update)
 		})
+
+		r.Route("/package", func(r chi.Router) {
+			r.Get("/list", cluster.ListDeployedPackages)
+		})
 	})
 
 	message.Infof("Zarf UI connection: http://127.0.0.1:3333/auth?token=%s", token)

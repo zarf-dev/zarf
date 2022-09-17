@@ -1,4 +1,4 @@
-import type { ClusterSummary, ZarfState } from './api-types';
+import type { ClusterSummary, ZarfState, ZarfPackage } from './api-types';
 import { HTTP } from './http';
 
 const http = new HTTP();
@@ -6,7 +6,8 @@ const http = new HTTP();
 const Cluster = {
 	summary: () => http.get<ClusterSummary>('/cluster'),
 	reachable: () => http.get<ZarfState>('/cluster/reachable'),
-	hasZarf: () => http.get<ZarfState>('/cluster/has-zarf')
+	hasZarf: () => http.get<ZarfState>('/cluster/has-zarf'),
+	getDeployedPackages: () => http.get<ZarfPackage[]>('/package/list')
 };
 
 const State = {

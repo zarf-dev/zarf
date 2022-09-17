@@ -421,12 +421,21 @@ export interface ZarfPackageVariable {
 }
 
 export interface ZarfState {
-    agentTLS:      GeneratedPKI;
-    architecture:  string;
-    distro:        string;
-    nodePort:      string;
-    secret:        string;
-    storageClass:  string;
+    agentTLS: GeneratedPKI;
+    /**
+     * Machine architecture of the k8s node(s)
+     */
+    architecture: string;
+    /**
+     * K8s distribution of the cluster Zarf was deployed to
+     */
+    distro:       string;
+    nodePort:     string;
+    secret:       string;
+    storageClass: string;
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
     zarfAppliance: boolean;
 }
 
