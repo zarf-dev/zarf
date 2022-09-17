@@ -1,8 +1,8 @@
 <script>
-	import { Button, Stepper } from '@ui';
 	import Container from '$lib/components/container.svelte';
-	import PackageCard from '$lib/components/package-card.svelte';
 	import Icon from '$lib/components/icon.svelte';
+	import PackageCard from '$lib/components/package-card.svelte';
+	import { Stepper } from '@ui';
 	import initConfig from '../packages/sample.json';
 </script>
 

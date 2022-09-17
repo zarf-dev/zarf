@@ -1,30 +1,45 @@
 <script>
-	import { Button } from '@ui';
-	import bigZarf from '@images/zarf-bubbles.png';
-	let zarfStatus = false;
+  import { Cluster } from '$lib/api';
+  import bigZarf from '@images/zarf-bubbles.png';
+  import { Button } from '@ui';
+  import Spinner from '$lib/components/spinner.svelte';
 </script>
 
 <svelte:head>
 	<title>Zarf</title>
 </svelte:head>
 
-{#if zarfStatus === false}
-	<section class="hero">
-		<div class="hero-content">
-			<img src={bigZarf} alt="Zarf logo" id="zarf-logo" width="40%" />
+{#await Cluster.summary()}
+<section class="hero">
+	<div class="hero-content">
+		<Spinner />
+	</div>
+</section>
+{:then summary}
+	{#if summary.reachable}
+		{#if summary.hasZarf}
+		<section class="hero">
+			<div class="hero-content">REPLACE_ME_HAZ_CLUSTER</div>
+		</section>
+		{:else}
+			<section class="hero">
+				<div class="hero-content">
+					<img src={bigZarf} alt="Zarf logo" id="zarf-logo" width="40%" />
 
-			<div class="hero-text">
-				<h1 class="hero-title">No Active Clusters</h1>
+					<div class="hero-text">
+						<h1 class="hero-title">No Active Clusters</h1>
 
-				<h2 class="hero-subtitle">
-					Click initialize cluster to install the Init Package and deploy a new cluster.
-				</h2>
-			</div>
+						<h2 class="hero-subtitle">
+							Click initialize cluster to install the Init Package and deploy a new cluster.
+						</h2>
+					</div>
 
-			<Button variant="raised" color="secondary">Initialize Cluter</Button>
-		</div>
-	</section>
-{/if}
+					<Button variant="raised" color="secondary">Initialize Cluster</Button>
+				</div>
+			</section>
+		{/if}
+	{/if}
+{/await}
 
 <style>
 	#zarf-logo {

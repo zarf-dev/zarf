@@ -36,7 +36,7 @@ func HasZarf(w http.ResponseWriter, r *http.Request) {
 
 func reachable() bool {
 	// Test if we can connect to the cluster.
-	err := k8s.WaitForHealthyCluster(15 * time.Second)
+	err := k8s.WaitForHealthyCluster(5 * time.Second)
 	return err == nil
 }
 

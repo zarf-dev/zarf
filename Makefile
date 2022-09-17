@@ -78,6 +78,8 @@ docs-and-schema: build-ui
 	.hooks/create-zarf-schema.sh
 
 dev:
+	mkdir -p build/ui
+	touch build/ui/index.html
 	go mod download
 	npm ci
 	npm run dev
