@@ -16,7 +16,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 	if data := k8s.LoadZarfState(); data.Distro == "" {
 		common.WriteEmpty(w)
 	} else {
-		common.WriteJSONResponse(w, data)
+		common.WriteJSONResponse(w, data, http.StatusOK)
 	}
 }
 
@@ -25,12 +25,10 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	message.Debug("state.Update()")
 
 	var data types.ZarfState
-	// r.Body
-	// common.ReadJSONRequest(r, &data)
 
 	if err := k8s.SaveZarfState(data); err != nil {
-		// common.WriteError(w, err)
+		common.WriteJSONResponse(w, nil, http.StatusInternalServerError)
 	} else {
-		common.WriteJSONResponse(w, data)
+		common.WriteJSONResponse(w, data, http.StatusCreated)
 	}
 }

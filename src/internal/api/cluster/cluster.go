@@ -19,19 +19,19 @@ func Summary(w http.ResponseWriter, r *http.Request) {
 		Distro:    distro(),
 	}
 
-	common.WriteJSONResponse(w, data)
+	common.WriteJSONResponse(w, data, http.StatusOK)
 }
 
 // Reachable checks if we can connect to the cluster
 func Reachable(w http.ResponseWriter, r *http.Request) {
 	message.Debug("cluster.Reachable()")
-	common.WriteJSONResponse(w, reachable())
+	common.WriteJSONResponse(w, reachable(), http.StatusOK)
 }
 
 // HasZarf checks if the cluster has been initialized by Zarf.
 func HasZarf(w http.ResponseWriter, r *http.Request) {
 	message.Debug("cluster.HasZarf()")
-	common.WriteJSONResponse(w, hasZarf())
+	common.WriteJSONResponse(w, hasZarf(), http.StatusOK)
 }
 
 func reachable() bool {
