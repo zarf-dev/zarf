@@ -21,7 +21,7 @@
     ]
   },
   "devDependencies": {
-    "@defense-unicorns/unicorn-ui": "^0.0.8",
+    "@defense-unicorns/unicorn-ui": "^0.0.9",
     "@material/circular-progress": "^14.0.0",
     "@material/data-table": "^14.0.0",
     "@material/theme": "^14.0.0",

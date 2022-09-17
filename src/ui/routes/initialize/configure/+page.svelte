@@ -66,6 +66,6 @@
 	{/each}
 </div>
 <div class="actionButtonsContainer">
-	<Button href="/" variant="outlined">cancel deployment</Button>
-	<Button href="/initialize/review" variant="flat">review deployment</Button>
+	<Button href="/" variant="outlined" shape="square">cancel deployment</Button>
+	<Button href="/initialize/review" variant="raised" shape="square">review deployment</Button>
 </div>
