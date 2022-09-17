@@ -1,17 +1,18 @@
-<script>
-	export let pkg;
+<script lang="ts">
+	import type { ZarfPackage } from '$lib/api-types';
+	export let pkg: ZarfPackage;
 </script>
 
 <div class="card mdc-elevation--z2">
 	<div class="card-col col-1">
 		<div class="col-header">Package Type</div>
-		<div class="col-content">{pkg.PackageYaml.Kind}</div>
+		<div class="col-content">{pkg.kind}</div>
 	</div>
 	<div class="card-col col-2">
 		<div class="col-header">Meta data</div>
 		<table>
-			<tr><td>Name:</td><td>{pkg.PackageName}</td></tr>
-			<tr><td>Description:</td><td>{pkg.PackageYaml.Metadata.Description}</td></tr>
+			<tr><td>Name:</td><td>{pkg.metadata?.name}</td></tr>
+			<tr><td>Description:</td><td>{pkg.metadata?.description}</td></tr>
 		</table>
 	</div>
 	<div class="card-col col-3">
@@ -19,16 +20,15 @@
 		<div class="col-content">
 			<table>
 				<tr
-					><td>User:</td><td>{pkg.PackageYaml.Build.User}</td><td>Terminal:</td><td
-						>{pkg.PackageYaml.Build.Terminal}</td
+					><td>User:</td><td>{pkg.build?.user}</td><td>Terminal:</td><td>{pkg.build?.terminal}</td
 					></tr
 				>
 				<tr
-					><td>Version:</td><td>{pkg.PackageYaml.Build.Version}</td><td>Timestamp:</td><td
-						>{pkg.PackageYaml.Build.Timestamp}</td
+					><td>Version:</td><td>{pkg.build?.version}</td><td>Timestamp:</td><td
+						>{pkg.build?.timestamp}</td
 					></tr
 				>
-				<tr><td>Architecture:</td><td>{pkg.PackageYaml.Build.Architecture}</td></tr>
+				<tr><td>Architecture:</td><td>{pkg.build?.architecture}</td></tr>
 			</table>
 		</div>
 	</div>
