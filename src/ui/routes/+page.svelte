@@ -3,11 +3,8 @@
 	import bigZarf from '@images/zarf-bubbles.png';
 	import { Button } from '@ui';
 	import Spinner from '$lib/components/spinner.svelte';
+	import { goto } from '$app/navigation';
 </script>
-
-<svelte:head>
-	<title>Zarf</title>
-</svelte:head>
 
 {#await Cluster.summary()}
 	<section class="hero">
@@ -18,9 +15,7 @@
 {:then summary}
 	{#if summary.reachable}
 		{#if summary.hasZarf}
-			<section class="hero">
-				<div class="hero-content">REPLACE_ME_HAZ_CLUSTER</div>
-			</section>
+			{goto(`/packages`, { replaceState: true })}
 		{:else}
 			<section class="hero">
 				<div class="hero-content">
@@ -34,7 +29,9 @@
 						</h2>
 					</div>
 
-					<Button variant="raised" color="primary" href="/initialize/configure">Initialize Cluster</Button>
+					<Button variant="raised" color="primary" href="/initialize/configure"
+						>Initialize Cluster</Button
+					>
 				</div>
 			</section>
 		{/if}
