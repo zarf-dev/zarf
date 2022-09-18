@@ -2,36 +2,36 @@ package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	Confirm       bool
-	TempDirectory string
-	SetVariables  map[string]string
+	Confirm       bool              `json:"confirm"`
+	TempDirectory string            `json:"tempDirectory"`
+	SetVariables  map[string]string `json:"setVariables"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment
 type ZarfDeployOptions struct {
-	PackagePath string
-	Components  string
-	SGetKeyPath string
+	PackagePath string `json:"packagePath"`
+	Components  string `json:"components"`
+	SGetKeyPath string `json:"sGetKeyPath"`
 
 	// Zarf init is installing the k3s component
-	ApplianceMode bool
+	ApplianceMode bool `json:"applianceMode"`
 
 	// Zarf init override options
-	StorageClass string
-	Secret       string
-	NodePort     string
+	StorageClass string `json:"storageClass"`
+	Secret       string `json:"secret"`
+	NodePort     string `json:"nodePort"`
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
-	SkipSBOM        bool
-	ImageCachePath  string
-	Insecure        bool
-	OutputDirectory string
+	SkipSBOM        bool   `json:"skipSBOM"`
+	ImageCachePath  string `json:"imageCachePath"`
+	Insecure        bool   `json:"insecure"`
+	OutputDirectory string `json:"outputDirectory"`
 }
 
 type ConnectString struct {
-	Description string
-	Url         string
+	Description string `json:"description"`
+	Url         string `json:"url"`
 }
 type ConnectStrings map[string]ConnectString
