@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
-	import { pkgStore, pkgComponentDeployStore } from '$lib/store';
+	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Accordion, Button } from '@ui';
 
 	// let componentsToDeploy: number[] = pkgConfig.components

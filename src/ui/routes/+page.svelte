@@ -7,11 +7,7 @@
 </script>
 
 {#await Cluster.summary()}
-	<section class="hero">
-		<div class="hero-content">
-			<Spinner />
-		</div>
-	</section>
+	<Spinner />
 {:then summary}
 	{#if summary.reachable}
 		{#if summary.hasZarf}

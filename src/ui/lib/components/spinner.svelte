@@ -1,65 +1,53 @@
-<div
-	class="mdc-circular-progress"
-	style="width:48px;height:48px;"
-	role="progressbar"
-	aria-label="Example Progress Bar"
-	aria-valuemin="0"
-	aria-valuemax="1"
->
-	<div class="mdc-circular-progress__indeterminate-container">
-		<div class="mdc-circular-progress__spinner-layer mdc-circular-progress__color-1">
-			<div class="mdc-circular-progress__circle-clipper mdc-circular-progress__circle-left">
-				<svg
-					class="mdc-circular-progress__indeterminate-circle-graphic"
-					viewBox="0 0 48 48"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<circle
-						cx="24"
-						cy="24"
-						r="18"
-						stroke-dasharray="113.097"
-						stroke-dashoffset="56.549"
-						stroke-width="4"
-					/>
-				</svg>
-			</div>
-			<div class="mdc-circular-progress__gap-patch">
-				<svg
-					class="mdc-circular-progress__indeterminate-circle-graphic"
-					viewBox="0 0 48 48"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<circle
-						cx="24"
-						cy="24"
-						r="18"
-						stroke-dasharray="113.097"
-						stroke-dashoffset="56.549"
-						stroke-width="3.8"
-					/>
-				</svg>
-			</div>
-			<div class="mdc-circular-progress__circle-clipper mdc-circular-progress__circle-right">
-				<svg
-					class="mdc-circular-progress__indeterminate-circle-graphic"
-					viewBox="0 0 48 48"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<circle
-						cx="24"
-						cy="24"
-						r="18"
-						stroke-dasharray="113.097"
-						stroke-dashoffset="56.549"
-						stroke-width="4"
-					/>
-				</svg>
-			</div>
-		</div>
-	</div>
+<script>
+	import { fade } from 'svelte/transition';
+	export let msg = 'Loading...';
+</script>
+
+<div class="spinner-wrapper" in:fade={{ duration: 200 }}>
+	<span class="spinner" />
+	<span class="label">{msg}</span>
 </div>
 
 <style lang="scss">
-	@use '@material/circular-progress/mdc-circular-progress';
+	.spinner-wrapper {
+		display: block;
+		position: relative;
+		width: 1px;
+		height: 1px;
+		padding: 5rem;
+		margin: 8rem auto;
+	}
+
+	.label {
+		text-align: center;
+		width: 100%;
+		display: block;
+		color: rgba(13, 19, 61, 1);
+		font-size: 1.2rem;
+		position: absolute;
+		bottom: 0;
+		left: 0;
+	}
+
+	.spinner::after {
+		content: '';
+		box-sizing: border-box;
+		width: 5.5rem;
+		height: 5.5rem;
+		position: absolute;
+		left: 2rem;
+		top: 2rem;
+		border-radius: 50%;
+		border-top: 6px solid rgba(13, 19, 61, 1);
+		border-left: 6px solid rgba(13, 19, 61, 1);
+		border-bottom: 6px solid rgba(13, 19, 61, 1);
+		border-right: 6px solid rgba(13, 19, 61, 0);
+		animation: spinner 1s linear infinite;
+	}
+
+	@keyframes spinner {
+		to {
+			transform: rotate(360deg);
+		}
+	}
 </style>
