@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -10,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/internal/api/state"
+	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 
@@ -21,7 +24,27 @@ import (
 func LaunchAPIServer() {
 	message.Debug("api.LaunchAPIServer()")
 
-	token := utils.RandomString(96)
+	// Track the developer port if it's set
+	devPort := os.Getenv("API_DEV_PORT")
+
+	// If the env variable API_PORT is set, use that for the listening port
+	port := os.Getenv("API_PORT")
+	// Otherwise, use a random available port
+	if port == "" {
+		// If we can't find an available port, just use the default
+		if portRaw, err := k8s.GetAvailablePort(); err != nil {
+			port = "8080"
+		} else {
+			port = fmt.Sprintf("%d", portRaw)
+		}
+	}
+
+	// If the env variable API_TOKEN is set, use that for the API secret
+	token := os.Getenv("API_TOKEN")
+	// Otherwise, generate a random secret
+	if token == "" {
+		token = utils.RandomString(96)
+	}
 
 	// Init the Chi router
 	router := chi.NewRouter()
@@ -29,7 +52,6 @@ func LaunchAPIServer() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.NoCache)
-	// @todo: bypass auth flow for now until we can make dev easier
 	router.Use(common.ValidateToken(token))
 
 	// Set a timeout value on the request context (ctx), that will signal
@@ -38,7 +60,6 @@ func LaunchAPIServer() {
 	router.Use(middleware.Timeout(60 * time.Second))
 
 	router.Route("/api", func(r chi.Router) {
-
 		r.Route("/cluster", func(r chi.Router) {
 			r.Get("/", cluster.Summary)
 			r.Get("/reachable", cluster.Reachable)
@@ -63,7 +84,15 @@ func LaunchAPIServer() {
 		})
 	})
 
-	message.Infof("Zarf UI connection: http://127.0.0.1:3333")
+	// If no dev port specified, use the server port for the URL and try to open it
+	if devPort == "" {
+		url := fmt.Sprintf("http://127.0.0.1:%s/auth?token=%s", port, token)
+		message.Infof("Zarf UI connection: %s", url)
+		message.Debug(utils.ExecLaunchURL(url))
+	} else {
+		// Otherwise, use the dev port for the URL and don't try to open
+		message.Infof("Zarf UI connection: http://127.0.0.1:%s/auth?token=%s", devPort, token)
+	}
 
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")
@@ -71,5 +100,5 @@ func LaunchAPIServer() {
 		router.Handle("/*", http.FileServer(http.FS(sub)))
 	}
 
-	http.ListenAndServe(":3333", router)
+	http.ListenAndServe(":"+port, router)
 }
