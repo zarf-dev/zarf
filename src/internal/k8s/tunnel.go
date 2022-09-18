@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"strconv"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -174,17 +174,8 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
 		if tunnel.autoOpen {
-			switch runtime.GOOS {
-			case "linux":
-				_ = exec.Command("xdg-open", url).Start()
-			case "windows":
-				_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-			case "darwin":
-				_ = exec.Command("open", url).Start()
-			}
-		} else {
-			// Dump the tunnel URL to the console for other tools if not auto-opening
-			fmt.Print(url)
+			err := utils.ExecLaunchURL(url)
+			message.Debug(err)
 		}
 
 		// Dump the tunnel URL to the console for other tools to use
