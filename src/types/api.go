@@ -8,6 +8,7 @@ type RestAPI struct {
 	ZarfDeployOptions ZarfDeployOptions `json:"zarfDeployOptions"`
 	ConnectStrings    ConnectStrings    `json:"connectStrings"`
 	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
+	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
 }
 
 type ClusterSummary struct {

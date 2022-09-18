@@ -10,6 +10,7 @@
 export interface APITypes {
     clusterSummary:    ClusterSummary;
     connectStrings:    { [key: string]: ConnectString };
+    deployedPackage:   DeployedPackage;
     zarfCommonOptions: ZarfCommonOptions;
     zarfCreateOptions: ZarfCreateOptions;
     zarfDeployOptions: ZarfDeployOptions;
@@ -24,31 +25,15 @@ export interface ClusterSummary {
 }
 
 export interface ConnectString {
-    Description: string;
-    Url:         string;
+    description: string;
+    url:         string;
 }
 
-export interface ZarfCommonOptions {
-    Confirm:       boolean;
-    SetVariables:  { [key: string]: string };
-    TempDirectory: string;
-}
-
-export interface ZarfCreateOptions {
-    ImageCachePath:  string;
-    Insecure:        boolean;
-    OutputDirectory: string;
-    SkipSBOM:        boolean;
-}
-
-export interface ZarfDeployOptions {
-    ApplianceMode: boolean;
-    Components:    string;
-    NodePort:      string;
-    PackagePath:   string;
-    Secret:        string;
-    SGetKeyPath:   string;
-    StorageClass:  string;
+export interface DeployedPackage {
+    cliVersion:         string;
+    data:               ZarfPackage;
+    deployedComponents: { [key: string]: DeployedComponent };
+    name:               string;
 }
 
 export interface ZarfPackage {
@@ -420,6 +405,38 @@ export interface ZarfPackageVariable {
     prompt?: boolean;
 }
 
+export interface DeployedComponent {
+    installedCharts: InstalledCharts[];
+}
+
+export interface InstalledCharts {
+    chartName: string;
+    namespace: string;
+}
+
+export interface ZarfCommonOptions {
+    confirm:       boolean;
+    setVariables:  { [key: string]: string };
+    tempDirectory: string;
+}
+
+export interface ZarfCreateOptions {
+    imageCachePath:  string;
+    insecure:        boolean;
+    outputDirectory: string;
+    skipSBOM:        boolean;
+}
+
+export interface ZarfDeployOptions {
+    applianceMode: boolean;
+    components:    string;
+    nodePort:      string;
+    packagePath:   string;
+    secret:        string;
+    sGetKeyPath:   string;
+    storageClass:  string;
+}
+
 export interface ZarfState {
     agentTLS: GeneratedPKI;
     /**
@@ -440,9 +457,9 @@ export interface ZarfState {
 }
 
 export interface GeneratedPKI {
-    CA:   string;
-    Cert: string;
-    Key:  string;
+    ca:   string;
+    cert: string;
+    key:  string;
 }
 
 // Converts JSON strings to/from your types
@@ -593,6 +610,7 @@ const typeMap: any = {
     "APITypes": o([
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
+        { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
         { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
@@ -605,28 +623,14 @@ const typeMap: any = {
         { json: "reachable", js: "reachable", typ: true },
     ], false),
     "ConnectString": o([
-        { json: "Description", js: "Description", typ: "" },
-        { json: "Url", js: "Url", typ: "" },
+        { json: "description", js: "description", typ: "" },
+        { json: "url", js: "url", typ: "" },
     ], false),
-    "ZarfCommonOptions": o([
-        { json: "Confirm", js: "Confirm", typ: true },
-        { json: "SetVariables", js: "SetVariables", typ: m("") },
-        { json: "TempDirectory", js: "TempDirectory", typ: "" },
-    ], false),
-    "ZarfCreateOptions": o([
-        { json: "ImageCachePath", js: "ImageCachePath", typ: "" },
-        { json: "Insecure", js: "Insecure", typ: true },
-        { json: "OutputDirectory", js: "OutputDirectory", typ: "" },
-        { json: "SkipSBOM", js: "SkipSBOM", typ: true },
-    ], false),
-    "ZarfDeployOptions": o([
-        { json: "ApplianceMode", js: "ApplianceMode", typ: true },
-        { json: "Components", js: "Components", typ: "" },
-        { json: "NodePort", js: "NodePort", typ: "" },
-        { json: "PackagePath", js: "PackagePath", typ: "" },
-        { json: "Secret", js: "Secret", typ: "" },
-        { json: "SGetKeyPath", js: "SGetKeyPath", typ: "" },
-        { json: "StorageClass", js: "StorageClass", typ: "" },
+    "DeployedPackage": o([
+        { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "data", js: "data", typ: r("ZarfPackage") },
+        { json: "deployedComponents", js: "deployedComponents", typ: m(r("DeployedComponent")) },
+        { json: "name", js: "name", typ: "" },
     ], false),
     "ZarfPackage": o([
         { json: "build", js: "build", typ: u(undefined, r("ZarfBuildData")) },
@@ -733,6 +737,33 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
     ], false),
+    "DeployedComponent": o([
+        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledCharts")) },
+    ], false),
+    "InstalledCharts": o([
+        { json: "chartName", js: "chartName", typ: "" },
+        { json: "namespace", js: "namespace", typ: "" },
+    ], false),
+    "ZarfCommonOptions": o([
+        { json: "confirm", js: "confirm", typ: true },
+        { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "tempDirectory", js: "tempDirectory", typ: "" },
+    ], false),
+    "ZarfCreateOptions": o([
+        { json: "imageCachePath", js: "imageCachePath", typ: "" },
+        { json: "insecure", js: "insecure", typ: true },
+        { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "skipSBOM", js: "skipSBOM", typ: true },
+    ], false),
+    "ZarfDeployOptions": o([
+        { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "components", js: "components", typ: "" },
+        { json: "nodePort", js: "nodePort", typ: "" },
+        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "secret", js: "secret", typ: "" },
+        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "storageClass", js: "storageClass", typ: "" },
+    ], false),
     "ZarfState": o([
         { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
         { json: "architecture", js: "architecture", typ: "" },
@@ -743,9 +774,9 @@ const typeMap: any = {
         { json: "zarfAppliance", js: "zarfAppliance", typ: true },
     ], false),
     "GeneratedPKI": o([
-        { json: "CA", js: "CA", typ: "" },
-        { json: "Cert", js: "Cert", typ: "" },
-        { json: "Key", js: "Key", typ: "" },
+        { json: "ca", js: "ca", typ: "" },
+        { json: "cert", js: "cert", typ: "" },
+        { json: "key", js: "key", typ: "" },
     ], false),
     "Architecture": [
         "amd64",

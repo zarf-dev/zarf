@@ -1,4 +1,10 @@
-import type { ClusterSummary, ZarfState, ZarfPackage, ZarfDeployOptions } from './api-types';
+import type {
+	ClusterSummary,
+	ZarfState,
+	ZarfPackage,
+	ZarfDeployOptions,
+	DeployedPackage
+} from './api-types';
 import { HTTP } from './http';
 
 const http = new HTTP();
@@ -21,7 +27,7 @@ const Packages = {
 	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<ZarfPackage>(`/packages/read/${encodeURIComponent(name)},`),
 	readInit: () => http.get<ZarfPackage>('/packages/read/init'),
-	getDeployedPackages: () => http.get<ZarfPackage[]>('/packages/list'),
+	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (body: ZarfDeployOptions) => http.put<boolean>('/packages/deploy', body),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
