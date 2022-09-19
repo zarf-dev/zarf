@@ -1,47 +1,48 @@
 <script>
+	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { fade } from 'svelte/transition';
+	import Hero from './hero.svelte';
+
 	export let msg = 'Loading...';
 </script>
 
-<div class="spinner-wrapper" in:fade={{ duration: 200 }}>
-	<span class="spinner" />
-	<span class="label">{msg}</span>
-</div>
+<Hero>
+	<div
+		class="spinner-wrapper"
+		style="background-image: url('{bigZarf}')"
+		in:fade={{ duration: 200 }}
+	>
+		<span class="spinner" />
+		<span class="label">{msg}</span>
+	</div>
+</Hero>
 
 <style lang="scss">
 	.spinner-wrapper {
-		display: block;
-		position: relative;
-		width: 1px;
-		height: 1px;
-		padding: 5rem;
-		margin: 8rem auto;
+		display: flex;
+		background-size: 59%;
+		background-position: center;
+		margin-top: -11.95rem;
 	}
 
 	.label {
 		text-align: center;
 		width: 100%;
-		display: block;
-		color: rgba(13, 19, 61, 1);
+		color: rgba(0, 0, 0, 0.6);
 		font-size: 1.2rem;
 		position: absolute;
-		bottom: 0;
-		left: 0;
+		top: 115%;
 	}
 
-	.spinner::after {
-		content: '';
+	.spinner {
 		box-sizing: border-box;
-		width: 5.5rem;
-		height: 5.5rem;
-		position: absolute;
-		left: 2rem;
-		top: 2rem;
+		width: 25rem;
+		height: 25rem;
 		border-radius: 50%;
-		border-top: 6px solid rgba(13, 19, 61, 1);
-		border-left: 6px solid rgba(13, 19, 61, 1);
-		border-bottom: 6px solid rgba(13, 19, 61, 1);
-		border-right: 6px solid rgba(13, 19, 61, 0);
+		border-top: 2rem solid #7bd5f5;
+		border-left: 2rem solid #7bd5f5;
+		border-bottom: 2rem solid #7bd5f5;
+		border-right: 2rem solid transparent;
 		animation: spinner 1s linear infinite;
 	}
 
