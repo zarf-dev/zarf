@@ -11,11 +11,11 @@ import (
 var assets embed.FS
 
 //go:embed cosign.pub
-var cosignPublicKeyUI string
+var cosignPublicKey string
 
 func main() {
 
 	config.UIAssets = assets
-	config.SGetPublicKey = cosignPublicKeyUI
+	config.SGetPublicKey = cosignPublicKey
 	cmd.Execute()
 }

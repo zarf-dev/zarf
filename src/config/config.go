@@ -69,7 +69,6 @@ var (
 
 	SGetPublicKey string
 	UIAssets      embed.FS
-	UIToken       string
 
 	// Variables set by the user
 	SetVariableMap map[string]string
