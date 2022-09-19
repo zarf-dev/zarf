@@ -1,0 +1,5 @@
+# Ignore file for false positives from protobuf, see the following for more information:
+#   https://github.com/anchore/grype/issues/558
+# ignore:
+#   - vulnerability: CVE-2021-22570
+#   - vulnerability: CVE-2015-5237
