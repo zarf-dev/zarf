@@ -12,7 +12,8 @@ type RestAPI struct {
 }
 
 type ClusterSummary struct {
-	Reachable bool   `json:"reachable"`
-	HasZarf   bool   `json:"hasZarf"`
-	Distro    string `json:"distro"`
+	Reachable bool      `json:"reachable"`
+	HasZarf   bool      `json:"hasZarf"`
+	Distro    string    `json:"distro"`
+	ZarfState ZarfState `json:"zarfState"`
 }

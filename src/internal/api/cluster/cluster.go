@@ -17,49 +17,29 @@ import (
 func Summary(w http.ResponseWriter, r *http.Request) {
 	message.Debug("cluster.Summary()")
 
+	var state types.ZarfState
+	var reachable bool
+	var distro string
+	var hasZarf bool
+
+	if err := k8s.WaitForHealthyCluster(5 * time.Second); err == nil {
+		reachable = true
+	}
+
+	if reachable {
+		distro, _ = k8s.DetectDistro()
+		state, _ = k8s.LoadZarfState()
+		hasZarf = state.Distro != ""
+	}
+
 	data := types.ClusterSummary{
-		Reachable: reachable(),
-		HasZarf:   hasZarf(),
-		Distro:    distro(),
+		Reachable: reachable,
+		HasZarf:   hasZarf,
+		Distro:    distro,
+		ZarfState: state,
 	}
 
 	common.WriteJSONResponse(w, data, http.StatusOK)
-}
-
-// Reachable checks if we can connect to the cluster.
-func Reachable(w http.ResponseWriter, r *http.Request) {
-	message.Debug("cluster.Reachable()")
-	common.WriteJSONResponse(w, reachable(), http.StatusOK)
-}
-
-// HasZarf checks if the cluster has been initialized by Zarf.
-func HasZarf(w http.ResponseWriter, r *http.Request) {
-	message.Debug("cluster.HasZarf()")
-	common.WriteJSONResponse(w, hasZarf(), http.StatusOK)
-}
-
-func reachable() bool {
-	// Test if we can connect to the cluster.
-	err := k8s.WaitForHealthyCluster(5 * time.Second)
-	return err == nil
-}
-
-func hasZarf() bool {
-	data, err := k8s.LoadZarfState()
-	if err != nil {
-		return false
-	}
-
-	// If this is an empty zarf state, then the cluster hasn't been initialized yet
-	return data.Distro != ""
-}
-
-func distro() string {
-	if distro, err := k8s.DetectDistro(); err != nil {
-		return ""
-	} else {
-		return distro
-	}
 }
 
 // InitializeCluster initializes the connected k8s cluster with Zarf

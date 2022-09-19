@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
-	"github.com/defenseunicorns/zarf/src/internal/api/state"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
@@ -62,9 +61,12 @@ func LaunchAPIServer() {
 	router.Route("/api", func(r chi.Router) {
 		r.Route("/cluster", func(r chi.Router) {
 			r.Get("/", cluster.Summary)
-			r.Get("/reachable", cluster.Reachable)
-			r.Get("/has-zarf", cluster.HasZarf)
 			r.Put("/initialize", cluster.InitializeCluster)
+
+			r.Route("/state", func(r chi.Router) {
+				r.Get("/", cluster.ReadState)
+				r.Put("/", cluster.UpdateState)
+			})
 		})
 
 		r.Route("/packages", func(r chi.Router) {
@@ -78,10 +80,6 @@ func LaunchAPIServer() {
 			r.Delete("/remove/{name}", packages.RemovePackage)
 		})
 
-		r.Route("/state", func(r chi.Router) {
-			r.Get("/", state.Read)
-			r.Put("/", state.Update)
-		})
 	})
 
 	// If no dev port specified, use the server port for the URL and try to open it

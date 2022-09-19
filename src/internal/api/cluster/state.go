@@ -1,4 +1,4 @@
-package state
+package cluster
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ import (
 )
 
 // Read the zarf state secret from the cluster, if it exists.
-func Read(w http.ResponseWriter, r *http.Request) {
+func ReadState(w http.ResponseWriter, r *http.Request) {
 	message.Debug("state.Read()")
 
 	data, err := k8s.LoadZarfState()
@@ -26,7 +26,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update the zarf state secret in the cluster.
-func Update(w http.ResponseWriter, r *http.Request) {
+func UpdateState(w http.ResponseWriter, r *http.Request) {
 	message.Debug("state.Update()")
 
 	var data types.ZarfState

@@ -1,4 +1,5 @@
 <script>
+	import { clusterStore } from '$lib/store';
 	import logo from '@images/zarf-logo.png';
 	import Icon from './icon.svelte';
 </script>
@@ -7,7 +8,9 @@
 	<div class="header-start">
 		<a href="/"><img alt="Zarf logo" id="logo" src={logo} width="100" /></a>
 		<div>
-			<pre>> cluster</pre>
+			{#if $clusterStore}
+				> {$clusterStore.distro}
+			{/if}
 		</div>
 	</div>
 

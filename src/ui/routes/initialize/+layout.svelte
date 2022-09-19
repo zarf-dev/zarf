@@ -6,7 +6,7 @@
 	import { Stepper } from '@ui';
 
 	Packages.readInit().then(pkgStore.set);
-  Packages.findInit().then(pkgPath.set)
+	Packages.findInit().then(pkgPath.set);
 </script>
 
 <Container>

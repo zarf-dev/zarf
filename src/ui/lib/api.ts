@@ -11,14 +11,11 @@ const http = new HTTP();
 
 const Cluster = {
 	summary: () => http.get<ClusterSummary>('/cluster'),
-	reachable: () => http.get<ZarfState>('/cluster/reachable'),
-	hasZarf: () => http.get<ZarfState>('/cluster/has-zarf'),
-	initialize: (body: ZarfDeployOptions) => http.put<boolean>('/cluster/initialize', body)
-};
-
-const State = {
-	read: () => http.get<ZarfState>('/state'),
-	update: (body: ZarfState) => http.patch<ZarfState>('/state', body)
+	initialize: (body: ZarfDeployOptions) => http.put<boolean>('/cluster/initialize', body),
+	state: {
+		read: () => http.get<ZarfState>('/state'),
+		update: (body: ZarfState) => http.patch<ZarfState>('/state', body)
+	}
 };
 
 const Packages = {
@@ -32,4 +29,4 @@ const Packages = {
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 
-export { Cluster, Packages, State };
+export { Cluster, Packages };
