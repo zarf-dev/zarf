@@ -2,11 +2,28 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import Container from '$lib/components/container.svelte';
-	import { pkgStore, pkgPath } from '$lib/store';
+	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Stepper } from '@ui';
 
 	Packages.readInit().then(pkgStore.set);
-	Packages.findInit().then(pkgPath.set);
+
+	// On first load set the required components and then unsubscribe
+	const once = pkgStore.subscribe((data) => {
+		if (data) {
+			let selected: number[] = [];
+
+			data.zarfPackage.components.forEach((component, index) => {
+				if (component.required) {
+					selected.push(index);
+				}
+			});
+
+			// Update the store with the required components
+			pkgComponentDeployStore.set(selected);
+			// Unscubscribe
+			once();
+		}
+	});
 </script>
 
 <Container>

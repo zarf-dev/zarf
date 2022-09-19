@@ -21,12 +21,11 @@ func Read(w http.ResponseWriter, r *http.Request) {
 
 	path := chi.URLParam(r, "path")
 
-	pkg, err := readPackage(w, path)
-	if err != nil {
+	if pkg, err := readPackage(w, path); err != nil {
 		message.ErrorWebf(err, w, "Unable to read the package")
+	} else {
+		common.WriteJSONResponse(w, pkg, http.StatusOK)
 	}
-
-	common.WriteJSONResponse(w, pkg, http.StatusOK)
 }
 
 // ReadInit finds and reads a zarf init package from the local filesystem and writes the zarf.yaml json to the response.
@@ -52,16 +51,17 @@ func ReadInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the init package
-	pkg, err := readPackage(w, initPackageName)
-	if err != nil {
+	if pkg, err := readPackage(w, initPackageName); err != nil {
 		message.ErrorWebf(err, w, "Unable to read the package")
+	} else {
+		common.WriteJSONResponse(w, pkg, http.StatusOK)
 	}
-
-	common.WriteJSONResponse(w, pkg, http.StatusOK)
 }
 
 // internal function to read a package from the local filesystem
-func readPackage(w http.ResponseWriter, path string) (pkg types.ZarfPackage, err error) {
+func readPackage(w http.ResponseWriter, path string) (pkg types.APIZarfPackage, err error) {
+	pkg.Path = path
+
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return pkg, err
@@ -75,7 +75,7 @@ func readPackage(w http.ResponseWriter, path string) (pkg types.ZarfPackage, err
 
 	// Read the Zarf yaml
 	configPath := filepath.Join(tmpDir, "zarf.yaml")
-	err = utils.ReadYaml(configPath, &pkg)
+	err = utils.ReadYaml(configPath, &pkg.ZarfPackage)
 	if err != nil {
 		return pkg, err
 	}

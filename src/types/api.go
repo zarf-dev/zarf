@@ -9,6 +9,7 @@ type RestAPI struct {
 	ConnectStrings    ConnectStrings    `json:"connectStrings"`
 	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
 	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
+	APIZarfPackage    APIZarfPackage    `json:"apiZarfPackage"`
 }
 
 type ClusterSummary struct {
@@ -16,4 +17,9 @@ type ClusterSummary struct {
 	HasZarf   bool      `json:"hasZarf"`
 	Distro    string    `json:"distro"`
 	ZarfState ZarfState `json:"zarfState"`
+}
+
+type APIZarfPackage struct {
+	Path        string      `json:"path"`
+	ZarfPackage ZarfPackage `json:"zarfPackage"`
 }

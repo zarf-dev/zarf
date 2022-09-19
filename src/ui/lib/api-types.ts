@@ -8,6 +8,7 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
+    apiZarfPackage:    APIZarfPackage;
     clusterSummary:    ClusterSummary;
     connectStrings:    { [key: string]: ConnectString };
     deployedPackage:   DeployedPackage;
@@ -18,48 +19,9 @@ export interface APITypes {
     zarfState:         ZarfState;
 }
 
-export interface ClusterSummary {
-    distro:    string;
-    hasZarf:   boolean;
-    reachable: boolean;
-    zarfState: ZarfState;
-}
-
-export interface ZarfState {
-    agentTLS: GeneratedPKI;
-    /**
-     * Machine architecture of the k8s node(s)
-     */
-    architecture: string;
-    /**
-     * K8s distribution of the cluster Zarf was deployed to
-     */
-    distro:       string;
-    nodePort:     string;
-    secret:       string;
-    storageClass: string;
-    /**
-     * Indicates if Zarf was initialized while deploying its own k8s cluster
-     */
-    zarfAppliance: boolean;
-}
-
-export interface GeneratedPKI {
-    ca:   string;
-    cert: string;
-    key:  string;
-}
-
-export interface ConnectString {
-    description: string;
-    url:         string;
-}
-
-export interface DeployedPackage {
-    cliVersion:         string;
-    data:               ZarfPackage;
-    deployedComponents: { [key: string]: DeployedComponent };
-    name:               string;
+export interface APIZarfPackage {
+    path:        string;
+    zarfPackage: ZarfPackage;
 }
 
 export interface ZarfPackage {
@@ -431,6 +393,50 @@ export interface ZarfPackageVariable {
     prompt?: boolean;
 }
 
+export interface ClusterSummary {
+    distro:    string;
+    hasZarf:   boolean;
+    reachable: boolean;
+    zarfState: ZarfState;
+}
+
+export interface ZarfState {
+    agentTLS: GeneratedPKI;
+    /**
+     * Machine architecture of the k8s node(s)
+     */
+    architecture: string;
+    /**
+     * K8s distribution of the cluster Zarf was deployed to
+     */
+    distro:       string;
+    nodePort:     string;
+    secret:       string;
+    storageClass: string;
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
+    zarfAppliance: boolean;
+}
+
+export interface GeneratedPKI {
+    ca:   string;
+    cert: string;
+    key:  string;
+}
+
+export interface ConnectString {
+    description: string;
+    url:         string;
+}
+
+export interface DeployedPackage {
+    cliVersion:         string;
+    data:               ZarfPackage;
+    deployedComponents: { [key: string]: DeployedComponent };
+    name:               string;
+}
+
 export interface DeployedComponent {
     installedCharts: InstalledCharts[];
 }
@@ -609,6 +615,7 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
+        { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
@@ -618,35 +625,9 @@ const typeMap: any = {
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
-    "ClusterSummary": o([
-        { json: "distro", js: "distro", typ: "" },
-        { json: "hasZarf", js: "hasZarf", typ: true },
-        { json: "reachable", js: "reachable", typ: true },
-        { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
-    ], false),
-    "ZarfState": o([
-        { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
-        { json: "architecture", js: "architecture", typ: "" },
-        { json: "distro", js: "distro", typ: "" },
-        { json: "nodePort", js: "nodePort", typ: "" },
-        { json: "secret", js: "secret", typ: "" },
-        { json: "storageClass", js: "storageClass", typ: "" },
-        { json: "zarfAppliance", js: "zarfAppliance", typ: true },
-    ], false),
-    "GeneratedPKI": o([
-        { json: "ca", js: "ca", typ: "" },
-        { json: "cert", js: "cert", typ: "" },
-        { json: "key", js: "key", typ: "" },
-    ], false),
-    "ConnectString": o([
-        { json: "description", js: "description", typ: "" },
-        { json: "url", js: "url", typ: "" },
-    ], false),
-    "DeployedPackage": o([
-        { json: "cliVersion", js: "cliVersion", typ: "" },
-        { json: "data", js: "data", typ: r("ZarfPackage") },
-        { json: "deployedComponents", js: "deployedComponents", typ: m(r("DeployedComponent")) },
-        { json: "name", js: "name", typ: "" },
+    "APIZarfPackage": o([
+        { json: "path", js: "path", typ: "" },
+        { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
     ], false),
     "ZarfPackage": o([
         { json: "build", js: "build", typ: u(undefined, r("ZarfBuildData")) },
@@ -752,6 +733,36 @@ const typeMap: any = {
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
+    ], false),
+    "ClusterSummary": o([
+        { json: "distro", js: "distro", typ: "" },
+        { json: "hasZarf", js: "hasZarf", typ: true },
+        { json: "reachable", js: "reachable", typ: true },
+        { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "ZarfState": o([
+        { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
+        { json: "architecture", js: "architecture", typ: "" },
+        { json: "distro", js: "distro", typ: "" },
+        { json: "nodePort", js: "nodePort", typ: "" },
+        { json: "secret", js: "secret", typ: "" },
+        { json: "storageClass", js: "storageClass", typ: "" },
+        { json: "zarfAppliance", js: "zarfAppliance", typ: true },
+    ], false),
+    "GeneratedPKI": o([
+        { json: "ca", js: "ca", typ: "" },
+        { json: "cert", js: "cert", typ: "" },
+        { json: "key", js: "key", typ: "" },
+    ], false),
+    "ConnectString": o([
+        { json: "description", js: "description", typ: "" },
+        { json: "url", js: "url", typ: "" },
+    ], false),
+    "DeployedPackage": o([
+        { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "data", js: "data", typ: r("ZarfPackage") },
+        { json: "deployedComponents", js: "deployedComponents", typ: m(r("DeployedComponent")) },
+        { json: "name", js: "name", typ: "" },
     ], false),
     "DeployedComponent": o([
         { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledCharts")) },
