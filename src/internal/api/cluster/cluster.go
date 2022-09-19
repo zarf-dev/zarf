@@ -22,7 +22,7 @@ func Summary(w http.ResponseWriter, r *http.Request) {
 	var distro string
 	var hasZarf bool
 
-	if err := k8s.WaitForHealthyCluster(5 * time.Second); err == nil {
+	if err := k8s.WaitForHealthyCluster(7 * time.Second); err == nil {
 		reachable = true
 	}
 

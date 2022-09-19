@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
+	import PackageComponent from '$lib/components/package-component.svelte';
+
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Button } from '@ui';
 </script>
@@ -9,13 +11,15 @@
 <p>Edits to default configurations are highlighted</p>
 <h2><Icon variant="package" /> Package Details</h2>
 
-<PackageCard pkg={$pkgStore} />
-<h2><Icon variant="component" /> Package Components</h2>
-<ul>
+<PackageCard pkg={$pkgStore.zarfPackage} />
+<h2><Icon variant="component" />Selected Package Components</h2>
+
+<div style="width: 100%;gap: 2px; display: flex; flex-direction: column;">
 	{#each $pkgComponentDeployStore as idx}
-		<li>{$pkgStore.components[idx].name} will be deployed</li>
+		<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
 	{/each}
-</ul>
+</div>
+
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined">configure</Button>
 	<Button href="/initialize/deploy" variant="flat">deploy</Button>
