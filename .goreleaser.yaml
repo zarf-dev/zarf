@@ -35,9 +35,11 @@ checksum:
   name_template: 'checksums.txt'
   extra_files:
     - glob: ./build/zarf-init-*
-    - glob: ./build/zarf-sbom.csv
-    - glob: ./build/zarf-known-cves.csv
   algorithm: sha256
+
+# generate sboms for each binary artifact
+sboms:
+  - artifacts: binary
 
 snapshot:
   name_template: "{{ incpatch .Version }}-snapshot"
@@ -56,8 +58,6 @@ release:
   mode: append
   extra_files:
     - glob: ./build/zarf-init-*
-    - glob: ./build/zarf-sbom.csv
-    - glob: ./build/zarf-known-cves.csv
 
 # Create a brew tap recipe that uses the new binary artifacts and push it to our tap
 brews:

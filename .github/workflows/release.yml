@@ -69,7 +69,7 @@ jobs:
           path: /tmp/zarf-*.log
 
       # Builds init packages since GoReleaser won't handle this for us
-      - name: "Build CVE and SBOM reports"
+      - name: "Create release time CVE report"
         run: "make cve-report"
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
@@ -90,6 +90,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
+
+      - name: "Save CVE report"
+        uses: actions/upload-artifact@v3
+        with:
+          name: cve-report
+          path: build/zarf-known-cves.csv
 
       - name: "Cleanup"
         run: sudo make destroy
