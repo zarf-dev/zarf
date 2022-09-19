@@ -3,8 +3,8 @@
 	import { Stepper } from '@ui';
 	import { Cluster } from '$lib/api';
 	import type { ZarfDeployOptions } from '$lib/api-types';
+	import Spinner from '$lib/components/spinner.svelte';
 
-	// @todo - update this view with the store interactions
 	// $: componentsStepperList = componentsToDeploy.map((idx) => {
 	// 	const config = pkgConfig.components[idx];
 	// 	return {
@@ -37,7 +37,9 @@
 
 <div>Deploying...</div>
 
-{#await Cluster.initialize(deployOptions) then successful}
+{#await Cluster.initialize(deployOptions)}
+	<Spinner />
+{:then successful}
 	{successful}
 	<div>Finished deploying</div>
 {/await}

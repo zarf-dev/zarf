@@ -32,7 +32,7 @@ func UpdateState(w http.ResponseWriter, r *http.Request) {
 	var data types.ZarfState
 
 	if err := k8s.SaveZarfState(data); err != nil {
-		common.WriteJSONResponse(w, nil, http.StatusInternalServerError)
+		message.ErrorWebf(err, w, "unable to update zarf state")
 	} else {
 		common.WriteJSONResponse(w, data, http.StatusCreated)
 	}
