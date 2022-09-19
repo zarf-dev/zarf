@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { Cluster } from '$lib/api';
 	import Header from '$lib/components/header.svelte';
+	import { clusterStore } from '$lib/store';
 	import '@fontsource/roboto';
 	import 'sanitize.css';
+
+	Cluster.summary().then(clusterStore.set);
 </script>
 
 <Header />

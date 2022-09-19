@@ -1,16 +1,15 @@
 <script>
-	import { Cluster } from '$lib/api';
+	import { clusterStore } from '$lib/store';
+
+	import { goto } from '$app/navigation';
+	import Spinner from '$lib/components/spinner.svelte';
 	import bigZarf from '@images/zarf-bubbles.png';
 	import { Button } from '@ui';
-	import Spinner from '$lib/components/spinner.svelte';
-	import { goto } from '$app/navigation';
 </script>
 
-{#await Cluster.summary()}
-	<Spinner />
-{:then summary}
-	{#if summary.reachable}
-		{#if summary.hasZarf}
+{#if $clusterStore}
+	{#if $clusterStore.reachable}
+		{#if $clusterStore.hasZarf}
 			{goto(`/packages`, { replaceState: true })}
 		{:else}
 			<section class="hero">
@@ -32,7 +31,9 @@
 			</section>
 		{/if}
 	{/if}
-{/await}
+{:else}
+	<Spinner />
+{/if}
 
 <style>
 	#zarf-logo {

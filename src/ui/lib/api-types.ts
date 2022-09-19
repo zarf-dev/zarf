@@ -22,6 +22,32 @@ export interface ClusterSummary {
     distro:    string;
     hasZarf:   boolean;
     reachable: boolean;
+    zarfState: ZarfState;
+}
+
+export interface ZarfState {
+    agentTLS: GeneratedPKI;
+    /**
+     * Machine architecture of the k8s node(s)
+     */
+    architecture: string;
+    /**
+     * K8s distribution of the cluster Zarf was deployed to
+     */
+    distro:       string;
+    nodePort:     string;
+    secret:       string;
+    storageClass: string;
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
+    zarfAppliance: boolean;
+}
+
+export interface GeneratedPKI {
+    ca:   string;
+    cert: string;
+    key:  string;
 }
 
 export interface ConnectString {
@@ -437,31 +463,6 @@ export interface ZarfDeployOptions {
     storageClass:  string;
 }
 
-export interface ZarfState {
-    agentTLS: GeneratedPKI;
-    /**
-     * Machine architecture of the k8s node(s)
-     */
-    architecture: string;
-    /**
-     * K8s distribution of the cluster Zarf was deployed to
-     */
-    distro:       string;
-    nodePort:     string;
-    secret:       string;
-    storageClass: string;
-    /**
-     * Indicates if Zarf was initialized while deploying its own k8s cluster
-     */
-    zarfAppliance: boolean;
-}
-
-export interface GeneratedPKI {
-    ca:   string;
-    cert: string;
-    key:  string;
-}
-
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
 export class Convert {
@@ -621,6 +622,21 @@ const typeMap: any = {
         { json: "distro", js: "distro", typ: "" },
         { json: "hasZarf", js: "hasZarf", typ: true },
         { json: "reachable", js: "reachable", typ: true },
+        { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "ZarfState": o([
+        { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
+        { json: "architecture", js: "architecture", typ: "" },
+        { json: "distro", js: "distro", typ: "" },
+        { json: "nodePort", js: "nodePort", typ: "" },
+        { json: "secret", js: "secret", typ: "" },
+        { json: "storageClass", js: "storageClass", typ: "" },
+        { json: "zarfAppliance", js: "zarfAppliance", typ: true },
+    ], false),
+    "GeneratedPKI": o([
+        { json: "ca", js: "ca", typ: "" },
+        { json: "cert", js: "cert", typ: "" },
+        { json: "key", js: "key", typ: "" },
     ], false),
     "ConnectString": o([
         { json: "description", js: "description", typ: "" },
@@ -763,20 +779,6 @@ const typeMap: any = {
         { json: "secret", js: "secret", typ: "" },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
         { json: "storageClass", js: "storageClass", typ: "" },
-    ], false),
-    "ZarfState": o([
-        { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
-        { json: "architecture", js: "architecture", typ: "" },
-        { json: "distro", js: "distro", typ: "" },
-        { json: "nodePort", js: "nodePort", typ: "" },
-        { json: "secret", js: "secret", typ: "" },
-        { json: "storageClass", js: "storageClass", typ: "" },
-        { json: "zarfAppliance", js: "zarfAppliance", typ: true },
-    ], false),
-    "GeneratedPKI": o([
-        { json: "ca", js: "ca", typ: "" },
-        { json: "cert", js: "cert", typ: "" },
-        { json: "key", js: "key", typ: "" },
     ], false),
     "Architecture": [
         "amd64",
