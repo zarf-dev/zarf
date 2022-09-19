@@ -46,6 +46,10 @@ destroy:
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
+ensure-ui-build-dir:
+	mkdir -p build/ui
+	touch build/ui/index.html
+
 build-ui:
 	npm ci
 	npm run build
@@ -72,13 +76,11 @@ build-injector-registry-amd:
 build-injector-registry-arm:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
-docs-and-schema: 
+docs-and-schema: ensure-ui-build-dir
 	go run main.go internal generate-cli-docs
 	.hooks/create-zarf-schema.sh
 
-dev:
-	mkdir -p build/ui
-	touch build/ui/index.html
+dev: ensure-ui-build-dir
 	go mod download
 	npm ci
 	npm run dev
