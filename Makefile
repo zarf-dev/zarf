@@ -84,6 +84,10 @@ clean-docs-and-schema:
 test-cves:
 	go run main.go tools sbom packages . -o json | grype --fail-on low
 
+cve-report:
+	go run main.go tools sbom packages . -o template -t .hooks/syft.tmpl > build/zarf-sbom.csv
+	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
+
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
 dev-agent-image:

@@ -21,6 +21,9 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: "Dependency: Install Grype"
+        run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
+
       - name: "Checkout Repo"
         uses: actions/checkout@v3
         with:
@@ -64,6 +67,10 @@ jobs:
         with:
           name: debug-log
           path: /tmp/zarf-*.log
+
+      # Builds init packages since GoReleaser won't handle this for us
+      - name: "Build CVE and SBOM reports"
+        run: "make cve-report"
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
