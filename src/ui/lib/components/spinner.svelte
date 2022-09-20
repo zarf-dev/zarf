@@ -1,28 +1,38 @@
 <script>
-	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { fade } from 'svelte/transition';
+	import bigZarf from '@images/zarf-bubbles-right.png';
 	import Hero from './hero.svelte';
+	import { onMount } from 'svelte';
 
 	export let msg = 'Loading...';
+
+	// Need this to force-enable first onload animation to avoid ugly flash on very fast REST calls
+	let ready = false;
+	onMount(() => {
+		ready = true;
+	});
 </script>
 
 <Hero>
-	<div
-		class="spinner-wrapper"
-		style="background-image: url('{bigZarf}')"
-		in:fade={{ duration: 200 }}
-	>
-		<span class="spinner" />
-		<span class="label">{msg}</span>
-	</div>
+	{#if ready}
+		<div
+			class="spinner-wrapper"
+			style="background-image: url('{bigZarf}')"
+			in:fade={{ duration: 1000 }}
+		>
+			<span class="spinner" />
+			<span class="label">{msg}</span>
+		</div>
+	{/if}
 </Hero>
 
 <style lang="scss">
 	.spinner-wrapper {
+		position: absolute;
 		display: flex;
 		background-size: 59%;
 		background-position: center;
-		margin-top: -11.95rem;
+		margin-top: -36.5vh;
 	}
 
 	.label {

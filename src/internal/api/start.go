@@ -61,7 +61,6 @@ func LaunchAPIServer() {
 	router.Route("/api", func(r chi.Router) {
 		r.Route("/cluster", func(r chi.Router) {
 			r.Get("/", cluster.Summary)
-			r.Put("/initialize", cluster.InitializeCluster)
 
 			r.Route("/state", func(r chi.Router) {
 				r.Get("/", cluster.ReadState)
