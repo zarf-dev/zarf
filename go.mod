@@ -36,7 +36,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
+require k8s.io/utils v0.0.0-20220823124924-e9cbc92d1a73
 
 require (
 	atomicgo.dev/cursor v0.1.1 // indirect
