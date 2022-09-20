@@ -7,7 +7,7 @@
 <header class="header mdc-elevation--z8">
 	<div class="header-start">
 		<a href="/"><img alt="Zarf logo" id="logo" src={logo} width="100" /></a>
-		<div>
+		<div id="cluster-selector">
 			{#if $clusterStore}
 				> {$clusterStore.distro}
 			{/if}
