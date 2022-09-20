@@ -8,10 +8,6 @@
 	import Hero from '$lib/components/hero.svelte';
 </script>
 
-<svelte:head>
-	<title>Zarf UI</title>
-</svelte:head>
-
 {#if $clusterStore}
 	{#if $clusterStore.hasZarf}
 		{goto(`/packages`, { replaceState: true })}

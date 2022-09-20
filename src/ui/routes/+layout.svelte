@@ -8,6 +8,10 @@
 	Cluster.summary().then(clusterStore.set);
 </script>
 
+<svelte:head>
+	<title>Zarf UI</title>
+</svelte:head>
+
 <Header />
 
 <main>
