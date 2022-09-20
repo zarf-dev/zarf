@@ -25,8 +25,10 @@ test.describe('homepage', () => {
 		await expect(spinner).toBeVisible();
 
 		const initBtn = page.locator('#init-cluster');
+		await expect(initBtn).toHaveAttribute('href', '/initialize/configure');
 		await expect(initBtn).toBeEnabled();
 
-		await expect(clusterSelector).toBeTruthy();
+		const currentCluster = await clusterSelector.textContent();
+		await expect(currentCluster).toBeTruthy();
 	});
 });
