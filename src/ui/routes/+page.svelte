@@ -8,6 +8,10 @@
 	import Hero from '$lib/components/hero.svelte';
 </script>
 
+<svelte:head>
+	<title>Zarf UI</title>
+</svelte:head>
+
 {#if $clusterStore}
 	{#if $clusterStore.hasZarf}
 		{goto(`/packages`, { replaceState: true })}
@@ -30,7 +34,7 @@
 				{/if}
 			</div>
 
-			<Button variant="raised" color="primary" href="/initialize/configure"
+			<Button variant="raised" color="primary" href="/initialize/configure" id="init-cluster"
 				>Initialize Cluster</Button
 			>
 		</Hero>
