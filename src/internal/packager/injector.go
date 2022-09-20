@@ -296,6 +296,8 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 	seedImage := config.GetSeedImage()
 
 	pod.Labels["app"] = "zarf-injector"
+	// Ensure zarf agent doesnt break the injector on future runs
+	pod.Labels["zarf.dev/agent"] = "ignore"
 
 	// Bind the pod to the node the image was found on
 	pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": node}
