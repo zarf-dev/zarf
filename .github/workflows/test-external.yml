@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
