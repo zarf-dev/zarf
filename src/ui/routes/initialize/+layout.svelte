@@ -7,12 +7,12 @@
 
 	Packages.readInit().then(pkgStore.set);
 
-	// On first load set the required components and then unsubscribe
-	const once = pkgStore.subscribe((data) => {
-		if (data) {
-			let selected: number[] = [];
+	let setupComplete = false;
 
-			data.zarfPackage.components.forEach((component, index) => {
+	pkgStore.subscribe((pkg) => {
+		if (!setupComplete && pkg) {
+			let selected: number[] = [];
+			pkg.zarfPackage.components.forEach((component, index) => {
 				if (component.required) {
 					selected.push(index);
 				}
@@ -20,8 +20,8 @@
 
 			// Update the store with the required components
 			pkgComponentDeployStore.set(selected);
-			// Unscubscribe
-			once();
+
+			setupComplete = true;
 		}
 	});
 </script>
@@ -57,16 +57,6 @@
 </Container>
 
 <style>
-	h1 {
-		font-size: 34px;
-		font-weight: 400;
-		line-height: 42px;
-		letter-spacing: 0.25px;
-	}
-	h2 {
-		display: flex;
-		gap: 0.75rem; /* 12px */
-	}
 	:global(.actionButtonsContainer) {
 		display: flex;
 		justify-content: space-between;

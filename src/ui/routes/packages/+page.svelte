@@ -6,21 +6,21 @@
 	import { Button } from '@ui';
 </script>
 
-<Container>
-	<div class="top-title">
-		<h1>📦 Deployed Zarf Packages</h1>
-		<Button variant="outlined">✚ New Package</Button>
-	</div>
-	{#await Packages.getDeployedPackages()}
-		<Spinner />
-	{:then packages}
+{#await Packages.getDeployedPackages()}
+	<Spinner />
+{:then packages}
+	<Container>
+		<div class="top-title">
+			<h1>📦 Deployed Zarf Packages</h1>
+			<Button variant="outlined">✚ New Package</Button>
+		</div>
 		{#each packages as pkg}
 			<article>
 				<PackageCard pkg={pkg.data} />
 			</article>
 		{/each}
-	{/await}
-</Container>
+	</Container>
+{/await}
 
 <style>
 	.top-title {
