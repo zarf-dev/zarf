@@ -1,6 +1,7 @@
 <script>
 	import { Packages } from '$lib/api';
 	import Container from '$lib/components/container.svelte';
+	import Hero from '$lib/components/hero.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
 	import Spinner from '$lib/components/spinner.svelte';
 	import { Button } from '@ui';
@@ -9,17 +10,26 @@
 {#await Packages.getDeployedPackages()}
 	<Spinner />
 {:then packages}
-	<Container>
-		<div class="top-title">
-			<h1>📦 Deployed Zarf Packages</h1>
-			<Button variant="outlined">✚ New Package</Button>
-		</div>
-		{#each packages as pkg}
-			<article>
-				<PackageCard pkg={pkg.data} />
-			</article>
-		{/each}
-	</Container>
+	{#if packages.length === 0}
+		<Hero
+			><div>
+				<h3>No deployed packages 🙁</h3>
+				<Button href="/" variant="flat">Go Home</Button>
+			</div></Hero
+		>
+	{:else}
+		<Container>
+			<div class="top-title">
+				<h1>📦 Deployed Zarf Packages</h1>
+				<Button variant="outlined">✚ New Package</Button>
+			</div>
+			{#each packages as pkg}
+				<article>
+					<PackageCard pkg={pkg.data} />
+				</article>
+			{/each}
+		</Container>
+	{/if}
 {/await}
 
 <style>
