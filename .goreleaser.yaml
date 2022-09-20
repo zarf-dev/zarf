@@ -37,6 +37,10 @@ checksum:
     - glob: ./build/zarf-init-*
   algorithm: sha256
 
+# generate sboms for each binary artifact
+sboms:
+  - artifacts: binary
+
 snapshot:
   name_template: "{{ incpatch .Version }}-snapshot"
 

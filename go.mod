@@ -36,6 +36,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+require k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
+
 require (
 	atomicgo.dev/cursor v0.1.1 // indirect
 	atomicgo.dev/keyboard v0.2.8 // indirect
@@ -400,7 +402,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/kubectl v0.24.3 // indirect
 	k8s.io/metrics v0.24.3 // indirect
-	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.36.1 // indirect
 	modernc.org/ccgo/v3 v3.16.8 // indirect
