@@ -31,12 +31,33 @@
 	};
 </script>
 
-{#await Packages.deploy(deployOptions) then successful}
-	{successful}
-	<div>Finished deploying</div>
-{/await}
+<svelte:head>
+	<title>Deploy</title>
+</svelte:head>
 
-<h1>Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</h1>
-<div style="display:flex;justify-content:center;">
-	<Stepper orientation="vertical" steps={components} />
-</div>
+{#await Packages.deploy(deployOptions)}
+	<h1>Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</h1>
+	<div style="display:flex;justify-content:center;">
+		<Stepper orientation="vertical" steps={components} />
+	</div>
+{:then successful}
+	<h1>Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</h1>
+	<div style="display:flex;justify-content:center;">
+		<Stepper
+			orientation="vertical"
+			steps={[
+				...components.map((c) => {
+					c.iconContent = undefined;
+					c.variant = 'info';
+					c.disabled = false;
+					return c;
+				}),
+				{
+					title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
+					variant: successful ? 'success' : 'error',
+					disabled: false
+				}
+			]}
+		/>
+	</div>
+{/await}
