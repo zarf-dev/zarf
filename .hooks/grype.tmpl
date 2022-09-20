@@ -1,0 +1,4 @@
+"Package","Version","Fixed In","Vulnerability ID","Severity","Path(s)"
+{{- range .Matches}}
+"{{.Artifact.Name}}","{{.Artifact.Version}}","{{range .Vulnerability.Fix.Versions}}{{.}}{{end}}","{{.Vulnerability.ID}}","{{.Vulnerability.Severity}}","{{range .Artifact.Locations}}{{.RealPath}}{{end}}"
+{{- end}}
