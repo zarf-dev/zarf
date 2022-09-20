@@ -7,6 +7,10 @@
 	import { Button } from '@ui';
 </script>
 
+<svelte:head>
+	<title>Review</title>
+</svelte:head>
+
 <h1>Review Deployment</h1>
 <p>Edits to default configurations are highlighted</p>
 <h2><Icon variant="package" /> Package Details</h2>

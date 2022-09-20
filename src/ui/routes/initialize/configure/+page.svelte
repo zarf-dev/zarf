@@ -6,6 +6,10 @@
 	import { Button } from '@ui';
 </script>
 
+<svelte:head>
+	<title>Configure</title>
+</svelte:head>
+
 <h1>Configure Package Deployment</h1>
 <h2><Icon variant="package" /> Package Details</h2>
 

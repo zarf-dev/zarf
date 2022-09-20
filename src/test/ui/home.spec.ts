@@ -30,5 +30,7 @@ test.describe('homepage', () => {
 
 		const currentCluster = await clusterSelector.textContent();
 		await expect(currentCluster).toBeTruthy();
+
+		await expect(spinner).not.toBeVisible();
 	});
 });
