@@ -96,6 +96,23 @@ func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
 		return fmt.Errorf("unable to remove unused git refs from the repo: %w", err)
 	}
 
+	// Fetch remote offline refs in case of redeploy or if multiple refs are specified in one package
+	fetchOptions := &git.FetchOptions{
+		RemoteName: offlineRemoteName,
+		Auth:       &gitCred,
+		RefSpecs: []goConfig.RefSpec{
+			"refs/heads/*:refs/heads/*",
+			onlineRemoteRefPrefix + "*:refs/heads/*",
+			"refs/tags/*:refs/tags/*",
+		},
+	}
+
+	err = repo.Fetch(fetchOptions)
+	if err != nil {
+		spinner.Debugf("%s", err.Error())
+	}
+
+	// Push all heads and tags to the offline remote
 	err = repo.Push(&git.PushOptions{
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,

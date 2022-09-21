@@ -13,9 +13,15 @@ To view the example source code, select the `Edit this page` link below the arti
 
 ## Tag-Provided Git Repository Clone
 
-Tag-provided `git` repository cloning is the recommended way of cloning a `git` repository for air-gapped deployments. Tag-provided clones are defined using the `url.git@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.12.0`).
+Tag-provided `git` repository cloning is the recommended way of cloning a `git` repository for air-gapped deployments. Tag-provided clones are defined using the `url.git@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).
 
 A tag-provided clone only mirrors the tag defined in the Zarf definition. The tag will appear on the `git` mirror as the default branch name of the repository being mirrored, along with the tag itself.
+
+## SHA-Provided Git Repository Clone
+
+SHA-provided `git` repository cloning is another supported way of cloning repos in Zarf but is not recommended as it is less readable / understandable than tag cloning.  Commit SHAs are defined using the same `url.git@sha` format as seen in the example of the `defenseunicorns/zarf-docs` repository (`https://github.com/defenseunicorns/zarf-docs.git@979d14c35f5d2fb07df13269bb5ef43ea638f54a`).
+
+A sha-provided clone only mirrors the tag defined in the Zarf definition. The SHA will appear on the `git` mirror as the default branch name of the repository being mirrored as it does with tagging.
 
 ## Git Repository Full Clone
 

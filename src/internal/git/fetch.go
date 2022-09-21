@@ -8,8 +8,8 @@ import (
 	goConfig "github.com/go-git/go-git/v5/config"
 )
 
-// fetchTag performs a `git fetch` of _only_ the provided tag
-func fetchTag(gitDirectory string, tag string) {
+// FetchTag performs a `git fetch` of _only_ the provided tag.
+func FetchTag(gitDirectory string, tag string) {
 	message.Debugf("Fetch git tag %s from repo %s", tag, path.Base(gitDirectory))
 
 	repo, err := git.PlainOpen(gitDirectory)
@@ -24,10 +24,10 @@ func fetchTag(gitDirectory string, tag string) {
 		message.Fatal(err, "Failed to identify remotes.")
 	}
 
-	gitUrl := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find tag: %s for %s", tag, gitUrl)
+	gitURL := remotes[0].Config().URLs[0]
+	message.Debugf("Attempting to find tag: %s for %s", tag, gitURL)
 
-	gitCred := FindAuthForHost(gitUrl)
+	gitCred := FindAuthForHost(gitURL)
 
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
@@ -46,5 +46,44 @@ func fetchTag(gitDirectory string, tag string) {
 		message.Debug("Tag already fetched")
 	} else if err != nil {
 		message.Fatal(err, "Not a valid tag or unable to fetch")
+	}
+}
+
+// FetchHash performs a `git fetch` of _only_ the provided commit hash.
+func FetchHash(gitDirectory string, hash string) {
+	message.Debugf("Fetch git hash %s from repo %s", hash, path.Base(gitDirectory))
+
+	repo, err := git.PlainOpen(gitDirectory)
+	if err != nil {
+		message.Fatal(err, "Unable to load the git repo")
+	}
+
+	remotes, err := repo.Remotes()
+	// There should never be no remotes, but it's easier to account for than
+	// let be a bug later
+	if err != nil || len(remotes) == 0 {
+		message.Fatal(err, "Failed to identify remotes.")
+	}
+
+	gitURL := remotes[0].Config().URLs[0]
+	message.Debugf("Attempting to find hash: %s for %s", hash, gitURL)
+
+	gitCred := FindAuthForHost(gitURL)
+
+	fetchOptions := &git.FetchOptions{
+		RemoteName: onlineRemoteName,
+		RefSpecs: []goConfig.RefSpec{
+			goConfig.RefSpec(hash + ":" + hash),
+		},
+	}
+
+	if gitCred.Auth.Username != "" {
+		fetchOptions.Auth = &gitCred.Auth
+	}
+
+	err = repo.Fetch(fetchOptions)
+
+	if err != nil {
+		message.Fatal(err, "Not a valid hash or unable to fetch")
 	}
 }

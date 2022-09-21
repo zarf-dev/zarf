@@ -29,13 +29,13 @@ func CheckoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName)
 	if err != nil {
 		message.Fatal(err, "Failed to locate tag in repository.")
 	}
-	checkoutHashAsBranch(path, tagRef.Hash(), branch)
+	CheckoutHashAsBranch(path, tagRef.Hash(), branch)
 }
 
-// checkoutHashAsBranch performs a `git checkout` of the commit hash associated
+// CheckoutHashAsBranch performs a `git checkout` of the commit hash associated
 // with the provided hash
 // It will delete the branch provided if it exists
-func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.ReferenceName) {
+func CheckoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.ReferenceName) {
 	message.Debugf("Checkout hash %s as branch %s for %s", hash.String(), branch.String(), path)
 
 	_ = deleteBranchIfExists(path, branch)
