@@ -13,7 +13,7 @@ import { devices } from '@playwright/test';
 const config: PlaywrightTestConfig = {
 	testDir: './src/test/ui',
 	/* Maximum time one test can run for. */
-	timeout: 30 * 1000,
+	timeout: 10 * 69 * 1000,
 	expect: {
 		/**
 		 * Maximum time expect() should wait for the condition to be met.
@@ -56,14 +56,14 @@ const config: PlaywrightTestConfig = {
 			use: {
 				...devices['Desktop Firefox']
 			}
-		},
-
-		{
-			name: 'webkit',
-			use: {
-				...devices['Desktop Safari']
-			}
 		}
+
+		// {
+		// 	name: 'webkit',
+		// 	use: {
+		// 		...devices['Desktop Safari']
+		// 	}
+		// }
 
 		/* Test against mobile viewports. */
 		// {
