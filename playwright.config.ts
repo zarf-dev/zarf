@@ -12,8 +12,8 @@ import { devices } from '@playwright/test';
  */
 const config: PlaywrightTestConfig = {
 	testDir: './src/test/ui',
-	/* Maximum time one test can run for. */
-	timeout: 10 * 69 * 1000,
+	/* This is 10 minutes jon */
+	timeout: 10 * 60 * 1000,
 	expect: {
 		/**
 		 * Maximum time expect() should wait for the condition to be met.
@@ -36,7 +36,7 @@ const config: PlaywrightTestConfig = {
 		/* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
 		actionTimeout: 0,
 		/* Base URL to use in actions like `await page.goto('/')`. */
-		baseURL: 'http://localhost:5173',
+		baseURL: process.env.CI ? 'http://localhost:3333' : 'http://localhost:5173',
 
 		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
 		trace: 'on-first-retry'
@@ -64,34 +64,6 @@ const config: PlaywrightTestConfig = {
 		// 		...devices['Desktop Safari']
 		// 	}
 		// }
-
-		/* Test against mobile viewports. */
-		// {
-		//   name: 'Mobile Chrome',
-		//   use: {
-		//     ...devices['Pixel 5'],
-		//   },
-		// },
-		// {
-		//   name: 'Mobile Safari',
-		//   use: {
-		//     ...devices['iPhone 12'],
-		//   },
-		// },
-
-		/* Test against branded browsers. */
-		// {
-		//   name: 'Microsoft Edge',
-		//   use: {
-		//     channel: 'msedge',
-		//   },
-		// },
-		// {
-		//   name: 'Google Chrome',
-		//   use: {
-		//     channel: 'chrome',
-		//   },
-		// },
 	],
 
 	/* Folder for test artifacts such as screenshots, videos, traces, etc. */
@@ -99,7 +71,7 @@ const config: PlaywrightTestConfig = {
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: 'npm run dev',
+		command: process.env.CI ? 'make test-built-ui' : 'npm run dev',
 		port: 3333,
 		reuseExistingServer: true,
 		timeout: 120 * 1000
