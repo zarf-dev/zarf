@@ -70,6 +70,7 @@ func PushAllDirectories(localPath string) error {
 			repoName, err := transformURLtoRepoName(remoteUrl)
 			if err != nil {
 				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
+				return err
 			}
 
 			err = addReadOnlyUserToRepo(gitServerURL, repoName)
@@ -101,7 +102,7 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 	remoteUrl := remote.Config().URLs[0]
 	targetUrl, err := transformURL(tunnelUrl, remoteUrl, username)
 	if err != nil {
-		return nil, fmt.Errorf("unable to transform the git url: %#v", err)
+		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
@@ -116,7 +117,6 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 }
 
 func push(repo *git.Repository, localPath string, spinner *message.Spinner) error {
-
 	gitCred := http.BasicAuth{
 		Username: config.GetState().GitServer.PushUsername,
 		Password: config.GetState().GitServer.PushPassword,

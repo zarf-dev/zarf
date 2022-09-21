@@ -88,6 +88,7 @@ func PrintConnectTable() error {
 	return nil
 }
 
+// IsServiceURL checks of a string appears to be a route to a local k8s service resource
 func IsServiceURL(url string) bool {
 	if strings.Contains(url, "svc.cluster.local:") || strings.HasSuffix(url, "svc.cluster.local") {
 		return true
@@ -107,7 +108,7 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 	// Get the remote port from the serviceURL
 	remotePort, err := strconv.Atoi(parsedURL.Port())
 	if err != nil {
-		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %#v", serviceURL, err)
+		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %w", serviceURL, err)
 	}
 
 	// Get the rest of the information from the remaining parts of the hostname

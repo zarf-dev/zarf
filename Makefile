@@ -151,7 +151,8 @@ test-e2e: init-package build-examples
 
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
-test-external: init-package
+test-external:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m

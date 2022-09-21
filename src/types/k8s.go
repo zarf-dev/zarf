@@ -26,13 +26,12 @@ type DeployedComponent struct {
 	InstalledCharts []InstalledCharts `json:"installedCharts"`
 }
 
-// TODO: @JPERRY This name should be singular
+// TODO: @JPERRY This name should be singular.
 type InstalledCharts struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`
 }
 
-// TODO: Should the password for the GitServerINfo be a secret/encoded?
 type GitServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`

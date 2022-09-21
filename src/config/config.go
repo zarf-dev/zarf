@@ -25,13 +25,15 @@ const (
 	PackagePrefix = "zarf-package"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength  = 40
-	ZarfGitPushUser         = "zarf-git-user"
-	ZarfGitReadUser         = "zarf-git-read-user"
-	ZarfRegistryPushUser    = "zarf-push"
-	ZarfRegistryPullUser    = "zarf-pull"
-	ZarfImagePullSecretName = "private-registry"
-	ZarfGitServerSecretName = "private-git-server"
+	ZarfMaxChartNameLength   = 40
+	ZarfGitPushUser          = "zarf-git-user"
+	ZarfGitReadUser          = "zarf-git-read-user"
+	ZarfRegistryPushUser     = "zarf-push"
+	ZarfRegistryPullUser     = "zarf-pull"
+	ZarfImagePullSecretName  = "private-registry"
+	ZarfGitServerSecretName  = "private-git-server"
+	ZarfGeneratedPasswordLen = 24
+	ZarfGeneratedSecretLen   = 48
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
@@ -65,9 +67,13 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
+	// InitOptions tracks user-defined values for the active Zarf initialization.
 	InitOptions types.ZarfInitOptions
-	CliArch     string
 
+	// CliArch is the computer architecture of the device executing the CLI commands
+	CliArch string
+
+	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
 
 	// Private vars

@@ -38,7 +38,7 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	zarfState, err := getStateFromAgentPod(zarfStatePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load zarf state from file: %v", err)
+		return nil, fmt.Errorf("failed to load zarf state from file: %w", err)
 	}
 
 	// Form the gitServerURL from the state
@@ -48,7 +48,7 @@ func mutateGitRepository(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// parse to simple struct to read the git url
 	gitRepo := &GenericGitRepo{}
 	if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal manifest: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
 	}
 
 	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServer.PushUsername)

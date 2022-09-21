@@ -16,7 +16,6 @@ import (
 )
 
 func TestExternalDeploy(t *testing.T) {
-
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
@@ -60,7 +59,7 @@ func TestExternalDeploy(t *testing.T) {
 
 	// Verify flux was able to pull from the 'external' repository
 	kubectlOut := verifyPodinfoDeployment(t)
-	assert.Contains(t, string(kubectlOut), "condition met")
+	assert.Contains(t, kubectlOut, "condition met")
 }
 
 func verifyPodinfoDeployment(t *testing.T) string {
@@ -69,7 +68,6 @@ func verifyPodinfoDeployment(t *testing.T) string {
 		// delay check 3 seconds
 		time.Sleep(2 * time.Second)
 		select {
-
 		// on timeout abort
 		case <-timeout:
 			t.Error("Timeout waiting for flux podinfo deployment")

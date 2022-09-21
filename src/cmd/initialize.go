@@ -35,10 +35,12 @@ var initCmd = &cobra.Command{
 		"that the Zarf binary is located in.\n\n\n\n" +
 
 		"Example Usage:\n" +
-		"Initializing without any optional components:\n`zarf init`\n\n" +
-		"Initializing w/ Zarfs internal git server:\n`zarf init --components=git-server`\n\n" +
-		"Initializing w/ an external registry:\n`zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
-		"Initializing w/ an external git server:\n`zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}`\n\n",
+		"# Initializing without any optional components:\nzarf init\n\n" +
+		"# Initializing w/ Zarfs internal git server:\nzarf init --components=git-server\n\n" +
+		"# Initializing w/ Zarfs internal git server and PLG stack:\nzarf init --components=git-server,logging\n\n" +
+		"# Initializing w/ an internal registry but with a different nodeport:\nzarf init --nodeport=30333\n\n" +
+		"# Initializing w/ an external registry:\nzarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
+		"# Initializing w/ an external git server:\nzarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}\n\n",
 
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()

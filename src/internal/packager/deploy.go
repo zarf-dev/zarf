@@ -199,7 +199,11 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 				seedZarfState(tempPath)
 				runInjectionMadness(tempPath)
 				installedCharts = deployComponent(tempPath, component, !addShasumToImg)
-				postSeedRegistry(tempPath)
+				err := postSeedRegistry(tempPath)
+				if err != nil {
+					message.Warnf("Unable to seed the Zarf registry")
+					return deployedComponents //TODO: @JPERRY this function should return an err here..
+				}
 			}
 		case "zarf-agent":
 			// Seed the state if we are using an external registry
@@ -227,13 +231,6 @@ func deployComponent(tempPath tempPaths, component types.ZarfComponent, addShasu
 	// Toggles for general deploy operations
 	componentPath := createComponentPaths(tempPath.components, component)
 
-	// Don't inject a registry if an external one has been provided
-	// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
-	if (config.InitOptions.RegistryInfo.Address != "") && (component.Name == "zarf-injector" || component.Name == "zarf-registry") {
-		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-		return installedCharts
-	}
-
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
@@ -250,7 +247,7 @@ func deployComponent(tempPath tempPaths, component types.ZarfComponent, addShasu
 	// Generate a value template
 	valueTemplate = template.Generate()
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
-		valueTemplate = getUpdatedValueTemplate(valueTemplate, component)
+		valueTemplate = getUpdatedValueTemplate(component)
 	}
 
 	/* Install all the parts of the component */
@@ -283,7 +280,6 @@ func runComponentScripts(scripts []string, componentScript types.ZarfComponentSc
 	for _, script := range scripts {
 		loopScriptUntilSuccess(script, componentScript)
 	}
-	return
 }
 
 // Move files onto the host of the machine performing the deployment
@@ -337,7 +333,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values
-func getUpdatedValueTemplate(valueTemplate template.Values, component types.ZarfComponent) template.Values {
+func getUpdatedValueTemplate(component types.ZarfComponent) template.Values {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -354,7 +350,7 @@ func getUpdatedValueTemplate(valueTemplate template.Values, component types.Zarf
 
 	// Continue loading state data if it is valid
 	config.InitState(state)
-	valueTemplate = template.Generate()
+	valueTemplate := template.Generate()
 	if len(component.Images) > 0 && state.Architecture != config.GetArch() {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 		spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
@@ -418,7 +414,7 @@ func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPat
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster
 func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) []types.InstalledCharts {
-	var installedCharts []types.InstalledCharts
+	installedCharts := []types.InstalledCharts{}
 
 	for _, chart := range component.Charts {
 		// zarf magic for the value file

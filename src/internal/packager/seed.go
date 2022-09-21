@@ -65,7 +65,7 @@ func seedZarfState(tempPath tempPaths) {
 		// Defaults
 		state.Distro = distro
 		state.Architecture = config.GetArch()
-		state.LoggingSecret = utils.RandomString(24)
+		state.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
@@ -124,25 +124,32 @@ func seedZarfState(tempPath tempPaths) {
 	config.InitState(state)
 }
 
-func postSeedRegistry(tempPath tempPaths) {
+func postSeedRegistry(tempPath tempPaths) error {
 	message.Debug("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
-	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+	if err := k8s.DeletePod(k8s.ZarfNamespace, "injector"); err != nil {
+		return err
+	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+	if err := k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch); err != nil {
+		return err
+	}
 
 	// Remove the injector service
-	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
+	if err := k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector"); err != nil {
+		return err
+	}
 
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, false)
+	err := images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, false)
+
+	return err
 }
 
 func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
-
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
@@ -152,7 +159,7 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) ty
 
 	// Generate a push-user password if not provided by init flag
 	if containerRegistry.PushPassword == "" {
-		containerRegistry.PushPassword = utils.RandomString(24)
+		containerRegistry.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 	}
 
 	// Set pull-username if not provided by init flag
@@ -166,7 +173,7 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) ty
 	}
 	if containerRegistry.PullPassword == "" {
 		if containerRegistry.InternalRegistry {
-			containerRegistry.PullPassword = utils.RandomString(24)
+			containerRegistry.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 		} else {
 			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
 			containerRegistry.PullPassword = containerRegistry.PushPassword
@@ -174,7 +181,7 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) ty
 	}
 
 	if containerRegistry.Secret == "" {
-		containerRegistry.Secret = utils.RandomString(48)
+		containerRegistry.Secret = utils.RandomString(config.ZarfGeneratedSecretLen)
 	}
 
 	return containerRegistry
@@ -190,7 +197,7 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 
 	// Generate a push-user password if not provided by init flag
 	if gitServer.PushPassword == "" {
-		gitServer.PushPassword = utils.RandomString(24)
+		gitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 	}
 
 	// Set read-user information if using an internal repository, otherwise copy from the push-user
@@ -203,7 +210,7 @@ func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerIn
 	}
 	if gitServer.PullPassword == "" {
 		if gitServer.InternalServer {
-			gitServer.PullPassword = utils.RandomString(24)
+			gitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 		} else {
 			gitServer.PullPassword = gitServer.PushPassword
 		}

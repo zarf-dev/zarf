@@ -8,6 +8,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 )
 
+// PushToZarfRegistry pushes a provided image into the configured Zarf registry
+// This function will optionally shorten the image name while appending a sha1sum of the original image name
 func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addShasumToImg bool) error {
 	message.Debugf("images.PushToZarfRegistry(%s, %s)", imageTarballPath, buildImageList)
 

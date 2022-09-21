@@ -28,10 +28,11 @@ type Credential struct {
 	Auth http.BasicAuth
 }
 
+// MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
 func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		//TODO: This might be less valid of a check now that people can specify the git username
+		// TODO @JPERRY: This might be less valid of a check now that people can specify the git username
 		if strings.Contains(match, "/"+gitUser+"/") {
 			message.Warnf("%s seems to have been previously patched.", match)
 			return match
@@ -61,7 +62,7 @@ func transformURLtoRepoName(url string) (string, error) {
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
-	io.WriteString(hasher, url)
+	_, _ = io.WriteString(hasher, url)
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
 	newRepoName := repoName + "-" + sha1Hash
 

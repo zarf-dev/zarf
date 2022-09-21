@@ -23,7 +23,7 @@ func getTargetImageFromURL(src string) string {
 	submatches := hostParser.FindStringSubmatch(src)
 	if len(submatches) == 0 {
 		message.Warnf("Unable to get the targetImage from the provided source: %s", src)
-		return src //TODO: This should probably return an err
+		return src // TODO @JPERRY: This should probably return an err
 	}
 
 	// Combine (most) of the matches we obtained
@@ -37,7 +37,7 @@ func getTargetImageFromURL(src string) string {
 	tagMatcher := regexp.MustCompile(`(?im)(:[\w\.\-\_]+)?$`)
 	srcWithoutTag := tagMatcher.ReplaceAllString(src, "")
 	hasher := sha1.New()
-	io.WriteString(hasher, srcWithoutTag)
+	_, _ = io.WriteString(hasher, srcWithoutTag)
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
 
 	// Ensure we add the sha1sum before we apply an image tag
@@ -50,12 +50,13 @@ func getTargetImageFromURL(src string) string {
 	return targetImage
 }
 
-// SwapHostWithoutSha Perform base url replacement but avoids adding a sha1sum of the original url
+// SwapHostWithoutSha Perform base url replacement but avoids adding a sha1sum of the original url.
 func SwapHostWithoutSha(src string, targetHost string) string {
 	submatches := hostParser.FindStringSubmatch(src)
 	if len(submatches) == 0 {
 		message.Warnf("Unable to get the targetImage from the provided source: %s", src)
-		return src //TODO: This should probably return an err
+		return src // TODO @JPERRY: This should probably return an err
 	}
+
 	return targetHost + "/" + submatches[0]
 }

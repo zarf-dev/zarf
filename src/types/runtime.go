@@ -17,7 +17,7 @@ type ZarfDeployOptions struct {
 	ApplianceMode bool `json:"applianceMode" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 }
 
-// Zarf InitOptions tracks the user-defined options during cluster initialization
+// ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
 	// Zarf init is installing the k3s component
 	ApplianceMode bool `json:"applianceMode"`
