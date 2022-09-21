@@ -2,16 +2,12 @@ import { test, expect } from '@playwright/test';
 
 const checkbox = 'input[type=checkbox]';
 
-test.describe('initialize a zarf cluster', () => {
-	// this below store the current page in a higher scope, so each indivdual test below will use same page context
-	let page;
-	test.beforeAll(async ({ browser }) => {
-		const context = await browser.newContext();
-		page = await context.newPage();
-		await page.goto('/auth?token=insecure');
-	});
+test.beforeEach(async ({ page }) => {
+	await page.goto('/auth?token=insecure');
+});
 
-	test('configure the init package', async () => {
+test.describe('initialize a zarf cluster', () => {
+	test('configure the init package', async ({ page }) => {
 		await page.goto('/initialize/configure');
 		await expect(page).toHaveTitle('Configure');
 
@@ -60,7 +56,7 @@ test.describe('initialize a zarf cluster', () => {
 		await expect(page).toHaveURL('/initialize/review');
 	});
 
-	test('review the init package', async () => {
+	test('review the init package', async ({ page }) => {
 		await page.goto('/initialize/review');
 		await expect(page).toHaveTitle('Review');
 
@@ -75,9 +71,5 @@ test.describe('initialize a zarf cluster', () => {
 			);
 			await expect(accordion.locator(checkbox)).toBeDisabled();
 		}
-	});
-
-	test('perform init package deployment', async () => {
-		// todo: finish deploy test
 	});
 });
