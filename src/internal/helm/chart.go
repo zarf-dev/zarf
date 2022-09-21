@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"helm.sh/helm/v3/pkg/action"
-	corev1 "k8s.io/api/core/v1"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -168,6 +167,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
+// GenerateChart generates a helm chart for a given Zarf manifest.
 func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) (types.ConnectStrings, string) {
 	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)

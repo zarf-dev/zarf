@@ -105,7 +105,7 @@ func Deploy() {
 		Name:               config.GetActiveConfig().Metadata.Name,
 		CLIVersion:         config.CLIVersion,
 		Data:               config.GetActiveConfig(),
-		DeployedComponents: make(map[string]types.DeployedComponent),
+		DeployedComponents: make([]types.DeployedComponent, 0),
 	}
 
 	// Set variables and prompt if --confirm is not set
@@ -126,12 +126,12 @@ func Deploy() {
 		installedCharts := deployComponents(tempPath, component)
 
 		// Get information about what we just installed so we can save it to a secret later
-		installedComponent := types.DeployedComponent{}
+		installedComponent := types.DeployedComponent{Name: component.Name}
 		if len(installedCharts) > 0 {
 			installedComponent.InstalledCharts = installedCharts
 		}
 
-		installedZarfPackage.DeployedComponents[component.Name] = installedComponent
+		installedZarfPackage.DeployedComponents = append(installedZarfPackage.DeployedComponents, installedComponent)
 	}
 
 	message.SuccessF("Zarf deployment complete")
@@ -339,6 +339,11 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 				// Move kustomizations to files now
 				destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				manifest.Files = append(manifest.Files, destination)
+			}
+
+			if manifest.DefaultNamespace == "" {
+				// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
+				manifest.DefaultNamespace = corev1.NamespaceDefault
 			}
 
 			// Iterate over any connectStrings and add to the main map

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -95,6 +94,24 @@ var packageListCmd = &cobra.Command{
 		packageTable := pterm.TableData{
 			{"     Package ", "Components"},
 		}
+
+		// Parse through all the secrets and output relevant information to the terminal
+		for _, secret := range secrets.Items {
+			installedPackage := types.DeployedPackage{}
+			err := json.Unmarshal(secret.Data["data"], &installedPackage)
+			if err != nil {
+				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
+			}
+
+			deployedComponentNames := make([]string, 0)
+			for _, component := range installedPackage.DeployedComponents {
+				deployedComponentNames = append(deployedComponentNames, component.Name)
+			}
+
+			packageTable = append(packageTable, pterm.TableData{{
+				fmt.Sprintf("     %s", installedPackage.Name),
+				fmt.Sprintf("%v", deployedComponentNames),
+			}}...)
 		for _, deployedPackage := range deployedZarfPackages {
 			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", deployedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(deployedPackage.DeployedComponents).MapKeys())}}...)
 		}
@@ -112,7 +129,7 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := packager.Remove(args[0])
 		if err != nil {
-			message.Warnf("Unable to remove the package with an error of: %#v", err)
+			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},
 }
