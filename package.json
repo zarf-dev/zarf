@@ -1,58 +1,58 @@
 {
-  "name": "zarf-ui",
-  "private": true,
-  "version": "0.0.1",
-  "type": "module",
-  "scripts": {
-    "dev": "API_DEV_PORT=5173 API_PORT=3333 API_TOKEN=insecure concurrently --names \"ui,api\" -c \"gray.bold,yellow\" \"vite dev\" \"nodemon -e go -x 'go run main.go dev ui -l=trace || exit 1'\"",
-    "build": "vite build",
-    "test": "playwright test",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
-  },
-  "nodemonConfig": {
-    "delay": 5000,
-    "watch": [
-      "src"
-    ],
-    "signal": "SIGKILL",
-    "extensions": [
-      "go"
-    ]
-  },
-  "devDependencies": {
-    "@defense-unicorns/unicorn-ui": "^0.0.9",
-    "@fontsource/roboto": "^4.5.8",
-    "@material/card": "^14.0.0",
-    "@material/data-table": "^14.0.0",
-    "@material/layout-grid": "^14.0.0",
-    "@material/linear-progress": "^14.0.0",
-    "@material/theme": "^14.0.0",
-    "@playwright/test": "^1.26.0",
-    "@sveltejs/adapter-static": "next",
-    "@sveltejs/kit": "next",
-    "@sveltejs/package": "next",
-    "@testing-library/svelte": "^3.2.1",
-    "@tsconfig/svelte": "^3.0.0",
-    "@types/prismjs": "^1.26.0",
-    "@typescript-eslint/eslint-plugin": "^5.27.0",
-    "@typescript-eslint/parser": "^5.27.0",
-    "concurrently": "^7.4.0",
-    "eslint": "^8.16.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-svelte3": "^4.0.0",
-    "nodemon": "^2.0.19",
-    "prettier": "^2.6.2",
-    "prettier-plugin-svelte": "^2.7.0",
-    "prismjs": "^1.29.0",
-    "sanitize.css": "^13.0.0",
-    "sass": "^1.54.8",
-    "svelte": "^3.44.0",
-    "svelte-check": "^2.7.1",
-    "svelte-preprocess": "^4.10.6",
-    "tslib": "^2.3.1",
-    "typescript": "^4.7.4",
-    "vite": "^3.1.0",
-    "yaml": "^2.1.1"
-  }
+	"name": "zarf-ui",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "API_DEV_PORT=5173 API_PORT=3333 API_TOKEN=insecure concurrently --names \"ui,api\" -c \"gray.bold,yellow\" \"vite dev\" \"nodemon -e go -x 'go run main.go dev ui -l=trace || exit 1'\"",
+		"build": "vite build",
+		"test": "playwright test -x --reporter github,html",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"nodemonConfig": {
+		"delay": 5000,
+		"watch": [
+			"src"
+		],
+		"signal": "SIGKILL",
+		"extensions": [
+			"go"
+		]
+	},
+	"devDependencies": {
+		"@defense-unicorns/unicorn-ui": "^0.0.9",
+		"@fontsource/roboto": "^4.5.8",
+		"@material/card": "^14.0.0",
+		"@material/data-table": "^14.0.0",
+		"@material/layout-grid": "^14.0.0",
+		"@material/linear-progress": "^14.0.0",
+		"@material/theme": "^14.0.0",
+		"@playwright/test": "^1.26.0",
+		"@sveltejs/adapter-static": "next",
+		"@sveltejs/kit": "next",
+		"@sveltejs/package": "next",
+		"@testing-library/svelte": "^3.2.1",
+		"@tsconfig/svelte": "^3.0.0",
+		"@types/prismjs": "^1.26.0",
+		"@typescript-eslint/eslint-plugin": "^5.27.0",
+		"@typescript-eslint/parser": "^5.27.0",
+		"concurrently": "^7.4.0",
+		"eslint": "^8.16.0",
+		"eslint-config-prettier": "^8.3.0",
+		"eslint-plugin-svelte3": "^4.0.0",
+		"nodemon": "^2.0.19",
+		"prettier": "^2.6.2",
+		"prettier-plugin-svelte": "^2.7.0",
+		"prismjs": "^1.29.0",
+		"sanitize.css": "^13.0.0",
+		"sass": "^1.54.8",
+		"svelte": "^3.44.0",
+		"svelte-check": "^2.7.1",
+		"svelte-preprocess": "^4.10.6",
+		"tslib": "^2.3.1",
+		"typescript": "^4.7.4",
+		"vite": "^3.1.0",
+		"yaml": "^2.1.1"
+	}
 }
