@@ -8,39 +8,13 @@ import (
 	goConfig "github.com/go-git/go-git/v5/config"
 )
 
-// FetchTag performs a `git fetch` of _only_ the provided tag.
-func FetchTag(gitDirectory string, tag string) {
+// fetchTag performs a `git fetch` of _only_ the provided tag.
+func fetchTag(gitDirectory string, tag string) {
 	message.Debugf("Fetch git tag %s from repo %s", tag, path.Base(gitDirectory))
 
-	repo, err := git.PlainOpen(gitDirectory)
-	if err != nil {
-		message.Fatal(err, "Unable to load the git repo")
-	}
+	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
 
-	remotes, err := repo.Remotes()
-	// There should never be no remotes, but it's easier to account for than
-	// let be a bug later
-	if err != nil || len(remotes) == 0 {
-		message.Fatal(err, "Failed to identify remotes.")
-	}
-
-	gitURL := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find tag: %s for %s", tag, gitURL)
-
-	gitCred := FindAuthForHost(gitURL)
-
-	fetchOptions := &git.FetchOptions{
-		RemoteName: onlineRemoteName,
-		RefSpecs: []goConfig.RefSpec{
-			goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag),
-		},
-	}
-
-	if gitCred.Auth.Username != "" {
-		fetchOptions.Auth = &gitCred.Auth
-	}
-
-	err = repo.Fetch(fetchOptions)
+	err := fetch(gitDirectory, refspec)
 
 	if err == git.ErrTagExists {
 		message.Debug("Tag already fetched")
@@ -49,10 +23,21 @@ func FetchTag(gitDirectory string, tag string) {
 	}
 }
 
-// FetchHash performs a `git fetch` of _only_ the provided commit hash.
-func FetchHash(gitDirectory string, hash string) {
+// fetchHash performs a `git fetch` of _only_ the provided commit hash.
+func fetchHash(gitDirectory string, hash string) {
 	message.Debugf("Fetch git hash %s from repo %s", hash, path.Base(gitDirectory))
 
+	refspec := goConfig.RefSpec(hash + ":" + hash)
+
+	err := fetch(gitDirectory, refspec)
+
+	if err != nil {
+		message.Fatal(err, "Not a valid hash or unable to fetch")
+	}
+}
+
+// fetch performs a `git fetch` of _only_ the provided git refspec.
+func fetch(gitDirectory string, refspec goConfig.RefSpec) error {
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
 		message.Fatal(err, "Unable to load the git repo")
@@ -66,24 +51,18 @@ func FetchHash(gitDirectory string, hash string) {
 	}
 
 	gitURL := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find hash: %s for %s", hash, gitURL)
+	message.Debugf("Attempting to find ref: %s for %s", refspec.String(), gitURL)
 
 	gitCred := FindAuthForHost(gitURL)
 
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
-		RefSpecs: []goConfig.RefSpec{
-			goConfig.RefSpec(hash + ":" + hash),
-		},
+		RefSpecs:   []goConfig.RefSpec{refspec},
 	}
 
 	if gitCred.Auth.Username != "" {
 		fetchOptions.Auth = &gitCred.Auth
 	}
 
-	err = repo.Fetch(fetchOptions)
-
-	if err != nil {
-		message.Fatal(err, "Not a valid hash or unable to fetch")
-	}
+	return repo.Fetch(fetchOptions)
 }

@@ -36,14 +36,14 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 	gitCred := FindAuthForHost(gitUrl)
 
 	matches := strings.Split(gitUrl, "@")
-	fetchAll := len(matches) == 1
+	onlyFetchRef := len(matches) == 2
 	cloneOptions := &git.CloneOptions{
 		URL:        matches[0],
 		Progress:   spinner,
 		RemoteName: onlineRemoteName,
 	}
 
-	if !fetchAll {
+	if onlyFetchRef {
 		cloneOptions.Tags = git.NoTags
 	}
 
@@ -74,7 +74,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 		return
 	}
 
-	if !fetchAll {
+	if onlyFetchRef {
 		ref := matches[1]
 
 		// Identify the remote trunk branch name
@@ -98,11 +98,11 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
 
 		if isHash(ref) {
-			FetchHash(targetFolder, ref)
-			CheckoutHashAsBranch(targetFolder, plumbing.NewHash(ref), trunkBranchName)
+			fetchHash(targetFolder, ref)
+			checkoutHashAsBranch(targetFolder, plumbing.NewHash(ref), trunkBranchName)
 		} else {
-			FetchTag(targetFolder, ref)
-			CheckoutTagAsBranch(targetFolder, ref, trunkBranchName)
+			fetchTag(targetFolder, ref)
+			checkoutTagAsBranch(targetFolder, ref, trunkBranchName)
 		}
 	}
 }

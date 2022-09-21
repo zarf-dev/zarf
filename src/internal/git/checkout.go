@@ -15,10 +15,10 @@ func CheckoutTag(path string, tag string) {
 	checkout(path, options)
 }
 
-// CheckoutTagAsBranch performs a `git checkout` of the provided tag but rather
+// checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
 // than checking out to a detached head, checks out to the provided branch ref
 // It will delete the branch provided if it exists
-func CheckoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName) {
+func checkoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName) {
 	message.Debugf("Checkout tag %s as branch %s for %s", tag, branch.String(), path)
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -29,13 +29,13 @@ func CheckoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName)
 	if err != nil {
 		message.Fatal(err, "Failed to locate tag in repository.")
 	}
-	CheckoutHashAsBranch(path, tagRef.Hash(), branch)
+	checkoutHashAsBranch(path, tagRef.Hash(), branch)
 }
 
-// CheckoutHashAsBranch performs a `git checkout` of the commit hash associated
+// checkoutHashAsBranch performs a `git checkout` of the commit hash associated
 // with the provided hash
 // It will delete the branch provided if it exists
-func CheckoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.ReferenceName) {
+func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.ReferenceName) {
 	message.Debugf("Checkout hash %s as branch %s for %s", hash.String(), branch.String(), path)
 
 	_ = deleteBranchIfExists(path, branch)
