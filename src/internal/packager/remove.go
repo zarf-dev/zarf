@@ -44,14 +44,16 @@ func Remove(packageName string) error {
 	// If components were provided; just remove the things we were asked to remove and return
 	requestedComponents := strings.Split(config.DeployOptions.Components, ",")
 	if len(requestedComponents) > 0 && requestedComponents[0] != "" {
-		for componentName, installedComponent := range deployedPackage.DeployedComponents {
-			if slices.Contains(requestedComponents, componentName) {
+		for i := len(deployedPackage.DeployedComponents) - 1; i >= 0; i-- {
+			installedComponent := deployedPackage.DeployedComponents[i]
+
+			if slices.Contains(requestedComponents, installedComponent.Name) {
 				for _, installedChart := range installedComponent.InstalledCharts {
 					helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				}
 
-				// Remove the component we just removed from the map
-				delete(deployedPackage.DeployedComponents, componentName)
+				// Remove the component we just removed from the array
+				deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents[:i], deployedPackage.DeployedComponents[i+1:]...)
 			}
 
 			if len(deployedPackage.DeployedComponents) == 0 {
@@ -71,13 +73,17 @@ func Remove(packageName string) error {
 		}
 	} else {
 		// Loop through all the installed components and remove them
-		for componentName, nativeComponent := range deployedPackage.DeployedComponents {
+		for i := len(deployedPackage.DeployedComponents) - 1; i >= 0; i-- {
+			installedComponent := deployedPackage.DeployedComponents[i]
+
 			// This component was installed onto the cluster. Prompt the user to see if they would like to remove it!
-			for _, installedChart := range nativeComponent.InstalledCharts {
-				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, componentName)
+			for _, installedChart := range installedComponent.InstalledCharts {
+				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, installedComponent.Name)
+
 				err = helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				if err != nil {
-					message.Errorf(err, "Unable to remove the installed helm chart %s from the namespace", installedChart.ChartName, installedChart.Namespace)
+					message.Errorf(err, "Unable to remove the installed helm chart (%s) from the namespace (%s) of component (%s) (were dependent components removed first?)",
+						installedChart.ChartName, installedChart.Namespace, installedComponent.Name)
 
 					return err
 				}
