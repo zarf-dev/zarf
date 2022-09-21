@@ -85,6 +85,9 @@ dev: ensure-ui-build-dir
 	npm ci
 	npm run dev
 
+test-built-ui:
+	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
+
 test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	.hooks/check-zarf-docs-and-schema.sh
