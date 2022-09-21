@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -51,7 +52,6 @@ func LaunchAPIServer() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.NoCache)
-	router.Use(common.ValidateToken(token))
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
@@ -59,6 +59,9 @@ func LaunchAPIServer() {
 	router.Use(middleware.Timeout(60 * time.Second))
 
 	router.Route("/api", func(r chi.Router) {
+		// Require a valid token for API calls
+		r.Use(common.RequireAuthSecret(token))
+
 		r.Route("/cluster", func(r chi.Router) {
 			r.Get("/", cluster.Summary)
 
@@ -91,10 +94,24 @@ func LaunchAPIServer() {
 		message.Infof("Zarf UI connection: http://127.0.0.1:%s/auth?token=%s", devPort, token)
 	}
 
+	// Load the static UI files
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")
 	} else {
-		router.Handle("/*", http.FileServer(http.FS(sub)))
+		// Setup a file server for the static UI files
+		fs := http.FileServer(http.FS(sub))
+
+		// Catch all routes
+		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			// If the request is not a real file, serve the index.html instead
+			if test, err := sub.Open(strings.TrimPrefix(r.URL.Path, "/")); err != nil {
+				message.Error(err, "Unable to open the requested file")
+				r.URL.Path = "/"
+			} else {
+				test.Close()
+			}
+			fs.ServeHTTP(w, r)
+		})
 	}
 
 	http.ListenAndServe(":"+port, router)
