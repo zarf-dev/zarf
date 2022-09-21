@@ -174,8 +174,9 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
 		if tunnel.autoOpen {
-			err := utils.ExecLaunchURL(url)
-			message.Debug(err)
+			if err := utils.ExecLaunchURL(url); err != nil {
+				message.Debug(err)
+			}
 		}
 
 		// Dump the tunnel URL to the console for other tools to use
