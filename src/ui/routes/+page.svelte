@@ -30,9 +30,9 @@
 				{/if}
 			</div>
 
-			<Button variant="raised" color="primary" href="/initialize/configure" id="init-cluster"
-				>Initialize Cluster</Button
-			>
+			<Button variant="raised" color="primary" href="/initialize/configure" id="init-cluster">
+				Initialize Cluster
+			</Button>
 		</Hero>
 	{/if}
 {:else}

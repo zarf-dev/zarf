@@ -38,12 +38,7 @@
 			},
 			{
 				title: 'Review',
-				iconContent:
-					$page.routeId === 'initialize/configure'
-						? '2'
-						: $page.routeId === 'initialize/review'
-						? '2'
-						: undefined,
+				iconContent: $page.routeId !== 'initialize/deploy' ? '2' : undefined,
 				disabled: $page.routeId === 'initialize/configure',
 				variant: 'primary'
 			},

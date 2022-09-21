@@ -11,24 +11,36 @@
 	<div class="card-col col-2">
 		<div class="col-header">Meta data</div>
 		<table>
-			<tr><td>Name:</td><td>{pkg.metadata?.name}</td></tr>
-			<tr><td>Description:</td><td>{pkg.metadata?.description}</td></tr>
+			<tr>
+				<td>Name:</td>
+				<td>{pkg.metadata?.name}</td>
+			</tr>
+			<tr>
+				<td>Description:</td>
+				<td>{pkg.metadata?.description}</td>
+			</tr>
 		</table>
 	</div>
 	<div class="card-col col-3">
 		<div class="col-header">Build</div>
 		<div class="col-content">
 			<table>
-				<tr
-					><td>User:</td><td>{pkg.build?.user}</td><td>Terminal:</td><td>{pkg.build?.terminal}</td
-					></tr
-				>
-				<tr
-					><td>Version:</td><td>{pkg.build?.version}</td><td>Timestamp:</td><td
-						>{pkg.build?.timestamp}</td
-					></tr
-				>
-				<tr><td>Architecture:</td><td>{pkg.build?.architecture}</td></tr>
+				<tr>
+					<td>User:</td>
+					<td>{pkg.build?.user}</td>
+					<td>Terminal:</td>
+					<td>{pkg.build?.terminal}</td>
+				</tr>
+				<tr>
+					<td>Version:</td>
+					<td>{pkg.build?.version}</td>
+					<td>Timestamp:</td>
+					<td>{pkg.build?.timestamp}</td>
+				</tr>
+				<tr>
+					<td>Architecture:</td>
+					<td>{pkg.build?.architecture}</td>
+				</tr>
 			</table>
 		</div>
 	</div>

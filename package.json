@@ -34,6 +34,7 @@
     "@sveltejs/package": "next",
     "@testing-library/svelte": "^3.2.1",
     "@tsconfig/svelte": "^3.0.0",
+    "@types/prismjs": "^1.26.0",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "concurrently": "^7.4.0",

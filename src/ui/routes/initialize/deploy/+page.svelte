@@ -42,7 +42,7 @@
 	</div>
 {:then successful}
 	<h1>Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</h1>
-	<div style="display:flex;justify-content:center;">
+	<div style="display:flex; justify-content:center;">
 		<Stepper
 			orientation="vertical"
 			steps={[
