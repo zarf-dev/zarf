@@ -89,10 +89,10 @@ test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	.hooks/check-zarf-docs-and-schema.sh
 
-test-cves:
+test-cves: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype --fail-on low
 
-cve-report:
+cve-report: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
