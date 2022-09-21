@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -108,8 +110,10 @@ func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
 	}
 
 	err = repo.Fetch(fetchOptions)
-	if err != nil {
-		spinner.Debugf("%s", err.Error())
+	if errors.Is(err, transport.ErrRepositoryNotFound) {
+		message.Debugf("Repo not yet available offline, skipping fetch")
+	} else if err != nil {
+		return fmt.Errorf("unable to fetch remote cleanly prior to push: %w", err)
 	}
 
 	// Push all heads and tags to the offline remote
@@ -125,7 +129,7 @@ func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
 		},
 	})
 
-	if err == git.NoErrAlreadyUpToDate {
+	if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		spinner.Debugf("Repo already up-to-date")
 	} else if err != nil {
 		return fmt.Errorf("unable to push repo to the gitops service: %w", err)

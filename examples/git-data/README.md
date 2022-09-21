@@ -13,7 +13,7 @@ To view the example source code, select the `Edit this page` link below the arti
 
 ## Tag-Provided Git Repository Clone
 
-Tag-provided `git` repository cloning is the recommended way of cloning a `git` repository for air-gapped deployments. Tag-provided clones are defined using the `url.git@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).
+Tag-provided `git` repository cloning is the recommended way of cloning a `git` repository for air-gapped deployments because it wraps meaning around a specific point in git history that can easily be traced back to the online world. Tag-provided clones are defined using the `url.git@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).
 
 A tag-provided clone only mirrors the tag defined in the Zarf definition. The tag will be applied on the `git` mirror to the default trunk branch of the repo (i.e. `master`, `main`, or the default when the repo is cloned).
 
