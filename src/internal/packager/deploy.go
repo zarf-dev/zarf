@@ -343,7 +343,7 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 
 			// Iterate over any connectStrings and add to the main map
 			addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
-			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.Namespace, ChartName: installedChartName})
 			for name, description := range addedConnectStrings {
 				connectStrings[name] = description
 			}

@@ -199,9 +199,9 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
 	}
 
-	if manifest.DefaultNamespace == "" {
+	if manifest.Namespace == "" {
 		// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
-		manifest.DefaultNamespace = corev1.NamespaceDefault
+		manifest.Namespace = corev1.NamespaceDefault
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart()
@@ -211,7 +211,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 			Name:        tmpChart.Metadata.Name,
 			ReleaseName: sha1ReleaseName,
 			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.DefaultNamespace,
+			Namespace:   manifest.Namespace,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently

@@ -10,13 +10,13 @@
 {#await Packages.getDeployedPackages()}
 	<Spinner />
 {:then packages}
-	{#if packages.length === 0}
-		<Hero
-			><div>
-				<h3>No deployed packages 🙁</h3>
+	{#if packages.length < 1}
+		<Hero>
+			<div>
+				<h3>No deployed packages found 🙁</h3>
 				<Button href="/" variant="flat">Go Home</Button>
-			</div></Hero
-		>
+			</div>
+		</Hero>
 	{:else}
 		<Container>
 			<div class="top-title">
