@@ -431,14 +431,15 @@ export interface ConnectString {
 }
 
 export interface DeployedPackage {
-    cliVersion:         string;
-    data:               ZarfPackage;
-    deployedComponents: { [key: string]: DeployedComponent };
-    name:               string;
+    CLIVersion:         string;
+    Data:               ZarfPackage;
+    DeployedComponents: DeployedComponent[];
+    Name:               string;
 }
 
 export interface DeployedComponent {
-    installedCharts: InstalledCharts[];
+    InstalledCharts: InstalledCharts[];
+    Name:            string;
 }
 
 export interface InstalledCharts {
@@ -759,13 +760,14 @@ const typeMap: any = {
         { json: "url", js: "url", typ: "" },
     ], false),
     "DeployedPackage": o([
-        { json: "cliVersion", js: "cliVersion", typ: "" },
-        { json: "data", js: "data", typ: r("ZarfPackage") },
-        { json: "deployedComponents", js: "deployedComponents", typ: m(r("DeployedComponent")) },
-        { json: "name", js: "name", typ: "" },
+        { json: "CLIVersion", js: "CLIVersion", typ: "" },
+        { json: "Data", js: "Data", typ: r("ZarfPackage") },
+        { json: "DeployedComponents", js: "DeployedComponents", typ: a(r("DeployedComponent")) },
+        { json: "Name", js: "Name", typ: "" },
     ], false),
     "DeployedComponent": o([
-        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledCharts")) },
+        { json: "InstalledCharts", js: "InstalledCharts", typ: a(r("InstalledCharts")) },
+        { json: "Name", js: "Name", typ: "" },
     ], false),
     "InstalledCharts": o([
         { json: "chartName", js: "chartName", typ: "" },

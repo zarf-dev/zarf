@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -95,8 +94,18 @@ var packageListCmd = &cobra.Command{
 		packageTable := pterm.TableData{
 			{"     Package ", "Components"},
 		}
-		for _, deployedPackage := range deployedZarfPackages {
-			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", deployedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(deployedPackage.DeployedComponents).MapKeys())}}...)
+
+		for _, pkg := range deployedZarfPackages {
+			var components []string
+
+			for _, component := range pkg.DeployedComponents {
+				components = append(components, component.Name)
+			}
+
+			packageTable = append(packageTable, pterm.TableData{{
+				fmt.Sprintf("     %s", pkg.Name),
+				fmt.Sprintf("%v", components),
+			}}...)
 		}
 
 		// Print out the table for the user
@@ -112,7 +121,7 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := packager.Remove(args[0])
 		if err != nil {
-			message.Warnf("Unable to remove the package with an error of: %#v", err)
+			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},
 }
