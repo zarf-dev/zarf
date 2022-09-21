@@ -2,14 +2,16 @@ import { test, expect } from '@playwright/test';
 
 const checkbox = 'input[type=checkbox]';
 
-// todo: make series tests work here to validate the store persistence between views
-
-test.beforeEach(async ({ page }) => {
-	await page.goto('/auth?token=insecure');
-});
-
 test.describe('initialize a zarf cluster', () => {
-	test('configure the init package', async ({ page }) => {
+	// this below store the current page in a higher scope, so each indivdual test below will use same page context
+	let page;
+	test.beforeAll(async ({ browser }) => {
+		const context = await browser.newContext();
+		page = await context.newPage();
+		await page.goto('/auth?token=insecure');
+	});
+
+	test('configure the init package', async () => {
 		await page.goto('/initialize/configure');
 		await expect(page).toHaveTitle('Configure');
 
@@ -57,15 +59,25 @@ test.describe('initialize a zarf cluster', () => {
 		await page.locator('text=review deployment').click();
 		await expect(page).toHaveURL('/initialize/review');
 	});
-	
-	test('review the init package', async ({ page }) => {
+
+	test('review the init package', async () => {
 		await page.goto('/initialize/review');
 		await expect(page).toHaveTitle('Review');
 
-		// todo: finish verifying the components are read-only and only include the required ones since we didn't select any optional ones
+		// finish verifying the components are read-only and only include the required ones since we didn't select any optional ones
+		const componentAccordions = await page.locator('.accordion');
+		const componentAccordionsLen = await componentAccordions.count();
+		await expect(componentAccordionsLen).toBe(4);
+		for (let i = 0; i < componentAccordionsLen; i++) {
+			const accordion = await componentAccordions.nth(i);
+			await expect(await accordion.locator('.component-accordion-header')).toContainText(
+				'(Required)'
+			);
+			await expect(accordion.locator(checkbox)).toBeDisabled();
+		}
 	});
 
-	test('perform init package deployment', async ({ page }) => {
+	test('perform init package deployment', async () => {
 		// todo: finish deploy test
 	});
 });
