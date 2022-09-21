@@ -24,6 +24,9 @@ jobs:
         with:
           go-version: 1.19.x
 
+      - name: "Dependency: Playwright Browsers"
+        run: npx playwright install
+
       - name: "Dependency: Install K3d"
         run: "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash"
 
@@ -42,6 +45,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Cache browsers
+        uses: actions/cache@v1
+        with:
+          path: '~/Library/Caches/ms-playwright/'
+          key: ${{ runner.os }}-browsers            
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
