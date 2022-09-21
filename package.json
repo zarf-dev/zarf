@@ -28,7 +28,7 @@
     "@material/layout-grid": "^14.0.0",
     "@material/linear-progress": "^14.0.0",
     "@material/theme": "^14.0.0",
-    "@playwright/test": "^1.25.2",
+    "@playwright/test": "^1.26.0",
     "@sveltejs/adapter-static": "next",
     "@sveltejs/kit": "next",
     "@sveltejs/package": "next",
