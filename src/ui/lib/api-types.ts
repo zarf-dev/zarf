@@ -433,12 +433,13 @@ export interface ConnectString {
 export interface DeployedPackage {
     cliVersion:         string;
     data:               ZarfPackage;
-    deployedComponents: { [key: string]: DeployedComponent };
+    deployedComponents: DeployedComponent[];
     name:               string;
 }
 
 export interface DeployedComponent {
     installedCharts: InstalledCharts[];
+    name:            string;
 }
 
 export interface InstalledCharts {
@@ -761,11 +762,12 @@ const typeMap: any = {
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
         { json: "data", js: "data", typ: r("ZarfPackage") },
-        { json: "deployedComponents", js: "deployedComponents", typ: m(r("DeployedComponent")) },
+        { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
         { json: "name", js: "name", typ: "" },
     ], false),
     "DeployedComponent": o([
         { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledCharts")) },
+        { json: "name", js: "name", typ: "" },
     ], false),
     "InstalledCharts": o([
         { json: "chartName", js: "chartName", typ: "" },

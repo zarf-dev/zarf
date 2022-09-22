@@ -12,20 +12,15 @@ type ZarfState struct {
 }
 
 type DeployedPackage struct {
-	Name       string
-	Data       ZarfPackage
-	CLIVersion string
+	Name       string      `json:"name"`
+	Data       ZarfPackage `json:"data"`
+	CLIVersion string      `json:"cliVersion"`
 
-	DeployedComponents []DeployedComponent
-	Name               string                       `json:"name"`
-	Data               ZarfPackage                  `json:"data"`
-	CLIVersion         string                       `json:"cliVersion"`
-	DeployedComponents map[string]DeployedComponent `json:"deployedComponents"`
+	DeployedComponents []DeployedComponent `json:"deployedComponents"`
 }
 
 type DeployedComponent struct {
-	Name            string
-	InstalledCharts []InstalledCharts
+	Name            string            `json:"name"`
 	InstalledCharts []InstalledCharts `json:"installedCharts"`
 }
 
