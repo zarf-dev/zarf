@@ -3,3 +3,8 @@
 ignore:
   - vulnerability: CVE-2021-22570
   - vulnerability: CVE-2015-5237
+
+  # Bless your heart NPM, you're a mess
+  - vulnerability: CVE-2017-18589
+  - vulnerability: CVE-2002-1647
+  - vulnerability: CVE-2021-29261
