@@ -16,10 +16,11 @@ type DeployedPackage struct {
 	Data       ZarfPackage
 	CLIVersion string
 
-	DeployedComponents map[string]DeployedComponent
+	DeployedComponents []DeployedComponent
 }
 
 type DeployedComponent struct {
+	Name            string
 	InstalledCharts []InstalledCharts
 }
 

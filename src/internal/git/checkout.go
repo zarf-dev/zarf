@@ -15,10 +15,10 @@ func CheckoutTag(path string, tag string) {
 	checkout(path, options)
 }
 
-// CheckoutTagAsBranch performs a `git checkout` of the provided tag but rather
+// checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
 // than checking out to a detached head, checks out to the provided branch ref
 // It will delete the branch provided if it exists
-func CheckoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName) {
+func checkoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName) {
 	message.Debugf("Checkout tag %s as branch %s for %s", tag, branch.String(), path)
 	repo, err := git.PlainOpen(path)
 	if err != nil {
