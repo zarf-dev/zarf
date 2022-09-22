@@ -1,14 +1,20 @@
 import type {
-	ClusterSummary,
-	ZarfState,
-	ZarfPackage,
-	ZarfDeployOptions,
-	DeployedPackage,
-	APIZarfPackage
+	APIZarfPackage, ClusterSummary, DeployedPackage, ZarfDeployOptions, ZarfState
 } from './api-types';
 import { HTTP } from './http';
 
 const http = new HTTP();
+
+const Auth = {
+	connect: async (token: string) => {
+		if (!token) {
+			return false;
+		}
+		
+		http.updateToken(token);
+		return await http.head('/');
+	}
+};
 
 const Cluster = {
 	summary: () => http.get<ClusterSummary>('/cluster'),
@@ -28,4 +34,4 @@ const Packages = {
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 
-export { Cluster, Packages };
+export { Auth, Cluster, Packages };

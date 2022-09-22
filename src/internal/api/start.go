@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/api/auth"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -58,7 +58,6 @@ func LaunchAPIServer() {
 
 	router.Use(middleware.RequestLogger(&logFormatter))
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.NoCache)
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
@@ -67,7 +66,10 @@ func LaunchAPIServer() {
 
 	router.Route("/api", func(r chi.Router) {
 		// Require a valid token for API calls
-		r.Use(common.RequireAuthSecret(token))
+		r.Use(auth.RequireSecret(token))
+		r.Use(middleware.NoCache)
+
+		r.Head("/", auth.Connect)
 
 		r.Route("/cluster", func(r chi.Router) {
 			r.Get("/", cluster.Summary)
