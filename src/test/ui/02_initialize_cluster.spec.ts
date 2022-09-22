@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('initialize a zarf cluster', () => {
 	test('configure the init package', async ({ page }) => {
+		await page.goto('/auth?token=insecure');
 		await page.goto('/initialize/configure');
 		await expect(page).toHaveTitle('Configure');
 
@@ -57,6 +58,7 @@ test.describe('initialize a zarf cluster', () => {
 	});
 
 	test('review the init package', async ({ page }) => {
+		await page.goto('/auth?token=insecure');
 		await page.goto('/initialize/review');
 		await expect(page).toHaveTitle('Review');
 
