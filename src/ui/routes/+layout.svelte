@@ -5,7 +5,18 @@
 	import '@fontsource/roboto';
 	import 'sanitize.css';
 
-	Cluster.summary().then(clusterStore.set);
+	function getClusterSummary() {
+		// Try to get the cluster summary
+		Cluster.summary()
+			// If success update the store
+			.then(clusterStore.set)
+			// Otherwise, try again in 250 ms
+			.catch((e) => {
+				setTimeout(getClusterSummary, 250);
+			});
+	}
+
+	getClusterSummary();
 </script>
 
 <Header />

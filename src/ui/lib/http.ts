@@ -13,9 +13,18 @@ const headers = new Headers({
 
 export class HTTP {
 	constructor() {
-		// @todo: this should throw an error if the token is not set
-		const token = window.sessionStorage.getItem('token') || '';
-		headers.append('Authorization', token);
+		const token = sessionStorage.getItem('token') || '';
+		if (!token) {
+			this.invalidateAuth();
+		} else {
+			headers.append('Authorization', token);
+		}
+	}
+
+	// Updates the internal token used for authentication.
+	updateToken(token: string) {
+		sessionStorage.setItem('token', token);
+		headers.set('Authorization', token);
 	}
 
 	// Perform a GET request to the given path, and return the response as JSON.
@@ -38,6 +47,10 @@ export class HTTP {
 		return this.request<T>({ path, method: 'PATCH', body });
 	}
 
+	head(path: string) {
+		return this.request<boolean>({ path, method: 'HEAD' });
+	}
+
 	// Performs a DELETE request to the given path, and returns the response as JSON.
 	async del(path: string) {
 		try {
@@ -48,10 +61,21 @@ export class HTTP {
 		}
 	}
 
+	private invalidateAuth() {
+		sessionStorage.removeItem('token');
+		if (location.pathname !== '/auth') {
+			location.pathname = '/auth';
+		}
+	}
+
 	// Private wrapper for handling the request/response cycle.
 	private async request<T>(req: APIRequest<T>): Promise<T> {
 		const url = BASE_URL + req.path;
 		const payload: RequestInit = { method: req.method, headers };
+
+		if (!headers.get('Authorization')) {
+			throw new Error('Not authenticated yet');
+		}
 
 		try {
 			// Add the body if it exists
@@ -62,12 +86,14 @@ export class HTTP {
 			// Actually make the request
 			const response = await fetch(url, payload);
 
+			// Head just returns response.ok
+			if (req.method === 'HEAD') {
+				return response.ok as T;
+			}
+
 			// If the response is not OK, throw an error.
 			if (!response.ok) {
 				throw new Error('HTTP request failed: ' + response.statusText);
-			}
-
-			if (response.status === 204 || response.status === 205) {
 			}
 
 			// Return the response as the expected type

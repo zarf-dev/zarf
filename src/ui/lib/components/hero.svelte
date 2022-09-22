@@ -30,4 +30,9 @@
 		gap: 1rem;
 		margin: 1rem 0;
 	}
+
+	.hero-content :global(h1),
+	.hero-content :global(h2) {
+		margin: 0;
+	}
 </style>

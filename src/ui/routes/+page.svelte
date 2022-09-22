@@ -44,10 +44,3 @@
 		msg="Checking if a Kubernetes cluster is available and initialized by Zarf. This may take a few seconds."
 	/>
 {/if}
-
-<style>
-	h1,
-	h2 {
-		margin: 0;
-	}
-</style>
