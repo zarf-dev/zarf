@@ -1,16 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 const checkbox = 'input[type=checkbox]';
 
 test.beforeEach(async ({ page }) => {
-	await page.goto('/auth?token=insecure');
+	page.on('pageerror', (err) => console.log(err.message));
 });
 
 test.describe('initialize a zarf cluster', () => {
 	test('configure the init package', async ({ page }) => {
-		await page.goto('/auth?token=insecure');
-		await page.goto('/initialize/configure');
-		await expect(page).toHaveTitle('Configure');
+		await page.goto('/auth?token=insecure&next=/initialize/configure');
 
 		// Stepper
 		await expect(page.locator('.stepper :text("1 Configure") .step-icon')).toHaveClass(/primary/);
@@ -35,17 +33,7 @@ test.describe('initialize a zarf cluster', () => {
 		await expect(k3s.locator('code:has-text("name: k3s")')).toBeVisible();
 
 		// Check remaining components for deploy states
-		let injector = page.locator('.accordion:has-text("zarf-injector (Required)")');
-		await expect(injector.locator(checkbox)).toBeDisabled();
-		await expect(injector.locator(checkbox)).toBeChecked();
-
-		let seedRegistry = page.locator('.accordion:has-text("zarf-seed-registry (Required)")');
-		await expect(seedRegistry.locator(checkbox)).toBeDisabled();
-		await expect(seedRegistry.locator(checkbox)).toBeChecked();
-
-		let registry = page.locator('.accordion:has-text("zarf-registry (Required)")');
-		await expect(registry.locator(checkbox)).toBeDisabled();
-		await expect(registry.locator(checkbox)).toBeChecked();
+		await validateRequiredCheckboxes(page);
 
 		let logging = page.locator('.accordion:has-text("logging (Optional)")');
 		await expect(logging.locator(checkbox)).toBeEnabled();
@@ -58,20 +46,23 @@ test.describe('initialize a zarf cluster', () => {
 	});
 
 	test('review the init package', async ({ page }) => {
-		await page.goto('/auth?token=insecure');
-		await page.goto('/initialize/review');
-		await expect(page).toHaveTitle('Review');
+		await page.goto('/auth?token=insecure&next=/initialize/review');
 
-		// finish verifying the components are read-only and only include the required ones since we didn't select any optional ones
-		const componentAccordions = await page.locator('.accordion');
-		const componentAccordionsLen = await componentAccordions.count();
-		await expect(componentAccordionsLen).toBe(4);
-		for (let i = 0; i < componentAccordionsLen; i++) {
-			const accordion = await componentAccordions.nth(i);
-			await expect(await accordion.locator('.component-accordion-header')).toContainText(
-				'(Required)'
-			);
-			await expect(accordion.locator(checkbox)).toBeDisabled();
-		}
+		await validateRequiredCheckboxes(page);
 	});
 });
+
+async function validateRequiredCheckboxes(page) {
+	// Check remaining components for deploy states
+	let injector = page.locator('.accordion:has-text("zarf-injector (Required)")');
+	await expect(injector.locator(checkbox)).toBeDisabled();
+	await expect(injector.locator(checkbox)).toBeChecked();
+
+	let seedRegistry = page.locator('.accordion:has-text("zarf-seed-registry (Required)")');
+	await expect(seedRegistry.locator(checkbox)).toBeDisabled();
+	await expect(seedRegistry.locator(checkbox)).toBeChecked();
+
+	let registry = page.locator('.accordion:has-text("zarf-registry (Required)")');
+	await expect(registry.locator(checkbox)).toBeDisabled();
+	await expect(registry.locator(checkbox)).toBeChecked();
+}

@@ -1,8 +1,11 @@
+import { goto } from '$app/navigation';
 import type { LoadEvent } from '@sveltejs/kit';
 
 // @todo: this is sort of hacky and gross rn....
 export async function load({ url }: LoadEvent) {
 	let token = url.searchParams.get('token');
+	let next = url.searchParams.get('next');
+
 	if (!token) {
 		return {
 			status: 400,
@@ -10,5 +13,5 @@ export async function load({ url }: LoadEvent) {
 		};
 	}
 	window.sessionStorage.setItem('token', token);
-	window.location.href = '/';
+	goto(next || '/');
 }

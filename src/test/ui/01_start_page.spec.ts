@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-	await page.goto('/auth?token=insecure');
+	page.on('pageerror', (err) => console.log(err.message));	
 });
 
 test.describe('start page without an initialized cluster', () => {
 	test('spinner loads properly, then displays init btn', async ({ page }) => {
-		await expect(page).toHaveTitle('Zarf UI');
+		await page.goto('/auth?token=insecure');
 
 		const clusterSelector = page.locator('#cluster-selector');
 		await expect(clusterSelector).toBeEmpty();
