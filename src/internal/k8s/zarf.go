@@ -44,7 +44,7 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()
 
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		spinner.Errorf(err, "unable to get k8s clientset")
 	}
@@ -69,7 +69,7 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 
 			for _, namespace := range namespaces.Items {
 				spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
-				err := clientSet.CoreV1().
+				err := clientset.CoreV1().
 					Secrets(namespace.Name).
 					DeleteCollection(context.TODO(), deleteOptions, listOptions)
 				if err != nil {

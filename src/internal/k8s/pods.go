@@ -99,7 +99,7 @@ func GetPods(namespace string) (*corev1.PodList, error) {
 func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods bool) []string {
 	message.Debugf("k8s.WaitForPodsAndContainers(%#v, %#v)", target, waitForAllPods)
 
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return []string{}
 	}
@@ -107,7 +107,7 @@ func WaitForPodsAndContainers(target types.ZarfContainerTarget, waitForAllPods b
 	message.Debugf("Waiting for ready pod %s/%s", target.Namespace, target.Selector)
 	for count := 0; count < waitLimit; count++ {
 
-		pods, err := clientSet.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
+		pods, err := clientset.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: target.Selector,
 		})
 		if err != nil {
