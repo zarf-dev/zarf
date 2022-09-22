@@ -51,6 +51,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 		cloneOptions.Auth = &gitCred.Auth
 	}
 
+	// TODO: targetFolder should be a cache dir
 	// Clone the given repo
 	repo, err := git.PlainClone(targetFolder, false, cloneOptions)
 
@@ -73,6 +74,8 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 		return
 	}
 
+	// TODO: We should copy the clone into the package
+
 	if !fetchAllTags {
 		tag := matches[1]
 
@@ -91,6 +94,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 			spinner.Errorf(nil, "No branch found for this repo head. Tag will be pushed to 'master'.")
 		}
 
+		// TODO: We should only do this in the actual package
 		_, _ = removeLocalBranchRefs(targetFolder)
 		_, _ = removeOnlineRemoteRefs(targetFolder)
 

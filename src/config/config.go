@@ -255,6 +255,7 @@ func BuildConfig(path string) error {
 	return utils.WriteYaml(path, active, 0400)
 }
 
+// TODO: We will need similar options for git cache path
 func SetImageCachePath(cachePath string) {
 	CreateOptions.ImageCachePath = cachePath
 }
