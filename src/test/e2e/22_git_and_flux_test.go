@@ -32,6 +32,7 @@ func TestGitAndFlux(t *testing.T) {
 
 	testGitServerConnect(t, tunnel.HttpEndpoint())
 	testGitServerReadOnly(t, tunnel.HttpEndpoint())
+	testGitServerTagAndHash(t, tunnel.HttpEndpoint())
 	waitFluxPodInfoDeployment(t)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
@@ -41,14 +42,14 @@ func TestGitAndFlux(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testGitServerConnect(t *testing.T, gitUrl string) {
+func testGitServerConnect(t *testing.T, gitURL string) {
 	// Make sure Gitea comes up cleanly
-	resp, err := http.Get(gitUrl + "/explore/repos")
+	resp, err := http.Get(gitURL + "/explore/repos")
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 }
 
-func testGitServerReadOnly(t *testing.T, gitUrl string) {
+func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err)
@@ -56,7 +57,7 @@ func testGitServerReadOnly(t *testing.T, gitUrl string) {
 
 	// Get the repo as the readonly user
 	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitUrl, config.ZarfGitPushUser, repoName), nil)
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.ZarfGitPushUser, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
 	assert.NoError(t, err)
 
@@ -67,6 +68,36 @@ func testGitServerReadOnly(t *testing.T, gitUrl string) {
 	assert.False(t, permissionsMap["admin"].(bool))
 	assert.False(t, permissionsMap["push"].(bool))
 	assert.True(t, permissionsMap["pull"].(bool))
+}
+
+func testGitServerTagAndHash(t *testing.T, gitURL string) {
+	// Init the state variable
+	state := k8s.LoadZarfState()
+	config.InitState(state)
+
+	repoName := "mirror__github.com__defenseunicorns__zarf"
+
+	// Get the Zarf repo tag
+	repoTag := "v0.15.0"
+	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
+	getRepoTagsResponseBody, err := git.DoHttpThings(getRepoTagsRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	assert.NoError(t, err)
+
+	// Make sure the pushed tag exists
+	var tagMap map[string]interface{}
+	json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	assert.Equal(t, repoTag, tagMap["name"])
+
+	// Get the Zarf repo commit
+	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
+	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/commits", gitURL, config.ZarfGitPushUser, repoName), nil)
+	getRepoCommitsResponseBody, err := git.DoHttpThings(getRepoCommitsRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	assert.NoError(t, err)
+
+	// Make sure the pushed commit exists
+	var commitMap []map[string]interface{}
+	json.Unmarshal(getRepoCommitsResponseBody, &commitMap)
+	assert.Equal(t, repoHash, commitMap[0]["sha"])
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
