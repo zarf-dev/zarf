@@ -43,38 +43,38 @@ func GenerateService(namespace, name string) *corev1.Service {
 // DeleteService removes a service from the cluster by namespace and name.
 func DeleteService(namespace, name string) error {
 	message.Debugf("k8s.DeleteService(%s, %s)", namespace, name)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return err
 	}
-	return clientSet.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	return clientset.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 // CreateService creates the given service in the cluster.
 func CreateService(service *corev1.Service) (*corev1.Service, error) {
 	message.Debugf("k8s.CreateService(%#v)", service)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return nil, err
 	}
 	createOptions := metav1.CreateOptions{}
-	return clientSet.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)
+	return clientset.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)
 }
 
 // GetService returns a Kubernetes service resource in the provided namespace with the given name.
 func GetService(namespace, serviceName string) (*corev1.Service, error) {
 	message.Debugf("k8s.GetService(%s, %s)", namespace, serviceName)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	return clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 }
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg
 func GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
 	message.Debugf("k8s.GetServicesByLabel(%s, %s)", namespace, label)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, er
 	})
 
 	// Run the query with the selector and return as a ServiceList
-	return clientSet.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
+	return clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
 }
 
 // GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg
 func GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
 	message.Debugf("k8s.GetServicesByLabelExists(%s, %s)", namespace, label)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return nil, err
 	}
@@ -107,5 +107,5 @@ func GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, err
 	})
 
 	// Run the query with the selector and return as a ServiceList
-	return clientSet.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
+	return clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
 }

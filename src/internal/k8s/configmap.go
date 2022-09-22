@@ -54,12 +54,12 @@ func CreateConfigmap(namespace, name string, labels map[string]string, data map[
 // DeleteConfigmap delets a confimap by name
 func DeleteConfigmap(namespace, name string) error {
 	message.Debugf("k8s.DeleteConfigmap(%s, %s)", namespace, name)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return err
 	}
 
-	namespaceConfigmap := clientSet.CoreV1().ConfigMaps(namespace)
+	namespaceConfigmap := clientset.CoreV1().ConfigMaps(namespace)
 
 	err = namespaceConfigmap.Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
@@ -72,7 +72,7 @@ func DeleteConfigmap(namespace, name string) error {
 // DeleteConfigMapsByLabel deletes a configmap by label(s)
 func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
 	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %#v)", namespace, labels)
-	clientSet, err := getClientset()
+	clientset, err := getClientset()
 	if err != nil {
 		return err
 	}
@@ -85,5 +85,5 @@ func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
 		LabelSelector: labelSelector.String(),
 	}
 
-	return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(context.TODO(), metaOptions, listOptions)
+	return clientset.CoreV1().ConfigMaps(namespace).DeleteCollection(context.TODO(), metaOptions, listOptions)
 }
