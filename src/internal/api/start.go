@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -49,7 +50,13 @@ func LaunchAPIServer() {
 	// Init the Chi router
 	router := chi.NewRouter()
 
-	router.Use(middleware.Logger)
+	// Push logs into the message buffer for log persistence
+	genericMsg := message.Generic{}
+	logFormatter := middleware.DefaultLogFormatter{
+		Logger: log.New(&genericMsg, "API CALL | ", log.LstdFlags),
+	}
+
+	router.Use(middleware.RequestLogger(&logFormatter))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.NoCache)
 
@@ -105,7 +112,6 @@ func LaunchAPIServer() {
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 			// If the request is not a real file, serve the index.html instead
 			if test, err := sub.Open(strings.TrimPrefix(r.URL.Path, "/")); err != nil {
-				message.Error(err, "Unable to open the requested file")
 				r.URL.Path = "/"
 			} else {
 				test.Close()
