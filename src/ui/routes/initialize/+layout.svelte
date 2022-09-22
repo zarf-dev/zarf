@@ -5,7 +5,11 @@
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Stepper } from '@ui';
 
-	Packages.readInit().then(pkgStore.set);
+	Packages.findInit().then((initPackages) => {
+		if (initPackages.length > 0) {
+			Packages.read(initPackages[0]).then(pkgStore.set);
+		}
+	});
 
 	let setupComplete = false;
 
