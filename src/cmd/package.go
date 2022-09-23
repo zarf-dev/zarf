@@ -95,25 +95,17 @@ var packageListCmd = &cobra.Command{
 			{"     Package ", "Components"},
 		}
 
-		// Parse through all the secrets and output relevant information to the terminal
-		for _, secret := range secrets.Items {
-			installedPackage := types.DeployedPackage{}
-			err := json.Unmarshal(secret.Data["data"], &installedPackage)
-			if err != nil {
-				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
-			}
+		for _, pkg := range deployedZarfPackages {
+			var components []string
 
-			deployedComponentNames := make([]string, 0)
-			for _, component := range installedPackage.DeployedComponents {
-				deployedComponentNames = append(deployedComponentNames, component.Name)
+			for _, component := range pkg.DeployedComponents {
+				components = append(components, component.Name)
 			}
 
 			packageTable = append(packageTable, pterm.TableData{{
-				fmt.Sprintf("     %s", installedPackage.Name),
-				fmt.Sprintf("%v", deployedComponentNames),
+				fmt.Sprintf("     %s", pkg.Name),
+				fmt.Sprintf("%v", components),
 			}}...)
-		for _, deployedPackage := range deployedZarfPackages {
-			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", deployedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(deployedPackage.DeployedComponents).MapKeys())}}...)
 		}
 
 		// Print out the table for the user

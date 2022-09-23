@@ -341,9 +341,9 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 				manifest.Files = append(manifest.Files, destination)
 			}
 
-			if manifest.DefaultNamespace == "" {
+			if manifest.Namespace == "" {
 				// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
-				manifest.DefaultNamespace = corev1.NamespaceDefault
+				manifest.Namespace = corev1.NamespaceDefault
 			}
 
 			// Iterate over any connectStrings and add to the main map
