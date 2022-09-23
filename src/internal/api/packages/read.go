@@ -34,10 +34,7 @@ func readPackage(w http.ResponseWriter, path string) (pkg types.APIZarfPackage, 
 		return pkg, err
 	}
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return pkg, err
-	}
+	tmpDir := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 
 	// Extract the archive
 	err = archiver.Extract(pkg.Path, config.ZarfYAML, tmpDir)
