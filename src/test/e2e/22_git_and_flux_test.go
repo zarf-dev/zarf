@@ -51,7 +51,8 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 
 func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Init the state variable
-	state := k8s.LoadZarfState()
+	state, err := k8s.LoadZarfState()
+	require.NoError(t, err)
 	config.InitState(state)
 
 	// Get the repo as the readonly user
@@ -71,7 +72,9 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 
 func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
-	state := k8s.LoadZarfState()
+	state, err := k8s.LoadZarfState()
+	require.NoError(t, err, "Failed to load Zarf state")
+
 	config.InitState(state)
 
 	repoName := "mirror__github.com__defenseunicorns__zarf"

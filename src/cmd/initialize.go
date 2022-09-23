@@ -98,7 +98,7 @@ var initCmd = &cobra.Command{
 				} else {
 					// Otherwise, exit and tell the user to manually download the init-package
 					message.Warn("You must download the init package manually and place it in the current working directory")
-					os.Exit(0)
+					return
 				}
 			}
 		}

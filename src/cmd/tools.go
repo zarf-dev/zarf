@@ -65,7 +65,11 @@ var readCredsCmd = &cobra.Command{
 	Use:   "get-admin-password",
 	Short: "Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			message.Fatal(err, "Unable to load Zarf state")
+		}
+
 		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")

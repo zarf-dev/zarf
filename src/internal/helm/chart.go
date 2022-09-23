@@ -206,7 +206,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 			Name:        tmpChart.Metadata.Name,
 			ReleaseName: sha1ReleaseName,
 			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.DefaultNamespace,
+			Namespace:   manifest.Namespace,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently

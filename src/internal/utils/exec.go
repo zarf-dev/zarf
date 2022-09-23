@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 )
 
@@ -17,7 +18,7 @@ const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
-//nolint
+// nolint
 func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, string, error) {
 	if showLogs {
 		fmt.Println()
@@ -71,4 +72,17 @@ func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName stri
 	}
 
 	return stdoutBuf.String(), stderrBuf.String(), nil
+}
+
+func ExecLaunchURL(url string) error {
+	switch runtime.GOOS {
+	case "linux":
+		return exec.Command("xdg-open", url).Start()
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		return exec.Command("open", url).Start()
+	}
+
+	return nil
 }

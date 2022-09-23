@@ -14,7 +14,10 @@ func GetAllServiceAccounts() (*corev1.ServiceAccountList, error) {
 
 // GetServiceAccounts returns a list of service accounts in a given namespace
 func GetServiceAccounts(namespace string) (*corev1.ServiceAccountList, error) {
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.ListOptions{}
 	return clientset.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metaOptions)
@@ -22,7 +25,10 @@ func GetServiceAccounts(namespace string) (*corev1.ServiceAccountList, error) {
 
 // GetServiceAccount reutrns a single service account by namespace and name.
 func GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.GetOptions{}
 	return clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metaOptions)
@@ -30,7 +36,10 @@ func GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
 
 // SaveServiceAccount updates the given service account in the cluster
 func SaveServiceAccount(svcAccount *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.UpdateOptions{}
 	return clientset.CoreV1().ServiceAccounts(svcAccount.Namespace).Update(context.TODO(), svcAccount, metaOptions)

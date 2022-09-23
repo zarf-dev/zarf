@@ -9,7 +9,10 @@ import (
 
 // GetNodes returns a list of nodes from the k8s cluster.
 func GetNodes() (*corev1.NodeList, error) {
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.ListOptions{}
 	return clientset.CoreV1().Nodes().List(context.TODO(), metaOptions)
