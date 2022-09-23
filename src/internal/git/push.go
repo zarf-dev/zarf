@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -129,23 +128,23 @@ func push(repo *git.Repository, localPath string, spinner *message.Spinner) erro
 		return fmt.Errorf("unable to remove unused git refs from the repo: %w", err)
 	}
 
-	// Fetch remote offline refs in case of old update or if multiple refs are specified in one package
-	fetchOptions := &git.FetchOptions{
-		RemoteName: offlineRemoteName,
-		Auth:       &gitCred,
-		RefSpecs: []goConfig.RefSpec{
-			"refs/heads/*:refs/heads/*",
-			onlineRemoteRefPrefix + "*:refs/heads/*",
-			"refs/tags/*:refs/tags/*",
-		},
-	}
+	// // Fetch remote offline refs in case of old update or if multiple refs are specified in one package
+	// fetchOptions := &git.FetchOptions{
+	// 	RemoteName: offlineRemoteName,
+	// 	Auth:       &gitCred,
+	// 	RefSpecs: []goConfig.RefSpec{
+	// 		"refs/heads/*:refs/heads/*",
+	// 		onlineRemoteRefPrefix + "*:refs/heads/*",
+	// 		"refs/tags/*:refs/tags/*",
+	// 	},
+	// }
 
-	err = repo.Fetch(fetchOptions)
-	if errors.Is(err, transport.ErrRepositoryNotFound) {
-		message.Debugf("Repo not yet available offline, skipping fetch")
-	} else if err != nil {
-		return fmt.Errorf("unable to fetch remote cleanly prior to push: %w", err)
-	}
+	// err = repo.Fetch(fetchOptions)
+	// if errors.Is(err, transport.ErrRepositoryNotFound) {
+	// 	message.Debugf("Repo not yet available offline, skipping fetch")
+	// } else if err != nil {
+	// 	return fmt.Errorf("unable to fetch remote cleanly prior to push: %w", err)
+	// }
 
 	// Push all heads and tags to the offline remote
 	err = repo.Push(&git.PushOptions{
