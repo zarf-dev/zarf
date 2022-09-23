@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -66,26 +67,12 @@ func Deploy() {
 
 	spinner.Success()
 
-	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
 	// If SBOM files exist, temporary place them in the deploy directory
-	if len(sbomViewFiles) > 0 {
-		sbomDir := "zarf-sbom"
-		// Cleanup any failed prior removals
-		_ = os.RemoveAll(sbomDir)
-		// Create the directory again
-		utils.CreateDirectory(sbomDir, 0755)
-		for _, file := range sbomViewFiles {
-			// Our file copy lib explodes on these files for some reason...
-			data, err := ioutil.ReadFile(file)
-			if err != nil {
-				message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
-			}
-			dst := filepath.Join(sbomDir, filepath.Base(file))
-			err = ioutil.WriteFile(dst, data, 0644)
-			if err != nil {
-				message.Fatalf(err, "Unable to write the sbom-viewer file %s", dst)
-			}
-		}
+	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+	err = writeSBOMFiles(sbomViewFiles)
+	if err != nil {
+		message.Errorf(err, "Unable to process the SBOM files for this package")
+		// Don't stop the deployment, let the user decide if they want to continue the deployment
 	}
 
 	// Confirm the overall package deployment
@@ -93,7 +80,7 @@ func Deploy() {
 
 	// Don't continue unless the user says so
 	if !confirm {
-		os.Exit(0)
+		return
 	}
 
 	// Generate a secret that describes the package that is being deployed
@@ -123,65 +110,40 @@ func Deploy() {
 
 	// Get a list of all the components we are deploying and actually deploy them
 	componentsToDeploy := getValidComponents(components, requestedComponents)
-	deployedComponents := deployComponents(tempPath, componentsToDeploy)
+	deployedComponents, err := deployComponents(tempPath, componentsToDeploy)
+	if err != nil {
+		message.Errorf(err, "Unable to deploy all the components of this Zarf Package.")
+	}
 	installedZarfPackage.DeployedComponents = deployedComponents
 
+	// Notify all the things about the successful deployment
 	message.SuccessF("Zarf deployment complete")
 	pterm.Println()
+	printTablesForDeployment(componentsToDeploy)
 
-	// If not init config, print the application connection table
-	if !config.IsZarfInitConfig() {
-		message.PrintConnectStringTable(connectStrings)
-	} else {
-		// otherwise, print the init config connection and passwords
-		loginTableHeader := pterm.TableData{
-			{"     Application", "Username", "Password", "Connect"},
-		}
-
-		loginTable := pterm.TableData{}
-		if config.GetContainerRegistryInfo().InternalRegistry {
-			loginTable = append(loginTable, pterm.TableData{{"     Registry", config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"}}...)
-		}
-
-		for _, component := range componentsToDeploy {
-			// Show message if including logging stack
-			if component.Name == "logging" {
-				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetState().LoggingSecret, "zarf connect logging"}}...)
-			}
-			// Show message if including git-server
-			if component.Name == "git-server" {
-				loginTable = append(loginTable, pterm.TableData{
-					{"     Git", config.GetGitServerInfo().PushUsername, config.GetState().GitServer.PushPassword, "zarf connect git"},
-					{"     Git (read-only)", config.GetGitServerInfo().PullUsername, config.GetState().GitServer.PullPassword, "zarf connect git"},
-				}...)
-			}
-		}
-
-		if len(loginTable) > 0 {
-			loginTable = append(loginTableHeader, loginTable...)
-			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
-		}
-	}
-
-	// Not all packages need k8s so we need to check if k8s is being used before saving the metadata secret
+	// Save deployed package information to k8s
+	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 	if packageUsesK8s(config.GetActiveConfig()) {
 		stateData, _ := json.Marshal(installedZarfPackage)
 		deployedPackageSecret.Data = make(map[string][]byte)
 		deployedPackageSecret.Data["data"] = stateData
 		k8s.ReplaceSecret(deployedPackageSecret)
 	}
+
+	// All done
+	return
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them
-func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfComponent) []types.DeployedComponent {
+func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
 	// When pushing images, the default behavior is to add a shasum of the url to the image name
-	addShasumToImg := true
 	deployedComponents := []types.DeployedComponent{}
 
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name}
-		installedCharts := []types.InstalledCharts{}
+		installedCharts := []types.InstalledChart{}
+		addShasumToImg := true
 
 		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
 		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
@@ -191,28 +153,31 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 			continue
 		}
 
-		// Do somewhat custom deploys for the seed and agent components
-		switch component.Name {
-		case "zarf-seed-registry":
-			// If this is the seed component; seed the state and inject a container registry into the cluster
-			if component.Name == "zarf-seed-registry" && config.InitOptions.RegistryInfo.Address == "" {
-				seedZarfState(tempPath)
-				runInjectionMadness(tempPath)
-				installedCharts = deployComponent(tempPath, component, !addShasumToImg)
-				err := postSeedRegistry(tempPath)
-				if err != nil {
-					message.Warnf("Unable to seed the Zarf registry")
-					return deployedComponents //TODO: @JPERRY this function should return an err here..
-				}
-			}
-		case "zarf-agent":
-			// Seed the state if we are using an external registry
+		// Do somewhat custom pre-configuration for the seed and agent components
+		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" && config.InitOptions.RegistryInfo.Address == "" {
+			// The zarf-seed-registry component is responsible for seeding the state and finding a pod to inject a registry into
+			seedZarfState(tempPath)
+			runInjectionMadness(tempPath)
+		} else if config.IsZarfInitConfig() && component.Name == "zarf-agent" {
+			// The zarf-agent cannot mutate itself, so don't change the img url
+			addShasumToImg = false
+
+			// If we are using an external registry, we will need to seed the ZarfState as part of the zarf-agent component
 			if !config.GetContainerRegistryInfo().InternalRegistry {
 				seedZarfState(tempPath)
 			}
-			installedCharts = deployComponent(tempPath, component, !addShasumToImg)
-		default:
-			installedCharts = deployComponent(tempPath, component, addShasumToImg)
+		}
+
+		// Actually deploy the component
+		installedCharts = deployComponent(tempPath, component, addShasumToImg)
+
+		// Do cleanup for when we inject the seed registry during initialization
+		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" {
+			err := postSeedRegistry(tempPath)
+			if err != nil {
+				message.Warnf("Unable to seed the Zarf registry")
+				return deployedComponents, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+			}
 		}
 
 		// Deploy the component
@@ -220,13 +185,13 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		deployedComponents = append(deployedComponents, deployedComponent)
 	}
 
-	return deployedComponents
+	return deployedComponents, nil
 }
 
-func deployComponent(tempPath tempPaths, component types.ZarfComponent, addShasumToImgs bool) []types.InstalledCharts {
+// Deploy a Zarf Component
+func deployComponent(tempPath tempPaths, component types.ZarfComponent, addShasumToImgs bool) []types.InstalledChart {
+	var installedCharts []types.InstalledChart
 	message.Debugf("packager.deployComponent(%#v, %#v", tempPath, component)
-
-	var installedCharts []types.InstalledCharts
 
 	// Toggles for general deploy operations
 	componentPath := createComponentPaths(tempPath.components, component)
@@ -292,8 +257,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
-		// sourceFile := componentPath.files + "/" + strconv.Itoa(index)
-		sourceFile := sourceLocation + "/" + strconv.Itoa(index)
+		sourceFile := path.Join(sourceLocation, strconv.Itoa(index))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
@@ -413,8 +377,8 @@ func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPat
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster
-func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) []types.InstalledCharts {
-	installedCharts := []types.InstalledCharts{}
+func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) []types.InstalledChart {
+	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
 		// zarf magic for the value file
@@ -429,7 +393,7 @@ func installChartAndManifests(componentPath componentPaths, component types.Zarf
 			Chart:     chart,
 			Component: component,
 		})
-		installedCharts = append(installedCharts, types.InstalledCharts{Namespace: chart.Namespace, ChartName: installedChartName})
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map
 		for name, description := range addedConnectStrings {
@@ -451,7 +415,7 @@ func installChartAndManifests(componentPath componentPaths, component types.Zarf
 
 		// Iterate over any connectStrings and add to the main map
 		addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
-		installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.Namespace, ChartName: installedChartName})
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map
 		for name, description := range addedConnectStrings {
@@ -460,6 +424,75 @@ func installChartAndManifests(componentPath componentPaths, component types.Zarf
 	}
 
 	return installedCharts
+}
+
+func writeSBOMFiles(sbomViewFiles []string) error {
+	// Check if we even have any SBOM files to process
+	if len(sbomViewFiles) == 0 {
+		return nil
+	}
+
+	// Cleanup any failed prior removals
+	_ = os.RemoveAll(config.ZarfSBOMDir)
+
+	// Create the directory again
+	err := utils.CreateDirectory(config.ZarfSBOMDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	// Write each of the sbom files
+	for _, file := range sbomViewFiles {
+		// Our file copy lib explodes on these files for some reason...
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
+		}
+		dst := filepath.Join(config.ZarfSBOMDir, filepath.Base(file))
+		err = ioutil.WriteFile(dst, data, 0644)
+		if err != nil {
+			message.Debugf("Unable to write the sbom-viewer file %s", dst)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func printTablesForDeployment(componentsToDeploy []types.ZarfComponent) {
+	// If not init config, print the application connection table
+	if !config.IsZarfInitConfig() {
+		message.PrintConnectStringTable(connectStrings)
+	} else {
+		// otherwise, print the init config connection and passwords
+		loginTableHeader := pterm.TableData{
+			{"     Application", "Username", "Password", "Connect"},
+		}
+
+		loginTable := pterm.TableData{}
+		if config.GetContainerRegistryInfo().InternalRegistry {
+			loginTable = append(loginTable, pterm.TableData{{"     Registry", config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword, "zarf connect registry"}}...)
+		}
+
+		for _, component := range componentsToDeploy {
+			// Show message if including logging stack
+			if component.Name == "logging" {
+				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", config.GetState().LoggingSecret, "zarf connect logging"}}...)
+			}
+			// Show message if including git-server
+			if component.Name == "git-server" {
+				loginTable = append(loginTable, pterm.TableData{
+					{"     Git", config.GetGitServerInfo().PushUsername, config.GetState().GitServer.PushPassword, "zarf connect git"},
+					{"     Git (read-only)", config.GetGitServerInfo().PullUsername, config.GetState().GitServer.PullPassword, "zarf connect git"},
+				}...)
+			}
+		}
+
+		if len(loginTable) > 0 {
+			loginTable = append(loginTableHeader, loginTable...)
+			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+		}
+	}
 }
 
 func packageUsesK8s(zarfPackage types.ZarfPackage) bool {

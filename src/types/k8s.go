@@ -13,6 +13,8 @@ type ZarfState struct {
 	LoggingSecret string        `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
 }
 
+// DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
+// This object is saved as the data of a k8s secret within the 'zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name       string      `json:"name"`
 	Data       ZarfPackage `json:"data"`
@@ -21,17 +23,19 @@ type DeployedPackage struct {
 	DeployedComponents []DeployedComponent `json:"deployedComponents"`
 }
 
+// DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name            string            `json:"name"`
-	InstalledCharts []InstalledCharts `json:"installedCharts"`
+	Name            string           `json:"name"`
+	InstalledCharts []InstalledChart `json:"installedCharts"`
 }
 
 // TODO: @JPERRY This name should be singular.
-type InstalledCharts struct {
+type InstalledChart struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`
 }
 
+// GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
 type GitServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`
@@ -42,6 +46,7 @@ type GitServerInfo struct {
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
+// RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
 type RegistryInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the registry"`
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the registry"`
@@ -55,6 +60,7 @@ type RegistryInfo struct {
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
 }
 
+// GeneratedPKI
 type GeneratedPKI struct {
 	CA   []byte `json:"ca"`
 	Cert []byte `json:"cert"`

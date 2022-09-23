@@ -146,9 +146,9 @@ build-examples:
 ## Run e2e tests. Will automatically build any required dependencies that aren't present.
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: init-package build-examples
+test-e2e: build-examples
 	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
-
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
 test-external:

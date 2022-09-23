@@ -55,28 +55,44 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	zarfState, _ := getStateFromAgentPod(zarfStatePath)
+	zarfState, err := getStateFromAgentPod(zarfStatePath)
+	if err != nil {
+		message.Debugf("Unable to load the ZarfState file so that the Agent can mutate pods: %#v", err)
+		return nil, err
+	}
 	config.InitState(zarfState)
 	containerRegistryURL := config.GetRegistry()
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		if err != nil {
+			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		if err != nil {
+			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		if err != nil {
+			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 

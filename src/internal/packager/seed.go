@@ -35,11 +35,9 @@ func seedZarfState(tempPath tempPaths) {
 	}
 
 	// Attempt to load an existing state prior to init
+	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, err := k8s.LoadZarfState()
-	if err != nil {
-		spinner.Errorf(err, "Unable to load existing Zarf state")
-	}
+	state, _ := k8s.LoadZarfState()
 
 	// If the distro isn't populated in the state, assume this is a new cluster
 	if state.Distro == "" {

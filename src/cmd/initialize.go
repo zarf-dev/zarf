@@ -125,10 +125,16 @@ func validateInitFlags() error {
 	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
 	if config.InitOptions.GitServer.Address != "" {
 		if config.InitOptions.GitServer.PushUsername == "" || config.InitOptions.GitServer.PushPassword == "" {
-			return fmt.Errorf("the 'git-user' and 'git-password' flags must be provided if the 'git-url' flag is provided")
+			return fmt.Errorf("the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided")
 		}
 	}
 
+	//If 'registry-url' is provided, make sure they provided values for the username and password of the push user
+	if config.InitOptions.RegistryInfo.Address != "" {
+		if config.InitOptions.RegistryInfo.PushUsername == "" || config.InitOptions.RegistryInfo.PushPassword == "" {
+			return fmt.Errorf("the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided ")
+		}
+	}
 	return nil
 }
 

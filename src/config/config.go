@@ -45,13 +45,13 @@ const (
 	ZarfCleanupScriptsPath    = "/opt/zarf"
 	ZarfDefaultImageCachePath = ".zarf-image-cache"
 
-	ZarfYAML = "zarf.yaml"
+	ZarfYAML    = "zarf.yaml"
+	ZarfSBOMDir = "zarf-sbom"
 
 	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
 	ZarfInClusterContainerRegistryNodePort = 31999
 
-	ZarfInClusterGitServiceURL  = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterGitServicePort = 3000
+	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 )
 
 var (

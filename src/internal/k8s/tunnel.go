@@ -102,7 +102,7 @@ func IsServiceURL(url string) bool {
 func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 	parsedURL, err := url.Parse(serviceURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse the provided URL: %v", serviceURL)
+		return nil, fmt.Errorf("unable to parse the provided URL (%s): %w", serviceURL, err)
 	}
 
 	// Get the remote port from the serviceURL

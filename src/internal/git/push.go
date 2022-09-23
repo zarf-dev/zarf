@@ -79,7 +79,6 @@ func PushAllDirectories(localPath string) error {
 				return err
 			}
 		}
-
 	}
 
 	spinner.Success()

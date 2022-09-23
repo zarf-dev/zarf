@@ -3,27 +3,25 @@ package utils
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"regexp"
 	"strings"
-
-	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
 // For further explanation see https://regex101.com/library/PiL191 and https://regex101.com/r/PiL191/1
 var hostParser = regexp.MustCompile(`(?im)([a-z0-9\-\_.]+)?(\/[a-z0-9\-.]+)?(:[\w\.\-\_]+)?$`)
 
 // SwapHost Perform base url replacement and adds a sha1sum of the original url to the end of the src
-func SwapHost(src string, targetHost string) string {
-	targetImage := getTargetImageFromURL(src)
-	return targetHost + "/" + targetImage
+func SwapHost(src string, targetHost string) (string, error) {
+	targetImage, err := getTargetImageFromURL(src)
+	return targetHost + "/" + targetImage, err
 }
 
-func getTargetImageFromURL(src string) string {
+func getTargetImageFromURL(src string) (string, error) {
 	submatches := hostParser.FindStringSubmatch(src)
 	if len(submatches) == 0 {
-		message.Warnf("Unable to get the targetImage from the provided source: %s", src)
-		return src // TODO @JPERRY: This should probably return an err
+		return "", fmt.Errorf("unable to get the targetImage from the provided source: %s", src)
 	}
 
 	// Combine (most) of the matches we obtained
@@ -37,7 +35,10 @@ func getTargetImageFromURL(src string) string {
 	tagMatcher := regexp.MustCompile(`(?im)(:[\w\.\-\_]+)?$`)
 	srcWithoutTag := tagMatcher.ReplaceAllString(src, "")
 	hasher := sha1.New()
-	_, _ = io.WriteString(hasher, srcWithoutTag)
+	_, err := io.WriteString(hasher, srcWithoutTag)
+	if err != nil {
+		return "", fmt.Errorf("unable to get targetImage from the provided source: %w", err)
+	}
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
 
 	// Ensure we add the sha1sum before we apply an image tag
@@ -47,16 +48,15 @@ func getTargetImageFromURL(src string) string {
 		targetImage += submatches[lastElementIndex] + "-" + sha1Hash
 	}
 
-	return targetImage
+	return targetImage, nil
 }
 
 // SwapHostWithoutSha Perform base url replacement but avoids adding a sha1sum of the original url.
-func SwapHostWithoutSha(src string, targetHost string) string {
+func SwapHostWithoutSha(src string, targetHost string) (string, error) {
 	submatches := hostParser.FindStringSubmatch(src)
 	if len(submatches) == 0 {
-		message.Warnf("Unable to get the targetImage from the provided source: %s", src)
-		return src // TODO @JPERRY: This should probably return an err
+		return "", fmt.Errorf("unable to get the targetImage from the provided source: %s", src)
 	}
 
-	return targetHost + "/" + submatches[0]
+	return targetHost + "/" + submatches[0], nil
 }
