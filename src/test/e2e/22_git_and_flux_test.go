@@ -74,6 +74,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
+
 	config.InitState(state)
 
 	repoName := "mirror__github.com__defenseunicorns__zarf"
