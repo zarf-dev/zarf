@@ -2,7 +2,6 @@ package external_test
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"path"
 	"strings"
@@ -24,20 +23,23 @@ func TestExternalDeploy(t *testing.T) {
 	_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "helm", helmInstallArgs...)
 	require.NoError(t, err, "unable to install gitea chart")
 
-	// Add private-git-server secret to git-server namespace
-	secretFilePath := "secret.yaml"
-	applyArgs := []string{"apply", fmt.Sprintf("-f=%s", secretFilePath)}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "kubectl", applyArgs...)
-	require.NoError(t, err, "unable to apply private-git-server secret ")
-
+	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
 	helmAddArgs := []string{"repo", "add", "twuni", "https://helm.twun.io"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmAddArgs...)
 	require.NoError(t, err, "unable to add the docker-registry chart repo")
-
-	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
 	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmInstallArgs...)
 	require.NoError(t, err, "unable to install the docker-registry chart")
+
+	// Verify the registry and gitea helm charts installed successfully
+	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=5s"}
+	registryErrStr := "unable to verify the docker-registry chart installed successfully"
+	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
+	giteaErrStr := "unable to verify the gitea chart installed successfully"
+	success := verifyKubectlWaitSuccess(t, 2, registryWaitCmd, registryErrStr)
+	require.True(t, success, registryErrStr)
+	success = verifyKubectlWaitSuccess(t, 2, giteaWaitCmd, giteaErrStr)
+	require.True(t, success, giteaErrStr)
 
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init",
@@ -53,34 +55,37 @@ func TestExternalDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm", "-l=trace"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, deployArgs...)
 	require.NoError(t, err, "unable to deploy flux example package")
 
 	// Verify flux was able to pull from the 'external' repository
-	kubectlOut := verifyPodinfoDeployment(t)
-	assert.Contains(t, kubectlOut, "condition met")
+	podinfoWaitCmd := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
+	errorStr := "unable to verify flux deployed the podinfo example"
+	success = verifyKubectlWaitSuccess(t, 2, podinfoWaitCmd, errorStr)
+	assert.True(t, success, errorStr)
 }
 
-func verifyPodinfoDeployment(t *testing.T) string {
-	timeout := time.After(1 * time.Minute)
+func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCmd []string, errorStr string) bool {
+	timeout := time.After(timeoutMinutes * time.Minute)
 	for {
 		// delay check 3 seconds
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 		select {
 		// on timeout abort
 		case <-timeout:
-			t.Error("Timeout waiting for flux podinfo deployment")
+			t.Error(errorStr)
 
 			// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
-			kubectlOut, err := exec.Command("kubectl", "wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s").Output()
+			kubectlOut, err := exec.Command("kubectl", waitCmd...).Output()
 			// Log error
 			if err != nil {
 				t.Log(string(kubectlOut), err)
-			} else if strings.Contains(string(kubectlOut), "condition met") {
-				return string(kubectlOut)
+			}
+			if strings.Contains(string(kubectlOut), "condition met") {
+				return true
 			}
 		}
 	}
