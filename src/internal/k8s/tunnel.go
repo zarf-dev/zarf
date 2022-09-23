@@ -5,11 +5,9 @@ package k8s
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"strconv"
@@ -22,6 +20,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -94,7 +93,7 @@ func PrintConnectTable() error {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 	return &Tunnel{
-		out:          ioutil.Discard,
+		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
 		namespace:    namespace,
@@ -175,17 +174,9 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors
 		if tunnel.autoOpen {
-			switch runtime.GOOS {
-			case "linux":
-				_ = exec.Command("xdg-open", url).Start()
-			case "windows":
-				_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-			case "darwin":
-				_ = exec.Command("open", url).Start()
+			if err := utils.ExecLaunchURL(url); err != nil {
+				message.Debug(err)
 			}
-		} else {
-			// Dump the tunnel URL to the console for other tools if not auto-opening
-			fmt.Print(url)
 		}
 
 		// Dump the tunnel URL to the console for other tools to use
@@ -303,7 +294,10 @@ func (tunnel *Tunnel) establish() (string, error) {
 	}
 	spinner.Debugf("Selected pod %s to open port forward to", podName)
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return "", fmt.Errorf("unable to get clientset: %w", err)
+	}
 
 	// Build url to the port forward endpoint
 	// example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward
@@ -318,7 +312,10 @@ func (tunnel *Tunnel) establish() (string, error) {
 
 	spinner.Debugf("Using URL %s to create portforward", portForwardCreateURL)
 
-	restConfig := getRestConfig()
+	restConfig, err := getRestConfig()
+	if err != nil {
+		return "", fmt.Errorf("unable to get rest config: %w", err)
+	}
 
 	// Construct the spdy client required by the client-go portforward library
 	transport, upgrader, err := spdy.RoundTripperFor(restConfig)

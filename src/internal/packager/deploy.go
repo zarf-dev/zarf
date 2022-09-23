@@ -169,9 +169,6 @@ func Deploy() {
 		deployedPackageSecret.Data["data"] = stateData
 		k8s.ReplaceSecret(deployedPackageSecret)
 	}
-
-	// All done
-	os.Exit(0)
 }
 
 func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types.InstalledCharts {
@@ -251,7 +248,10 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 		spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 		defer spinner.Stop()
 
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			spinner.Fatalf(err, "Unable to load the Zarf State from the Kubernetes cluster")
+		}
 
 		if state.Distro == "" {
 			// If no distro the zarf secret did not load properly
@@ -341,14 +341,14 @@ func deployComponents(tempPath tempPaths, component types.ZarfComponent) []types
 				manifest.Files = append(manifest.Files, destination)
 			}
 
-			if manifest.DefaultNamespace == "" {
+			if manifest.Namespace == "" {
 				// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
-				manifest.DefaultNamespace = corev1.NamespaceDefault
+				manifest.Namespace = corev1.NamespaceDefault
 			}
 
 			// Iterate over any connectStrings and add to the main map
 			addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.manifests, manifest, component)
-			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.DefaultNamespace, ChartName: installedChartName})
+			installedCharts = append(installedCharts, types.InstalledCharts{Namespace: manifest.Namespace, ChartName: installedChartName})
 			for name, description := range addedConnectStrings {
 				connectStrings[name] = description
 			}
