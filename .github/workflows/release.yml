@@ -15,7 +15,7 @@ jobs:
           go-version: 1.19.x
 
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.6.0
+        uses: sigstore/cosign-installer@v2.7.0
 
       - name: "Dependency: Install Docker Buildx"
         id: buildx
