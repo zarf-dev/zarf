@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -110,6 +111,13 @@ func Debugf(format string, a ...any) {
 func Error(err any, message string) {
 	debugPrinter(1, err)
 	Warnf(message)
+}
+
+func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
+	debugPrinter(1, err)
+	message := fmt.Sprintf(format, a...)
+	Warn(message)
+	http.Error(w, message, http.StatusInternalServerError)
 }
 
 func Errorf(err any, format string, a ...any) {

@@ -46,16 +46,24 @@ destroy:
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-build-cli-linux-amd: build-injector-registry-amd
+ensure-ui-build-dir:
+	mkdir -p build/ui
+	touch build/ui/index.html
+
+build-ui:
+	npm ci
+	npm run build
+
+build-cli-linux-amd: build-injector-registry-amd build-ui
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm
+build-cli-linux-arm: build-injector-registry-arm build-ui
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd
+build-cli-mac-intel: build-injector-registry-amd build-ui
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm
+build-cli-mac-apple: build-injector-registry-arm build-ui
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
@@ -68,18 +76,27 @@ build-injector-registry-amd:
 build-injector-registry-arm:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
-docs-and-schema:
+docs-and-schema: ensure-ui-build-dir
 	go run main.go internal generate-cli-docs
 	.hooks/create-zarf-schema.sh
 
+dev: ensure-ui-build-dir
+	go mod download
+	npm ci
+	npm run dev
+
+test-built-ui:
+	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
+
 test-docs-and-schema:
-	.hooks/backup-zarf-docs-and-schema.sh
 	$(MAKE) docs-and-schema
 	.hooks/check-zarf-docs-and-schema.sh
-	$(MAKE) clean-docs-and-schema
 
-clean-docs-and-schema:
-	rm -r zarf.schema.json.bak docs/4-user-guide/3-zarf-schema.md.bak docs/4-user-guide/1-the-zarf-cli/100-cli-commands.bak/
+test-cves: ensure-ui-build-dir
+	go run main.go tools sbom packages . -o json | grype --fail-on low
+
+cve-report: ensure-ui-build-dir
+	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
 
 test-cves:
 	go run main.go tools sbom packages . -o json | grype --fail-on low

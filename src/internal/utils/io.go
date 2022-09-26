@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -12,6 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/otiai10/copy"
 )
+
+const dotCharacter = 46
 
 var TempPathPrefix = "zarf-"
 
@@ -94,31 +97,31 @@ func ReplaceTextTemplate(path string, mappings map[string]string) {
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths
-func RecursiveFileList(root string, pattern *regexp.Regexp) []string {
-	var files []string
+func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		// Skip hidden directories
+		if d.IsDir() && d.Name()[0] == dotCharacter {
+			return filepath.SkipDir
+		}
 
-	err := filepath.Walk(root,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() {
-				if pattern != nil {
-					if len(pattern.FindStringIndex(path)) > 0 {
-						files = append(files, path)
-					}
-				} else {
+		// Return errors
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			if pattern != nil {
+				if len(pattern.FindStringIndex(path)) > 0 {
 					files = append(files, path)
 				}
+			} else {
+				files = append(files, path)
 			}
-			return nil
-		})
+		}
 
-	if err != nil {
-		message.Fatalf(err, "Unable to walk the directory %s", root)
-	}
-
-	return files
+		return nil
+	})
+	return files, err
 }
 
 func CreateFilePath(destination string) error {

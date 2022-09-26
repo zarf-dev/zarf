@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -46,6 +47,19 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
+var apiSchemaCmd = &cobra.Command{
+	Use:   "api-schema",
+	Short: "Generates a JSON schema from the API stypes",
+	Run: func(cmd *cobra.Command, args []string) {
+		schema := jsonschema.Reflect(&types.RestAPI{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			message.Fatal(err, "Unable to generate the zarf api schema")
+		}
+		fmt.Print(string(output) + "\n")
+	},
+}
+
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: "Creates a read-only user in Gitea",
@@ -53,14 +67,25 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
-		state := k8s.LoadZarfState()
+		state, err := k8s.LoadZarfState()
+		if err != nil {
+			message.Error(err, "Unable to load the Zarf state")
+		}
 		config.InitState(state)
 
 		// Create the non-admin user
-		err := git.CreateReadOnlyUser()
+		err = git.CreateReadOnlyUser()
 		if err != nil {
 			message.Error(err, "Unable to create a read-only user in the Gitea service.")
 		}
+	},
+}
+
+var uiCmd = &cobra.Command{
+	Use:   "ui",
+	Short: "Launch the experimental Zarf UI",
+	Run: func(cmd *cobra.Command, args []string) {
+		api.LaunchAPIServer()
 	},
 }
 
@@ -69,5 +94,7 @@ func init() {
 
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
+	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
+	internalCmd.AddCommand(uiCmd)
 }
