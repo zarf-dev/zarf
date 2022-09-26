@@ -23,15 +23,16 @@ zarf init [flags]
       --nodeport string        Nodeport to access the Zarf container registry. Between [30000-32767]
       --secret string          Root secret value that is used to 'seed' other secrets
       --storage-class string   Describe the StorageClass to be used
-      --tmpdir string          Specify the temporary directory to use for intermediate files
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace
+  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-log-file           Disable log file creation.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc.
+      --tmpdir string         Specify the temporary directory to use for intermediate files
 ```
 
 ### SEE ALSO

@@ -21,7 +21,6 @@ zarf package create [DIRECTORY] [flags]
   -o, --output-directory string   Specify the output directory for the created Zarf package
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package
-      --tmpdir string             Specify the temporary directory to use for intermediate files
       --zarf-cache string         Specify the location of the Zarf image cache (default ".zarf-image-cache")
 ```
 
@@ -29,8 +28,10 @@ zarf package create [DIRECTORY] [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace
+  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-log-file           Disable log file creation.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc.
+      --tmpdir string         Specify the temporary directory to use for intermediate files
 ```
 
 ### SEE ALSO
