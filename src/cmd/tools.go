@@ -63,7 +63,7 @@ var registryCmd = &cobra.Command{
 
 var readCredsCmd = &cobra.Command{
 	Use:   "get-git-password",
-	Short: "Returns the push users password for the Git server",
+	Short: "Returns the push user's password for the Git server",
 	Long:  "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		state, err := k8s.LoadZarfState()

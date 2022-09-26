@@ -88,7 +88,7 @@ func PrintConnectTable() error {
 	return nil
 }
 
-// IsServiceURL checks of a string appears to be a route to a local k8s service resource
+// IsServiceURL checks if a string appears to be a route to a local k8s service resource.
 func IsServiceURL(url string) bool {
 	if strings.Contains(url, "svc.cluster.local:") || strings.HasSuffix(url, "svc.cluster.local") {
 		return true

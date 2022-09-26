@@ -105,9 +105,9 @@ cve-report:
 	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
-# @todo: find a clean way to dynamiically support Kind or k3d:
+# @todo: find a clean way to dynamically support Kind or k3d:
 #        when using kind: kind load docker-image $(tag)
-#        when using k3d: k3d imagei mport $(tag)
+#        when using k3d: k3d image import $(tag)
 dev-agent-image:
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))

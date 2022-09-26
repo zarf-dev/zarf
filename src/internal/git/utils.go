@@ -49,6 +49,7 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 }
 
 func transformURLtoRepoName(url string) (string, error) {
+	// For further explanation: https://regex101.com/library/UfILls and https://regex101.com/rary/UfILls
 	findRegex := regexp.MustCompile(`\/([\w\-]+)(.git)?(@([\w\-\.]+))?$`)
 	substrings := findRegex.FindStringSubmatch(url)
 	if len(substrings) == 0 {
