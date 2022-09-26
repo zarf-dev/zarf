@@ -25,7 +25,7 @@ type ZarfDeployOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM        bool   `json:"skipSBOM"`
-	ImageCachePath  string `json:"imageCachePath"`
+	CachePath       string `json:"cachePath"`
 	Insecure        bool   `json:"insecure"`
 	OutputDirectory string `json:"outputDirectory"`
 }

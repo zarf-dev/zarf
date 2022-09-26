@@ -42,7 +42,7 @@ func CatalogImages(tagToImage map[name.Tag]v1.Image, sbomDir, tarPath string) {
 	imageCount := len(tagToImage)
 	builder := Builder{
 		spinner:   message.NewProgressSpinner("Creating SBOMs for %d images.", imageCount),
-		cachePath: config.GetImageCachePath(),
+		cachePath: config.GetCachePath(),
 		tarPath:   tarPath,
 		dir:       sbomDir,
 	}
@@ -89,7 +89,8 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Create the sbom
-	syftImage := image.NewImage(tarballImg, builder.cachePath, image.WithTags(tag.String()))
+	imageCachePath := filepath.Join(builder.cachePath, "images")
+	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}

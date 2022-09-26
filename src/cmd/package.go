@@ -17,7 +17,7 @@ import (
 
 var insecureDeploy bool
 var shasum string
-var zarfImageCache string
+var zarfCache string
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -42,8 +42,8 @@ var packageCreateCmd = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		if zarfImageCache != config.ZarfDefaultImageCachePath && cachePathClean(zarfImageCache) {
-			config.SetImageCachePath(zarfImageCache)
+		if zarfCache != config.ZarfDefaultCachePath && cachePathClean(zarfCache) {
+			config.SetCachePath(zarfCache)
 		}
 
 		packager.Create(baseDir)
@@ -149,7 +149,7 @@ func choosePackage(args []string) string {
 func cachePathClean(cachePath string) bool {
 	var isCleanPath = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
 	if !isCleanPath(cachePath) {
-		message.Warnf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultImageCachePath)
+		message.Warnf("Invalid characters in Zarf cache path, defaulting to ~/%s", config.ZarfDefaultCachePath)
 		return false
 	}
 	return true
@@ -166,7 +166,7 @@ func init() {
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	packageCreateCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
-	packageCreateCmd.Flags().StringVar(&zarfImageCache, "zarf-cache", config.ZarfDefaultImageCachePath, "Specify the location of the Zarf image cache")
+	packageCreateCmd.Flags().StringVar(&zarfCache, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
 	packageCreateCmd.Flags().StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", "", "Specify the output directory for the created Zarf package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.Insecure, "insecure", false, "Allow insecure registry connections when pulling OCI images")

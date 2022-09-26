@@ -39,9 +39,9 @@ const (
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
 
-	ZarfManagedByLabel        = "app.kubernetes.io/managed-by"
-	ZarfCleanupScriptsPath    = "/opt/zarf"
-	ZarfDefaultImageCachePath = ".zarf-image-cache"
+	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
+	ZarfCleanupScriptsPath = "/opt/zarf"
+	ZarfDefaultCachePath   = ".zarf-cache"
 
 	ZarfYAML = "zarf.yaml"
 )
@@ -257,19 +257,20 @@ func BuildConfig(path string) error {
 	return utils.WriteYaml(path, active, 0400)
 }
 
-// TODO: We will need similar options for git cache path
-func SetImageCachePath(cachePath string) {
-	CreateOptions.ImageCachePath = cachePath
+// SetCachePath sets the cache path for images and git repos.
+func SetCachePath(cachePath string) {
+	CreateOptions.CachePath = cachePath
 }
 
-func GetImageCachePath() string {
+// GetCachePath gets the absolute cache path for images and git repos.
+func GetCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	if CreateOptions.ImageCachePath == "" {
-		return filepath.Join(homePath, ZarfDefaultImageCachePath)
+	if CreateOptions.CachePath == "" {
+		return filepath.Join(homePath, ZarfDefaultCachePath)
 	}
 
-	return strings.Replace(CreateOptions.ImageCachePath, "~", homePath, 1)
+	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {

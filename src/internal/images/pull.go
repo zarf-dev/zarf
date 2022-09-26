@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -45,7 +46,7 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		if err != nil {
 			spinner.Fatalf(err, "Unable to pull the image %s", src)
 		}
-		imageCachePath := config.GetImageCachePath()
+		imageCachePath := filepath.Join(config.GetCachePath(), "images")
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
 	}

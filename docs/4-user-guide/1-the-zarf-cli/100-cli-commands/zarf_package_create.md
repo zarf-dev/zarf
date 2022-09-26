@@ -22,7 +22,7 @@ zarf package create [DIRECTORY] [flags]
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package
       --tmpdir string             Specify the temporary directory to use for intermediate files
-      --zarf-cache string         Specify the location of the Zarf image cache (default ".zarf-image-cache")
+      --zarf-cache string         Specify the location of the Zarf  artifact cache (images and git repositories) (default ".zarf-cache")
 ```
 
 ### Options inherited from parent commands
@@ -36,4 +36,3 @@ zarf package create [DIRECTORY] [flags]
 ### SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

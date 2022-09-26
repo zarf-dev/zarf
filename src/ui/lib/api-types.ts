@@ -454,7 +454,7 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
-    imageCachePath:  string;
+    cachePath:       string;
     insecure:        boolean;
     outputDirectory: string;
     skipSBOM:        boolean;
@@ -779,7 +779,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "imageCachePath", js: "imageCachePath", typ: "" },
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },

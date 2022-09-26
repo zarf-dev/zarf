@@ -19,12 +19,13 @@ func TestUseCLI(t *testing.T) {
 	shasumTestFilePath := "shasum-test-file"
 
 	// run `zarf package create` with a specified image cache location
-	imageCachePath := "/tmp/.image_cache-location"
+	cachePath := "/tmp/.cache-location"
+	imageCachePath := cachePath + "/images"
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := "/tmp/othertmp"
 
-	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
 
 	err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
 	assert.NoError(t, err)
@@ -61,14 +62,14 @@ func TestUseCLI(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName)
 	require.NoError(t, err, stdOut, stdErr)
 
 	_ = os.Mkdir(otherTmpPath, 0750)
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", imageCachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -82,5 +83,5 @@ func TestUseCLI(t *testing.T) {
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
 
-	e2e.cleanFiles(shasumTestFilePath, imageCachePath, otherTmpPath)
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
 }
