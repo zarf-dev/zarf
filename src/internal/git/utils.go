@@ -32,12 +32,6 @@ type Credential struct {
 func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		// TODO @JPERRY: This might be less valid of a check now that people can specify the git username
-		if strings.Contains(match, "/"+gitUser+"/") {
-			message.Warnf("%s seems to have been previously patched.", match)
-			return match
-		}
-
 		output, err := transformURL(host, match, gitUser)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
