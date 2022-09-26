@@ -8,10 +8,36 @@ import (
 	goConfig "github.com/go-git/go-git/v5/config"
 )
 
-// fetchTag performs a `git fetch` of _only_ the provided tag
+// fetchTag performs a `git fetch` of _only_ the provided tag.
 func fetchTag(gitDirectory string, tag string) {
 	message.Debugf("Fetch git tag %s from repo %s", tag, path.Base(gitDirectory))
 
+	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
+
+	err := fetch(gitDirectory, refspec)
+
+	if err == git.ErrTagExists {
+		message.Debug("Tag already fetched")
+	} else if err != nil {
+		message.Fatal(err, "Not a valid tag or unable to fetch")
+	}
+}
+
+// fetchHash performs a `git fetch` of _only_ the provided commit hash.
+func fetchHash(gitDirectory string, hash string) {
+	message.Debugf("Fetch git hash %s from repo %s", hash, path.Base(gitDirectory))
+
+	refspec := goConfig.RefSpec(hash + ":" + hash)
+
+	err := fetch(gitDirectory, refspec)
+
+	if err != nil {
+		message.Fatal(err, "Not a valid hash or unable to fetch")
+	}
+}
+
+// fetch performs a `git fetch` of _only_ the provided git refspec.
+func fetch(gitDirectory string, refspec goConfig.RefSpec) error {
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
 		message.Fatal(err, "Unable to load the git repo")
@@ -24,27 +50,19 @@ func fetchTag(gitDirectory string, tag string) {
 		message.Fatal(err, "Failed to identify remotes.")
 	}
 
-	gitUrl := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find tag: %s for %s", tag, gitUrl)
+	gitURL := remotes[0].Config().URLs[0]
+	message.Debugf("Attempting to find ref: %s for %s", refspec.String(), gitURL)
 
-	gitCred := FindAuthForHost(gitUrl)
+	gitCred := FindAuthForHost(gitURL)
 
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
-		RefSpecs: []goConfig.RefSpec{
-			goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag),
-		},
+		RefSpecs:   []goConfig.RefSpec{refspec},
 	}
 
 	if gitCred.Auth.Username != "" {
 		fetchOptions.Auth = &gitCred.Auth
 	}
 
-	err = repo.Fetch(fetchOptions)
-
-	if err == git.ErrTagExists {
-		message.Debug("Tag already fetched")
-	} else if err != nil {
-		message.Fatal(err, "Not a valid tag or unable to fetch")
-	}
+	return repo.Fetch(fetchOptions)
 }

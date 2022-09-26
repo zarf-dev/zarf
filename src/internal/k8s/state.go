@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -21,23 +19,23 @@ const (
 )
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState
-func LoadZarfState() types.ZarfState {
+func LoadZarfState() (types.ZarfState, error) {
 	message.Debug("k8s.LoadZarfState()")
 
 	// The empty state that we will try to fill
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secretInterface := getZarfStateInterface()
-
-	// Try to get the zarf-state secret
-	if match, err := secretInterface.Get(context.TODO(), ZarfStateSecretName, metav1.GetOptions{}); err == nil {
-		_ = json.Unmarshal(match.Data[ZarfStateDataKey], &state)
+	secret, err := GetSecret(ZarfNamespace, ZarfStateSecretName)
+	if err != nil {
+		return state, err
 	}
+
+	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
 	message.Debugf("ZarfState = %s", message.JsonValue(state))
 
-	return state
+	return state, nil
 }
 
 // SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret
@@ -78,13 +76,4 @@ func SaveZarfState(state types.ZarfState) error {
 	}
 
 	return nil
-}
-
-// getZarfStateInterface returns a secret interface for the zarf namespace
-func getZarfStateInterface() v1.SecretInterface {
-	message.Debug("k8s.getZarfStateInterface()")
-	clientSet := getClientset()
-
-	// Get interface for all secrets in the zarf namespace
-	return clientSet.CoreV1().Secrets(ZarfNamespace)
 }

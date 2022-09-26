@@ -25,7 +25,10 @@ func ReplaceConfigmap(namespace, name string, labels map[string]string, data map
 // CreateConfigmap applys a configmap to the cluster
 func CreateConfigmap(namespace, name string, labels map[string]string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	message.Debugf("k8s.CreateConfigmap(%s, %s, data)", namespace, name)
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -51,11 +54,14 @@ func CreateConfigmap(namespace, name string, labels map[string]string, data map[
 // DeleteConfigmap delets a confimap by name
 func DeleteConfigmap(namespace, name string) error {
 	message.Debugf("k8s.DeleteConfigmap(%s, %s)", namespace, name)
-	clientSet := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return err
+	}
 
-	namespaceConfigmap := clientSet.CoreV1().ConfigMaps(namespace)
+	namespaceConfigmap := clientset.CoreV1().ConfigMaps(namespace)
 
-	err := namespaceConfigmap.Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err = namespaceConfigmap.Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error deleting the configmap: %w", err)
 	}
@@ -66,7 +72,10 @@ func DeleteConfigmap(namespace, name string) error {
 // DeleteConfigMapsByLabel deletes a configmap by label(s)
 func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
 	message.Debugf("k8s.DeleteConfigMapsByLabel(%s, %#v)", namespace, labels)
-	clientSet := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return err
+	}
 
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: labels,
@@ -76,5 +85,5 @@ func DeleteConfigMapsByLabel(namespace string, labels map[string]string) error {
 		LabelSelector: labelSelector.String(),
 	}
 
-	return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(context.TODO(), metaOptions, listOptions)
+	return clientset.CoreV1().ConfigMaps(namespace).DeleteCollection(context.TODO(), metaOptions, listOptions)
 }
