@@ -177,7 +177,7 @@ func init() {
 
 	//  Always require confirm flag (no viper)
 	packageDeployCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
-	packageDeployCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify deployment variables to set on the command line (KEY=value)")
+	packageDeployCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString("package.deploy.set"), "Specify deployment variables to set on the command line (KEY=value)")
 	packageDeployCmd.Flags().StringVar(&config.DeployOptions.Components, "components", v.GetString("package.deploy.components"), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	packageDeployCmd.Flags().BoolVar(&insecureDeploy, "insecure", v.GetBool("package.deploy.insecure"), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	packageDeployCmd.Flags().StringVar(&shasum, "shasum", v.GetString("package.deploy.shasum"), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
