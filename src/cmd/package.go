@@ -167,6 +167,8 @@ func init() {
 
 	v.SetDefault("package.create.zarf_cache", config.ZarfDefaultImageCachePath)
 
+	// todo fill all these defaults in...
+
 	//  Always require confirm flag (no viper)
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString("package.create.set"), "Specify package variables to set on the command line (KEY=value)")

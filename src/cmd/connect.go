@@ -58,8 +58,12 @@ func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.AddCommand(connectListCmd)
 
+	v.SetDefault("connect.name", "")
 	v.SetDefault("connect.namespace", k8s.ZarfNamespace)
 	v.SetDefault("connect.resource_type", k8s.SvcResource)
+	v.SetDefault("connect.local_port", 0)
+	v.SetDefault("connect.remote_port", 0)
+	v.SetDefault("connect.cli_only", false)
 
 	connectCmd.Flags().StringVar(&connectResourceName, "name", v.GetString("connect.name"), "Specify the resource name.  E.g. name=unicorns or name=unicorn-pod-7448499f4d-b5bk6")
 	connectCmd.Flags().StringVar(&connectNamespace, "namespace", v.GetString("connect.namespace"), "Specify the namespace.  E.g. namespace=default")

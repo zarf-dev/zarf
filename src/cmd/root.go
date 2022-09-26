@@ -54,6 +54,12 @@ func Execute() {
 func init() {
 	initViper()
 
+	v.SetDefault("log_level", "info")
+	v.SetDefault("architecture", "")
+	v.SetDefault("no_log_file", false)
+	v.SetDefault("no_progress", false)
+	v.SetDefault("no_progress", false)
+
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString("log_level"), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString("architecture"), "Architecture for OCI images")
 	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool("no_log_file"), "Disable log file creation.")
