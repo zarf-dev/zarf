@@ -54,59 +54,17 @@ func Execute() {
 func init() {
 	initViper()
 
-	v.SetDefault("log_level", "info")
-	v.SetDefault("architecture", "")
-	v.SetDefault("no_log_file", false)
-	v.SetDefault("no_progress", false)
-	v.SetDefault("no_progress", false)
+	v.SetDefault(V_LOG_LEVEL, "info")
+	v.SetDefault(V_ARCHITECTURE, "")
+	v.SetDefault(V_NO_LOG_FILE, false)
+	v.SetDefault(V_NO_PROGRESS, false)
+	v.SetDefault(V_TMP_DIR, "")
 
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString("log_level"), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
-	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString("architecture"), "Architecture for OCI images")
-	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool("no_log_file"), "Disable log file creation.")
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc.")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString("tmpdir"), "Specify the temporary directory to use for intermediate files")
-
-}
-
-func initViper() {
-	// Already initializedby some other command
-	if v != nil {
-		return
-	}
-
-	v = viper.New()
-	// Specify an alternate config file
-	cfgFile := os.Getenv("ZARF_CONFIG")
-
-	// Don't forget to read config either from cfgFile or from home directory!
-	if cfgFile != "" {
-		// Use config file from the flag.
-		v.SetConfigFile(cfgFile)
-	} else {
-		// Search config paths in the current directory and $HOME/.zarf.
-		v.AddConfigPath(".")
-		v.AddConfigPath("$HOME/.zarf")
-		v.SetConfigName("zarf-config")
-	}
-
-	v.SetEnvPrefix("zarf")
-	v.AutomaticEnv()
-
-	// E.g. ZARF_LOG_LEVEL=debug
-	v.SetEnvPrefix("zarf")
-	v.AutomaticEnv()
-
-	// Optional, so ignore errors
-	err := v.ReadInConfig()
-
-	if err != nil {
-		// Config file not found; ignore
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, "Failed to read config file")
-		}
-	} else {
-		message.Notef("Using config file %s", v.ConfigFileUsed())
-	}
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
+	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), "Architecture for OCI images")
+	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation.")
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), "Disable fancy UI progress bars, spinners, logos, etc.")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), "Specify the temporary directory to use for intermediate files")
 }
 
 func setLogLevel() {

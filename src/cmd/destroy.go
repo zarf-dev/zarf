@@ -88,10 +88,10 @@ func init() {
 
 	rootCmd.AddCommand(destroyCmd)
 
-	v.SetDefault("destroy.removeComponents", false)
+	v.SetDefault(V_DSTRY_REMOVE_COMPONENTS, false)
 
 	// Still going to require a flag for destroy confirm, no viper oopsies here
 	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "REQUIRED. Confirm the destroy action to prevent accidental deletions")
-	destroyCmd.Flags().BoolVar(&removeComponents, "remove-components", v.GetBool("destroy.remove_components"), "Also remove any installed components outside the zarf namespace")
+	destroyCmd.Flags().BoolVar(&removeComponents, "remove-components", v.GetBool(V_DSTRY_REMOVE_COMPONENTS), "Also remove any installed components outside the zarf namespace")
 	_ = destroyCmd.MarkFlagRequired("confirm")
 }

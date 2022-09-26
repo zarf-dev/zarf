@@ -113,15 +113,15 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
-	v.SetDefault("init.components", "")
-	v.SetDefault("init.storage_class", "")
-	v.SetDefault("init.secret", "")
-	v.SetDefault("init.nodeport", "")
+	v.SetDefault(V_INIT_COMPONENTS, "")
+	v.SetDefault(V_INIT_STORAGE_CLASS, "")
+	v.SetDefault(V_INIT_SECRET, "")
+	v.SetDefault(V_INIT_NODEPORT, "")
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", v.GetString("init.components"), "Comma-separated list of components to install.")
-	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", v.GetString("init.storage_class"), "Describe the StorageClass to be used")
-	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", v.GetString("init.secret"), "Root secret value that is used to 'seed' other secrets")
-	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", v.GetString("init.nodeport"), "Nodeport to access the Zarf container registry. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
+	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", v.GetString(V_INIT_SECRET), "Root secret value that is used to 'seed' other secrets")
+	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", v.GetString(V_INIT_NODEPORT), "Nodeport to access the Zarf container registry. Between [30000-32767]")
 }
