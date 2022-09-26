@@ -1,6 +1,6 @@
 ## zarf tools get-git-password
 
-Returns the push users password for the Git server
+Returns the push user's password for the Git server
 
 ### Synopsis
 
