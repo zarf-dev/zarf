@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.6.0
+        uses: sigstore/cosign-installer@v2.7.0
 
       - name: "Dependency: Setup rust toolchain"
         run: |

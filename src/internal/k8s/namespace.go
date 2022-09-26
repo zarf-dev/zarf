@@ -12,7 +12,10 @@ import (
 )
 
 func GetNamespaces() (*corev1.NamespaceList, error) {
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	metaOptions := metav1.ListOptions{}
 	return clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
@@ -21,7 +24,11 @@ func GetNamespaces() (*corev1.NamespaceList, error) {
 func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	message.Debugf("k8s.UpdateNamespace(%s)", message.JsonValue(namespace))
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
+
 	updateOptions := metav1.UpdateOptions{}
 
 	return clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
@@ -30,7 +37,10 @@ func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	message.Debugf("k8s.CreateNamespace(%s)", name)
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	if namespace == nil {
 		// if only a name was provided create the namespace object
@@ -67,7 +77,11 @@ func DeleteZarfNamespace() {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()
 
-	clientset := getClientset()
+	clientset, err := getClientset()
+	if err != nil {
+		spinner.Fatalf(err, "Failed to get k8s clientset")
+	}
+
 	// Get the zarf ns and ignore errors
 	namespace, _ := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
 	// Remove the k8s finalizer to speed up destroy
@@ -75,7 +89,7 @@ func DeleteZarfNamespace() {
 
 	// Attempt to delete the namespace
 	gracePeriod := int64(0)
-	err := clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
+	err = clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
 	if err != nil && !errors.IsNotFound(err) {
 		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
 	}

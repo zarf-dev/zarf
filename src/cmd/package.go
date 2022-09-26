@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -87,29 +84,31 @@ var packageListCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   "List out all of the packages that have been deployed to the cluster",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Get all secrets for the deployed packages
-		namespace := "zarf"
-		labelSelector := "package-deploy-info"
-		secrets, err := k8s.GetSecretsWithLabel(namespace, labelSelector)
+		// Get all the deployed packages
+		deployedZarfPackages, err := k8s.GetDeployedZarfPackages()
 		if err != nil {
-			message.Fatalf(err, "unable to get secrets with the label selector")
+			message.Fatalf(err, "Unable to get the packages deployed to the cluster")
 		}
 
+		// Populate a pterm table of all the deployed packages
 		packageTable := pterm.TableData{
 			{"     Package ", "Components"},
 		}
 
-		// Parse through all the secrets and output relevant information to the terminal
-		for _, secret := range secrets.Items {
-			installedPackage := types.DeployedPackage{}
-			err := json.Unmarshal(secret.Data["data"], &installedPackage)
-			if err != nil {
-				message.Fatalf(err, "unable to unmarshal the secrets data of an installed package secret")
+		for _, pkg := range deployedZarfPackages {
+			var components []string
+
+			for _, component := range pkg.DeployedComponents {
+				components = append(components, component.Name)
 			}
 
-			packageTable = append(packageTable, pterm.TableData{{fmt.Sprintf("     %s", installedPackage.Name), fmt.Sprintf("%v", reflect.ValueOf(installedPackage.DeployedComponents).MapKeys())}}...)
-
+			packageTable = append(packageTable, pterm.TableData{{
+				fmt.Sprintf("     %s", pkg.Name),
+				fmt.Sprintf("%v", components),
+			}}...)
 		}
+
+		// Print out the table for the user
 		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
 	},
 }
@@ -122,7 +121,7 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := packager.Remove(args[0])
 		if err != nil {
-			message.Warnf("Unable to remove the package with an error of: %#v", err)
+			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},
 }

@@ -12,24 +12,25 @@ type ZarfState struct {
 }
 
 type DeployedPackage struct {
-	Name       string
-	Data       ZarfPackage
-	CLIVersion string
+	Name       string      `json:"name"`
+	Data       ZarfPackage `json:"data"`
+	CLIVersion string      `json:"cliVersion"`
 
-	DeployedComponents map[string]DeployedComponent
+	DeployedComponents []DeployedComponent `json:"deployedComponents"`
 }
 
 type DeployedComponent struct {
-	InstalledCharts []InstalledCharts
+	Name            string            `json:"name"`
+	InstalledCharts []InstalledCharts `json:"installedCharts"`
 }
 
 type InstalledCharts struct {
-	Namespace string
-	ChartName string
+	Namespace string `json:"namespace"`
+	ChartName string `json:"chartName"`
 }
 
 type GeneratedPKI struct {
-	CA   []byte
-	Cert []byte
-	Key  []byte
+	CA   []byte `json:"ca"`
+	Cert []byte `json:"cert"`
+	Key  []byte `json:"key"`
 }

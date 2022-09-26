@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"helm.sh/helm/v3/pkg/action"
-	corev1 "k8s.io/api/core/v1"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -168,6 +167,7 @@ func TemplateChart(options ChartOptions) (string, error) {
 	return templatedChart.Manifest, nil
 }
 
+// GenerateChart generates a helm chart for a given Zarf manifest.
 func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) (types.ConnectStrings, string) {
 	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
@@ -199,11 +199,6 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
 	}
 
-	if manifest.DefaultNamespace == "" {
-		// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
-		manifest.DefaultNamespace = corev1.NamespaceDefault
-	}
-
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	options := ChartOptions{
 		BasePath: basePath,
@@ -211,7 +206,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 			Name:        tmpChart.Metadata.Name,
 			ReleaseName: sha1ReleaseName,
 			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.DefaultNamespace,
+			Namespace:   manifest.Namespace,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently

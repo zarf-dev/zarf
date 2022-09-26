@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -35,14 +36,14 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 	gitCred := FindAuthForHost(gitUrl)
 
 	matches := strings.Split(gitUrl, "@")
-	fetchAllTags := len(matches) == 1
+	onlyFetchRef := len(matches) == 2
 	cloneOptions := &git.CloneOptions{
 		URL:        matches[0],
 		Progress:   spinner,
 		RemoteName: onlineRemoteName,
 	}
 
-	if !fetchAllTags {
+	if onlyFetchRef {
 		cloneOptions.Tags = git.NoTags
 	}
 
@@ -76,8 +77,8 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 
 	// TODO: We should copy the clone into the package
 
-	if !fetchAllTags {
-		tag := matches[1]
+	if onlyFetchRef {
+		ref := matches[1]
 
 		// Identify the remote trunk branch name
 		trunkBranchName := plumbing.NewBranchReferenceName("master")
@@ -85,20 +86,27 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 
 		if err != nil {
 			// No repo head available
-			spinner.Errorf(err, "Failed to identify repo head. Tag will be pushed to 'master'.")
+			spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
 			// Valid repo head and it is a branch
 			trunkBranchName = head.Name()
 		} else {
 			// Valid repo head but not a branch
-			spinner.Errorf(nil, "No branch found for this repo head. Tag will be pushed to 'master'.")
+			spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
 		// TODO: We should only do this in the actual package
 		_, _ = removeLocalBranchRefs(targetFolder)
 		_, _ = removeOnlineRemoteRefs(targetFolder)
 
-		fetchTag(targetFolder, tag)
-		CheckoutTagAsBranch(targetFolder, tag, trunkBranchName)
+		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
+
+		if isHash(ref) {
+			fetchHash(targetFolder, ref)
+			checkoutHashAsBranch(targetFolder, plumbing.NewHash(ref), trunkBranchName)
+		} else {
+			fetchTag(targetFolder, ref)
+			checkoutTagAsBranch(targetFolder, ref, trunkBranchName)
+		}
 	}
 }
