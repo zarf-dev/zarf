@@ -43,7 +43,7 @@
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
 		"prettier": "2.7.1",
-		"prettier-plugin-svelte": "2.7.0",
+		"prettier-plugin-svelte": "2.7.1",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
 		"sass": "1.55.0",
