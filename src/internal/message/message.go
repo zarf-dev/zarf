@@ -29,6 +29,8 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates
 var NoProgress bool
 
+var SkipLogFile bool
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logfile generation
@@ -52,13 +54,17 @@ func init() {
 	}
 
 	pterm.DefaultProgressbar.MaxWidth = 85
+	pterm.SetDefaultOutput(os.Stderr)
+
+	if SkipLogFile {
+		return
+	}
 
 	// Prepend the log filename with a timestampe
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
 	// Try to create a temp log file
 	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-		pterm.SetDefaultOutput(os.Stderr)
 		Error(err, "Error saving a log file")
 	} else {
 		// Otherwise fallback to stderr
@@ -167,6 +173,11 @@ func Question(text string) {
 	pterm.Println()
 	message := paragraph(text)
 	pterm.FgMagenta.Println(message)
+}
+
+func Notef(format string, a ...any) {
+	message := fmt.Sprintf(format, a...)
+	Note(message)
 }
 
 func Note(text string) {

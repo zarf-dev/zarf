@@ -14,7 +14,6 @@ var assets embed.FS
 var cosignPublicKey string
 
 func main() {
-
 	config.UIAssets = assets
 	config.SGetPublicKey = cosignPublicKey
 	cmd.Execute()

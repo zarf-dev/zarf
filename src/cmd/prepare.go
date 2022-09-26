@@ -95,12 +95,13 @@ var prepareFindImages = &cobra.Command{
 }
 
 func init() {
+	initViper()
+
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
-	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
+	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", v.GetString("prepare.repo_chart_path"), `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
+	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString("prepare.set"), "Specify package variables to set on the command line (KEY=value)")
 }

@@ -109,11 +109,14 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
+	initViper()
+
 	rootCmd.AddCommand(initCmd)
+
+	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
-	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
-	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", "", "Root secret value that is used to 'seed' other secrets")
-	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", "", "Nodeport to access the Zarf container registry. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", v.GetString("init.components"), "Comma-separated list of components to install.")
+	initCmd.Flags().StringVar(&config.DeployOptions.StorageClass, "storage-class", v.GetString("init.storage_class"), "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&config.DeployOptions.Secret, "secret", v.GetString("init.secret"), "Root secret value that is used to 'seed' other secrets")
+	initCmd.Flags().StringVar(&config.DeployOptions.NodePort, "nodeport", v.GetString("init.nodeport"), "Nodeport to access the Zarf container registry. Between [30000-32767]")
 }

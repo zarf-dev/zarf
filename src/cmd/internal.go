@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
@@ -20,6 +21,19 @@ var internalCmd = &cobra.Command{
 	Aliases: []string{"dev"},
 	Hidden:  true,
 	Short:   "Internal tools used by zarf",
+}
+
+var agentCmd = &cobra.Command{
+	Use:   "agent",
+	Short: "Runs the zarf agent",
+	Long: "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
+		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
+		"with the Zarf container registry and Gitea server URLs.",
+	// this command should not be advertised on the cli as it has no value outside the k8s env
+	Hidden: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		agent.StartWebhook()
+	},
 }
 
 var generateCLIDocs = &cobra.Command{
@@ -92,6 +106,7 @@ var uiCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(internalCmd)
 
+	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
 	internalCmd.AddCommand(apiSchemaCmd)
