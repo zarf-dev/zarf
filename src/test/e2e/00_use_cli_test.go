@@ -21,6 +21,7 @@ func TestUseCLI(t *testing.T) {
 	// run `zarf package create` with a specified image cache location
 	cachePath := "/tmp/.cache-location"
 	imageCachePath := cachePath + "/images"
+	gitCachePath := cachePath + "/repos"
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := "/tmp/othertmp"
@@ -83,5 +84,14 @@ func TestUseCLI(t *testing.T) {
 	require.NoError(t, err, "Error when reading image cache path")
 	assert.Greater(t, len(files), 1)
 
-	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
+	pkgName = fmt.Sprintf("zarf-package-git-data-%s.tar.zst", e2e.arch)
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	require.NoError(t, err, stdOut, stdErr)
+
+	files, err = os.ReadDir(gitCachePath)
+	require.NoError(t, err, "Error when reading git cache path")
+	assert.Greater(t, len(files), 1)
+
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
 }
