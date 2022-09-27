@@ -111,9 +111,13 @@ func push(localPath, tunnelUrl string, spinner *message.Spinner) error {
 
 	err = repo.Fetch(fetchOptions)
 	if errors.Is(err, transport.ErrRepositoryNotFound) {
-		message.Debugf("Repo not yet available offline, skipping fetch")
+		message.Debugf("Repo not yet available offline, skipping fetch...")
+	} else if errors.Is(err, git.ErrForceNeeded) {
+		message.Debugf("Repo fetch requires force, skipping fetch...")
+	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
+		message.Debugf("Repo already up-to-date, skipping fetch...")
 	} else if err != nil {
-		return fmt.Errorf("unable to fetch remote cleanly prior to push: %w", err)
+		message.Warnf("unable to fetch remote cleanly prior to push: %#v", err)
 	}
 
 	// Push all heads and tags to the offline remote
