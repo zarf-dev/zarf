@@ -81,6 +81,9 @@ func debugPrinter(offset int, a ...any) {
 
 	// Always write to the log file
 	if logFile != nil && !pterm.PrintDebugMessages {
+		now := time.Now().Format(time.RFC3339)
+		// prepend to a
+		a = append([]any{now, " - "}, a...)
 		pterm.Debug.
 			WithShowLineNumber(true).
 			WithLineNumberOffset(offset).
@@ -106,28 +109,28 @@ func GetLogLevel() LogLevel {
 }
 
 func Debug(payload ...any) {
-	debugPrinter(1, payload...)
+	debugPrinter(2, payload...)
 }
 
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
-	debugPrinter(2, message)
+	debugPrinter(3, message)
 }
 
 func Error(err any, message string) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	Warnf(message)
 }
 
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
 }
 
 func Errorf(err any, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	Warnf(format, a...)
 }
 
@@ -141,15 +144,15 @@ func Warnf(format string, a ...any) {
 }
 
 func Fatal(err any, message string) {
-	debugPrinter(1, err)
-	errorPrinter(1).Println(message)
+	debugPrinter(2, err)
+	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
 func Fatalf(err any, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	message := paragraph(format, a...)
-	errorPrinter(1).Println(message)
+	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
