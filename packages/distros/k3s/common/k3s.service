@@ -1,3 +1,4 @@
+[Unit]
 Description=Zarf K3s Runner
 Documentation=https://zarf.dev
 Wants=network-online.target
