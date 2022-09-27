@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"path"
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -16,7 +17,7 @@ func fetchTag(gitDirectory string, tag string) {
 
 	err := fetch(gitDirectory, refspec)
 
-	if err == git.ErrTagExists {
+	if errors.Is(err, git.ErrTagExists) || errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debug("Tag already fetched")
 	} else if err != nil {
 		message.Fatal(err, "Not a valid tag or unable to fetch")

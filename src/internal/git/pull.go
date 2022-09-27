@@ -2,6 +2,9 @@ package git
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -34,6 +37,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 	spinner.Updatef("Processing git repo %s", gitUrl)
 
 	gitCred := FindAuthForHost(gitUrl)
+	gitCachePath := filepath.Join(config.GetCachePath(), "repos/"+transformURLtoRepoName(gitUrl))
 
 	matches := strings.Split(gitUrl, "@")
 	onlyFetchRef := len(matches) == 2
@@ -52,19 +56,81 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 		cloneOptions.Auth = &gitCred.Auth
 	}
 
-	// TODO: targetFolder should be a cache dir
+	// TODO: Refactor this iffy mess
 	// Clone the given repo
-	repo, err := git.PlainClone(targetFolder, false, cloneOptions)
+	repo, err := git.PlainClone(gitCachePath, false, cloneOptions)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		spinner.Debugf("Repo already cloned")
+		spinner.Debugf("Repo already cloned, fetching upstream changes...")
+
+		fetchOptions := &git.FetchOptions{
+			RemoteName: onlineRemoteName,
+			Force:      true,
+		}
+
+		// Gracefully handle no git creds on the system (like our CI/CD)
+		if gitCred.Auth.Username != "" {
+			fetchOptions.Auth = &gitCred.Auth
+		}
+
+		repo, err = git.PlainOpen(gitCachePath)
+		if err != nil {
+			message.Fatal(err, "Unable to load cached git repo")
+		}
+
+		err = repo.Fetch(fetchOptions)
+
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			spinner.Debugf("Repo already up to date")
+		} else if err != nil {
+			spinner.Debugf("Failed to fetch repo: %s", err)
+			message.Infof("Falling back to host git for %s", gitUrl)
+
+			// TODO fallback fetch workflow THIS IS ALL BAD CODE!
+			// If we can't fetch with go-git, fallback to the host fetch
+			// Only support "all tags" due to the azure fetch url format including a username
+			cwd, err := os.Getwd()
+			if err != nil {
+				spinner.Fatalf(err, "Unable to get cwd")
+			}
+			stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "cd", gitCachePath)
+			spinner.Updatef(stdOut)
+			spinner.Debugf(stdErr)
+
+			if err != nil {
+				spinner.Fatalf(err, "Unable to cd %s", gitCachePath)
+			}
+
+			stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), false, "git", "fetch", "--origin", onlineRemoteName, gitUrl, gitCachePath)
+			spinner.Updatef(stdOut)
+			spinner.Debugf(stdErr)
+
+			if err != nil {
+				spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
+			}
+
+			stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), false, "cd", cwd)
+			spinner.Updatef(stdOut)
+			spinner.Debugf(stdErr)
+
+			if err != nil {
+				spinner.Fatalf(err, "Unable to cd %s", cwd)
+			}
+
+			err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
+			if err != nil {
+				message.Errorf(err, "Error bad %#v", err)
+			}
+
+			return
+		}
 	} else if err != nil {
 		spinner.Debugf("Failed to clone repo: %s", err)
 		message.Infof("Falling back to host git for %s", gitUrl)
 
 		// If we can't clone with go-git, fallback to the host clone
 		// Only support "all tags" due to the azure clone url format including a username
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, targetFolder)
+		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, gitCachePath)
 		spinner.Updatef(stdOut)
 		spinner.Debugf(stdErr)
 
@@ -72,10 +138,18 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 			spinner.Fatalf(err, "Not a valid git repo or unable to clone")
 		}
 
+		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
+		if err != nil {
+			message.Errorf(err, "Error bad %#v", err)
+		}
+
 		return
 	}
 
-	// TODO: We should copy the clone into the package
+	err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
+	if err != nil {
+		message.Errorf(err, "Error bad %#v", err)
+	}
 
 	if onlyFetchRef {
 		ref := matches[1]
@@ -95,7 +169,6 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 			spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
-		// TODO: We should only do this in the actual package
 		_, _ = removeLocalBranchRefs(targetFolder)
 		_, _ = removeOnlineRemoteRefs(targetFolder)
 
