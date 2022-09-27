@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"regexp"
 
@@ -22,21 +23,30 @@ func DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	pull(gitURL, path, spinner)
+	pull(gitURL, path, spinner, "")
 	return path
 }
 
 // Pull clones or updates a git repository into the target folder.
-func Pull(gitURL, targetFolder string, spinner *message.Spinner) string {
-	path := targetFolder + "/" + transformURLtoRepoName(gitURL)
-	pull(gitURL, path, spinner)
-	return path
+func Pull(gitURL, targetFolder string, spinner *message.Spinner) (string, error) {
+	repoName, err := transformURLtoRepoName(gitURL)
+	if err != nil {
+		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
+		return "", err
+	}
+
+	path := targetFolder + "/" + repoName
+	pull(gitURL, path, spinner, repoName)
+	return path, nil
 }
 
-func pull(gitURL, targetFolder string, spinner *message.Spinner) {
+func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string) {
 	spinner.Updatef("Processing git repo %s", gitURL)
 
-	gitCachePath := filepath.Join(config.GetCachePath(), "repos/"+transformURLtoRepoName(gitURL))
+	gitCachePath := targetFolder
+	if repoName != "" {
+		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("repos/%s", repoName))
+	}
 
 	matches := strings.Split(gitURL, "@")
 	onlyFetchRef := len(matches) == 2
@@ -57,9 +67,11 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner) {
 		spinner.Fatalf(err, "Not a valid git repo or unable to clone")
 	}
 
-	err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
-	if err != nil {
-		message.Errorf(err, "Unable to copy %s into %s", gitCachePath, targetFolder)
+	if gitCachePath != targetFolder {
+		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
+		if err != nil {
+			message.Errorf(err, "Unable to copy %s into %s", gitCachePath, targetFolder)
+		}
 	}
 
 	if onlyFetchRef {

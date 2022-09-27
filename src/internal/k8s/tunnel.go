@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
@@ -87,6 +88,42 @@ func PrintConnectTable() error {
 	return nil
 }
 
+// IsServiceURL checks if a string appears to be a route to a local k8s service resource.
+func IsServiceURL(url string) bool {
+	if strings.Contains(url, "svc.cluster.local:") || strings.HasSuffix(url, "svc.cluster.local") {
+		return true
+	}
+
+	return false
+}
+
+// NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
+func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
+	parsedURL, err := url.Parse(serviceURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse the provided URL (%s): %w", serviceURL, err)
+	}
+
+	// Get the remote port from the serviceURL
+	remotePort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil {
+		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %w", serviceURL, err)
+	}
+
+	// Get the rest of the information from the remaining parts of the hostname
+	serviceHostname := parsedURL.Hostname()
+	splitByResourceInfo := strings.Split(serviceHostname, ".")
+	if len(splitByResourceInfo) != 5 {
+		return nil, fmt.Errorf("splitting the service URL by '.' returned a length other than 5. unable to confidently get resourceName, namespace, and resourceType")
+	}
+	resourceName := splitByResourceInfo[0]
+	namespace := splitByResourceInfo[1]
+	resourceType := splitByResourceInfo[2]
+
+	return NewTunnel(namespace, resourceType, resourceName, 0, remotePort), nil
+}
+
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
@@ -123,6 +160,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.remotePort = 5000
+		tunnel.urlSuffix = `/v2/_catalog`
 
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"

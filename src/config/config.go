@@ -25,13 +25,15 @@ const (
 	PackagePrefix = "zarf-package"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength  = 40
-	ZarfGitPushUser         = "zarf-git-user"
-	ZarfGitReadUser         = "zarf-git-read-user"
-	ZarfRegistryPushUser    = "zarf-push"
-	ZarfRegistryPullUser    = "zarf-pull"
-	ZarfImagePullSecretName = "private-registry"
-	ZarfGitServerSecretName = "private-git-server"
+	ZarfMaxChartNameLength   = 40
+	ZarfGitPushUser          = "zarf-git-user"
+	ZarfGitReadUser          = "zarf-git-read-user"
+	ZarfRegistryPushUser     = "zarf-push"
+	ZarfRegistryPullUser     = "zarf-pull"
+	ZarfImagePullSecretName  = "private-registry"
+	ZarfGitServerSecretName  = "private-git-server"
+	ZarfGeneratedPasswordLen = 24
+	ZarfGeneratedSecretLen   = 48
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
@@ -43,7 +45,13 @@ const (
 	ZarfCleanupScriptsPath = "/opt/zarf"
 	ZarfDefaultCachePath   = ".zarf-cache"
 
-	ZarfYAML = "zarf.yaml"
+	ZarfYAML    = "zarf.yaml"
+	ZarfSBOMDir = "zarf-sbom"
+
+	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
+	ZarfInClusterContainerRegistryNodePort = 31999
+
+	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 )
 
 var (
@@ -59,8 +67,13 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
+	// InitOptions tracks user-defined values for the active Zarf initialization.
+	InitOptions types.ZarfInitOptions
+
+	// CliArch is the computer architecture of the device executing the CLI commands
 	CliArch string
 
+	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
 
 	// Private vars
@@ -189,7 +202,6 @@ func GetValidPackageExtensions() [3]string {
 func InitState(tmpState types.ZarfState) {
 	message.Debugf("config.InitState()")
 	state = tmpState
-	initSecrets()
 }
 
 func GetState() types.ZarfState {
@@ -197,7 +209,12 @@ func GetState() types.ZarfState {
 }
 
 func GetRegistry() string {
-	return fmt.Sprintf("%s:%s", IPV4Localhost, state.NodePort)
+	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
+	if state.RegistryInfo.NodePort >= 30000 {
+		return fmt.Sprintf("%s:%d", IPV4Localhost, state.RegistryInfo.NodePort)
+	}
+
+	return state.RegistryInfo.Address
 }
 
 // LoadConfig loads the config from the given path and removes
@@ -222,6 +239,16 @@ func LoadConfig(path string, filterByOS bool) error {
 
 func GetActiveConfig() types.ZarfPackage {
 	return active
+}
+
+// GetGitServerInfo returns the GitServerInfo for the git server Zarf is configured to use from the state
+func GetGitServerInfo() types.GitServerInfo {
+	return state.GitServer
+}
+
+// GetContainerRegistryInfo returns the ContainerRegistryInfo for the docker registry Zarf is configured to use from the state
+func GetContainerRegistryInfo() types.RegistryInfo {
+	return state.RegistryInfo
 }
 
 // BuildConfig adds build information and writes the config to the given path
