@@ -3,7 +3,6 @@ package git
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"regexp"
 
@@ -89,32 +88,12 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 			// TODO fallback fetch workflow THIS IS ALL BAD CODE!
 			// If we can't fetch with go-git, fallback to the host fetch
 			// Only support "all tags" due to the azure fetch url format including a username
-			cwd, err := os.Getwd()
-			if err != nil {
-				spinner.Fatalf(err, "Unable to get cwd")
-			}
-			stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "cd", gitCachePath)
-			spinner.Updatef(stdOut)
-			spinner.Debugf(stdErr)
-
-			if err != nil {
-				spinner.Fatalf(err, "Unable to cd %s", gitCachePath)
-			}
-
-			stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), false, "git", "fetch", "--origin", onlineRemoteName, gitUrl, gitCachePath)
+			stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), gitCachePath, false, "git", "fetch", onlineRemoteName)
 			spinner.Updatef(stdOut)
 			spinner.Debugf(stdErr)
 
 			if err != nil {
 				spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
-			}
-
-			stdOut, stdErr, err = utils.ExecCommandWithContext(context.TODO(), false, "cd", cwd)
-			spinner.Updatef(stdOut)
-			spinner.Debugf(stdErr)
-
-			if err != nil {
-				spinner.Fatalf(err, "Unable to cd %s", cwd)
 			}
 
 			err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
@@ -130,7 +109,7 @@ func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
 
 		// If we can't clone with go-git, fallback to the host clone
 		// Only support "all tags" due to the azure clone url format including a username
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, gitCachePath)
+		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), "", false, "git", "clone", "--origin", onlineRemoteName, gitUrl, gitCachePath)
 		spinner.Updatef(stdOut)
 		spinner.Debugf(stdErr)
 

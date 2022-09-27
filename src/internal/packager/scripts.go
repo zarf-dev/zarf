@@ -45,7 +45,7 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		// Oherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+			output, errOut, err := utils.ExecCommandWithContext(ctx, "", scripts.ShowOutput, "sh", "-c", script)
 			defer cancel()
 
 			if err != nil {
