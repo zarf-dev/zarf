@@ -1,5 +1,23 @@
 {
   "extends": [
     "config:base"
-  ]
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ],
+  "platformAutomerge": true,
+  "platformCommit": true
 }
