@@ -8,7 +8,7 @@ As mentioned in the [Getting Started page](../../3-getting-started.md), a pre-co
 
 :::info
 
-If you want to built the CLI from scratch, you can easily do that! In order to build the cli you will need to make sure you have the following dependencies correctly configured:
+If you want to build the CLI from scratch, you can easily do that! In order to build the cli you will need to make sure you have the following dependencies correctly configured:
 
 1. The Zarf repository cloned down:
    - `git clone git@github.com:defenseunicorns/zarf.git`
