@@ -449,7 +449,6 @@ export interface InstalledCharts {
 
 export interface ZarfCommonOptions {
     confirm:       boolean;
-    setVariables:  { [key: string]: string };
     tempDirectory: string;
 }
 
@@ -457,6 +456,7 @@ export interface ZarfCreateOptions {
     imageCachePath:  string;
     insecure:        boolean;
     outputDirectory: string;
+    setVariables:    { [key: string]: string };
     skipSBOM:        boolean;
 }
 
@@ -466,6 +466,7 @@ export interface ZarfDeployOptions {
     nodePort:      string;
     packagePath:   string;
     secret:        string;
+    setVariables:  { [key: string]: string };
     sGetKeyPath:   string;
     storageClass:  string;
 }
@@ -775,13 +776,13 @@ const typeMap: any = {
     ], false),
     "ZarfCommonOptions": o([
         { json: "confirm", js: "confirm", typ: true },
-        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
         { json: "imageCachePath", js: "imageCachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "ZarfDeployOptions": o([
@@ -790,6 +791,7 @@ const typeMap: any = {
         { json: "nodePort", js: "nodePort", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "secret", js: "secret", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
         { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
