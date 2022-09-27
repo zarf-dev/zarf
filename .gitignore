@@ -33,4 +33,4 @@ test-results/
 zarf
 zarf-pki
 zarf-sbom/
-zarf-config.*
+./zarf-config.*

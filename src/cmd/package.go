@@ -183,7 +183,7 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 
-	createFlags.StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVar(&zarfImageCache, "zarf-cache", v.GetString(V_PKG_CREATE_ZARF_CACHE), "Specify the location of the Zarf image cache")
 	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIRTORY), "Specify the output directory for the created Zarf package")
 	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
@@ -202,7 +202,7 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	deployFlags.StringToStringVar(&config.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
 	deployFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
@@ -211,18 +211,12 @@ func bindDeployFlags() {
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
-	v.SetDefault(V_PKG_INSP_SBOM, false)
-	inspectFlags.BoolVarP(&packager.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_INSP_SBOM), "View SBOM contents while inspecting the package")
+	inspectFlags.BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
 }
 
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
-
-	//  Always require confirm flag (no viper)
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-
-	v.SetDefault(V_PKG_REMOVE_COMPONENTS, "")
-
-	removeFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_REMOVE_COMPONENTS), "Comma-separated list of components to uninstall")
+	removeFlags.StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }

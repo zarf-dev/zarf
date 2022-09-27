@@ -126,9 +126,8 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	v.SetDefault(V_PREP_REPO_CHART_PATH, "")
-	v.SetDefault(V_PREP_SET, map[string]string{})
+	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", v.GetString(V_PREP_REPO_CHART_PATH), `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
-	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", v.GetStringMapString(V_PREP_SET), "Specify package variables to set on the command line (KEY=value)")
+	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
+	prepareFindImages.Flags().StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 }

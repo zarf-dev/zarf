@@ -14,15 +14,6 @@ const (
 	V_NO_PROGRESS  = "no_progress"
 	V_TMP_DIR      = "tmp_dir"
 
-	V_CONN_NAME          = "connect.name"
-	V_CONN_NAMESPACE     = "connect.namespace"
-	V_CONN_RESOURCE_TYPE = "connect.resource_type"
-	V_CONN_LOCAL_PORT    = "connect.local_port"
-	V_CONN_REMOTE_PORT   = "connect.remote_port"
-	V_CONN_CLI_ONLY      = "connect.cli_only"
-
-	V_DSTRY_REMOVE_COMPONENTS = "destroy.removeComponents"
-
 	V_INIT_COMPONENTS    = "init.components"
 	V_INIT_STORAGE_CLASS = "init.storage_class"
 	V_INIT_SECRET        = "init.secret"
@@ -39,13 +30,6 @@ const (
 	V_PKG_DEPLOY_INSECURE   = "package.deploy.insecure"
 	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
-
-	V_PKG_INSP_SBOM = "package.inspect.sbom"
-
-	V_PKG_REMOVE_COMPONENTS = "package.remove.components"
-
-	V_PREP_SET             = "prepare.set"
-	V_PREP_REPO_CHART_PATH = "prepare.repo_chart_path"
 )
 
 func initViper() {

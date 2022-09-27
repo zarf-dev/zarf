@@ -17,9 +17,10 @@ func FillActiveTemplate() error {
 		return err
 	}
 
-	for key := range CommonOptions.SetVariables {
-		value := CommonOptions.SetVariables[key]
-		packageVariables[key] = &value
+	for key := range CreateOptions.SetVariables {
+		value := CreateOptions.SetVariables[key]
+		// Ensure uppercase for VIPER
+		packageVariables[strings.ToUpper(key)] = &value
 	}
 
 	for key, value := range packageVariables {
@@ -47,7 +48,7 @@ func FillActiveTemplate() error {
 
 // SetActiveVariables handles setting the active variables used to template component files.
 func SetActiveVariables() error {
-	SetVariableMap = CommonOptions.SetVariables
+	SetVariableMap = DeployOptions.SetVariables
 
 	for _, variable := range active.Variables {
 		_, present := SetVariableMap[variable.Name]

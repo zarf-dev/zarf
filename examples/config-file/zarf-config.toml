@@ -1,0 +1,13 @@
+# Example config file, use "zarf prepare generate-config" to generate a new one
+log_level = 'info'
+
+[package]
+[package.create]
+skip_sbom = false
+
+[package.create.set]
+zebra = 'stripes'
+leapord = 'spots'
+
+[package.deploy]
+components = 'lion'

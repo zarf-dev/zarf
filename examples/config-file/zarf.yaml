@@ -1,0 +1,28 @@
+kind: ZarfPackageConfig
+metadata:
+  name: config-file
+  description: 'Test component to demonstrate using a config file to control the cli. Files are generated use "zarf prepare generate-config"'
+
+variables:
+  - name: ZEBRA
+  - name: LEOPARD
+
+components:
+  - name: lion
+    description: "By default, only this component will be deployed when using the config file"
+    scripts:
+      showOutput: true
+      after:
+        - "echo 'this is a lion'"
+
+  - name: zebra
+    scripts:
+      showOutput: true
+      after:
+        - "echo 'this is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###'"
+
+  - name: leopard
+    scripts:
+      showOutput: true
+      after:
+        - "echo 'this is a leopard and they have ###ZARF_PKG_VAR_LEOPARD###'"
