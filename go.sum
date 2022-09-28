@@ -661,6 +661,8 @@ github.com/derailed/k9s v0.26.4 h1:kmYrdhBAMFf38kP/W3vgBE/szR/opK0+u0TY/SL6VuQ=
 github.com/derailed/k9s v0.26.4/go.mod h1:fEfXpctbj4HyXEvD6+P+8lL94Q6eiojofr/i6A9Zus8=
 github.com/derailed/k9s v0.26.5 h1:afOQSIad+893o9EjzYN3DMQ2o4Cjj+JraBfLep/GKEw=
 github.com/derailed/k9s v0.26.5/go.mod h1:uUX//U+7n6KYzdmqj4QLYdXdu2akfSP81WxDyeo/ZuY=
+github.com/derailed/k9s v0.26.6 h1://neH2SAF9akWkKKrfZvRVIg/Z1W/TLMs/k0T0aUBPU=
+github.com/derailed/k9s v0.26.6/go.mod h1:uUX//U+7n6KYzdmqj4QLYdXdu2akfSP81WxDyeo/ZuY=
 github.com/derailed/popeye v0.10.1 h1:+lyLDGUyKANfMiSHV8X1pHD1HhcxEXCa8ple0ZvyRqc=
 github.com/derailed/popeye v0.10.1/go.mod h1:ChD8GPNvgsgjLG5fQBZIxm3VOhFrqd10Xn8IxfuGn4w=
 github.com/derailed/tview v0.7.2 h1:9AyPjBR0yr8t4e+pQMayLhc9AASediouUGpcoDvwy+Q=
@@ -1153,6 +1155,8 @@ github.com/gookit/color v1.2.5/go.mod h1:AhIE+pS6D4Ql0SQWbBeXPHw7gY0/sjHoA4s/n1K
 github.com/gookit/color v1.4.2/go.mod h1:fqRyamkC1W8uxl+lxCQxOT09l/vYfZ+QeiX3rKQHCoQ=
 github.com/gookit/color v1.5.0 h1:1Opow3+BWDwqor78DcJkJCIwnkviFi+rrOANki9BUFw=
 github.com/gookit/color v1.5.0/go.mod h1:43aQb+Zerm/BWh2GnrgOQm7ffz7tvQXEKV6BFMl7wAo=
+github.com/gookit/color v1.5.2 h1:uLnfXcaFjlrDnQDT+NCBcfhrXqYTx/rcCa6xn01Y8yI=
+github.com/gookit/color v1.5.2/go.mod h1:w8h4bGiHeeBpvQVePTutdbERIUf3oJE5lZ8HM0UgXyg=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gordonklaus/ineffassign v0.0.0-20200309095847-7953dde2c7bf/go.mod h1:cuNKsD1zp2v6XfE/orVX2QE1LC+i254ceGcVeDT3pTU=
@@ -1831,6 +1835,8 @@ github.com/pterm/pterm v0.12.36/go.mod h1:NjiL09hFhT/vWjQHSj1athJpx6H8cjpHXNAK5b
 github.com/pterm/pterm v0.12.40/go.mod h1:ffwPLwlbXxP+rxT0GsgDTzS3y3rmpAO1NMjUkGTYf8s=
 github.com/pterm/pterm v0.12.46 h1:7W//n3UldGXI2s+IFRV9GucNsbqex3MG/sibNm/62ag=
 github.com/pterm/pterm v0.12.46/go.mod h1:hJgLlBafm45w/Hr0dKXxY//POD7CgowhePaG1sdPNBg=
+github.com/pterm/pterm v0.12.47 h1:vYTGddJqOldexC5TzlN4UT3HC4gw9eBaYJrVcqe1UJA=
+github.com/pterm/pterm v0.12.47/go.mod h1:D4OBoWNqAfXkm5QLTjIgjNiMXPHemLJHnIreGUsWzWg=
 github.com/quasilyte/go-consistent v0.0.0-20190521200055-c6f3937de18c/go.mod h1:5STLWrekHfjyYwxBRVRXNOSewLJ3PWfDJd1VyTS21fI=
 github.com/quasilyte/go-ruleguard v0.3.1-0.20210203134552-1b5a410e1cc8/go.mod h1:KsAh3x0e7Fkpgs+Q9pNLS5XpFSvYCEVl5gP9Pp1xp30=
 github.com/quasilyte/go-ruleguard v0.3.13/go.mod h1:Ul8wwdqR6kBVOCt2dipDBkE+T6vAV/iixkrKuRTN1oQ=
@@ -2360,6 +2366,8 @@ golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0 h1:a5Yg6ylndHHYJqIPrdq0Ah
 golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.0.0-20220924013350-4ba4fb4dd9e7 h1:WJywXQVIb56P2kAvXeMGTIgQ1ZHQxR60+F9dLsodECc=
 golang.org/x/crypto v0.0.0-20220924013350-4ba4fb4dd9e7/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
+golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be h1:fmw3UbQh+nxngCAHrDCCztao/kbYFnWjoqop8dHx05A=
+golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=
