@@ -555,7 +555,7 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
-     * Path to where a .cache directory of cached image that were pulled down to create packages
+     * Path to use to cache images and git repos on package create
      */
     cachePath: string;
     /**
