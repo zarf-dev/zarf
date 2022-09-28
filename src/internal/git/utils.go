@@ -56,12 +56,13 @@ func transformURLtoRepoName(url string) (string, error) {
 
 	// NOTE: The second element in the returned substrings is the repo name....
 	//       <full-input-url>, <base-url>, <repo-name>, <.git>, <@tag>, <tag>
-	baseURL := substrings[1]
+	// We remove the .git so that https://example.com/repo.git and https://example.com/repo resolve to the same repository (as they would in real life)
+	sanitizedURL := substrings[1] + substrings[2] + substrings[4]
 	repoName := substrings[2]
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
-	_, _ = io.WriteString(hasher, baseURL)
+	_, _ = io.WriteString(hasher, sanitizedURL)
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
 	newRepoName := repoName + "-" + sha1Hash
 

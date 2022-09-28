@@ -52,7 +52,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
 	onlyFetchRef := substrings[4] != ""
-	gitURLNoTag := substrings[1] + "/" + substrings[2]
+	gitURLNoTag := substrings[1] + "/" + substrings[2] + substrings[3]
 
 	repo, err := clone(gitCachePath, gitURLNoTag, onlyFetchRef, spinner)
 
@@ -73,7 +73,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	if gitCachePath != targetFolder {
 		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
 		if err != nil {
-			message.Errorf(err, "Unable to copy %s into %s", gitCachePath, targetFolder)
+			message.Fatalf(err, "Unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
 		}
 	}
 
