@@ -56,7 +56,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "twistlock-327c7a99d77a530fe94872911f0dabef839441bf"
+	repoName := "twistlock-e8159fb0193b1adc54a3d49f6b27d1d5587dbdcc"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
@@ -75,7 +75,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
 	config.InitState(state)
-	repoName := "zarf-bf89aea1b43dd0ea83360d4a219643a4bc8424c6"
+	repoName := "zarf-1c9a77c4bf8aa495cd61f707b645041c53426757"
 
 	// Get the Zarf repo tag
 	repoTag := "v0.15.0"
