@@ -18,13 +18,10 @@ const dotCharacter = 46
 
 var TempPathPrefix = "zarf-"
 
-func MakeTempDir(tmpDir string) string {
+func MakeTempDir(tmpDir string) (string, error) {
 	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
-	if err != nil {
-		message.Fatalf(err, "Specified tmpdir does not exist, please create it: %s", tmpDir)
-	}
-	message.Debugf("Creating temp path %s", tmp)
-	return tmp
+	message.Debugf("Attempted to create temp path %s", tmp)
+	return tmp, err
 }
 
 // VerifyBinary returns true if binary is available
