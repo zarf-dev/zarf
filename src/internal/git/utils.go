@@ -30,7 +30,7 @@ type Credential struct {
 
 var (
 	// For further explanation: https://regex101.com/library/UfILls and https://regex101.com/rary/UfILls
-	gitURLRegex = regexp.MustCompile(`^(.+)\/([\w\-\.]+)(.git)?(@([\w\-\.]+))?$`)
+	gitURLRegex = regexp.MustCompile(`^(.+)\/([\w\-\.]+?)(\.git)?(@([\w\-\.]+))?$`)
 )
 
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
@@ -54,9 +54,9 @@ func transformURLtoRepoName(url string) (string, error) {
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
-	// NOTE: The third element in the returned substrings is the combination of all the rest of the substrings....
-	//       So just skip the first element so we can get a hash without the version tag
-	repoName := substrings[3]
+	// NOTE: The second element in the returned substrings is the repo name....
+	//       <full-input-url>, <base-url>, <repo-name>, <.git>, <@tag>, <tag>
+	repoName := substrings[2]
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
