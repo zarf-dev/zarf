@@ -11,8 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-
-	"strings"
 )
 
 const onlineRemoteName = "online-upstream"
@@ -48,10 +46,15 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("repos/%s", repoName))
 	}
 
-	matches := strings.Split(gitURL, "@")
-	onlyFetchRef := len(matches) == 2
+	substrings := findRegex.FindStringSubmatch(gitURL)
+	if len(substrings) == 0 {
+		// Unable to find a substring match for the regex
+		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
+	}
+	onlyFetchRef := substrings[4] != ""
+	gitURLNoTag := substrings[1] + "/" + substrings[2]
 
-	repo, err := clone(gitCachePath, matches[0], onlyFetchRef, spinner)
+	repo, err := clone(gitCachePath, gitURLNoTag, onlyFetchRef, spinner)
 
 	if err == git.ErrRepositoryAlreadyExists {
 		spinner.Debugf("Repo already cloned, fetching upstream changes...")
@@ -75,7 +78,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	}
 
 	if onlyFetchRef {
-		ref := matches[1]
+		ref := substrings[5]
 
 		// Identify the remote trunk branch name
 		trunkBranchName := plumbing.NewBranchReferenceName("master")

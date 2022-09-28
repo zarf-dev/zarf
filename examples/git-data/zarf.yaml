@@ -19,3 +19,5 @@ components:
       - https://github.com/stefanprodan/podinfo.git
         # Clone an azure repo that breaks in go-git and has to fall back to the host git
       - https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test
+        # Clone an azure repo (w/SHA) that breaks in go-git and has to fall back to the host git
+      - https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@524980951ff16e19dc25232e9aea8fd693989ba6
