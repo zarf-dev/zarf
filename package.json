@@ -21,7 +21,7 @@
 		]
 	},
 	"devDependencies": {
-		"@defense-unicorns/unicorn-ui": "0.0.10",
+		"@defense-unicorns/unicorn-ui": "^0.0.11",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
 		"@material/data-table": "14.0.0",

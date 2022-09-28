@@ -1,8 +1,8 @@
 <script>
 	import { fade } from 'svelte/transition';
-	import bigZarf from '@images/zarf-bubbles-right.png';
 	import Hero from './hero.svelte';
 	import { onMount } from 'svelte';
+	import { Typography } from '@ui';
 
 	export let msg = 'Loading...';
 
@@ -15,37 +15,32 @@
 
 <Hero>
 	{#if ready}
-		<div
-			class="spinner-wrapper"
-			style="background-image: url('{bigZarf}')"
-			in:fade={{ duration: 1000 }}
-		>
+		<div class="spinner-wrapper" in:fade={{ duration: 1000 }}>
 			<span class="spinner" />
-			<span class="label">{msg}</span>
 		</div>
+		<Typography variant="h5">Checking for Cluster</Typography>
+		<Typography variant="body2" element="span" class="label">{msg}</Typography>
 	{/if}
 </Hero>
 
 <style lang="scss">
-	.spinner-wrapper {
-		position: absolute;
+	:global(.spinner-wrapper) {
+		background-image: url('@images/zarf-bubbles-right.png');
 		display: flex;
-		background-size: 59%;
+		flex-direction: column;
 		background-position: center;
-		margin-top: -36.5vh;
+		align-items: center;
+		margin-left: auto;
+		margin-right: auto;
+		background-size: 59%;
 	}
 
-	.label {
+	:global(.label) {
 		text-align: center;
-		width: 100%;
-		color: rgba(0, 0, 0, 0.6);
-		font-size: 1.2rem;
-		position: absolute;
-		top: 115%;
+		width: 50%;
 	}
 
 	.spinner {
-		box-sizing: border-box;
 		width: 25rem;
 		height: 25rem;
 		border-radius: 50%;
