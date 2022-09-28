@@ -3,6 +3,7 @@ package k8s
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -110,7 +111,7 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 
 	// If incomplete match, return an error
 	if len(matches) != 3 {
-		return nil, err
+		return nil, errors.New("url does not match service url format http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
 	}
 
 	// Use the matched values to create a new tunnel

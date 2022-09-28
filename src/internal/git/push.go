@@ -23,7 +23,7 @@ func PushAllDirectories(localPath string) error {
 	gitServerURL := gitServerInfo.Address
 
 	// If this is a serviceURL, create a port-forward tunnel to that resource
-	if tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL); err == nil {
+	if tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL); err != nil {
 		message.Debug(err)
 	} else {
 		tunnel.Connect("", false)

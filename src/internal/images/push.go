@@ -25,7 +25,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addSha
 		registryUrl = config.GetContainerRegistryInfo().Address
 
 		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err := k8s.NewTunnelFromServiceURL(registryUrl); err == nil {
+		if tunnel, err := k8s.NewTunnelFromServiceURL(registryUrl); err != nil {
 			message.Debug(err)
 		} else {
 			tunnel.Connect("", false)
