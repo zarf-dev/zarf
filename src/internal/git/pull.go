@@ -46,7 +46,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("repos/%s", repoName))
 	}
 
-	substrings := findRegex.FindStringSubmatch(gitURL)
+	substrings := gitURLRegex.FindStringSubmatch(gitURL)
 	if len(substrings) == 0 {
 		// Unable to find a substring match for the regex
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
