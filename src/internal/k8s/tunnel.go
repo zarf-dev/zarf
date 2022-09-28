@@ -89,37 +89,28 @@ func PrintConnectTable() error {
 	return nil
 }
 
-// IsServiceURL checks if a string appears to be a route to a local k8s service resource.
-func IsServiceURL(url string) bool {
-	if strings.Contains(url, "svc.cluster.local:") || strings.HasSuffix(url, "svc.cluster.local") {
-		return true
-	}
-
-	return false
-}
-
 // NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
 // Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
 func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 	parsedURL, err := url.Parse(serviceURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse the provided URL (%s): %w", serviceURL, err)
+		return nil, err
 	}
 
 	// Get the remote port from the serviceURL
 	remotePort, err := strconv.Atoi(parsedURL.Port())
 	if err != nil {
-		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %w", serviceURL, err)
+		return nil, err
 	}
 
-	// Match hostname against local cluster ervice format
+	// Match hostname against local cluster service format
 	// See https://regex101.com/r/OWVfAO/1
 	pattern := regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
 	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
 
 	// If incomplete match, return an error
 	if len(matches) != 3 {
-		return nil, fmt.Errorf("unable to parse the provided URL %s", serviceURL)
+		return nil, err
 	}
 
 	// Use the matched values to create a new tunnel
