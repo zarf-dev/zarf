@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -111,17 +112,21 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 		return nil, fmt.Errorf("unable to get port from serviceURL (%s): %w", serviceURL, err)
 	}
 
-	// Get the rest of the information from the remaining parts of the hostname
-	serviceHostname := parsedURL.Hostname()
-	splitByResourceInfo := strings.Split(serviceHostname, ".")
-	if len(splitByResourceInfo) != 5 {
-		return nil, fmt.Errorf("splitting the service URL by '.' returned a length other than 5. unable to confidently get resourceName, namespace, and resourceType")
-	}
-	resourceName := splitByResourceInfo[0]
-	namespace := splitByResourceInfo[1]
-	resourceType := splitByResourceInfo[2]
+	// Match hostname against local cluster ervice format
+	// See https://regex101.com/r/OWVfAO/1
+	pattern := regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
 
-	return NewTunnel(namespace, resourceType, resourceName, 0, remotePort), nil
+	// If incomplete match, return an error
+	if len(matches) != 3 {
+		return nil, fmt.Errorf("unable to parse the provided URL %s", serviceURL)
+	}
+
+	// Use the matched values to create a new tunnel
+	name := matches[pattern.SubexpIndex("name")]
+	namespace := matches[pattern.SubexpIndex("namespace")]
+
+	return NewTunnel(namespace, SvcResource, name, 0, remotePort), nil
 }
 
 // NewTunnel will create a new Tunnel struct
