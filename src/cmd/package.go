@@ -126,8 +126,6 @@ var packageRemoveCmd = &cobra.Command{
 		pkgName := args[0]
 		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
 		if isTarball(pkgName) {
-			message.Debug("PACKAGE NAME IS A ARCHIVE")
-
 			if utils.InvalidPath(pkgName) {
 				message.Fatalf(nil, "Invalid tarball path provided")
 			}
