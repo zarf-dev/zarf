@@ -21,6 +21,7 @@ func TestExternalDeploy(t *testing.T) {
 	giteaChartURL := "https://dl.gitea.io/charts/gitea-5.0.8.tgz"
 	helmInstallArgs := []string{"install", "gitea", giteaChartURL, "-f", "gitea-values.yaml", "-n", "git-server", "--create-namespace"}
 	_, _, err := utils.ExecCommandWithContext(context.TODO(), "", true, "helm", helmInstallArgs...)
+
 	require.NoError(t, err, "unable to install gitea chart")
 
 	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
@@ -29,6 +30,7 @@ func TestExternalDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to add the docker-registry chart repo")
 	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), "", true, "helm", helmInstallArgs...)
+
 	require.NoError(t, err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
@@ -52,11 +54,13 @@ func TestExternalDeploy(t *testing.T) {
 		"--nodeport=31999",
 		"--confirm"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), "", true, zarfBinPath, initArgs...)
+
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
 	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm", "-l=trace"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), "", true, zarfBinPath, deployArgs...)
+
 	require.NoError(t, err, "unable to deploy flux example package")
 
 	// Verify flux was able to pull from the 'external' repository
