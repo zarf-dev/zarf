@@ -86,12 +86,24 @@ func TestUseCLI(t *testing.T) {
 
 	pkgName = fmt.Sprintf("zarf-package-git-data-%s.tar.zst", e2e.arch)
 
+	// Pull once to test git cloning
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.NoError(t, err, stdOut, stdErr)
 
 	files, err = os.ReadDir(gitCachePath)
 	require.NoError(t, err, "Error when reading git cache path")
 	assert.Greater(t, len(files), 1)
+
+	// Pull twice to test git fetching (from cache)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Test removal of cache
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "clear-cache", "--zarf-cache", cachePath, "--log-level=debug")
+	require.NoError(t, err, stdOut, stdErr)
+
+	_, err = os.ReadDir(cachePath)
+	require.Error(t, err, cachePath+": no such file or directory")
 
 	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
 }
