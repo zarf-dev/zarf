@@ -29,13 +29,13 @@ type GenericGitRepo struct {
 func NewGitRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
-		Create: mutateGitRepoCreate,
-		Update: mutateGitRepoUpdate,
+		Create: mutateGitRepo,
+		Update: mutateGitRepo,
 	}
 }
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the zarfState.
-func mutateGitRepoCreate(r *v1.AdmissionRequest) (*operations.Result, error) {
+func mutateGitRepo(r *v1.AdmissionRequest) (*operations.Result, error) {
 	var patches []operations.PatchOperation
 
 	// Form the gitServerURL from the state
@@ -51,49 +51,23 @@ func mutateGitRepoCreate(r *v1.AdmissionRequest) (*operations.Result, error) {
 	if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
 	}
-
-	replacedURL := git.MutateGitUrlsInText(gitServerURL, gitRepo.Spec.URL, zarfState.GitServer.PushUsername)
-	message.Debugf("original git URL of (%s) got mutated to (%s)", gitRepo.Spec.URL, replacedURL)
-
-	// Patch updates of the repo spec
-	patches = populatePatchOperations(replacedURL, gitRepo.Spec.SecretRef.Name)
-
-	return &operations.Result{
-		Allowed:  true,
-		PatchOps: patches,
-	}, nil
-}
-
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the zarfState
-// NOTE: This mutates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
-// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-func mutateGitRepoUpdate(r *v1.AdmissionRequest) (*operations.Result, error) {
-	var patches []operations.PatchOperation
-
-	// Form the gitServerURL from the state
-	zarfState, err := getStateFromAgentPod(zarfStatePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load zarf state from file: %w", err)
-	}
-	gitServerURL := zarfState.GitServer.Address
-	message.Debugf("Using the gitServerURL of (%s) to mutate the flux repository", gitServerURL)
-
-	// parse to simple struct to read the git url
-	gitRepo := &GenericGitRepo{}
-	if err := json.Unmarshal(r.Object.Raw, &gitRepo); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
-	}
-
-	// Only mutate the git URL if the hostname is different
-	// NOTE: We do this because the hostname has likely already been mutated already and we don't want to sha the already mutated sha
 	gitURL := gitRepo.Spec.URL
-	matches, err := utils.DoesHostnamesMatch(gitServerURL, gitRepo.Spec.URL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to complete hostname matching: %w", err)
+
+	// Check if this is an update operation and the hostname is different from what we have in the state
+	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
+	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
+	urlMatches := false
+	if r.Operation == v1.Update {
+		urlMatches, err = utils.DoesHostnamesMatch(gitServerURL, gitRepo.Spec.URL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to complete hostname matching: %w", err)
+		}
 	}
-	if !matches {
+
+	// Mutate the git URL if necessary
+	if r.Operation == v1.Create || (r.Operation == v1.Update && !urlMatches) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		gitURL := git.MutateGitUrlsInText(gitServerURL, gitURL, zarfState.GitServer.PushUsername)
+		gitURL = git.MutateGitUrlsInText(gitServerURL, gitURL, zarfState.GitServer.PushUsername)
 		message.Debugf("original git URL of (%s) got mutated to (%s)", gitRepo.Spec.URL, gitURL)
 	}
 
