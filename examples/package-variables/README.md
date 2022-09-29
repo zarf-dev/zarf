@@ -15,7 +15,7 @@ To view the example source code, select the `Edit this page` link below the arti
 &nbsp;
 
 ## How to Use Deploy-Time Variables and Constants
-The 'placeholder' text in the manifest or chart yaml should have your desired key name in all caps with `###ZARF_VAR` prepended and `###` appened for `variables` or `###ZARF_CONST` prepended and `###` appened for `constants`.
+The 'placeholder' text in the manifest or chart yaml should have your desired key name in all caps with `###ZARF_VAR` prepended and `###` appended for `variables` or `###ZARF_CONST` prepended and `###` appended for `constants`.
 
 For example, if I wanted to create a template for a database username (using the variable `name`: `DATABASE_USERNAME`) I would do something like `###ZARF_VAR_DATABASE_USERNAME###` in the manifest or chart yaml.
 
