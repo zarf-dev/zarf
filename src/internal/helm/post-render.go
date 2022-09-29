@@ -45,7 +45,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		message.Fatalf(err, "Specified tmpdir does not exist, please create it: %s", config.CommonOptions.TempDirectory)
+		return nil, fmt.Errorf("tmpdir does not exist: %w", err)
 	}
 	path := tempDir + "/chart.yaml"
 

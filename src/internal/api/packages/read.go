@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -36,7 +37,7 @@ func readPackage(w http.ResponseWriter, path string) (pkg types.APIZarfPackage, 
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		message.Fatalf(err, "Specified tmpdir does not exist, please create it: %s", config.CommonOptions.TempDirectory)
+		return pkg, fmt.Errorf("tmpdir does not exist: %w", err)
 	}
 
 	// Extract the archive
