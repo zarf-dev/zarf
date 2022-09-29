@@ -16,7 +16,7 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
-AGENT_IMAGE ?= defenseunicorns/zarf-agent:v0.21.1
+AGENT_IMAGE ?= zarfdev/agent:a57bb136f21441c66630403412c6f03fc7f9cd49
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -99,19 +99,20 @@ cve-report:
 	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
-# @todo: find a clean way to support Kind or k3d: k3d image import $(tag)
+# @todo: find a clean way to dynamically support Kind or k3d:
+#        when using kind: kind load docker-image $(tag)
+#        when using k3d: k3d image import $(tag)
 dev-agent-image:
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))
 	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
 	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
-	kind load docker-image zarf-agent:$(tag) && \
+	k3d image import $(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
 init-package: ## Create the zarf init package, macos "brew install coreutils" first
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
 ci-release: init-package ## Create the init package
 
@@ -134,10 +135,18 @@ build-examples:
 
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-flux-test-${ARCH}.tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 
 ## Run e2e tests. Will automatically build any required dependencies that aren't present.
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: init-package build-examples
+test-e2e: build-examples
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
+
+test-external:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+	cd src/test/external-test && go test -failfast -v -timeout 30m
