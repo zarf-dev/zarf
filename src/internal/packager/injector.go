@@ -84,16 +84,23 @@ func runInjectionMadness(tempPath tempPaths) {
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 
 		// Update the podspec image path and use the first node found
-		pod := buildInjectionPod(node[0], image, envVars, payloadConfigmaps, sha256sum)
+		pod, err := buildInjectionPod(node[0], image, envVars, payloadConfigmaps, sha256sum)
+		if err != nil {
+			// Just debug log the output because failures just result in trying the next image
+			message.Debug(err)
+			continue
+		}
 
 		// Create the pod in the cluster
 		pod, err = k8s.CreatePod(pod)
-
-		// Just debug log the output because failures just result in trying the next image
-		message.Debug(pod, err)
+		if err != nil {
+			// Just debug log the output because failures just result in trying the next image
+			message.Debug(pod, err)
+			continue
+		}
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		if err == nil && hasSeedImages(spinner) {
+		if hasSeedImages(spinner) {
 			return
 		}
 
@@ -290,7 +297,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
-func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) *corev1.Pod {
+func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
 	seedImage := config.GetSeedImage()
@@ -345,7 +352,12 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 		},
 	}
 
-	// Container definition for the injector pod
+	// Create container definition for the injector pod
+	newHost, err := utils.SwapHostWithoutSha(seedImage, "127.0.0.1:5001")
+	if err != nil {
+		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
+		return nil, err
+	}
 	pod.Spec.Containers = []corev1.Container{
 		{
 			Name: "injector",
@@ -359,7 +371,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 				"/zarf-stage2/zarf-registry",
 				"/zarf-stage2/seed-image.tar",
 				seedImage,
-				utils.SwapHost(seedImage, "127.0.0.1:5001"),
+				newHost,
 			},
 
 			// Shared mount between the init and regular containers
@@ -430,5 +442,5 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 		})
 	}
 
-	return pod
+	return pod, nil
 }
