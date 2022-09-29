@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -9,9 +10,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func preSeedRegistry(tempPath tempPaths) {
+func seedZarfState(tempPath tempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -32,16 +34,17 @@ func preSeedRegistry(tempPath tempPaths) {
 		spinner.Errorf(err, "Unable to validate the cluster system architecture")
 	}
 
-	// Attempt to load an existing state prior to init, ignore errors as they are expected
+	// Attempt to load an existing state prior to init
+	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state, _ := k8s.LoadZarfState()
 
-	// If the state is invalid, assume this is a new cluster
-	if state.Secret == "" {
+	// If the distro isn't populated in the state, assume this is a new cluster
+	if state.Distro == "" {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
-		if config.DeployOptions.ApplianceMode {
+		if config.InitOptions.ApplianceMode {
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -58,10 +61,9 @@ func preSeedRegistry(tempPath tempPaths) {
 		}
 
 		// Defaults
-		state.NodePort = "31999"
-		state.Secret = utils.RandomString(120)
 		state.Distro = distro
 		state.Architecture = config.GetArch()
+		state.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
@@ -102,20 +104,14 @@ func preSeedRegistry(tempPath tempPaths) {
 		state.StorageClass = "hostpath"
 	}
 
-	// CLI provided overrides that haven't been processed already
-	if config.DeployOptions.NodePort != "" {
-		state.NodePort = config.DeployOptions.NodePort
+	if config.InitOptions.StorageClass != "" {
+		state.StorageClass = config.InitOptions.StorageClass
 	}
-	if config.DeployOptions.Secret != "" {
-		state.Secret = config.DeployOptions.Secret
-	}
-	if config.DeployOptions.StorageClass != "" {
-		state.StorageClass = config.DeployOptions.StorageClass
-	}
+
+	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
+	state.RegistryInfo = fillInEmptyContainerRegistryValues(config.InitOptions.RegistryInfo)
 
 	spinner.Success()
-
-	runInjectionMadness(tempPath)
 
 	// Save the state back to K8s
 	if err := k8s.SaveZarfState(state); err != nil {
@@ -126,19 +122,97 @@ func preSeedRegistry(tempPath tempPaths) {
 	config.InitState(state)
 }
 
-func postSeedRegistry(tempPath tempPaths) {
+func postSeedRegistry(tempPath tempPaths) error {
 	message.Debug("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
-	_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+	if err := k8s.DeletePod(k8s.ZarfNamespace, "injector"); err != nil {
+		return err
+	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	_ = k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch)
+	if err := k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch); err != nil {
+		return err
+	}
 
 	// Remove the injector service
-	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
+	if err := k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector"); err != nil {
+		return err
+	}
 
 	// Push the seed images into to Zarf registry
-	images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()})
+	err := images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, false)
+
+	return err
+}
+
+func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+	// Set default url if an external registry was not provided
+	if containerRegistry.Address == "" {
+		containerRegistry.InternalRegistry = true
+		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
+		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+	}
+
+	// Generate a push-user password if not provided by init flag
+	if containerRegistry.PushPassword == "" {
+		containerRegistry.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+	}
+
+	// Set pull-username if not provided by init flag
+	if containerRegistry.PullUsername == "" {
+		if containerRegistry.InternalRegistry {
+			containerRegistry.PullUsername = config.ZarfRegistryPullUser
+		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
+			containerRegistry.PullUsername = containerRegistry.PushUsername
+		}
+	}
+	if containerRegistry.PullPassword == "" {
+		if containerRegistry.InternalRegistry {
+			containerRegistry.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
+			containerRegistry.PullPassword = containerRegistry.PushPassword
+		}
+	}
+
+	if containerRegistry.Secret == "" {
+		containerRegistry.Secret = utils.RandomString(config.ZarfGeneratedSecretLen)
+	}
+
+	return containerRegistry
+}
+
+// Fill in empty GitServerInfo values with the defaults
+func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
+	// Set default svc url if an external repository was not provided
+	if gitServer.Address == "" {
+		gitServer.Address = config.ZarfInClusterGitServiceURL
+		gitServer.InternalServer = true
+	}
+
+	// Generate a push-user password if not provided by init flag
+	if gitServer.PushPassword == "" {
+		gitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+	}
+
+	// Set read-user information if using an internal repository, otherwise copy from the push-user
+	if gitServer.PullUsername == "" {
+		if gitServer.InternalServer {
+			gitServer.PullUsername = config.ZarfGitReadUser
+		} else {
+			gitServer.PullUsername = gitServer.PushUsername
+		}
+	}
+	if gitServer.PullPassword == "" {
+		if gitServer.InternalServer {
+			gitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		} else {
+			gitServer.PullPassword = gitServer.PushPassword
+		}
+	}
+
+	return gitServer
 }

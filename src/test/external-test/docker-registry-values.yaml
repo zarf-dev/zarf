@@ -1,0 +1,19 @@
+image:
+  repository: registry
+  tag: 2.7.1
+  pullPolicy: IfNotPresent
+imagePullSecrets:
+    - name: private-registry
+
+service:
+  name: registry
+  # type: ClusterIP
+  port: 5000
+  annotations: {}
+  type: NodePort
+  nodePort: 31999
+
+# Note: Super fake and not real htpasswd for testing purposes
+secrets:
+  haSharedSecret: ""
+  htpasswd: "push-user:$2a$10$bnke4DeqY4qsAWIRsJCFluayx4v56mxhp/bfwubt.K83fudDzKAue"

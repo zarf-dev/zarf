@@ -37,7 +37,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text)
+		processedText := git.MutateGitUrlsInText(host, text, config.InitOptions.GitServer.PushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false
@@ -130,4 +130,7 @@ func init() {
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
 	prepareFindImages.Flags().StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
+
+	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
 }

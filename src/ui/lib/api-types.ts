@@ -409,9 +409,19 @@ export interface ZarfState {
     /**
      * K8s distribution of the cluster Zarf was deployed to
      */
-    distro:       string;
-    nodePort:     string;
-    secret:       string;
+    distro: string;
+    /**
+     * Information about the repository Zarf is configured to use
+     */
+    gitServer: GitServerInfo;
+    /**
+     * Secret value that the internal Grafana server was seeded with
+     */
+    loggingSecret: string;
+    /**
+     * Information about the registry Zarf is configured to use
+     */
+    registryInfo: RegistryInfo;
     storageClass: string;
     /**
      * Indicates if Zarf was initialized while deploying its own k8s cluster
@@ -425,9 +435,88 @@ export interface GeneratedPKI {
     key:  string;
 }
 
+/**
+ * Information about the repository Zarf is configured to use
+ */
+export interface GitServerInfo {
+    /**
+     * URL address of the git server
+     */
+    address: string;
+    /**
+     * Indicates if we are using a git server that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with pull-only access to the git repository. If not provided for an
+     * external repository than the push-user is used
+     */
+    pullPassword: string;
+    /**
+     * Username of a user with pull-only access to the git repository. If not provided for an
+     * external repository than the push-user is used
+     */
+    pullUsername: string;
+    /**
+     * Password of a user with push access to the git repository
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the git repository
+     */
+    pushUsername: string;
+}
+
+/**
+ * Information about the registry Zarf is configured to use
+ */
+export interface RegistryInfo {
+    /**
+     * URL address of the registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a registry that Zarf is directly managing
+     */
+    internalRegistry: boolean;
+    /**
+     * Nodeport of the registry. Only needed if the registry is running inside the kubernetes
+     * cluster
+     */
+    nodePort: number;
+    /**
+     * Password of a user with pull-only access to the registry. If not provided for an external
+     * registry than the push-user is used
+     */
+    pullPassword: string;
+    /**
+     * Username of a user with pull-only access to the registry. If not provided for an external
+     * registry than the push-user is used
+     */
+    pullUsername: string;
+    /**
+     * Password of a user with push access to the registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the registry
+     */
+    pushUsername: string;
+    /**
+     * Secret value that the registry was seeded with
+     */
+    secret: string;
+}
+
 export interface ConnectString {
+    /**
+     * Descriptive text that explains what the resource you would be connecting to is used for
+     */
     description: string;
-    url:         string;
+    /**
+     * URL path that gets appended to the k8s port-forward result
+     */
+    url: string;
 }
 
 export interface DeployedPackage {
@@ -438,37 +527,69 @@ export interface DeployedPackage {
 }
 
 export interface DeployedComponent {
-    installedCharts: InstalledCharts[];
+    installedCharts: InstalledChart[];
     name:            string;
 }
 
-export interface InstalledCharts {
+export interface InstalledChart {
     chartName: string;
     namespace: string;
 }
 
 export interface ZarfCommonOptions {
-    confirm:       boolean;
+    /**
+     * Verify that Zarf should perform an action
+     */
+    confirm: boolean;
+    /**
+     * Location Zarf should use as a staging ground when managing files and images for package
+     * creation and deployment
+     */
     tempDirectory: string;
 }
 
 export interface ZarfCreateOptions {
-    imageCachePath:  string;
-    insecure:        boolean;
+    /**
+     * Path to where a .cache directory of cached image that were pulled down to create packages
+     */
+    imageCachePath: string;
+    /**
+     * Disable the need for shasum validations when pulling down files from the internet
+     */
+    insecure: boolean;
+    /**
+     * Location where the finalized Zarf package will be placed
+     */
     outputDirectory: string;
-    setVariables:    { [key: string]: string };
-    skipSBOM:        boolean;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
+    /**
+     * Disable the generation of SBOM materials during package creation
+     */
+    skipSBOM: boolean;
 }
 
 export interface ZarfDeployOptions {
-    applianceMode: boolean;
-    components:    string;
-    nodePort:      string;
-    packagePath:   string;
-    secret:        string;
-    setVariables:  { [key: string]: string };
-    sGetKeyPath:   string;
-    storageClass:  string;
+    /**
+     * Comma separated list of optional components to deploy
+     */
+    components: string;
+    /**
+     * Location where a Zarf package to deploy can be found
+     */
+    packagePath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    sGetKeyPath: string;
 }
 
 // Converts JSON strings to/from your types
@@ -746,8 +867,9 @@ const typeMap: any = {
         { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
         { json: "architecture", js: "architecture", typ: "" },
         { json: "distro", js: "distro", typ: "" },
-        { json: "nodePort", js: "nodePort", typ: "" },
-        { json: "secret", js: "secret", typ: "" },
+        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
+        { json: "loggingSecret", js: "loggingSecret", typ: "" },
+        { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
         { json: "zarfAppliance", js: "zarfAppliance", typ: true },
     ], false),
@@ -755,6 +877,24 @@ const typeMap: any = {
         { json: "ca", js: "ca", typ: "" },
         { json: "cert", js: "cert", typ: "" },
         { json: "key", js: "key", typ: "" },
+    ], false),
+    "GitServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
+        { json: "pullPassword", js: "pullPassword", typ: "" },
+        { json: "pullUsername", js: "pullUsername", typ: "" },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+    ], false),
+    "RegistryInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalRegistry", js: "internalRegistry", typ: true },
+        { json: "nodePort", js: "nodePort", typ: 0 },
+        { json: "pullPassword", js: "pullPassword", typ: "" },
+        { json: "pullUsername", js: "pullUsername", typ: "" },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+        { json: "secret", js: "secret", typ: "" },
     ], false),
     "ConnectString": o([
         { json: "description", js: "description", typ: "" },
@@ -767,10 +907,10 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
     ], false),
     "DeployedComponent": o([
-        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledCharts")) },
+        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChart")) },
         { json: "name", js: "name", typ: "" },
     ], false),
-    "InstalledCharts": o([
+    "InstalledChart": o([
         { json: "chartName", js: "chartName", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
     ], false),
@@ -786,14 +926,10 @@ const typeMap: any = {
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "ZarfDeployOptions": o([
-        { json: "applianceMode", js: "applianceMode", typ: true },
         { json: "components", js: "components", typ: "" },
-        { json: "nodePort", js: "nodePort", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
-        { json: "secret", js: "secret", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
-        { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
     "Architecture": [
         "amd64",

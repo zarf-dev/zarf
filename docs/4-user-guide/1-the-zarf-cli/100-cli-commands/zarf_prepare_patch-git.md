@@ -10,7 +10,8 @@ zarf prepare patch-git [HOST] [FILE] [flags]
 ### Options
 
 ```
-  -h, --help   help for patch-git
+      --git-account string   User or organization name for the git account that the repos are created under. (default "zarf-git-user")
+  -h, --help                 help for patch-git
 ```
 
 ### Options inherited from parent commands

@@ -1,19 +1,17 @@
 persistence:
-  storageClass: "###ZARF_STORAGE_CLASS###"
+  storageClass: "local-path" # 'local-path' is for k3d, 'standard' is for kind
 gitea:
   admin:
-    username: "###ZARF_GIT_PUSH###"
-    password: "###ZARF_GIT_AUTH_PUSH###"
+    username: "git-user"
+    password: "superSecurePassword"   # Note: Super fake and not real username/password for testing purposes
     email: "zarf@localhost"
   config:
-    APP_NAME: "Zarf Gitops Service"
+    APP_NAME: "Gitops Service"
     server:
       DISABLE_SSH: true
       OFFLINE_MODE: true
     database:
       DB_TYPE: sqlite3
-      # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
-      HOST: zarf-docker-registry.zarf.svc.cluster.local:5000
     security:
       INSTALL_LOCK: true
     service:
