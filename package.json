@@ -28,7 +28,7 @@
 		"@material/layout-grid": "14.0.0",
 		"@material/linear-progress": "14.0.0",
 		"@material/theme": "14.0.0",
-		"@playwright/test": "1.26.0",
+		"@playwright/test": "1.26.1",
 		"@sveltejs/adapter-static": "next",
 		"@sveltejs/kit": "next",
 		"@sveltejs/package": "next",
@@ -51,7 +51,7 @@
 		"svelte-check": "2.9.1",
 		"svelte-preprocess": "4.10.7",
 		"tslib": "2.4.0",
-		"typescript": "4.8.3",
+		"typescript": "4.8.4",
 		"vite": "3.1.4",
 		"yaml": "2.1.1"
 	}
