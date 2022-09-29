@@ -29,8 +29,8 @@ type Credential struct {
 }
 
 var (
-	// For further explanation: https://regex101.com/library/UfILls and https://regex101.com/rary/UfILls
-	gitURLRegex = regexp.MustCompile(`^(.+)\/([\w\-\.]+?)(\.git)?(@([\w\-\.]+))?$`)
+	// For further explanation: https://regex101.com/r/gOVJ7o/2
+	gitURLRegex = regexp.MustCompile(`^(?P<baseURL>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atTag>@(?P<tag>[\w\-\.]+))?$`)
 )
 
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
@@ -48,17 +48,16 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 }
 
 func transformURLtoRepoName(url string) (string, error) {
-	substrings := gitURLRegex.FindStringSubmatch(url)
-	if len(substrings) == 0 {
+	matches := gitURLRegex.FindStringSubmatch(url)
+	if len(matches) != 6 {
 		// the first element in the return substrings is
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
-	// NOTE: The second element in the returned substrings is the repo name....
-	//       <full-input-url>, <base-url>, <repo-name>, <.git>, <@tag>, <tag>
-	// We remove the .git so that https://example.com/repo.git and https://example.com/repo resolve to the same repository (as they would in real life)
-	sanitizedURL := substrings[1] + "/" + substrings[2] + substrings[4]
-	repoName := substrings[2]
+	repoName := matches[gitURLRegex.SubexpIndex("repo")]
+	// NOTE: We remove the .git so that https://zarf.dev/repo.git and https://zarf.dev/repo resolve to the same repo
+	// (as they would in real life)
+	sanitizedURL := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atTag")]
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
@@ -70,12 +69,12 @@ func transformURLtoRepoName(url string) (string, error) {
 	return newRepoName, nil
 }
 
-func transformURL(baseUrl string, url string, username string) (string, error) {
-	replaced, err := transformURLtoRepoName(url)
+func transformURL(baseURL string, url string, username string) (string, error) {
+	repoName, err := transformURLtoRepoName(url)
 	if err != nil {
 		return "", err
 	}
-	output := baseUrl + "/" + username + "/" + replaced
+	output := baseURL + "/" + username + "/" + repoName
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
 }
