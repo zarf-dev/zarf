@@ -124,8 +124,8 @@ var packageRemoveCmd = &cobra.Command{
 	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
-		re := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`)
-		if re.Match([]byte(pkgName)) {
+		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
+		if isTarball(pkgName) {
 			message.Debug("PACKAGE NAME IS A ARCHIVE")
 
 			if utils.InvalidPath(pkgName) {
