@@ -35,7 +35,7 @@ func GetCLIName() string {
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
-	utils.ExecCommandWithContext(context.TODO(), "", true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
 }
 
 // teardown actions for each test
@@ -45,7 +45,7 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 // execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
-	return utils.ExecCommandWithContext(context.TODO(), "", true, e2e.zarfBinPath, commandString...)
+	return utils.ExecCommandWithContext(context.TODO(), true, e2e.zarfBinPath, commandString...)
 }
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {

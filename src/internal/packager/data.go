@@ -51,7 +51,7 @@ iterator:
 
 			// Must create the target directory before trying to change to it for untar
 			mkdirExec := fmt.Sprintf("%s -- mkdir -p %s", kubectlExec, data.Target.Path)
-			_, _, err := utils.ExecCommandWithContext(context.TODO(), "", true, "sh", "-c", mkdirExec)
+			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", mkdirExec)
 			if err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
 				break iterator
@@ -65,7 +65,7 @@ iterator:
 			)
 
 			// Do the actual data injection
-			_, _, err = utils.ExecCommandWithContext(context.TODO(), "", true, "sh", "-c", cpPodExec)
+			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 			if err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				break iterator
@@ -78,7 +78,7 @@ iterator:
 					kubectlExec,
 					untarExec,
 				)
-				_, _, err = utils.ExecCommandWithContext(context.TODO(), "", true, "sh", "-c", cpPodExec)
+				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 				if err != nil {
 					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 				}

@@ -51,7 +51,7 @@ func clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinner *messa
 			cmdArgs = append(cmdArgs, "--no-tags")
 		}
 
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), "", false, "git", cmdArgs...)
+		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", cmdArgs...)
 		spinner.Updatef(stdOut)
 		spinner.Debugf(stdErr)
 

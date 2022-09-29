@@ -79,7 +79,7 @@ func fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 		for _, refspec := range refspecs {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
-		_, _, err := utils.ExecCommandWithContext(context.TODO(), gitDirectory, false, "git", cmdArgs...)
+		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), gitDirectory, false, "git", cmdArgs...)
 
 		return err
 	}

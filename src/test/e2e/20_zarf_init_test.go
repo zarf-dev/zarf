@@ -24,10 +24,10 @@ func TestZarfInit(t *testing.T) {
 	defer cancel()
 
 	// run `zarf init`
-	_, _, err := utils.ExecCommandWithContext(ctx, "", true, e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm")
+	_, _, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm")
 	require.NoError(t, err)
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = utils.ExecCommandWithContext(ctx, "", true, "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
-	_, _, _ = utils.ExecCommandWithContext(ctx, "", true, "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
+	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
+	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
 }
