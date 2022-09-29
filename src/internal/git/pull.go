@@ -2,7 +2,6 @@ package git
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"regexp"
 
@@ -43,7 +42,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 
 	gitCachePath := targetFolder
 	if repoName != "" {
-		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("%s/%s", config.ZarfGitCacheDir, repoName))
+		gitCachePath = filepath.Join(config.GetCachePath(), filepath.Join(config.ZarfGitCacheDir, repoName))
 	}
 
 	substrings := gitURLRegex.FindStringSubmatch(gitURL)
