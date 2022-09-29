@@ -17,7 +17,7 @@ type ZarfE2ETest struct {
 }
 
 // getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
-func getCLIName() string {
+func GetCLIName() string {
 	var binaryName string
 	if runtime.GOOS == "linux" {
 		binaryName = "zarf"
