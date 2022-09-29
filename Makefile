@@ -92,12 +92,6 @@ test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	.hooks/check-zarf-docs-and-schema.sh
 
-test-cves: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype --fail-on low
-
-cve-report: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
-
 test-cves:
 	go run main.go tools sbom packages . -o json | grype --fail-on low
 
