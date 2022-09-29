@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: never-ready-zarf-wait-test
+spec:
+  containers:
+  - name: alpine
+    image: alpine:latest
+    command:
+      - "sleep"
+      - "infinity"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    readinessProbe:
+      exec:
+        command:
+          - "exit"
+          - "1"

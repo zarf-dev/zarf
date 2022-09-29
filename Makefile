@@ -142,6 +142,8 @@ build-examples:
 
 	@test -s ./build/zarf-package-flux-test-${ARCH}.tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
+
 ## Run e2e tests. Will automatically build any required dependencies that aren't present.
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
