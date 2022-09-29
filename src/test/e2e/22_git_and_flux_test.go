@@ -56,9 +56,9 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "mirror__repo1.dso.mil__platform-one__big-bang__apps__security-tools__twistlock"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.ZarfGitPushUser, repoName), nil)
-	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	repoName := "twistlock-327c7a99d77a530fe94872911f0dabef839441bf"
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
+	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the only permissions are pull (read)
@@ -74,15 +74,13 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
-
 	config.InitState(state)
-
-	repoName := "mirror__github.com__defenseunicorns__zarf"
+	repoName := "zarf-bf89aea1b43dd0ea83360d4a219643a4bc8424c6"
 
 	// Get the Zarf repo tag
 	repoTag := "v0.15.0"
 	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
-	getRepoTagsResponseBody, err := git.DoHttpThings(getRepoTagsRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	getRepoTagsResponseBody, err := git.DoHttpThings(getRepoTagsRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the pushed tag exists
@@ -93,7 +91,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Get the Zarf repo commit
 	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
 	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/commits", gitURL, config.ZarfGitPushUser, repoName), nil)
-	getRepoCommitsResponseBody, err := git.DoHttpThings(getRepoCommitsRequest, config.ZarfGitReadUser, config.GetSecret(config.StateGitPull))
+	getRepoCommitsResponseBody, err := git.DoHttpThings(getRepoCommitsRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the pushed commit exists

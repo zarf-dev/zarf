@@ -26,6 +26,6 @@ components:
           - podinfo-source.yaml
           - podinfo-kustomization.yaml
     repos:
-      - https://github.com/stefanprodan/podinfo
+      - https://github.com/stefanprodan/podinfo.git
     images:
       - ghcr.io/stefanprodan/podinfo:6.1.6

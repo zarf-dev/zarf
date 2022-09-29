@@ -44,7 +44,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	// Set up constants in the global variable that all the tests are able to access
 	e2e.arch = config.GetArch()
 
-	e2e.zarfBinPath = path.Join("build", getCLIName())
+	e2e.zarfBinPath = path.Join("build", GetCLIName())
 	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"
 
 	// Validate that the Zarf binary exists. If it doesn't that means the dev hasn't built it, usually by running
