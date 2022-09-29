@@ -43,7 +43,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 
 	gitCachePath := targetFolder
 	if repoName != "" {
-		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("repos/%s", repoName))
+		gitCachePath = filepath.Join(config.GetCachePath(), fmt.Sprintf("%s/%s", config.ZarfGitCacheDir, repoName))
 	}
 
 	substrings := gitURLRegex.FindStringSubmatch(gitURL)

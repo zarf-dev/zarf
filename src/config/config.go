@@ -43,7 +43,10 @@ const (
 
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
-	ZarfDefaultCachePath   = ".zarf-cache"
+
+	ZarfDefaultCachePath = ".zarf-cache"
+	ZarfImageCacheDir    = "images"
+	ZarfGitCacheDir      = "repos"
 
 	ZarfYAML    = "zarf.yaml"
 	ZarfSBOMDir = "zarf-sbom"

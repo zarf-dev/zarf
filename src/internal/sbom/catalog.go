@@ -89,7 +89,7 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Create the sbom
-	imageCachePath := filepath.Join(builder.cachePath, "images")
+	imageCachePath := filepath.Join(builder.cachePath, config.ZarfImageCacheDir)
 	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
