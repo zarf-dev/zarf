@@ -27,10 +27,16 @@ func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	return path
 }
 
-func Pull(gitUrl, targetFolder string, spinner *message.Spinner) string {
-	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
+func Pull(gitUrl, targetFolder string, spinner *message.Spinner) (string, error) {
+	repoName, err := transformURLtoRepoName(gitUrl)
+	if err != nil {
+		message.Errorf(err, "unable to pull the git repo at %s", gitUrl)
+		return "", err
+	}
+
+	path := targetFolder + "/" + repoName
 	pull(gitUrl, path, spinner)
-	return path
+	return path, nil
 }
 
 func pull(gitUrl, targetFolder string, spinner *message.Spinner) {

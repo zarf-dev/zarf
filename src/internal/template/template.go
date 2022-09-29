@@ -34,8 +34,8 @@ func Generate() Values {
 	state := config.GetState()
 
 	generated.state = state
-	pushUser, errPush := utils.GetHtpasswdString(config.ZarfRegistryPushUser, config.GetSecret(config.StateRegistryPush))
-	pullUser, errPull := utils.GetHtpasswdString(config.ZarfRegistryPullUser, config.GetSecret(config.StateRegistryPull))
+	pushUser, errPush := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword)
+	pullUser, errPull := utils.GetHtpasswdString(config.GetContainerRegistryInfo().PullUsername, config.GetContainerRegistryInfo().PullPassword)
 	if errPush != nil || errPull != nil {
 		message.Debug(errPush, errPull)
 		message.Fatal(nil, "Unable to define `htpasswd` string for the Zarf user")
@@ -45,14 +45,14 @@ func Generate() Values {
 	generated.seedRegistry = config.GetSeedRegistry()
 	generated.registry = config.GetRegistry()
 
-	generated.secret.registryPush = config.GetSecret(config.StateRegistryPush)
-	generated.secret.registryPull = config.GetSecret(config.StateRegistryPull)
-	generated.secret.registrySecret = config.GetSecret(config.StateRegistrySecret)
+	generated.secret.registryPush = config.GetContainerRegistryInfo().PushPassword
+	generated.secret.registryPull = config.GetContainerRegistryInfo().PullPassword
+	generated.secret.registrySecret = config.GetContainerRegistryInfo().Secret
 
-	generated.secret.gitPush = config.GetSecret(config.StateGitPush)
-	generated.secret.gitPull = config.GetSecret(config.StateGitPull)
+	generated.secret.gitPush = state.GitServer.PushPassword
+	generated.secret.gitPull = state.GitServer.PullPassword
 
-	generated.secret.logging = config.GetSecret(config.StateLogging)
+	generated.secret.logging = state.LoggingSecret
 
 	generated.agentTLS = state.AgentTLS
 
@@ -60,7 +60,7 @@ func Generate() Values {
 }
 
 func (values Values) Ready() bool {
-	return values.secret.htpasswd != ""
+	return values.state.Distro != ""
 }
 
 func (values Values) GetRegistry() string {
@@ -79,9 +79,10 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	builtinMap := map[string]string{
 		"STORAGE_CLASS":      values.state.StorageClass,
 		"REGISTRY":           values.registry,
-		"NODEPORT":           values.state.NodePort,
+		"NODEPORT":           fmt.Sprintf("%d", values.state.RegistryInfo.NodePort),
 		"REGISTRY_AUTH_PUSH": values.secret.registryPush,
 		"REGISTRY_AUTH_PULL": values.secret.registryPull,
+		"GIT_PUSH":           values.state.GitServer.PushUsername,
 		"GIT_AUTH_PUSH":      values.secret.gitPush,
 		"GIT_AUTH_PULL":      values.secret.gitPull,
 	}
