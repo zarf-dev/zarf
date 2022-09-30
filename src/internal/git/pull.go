@@ -15,8 +15,11 @@ import (
 const onlineRemoteName = "online-upstream"
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
-	path, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+	}
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
