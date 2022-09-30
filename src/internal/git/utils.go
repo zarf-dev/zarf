@@ -29,7 +29,7 @@ type Credential struct {
 }
 
 var (
-	// For further explanation: https://regex101.com/r/gOVJ7o/2
+	// For further explanation: https://regex101.com/r/gOVJ7o/3
 	gitURLRegex = regexp.MustCompile(`^(?P<baseURL>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
 )
 
