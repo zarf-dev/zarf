@@ -42,7 +42,10 @@ type tempPaths struct {
 }
 
 func createPaths() tempPaths {
-	basePath, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
+	}
 	return tempPaths{
 		base: basePath,
 

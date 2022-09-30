@@ -30,7 +30,7 @@ zarf init       # Run the initialization command
 ### Confirming the Deployment
 Just like how we got a prompt when creating a package in the prior walkthrough, we will also get a prompt when deploying a package.
 ![Confirm Package Deploy](../.images/walkthroughs/package_deploy_confirm.png)
-Since there are container images within our init-package, we also get a notification about the [Software Bill of Materials (SBOM)](https://www.ntia.gov/SBOM) Zarf included for our package with a file location of where we could view the [SBOM Dashoard](../7-dashboard-ui/1-sbom-dashboard.md) if interested incase we were interested in viewing it.
+Since there are container images within our init-package, we also get a notification about the [Software Bill of Materials (SBOM)](https://www.ntia.gov/SBOM) Zarf included for our package with the file location of where the [SBOM Dashboard](../7-dashboard-ui/1-sbom-dashboard.md) can be viewed.
 
 <br />
 
