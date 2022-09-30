@@ -44,9 +44,8 @@ const (
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
-	ZarfDefaultCachePath = ".zarf-cache"
-	ZarfImageCacheDir    = "images"
-	ZarfGitCacheDir      = "repos"
+	ZarfImageCacheDir = "images"
+	ZarfGitCacheDir   = "repos"
 
 	ZarfYAML    = "zarf.yaml"
 	ZarfSBOMDir = "zarf-sbom"
@@ -92,6 +91,8 @@ var (
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
+
+	ZarfCachePath = filepath.Join("~", ".zarf-cache")
 )
 
 // Timestamp of when the CLI was started
@@ -289,18 +290,14 @@ func BuildConfig(path string) error {
 
 // SetCachePath sets the cache path for images and git repos.
 func SetCachePath(cachePath string) {
-	CreateOptions.CachePath = cachePath
+	ZarfCachePath = cachePath
 }
 
 // GetCachePath gets the absolute cache path for images and git repos.
 func GetCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	if CreateOptions.CachePath == "" {
-		return filepath.Join(homePath, ZarfDefaultCachePath)
-	}
-
-	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	return strings.Replace(ZarfCachePath, "~", homePath, 1)
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
