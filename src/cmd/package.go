@@ -165,7 +165,7 @@ func init() {
 	packageCreateCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 	packageCreateCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
 	packageCreateCmd.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
-	packageCreateCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+	packageCreateCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfCachePath, "Specify the location of the Zarf artifact cache (images and git repositories)")
 	packageCreateCmd.Flags().StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", "", "Specify the output directory for the created Zarf package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", false, "Skip generating SBOM for this package")
 	packageCreateCmd.Flags().BoolVar(&config.CreateOptions.Insecure, "insecure", false, "Allow insecure registry connections when pulling OCI images")
