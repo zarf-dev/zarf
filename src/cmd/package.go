@@ -118,7 +118,7 @@ var packageListCmd = &cobra.Command{
 }
 
 var packageRemoveCmd = &cobra.Command{
-	Use:     "remove {PACKAGE_NAME}",
+	Use:     "remove {PACKAGE_NAME|PACKAGE_FILE}",
 	Aliases: []string{"u"},
 	Args:    cobra.ExactArgs(1),
 	Short:   "Use to remove a Zarf package that has been deployed already",
