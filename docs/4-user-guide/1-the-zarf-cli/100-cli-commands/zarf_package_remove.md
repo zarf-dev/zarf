@@ -3,7 +3,7 @@
 Use to remove a Zarf package that has been deployed already
 
 ```
-zarf package remove {PACKAGE_NAME} [flags]
+zarf package remove {PACKAGE_NAME|PACKAGE_FILE} [flags]
 ```
 
 ### Options
