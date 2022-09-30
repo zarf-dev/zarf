@@ -132,7 +132,7 @@ var packageRemoveCmd = &cobra.Command{
 
 			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
-				message.Fatal(err, "tmpdir does not exist")
+				message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
 			}
 			defer os.RemoveAll(tempPath)
 
