@@ -123,7 +123,7 @@ func seedZarfState(tempPath tempPaths) {
 }
 
 func postSeedRegistry(tempPath tempPaths) error {
-	message.Debug("packager.postSeedRegistry(%#v)", tempPath)
+	message.Debugf("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
 	if err := k8s.DeletePod(k8s.ZarfNamespace, "injector"); err != nil {

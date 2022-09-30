@@ -102,8 +102,9 @@ func TestUseCLI(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("tools", "clear-cache", "--zarf-cache", cachePath, "--log-level=debug")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// Check that ReadDir returns no such file or directory for the cachePath
 	_, err = os.ReadDir(cachePath)
-	require.Error(t, err, cachePath+": no such file or directory")
+	require.ErrorContains(t, err, cachePath+": no such file or directory", "Did not receive expected error when reading a directory that should not exist")
 
 	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
 }

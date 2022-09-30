@@ -201,7 +201,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 			for _, image := range sortedImages {
 				if descriptor, err := crane.Head(image, config.GetCraneOptions()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
-					message.Debugf("Suspected image does not appear to be valid: %w", err)
+					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 				} else {
 					// Otherwise, add to the list of images
 					message.Debugf("Imaged digest found: %s", descriptor.Digest)

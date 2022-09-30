@@ -30,7 +30,7 @@ type Credential struct {
 
 var (
 	// For further explanation: https://regex101.com/r/gOVJ7o/2
-	gitURLRegex = regexp.MustCompile(`^(?P<baseURL>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atTag>@(?P<tag>[\w\-\.]+))?$`)
+	gitURLRegex = regexp.MustCompile(`^(?P<baseURL>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
 )
 
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
@@ -50,14 +50,14 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 func transformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
 	if len(matches) != 6 {
-		// the first element in the return substrings is
+		// Unable to find a substring match for the regex
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
 	repoName := matches[gitURLRegex.SubexpIndex("repo")]
 	// NOTE: We remove the .git so that https://zarf.dev/repo.git and https://zarf.dev/repo resolve to the same repo
 	// (as they would in real life)
-	sanitizedURL := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atTag")]
+	sanitizedURL := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atRef")]
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
@@ -92,7 +92,7 @@ func credentialParser() []Credential {
 	defer func(credentialsFile *os.File) {
 		err := credentialsFile.Close()
 		if err != nil {
-			message.Debugf("Unable to load an existing git credentials file: %w", err)
+			message.Debugf("Unable to load an existing git credentials file: %#v", err)
 		}
 	}(credentialsFile)
 

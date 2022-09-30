@@ -45,15 +45,15 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 		gitCachePath = filepath.Join(config.GetCachePath(), filepath.Join(config.ZarfGitCacheDir, repoName))
 	}
 
-	substrings := gitURLRegex.FindStringSubmatch(gitURL)
-	if len(substrings) == 0 {
+	matches := gitURLRegex.FindStringSubmatch(gitURL)
+	if len(matches) != 6 {
 		// Unable to find a substring match for the regex
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
-	onlyFetchRef := substrings[4] != ""
-	gitURLNoTag := substrings[1] + "/" + substrings[2] + substrings[3]
+	onlyFetchRef := matches[gitURLRegex.SubexpIndex("atRef")] != ""
+	gitURLNoRef := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + matches[gitURLRegex.SubexpIndex("repo")] + matches[gitURLRegex.SubexpIndex("git")]
 
-	repo, err := clone(gitCachePath, gitURLNoTag, onlyFetchRef, spinner)
+	repo, err := clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
 
 	if err == git.ErrRepositoryAlreadyExists {
 		spinner.Debugf("Repo already cloned, fetching upstream changes...")
@@ -77,7 +77,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	}
 
 	if onlyFetchRef {
-		ref := substrings[5]
+		ref := matches[gitURLRegex.SubexpIndex("ref")]
 
 		// Identify the remote trunk branch name
 		trunkBranchName := plumbing.NewBranchReferenceName("master")

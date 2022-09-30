@@ -57,12 +57,12 @@ func validateComponent(component types.ZarfComponent) {
 
 	for _, chart := range component.Charts {
 		if err := validateChart(chart); err != nil {
-			message.Fatalf(err, "Invalid chart definition in the %s component: %s", component.Name)
+			message.Fatalf(err, "Invalid chart definition in the %s component: %s", component.Name, chart.Name)
 		}
 	}
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
-			message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name)
+			message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name, manifest.Name)
 		}
 	}
 }
