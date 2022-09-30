@@ -20,7 +20,7 @@ var TempPathPrefix = "zarf-"
 
 func MakeTempDir(tmpDir string) (string, error) {
 	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
-	message.Debugf("Attempted to create temp path %s", tmp)
+	message.Debugf("Using temp path: '%s'", tmp)
 	return tmp, err
 }
 

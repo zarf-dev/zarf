@@ -37,7 +37,7 @@ func readPackage(w http.ResponseWriter, path string) (pkg types.APIZarfPackage, 
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return pkg, fmt.Errorf("tmpdir does not exist: %w", err)
+		return pkg, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
 
 	// Extract the archive

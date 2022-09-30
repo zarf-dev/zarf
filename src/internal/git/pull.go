@@ -18,7 +18,7 @@ const onlineRemoteName = "online-upstream"
 func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		message.Fatalf(err, "Specified tmpdir does not exist, please create it: %s", config.CommonOptions.TempDirectory)
+		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
 	}
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
