@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -100,14 +101,8 @@ var clearCacheCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   "Clears the configured git and image cache directory",
 	Run: func(cmd *cobra.Command, args []string) {
-		if zarfCache != config.ZarfDefaultCachePath && cachePathClean(zarfCache) {
-			config.SetCachePath(zarfCache)
-		}
-
-		cachePath := config.GetCachePath()
-
-		if err := os.RemoveAll(cachePath); err != nil {
-			message.Fatalf("Unable to clear the cache driectory %s: %s", cachePath, err.Error())
+		if err := os.RemoveAll(zarfCache); err != nil {
+			message.Fatalf("Unable to clear the cache driectory %s: %s", zarfCache, err.Error())
 		}
 	},
 }
@@ -120,7 +115,7 @@ func init() {
 	toolsCmd.AddCommand(registryCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
-	clearCacheCmd.Flags().StringVar(&zarfCache, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+	clearCacheCmd.Flags().StringVar(&zarfCache, "zarf-cache", filepath.Join("~", config.ZarfDefaultCachePath), "Specify the location of the Zarf  artifact cache (images and git repositories)")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
