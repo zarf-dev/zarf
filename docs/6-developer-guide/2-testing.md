@@ -53,7 +53,7 @@ There are a few requirements for all of our tests, that will need to be followed
 
 ## Test Naming Conventions
 
-The tests are run sequentially and the naming convention is set intentinonally:
+The tests are run sequentially and the naming convention is set intentionally:
 - 00-19 tests run prior to `zarf init` (cluster not initialized)
 - 20 is reserved for `zarf init`
 - 21 is reserved for logging tests so they can be removed first (they take the most resources in the cluster)

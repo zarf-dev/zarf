@@ -55,7 +55,7 @@ func TestExternalDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm", "-l=trace"}
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, deployArgs...)
 	require.NoError(t, err, "unable to deploy flux example package")
 

@@ -13,7 +13,7 @@ Packages can provide service manifests that define their own shortcut connection
 Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect to whatever resource you are trying to connect to.
 
 ```
-zarf connect <REGISTRY|LOGGING|GIT> [flags]
+zarf connect {REGISTRY|LOGGING|GIT|connect-name} [flags]
 ```
 
 ### Options

@@ -197,4 +197,4 @@ Coming Soon!
 </TabItem>
 </Tabs>
 
-Zarf is being activity developed by the community. Our releases can be found [here](https://github.com/defenseunicorns/zarf/releases).
+Zarf is being actively developed by the community. Our releases can be found [here](https://github.com/defenseunicorns/zarf/releases).

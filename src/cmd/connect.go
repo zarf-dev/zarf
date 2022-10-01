@@ -14,7 +14,7 @@ var (
 	cliOnly             bool
 
 	connectCmd = &cobra.Command{
-		Use:     "connect <REGISTRY|LOGGING|GIT>",
+		Use:     "connect {REGISTRY|LOGGING|GIT|connect-name}",
 		Aliases: []string{"c"},
 		Short:   "Access services or pods deployed in the cluster.",
 		Long: "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
