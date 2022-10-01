@@ -17,6 +17,7 @@ import (
 var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
 	Use:   "prepare",
+	Aliases: []string{"prep"},
 	Short: "Tools to help prepare assets for packaging",
 }
 

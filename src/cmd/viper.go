@@ -8,23 +8,41 @@ import (
 )
 
 const (
+	// Root config keys
 	V_LOG_LEVEL    = "log_level"
 	V_ARCHITECTURE = "architecture"
 	V_NO_LOG_FILE  = "no_log_file"
 	V_NO_PROGRESS  = "no_progress"
 	V_TMP_DIR      = "tmp_dir"
 
+	// Init config keys
 	V_INIT_COMPONENTS    = "init.components"
 	V_INIT_STORAGE_CLASS = "init.storage_class"
-	V_INIT_SECRET        = "init.secret"
-	V_INIT_NODEPORT      = "init.nodeport"
 
+	// Init Git config keys
+	V_INIT_GIT_URL       = "init.git.url"
+	V_INIT_GIT_PUSH_USER = "init.git.push_username"
+	V_INIT_GIT_PUSH_PASS = "init.git.push_password"
+	V_INIT_GIT_PULL_USER = "init.git.pull_username"
+	V_INIT_GIT_PULL_PASS = "init.git.pull_password"
+
+	// Init Registry config keys
+	V_INIT_REGISTRY_URL       = "init.registry.url"
+	V_INIT_REGISTRY_NODEPORT  = "init.registry.nodeport"
+	V_INIT_REGISTRY_SECRET    = "init.registry.secret"
+	V_INIT_REGISTRY_PUSH_USER = "init.registry.push_username"
+	V_INIT_REGISTRY_PUSH_PASS = "init.registry.push_password"
+	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
+	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
+
+	// Package create config keys
 	V_PKG_CREATE_SET            = "package.create.set"
 	V_PKG_CREATE_ZARF_CACHE     = "package.create.zarf_cache"
 	V_PKG_CREATE_OUTPUT_DIRTORY = "package.create.output_directory"
 	V_PKG_CREATE_SKIP_SBOM      = "package.create.skip_sbom"
 	V_PKG_CREATE_INSECURE       = "package.create.insecure"
 
+	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
 	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
 	V_PKG_DEPLOY_INSECURE   = "package.deploy.insecure"
