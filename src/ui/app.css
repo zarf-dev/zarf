@@ -18,7 +18,8 @@
 	font-family: var(--mdc-typography-font-family);
 }
 
-.mdc-typography--body2 {
+.mdc-typography--body2,
+.mdc-typography--caption {
 	color: var(--mdc-theme-text-secondary-on-light);
 }
 
@@ -32,22 +33,14 @@ html,
 body {
 	margin: 0;
 	padding: 0;
-	background-color: #f0f0f0;
+	background-color: var(--mdc-theme-surface);
 }
 
 .card {
-	background-color: #fff;
+	background-color: var(--mdc-theme-surface);
 }
 
-.accordion {
-	border-radius: 4px;
-	margin-bottom: 14px;
-}
-
-.accordion .accordion-header-wrapper {
-	border-radius: 4px;
-}
-
-.stepper-horizontal .stepper-item {
-	z-index: 100;
+/* Shorthand Classes */
+.invisible {
+	visibility: hidden;
 }

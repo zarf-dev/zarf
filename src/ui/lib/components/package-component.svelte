@@ -1,19 +1,16 @@
 <script lang="ts">
-	import Prism from 'prismjs';
+	import YamlCode from './yaml-code.svelte';
+
 	import 'prismjs/components/prism-yaml';
 	import 'prismjs/themes/prism-okaidia.css';
-	import { stringify } from 'yaml';
 
 	import type { ZarfComponent } from '$lib/api-types';
 	import { pkgComponentDeployStore } from '$lib/store';
 	import { Accordion } from '@defense-unicorns/unicorn-ui';
-	import { onMount } from 'svelte';
 
 	export let readOnly: boolean = true;
 	export let idx: number;
 	export let component: ZarfComponent;
-
-	const yaml = stringify(component);
 
 	const toggleComponentDeployment = (list: number[], idx: number) => {
 		const enabled = list.includes(idx);
@@ -25,13 +22,9 @@
 		list.sort();
 		pkgComponentDeployStore.set(list);
 	};
-
-	onMount(() => {
-		Prism.highlightAll();
-	});
 </script>
 
-<Accordion id={`component-accordion-${idx}`}>
+<Accordion id={`component-accordion-${idx}`} style="flex-basis: content;">
 	<div slot="headerContent" class="component-accordion-header">
 		<div style="display:flex;width: 60%;justify-content:space-between;">
 			<div>
@@ -66,21 +59,14 @@
 		</div>
 	</div>
 	<div slot="content">
-		<pre>
-			<code class="language-yaml">{yaml}</code>
-		</pre>
+		<YamlCode {component} />
 	</div>
 </Accordion>
 
 <style lang="scss">
-	:global(.accordion-content) {
-		padding: 0 !important;
-	}
-
 	pre {
+		border-radius: unset;
 		margin: 0;
 		padding: 24px;
-		border-top-left-radius: 0;
-		border-top-right-radius: 0;
 	}
 </style>

@@ -22,6 +22,6 @@
 
 <Header />
 
-<main>
+<main class="mdc-typography">
 	<slot />
 </main>

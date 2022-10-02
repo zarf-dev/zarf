@@ -1,9 +1,8 @@
 <script lang="ts">
+	import { Stepper } from '@ui';
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
-	import Container from '$lib/components/container.svelte';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import { Stepper } from '@ui';
 
 	Packages.findInit().then((initPackages) => {
 		if (initPackages.length > 0) {
@@ -30,14 +29,13 @@
 	});
 </script>
 
-<Container>
+<section class="initStepPage">
 	<Stepper
 		orientation="horizontal"
 		steps={[
 			{
 				title: 'Configure',
 				iconContent: $page.routeId === 'initialize/configure' ? '1' : undefined,
-				disabled: false,
 				variant: 'primary'
 			},
 			{
@@ -54,13 +52,29 @@
 			}
 		]}
 	/>
-
 	{#if $pkgStore}
 		<slot />
 	{/if}
-</Container>
+</section>
 
 <style>
+	.initStepPage {
+		padding: 2rem 10rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+	@media (max-width: 900px) {
+		.initStepPage {
+			padding: 2rem 4rem;
+		}
+	}
+	@media (max-width: 600px) {
+		.initStepPage {
+			padding: 2rem 1rem;
+		}
+	}
+
 	:global(.actionButtonsContainer) {
 		display: flex;
 		justify-content: space-between;
