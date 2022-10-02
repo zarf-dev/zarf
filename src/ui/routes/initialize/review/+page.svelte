@@ -2,27 +2,39 @@
 	import Icon from '$lib/components/icon.svelte';
 	import PackageCard from '$lib/components/package-card.svelte';
 	import PackageComponent from '$lib/components/package-component.svelte';
+	import AccordionGroup from '$lib/components/accordion-group.svelte';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import { Button } from '@ui';
+	import { Button, Typography } from '@ui';
 </script>
 
 <svelte:head>
 	<title>Review</title>
 </svelte:head>
 
-<h1>Review Deployment</h1>
-<p>Edits to default configurations are highlighted</p>
-<h2><Icon variant="package" /> Package Details</h2>
+<section class="pageHeader">
+	<Typography variant="h4">Review Deployment</Typography>
+</section>
 
-<PackageCard pkg={$pkgStore.zarfPackage} />
-<h2><Icon variant="component" />Selected Package Components</h2>
+<section class="initSection">
+	<Typography variant="h5">
+		<Icon variant="package" />
+		Package Details
+	</Typography>
+	<PackageCard pkg={$pkgStore.zarfPackage} />
+</section>
 
-<div style="width: 100%;gap: 2px; display: flex; flex-direction: column;">
-	{#each $pkgComponentDeployStore as idx}
-		<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
-	{/each}
-</div>
+<section class="initSection">
+	<Typography variant="h5">
+		<Icon variant="component" />
+		Selected Package Components
+	</Typography>
+	<AccordionGroup>
+		{#each $pkgComponentDeployStore as idx}
+			<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
+		{/each}
+	</AccordionGroup>
+</section>
 
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined">configure</Button>

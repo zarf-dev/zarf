@@ -24,7 +24,11 @@
 	};
 </script>
 
-<Accordion id={`component-accordion-${idx}`} style="flex-basis: content;">
+<Accordion
+	id={`component-accordion-${idx}`}
+	wrapperClass="package-component-accordion"
+	style="flex-basis: content;"
+>
 	<div slot="headerContent" class="component-accordion-header">
 		<div style="display:flex;width: 60%;justify-content:space-between;">
 			<div>
@@ -68,5 +72,13 @@
 		border-radius: unset;
 		margin: 0;
 		padding: 24px;
+	}
+	:global(.package-component-accordion .component-accordion-header) {
+		display: flex;
+		justify-content: space-between;
+		width: 100%;
+	}
+	:global(.package-component-accordion .accordion-header) {
+		width: 100%;
 	}
 </style>

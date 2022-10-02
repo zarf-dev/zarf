@@ -75,18 +75,18 @@
 		}
 	}
 
-	:global(.actionButtonsContainer) {
+	/* Globals */
+	.initStepPage :global(.actionButtonsContainer) {
 		display: flex;
 		justify-content: space-between;
 		margin-top: 2rem;
 	}
-
-	:global(.component-accordion-header) {
+	.initStepPage :global(.initSection) {
+		gap: 20px;
 		display: flex;
-		justify-content: space-between;
-		width: 100%;
+		flex-direction: column;
 	}
-	:global(.accordion-header) {
-		width: 100%;
+	.initStepPage :global(.pageHeader) {
+		margin-top: 2rem;
 	}
 </style>

@@ -11,11 +11,11 @@
 <svelte:head>
 	<title>Configure</title>
 </svelte:head>
-<section class="pageHeader" style="margin-top: 2rem" aria-label="Page Title">
+<section class="pageHeader">
 	<Typography variant="h4">Configure Package Deployment</Typography>
 </section>
 
-<section class="initSection" aria-label="Package Details">
+<section class="initSection">
 	<Typography variant="h5">
 		<Icon variant="package" />
 		Package Details
@@ -23,12 +23,14 @@
 	<PackageCard pkg={$pkgStore.zarfPackage} />
 </section>
 
-<section class="initSection" aria-label="Package Components">
+<section class="initSection">
 	<Typography variant="h5">
 		<Icon variant="component" />
 		Package Components
 		<Typography variant="caption" element="p">
-			<Icon variant="component" className="invisible" />
+			<span aria-hidden="true">
+				<Icon variant="component" className="invisible" />
+			</span>
 			The following components wil be deployed into the cluster. Optional components that are not selected
 			will not be deployed.
 		</Typography>
@@ -45,11 +47,3 @@
 	<Button href="/" variant="outlined">cancel deployment</Button>
 	<Button href="/initialize/review" variant="raised">review deployment</Button>
 </section>
-
-<style>
-	.initSection {
-		gap: 20px;
-		display: flex;
-		flex-direction: column;
-	}
-</style>
