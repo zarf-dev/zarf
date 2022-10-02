@@ -1,6 +1,6 @@
 # Understand The Basics
 
-Before you are able to effectively use Zarf, it is would be useful to have an underlying understanding of the technology Zarf is built on/around. The section below provides some helpful links to start build up this foundation as well as a glossary of the terms used in this project.
+Before you are able to effectively use Zarf, it is useful to have an underlying understanding of the technology Zarf is built on and around. The sections below provide some helpful links to start building up this foundation as well as a glossary of the terms used in this project.
 
 :::caution Hard Hat Area
 This page is still being developed. More content will be added soon!
@@ -31,11 +31,11 @@ This page is still being developed. More content will be added soon!
 
 **declarative** &mdash; A user states (via configuration file) which resources are needed and Zarf locates & packages them. A user does not have to know _how_ to download / collect / roll & unroll dependencies for transport, they only have to know _what_ they need.
 
-**package** &mdash; A well-defined (tool-generated / versioned / compressed) collection of software intended for movement (and later use) across a network / adminstrative boundary.
+**package** &mdash; A well-defined (tool-generated / versioned / compressed) collection of software intended for movement (and later use) across a network / administrative boundary.
 
 **remote systems** &mdash; Systems organized such that development & maintenance actions occur _primarily_ in locations physically & logically separate from where operations occur.
 
-**constrained systems** &mdash; Systems with explicit resource / adminstrative / capability limitations.
+**constrained systems** &mdash; Systems with explicit resource / administrative / capability limitations.
 
 **independent systems** &mdash; Systems organized such that continued operation is possible even when disconnected (temporarily or otherwise) from external systems dependencies.
 

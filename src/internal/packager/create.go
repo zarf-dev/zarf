@@ -210,7 +210,10 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		defer spinner.Success()
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
-			git.Pull(url, componentPath.repos, spinner)
+			_, err := git.Pull(url, componentPath.repos, spinner)
+			if err != nil {
+				message.Fatalf(err, fmt.Sprintf("Unable to pull the repo with the url of (%s}", url))
+			}
 		}
 	}
 

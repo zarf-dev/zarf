@@ -3,12 +3,15 @@ package k8s
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -87,6 +90,37 @@ func PrintConnectTable() error {
 	return nil
 }
 
+// NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
+func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
+	parsedURL, err := url.Parse(serviceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the remote port from the serviceURL
+	remotePort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil {
+		return nil, err
+	}
+
+	// Match hostname against local cluster service format
+	// See https://regex101.com/r/OWVfAO/1
+	pattern := regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
+
+	// If incomplete match, return an error
+	if len(matches) != 3 {
+		return nil, errors.New("url does not match service url format http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
+	}
+
+	// Use the matched values to create a new tunnel
+	name := matches[pattern.SubexpIndex("name")]
+	namespace := matches[pattern.SubexpIndex("namespace")]
+
+	return NewTunnel(namespace, SvcResource, name, 0, remotePort), nil
+}
+
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
@@ -123,6 +157,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 	case ZarfRegistry:
 		tunnel.resourceName = "zarf-docker-registry"
 		tunnel.remotePort = 5000
+		tunnel.urlSuffix = `/v2/_catalog`
 
 	case ZarfLogging:
 		tunnel.resourceName = "zarf-loki-stack-grafana"

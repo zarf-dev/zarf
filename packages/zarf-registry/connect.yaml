@@ -4,9 +4,10 @@ metadata:
   name: zarf-connect-registry
   labels:
     # Enables "zarf connect registry"
-    zarf.dev/connect-name: registry    
+    zarf.dev/connect-name: registry
   annotations:
     zarf.dev/connect-description: "Internal Zarf Registry (run zarf tools registry login to authenticate)"
+    zarf.dev/connect-url: "/v2/_catalog"
 spec:
   ports:
   - port: 5000

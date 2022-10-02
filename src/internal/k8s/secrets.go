@@ -71,12 +71,18 @@ func GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
 
 	secretDockerConfig := GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
-	// Auth field must be username:password and base64 encoded
-	credential := config.GetSecret(config.StateRegistryPull)
+	// Get the registry credentials from the ZarfState secret
+	zarfState, err := LoadZarfState()
+	if err != nil {
+		message.Fatalf(err, "Unable to load the Zarf state to get the registry credentials")
+	}
+	credential := zarfState.RegistryInfo.PullPassword
 	if credential == "" {
 		message.Fatalf(nil, "Generate pull cred failed")
 	}
-	fieldValue := config.ZarfRegistryPullUser + ":" + credential
+
+	// Auth field must be username:password and base64 encoded
+	fieldValue := zarfState.RegistryInfo.PullUsername + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := config.GetRegistry()

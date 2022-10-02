@@ -78,7 +78,7 @@ We've chosen to use ADRs to document architecturally significant decisions. We p
 # Create a new ADR titled "Use Bisquick for all waffle making"
 adr new Use Bisquick for all waffle making
 
-# Create a new ADR that supercedes a previous one. Let's say for example that the previous ADR about Bisquick was ADR number 9.
+# Create a new ADR that supersedes a previous one. Let's say for example that the previous ADR about Bisquick was ADR number 9.
 adr new -s 9 Use scratch ingredients for all waffle making
 
 # Create a new ADR that amends a previous one. Let's say the previous one was ADR number 15
