@@ -3,6 +3,7 @@ package helm
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/defenseunicorns/zarf/src/types"
@@ -19,7 +20,7 @@ import (
 
 // StandardName generates a predictable full path for a helm chart for Zarf
 func StandardName(destination string, chart types.ZarfChart) string {
-	return destination + "/" + chart.Name + "-" + chart.Version
+	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }
 
 // loadChartFromTarball returns a helm chart from a tarball

@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"path/filepath"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -34,7 +35,7 @@ func Pull(gitUrl, targetFolder string, spinner *message.Spinner) (string, error)
 		return "", err
 	}
 
-	path := targetFolder + "/" + repoName
+	path := filepath.Join(targetFolder, repoName)
 	pull(gitUrl, path, spinner)
 	return path, nil
 }

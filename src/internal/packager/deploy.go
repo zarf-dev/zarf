@@ -68,7 +68,7 @@ func Deploy() {
 	spinner.Success()
 
 	// If SBOM files exist, temporary place them in the deploy directory
-	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(tempPath.sboms, "sbom-viewer-*"))
 	err = writeSBOMFiles(sbomViewFiles)
 	if err != nil {
 		message.Errorf(err, "Unable to process the SBOM files for this package")
@@ -267,6 +267,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPathBase, 1)
+		message.Infof("Copying file to ", file.Target)
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)

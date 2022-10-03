@@ -11,6 +11,7 @@ import (
 	netHttp "net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -76,7 +77,7 @@ func transformURL(baseUrl string, url string, username string) (string, error) {
 
 func credentialFilePath() string {
 	homePath, _ := os.UserHomeDir()
-	return homePath + "/.git-credentials"
+	return filepath.Join(homePath, ".git-credentials")
 }
 
 func credentialParser() []Credential {

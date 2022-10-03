@@ -2,6 +2,8 @@ package validate
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -172,9 +174,7 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 	}
 
 	// add a forward slash to end of path if it does not have one
-	if !strings.HasSuffix(path, "/") {
-		path = path + "/"
-	}
+	path = filepath.Clean(path) + string(os.PathSeparator)
 
 	// ensure there is a zarf.yaml in provided path
 	if utils.InvalidPath(path + packageSuffix) {

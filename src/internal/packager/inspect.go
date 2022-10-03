@@ -51,7 +51,7 @@ func Inspect(packageName string) {
 			message.Fatalf(err, "Unable to extract sbom information from the package.")
 		}
 
-		sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+		sbomViewFiles, _ := filepath.Glob(filepath.Join(tempPath.sboms, "sbom-viewer-*"))
 		if len(sbomViewFiles) > 1 {
 			link := sbomViewFiles[0]
 			msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n\n", len(sbomViewFiles), link)
