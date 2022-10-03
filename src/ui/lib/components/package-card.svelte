@@ -1,45 +1,53 @@
 <script lang="ts">
+	import Divider from './divider.svelte';
 	import type { ZarfPackage } from '$lib/api-types';
+	import { Typography } from '@defense-unicorns/unicorn-ui';
 	export let pkg: ZarfPackage;
 </script>
 
-<div class="card mdc-elevation--z2">
-	<div class="card-col col-1">
-		<div class="col-header">Package Type</div>
-		<div class="col-content">{pkg.kind}</div>
+<div class="package-card mdc-elevation--z2">
+	<div class="package-card-col col-1">
+		<Typography variant="overline" class="color-primary-dark">Package Type</Typography>
+		<Typography class="col-content" variant="body1" element="span">{pkg.kind}</Typography>
 	</div>
-	<div class="card-col col-2">
-		<div class="col-header">Meta data</div>
+	<Divider />
+	<div class="package-card-col col-2">
+		<Typography variant="overline" class="color-primary-dark">Metadata</Typography>
 		<table>
 			<tr>
-				<td>Name:</td>
-				<td>{pkg.metadata?.name}</td>
+				<Typography variant="caption" element="td">Name:</Typography>
+				<Typography variant="th" element="td">
+					{pkg.metadata?.name}
+				</Typography>
 			</tr>
 			<tr>
-				<td>Description:</td>
-				<td>{pkg.metadata?.description}</td>
+				<Typography variant="caption" element="td">Description:</Typography>
+				<Typography variant="body3" element="td">
+					{pkg.metadata?.description}
+				</Typography>
 			</tr>
 		</table>
 	</div>
-	<div class="card-col col-3">
-		<div class="col-header">Build</div>
+	<Divider />
+	<div class="package-card-col col-3">
+		<Typography variant="overline" element="div" class="color-primary-dark">Build</Typography>
 		<div class="col-content">
 			<table>
 				<tr>
-					<td>User:</td>
-					<td>{pkg.build?.user}</td>
-					<td>Terminal:</td>
-					<td>{pkg.build?.terminal}</td>
+					<Typography variant="caption" element="td">User:</Typography>
+					<Typography variant="th" element="td">{pkg.build?.user}</Typography>
+					<Typography variant="caption" element="td">Terminal:</Typography>
+					<Typography variant="th" element="td">{pkg.build?.terminal}</Typography>
 				</tr>
 				<tr>
-					<td>Version:</td>
-					<td>{pkg.build?.version}</td>
-					<td>Timestamp:</td>
-					<td>{pkg.build?.timestamp}</td>
+					<Typography variant="caption" element="td">Version:</Typography>
+					<Typography variant="th" element="td">{pkg.build?.version}</Typography>
+					<Typography variant="caption" element="td">Timestamp:</Typography>
+					<Typography variant="th" element="td">{pkg.build?.timestamp}</Typography>
 				</tr>
 				<tr>
-					<td>Architecture:</td>
-					<td>{pkg.build?.architecture}</td>
+					<Typography variant="caption" element="td">Architecture:</Typography>
+					<Typography variant="th" element="td">{pkg.build?.architecture}</Typography>
 				</tr>
 			</table>
 		</div>
@@ -54,55 +62,43 @@
 		border-collapse: collapse;
 		width: 100%;
 	}
-	td {
-		font-size: 14px;
-		line-height: 20px;
-		letter-spacing: 0.17px;
+	.package-card :global(.mdc-typography--overline) {
+		color: var(--mdc-theme-primary-dark);
 	}
-	td:nth-child(odd) {
-		text-align: left;
-		color: #00000099;
-		font-size: 12px;
-		line-height: 166%;
-		letter-spacing: 0.4px;
-	}
-
-	td:nth-child(even) {
-		font-weight: bold;
-		vertical-align: text-bottom;
-	}
-
-	.card {
+	.package-card {
 		display: flex;
 		flex-direction: row;
-		border-radius: 0.25rem;
-		padding-left: 0.5rem;
-		padding-right: 0.5rem;
-		padding-top: 0.375rem;
-		padding-bottom: 0.375rem;
+		min-height: 10rem;
+		padding: 16px;
+		width: 100%;
+		text-align: left;
+		gap: 1.25rem;
+		background-color: var(--mdc-theme-surface);
 	}
-	.col-header {
-		color: #00acac;
-		text-transform: uppercase;
-		font-size: 12px;
-		line-height: 32px;
-		letter-spacing: 1px;
-	}
-	.card-col {
-		padding: 0.5rem 0;
+	.package-card-col {
+		padding: 0 0.5rem;
 	}
 	.col-1 {
-		flex-grow: 0.2;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		min-width: 10%;
 	}
 	.col-2 {
-		flex-grow: 0.6;
-		max-width: 350px;
-		border-left: 1px solid #0000001f;
-		padding-left: 1.25rem;
+		min-width: 30%;
 	}
+
 	.col-3 {
-		flex-grow: 1;
-		border-left: 1px solid #0000001f;
-		padding-left: 1.25rem;
+		min-width: 50%;
+	}
+	@media (max-width: 1200px) {
+		.package-card {
+			flex-direction: column;
+			gap: 1.25rem;
+		}
+		.col-3,
+		.col-2 {
+			flex-grow: 1;
+		}
 	}
 </style>
