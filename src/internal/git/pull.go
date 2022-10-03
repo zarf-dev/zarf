@@ -16,7 +16,10 @@ import (
 const onlineRemoteName = "online-upstream"
 
 func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
-	path, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+	}
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
@@ -24,10 +27,16 @@ func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	return path
 }
 
-func Pull(gitUrl, targetFolder string, spinner *message.Spinner) string {
-	path := targetFolder + "/" + transformURLtoRepoName(gitUrl)
+func Pull(gitUrl, targetFolder string, spinner *message.Spinner) (string, error) {
+	repoName, err := transformURLtoRepoName(gitUrl)
+	if err != nil {
+		message.Errorf(err, "unable to pull the git repo at %s", gitUrl)
+		return "", err
+	}
+
+	path := targetFolder + "/" + repoName
 	pull(gitUrl, path, spinner)
-	return path
+	return path, nil
 }
 
 func pull(gitUrl, targetFolder string, spinner *message.Spinner) {

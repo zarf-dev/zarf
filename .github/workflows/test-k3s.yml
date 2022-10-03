@@ -9,6 +9,8 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
+      - "package.json"
+      - "package-lock.json"
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
