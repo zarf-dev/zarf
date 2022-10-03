@@ -49,7 +49,7 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 
 func transformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
-	if len(matches) != 6 {
+	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
