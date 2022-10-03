@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-helm-local-chart
+  description: "Deploys a helm chart from local files"
+components:
+  - name: demo-helm-local-chart
+    required: true
+    charts:
+      - name: local
+        localPath: chart
+        namespace: local-chart
+    images:
+      - nginx:1.16.0
