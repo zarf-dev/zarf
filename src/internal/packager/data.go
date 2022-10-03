@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -31,7 +31,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 		tarCompressFlag = "z"
 	}
 
-	iterator:
+iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)

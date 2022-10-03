@@ -1,7 +1,7 @@
 run:
   timeout: 5m
   skip-files:
-    - src/internal/message/logo.go
+    - src/pkg/message/logo.go
 linters:
   enable-all: true
   disable:

@@ -1,10 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"regexp"
-
-	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
 func ValidHostname(hostname string) bool {
@@ -20,7 +19,6 @@ func ValidHostname(hostname string) bool {
 }
 
 func IsValidHostName() bool {
-	message.Debug("Preflight check: validating hostname")
 	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
 	hostname, err := os.Hostname()
 
@@ -35,8 +33,10 @@ func IsRHEL() bool {
 	return !InvalidPath("/etc/redhat-release")
 }
 
-func RunPreflightChecks() {
+func RunPreflightChecks() error {
 	if !IsValidHostName() {
-		message.Fatal(nil, "Please ensure this hostname is valid according to https://www.ietf.org/rfc/rfc1123.txt.")
+		return fmt.Errorf("Please ensure this hostname is valid according to https://www.ietf.org/rfc/rfc1123.txt.")
 	}
+
+	return nil
 }

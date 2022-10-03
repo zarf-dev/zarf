@@ -7,9 +7,9 @@ import (
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -67,7 +67,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
-		state, err := k8s.LoadZarfState()
+		state, err := cluster.LoadZarfState()
 		if err != nil {
 			message.Error(err, "Unable to load the Zarf state")
 		}

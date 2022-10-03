@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
 	assert.Contains(t, stdOut, ".zarf-injection-")
-													
+
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "data-injection-demo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

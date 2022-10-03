@@ -15,13 +15,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/template"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
@@ -156,7 +157,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		// Do somewhat custom pre-configuration for the seed and agent components
 		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" && config.InitOptions.RegistryInfo.Address == "" {
 			// The zarf-seed-registry component is responsible for seeding the state and finding a pod to inject a registry into
-			seedZarfState(tempPath)
+			prepareCluster(tempPath)
 			runInjectionMadness(tempPath)
 		} else if config.IsZarfInitConfig() && component.Name == "zarf-agent" {
 			// The zarf-agent cannot mutate itself, so don't change the img url
@@ -164,7 +165,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 
 			// If we are using an external registry, we will need to seed the ZarfState as part of the zarf-agent component
 			if !config.GetContainerRegistryInfo().InternalRegistry {
-				seedZarfState(tempPath)
+				prepareCluster(tempPath)
 			}
 		}
 
@@ -302,7 +303,7 @@ func getUpdatedValueTemplate(component types.ZarfComponent) template.Values {
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
 
-	state, err := k8s.LoadZarfState()
+	state, err := cluster.LoadZarfState()
 	if err != nil {
 		spinner.Fatalf(err, "Unable to load the Zarf State from the Kubernetes cluster")
 	}

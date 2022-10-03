@@ -3,7 +3,7 @@ package helm
 import (
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 )
 

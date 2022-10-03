@@ -1,4 +1,4 @@
-package packager
+package cluster
 
 import (
 	"crypto/sha256"
@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +36,7 @@ func runInjectionMadness(tempPath tempPaths) {
 
 	// Try to create the zarf namespace
 	spinner.Updatef("Creating the Zarf namespace")
-	if _, err := k8s.CreateNamespace(k8s.ZarfNamespace, nil); err != nil {
+	if _, err := k8s.CreateNamespace(config.ZarfNamespace, nil); err != nil {
 		spinner.Fatalf(err, "Unable to create the zarf namespace")
 	}
 
@@ -81,7 +81,7 @@ func runInjectionMadness(tempPath tempPaths) {
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
+		_ = k8s.DeletePod(config.ZarfNamespace, "injector")
 
 		// Update the podspec image path and use the first node found
 		pod, err := buildInjectionPod(node[0], image, envVars, payloadConfigmaps, sha256sum)
@@ -176,7 +176,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = k8s.ReplaceConfigmap(k8s.ZarfNamespace, fileName, labels, configData); err != nil {
+		if _, err = k8s.ReplaceConfigmap(config.ZarfNamespace, fileName, labels, configData); err != nil {
 			return configMaps, "", err
 		}
 
@@ -240,10 +240,10 @@ func createInjectorConfigmap(tempPath tempPaths) error {
 	}
 
 	// Try to delete configmap silently
-	_ = k8s.DeleteConfigmap(k8s.ZarfNamespace, "injector-binaries")
+	_ = k8s.DeleteConfigmap(config.ZarfNamespace, "injector-binaries")
 
 	// Attempt to create the configmap in the cluster
-	if _, err = k8s.CreateConfigmap(k8s.ZarfNamespace, "injector-binaries", labels, configData); err != nil {
+	if _, err = k8s.CreateConfigmap(config.ZarfNamespace, "injector-binaries", labels, configData); err != nil {
 		return err
 	}
 
@@ -251,7 +251,7 @@ func createInjectorConfigmap(tempPath tempPaths) error {
 }
 
 func createService() (*corev1.Service, error) {
-	service := k8s.GenerateService(k8s.ZarfNamespace, "zarf-injector")
+	service := k8s.GenerateService(config.ZarfNamespace, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
@@ -262,7 +262,7 @@ func createService() (*corev1.Service, error) {
 	}
 
 	// Attempt to purse the service silently
-	_ = k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector")
+	_ = k8s.DeleteService(config.ZarfNamespace, "zarf-injector")
 
 	return k8s.CreateService(service)
 }
@@ -298,7 +298,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
 func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
-	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
+	pod := k8s.GeneratePod("injector", config.ZarfNamespace)
 	executeMode := int32(0777)
 	seedImage := config.GetSeedImage()
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/mholt/archiver/v3"
@@ -66,7 +66,7 @@ var readCredsCmd = &cobra.Command{
 	Short: "Returns the push user's password for the Git server",
 	Long:  "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
-		state, err := k8s.LoadZarfState()
+		state, err := cluster.LoadZarfState()
 		if err != nil {
 			message.Fatal(err, "Unable to load Zarf state")
 		}

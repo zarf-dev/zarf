@@ -1,4 +1,4 @@
-package packager
+package cluster
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/images"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -126,18 +126,18 @@ func postSeedRegistry(tempPath tempPaths) error {
 	message.Debug("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
-	if err := k8s.DeletePod(k8s.ZarfNamespace, "injector"); err != nil {
+	if err := k8s.DeletePod(config.ZarfNamespace, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch); err != nil {
+	if err := k8s.DeleteConfigMapsByLabel(config.ZarfNamespace, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	if err := k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector"); err != nil {
+	if err := k8s.DeleteService(config.ZarfNamespace, "zarf-injector"); err != nil {
 		return err
 	}
 

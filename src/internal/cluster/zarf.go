@@ -1,11 +1,11 @@
-package k8s
+package cluster
 
 import (
 	"context"
 	"encoding/json"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -69,7 +69,7 @@ func StripZarfLabelsAndSecretsFromNamespaces() {
 
 			for _, namespace := range namespaces.Items {
 				spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
-				err := clientset.CoreV1().
+				err := k.Clientset.CoreV1().
 					Secrets(namespace.Name).
 					DeleteCollection(context.TODO(), deleteOptions, listOptions)
 				if err != nil {

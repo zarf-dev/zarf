@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize

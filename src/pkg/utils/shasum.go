@@ -5,15 +5,11 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-
-	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
-func ValidateSha256Sum(expectedChecksum string, path string) {
+func ValidateSha256Sum(expectedChecksum string, path string) bool {
 	actualChecksum, _ := GetSha256Sum(path)
-	if expectedChecksum != actualChecksum {
-		message.Fatalf("Invalid or mismatched file checksum for %s.  Expected %s, computed %s", path, expectedChecksum, actualChecksum)
-	}
+	return expectedChecksum == actualChecksum
 }
 
 // GetSha256Sum returns the computed SHA256 Sum of a given file
@@ -23,8 +19,10 @@ func GetSha256Sum(path string) (string, error) {
 
 	if IsUrl(path) {
 		// Handle download from URL
-		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
-		data = Fetch(path)
+		data, err = Fetch(path)
+		if err != nil {
+			return "", err
+		}
 	} else {
 		// Handle local file
 		data, err = os.Open(path)

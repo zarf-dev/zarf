@@ -3,7 +3,7 @@ package kustomize
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"

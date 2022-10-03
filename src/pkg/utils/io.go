@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/otiai10/copy"
 )
 
@@ -20,7 +19,6 @@ var TempPathPrefix = "zarf-"
 
 func MakeTempDir(tmpDir string) (string, error) {
 	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
-	message.Debugf("Using temp path: '%s'", tmp)
 	return tmp, err
 }
 
@@ -81,10 +79,10 @@ func WriteFile(path string, data []byte) error {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place
-func ReplaceTextTemplate(path string, mappings map[string]string) {
+func ReplaceTextTemplate(path string, mappings map[string]string) error {
 	text, err := os.ReadFile(path)
 	if err != nil {
-		message.Fatalf(err, "Unable to load %s", path)
+		return err
 	}
 
 	for template, value := range mappings {
@@ -92,8 +90,10 @@ func ReplaceTextTemplate(path string, mappings map[string]string) {
 	}
 
 	if err = os.WriteFile(path, text, 0600); err != nil {
-		message.Fatalf(err, "Unable to update %s", path)
+		return err
 	}
+
+	return nil
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths
@@ -143,8 +143,6 @@ func CreatePathAndCopy(source string, destination string) error {
 
 // GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way
 func GetFinalExecutablePath() (string, error) {
-	message.Debug("utils.GetExecutablePath()")
-
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return "", err

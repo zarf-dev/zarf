@@ -5,7 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -13,7 +12,7 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
-func GetAllImages() (ImageNodeMap, error) {
+func (k *K8sClient) GetAllImages() (ImageNodeMap, error) {
 	timeout := time.After(5 * time.Minute)
 
 	for {
@@ -28,8 +27,8 @@ func GetAllImages() (ImageNodeMap, error) {
 		// after delay, try running
 		default:
 			// If no images or an error, log and loop
-			if images, err := GetImagesWithNodes(corev1.NamespaceAll); len(images) < 1 || err != nil {
-				message.Debug(err)
+			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll); len(images) < 1 || err != nil {
+				k.Log("no images found: %w", err)
 			} else {
 				// Otherwise, return the image list
 				return images, nil
@@ -39,10 +38,10 @@ func GetAllImages() (ImageNodeMap, error) {
 }
 
 // GetImagesWithNodes returns all images and their nodes in a given namespace.
-func GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
+func (k *K8sClient) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 
-	pods, err := GetPods(namespace)
+	pods, err := k.GetPods(namespace)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the list of pods in the cluster")
 	}
@@ -64,7 +63,7 @@ func GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 }
 
 // BuildImageMap looks for init container, ephemeral and regular container images.
-func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
+func (k *K8sClient) BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	for _, container := range pod.InitContainers {
 		images[container.Image] = true
 	}

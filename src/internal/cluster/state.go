@@ -1,4 +1,4 @@
-package k8s
+package cluster
 
 import (
 	"encoding/json"
@@ -7,7 +7,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,7 +27,7 @@ func LoadZarfState() (types.ZarfState, error) {
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secret, err := GetSecret(ZarfNamespace, ZarfStateSecretName)
+	secret, err := k8s.GetSecret(ZarfNamespace, ZarfStateSecretName)
 	if err != nil {
 		return state, err
 	}
@@ -71,7 +72,7 @@ func SaveZarfState(state types.ZarfState) error {
 	}
 
 	// Attempt to create or replace the secret and return
-	if err := ReplaceSecret(secret); err != nil {
+	if err := k8s.ReplaceSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 

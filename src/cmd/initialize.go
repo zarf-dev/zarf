@@ -10,9 +10,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/cosign"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -107,7 +108,7 @@ var initCmd = &cobra.Command{
 
 				// If the user wants to download the init-package, download it
 				if confirmDownload {
-					utils.DownloadToFile(url, config.DeployOptions.PackagePath, "")
+					cosign.DownloadToFile(url, config.DeployOptions.PackagePath, "")
 				} else {
 					// Otherwise, exit and tell the user to manually download the init-package
 					message.Warn("You must download the init package manually and place it in the current working directory")

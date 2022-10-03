@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
@@ -23,7 +22,7 @@ func yamlFormat(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
 
-func ColorPrintYAML(text string) {
+func ColorPrintYAML(text string) error {
 	tokens := lexer.Tokenize(text)
 
 	var p printer.Printer
@@ -65,13 +64,10 @@ func ColorPrintYAML(text string) {
 	}
 	writer := colorable.NewColorableStdout()
 	_, err := writer.Write([]byte(p.PrintTokens(tokens) + "\n"))
-	if err != nil {
-		message.Error(err, "Unable to print the config yaml contents")
-	}
+	return err
 }
 
 func ReadYaml(path string, destConfig any) error {
-	message.Debugf("Loading zarf config %s", path)
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {

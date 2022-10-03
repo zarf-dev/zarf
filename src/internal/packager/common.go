@@ -12,14 +12,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/internal/cosign"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 type componentPaths struct {
@@ -199,7 +200,7 @@ func handleSgetPackage(sgetPackagePath string) (string, func()) {
 	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
 
 	// Sget the package
-	err = utils.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
+	err = cosign.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatal(err, "Unable to get the remote package via sget")
 	}

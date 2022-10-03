@@ -1,12 +1,12 @@
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
-package utils
+package cosign
 
 import (
 	"context"
 	"fmt"
 	"io"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"

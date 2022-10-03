@@ -1,4 +1,4 @@
-package k8s
+package cluster
 
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
@@ -22,8 +22,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -336,7 +336,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 
 	// Build url to the port forward endpoint
 	// example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward
-	postEndpoint := clientset.CoreV1().RESTClient().Post()
+	postEndpoint := k.Clientset.CoreV1().RESTClient().Post()
 	namespace := tunnel.namespace
 	portForwardCreateURL := postEndpoint.
 		Resource("pods").

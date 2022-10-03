@@ -10,7 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

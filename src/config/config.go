@@ -11,8 +11,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/types"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -35,6 +35,7 @@ const (
 	ZarfGeneratedPasswordLen = 24
 	ZarfGeneratedSecretLen   = 48
 
+	ZarfNamespace = "zarf"
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"

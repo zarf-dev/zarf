@@ -13,9 +13,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/auth"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
