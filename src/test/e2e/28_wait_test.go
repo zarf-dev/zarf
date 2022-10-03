@@ -3,6 +3,7 @@ package test
 import (
 	// "context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	// "os/exec"
@@ -46,6 +47,13 @@ func TestWait(t *testing.T) {
 		err    = res.err
 	case <-time.After(10 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
+		t.Log("Removing hanging namespace...")
+		kubectlOut, err := exec.Command("kubectl", "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0").Output()
+		if err != nil {
+			t.Log(kubectlOut)
+		} else {
+			panic(err)
+		}
 	}
 
 	// Deploy the charts

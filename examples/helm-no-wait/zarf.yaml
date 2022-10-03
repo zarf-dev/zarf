@@ -8,7 +8,7 @@ components:
     manifests:
       - name: never-ready
         namespace: no-wait
-        wait: false
+        noWait: true
         files:
           - never-ready.pod.yaml
     images:
