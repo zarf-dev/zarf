@@ -54,7 +54,8 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
 	onlyFetchRef := matches[gitURLRegex.SubexpIndex("atRef")] != ""
-	gitURLNoRef := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + matches[gitURLRegex.SubexpIndex("repo")] + matches[gitURLRegex.SubexpIndex("git")]
+	gitURLNoRef := matches[gitURLRegex.SubexpIndex("proto")] + matches[gitURLRegex.SubexpIndex("hostPath")] + "/" +
+		matches[gitURLRegex.SubexpIndex("repo")] + matches[gitURLRegex.SubexpIndex("git")]
 
 	repo, err := clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
 

@@ -29,8 +29,8 @@ type Credential struct {
 }
 
 var (
-	// For further explanation: https://regex101.com/r/gOVJ7o/3
-	gitURLRegex = regexp.MustCompile(`^(?P<baseURL>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
+	// For further explanation: https://regex101.com/r/zq64q4/1
+	gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
 )
 
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
@@ -55,9 +55,9 @@ func transformURLtoRepoName(url string) (string, error) {
 	}
 
 	repoName := matches[gitURLRegex.SubexpIndex("repo")]
-	// NOTE: We remove the .git so that https://zarf.dev/repo.git and https://zarf.dev/repo resolve to the same repo
-	// (as they would in real life)
-	sanitizedURL := matches[gitURLRegex.SubexpIndex("baseURL")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atRef")]
+	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
+	// resolve to the same repp (as they would in real life)
+	sanitizedURL := matches[gitURLRegex.SubexpIndex("hostPath")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atRef")]
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
