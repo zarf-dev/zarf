@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -142,8 +141,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name}
-		installedCharts := []types.InstalledChart{}
-		addShasumToImg := true
+		var addShasumToImg bool = true
 
 		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
 		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
@@ -169,7 +167,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		}
 
 		// Actually deploy the component
-		installedCharts = deployComponent(tempPath, component, addShasumToImg)
+		installedCharts := deployComponent(tempPath, component, addShasumToImg)
 
 		// Do cleanup for when we inject the seed registry during initialization
 		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" {
@@ -257,7 +255,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
-		sourceFile := path.Join(sourceLocation, strconv.Itoa(index))
+		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
@@ -267,7 +265,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPathBase, 1)
-		message.Infof("Copying file to ", file.Target)
+		message.Infof("Copying file %s to %s", sourceFile, file.Target)
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
