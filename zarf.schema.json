@@ -68,6 +68,10 @@
         "gitPath": {
           "type": "string",
           "description": "If using a git repo"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for chart resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
@@ -377,6 +381,10 @@
           },
           "type": "array",
           "description": "List of kustomization paths to include in the package"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for manifest resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
