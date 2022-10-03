@@ -56,7 +56,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-bf89aea1b43dd0ea83360d4a219643a4bc8424c6"
+	repoName := "zarf-1c9a77c4bf8aa495cd61f707b645041c53426757"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
