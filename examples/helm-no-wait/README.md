@@ -13,5 +13,5 @@ components:
   - name: component-name
     manifests:
       - name: chart-name
-        wait: false
+        noWait: true
 ```
