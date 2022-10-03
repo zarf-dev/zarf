@@ -1,18 +1,22 @@
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
-UNAME_S := $(shell uname -s)
-UNAME_P := $(shell uname -p)
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-ifneq ($(UNAME_S),Linux)
-	ifeq ($(UNAME_S),Darwin)
-		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),i386)
-		ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),arm)
-		ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+ifeq ($(OS),Windows_NT)
+	ZARF_BIN := $(addsuffix -windows-amd64.exe,$(ZARF_BIN))
+else
+	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
+	ifneq ($(UNAME_S),Linux)
+		ifeq ($(UNAME_S),Darwin)
+			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),i386)
+			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),arm)
+			ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+		endif
 	endif
 endif
 
@@ -66,9 +70,12 @@ build-cli-mac-intel: build-injector-registry-amd build-ui
 build-cli-mac-apple: build-injector-registry-arm build-ui
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
+build-cli-windows-amd: build-injector-registry-amd build-ui
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-windows-amd64.exe main.go
+
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd ## Build the CLI
 
 build-injector-registry-amd:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
