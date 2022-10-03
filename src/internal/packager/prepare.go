@@ -117,7 +117,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+					chartValueName := helm.StandardName(chart, componentPath.values) + "-" + strconv.Itoa(idx)
 					if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
 						message.Fatalf(err, "Unable to copy values file %s", path)
 					}

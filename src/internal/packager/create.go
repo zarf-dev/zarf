@@ -120,7 +120,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 				helm.DownloadPublishedChart(chart, componentPath.charts)
 			}
 			for idx, path := range chart.ValuesFiles {
-				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+				chartValueName := helm.StandardName(chart, componentPath.values) + "-" + strconv.Itoa(idx)
 				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
 					message.Fatalf(err, "Unable to copy values file %s", path)
 				}
@@ -161,7 +161,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		defer spinner.Success()
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			destinationFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+			destinationFile := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
 			if err := utils.CreatePathAndCopy(data.Source, destinationFile); err != nil {
 				spinner.Fatalf(err, "Unable to copy data injection %s", data.Source)
 			}

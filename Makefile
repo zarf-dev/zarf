@@ -66,9 +66,15 @@ build-cli-mac-intel: build-injector-registry-amd build-ui
 build-cli-mac-apple: build-injector-registry-arm build-ui
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
+build-cli-windows-amd: build-injector-registry-amd build-ui
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-windows.exe main.go
+
+build-cli-windows-arm: build-injector-registry-arm build-ui
+	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-windows-arm.exe main.go
+
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 build-injector-registry-amd:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go

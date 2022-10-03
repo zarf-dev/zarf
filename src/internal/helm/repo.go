@@ -73,7 +73,7 @@ func DownloadPublishedChart(chart types.ZarfChart, destination string) {
 	}
 
 	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(destination, chart) + ".tgz"
+	destinationTarball := StandardName(chart, destination) + ".tgz"
 	err = os.Rename(saved, destinationTarball)
 	if err != nil {
 		spinner.Fatalf(err, "Unable to save the chart tarball")

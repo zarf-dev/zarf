@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -47,7 +48,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
-	path := tempDir + "/chart.yaml"
+	path := filepath.Join(tempDir, "/chart.yaml")
 
 	// Write the context to a file for processing
 	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {

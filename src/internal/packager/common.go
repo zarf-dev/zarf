@@ -49,12 +49,12 @@ func createPaths() tempPaths {
 	return tempPaths{
 		base: basePath,
 
-		injectZarfBinary: basePath + "/zarf-registry",
-		injectBinary:     basePath + "/zarf-injector",
-		seedImage:        basePath + "/seed-image.tar",
-		images:           basePath + "/images.tar",
-		components:       basePath + "/components",
-		sboms:            basePath + "/sboms",
+		injectZarfBinary: filepath.Join(basePath, "zarf-registry"),
+		injectBinary:     filepath.Join(basePath, "zarf-injector"),
+		seedImage:        filepath.Join(basePath, "seed-image.tar"),
+		images:           filepath.Join(basePath, "images.tar"),
+		components:       filepath.Join(basePath, "components"),
+		sboms:            filepath.Join(basePath, "sboms"),
 	}
 }
 
@@ -65,16 +65,16 @@ func (t tempPaths) clean() {
 }
 
 func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
-	basePath = basePath + "/" + component.Name
+	basePath = filepath.Join(basePath, component.Name)
 	_ = utils.CreateDirectory(basePath, 0700)
 	return componentPaths{
 		base:           basePath,
-		files:          basePath + "/files",
-		charts:         basePath + "/charts",
-		repos:          basePath + "/repos",
-		manifests:      basePath + "/manifests",
-		dataInjections: basePath + "/data",
-		values:         basePath + "/values",
+		files:          filepath.Join(basePath, "files"),
+		charts:         filepath.Join(basePath, "charts"),
+		repos:          filepath.Join(basePath, "repos"),
+		manifests:      filepath.Join(basePath, "manifests"),
+		dataInjections: filepath.Join(basePath, "data"),
+		values:         filepath.Join(basePath, "values"),
 	}
 }
 
@@ -151,7 +151,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 	// Write the package to a local file
 	tempPath := createPaths()
 
-	localPackagePath := tempPath.base + providedURL.Path
+	localPackagePath := filepath.Join(tempPath.base, providedURL.Path)
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)
 	_, err = io.Copy(packageFile, resp.Body)
