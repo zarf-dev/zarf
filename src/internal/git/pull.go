@@ -49,7 +49,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	}
 
 	matches := gitURLRegex.FindStringSubmatch(gitURL)
-	if len(matches) != 6 {
+	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
