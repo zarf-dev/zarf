@@ -121,8 +121,8 @@ func validateChart(chart types.ZarfChart) error {
 	}
 
 	// Must have a url
-	if chart.Url == "" {
-		return fmt.Errorf("%s must include a url", intro)
+	if (chart.Url == "" && chart.LocalPath == "") {
+		return fmt.Errorf("%s must include a url or localPath", intro)
 	}
 
 	// Must have a version

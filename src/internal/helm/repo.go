@@ -15,6 +15,25 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
+// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os
+func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", chart.Name, chart.Version, chart.LocalPath)
+	defer spinner.Stop()
+
+	client := action.NewPackage()
+
+	client.Destination = destination
+	path, err := client.Run(chart.LocalPath, nil)
+
+	if err != nil {
+		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", path)
+	}
+
+	spinner.Success()
+
+	return path
+}
+
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
 func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", chart.Name)

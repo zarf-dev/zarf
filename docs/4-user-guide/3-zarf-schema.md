@@ -854,13 +854,11 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_url"></a>url *</strong>
+<summary><strong> <a name="components_items_charts_items_url"></a>url</strong>
 
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
 
@@ -940,6 +938,21 @@ Must be one of:
 <blockquote>
 
 **Description:** If using a git repo
+
+| Type | `string` |
+| ---- | -------- |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The path to the chart folder
 
 | Type | `string` |
 | ---- | -------- |

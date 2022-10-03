@@ -33,7 +33,6 @@
     "ZarfChart": {
       "required": [
         "name",
-        "url",
         "version",
         "namespace"
       ],
@@ -68,6 +67,10 @@
         "gitPath": {
           "type": "string",
           "description": "If using a git repo"
+        },
+        "localPath": {
+          "type": "string",
+          "description": "The path to the chart folder"
         }
       },
       "additionalProperties": false,
