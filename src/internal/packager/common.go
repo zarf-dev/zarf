@@ -67,7 +67,7 @@ func (t tempPaths) clean() {
 }
 
 func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
-	basePath = filepath.Join(basePath, "component.Name")
+	basePath = filepath.Join(basePath, component.Name)
 	_ = utils.CreateDirectory(basePath, 0700)
 	return componentPaths{
 		base:           basePath,
