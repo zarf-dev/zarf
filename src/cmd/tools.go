@@ -62,8 +62,9 @@ var registryCmd = &cobra.Command{
 }
 
 var readCredsCmd = &cobra.Command{
-	Use:   "get-admin-password",
-	Short: "Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace",
+	Use:   "get-git-password",
+	Short: "Returns the push user's password for the Git server",
+	Long:  "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		state, err := k8s.LoadZarfState()
 		if err != nil {
@@ -78,7 +79,8 @@ var readCredsCmd = &cobra.Command{
 		// Continue loading state data if it is valid
 		config.InitState(state)
 
-		fmt.Println(config.GetSecret(config.StateGitPush))
+		message.Note("Git Server Push Password: ")
+		fmt.Println(state.GitServer.PushPassword)
 	},
 }
 

@@ -51,7 +51,7 @@ Find out more about that by calling the CLI for help, or check out an example pa
   <img alt="diagram showing the process to ship a package" src={require('../.images/what-is-zarf/ship-the-package.png').default} height="255" />
 </a>
 
-What this activity looks like is _very_ situationally specific so Zarf tries not to have an opinion&mdash;transfer Zarf packages between production & operating locations using whatever mechanisms are available.
+What this activity looks like is _very_ situational specific so Zarf tries not to have an opinion&mdash;transfer Zarf packages between production & operating locations using whatever mechanisms are available.
 
 Have to burn your package to disk & "sneakernet" it? That works.
 

@@ -1,6 +1,6 @@
 # Git Data
 
-This examples shows how to package `git` repositories to be bundled and pushed across the airgap.  This package does not deploy anything itself, but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, their are tow main ways to include `git` reposisotries as desribed below.
+This examples shows how to package `git` repositories to be bundled and pushed across the airgap.  This package does not deploy anything itself, but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, their are tow main ways to include `git` repositories as described below.
 
 :::info
 
