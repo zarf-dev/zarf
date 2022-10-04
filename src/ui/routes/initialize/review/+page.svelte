@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
-	import PackageCard from '$lib/components/package-card.svelte';
-	import PackageComponent from '$lib/components/package-component.svelte';
+	import PackageDetails from '$lib/components/package-details-card.svelte';
+	import PackageComponent from '$lib/components/package-component-accordion.svelte';
 	import AccordionGroup from '$lib/components/accordion-group.svelte';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
@@ -21,7 +21,7 @@
 		<Icon variant="package" />
 		Package Details
 	</Typography>
-	<PackageCard pkg={$pkgStore.zarfPackage} />
+	<PackageDetails pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="initSection">

@@ -2,7 +2,7 @@
 	import { Packages } from '$lib/api';
 	import Container from '$lib/components/container.svelte';
 	import Hero from '$lib/components/hero.svelte';
-	import PackageCard from '$lib/components/package-card.svelte';
+	import PackageDetails from '$lib/components/package-details-card.svelte';
 	import Spinner from '$lib/components/spinner.svelte';
 	import { Button } from '@ui';
 </script>
@@ -25,7 +25,7 @@
 			</div>
 			{#each packages as pkg}
 				<article>
-					<PackageCard pkg={pkg.data} />
+					<PackageDetails pkg={pkg.data} />
 				</article>
 			{/each}
 		</Container>

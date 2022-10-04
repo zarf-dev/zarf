@@ -5,6 +5,7 @@
 	import { Cluster } from '$lib/api';
 	import { clusterStore } from '$lib/store';
 	import Header from '$lib/components/header.svelte';
+	import 'material-symbols/';
 
 	function getClusterSummary() {
 		// Try to get the cluster summary

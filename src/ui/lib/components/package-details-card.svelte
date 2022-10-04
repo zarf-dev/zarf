@@ -5,13 +5,13 @@
 	export let pkg: ZarfPackage;
 </script>
 
-<div class="package-card mdc-elevation--z2">
-	<div class="package-card-col col-1">
+<div class="package-details-card mdc-elevation--z2">
+	<div class="package-details-card-col col-1">
 		<Typography variant="overline" class="color-primary-dark">Package Type</Typography>
 		<Typography class="col-content" variant="body1" element="span">{pkg.kind}</Typography>
 	</div>
 	<Divider />
-	<div class="package-card-col col-2">
+	<div class="package-details-card-col col-2">
 		<Typography variant="overline" class="color-primary-dark">Metadata</Typography>
 		<table>
 			<tr>
@@ -29,7 +29,7 @@
 		</table>
 	</div>
 	<Divider />
-	<div class="package-card-col col-3">
+	<div class="package-details-card-col col-3">
 		<Typography variant="overline" element="div" class="color-primary-dark">Build</Typography>
 		<div class="col-content">
 			<table>
@@ -62,20 +62,20 @@
 		border-collapse: collapse;
 		width: 100%;
 	}
-	.package-card :global(.mdc-typography--overline) {
+	.package-details-card :global(.mdc-typography--overline) {
 		color: var(--mdc-theme-primary-dark);
 	}
-	.package-card {
-		display: flex;
-		flex-direction: row;
-		min-height: 10rem;
-		padding: 16px;
+	.package-details-card {
 		width: 100%;
-		text-align: left;
 		gap: 1.25rem;
+		display: flex;
+		padding: 16px;
+		text-align: left;
+		min-height: 10rem;
+		flex-direction: row;
 		background-color: var(--mdc-theme-surface);
 	}
-	.package-card-col {
+	.package-details-card-col {
 		padding: 0 0.5rem;
 	}
 	.col-1 {
@@ -92,7 +92,7 @@
 		min-width: 50%;
 	}
 	@media (max-width: 1200px) {
-		.package-card {
+		.package-details-card {
 			flex-direction: column;
 			gap: 1.25rem;
 		}
