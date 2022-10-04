@@ -21,18 +21,17 @@ components:
         # https://docs.rke2.io/known_issues/#firewalld-conflicts-with-default-networking
         # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
         - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
-        - | 
-          "[ -e /etc/redhat-release ] && cat > /etc/NetworkManager/conf.d << EOF
-          [keyfile]
-          unmanaged-devices=interface-name:cali*;interface-name:flannel*
-          EOF
-
-           || echo ''"
       after:
         # Configure RKE2 systemd service
+        - "[ -e /etc/redhat-release ] && mv /tmp/rke2-canal.conf /etc/NetworkManager/conf.d/ || echo ''"
         - "systemctl daemon-reload"
         - "systemctl enable --now rke2"
     files:
+      # NetworkManager script for RHEL Based systems
+      # https://docs.rke2.io/known_issues/#networkmanager
+      - source: rke2-canal.conf
+        target: /tmp/rke2-canal.conf
+        executable: false
       # rke2 removal script
       - source: zarf-clean-rke2.sh
         target: /opt/zarf/zarf-clean-rke2.sh
