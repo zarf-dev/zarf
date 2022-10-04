@@ -45,7 +45,9 @@ var packageCreateCmd = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		if !isCachePathClean() {
+		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`)
+		if !isCleanPathRegex.MatchString(config.CreateOptions.CachePath) {
+			message.Warnf("Invalid characters in Zarf cache path, defaulting to %s", config.ZarfDefaultCachePath)
 			config.CreateOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
@@ -172,15 +174,6 @@ func choosePackage(args []string) string {
 	}
 
 	return path
-}
-
-func isCachePathClean() bool {
-	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~]+$`).MatchString
-	if !isCleanPathRegex(config.CreateOptions.CachePath) {
-		message.Warnf("Invalid characters in Zarf cache path, defaulting to %s", config.ZarfDefaultCachePath)
-		return false
-	}
-	return true
 }
 
 func init() {

@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"regexp"
 
@@ -49,13 +50,15 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	}
 
 	matches := gitURLRegex.FindStringSubmatch(gitURL)
+	idx := gitURLRegex.SubexpIndex
+
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
 		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
-	onlyFetchRef := matches[gitURLRegex.SubexpIndex("atRef")] != ""
-	gitURLNoRef := matches[gitURLRegex.SubexpIndex("proto")] + matches[gitURLRegex.SubexpIndex("hostPath")] + "/" +
-		matches[gitURLRegex.SubexpIndex("repo")] + matches[gitURLRegex.SubexpIndex("git")]
+
+	onlyFetchRef := matches[idx("atRef")] != ""
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
 
 	repo, err := clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
 
@@ -81,7 +84,7 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	}
 
 	if onlyFetchRef {
-		ref := matches[gitURLRegex.SubexpIndex("ref")]
+		ref := matches[idx("ref")]
 
 		// Identify the remote trunk branch name
 		trunkBranchName := plumbing.NewBranchReferenceName("master")

@@ -49,15 +49,17 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 
 func transformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
+	idx := gitURLRegex.SubexpIndex
+
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
-	repoName := matches[gitURLRegex.SubexpIndex("repo")]
+	repoName := matches[idx("repo")]
 	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
 	// resolve to the same repp (as they would in real life)
-	sanitizedURL := matches[gitURLRegex.SubexpIndex("hostPath")] + "/" + repoName + matches[gitURLRegex.SubexpIndex("atRef")]
+	sanitizedURL := fmt.Sprintf("%s/%s%s", matches[idx("hostPath")], repoName, matches[idx("atRef")])
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
@@ -66,7 +68,7 @@ func transformURLtoRepoName(url string) (string, error) {
 	}
 
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
-	newRepoName := repoName + "-" + sha1Hash
+	newRepoName := fmt.Sprintf("%s-%s", repoName, sha1Hash)
 
 	return newRepoName, nil
 }
