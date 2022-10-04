@@ -246,6 +246,6 @@ func bindInspectFlags() {
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-	removeFlags.StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to uninstall")
+	removeFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }

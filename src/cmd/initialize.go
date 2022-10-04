@@ -162,7 +162,7 @@ func init() {
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
+	initCmd.Flags().StringVar(&config.InitOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
 	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), "Describe the StorageClass to be used")
 
 	// Flags for using an external Git server
