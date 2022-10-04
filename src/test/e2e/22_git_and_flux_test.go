@@ -119,7 +119,9 @@ timer:
 		case <-timeout:
 			t.Error("Timeout waiting for flux podinfo deployment")
 
-			// after delay, try running
+			break timer
+
+		// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
 			kubectlOut, err = exec.Command("kubectl", "wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s").Output()
