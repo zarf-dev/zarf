@@ -555,9 +555,9 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
-     * Path to where a .cache directory of cached image that were pulled down to create packages
+     * Path to use to cache images and git repos on package create
      */
-    imageCachePath: string;
+    cachePath: string;
     /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
@@ -915,7 +915,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "imageCachePath", js: "imageCachePath", typ: "" },
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
