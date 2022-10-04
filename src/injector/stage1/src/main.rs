@@ -1,13 +1,19 @@
 use flate2::read::GzDecoder;
 use glob::glob;
+use hex::ToHex;
 use sha2::{Digest, Sha256};
 use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use tar::Archive;
-use hex::ToHex;
+
+fn chmod777(path: &str) {
+    println!("chmod 777 {}", path);
+    fs::set_permissions(path, PermissionsExt::from_mode(0o777)).unwrap();
+}
 
 // Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 
@@ -79,4 +85,11 @@ fn main() {
     archive
         .unpack("/zarf-stage2")
         .expect("Unable to unarchive the resulting tarball");
+
+    for entry in glob("/zarf-stage2/**/*").unwrap() {
+        match entry {
+            Ok(path) => chmod777(path.to_str().unwrap()),
+            Err(e) => println!("{:?}", e),
+        }
+    }
 }
