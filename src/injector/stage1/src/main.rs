@@ -3,6 +3,7 @@ use glob::glob;
 use hex::ToHex;
 use sha2::{Digest, Sha256};
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
