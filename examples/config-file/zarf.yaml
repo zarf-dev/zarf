@@ -10,16 +10,9 @@ variables:
 components:
   - name: lion
     description: "By default, only this component will be deployed when using the config file"
-    scripts:
-      prepare:
-        - "# this is a lion"
 
   - name: zebra
-    scripts:
-      prepare:
-        - "# this is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
+    description: "This is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
 
   - name: leopard
-    scripts:
-      prepare:
-        - "# this is a leopard and they have ###ZARF_PKG_VAR_LEOPARD###"
+    description: "This is a leopard and they have ###ZARF_PKG_VAR_LEOPARD###"
