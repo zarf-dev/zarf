@@ -31,7 +31,7 @@
 				</Typography>
 			{/if}
 
-			<Button variant="raised" color="primary" href="/initialize/configure" id="init-cluster">
+			<Button variant="raised" color="secondary" href="/initialize/configure" id="init-cluster">
 				Initialize Cluster
 			</Button>
 		</Hero>

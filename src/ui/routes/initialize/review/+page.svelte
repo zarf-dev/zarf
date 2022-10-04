@@ -37,6 +37,6 @@
 </section>
 
 <div class="actionButtonsContainer">
-	<Button href="/initialize/configure" variant="outlined">configure</Button>
-	<Button href="/initialize/deploy" variant="flat">deploy</Button>
+	<Button href="/initialize/configure" variant="outlined" color="secondary">configure</Button>
+	<Button href="/initialize/deploy" variant="flat" color="secondary">deploy</Button>
 </div>

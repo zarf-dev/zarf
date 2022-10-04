@@ -44,6 +44,6 @@
 </section>
 
 <section class="actionButtonsContainer" aria-label="action buttons">
-	<Button href="/" variant="outlined">cancel deployment</Button>
-	<Button href="/initialize/review" variant="raised">review deployment</Button>
+	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>
+	<Button href="/initialize/review" variant="raised" color="secondary">review deployment</Button>
 </section>

@@ -14,14 +14,14 @@
 		<Hero>
 			<div>
 				<h3>No deployed packages found 🙁</h3>
-				<Button href="/" variant="flat">Go Home</Button>
+				<Button href="/" variant="flat" color="secondary">Go Home</Button>
 			</div>
 		</Hero>
 	{:else}
 		<Container>
 			<div class="top-title">
 				<h1>📦 Deployed Zarf Packages</h1>
-				<Button variant="outlined">✚ New Package</Button>
+				<Button variant="outlined" color="secondary">✚ New Package</Button>
 			</div>
 			{#each packages as pkg}
 				<article>
