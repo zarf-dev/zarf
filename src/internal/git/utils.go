@@ -28,6 +28,11 @@ type Credential struct {
 	Auth http.BasicAuth
 }
 
+var (
+	// For further explanation: https://regex101.com/r/zq64q4/1
+	gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
+)
+
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
 func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
@@ -43,33 +48,37 @@ func MutateGitUrlsInText(host string, text string, gitUser string) string {
 }
 
 func transformURLtoRepoName(url string) (string, error) {
-	// For further explanation: https://regex101.com/library/UfILls and https://regex101.com/rary/UfILls
-	findRegex := regexp.MustCompile(`\/([\w\-]+)(.git)?(@([\w\-\.]+))?$`)
-	substrings := findRegex.FindStringSubmatch(url)
-	if len(substrings) == 0 {
-		// the first element in the return substrings is
+	matches := gitURLRegex.FindStringSubmatch(url)
+	idx := gitURLRegex.SubexpIndex
+
+	if len(matches) == 0 {
+		// Unable to find a substring match for the regex
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
-	// NOTE: The first element in the returned substrings is the combination of all the rest of the substrings....
-	//       So just skip the first element so we can get a hash without the version tag
-	repoName := substrings[1]
+	repoName := matches[idx("repo")]
+	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
+	// resolve to the same repp (as they would in real life)
+	sanitizedURL := fmt.Sprintf("%s/%s%s", matches[idx("hostPath")], repoName, matches[idx("atRef")])
 
 	// Add sha1 hash of the repoName to the end of the repo
 	hasher := sha1.New()
-	_, _ = io.WriteString(hasher, url)
+	if _, err := io.WriteString(hasher, sanitizedURL); err != nil {
+		return "", fmt.Errorf("unable to create a hash from the sanitized git url %s", sanitizedURL)
+	}
+
 	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
-	newRepoName := repoName + "-" + sha1Hash
+	newRepoName := fmt.Sprintf("%s-%s", repoName, sha1Hash)
 
 	return newRepoName, nil
 }
 
-func transformURL(baseUrl string, url string, username string) (string, error) {
-	replaced, err := transformURLtoRepoName(url)
+func transformURL(baseURL string, url string, username string) (string, error) {
+	repoName, err := transformURLtoRepoName(url)
 	if err != nil {
 		return "", err
 	}
-	output := baseUrl + "/" + username + "/" + replaced
+	output := fmt.Sprintf("%s/%s/%s", baseURL, username, repoName)
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
 }
@@ -87,7 +96,7 @@ func credentialParser() []Credential {
 	defer func(credentialsFile *os.File) {
 		err := credentialsFile.Close()
 		if err != nil {
-			message.Debugf("Unable to load an existing git credentials file: %w", err)
+			message.Debugf("Unable to load an existing git credentials file: %#v", err)
 		}
 	}(credentialsFile)
 

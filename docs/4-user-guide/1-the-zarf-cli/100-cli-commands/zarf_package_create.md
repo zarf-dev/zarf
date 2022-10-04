@@ -21,7 +21,7 @@ zarf package create [DIRECTORY] [flags]
   -o, --output-directory string   Specify the output directory for the created Zarf package
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package
-      --zarf-cache string         Specify the location of the Zarf image cache (default ".zarf-image-cache")
+      --zarf-cache string         Specify the location of the Zarf image cache (default "~/.zarf-cache")
 ```
 
 ### Options inherited from parent commands
