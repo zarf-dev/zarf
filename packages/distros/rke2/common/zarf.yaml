@@ -1,6 +1,7 @@
 kind: ZarfInitConfig
 metadata:
   name: "distro-rke2"
+  architecture: amd64  # arm64 not yet supported by RKE2.  Remove when it is.
 
 components:
   - name: rke2
