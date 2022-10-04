@@ -92,7 +92,7 @@ var (
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
 
-	ZarfCachePath = filepath.Join("~", ".zarf-cache")
+	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
 
 // Timestamp of when the CLI was started
@@ -288,16 +288,11 @@ func BuildConfig(path string) error {
 	return utils.WriteYaml(path, active, 0400)
 }
 
-// SetCachePath sets the cache path for images and git repos.
-func SetCachePath(cachePath string) {
-	ZarfCachePath = cachePath
-}
-
-// GetCachePath gets the absolute cache path for images and git repos.
-func GetCachePath() string {
+// GetAbsCachePath gets the absolute cache path for images and git repos.
+func GetAbsCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	return strings.Replace(ZarfCachePath, "~", homePath, 1)
+	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {

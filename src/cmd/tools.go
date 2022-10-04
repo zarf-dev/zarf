@@ -114,7 +114,7 @@ func init() {
 	toolsCmd.AddCommand(registryCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
-	clearCacheCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+	clearCacheCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
