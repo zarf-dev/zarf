@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,12 +20,12 @@ func TestUseCLI(t *testing.T) {
 	shasumTestFilePath := "shasum-test-file"
 
 	// run `zarf package create` with a specified image cache location
-	cachePath := "/tmp/.cache-location"
+	cachePath := filepath.Join(os.TempDir(), ".cache-location")
 	imageCachePath := cachePath + "/images"
 	gitCachePath := cachePath + "/repos"
 
 	// run `zarf package create` with a specified tmp location
-	otherTmpPath := "/tmp/othertmp"
+	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
 
 	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
 

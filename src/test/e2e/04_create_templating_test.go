@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,8 +16,8 @@ func TestCreateTemplating(t *testing.T) {
 	defer e2e.teardown(t)
 
 	// run `zarf package create` with a specified image cache location
-	cachePath := "/tmp/.cache-location"
-	decompressPath := "/tmp/.package-decompressed"
+	cachePath := filepath.Join(os.TempDir(), ".cache-location")
+	decompressPath := filepath.Join(os.TempDir(), ".package-decompressed")
 
 	e2e.cleanFiles(cachePath, decompressPath)
 
