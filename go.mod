@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20220921141924-56552770e555
+	github.com/anchore/stereoscope v0.0.0-20221003160521-1b1b744a9199
 	github.com/anchore/syft v0.58.0
 	github.com/derailed/k9s v0.26.6
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
@@ -20,7 +20,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.47
+	github.com/pterm/pterm v0.12.49
 	github.com/sigstore/cosign v1.12.1
 	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.8.0
@@ -123,7 +123,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20211130200136-a8f946100490 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.6.6 // indirect
+	github.com/containerd/containerd v1.6.8 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.12.0 // indirect
 	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
