@@ -31,7 +31,7 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM        bool   `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	ImageCachePath  string `json:"imageCachePath" jsonschema:"description=Path to where a .cache directory of cached image that were pulled down to create packages"`
+	CachePath       string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 	Insecure        bool   `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 }

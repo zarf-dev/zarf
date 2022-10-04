@@ -31,7 +31,7 @@ APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 go test ./... -v
 
 # Let's say you only want to run one test. You would run:
-test ./... -v -run TestFooBarBaz
+go test ./... -v -run TestFooBarBaz
 ```
 
 :::note
