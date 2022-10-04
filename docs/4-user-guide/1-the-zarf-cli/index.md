@@ -154,7 +154,7 @@ As stated before, Zarf was built to make deploying applications into disconnecte
 
 `zarf package deploy` is used to deploy an already built tar.zst package onto a machine, usually specifically into a k8s cluster. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few rare cases where this doesn't apply.
 
-### Using a config file to make CLI command flags declarative
+## Using a config file to make CLI command flags declarative
 
 The `zarf init`, `zarf package create`, `zarf package deploy` command flags and any global flags can also be set via a config file. The default config file Zarf looks for is `zarf-config.toml` in the current working directory. Use the command `zarf prepare generate-config` with an optional filename to create a config template for use by Zarf. Note there are several config file formats supported including: `toml`, `json`, `yaml`, `ini` and `props`. For example, to create an template config file with the `my-cool-env` and the yaml format use the command `zarf prepare generate-config my-cool-env.yaml`.
 
