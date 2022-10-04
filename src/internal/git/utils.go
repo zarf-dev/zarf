@@ -74,7 +74,7 @@ func transformURL(baseURL string, url string, username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	output := baseURL + "/" + username + "/" + repoName
+	output := fmt.Sprintf("%s/%s/%s", baseURL, username, repoName)
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
 }
