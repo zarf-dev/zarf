@@ -550,11 +550,6 @@ export interface ZarfCommonOptions {
      */
     confirm: boolean;
     /**
-     * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
-     */
-    setVariables: { [key: string]: string };
-    /**
      * Location Zarf should use as a staging ground when managing files and images for package
      * creation and deployment
      */
@@ -575,6 +570,11 @@ export interface ZarfCreateOptions {
      */
     outputDirectory: string;
     /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
+    /**
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
@@ -589,6 +589,11 @@ export interface ZarfDeployOptions {
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
     /**
      * Location where the public key component of a cosign key-pair can be found
      */
@@ -921,18 +926,19 @@ const typeMap: any = {
     ], false),
     "ZarfCommonOptions": o([
         { json: "confirm", js: "confirm", typ: true },
-        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
         { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
     ], false),
     "Architecture": [

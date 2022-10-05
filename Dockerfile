@@ -6,4 +6,4 @@ EXPOSE 8443
 
 ENV USER=zarf
 
-CMD ["/zarf", "agent", "-l=trace"]
+CMD ["/zarf", "internal", "agent", "-l=trace"]
