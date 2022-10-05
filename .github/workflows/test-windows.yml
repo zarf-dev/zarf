@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: 1.19.x
 
-      - name: "Dependency: Install Scoop+Make"
+      - name: "Dependency: Install Scoop+Make+NodeJS"
         shell: pwsh
         run: |
           Set-ExecutionPolicy RemoteSigned -scope CurrentUser
@@ -39,7 +39,6 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            ~/scoop
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
