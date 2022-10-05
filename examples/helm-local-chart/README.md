@@ -1,6 +1,5 @@
-# Helm Alt Release Name
-
-This example shows how you can specify an alternate release name using the `releaseName` within a components `charts`.
+# Helm Local Chart
+This example shows how you can specify a local chart for a helm source within a component's `charts`.
 
 :::info
 
@@ -13,5 +12,5 @@ components:
   - name: component-name
     charts:
       - name: chart-name
-        releaseName: alt-release-name
+        localPath: path/to/chart
 ```

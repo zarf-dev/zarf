@@ -18,6 +18,6 @@ func TestLocalHelm(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
