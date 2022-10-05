@@ -27,6 +27,10 @@ func GetCLIName() string {
 		} else {
 			binaryName = "zarf-mac-intel"
 		}
+	} else if runtime.GOOS == "windows" {
+		if runtime.GOARCH == "amd64" {
+			binaryName = "zarf-windows-amd64.exe"
+		}
 	}
 	return binaryName
 }
@@ -35,7 +39,11 @@ func GetCLIName() string {
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
-	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	if runtime.GOOS != "windows" {
+		_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	} else {
+		t.Log("Skipping kubectl describe nodes on Windows")
+	}
 }
 
 // teardown actions for each test
