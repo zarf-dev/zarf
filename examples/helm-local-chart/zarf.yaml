@@ -8,7 +8,6 @@ components:
     charts:
       - name: local-demo
         localPath: chart
-        url: test
         namespace: local-chart
         version: 0.1.0
     images:
