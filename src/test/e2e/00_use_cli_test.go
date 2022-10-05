@@ -21,8 +21,8 @@ func TestUseCLI(t *testing.T) {
 
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
-	imageCachePath := cachePath + "/images"
-	gitCachePath := cachePath + "/repos"
+	imageCachePath := filepath.Join(cachePath, "images")
+	gitCachePath := filepath.Join(cachePath, "/repos")
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
