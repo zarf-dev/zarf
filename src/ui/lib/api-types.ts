@@ -130,7 +130,11 @@ export interface ZarfChart {
     /**
      * If using a git repo
      */
-    gitPath?: string;
+    gitPath: string;
+    /**
+     * The path to the chart folder
+     */
+    localPath: string;
     /**
      * The name of the chart to deploy
      */
@@ -139,6 +143,10 @@ export interface ZarfChart {
      * The namespace to deploy the chart to
      */
     namespace: string;
+    /**
+     * Wait for chart resources to be ready before continuing
+     */
+    noWait?: boolean;
     /**
      * The name of the release to create
      */
@@ -214,7 +222,7 @@ export interface ZarfFile {
      */
     symlinks?: string[];
     /**
-     * The absolute or relative path wher the file should be copied to during package deploy
+     * The absolute or relative path where the file should be copied to during package deploy
      */
     target: string;
 }
@@ -248,6 +256,10 @@ export interface ZarfManifest {
      * The namespace to deploy the manifests to
      */
     namespace?: string;
+    /**
+     * Wait for manifest resources to be ready before continuing
+     */
+    noWait?: boolean;
 }
 
 /**
@@ -786,9 +798,11 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
     "ZarfChart": o([
-        { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
+        { json: "gitPath", js: "gitPath", typ: "" },
+        { json: "localPath", js: "localPath", typ: "" },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
+        { json: "noWait", js: "noWait", typ: u(undefined, true) },
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: "" },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
@@ -822,6 +836,7 @@ const typeMap: any = {
         { json: "kustomizeAllowAnyDirectory", js: "kustomizeAllowAnyDirectory", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
+        { json: "noWait", js: "noWait", typ: u(undefined, true) },
     ], false),
     "ZarfComponentOnlyTarget": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentOnlyCluster")) },
