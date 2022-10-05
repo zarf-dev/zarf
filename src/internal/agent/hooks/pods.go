@@ -43,8 +43,8 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		return &operations.Result{Msg: err.Error()}, nil
 	}
 
-	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
-		// We've already played with this pod, just keep swimming 🐟
+	if pod.Labels != nil && (pod.Labels["zarf-agent"] == "patched" || pod.Labels["release"] == "zarf-docker-registry") {
+		// We've already played with this pod, or it is the internal registry itself, just keep swimming 🐟
 		return &operations.Result{
 			Allowed:  true,
 			PatchOps: patchOperations,
