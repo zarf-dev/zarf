@@ -55,14 +55,7 @@ func TestWait(t *testing.T) {
 			panic(err)
 		}
 	}
-
-	// Deploy the charts
-	// stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	// // Verify multiple helm installs of different release names were deployed
-	// kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-releasename", "--no-headers").Output()
-	// assert.Contains(t, string(kubectlOut), "zarf-cool-name-podinfo")
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
