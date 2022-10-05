@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -25,7 +26,9 @@ func FillActiveTemplate() error {
 
 	for key, value := range packageVariables {
 		if value == nil && !CommonOptions.Confirm {
-			setVal, err := promptVariable(key, "")
+			setVal, err := promptVariable(types.ZarfPackageVariable{
+				Name: key,
+			})
 
 			if err == nil {
 				packageVariables[key] = &setVal
@@ -64,7 +67,7 @@ func SetActiveVariables() error {
 		// Variable is set to prompt the user
 		if variable.Prompt && !CommonOptions.Confirm {
 			// Prompt the user for the variable
-			val, err := promptVariable(variable.Name, variable.Default)
+			val, err := promptVariable(variable)
 
 			if err != nil {
 				return err
@@ -105,17 +108,20 @@ func InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	}
 }
 
-func promptVariable(varName string, varDefault string) (string, error) {
-	var value string
+func promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
 
 	pterm.Println()
 
-	prompt := &survey.Input{
-		Message: "Please provide a value for '" + varName + "'",
-		Default: varDefault,
+	if variable.Description != "" {
+		message.Note(variable.Description)
 	}
 
-	if err := survey.AskOne(prompt, &value); err != nil {
+	prompt := &survey.Input{
+		Message: "Please provide a value for '" + variable.Name + "'",
+		Default: variable.Default,
+	}
+
+	if err = survey.AskOne(prompt, &value); err != nil {
 		return "", err
 	}
 
