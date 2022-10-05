@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/auth"
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -88,6 +89,10 @@ func LaunchAPIServer() {
 			r.Get("/list", packages.ListDeployedPackages)
 			r.Put("/deploy", packages.DeployPackage)
 			r.Delete("/remove/{name}", packages.RemovePackage)
+		})
+
+		r.Route("/components", func(r chi.Router) {
+			r.Get("/deployed", components.ListDeployedComponents)
 		})
 
 	})
