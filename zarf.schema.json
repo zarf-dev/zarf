@@ -71,6 +71,10 @@
         "localPath": {
           "type": "string",
           "description": "The path to the chart folder"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for chart resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
@@ -390,6 +394,10 @@
           },
           "type": "array",
           "description": "List of kustomization paths to include in the package"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for manifest resources to be ready before continuing"
         }
       },
       "additionalProperties": false,

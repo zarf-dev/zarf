@@ -79,6 +79,7 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package, these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"oneof_required=chartLocationGroup,description=If using a git repo, the path to the chart in the repo"`
 	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=chartLocationGroup,description=The path to the chart folder"`
+	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
@@ -88,6 +89,7 @@ type ZarfManifest struct {
 	Files                      []string `json:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
 	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
+	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`
 }
 
 // ZarfComponentScripts are scripts that run before or after a component is deployed

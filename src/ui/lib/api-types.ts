@@ -144,6 +144,10 @@ export interface ZarfChart {
      */
     namespace: string;
     /**
+     * Wait for chart resources to be ready before continuing
+     */
+    noWait?: boolean;
+    /**
      * The name of the release to create
      */
     releaseName?: string;
@@ -252,6 +256,10 @@ export interface ZarfManifest {
      * The namespace to deploy the manifests to
      */
     namespace?: string;
+    /**
+     * Wait for manifest resources to be ready before continuing
+     */
+    noWait?: boolean;
 }
 
 /**
@@ -794,6 +802,7 @@ const typeMap: any = {
         { json: "localPath", js: "localPath", typ: "" },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
+        { json: "noWait", js: "noWait", typ: u(undefined, true) },
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: "" },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
@@ -827,6 +836,7 @@ const typeMap: any = {
         { json: "kustomizeAllowAnyDirectory", js: "kustomizeAllowAnyDirectory", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
+        { json: "noWait", js: "noWait", typ: u(undefined, true) },
     ], false),
     "ZarfComponentOnlyTarget": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentOnlyCluster")) },

@@ -985,6 +985,21 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary><strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Wait for chart resources to be ready before continuing
+
+| Type | `boolean` |
+| ---- | --------- |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -1112,6 +1127,21 @@ Must be one of:
 
 | Type | `string` |
 | ---- | -------- |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Wait for manifest resources to be ready before continuing
+
+| Type | `boolean` |
+| ---- | --------- |
 
 </blockquote>
 </details>
