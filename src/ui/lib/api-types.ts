@@ -130,7 +130,11 @@ export interface ZarfChart {
     /**
      * If using a git repo
      */
-    gitPath?: string;
+    gitPath: string;
+    /**
+     * The path to the chart folder
+     */
+    localPath: string;
     /**
      * The name of the chart to deploy
      */
@@ -218,7 +222,7 @@ export interface ZarfFile {
      */
     symlinks?: string[];
     /**
-     * The absolute or relative path wher the file should be copied to during package deploy
+     * The absolute or relative path where the file should be copied to during package deploy
      */
     target: string;
 }
@@ -794,7 +798,8 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
     "ZarfChart": o([
-        { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
+        { json: "gitPath", js: "gitPath", typ: "" },
+        { json: "localPath", js: "localPath", typ: "" },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
