@@ -5,6 +5,8 @@ metadata:
 
 components:
   - name: prepare
+    only:
+      localOS: linux
     required: true
     scripts:
       # Note this file will be created in this directory, regardless of where the package create command is called from
@@ -12,12 +14,52 @@ components:
         - "touch test-prepare.txt"
   # This script will pass after 1 second
   - name: deploy
+    only:
+      localOS: linux
     required: true
     scripts:
       before:
         - "touch test-deploy-before.txt"
       after:
         - "touch test-deploy-after.txt"
+
+  - name: prepare
+    only:
+      localOS: darwin
+    required: true
+    scripts:
+      # Note this file will be created in this directory, regardless of where the package create command is called from
+      prepare:
+        - "touch test-prepare.txt"
+  # This script will pass after 1 second
+  - name: deploy
+    only:
+      localOS: darwin
+    required: true
+    scripts:
+      before:
+        - "touch test-deploy-before.txt"
+      after:
+        - "touch test-deploy-after.txt"
+
+  - name: prepare
+    only:
+      localOS: windows
+    required: true
+    scripts:
+      # Note this file will be created in this directory, regardless of where the package create command is called from
+      prepare:
+        - "New-Item test-prepare.txt"
+  # This script will pass after 1 second
+  - name: deploy
+    only:
+      localOS: windows
+    required: true
+    scripts:
+      before:
+        - "New-Item test-deploy-before.txt"
+      after:
+        - "New-Item test-deploy-after.txt"
 
   # This script will fail after 1 seconds
   - name: timeout
