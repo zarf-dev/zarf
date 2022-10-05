@@ -2,6 +2,7 @@ package helm
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
@@ -10,6 +11,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 
+	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
@@ -19,6 +21,12 @@ import (
 func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", chart.Name, chart.Version, chart.LocalPath)
 	defer spinner.Stop()
+
+	// Validate the chart
+	_, err := loader.LoadDir(chart.LocalPath)
+	if err!= nil {
+		spinner.Fatalf(err, "Validation failed for chart from %s (%s)", chart.LocalPath, err.Error())
+	}
 
 	client := action.NewPackage()
 
@@ -47,9 +55,15 @@ func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 	// Switch to the correct tag
 	git.CheckoutTag(tempPath, chart.Version)
 
+	// Validate the chart
+	_, err := loader.LoadDir(filepath.Join(tempPath, chart.GitPath))
+	if err!= nil {
+		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
+	}
+
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	name, err := client.Run(tempPath+"/"+chart.GitPath, nil)
+	name, err := client.Run(filepath.Join(tempPath, chart.GitPath), nil)
 
 	if err != nil {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
@@ -89,6 +103,12 @@ func DownloadPublishedChart(chart types.ZarfChart, destination string) {
 	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
 	if err != nil {
 		spinner.Fatalf(err, "Unable to download the helm chart")
+	}
+
+	// Validate the chart
+	_, err = loader.LoadFile(saved)
+	if err!= nil {
+		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
 	}
 
 	// Ensure the name is consistent for deployments
