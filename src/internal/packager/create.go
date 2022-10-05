@@ -114,10 +114,17 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		re := regexp.MustCompile(`\.git$`)
 		for _, chart := range component.Charts {
 			isGitURL := re.MatchString(chart.Url)
+			URLLen := len(chart.Url)
 			if isGitURL {
 				_ = helm.DownloadChartFromGit(chart, componentPath.charts)
-			} else {
+			} else if URLLen > 0 {
 				helm.DownloadPublishedChart(chart, componentPath.charts)
+			} else {
+				path := helm.CreateChartFromLocalFiles(chart, componentPath.charts)
+				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
+				if !strings.HasSuffix(path, zarfFilename) {
+					message.Fatalf(fmt.Errorf("error creating chart archive"), "User provided chart name and/or version does not match given chart")
+				}
 			}
 			for idx, path := range chart.ValuesFiles {
 				chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
