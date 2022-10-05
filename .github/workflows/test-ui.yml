@@ -19,6 +19,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      - name: "Break out early"
+        run: exit 1
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
         with:
@@ -46,8 +48,8 @@ jobs:
       - name: Cache browsers
         uses: actions/cache@v3
         with:
-          path: '~/Library/Caches/ms-playwright/'
-          key: ${{ runner.os }}-browsers            
+          path: "~/Library/Caches/ms-playwright/"
+          key: ${{ runner.os }}-browsers
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64
