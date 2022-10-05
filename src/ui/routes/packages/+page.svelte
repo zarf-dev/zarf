@@ -43,7 +43,4 @@
 		display: flex;
 		justify-content: space-between;
 	}
-	article {
-		margin: 1rem 0;
-	}
 </style>
