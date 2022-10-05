@@ -139,27 +139,47 @@ func validateInitFlags() error {
 }
 
 func init() {
+	initViper()
+
 	rootCmd.AddCommand(initCmd)
+
+	v.SetDefault(V_INIT_COMPONENTS, "")
+	v.SetDefault(V_INIT_STORAGE_CLASS, "")
+
+	v.SetDefault(V_INIT_GIT_URL, "")
+	v.SetDefault(V_INIT_GIT_PUSH_USER, config.ZarfGitPushUser)
+	v.SetDefault(V_INIT_GIT_PUSH_PASS, "")
+	v.SetDefault(V_INIT_GIT_PULL_USER, "")
+	v.SetDefault(V_INIT_GIT_PULL_PASS, "")
+
+	v.SetDefault(V_INIT_REGISTRY_URL, "")
+	v.SetDefault(V_INIT_REGISTRY_NODEPORT, 0)
+	v.SetDefault(V_INIT_REGISTRY_SECRET, "")
+	v.SetDefault(V_INIT_REGISTRY_PUSH_USER, config.ZarfRegistryPushUser)
+	v.SetDefault(V_INIT_REGISTRY_PUSH_PASS, "")
+	v.SetDefault(V_INIT_REGISTRY_PULL_USER, "")
+	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
+
+	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	initCmd.Flags().StringVar(&config.DeployOptions.Components, "components", "", "Comma-separated list of components to install.")
-	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", "", "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&config.InitOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
+	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), "Describe the StorageClass to be used")
 
 	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", "", "External git server url to use for this Zarf cluster")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-push-username", config.ZarfGitPushUser, "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-push-password", "", "Password for the push-user to access the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullUsername, "git-pull-username", "", "Username for pull-only access to the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullPassword, "git-pull-password", "", "Password for the pull-only user to access the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), "External git server url to use for this Zarf cluster")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), "Password for the push-user to access the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), "Username for pull-only access to the git server")
+	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), "Password for the pull-only user to access the git server")
 
 	// Flags for using an external registry
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Address, "registry-url", "", "External registry url address to use for this Zarf cluster")
-	initCmd.Flags().IntVar(&config.InitOptions.RegistryInfo.NodePort, "nodeport", 0, "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushUsername, "registry-push-username", config.ZarfRegistryPushUser, "Username to access to the registry Zarf is configured to use")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", "", "Password for the push-user to connect to the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", "", "Username for pull-only access to the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", "", "Password for the pull-only user to access the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Secret, "registry-secret", "", "Registry secret value")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), "External registry url address to use for this Zarf cluster")
+	initCmd.Flags().IntVar(&config.InitOptions.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), "Username to access to the registry Zarf is configured to use")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), "Password for the push-user to connect to the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), "Username for pull-only access to the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), "Password for the pull-only user to access the registry")
+	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), "Registry secret value")
 
 	initCmd.Flags().SortFlags = true
 }

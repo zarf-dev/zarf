@@ -86,6 +86,7 @@ var destroyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(destroyCmd)
 
+	// Still going to require a flag for destroy confirm, no viper oopsies here
 	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, "REQUIRED. Confirm the destroy action to prevent accidental deletions")
 	destroyCmd.Flags().BoolVar(&removeComponents, "remove-components", false, "Also remove any installed components outside the zarf namespace")
 	_ = destroyCmd.MarkFlagRequired("confirm")

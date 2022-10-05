@@ -23,6 +23,7 @@ require (
 	github.com/pterm/pterm v0.12.49
 	github.com/sigstore/cosign v1.12.1
 	github.com/spf13/cobra v1.5.0
+	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be
 	gopkg.in/yaml.v2 v2.4.0
@@ -310,7 +311,6 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.13.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.1.1 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/sylabs/sif/v2 v2.7.2 // indirect
