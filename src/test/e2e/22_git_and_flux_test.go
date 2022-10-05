@@ -56,7 +56,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-bf89aea1b43dd0ea83360d4a219643a4bc8424c6"
+	repoName := "zarf-11acfc2404b6e9e39ddcc5f41d9cbb226a6fbf31"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
@@ -75,7 +75,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
 	config.InitState(state)
-	repoName := "zarf-bf89aea1b43dd0ea83360d4a219643a4bc8424c6"
+	repoName := "zarf-11acfc2404b6e9e39ddcc5f41d9cbb226a6fbf31"
 
 	// Get the Zarf repo tag
 	repoTag := "v0.15.0"
@@ -119,7 +119,9 @@ timer:
 		case <-timeout:
 			t.Error("Timeout waiting for flux podinfo deployment")
 
-			// after delay, try running
+			break timer
+
+		// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
 			kubectlOut, err = exec.Command("kubectl", "wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s").Output()

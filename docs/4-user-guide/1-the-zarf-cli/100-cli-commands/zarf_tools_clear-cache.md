@@ -1,15 +1,16 @@
-## zarf tools get-admin-password
+## zarf tools clear-cache
 
-Returns the Zarf admin password for gitea read from the zarf-state secret in the zarf namespace
+Clears the configured git and image cache directory
 
 ```
-zarf tools get-admin-password [flags]
+zarf tools clear-cache [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for get-admin-password
+  -h, --help                help for clear-cache
+      --zarf-cache string   Specify the location of the Zarf  artifact cache (images and git repositories) (default "~/.zarf-cache")
 ```
 
 ### Options inherited from parent commands

@@ -102,9 +102,17 @@ func Deploy() {
 
 	// Verify the components requested all exist
 	components := config.GetComponents()
+	componentOptions := config.DeployOptions.Components
+
+	// Init packages use a different component list
+	if config.IsZarfInitConfig() {
+		componentOptions = config.InitOptions.Components
+	}
+
+	// The component list is comma-delimited list
 	var requestedComponents []string
-	if config.DeployOptions.Components != "" {
-		requestedComponents = strings.Split(config.DeployOptions.Components, ",")
+	if componentOptions != "" {
+		requestedComponents = strings.Split(componentOptions, ",")
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
@@ -122,15 +130,11 @@ func Deploy() {
 
 	// Save deployed package information to k8s
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
-	if packageUsesK8s(config.GetActiveConfig()) {
+	if packageUsesK8s() {
 		stateData, _ := json.Marshal(installedZarfPackage)
-		deployedPackageSecret.Data = make(map[string][]byte)
-		deployedPackageSecret.Data["data"] = stateData
+		deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 		k8s.ReplaceSecret(deployedPackageSecret)
 	}
-
-	// All done
-	return
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them
@@ -141,7 +145,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name}
-		var addShasumToImg bool = true
+		addShasumToImg := true
 
 		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
 		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
@@ -494,8 +498,8 @@ func printTablesForDeployment(componentsToDeploy []types.ZarfComponent) {
 	}
 }
 
-func packageUsesK8s(zarfPackage types.ZarfPackage) bool {
-	for _, component := range zarfPackage.Components {
+func packageUsesK8s() bool {
+	for _, component := range config.GetComponents() {
 		// If the component is using anything that depends on the cluster, return true
 		if len(component.Charts) > 0 ||
 			len(component.Images) > 0 ||

@@ -29,6 +29,8 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates
 var NoProgress bool
 
+var SkipLogFile bool
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logfile generation
@@ -52,13 +54,17 @@ func init() {
 	}
 
 	pterm.DefaultProgressbar.MaxWidth = 85
+	pterm.SetDefaultOutput(os.Stderr)
+
+	if SkipLogFile {
+		return
+	}
 
 	// Prepend the log filename with a timestampe
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
 	// Try to create a temp log file
 	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-		pterm.SetDefaultOutput(os.Stderr)
 		Error(err, "Error saving a log file")
 	} else {
 		// Otherwise fallback to stderr
@@ -75,6 +81,9 @@ func debugPrinter(offset int, a ...any) {
 
 	// Always write to the log file
 	if logFile != nil && !pterm.PrintDebugMessages {
+		now := time.Now().Format(time.RFC3339)
+		// prepend to a
+		a = append([]any{now, " - "}, a...)
 		pterm.Debug.
 			WithShowLineNumber(true).
 			WithLineNumberOffset(offset).
@@ -100,28 +109,28 @@ func GetLogLevel() LogLevel {
 }
 
 func Debug(payload ...any) {
-	debugPrinter(1, payload...)
+	debugPrinter(2, payload...)
 }
 
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
-	debugPrinter(2, message)
+	debugPrinter(3, message)
 }
 
 func Error(err any, message string) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	Warnf(message)
 }
 
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
 }
 
 func Errorf(err any, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	Warnf(format, a...)
 }
 
@@ -135,15 +144,15 @@ func Warnf(format string, a ...any) {
 }
 
 func Fatal(err any, message string) {
-	debugPrinter(1, err)
-	errorPrinter(1).Println(message)
+	debugPrinter(2, err)
+	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
 func Fatalf(err any, format string, a ...any) {
-	debugPrinter(1, err)
+	debugPrinter(2, err)
 	message := paragraph(format, a...)
-	errorPrinter(1).Println(message)
+	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
@@ -169,15 +178,14 @@ func Question(text string) {
 	pterm.FgMagenta.Println(message)
 }
 
+func Notef(format string, a ...any) {
+	message := fmt.Sprintf(format, a...)
+	Note(message)
+}
+
 func Note(text string) {
 	pterm.Println()
 	message := paragraph(text)
-	pterm.FgYellow.Println(message)
-}
-
-func Notef(text string, a ...any) {
-	pterm.Println()
-	message := paragraph(text, a...)
 	pterm.FgYellow.Println(message)
 }
 

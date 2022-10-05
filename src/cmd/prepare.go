@@ -17,6 +17,7 @@ import (
 var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
 	Use:   "prepare",
+	Aliases: []string{"prep"},
 	Short: "Tools to help prepare assets for packaging",
 }
 
@@ -76,7 +77,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 }
 
 var prepareFindImages = &cobra.Command{
-	Use:     "find-images",
+	Use:     "find-images [PACKAGE]",
 	Aliases: []string{"f"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   "Evaluates components in a zarf file to identify images specified in their helm charts and manifests",
@@ -94,15 +95,43 @@ var prepareFindImages = &cobra.Command{
 	},
 }
 
+var prepareGenerateConfigFile = &cobra.Command{
+	Use:     "generate-config [FILENAME]",
+	Aliases: []string{"gc"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Generates a config file for Zarf",
+	Long: "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
+		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. \n" +
+		"Accepted extensions are json, toml, yaml.\n\n" +
+		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml.",
+	Run: func(cmd *cobra.Command, args []string) {
+		fileName := "zarf-config.toml"
+
+		// If a filename was provided, use that
+		if len(args) > 0 {
+			fileName = args[0]
+		}
+
+		if err := v.SafeWriteConfigAs(fileName); err != nil {
+			message.Fatalf(err, "Unable to write the config file %s, make sure the file doesn't already exist", fileName)
+		}
+	},
+}
+
 func init() {
+	initViper()
+
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
+	prepareCmd.AddCommand(prepareGenerateConfigFile)
+
+	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
-	prepareFindImages.Flags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", "", "Specify the temporary directory to use for intermediate files")
-	prepareFindImages.Flags().StringToStringVar(&config.CommonOptions.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
+	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
+	prepareFindImages.Flags().StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
 
 	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
 }
