@@ -45,6 +45,14 @@ func Run() {
 
 }
 
+func oneIfNotEmpty(testString string) int {
+	if testString == "" {
+		return 0
+	} else {
+		return 1
+	}
+}
+
 func validateComponent(component types.ZarfComponent) {
 	if component.Required {
 		if component.Default {
@@ -120,6 +128,12 @@ func validateChart(chart types.ZarfChart) error {
 		return fmt.Errorf("%s must include a namespace", intro)
 	}
 
+	// Must only have one of url, localPath, or gitPath
+	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath) + oneIfNotEmpty(chart.GitPath)
+	if count != 1 {
+		return fmt.Errorf("%s must only have one of url, localPath or gitPath", intro)
+	}
+	
 	// Must have a url
 	if (chart.Url == "" && chart.LocalPath == "") {
 		return fmt.Errorf("%s must include a url or localPath", intro)
