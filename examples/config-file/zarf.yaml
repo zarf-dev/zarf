@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: config-file
-  description: 'Test component to demonstrate using a config file to control the cli. Files are generated use "zarf prepare generate-config"'
+  description: 'Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"'
 
 variables:
   - name: ZEBRA
