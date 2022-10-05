@@ -1,0 +1,44 @@
+architecture = 'architecture: 509a38f0'
+log_level = 'log_level: 6a845a41'
+no_log_file = true
+no_progress = true
+tmp_dir = 'tmp_dir: c457359e'
+
+[init]
+components = 'components: 359049b9'
+storage_class = 'storage_class: 9cae917f'
+
+[init.git]
+pull_password = 'git.pull_password: 8522ccca'
+pull_username = 'git.pull_username: 36646dbe'
+push_password = 'git.push_password: ba00d92d'
+push_username = 'git.push_username: eb76dca8'
+url = 'git.url: 7c63c1b9'
+
+[init.registry]
+nodeport = 186282
+pull_password = 'regisry.pull_password: b8152e38'
+pull_username = 'registry.pull_username: d0961a97'
+push_password = 'registry.push_password: 8f58ca41'
+push_username = 'registry.push_username: 7aab3f6f'
+secret = 'registry.secret: 881ae9dd'
+url = 'registry.url: c0ac2e47'
+
+[package]
+[package.create]
+insecure = true
+output_directory = 'create.output_directory: 52d061d5'
+skip_sbom = true
+zarf_cache = 'create.zarf_cache: 978499a5'
+
+[package.create.set]
+thing1 = '1a2b3c4d'
+
+[package.deploy]
+components = 'deploy.components: 8d6fde37'
+insecure = true
+sget = 'deploy.sget: ee7905de'
+shasum = 'deploy.shasum: 7606fe19'
+
+[package.deploy.set]
+thing2 = '2b3c4d5e'
