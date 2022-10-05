@@ -55,15 +55,16 @@ zarf init [flags]
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
       --storage-class string            Describe the StorageClass to be used
-      --tmpdir string                   Specify the temporary directory to use for intermediate files
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace
+  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-log-file           Disable log file creation.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc.
+      --tmpdir string         Specify the temporary directory to use for intermediate files
 ```
 
 ### SEE ALSO

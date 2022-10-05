@@ -20,15 +20,16 @@ zarf package deploy [PACKAGE] [flags]
       --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --sget string          Path to public sget key file for remote packages signed via cosign
       --shasum --insecure    Shasum of the package to deploy. Required if deploying a remote package and --insecure is not provided
-      --tmpdir string        Specify the temporary directory to use for intermediate files
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace
+  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-log-file           Disable log file creation.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc.
+      --tmpdir string         Specify the temporary directory to use for intermediate files
 ```
 
 ### SEE ALSO

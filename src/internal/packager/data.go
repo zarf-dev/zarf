@@ -31,7 +31,7 @@ func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, compo
 		tarCompressFlag = "z"
 	}
 
-	iterator:
+iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)

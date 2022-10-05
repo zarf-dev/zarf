@@ -1,7 +1,9 @@
 package git
 
 import (
-	"context"
+	"errors"
+	"fmt"
+	"path/filepath"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -9,13 +11,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-
-	"strings"
 )
 
 const onlineRemoteName = "online-upstream"
 
-func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
+// DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
+func DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
@@ -23,68 +24,67 @@ func DownloadRepoToTemp(gitUrl string, spinner *message.Spinner) string {
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	pull(gitUrl, path, spinner)
+	pull(gitURL, path, spinner, "")
 	return path
 }
 
-func Pull(gitUrl, targetFolder string, spinner *message.Spinner) (string, error) {
-	repoName, err := transformURLtoRepoName(gitUrl)
+// Pull clones or updates a git repository into the target folder.
+func Pull(gitURL, targetFolder string, spinner *message.Spinner) (string, error) {
+	repoName, err := transformURLtoRepoName(gitURL)
 	if err != nil {
-		message.Errorf(err, "unable to pull the git repo at %s", gitUrl)
+		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
 		return "", err
 	}
 
 	path := targetFolder + "/" + repoName
-	pull(gitUrl, path, spinner)
+	pull(gitURL, path, spinner, repoName)
 	return path, nil
 }
 
-func pull(gitUrl, targetFolder string, spinner *message.Spinner) {
-	spinner.Updatef("Processing git repo %s", gitUrl)
+func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string) {
+	spinner.Updatef("Processing git repo %s", gitURL)
 
-	gitCred := FindAuthForHost(gitUrl)
-
-	matches := strings.Split(gitUrl, "@")
-	onlyFetchRef := len(matches) == 2
-	cloneOptions := &git.CloneOptions{
-		URL:        matches[0],
-		Progress:   spinner,
-		RemoteName: onlineRemoteName,
+	gitCachePath := targetFolder
+	if repoName != "" {
+		gitCachePath = filepath.Join(config.GetAbsCachePath(), filepath.Join(config.ZarfGitCacheDir, repoName))
 	}
 
-	if onlyFetchRef {
-		cloneOptions.Tags = git.NoTags
+	matches := gitURLRegex.FindStringSubmatch(gitURL)
+	idx := gitURLRegex.SubexpIndex
+
+	if len(matches) == 0 {
+		// Unable to find a substring match for the regex
+		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
 	}
 
-	// Gracefully handle no git creds on the system (like our CI/CD)
-	if gitCred.Auth.Username != "" {
-		cloneOptions.Auth = &gitCred.Auth
-	}
+	onlyFetchRef := matches[idx("atRef")] != ""
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
 
-	// Clone the given repo
-	repo, err := git.PlainClone(targetFolder, false, cloneOptions)
+	repo, err := clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		spinner.Debugf("Repo already cloned")
-	} else if err != nil {
-		spinner.Debugf("Failed to clone repo: %s", err)
-		message.Infof("Falling back to host git for %s", gitUrl)
+		spinner.Debugf("Repo already cloned, fetching upstream changes...")
 
-		// If we can't clone with go-git, fallback to the host clone
-		// Only support "all tags" due to the azure clone url format including a username
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", "clone", "--origin", onlineRemoteName, gitUrl, targetFolder)
-		spinner.Updatef(stdOut)
-		spinner.Debugf(stdErr)
+		err = fetch(gitCachePath)
 
-		if err != nil {
-			spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			spinner.Debugf("Repo already up to date")
+		} else if err != nil {
+			spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
 		}
+	} else if err != nil {
+		spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+	}
 
-		return
+	if gitCachePath != targetFolder {
+		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
+		if err != nil {
+			message.Fatalf(err, "Unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
+		}
 	}
 
 	if onlyFetchRef {
-		ref := matches[1]
+		ref := matches[idx("ref")]
 
 		// Identify the remote trunk branch name
 		trunkBranchName := plumbing.NewBranchReferenceName("master")
