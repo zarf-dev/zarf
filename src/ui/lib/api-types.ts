@@ -542,11 +542,6 @@ export interface ZarfCommonOptions {
      */
     confirm: boolean;
     /**
-     * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
-     */
-    setVariables: { [key: string]: string };
-    /**
      * Location Zarf should use as a staging ground when managing files and images for package
      * creation and deployment
      */
@@ -555,9 +550,9 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
-     * Path to where a .cache directory of cached image that were pulled down to create packages
+     * Path to use to cache images and git repos on package create
      */
-    imageCachePath: string;
+    cachePath: string;
     /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
@@ -566,6 +561,11 @@ export interface ZarfCreateOptions {
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
     /**
      * Disable the generation of SBOM materials during package creation
      */
@@ -581,6 +581,11 @@ export interface ZarfDeployOptions {
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
     /**
      * Location where the public key component of a cosign key-pair can be found
      */
@@ -911,18 +916,19 @@ const typeMap: any = {
     ], false),
     "ZarfCommonOptions": o([
         { json: "confirm", js: "confirm", typ: true },
-        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "imageCachePath", js: "imageCachePath", typ: "" },
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
     ], false),
     "Architecture": [
