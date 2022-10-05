@@ -24,17 +24,13 @@ jobs:
         with:
           go-version: 1.19.x
 
-      - name: "Dependency: Install Scoop+Make+k3d+docker"
+      - name: "Dependency: Install Scoop+Make"
         shell: pwsh
         run: |
           Set-ExecutionPolicy RemoteSigned -scope CurrentUser
           iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
           Join-Path (Resolve-Path ~).Path "scoop\shims" >> $Env:GITHUB_PATH
-          scoop version
-          scoop install make k3d docker
-
-      - name: "Dependency: K3d cluster init"
-        run: k3d cluster delete && k3d cluster create
+          scoop install make@4.3 nodejs@16.17.1
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
@@ -59,10 +55,10 @@ jobs:
 
       - name: "Run Tests"
         shell: pwsh
-        run: make test-e2e ARCH=amd64
+        run: |
+          cd src/test/e2e && go test -v -timeout 30m
 
       - name: "Cleanup"
         shell: pwsh
         run: |
-          .\build\zarf-windows-amd64.exe destroy --confirm --remove-components
           Remove-Item -Recurse -Force .\build\
