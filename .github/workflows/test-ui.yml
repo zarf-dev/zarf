@@ -50,7 +50,7 @@ jobs:
           key: ${{ runner.os }}-browsers
 
       - name: "Build CLI"
-        run: make build-cli-linux-amd ARCH=amd64 && make build-ui
+        run: make build-cli-linux-amd ARCH=amd64
 
       - name: "Zarf Agent: Login to Docker Hub"
         uses: docker/login-action@v2
