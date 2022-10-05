@@ -19,7 +19,7 @@ The 'placeholder' text in the manifest or chart yaml should have your desired ke
 
 For example, if I wanted to create a template for a database username (using the variable `name`: `DATABASE_USERNAME`) I would do something like `###ZARF_VAR_DATABASE_USERNAME###` in the manifest or chart yaml.
 
-In the zarf.yaml you would add the name of the variable in the `variables` section, or the name of the constant in the `constants` section (which both must match the regex pattern `[A-Z_]*` [Test](https://regex101.com/?regex=%5BA-Z_%5D%2A)). For the same example as above, I would have:
+In the zarf.yaml you would add the name of the variable in the `variables` section, or the name of the constant in the `constants` section (which both must match the regex pattern `[A-Z0-9_]+` [Test](https://regex101.com/r/eeeJs2/1)). For the same example as above, I would have:
 
 ```yaml
 variables:
@@ -32,28 +32,42 @@ You shouldn't include the `###ZARF_VAR` and `###` or `###ZARF_CONST` and `###` a
 
 :::
 
-:::note
-
-When not specifying `default` or `prompt` Zarf will default to `default: ""` and `prompt: false`
-
-:::
-
-For variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
+For variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy (either from an interactive prompt, with `--set` on the CLI or with a config file). This should be set to a safe value to avoid deploy-time issues.
 
 ```yaml
 variables:
   name: DATABASE_USERNAME
   default: "postgres"
-  prompt: true
 ```
 
 :::note
 
-Variables that do not have a default, are not `--set` and are not prompted for during deploy will be left as their template strings in the manifests/charts
+Variables that do not have a default and are not specified during deploy will not be accepted and the user will be asked to set them on the CLI or in a config file.
 
 :::
 
-For constants, you must specify the value they will use at package create.  These values cannot be overridden with `--set` during `zarf package deploy`, but you can use package variables (described below) to variablize them during create.
+Additionally, if you have a variable the user shouldn't be prompted for interactively (i.e. it is unlikely to change or is a more advanced configuration option), you can specify `noPrompt` to suppress the interactive prompt, requiring the user to set it with `--set` or a config file.
+
+```yaml
+variables:
+  name: DATABASE_USERNAME
+  default: "postgres"
+  noPrompt: true
+```
+
+:::note
+
+When using `noPrompt` you must specify a `default` for the variable to take during interactive mode.
+
+:::
+
+:::note
+
+When not specifying `default` or `noPrompt` Zarf will default to `default: null` and `noPrompt: false`.
+
+:::
+
+For constants, you must specify the value they will use at package create.  These values **cannot** be overridden with `--set` during `zarf package deploy`, but you can use package variables (described below) to variablize them during create.
 
 ```yaml
 constants:

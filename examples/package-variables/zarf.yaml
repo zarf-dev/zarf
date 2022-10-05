@@ -1,23 +1,34 @@
 kind: ZarfPackageConfig
 metadata:
   name: package-variables
-  description: "Test component to demonstrate package variables feature"
+  description: "Test component to demonstrate the package variables feature"
 
-# Demonstrates injecting custom constants into a K8s resource, e.g. ###ZARF_CONST_DINGO###
+# Demonstrates injecting custom constants into a K8s resource, e.g. ###ZARF_CONST_CONSTANT###
 constants:
-  - name: "DINGO"
-    value: "howl"
+  - name: "CONSTANT"
+    value: "a value that does not change on package deploy"
 
-# Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
+# Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_STANDARD###
 variables:
-  - name: "WOLF"
-  - name: "DOG"
-    default: "woof"
-  - name: "CAT"
-    prompt: true
-  - name: "FOX"
+    # This case is the standard case for package variables, the user will be prompted but no default will be taken
+  - name: "STANDARD"
+
+  # This case will not prompt the user interactively, taking the default if not explicitly `--set`
+  - name: "NO_PROMPT"
+    default: "no prompt default"
+    noPrompt: true
+
+  # This case will prompt the user interactively but provides a default as a suggestion or form use with `--confirm`
+  - name: "DEFAULT"
+    default: "a safe default"
+
+  # This case will prompt the user interactively with a default that is set from a package variable
+  - name: "VARIABLIZED_DEFAULT"
     default: "###ZARF_PKG_VAR_CONFIG_MAP###"
-    prompt: true
+
+  # This case is invalid, when using `noPrompt` you must specify a `default`
+  # - name: "NO_PROMPT_NO_DEFAULT"
+  #   noPrompt: true
 
 components:
   # Note that you must specify the ACTION and CONFIG_MAP i.e. `--set ACTION=template --set CONFIG_MAP=simple-configmap.yaml` during package create

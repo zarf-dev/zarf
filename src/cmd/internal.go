@@ -55,7 +55,7 @@ var configSchemaCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, "Unable to generate the zarf config schema")
 		}
-		fmt.Print(string(output) + "\n")
+		fmt.Println(string(output))
 	},
 }
 
@@ -68,7 +68,7 @@ var apiSchemaCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, "Unable to generate the zarf api schema")
 		}
-		fmt.Print(string(output) + "\n")
+		fmt.Println(string(output))
 	},
 }
 

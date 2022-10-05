@@ -33,13 +33,13 @@ type ZarfBuildData struct {
 
 // ZarfPackageVariable are variables that can be used to dynaically template K8s resources.
 type ZarfPackageVariable struct {
-	Name    string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z_]+$"`
-	Default string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
-	Prompt  bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+	Name     string  `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Default  *string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
+	NoPrompt bool    `json:"noPrompt,omitempty" jsonschema:"description=Whether to suppress the prompt for the user to provide input for this variable (cannot be used without a default)"`
 }
 
 // ZarfPackageConstant are constants that can be used to dynaically template K8s resources.
 type ZarfPackageConstant struct {
-	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z_]+$"`
+	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z0-9_]+$"`
 	Value string `json:"value" jsonschema:"description=The value to set for the constant during deploy"`
 }

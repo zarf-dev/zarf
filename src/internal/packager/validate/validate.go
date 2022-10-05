@@ -79,18 +79,22 @@ func validatePackageName(subject string) error {
 }
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 	// ensure the variable name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {
 		return fmt.Errorf("variable name '%s' must be all uppercase and contain no special characters except _", subject.Name)
 	}
 
+	if subject.Default == nil && subject.NoPrompt {
+		return fmt.Errorf("variable '%s' has no 'default'; when using 'noPrompt' you must specify a 'default' for the variable", subject.Name)
+	}
+
 	return nil
 }
 
 func validatePackageConstant(subject types.ZarfPackageConstant) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 	// ensure the constant name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {

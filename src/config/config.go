@@ -86,7 +86,7 @@ var (
 	UIAssets      embed.FS
 
 	// Variables set by the user
-	SetVariableMap map[string]string
+	SetVariableMap = map[string]string{}
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -255,7 +255,7 @@ func GetContainerRegistryInfo() types.RegistryInfo {
 	return state.RegistryInfo
 }
 
-// BuildConfig adds build information and writes the config to the given path
+// BuildConfig adds build information and writes the config to the given path.
 func BuildConfig(path string) error {
 	message.Debugf("config.BuildConfig(%s)", path)
 	now := time.Now()

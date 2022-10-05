@@ -51,7 +51,7 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 	stderr := io.MultiWriter(os.Stderr, &stderrBuf)
 
 	if err := cmd.Start(); err != nil {
-		return "", "", err
+		return stdoutBuf.String(), stderrBuf.String(), err
 	}
 
 	if showLogs {
@@ -68,18 +68,19 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return "", "", err
+		return stdoutBuf.String(), stderrBuf.String(), err
 	}
 
 	if showLogs {
 		if errStdout != nil || errStderr != nil {
-			return "", "", errors.New("unable to capture stdOut or stdErr")
+			return stdoutBuf.String(), stderrBuf.String(), errors.New("unable to capture stdOut or stdErr")
 		}
 	}
 
 	return stdoutBuf.String(), stderrBuf.String(), nil
 }
 
+// ExecLaunchURL opens a URL with the user's default application.
 func ExecLaunchURL(url string) error {
 	switch runtime.GOOS {
 	case "linux":

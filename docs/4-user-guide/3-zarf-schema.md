@@ -1345,9 +1345,9 @@ Must be one of:
 | Type | `string` |
 | ---- | -------- |
 
-| Restrictions                      |                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[A-Z_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z_%5D%2B%24) |
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
 
 </blockquote>
 </details>
@@ -1368,13 +1368,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="variables_items_prompt"></a>prompt</strong>
+<summary><strong> <a name="variables_items_noPrompt"></a>noPrompt</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Whether to prompt the user for input for this variable
+**Description:** Whether to suppress the prompt for the user to provide input for this variable (cannot be used without a default)
 
 | Type | `boolean` |
 | ---- | --------- |
@@ -1426,9 +1426,9 @@ Must be one of:
 | Type | `string` |
 | ---- | -------- |
 
-| Restrictions                      |                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[A-Z_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z_%5D%2B%24) |
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
 
 </blockquote>
 </details>

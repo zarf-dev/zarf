@@ -388,9 +388,10 @@ export interface ZarfPackageVariable {
      */
     name: string;
     /**
-     * Whether to prompt the user for input for this variable
+     * Whether to suppress the prompt for the user to provide input for this variable (cannot be
+     * used without a default)
      */
-    prompt?: boolean;
+    noPrompt?: boolean;
 }
 
 export interface ClusterSummary {
@@ -855,7 +856,7 @@ const typeMap: any = {
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
-        { json: "prompt", js: "prompt", typ: u(undefined, true) },
+        { json: "noPrompt", js: "noPrompt", typ: u(undefined, true) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },

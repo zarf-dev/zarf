@@ -12,7 +12,6 @@ variables:
   # Prompt user for the domain override
   - name: DOMAIN
     default: "bigbang.dev"
-    prompt: true
 
 components:
   - name: flux

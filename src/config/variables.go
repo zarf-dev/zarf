@@ -25,7 +25,7 @@ func FillActiveTemplate() error {
 
 	for key, value := range packageVariables {
 		if value == nil && !CommonOptions.Confirm {
-			setVal, err := promptVariable(key, "")
+			setVal, err := promptVariable(key, nil)
 
 			if err == nil {
 				packageVariables[key] = &setVal
@@ -48,7 +48,9 @@ func FillActiveTemplate() error {
 
 // SetActiveVariables handles setting the active variables used to template component files.
 func SetActiveVariables() error {
-	SetVariableMap = DeployOptions.SetVariables
+	for key, value := range DeployOptions.SetVariables {
+		SetVariableMap[key] = value
+	}
 
 	for _, variable := range active.Variables {
 		_, present := SetVariableMap[variable.Name]
@@ -58,11 +60,19 @@ func SetActiveVariables() error {
 			continue
 		}
 
-		// First set default (may be overridden by prompt)
-		SetVariableMap[variable.Name] = variable.Default
+		// Check if the user did not `--set` a non-defaulted variable and is using `--confirm`
+		if CommonOptions.Confirm && variable.Default == nil {
+			return fmt.Errorf("variable '%s' has no 'default'; when using '--confirm' you must specify '%s' with '--set' or a config file",
+				variable.Name, variable.Name)
+		}
 
-		// Variable is set to prompt the user
-		if variable.Prompt && !CommonOptions.Confirm {
+		// Initially set the variable to the default (if it exists) (may be overridden by a prompt)
+		if variable.Default != nil {
+			SetVariableMap[variable.Name] = *variable.Default
+		}
+
+		// Prompt the user for a value if in interactive mode
+		if !variable.NoPrompt && !CommonOptions.Confirm {
 			// Prompt the user for the variable
 			val, err := promptVariable(variable.Name, variable.Default)
 
@@ -105,14 +115,17 @@ func InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	}
 }
 
-func promptVariable(varName string, varDefault string) (string, error) {
+func promptVariable(varName string, varDefault *string) (string, error) {
 	var value string
 
 	pterm.Println()
 
 	prompt := &survey.Input{
 		Message: "Please provide a value for '" + varName + "'",
-		Default: varDefault,
+	}
+
+	if varDefault != nil {
+		prompt.Default = *varDefault
 	}
 
 	if err := survey.AskOne(prompt, &value); err != nil {

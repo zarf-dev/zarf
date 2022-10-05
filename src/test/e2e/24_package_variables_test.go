@@ -17,28 +17,29 @@ func TestPackageVariables(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-package-variables-%s.tar.zst", e2e.arch)
 
 	// Test that not specifying a prompted variable results in an error
-	_, stdErr, _ := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	expectedOutString := "variable 'CAT' must be '--set' when using the '--confirm' flag"
-	require.Contains(t, stdErr, "", expectedOutString)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	expectedOutString := "variable 'STANDARD' has no 'default'"
+	require.Contains(t, stdErr, expectedOutString)
+	require.Error(t, err, stdOut, stdErr)
 
 	// Deploy the simple configmap
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "CAT=meow")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "STANDARD=something")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was properly templated
 	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
-	// wolf should remain unset because it was not set during deploy
-	assert.Contains(t, string(kubectlOut), "wolf=")
-	// dog should take the default value
-	assert.Contains(t, string(kubectlOut), "dog=woof")
-	// cat should take the set value
-	assert.Contains(t, string(kubectlOut), "cat=meow")
-	// fox should take the created value
-	assert.Contains(t, string(kubectlOut), "fox=simple-configmap.yaml")
-	// dingo should take the constant value
-	assert.Contains(t, string(kubectlOut), "dingo=howl")
-	// zebra should remain unset as it is not a component variable
-	assert.Contains(t, string(kubectlOut), "zebra=###ZARF_VAR_ZEBRA###")
+	// standard should take the set value
+	assert.Contains(t, string(kubectlOut), "standard=something")
+	// no prompt should take the default value
+	assert.Contains(t, string(kubectlOut), "noPrompt=no prompt default")
+	// default should take the default value
+	assert.Contains(t, string(kubectlOut), "default=a safe default")
+	// variablized default should take the default value
+	assert.Contains(t, string(kubectlOut), "varDefault=simple-configmap.yaml")
+	// constant should take the constant value
+	assert.Contains(t, string(kubectlOut), "constant=a value that does not change on package deploy")
+	// nonExist should remain unset as it is not a component variable
+	assert.Contains(t, string(kubectlOut), "nonExist=###ZARF_VAR_NON_EXISTENT###")
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

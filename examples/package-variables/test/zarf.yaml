@@ -1,0 +1,21 @@
+#####################################################################
+# THIS ZARF YAML IS FOR TESTING ONLY                                #
+#####################################################################
+#                                                                   #
+# This zarf.yaml is for testing that an invalid package variable    #
+# specification (setting noPrompt without a default) results in the #
+# expected package create error.  See 04_create_templating_test.go. #
+#                                                                   #
+#####################################################################
+kind: ZarfPackageConfig
+metadata:
+  name: package-variables-test
+  description: "Test component to validate errors for the package variables feature"
+
+variables:
+  # This case is invalid, when using `noPrompt` you must specify a `default`
+  - name: "NO_PROMPT_NO_DEFAULT"
+    noPrompt: true
+
+components:
+  - name: noop

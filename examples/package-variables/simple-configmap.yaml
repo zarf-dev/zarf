@@ -5,11 +5,10 @@ metadata:
   namespace: zarf
 data:
   templateme.properties: |
-    horse=neigh
-    wolf=###ZARF_VAR_WOLF###
-    dingo=###ZARF_CONST_DINGO###
-    dog=###ZARF_VAR_DOG###
-    cat=###ZARF_VAR_CAT###
-    fox=###ZARF_VAR_FOX###
-    cow=moo
-    zebra=###ZARF_VAR_ZEBRA###
+    preExist=already-here
+    constant=###ZARF_CONST_CONSTANT###
+    standard=###ZARF_VAR_STANDARD###
+    noPrompt=###ZARF_VAR_NO_PROMPT###
+    default=###ZARF_VAR_DEFAULT###
+    varDefault=###ZARF_VAR_VARIABLIZED_DEFAULT###
+    nonExist=###ZARF_VAR_NON_EXISTENT###
