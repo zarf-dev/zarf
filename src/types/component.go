@@ -64,7 +64,7 @@ type ZarfComponentOnlyCluster struct {
 type ZarfFile struct {
 	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
 	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
-	Target     string   `json:"target" jsonschema:"description=The absolute or relative path wher the file should be copied to during package deploy"`
+	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
@@ -73,11 +73,12 @@ type ZarfFile struct {
 type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy, this should be the name of the chart as it is installed in the helm repo"`
 	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create, defaults to the name of the chart"`
-	Url         string   `json:"url" jsonschema:"description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
+	Url         string   `json:"url,omitempty" jsonschema:"oneof_required=chartLocationGroup,url,description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
 	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy, for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package, these will be merged together"`
-	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=If using a git repo, the path to the chart in the repo"`
+	GitPath     string   `json:"gitPath,omitempty" jsonschema:"oneof_required=chartLocationGroup,description=If using a git repo, the path to the chart in the repo"`
+	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=chartLocationGroup,description=The path to the chart folder"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
 }
 
