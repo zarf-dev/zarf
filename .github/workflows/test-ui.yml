@@ -47,10 +47,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: '~/Library/Caches/ms-playwright/'
-          key: ${{ runner.os }}-browsers            
+          key: ${{ runner.os }}-browsers
 
       - name: "Build CLI"
-        run: make build-cli-linux-amd ARCH=amd64
+        run: make build-cli-linux-amd ARCH=amd64 && make build-ui
 
       - name: "Zarf Agent: Login to Docker Hub"
         uses: docker/login-action@v2
