@@ -11,11 +11,11 @@
 <svelte:head>
 	<title>Configure</title>
 </svelte:head>
-<section class="pageHeader">
+<section class="page-header">
 	<Typography variant="h4">Configure Package Deployment</Typography>
 </section>
 
-<section class="initSection">
+<section class="page-section">
 	<Typography variant="h5">
 		<Icon variant="package" />
 		Package Details
@@ -23,7 +23,7 @@
 	<PackageDetails pkg={$pkgStore.zarfPackage} />
 </section>
 
-<section class="initSection">
+<section class="page-section">
 	<Typography variant="h5">
 		<Icon variant="component" />
 		Package Components

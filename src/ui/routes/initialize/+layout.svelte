@@ -29,7 +29,7 @@
 	});
 </script>
 
-<section class="initStepPage">
+<section class="page">
 	<Stepper
 		orientation="horizontal"
 		steps={[
@@ -56,37 +56,3 @@
 		<slot />
 	{/if}
 </section>
-
-<style>
-	.initStepPage {
-		padding: 2rem 10rem;
-		display: flex;
-		flex-direction: column;
-		gap: 2rem;
-	}
-	@media (max-width: 900px) {
-		.initStepPage {
-			padding: 2rem 4rem;
-		}
-	}
-	@media (max-width: 600px) {
-		.initStepPage {
-			padding: 2rem 1rem;
-		}
-	}
-
-	/* Globals */
-	.initStepPage :global(.actionButtonsContainer) {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 2rem;
-	}
-	.initStepPage :global(.initSection) {
-		gap: 20px;
-		display: flex;
-		flex-direction: column;
-	}
-	.initStepPage :global(.pageHeader) {
-		margin-top: 2rem;
-	}
-</style>

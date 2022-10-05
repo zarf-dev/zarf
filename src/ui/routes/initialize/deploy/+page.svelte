@@ -83,7 +83,7 @@
 <svelte:head>
 	<title>Deploy</title>
 </svelte:head>
-<section class="pageHeader">
+<section class="page-header">
 	<Typography variant="h4">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
 </section>
 <section class="deployment-steps">
