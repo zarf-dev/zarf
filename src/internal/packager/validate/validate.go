@@ -174,7 +174,9 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 	}
 
 	// add a forward slash to end of path if it does not have one
-	path = filepath.Clean(path) + string(os.PathSeparator)
+	if !strings.HasSuffix(path, "/") {
+		path = filepath.Clean(path) + string(os.PathSeparator)
+	}
 
 	// ensure there is a zarf.yaml in provided path
 	if utils.InvalidPath(path + packageSuffix) {
