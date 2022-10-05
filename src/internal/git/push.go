@@ -95,15 +95,15 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 		return nil, fmt.Errorf("unable to find the git remote: %w", err)
 	}
 
-	remoteUrl := remote.Config().URLs[0]
-	targetUrl, err := transformURL(tunnelUrl, remoteUrl, username)
+	remoteURL := remote.Config().URLs[0]
+	targetURL, err := TransformURL(tunnelUrl, remoteURL, username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
-		URLs: []string{targetUrl},
+		URLs: []string{targetURL},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create offline remote: %w", err)

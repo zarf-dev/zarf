@@ -28,3 +28,11 @@ func NewServer(port string) *http.Server {
 		Handler: mux,
 	}
 }
+
+// NewGitProxy creates and returns a git proxy server.
+func NewGitProxy(port string) *http.Server {
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: http.HandlerFunc(hooks.GitProxy),
+	}
+}

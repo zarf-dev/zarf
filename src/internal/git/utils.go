@@ -30,14 +30,14 @@ type Credential struct {
 
 var (
 	// For further explanation: https://regex101.com/r/zq64q4/1
-	gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
+	gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
 )
 
 // MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
 func MutateGitUrlsInText(host string, text string, gitUser string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		output, err := transformURL(host, match, gitUser)
+		output, err := TransformURL(host, match, gitUser)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
 			output = match
@@ -73,12 +73,23 @@ func transformURLtoRepoName(url string) (string, error) {
 	return newRepoName, nil
 }
 
-func transformURL(baseURL string, url string, username string) (string, error) {
+// TransformURL transforms an online git URL into an offline one.
+func TransformURL(baseURL string, url string, username string) (string, error) {
 	repoName, err := transformURLtoRepoName(url)
 	if err != nil {
 		return "", err
 	}
-	output := fmt.Sprintf("%s/%s/%s", baseURL, username, repoName)
+
+	// Get the full path
+	matches := gitURLRegex.FindStringSubmatch(url)
+	idx := gitURLRegex.SubexpIndex
+
+	if len(matches) == 0 {
+		// Unable to find a substring match for the regex
+		return "", fmt.Errorf("unable to extract the git url from the url %s", url)
+	}
+
+	output := fmt.Sprintf("%s/%s/%s%s%s", baseURL, username, repoName, matches[idx("git")], matches[idx("gitPath")])
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
 }

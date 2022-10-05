@@ -16,9 +16,10 @@ import (
 
 // We can hard-code these because we control the entire thing anyway
 const (
-	httpPort = "8443"
-	tlscert  = "/etc/certs/tls.crt"
-	tlskey   = "/etc/certs/tls.key"
+	httpPort     = "8443"
+	gitProxyPort = "443"
+	tlscert      = "/etc/certs/tls.crt"
+	tlskey       = "/etc/certs/tls.key"
 )
 
 // StartWebhook launches the zarf agent mutating webhook in the cluster
@@ -33,6 +34,30 @@ func StartWebhook() {
 	}()
 
 	message.Infof("Server running in port: %s", httpPort)
+
+	// listen shutdown signal
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	<-signalChan
+
+	message.Infof("Shutdown gracefully...")
+	if err := server.Shutdown(context.Background()); err != nil {
+		message.Fatal(err, "unable to properly shutdown the web server")
+	}
+}
+
+// StartGitProxy launches the zarf agent proxy in the cluster.
+func StartGitProxy() {
+	message.Debug("agent.StartGitProxy()")
+
+	server := agentHttp.NewGitProxy(gitProxyPort)
+	go func() {
+		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
+			message.Fatal(err, "Failed to start the web server")
+		}
+	}()
+
+	message.Infof("Server running in port: %s", gitProxyPort)
 
 	// listen shutdown signal
 	signalChan := make(chan os.Signal, 1)
