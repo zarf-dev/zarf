@@ -100,8 +100,9 @@ var clearCacheCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   "Clears the configured git and image cache directory",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := os.RemoveAll(config.CreateOptions.CachePath); err != nil {
-			message.Fatalf("Unable to clear the cache driectory %s: %s", config.CreateOptions.CachePath, err.Error())
+		message.Debugf("Cache directory set to: %s", config.GetAbsCachePath())
+		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
+			message.Fatalf("Unable to clear the cache driectory %s: %s", config.GetAbsCachePath(), err.Error())
 		}
 	},
 }
