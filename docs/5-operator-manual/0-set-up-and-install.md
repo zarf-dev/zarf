@@ -1,10 +1,5 @@
 # Set Up And Install
 
-:::caution Hard Hat Area
-This page is still being developed. More content will be added soon!
-:::
-
-
 <!-- TODO: I @jperry am still confused about what the difference between this page the other install/setup sections should be.. -->
 <!--       ex. The 'Getting Started' page has an 'Installing Zarf' section that I copied this from.. -->
 # Installing Zarf
