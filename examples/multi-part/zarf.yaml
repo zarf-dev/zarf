@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: multi-part
+  description: A Zarf package broken into multiple parts for easier distribution
+  chunkSize: 5
+
+components:
+  - name: big-ol-file
+    description: A big ol' file
+    files:
+      - source: https://github.com/defenseunicorns/zarf/releases/download/v0.21.0/zarf_v0.21.0_Darwin_amd64
+        shasum: d6ebc6a0476bd2af8f25cda739d7eb0d981fe2b0f78b907f9730b0fa0746d0d5
+        target: "###ZARF_TEMP###/zarf-apple"

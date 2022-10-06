@@ -433,6 +433,10 @@
           "type": "boolean",
           "description": "Disable compression of this package"
         },
+        "chunkSize": {
+          "type": "integer",
+          "description": "The size of each chunk in Megabytes when chunking the package into multiple files"
+        },
         "architecture": {
           "type": "string",
           "description": "The target cluster architecture of this package"

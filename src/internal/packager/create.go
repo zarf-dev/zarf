@@ -97,6 +97,27 @@ func Create(baseDir string) {
 	if err != nil {
 		message.Fatal(err, "Unable to create the package archive")
 	}
+
+	// If a chunk size was specified, split the package into chunks
+	if config.CreateOptions.ChunkSize > 0 {
+		// Convert Megabytes to Bytes
+		chunkSize := config.CreateOptions.ChunkSize * 1024 * 1024
+
+		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
+		if err != nil {
+			message.Fatal(err, "Unable to split the package archive into chunks")
+		}
+
+		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks), sha256sum)
+		_ = os.RemoveAll(packageName)
+
+		for idx, chunk := range chunks {
+			path := strings.Replace(packageName, ".tar", fmt.Sprintf("-%03d.partial-tar", idx), 1)
+			if err := os.WriteFile(path, chunk, 0644); err != nil {
+				message.Fatalf(err, "Unable to write the file %s", path)
+			}
+		}
+	}
 }
 
 func addComponent(tempPath tempPaths, component types.ZarfComponent) {

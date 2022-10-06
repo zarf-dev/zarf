@@ -140,6 +140,21 @@ Must be one of:
 </details>
 
 <details>
+<summary><strong> <a name="metadata_chunkSize"></a>chunkSize</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The size of each chunk in Megabytes when chunking the package into multiple files
+
+| Type | `integer` |
+| ---- | --------- |
+
+</blockquote>
+</details>
+
+<details>
 <summary><strong> <a name="metadata_architecture"></a>architecture</strong>
 
 </summary>

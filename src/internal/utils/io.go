@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"os"
@@ -153,4 +154,34 @@ func GetFinalExecutablePath() (string, error) {
 	// In case the binary is symlinked somewhere else, get the final destination!!
 	linkedPath, err := filepath.EvalSymlinks(binaryPath)
 	return linkedPath, err
+}
+
+// SplitFile splits a file into multiple parts by the given size
+func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum string, err error) {
+	var file []byte
+
+	// Open the created archive for io.Copy
+	if file, err = os.ReadFile(path); err != nil {
+		return chunks, sha256sum, err
+	}
+
+	//Calculate the sha256sum of the tarFile before we split it up
+	sha256sum = fmt.Sprintf("%x", sha256.Sum256(file))
+
+	// Loop over the tarball breaking it into chunks based on the payloadChunkSize
+	for {
+		if len(file) == 0 {
+			break
+		}
+
+		// don't bust slice length
+		if len(file) < chunkSizeBytes {
+			chunkSizeBytes = len(file)
+		}
+
+		chunks = append(chunks, file[0:chunkSizeBytes])
+		file = file[chunkSizeBytes:]
+	}
+
+	return chunks, sha256sum, nil
 }

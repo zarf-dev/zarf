@@ -41,6 +41,7 @@ const (
 	V_PKG_CREATE_OUTPUT_DIR = "package.create.output_directory"
 	V_PKG_CREATE_SKIP_SBOM  = "package.create.skip_sbom"
 	V_PKG_CREATE_INSECURE   = "package.create.insecure"
+	V_PKG_CREATE_CHUNK_SIZE = "package.create.chunk_size"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"

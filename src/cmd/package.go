@@ -203,12 +203,14 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
+	v.SetDefault(V_PKG_CREATE_CHUNK_SIZE, 0)
 
 	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVar(&config.CreateOptions.CachePath, "zarf-cache", v.GetString(V_PKG_CREATE_ZARF_CACHE), "Specify the location of the Zarf image cache")
 	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
 	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
 	createFlags.BoolVar(&config.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
+	createFlags.IntVar(&config.CreateOptions.ChunkSize, "chunk-size", v.GetInt(V_PKG_CREATE_CHUNK_SIZE), "Specify a size in Megabytes to break a package into multiple files")
 }
 
 func bindDeployFlags() {

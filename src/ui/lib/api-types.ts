@@ -365,6 +365,10 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
+     * The size of each chunk in Megabytes when chunking the package into multiple files
+     */
+    chunkSize?: number;
+    /**
      * Additional information about this package
      */
     description?: string;
@@ -860,6 +864,7 @@ const typeMap: any = {
     ], false),
     "ZarfMetadata": o([
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
+        { json: "chunkSize", js: "chunkSize", typ: u(undefined, 0) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "image", js: "image", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
