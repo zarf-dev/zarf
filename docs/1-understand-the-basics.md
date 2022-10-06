@@ -2,30 +2,40 @@
 
 Before you are able to effectively use Zarf, it is useful to have an underlying understanding of the technology Zarf is built on and around. The sections below provide some helpful links to start building up this foundation as well as a glossary of the terms used in this project.
 
-:::caution Hard Hat Area
-This page is still being developed. More content will be added soon!
-:::
-
-<!-- TODO: This might be a good place to shamelessly plug the 'Air Gap' course -->
 <!-- TODO: The links and information on this page need to be expanded a lot more to really be useful -->
 
 <br />
 <br />
 
-## What is Kubernetes?
+## Fundamental Technologies
 
-- [Kubernetes Overview](https://kubernetes.io/docs/concepts/overview/)
+### Kubernetes Basics
+
+- [What is Kubernetes?](https://www.ibm.com/cloud/learn/kubernetes)
+- [Learn Kubernetes Basics](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
+- [Free Introduction to Kubernetes Course](https://www.edx.org/course/introduction-to-kubernetes)
+- [Super charge your Kubernetes deployments](https://www.youtube.com/watch?v=N6UCKF7JD7k)
   <br />
   <br />
 
-## What is the 'Air Gap'?
+### AirGap Basics
+
+- [What is AirGap](https://ibm.github.io/kubernetes-networking/vpc/airgap/)
+- AirGap Kubernetes Course - Coming Soon!
 
 <br />
 <br />
 
-## What is GitOps?
+## GitOps Basics
 
 - [CloudBees GitOps Definition](https://www.cloudbees.com/gitops/what-is-gitops)
+- [Understanding Git](https://hackernoon.com/understanding-git-fcffd87c15a3)
+
+### CLI Basics
+
+- [List of CLI Commands](https://www.codecademy.com/article/command-line-commands)
+- [How to use the Command Line](https://training.linuxfoundation.org/training/linux-tools-for-software-development-lfd108x/)
+- [Free Linux tools for Software Development Course](https://training.linuxfoundation.org/training/linux-tools-for-software-development-lfd108x/)
 
 ## Terms Used
 
