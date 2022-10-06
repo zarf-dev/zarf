@@ -3,6 +3,7 @@ package packager
 import (
 	"context"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -45,7 +46,19 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		// Otherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+
+			var shell string
+			var shellArgs string
+
+			if runtime.GOOS == "windows" {
+				shell = "powershell"
+				shellArgs = "-Command"
+			} else {
+				shell = "sh"
+				shellArgs = "-c"
+			}
+			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, shell, shellArgs, script)
+
 			defer cancel()
 
 			if err != nil {
