@@ -45,7 +45,7 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
 		img, err := crane.Pull(src, config.GetCraneOptions()...)
 		if err != nil {
-			spinner.Fatalf(err, "Unable to pull the image %s", src)
+			spinner.Fatalf(err, "Unable to pull the image \"%s\"", src)
 		}
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
