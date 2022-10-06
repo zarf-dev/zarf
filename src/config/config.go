@@ -261,7 +261,11 @@ func BuildConfig(path string) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
-	currentUser := os.Getenv("USER")
+	if runtime.GOOS == "windows" {
+		active.Build.User = os.Getenv("USERNAME")
+	} else {
+		active.Build.User = os.Getenv("USER")
+	}
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
@@ -292,7 +296,10 @@ func BuildConfig(path string) error {
 func GetAbsCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(CreateOptions.CachePath, "~") {
+		return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	}
+	return CreateOptions.CachePath
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
