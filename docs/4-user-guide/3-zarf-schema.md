@@ -1421,6 +1421,21 @@ Must be one of:
 </details>
 
 <details>
+<summary><strong> <a name="variables_items_description"></a>description</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** A description of the variable to be used when prompting the user a value
+
+| Type | `string` |
+| ---- | -------- |
+
+</blockquote>
+</details>
+
+<details>
 <summary><strong> <a name="variables_items_default"></a>default</strong>
 
 </summary>
@@ -1511,6 +1526,21 @@ Must be one of:
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The value to set for the constant during deploy
+
+| Type | `string` |
+| ---- | -------- |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="constants_items_description"></a>description</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** A description of the constant to explain its purpose on package create or deploy confirmation prompts
 
 | Type | `string` |
 | ---- | -------- |
