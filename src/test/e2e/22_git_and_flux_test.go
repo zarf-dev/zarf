@@ -16,6 +16,9 @@ import (
 )
 
 func TestGitAndFlux(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	t.Log("E2E: Git and flux")
 	e2e.setup(t)
 	defer e2e.teardown(t)
@@ -43,6 +46,9 @@ func TestGitAndFlux(t *testing.T) {
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	// Make sure Gitea comes up cleanly
 	resp, err := http.Get(gitURL + "/explore/repos")
 	assert.NoError(t, err)
@@ -50,6 +56,9 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 }
 
 func testGitServerReadOnly(t *testing.T, gitURL string) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	// Init the state variable
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err)
@@ -71,6 +80,9 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 }
 
 func testGitServerTagAndHash(t *testing.T, gitURL string) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	// Init the state variable
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
@@ -101,6 +113,9 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.arch)
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")

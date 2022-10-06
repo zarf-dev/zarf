@@ -10,6 +10,9 @@ import (
 )
 
 func TestPackageVariables(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	t.Log("E2E: Package variables")
 	e2e.setup(t)
 	defer e2e.teardown(t)

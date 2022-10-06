@@ -12,6 +12,9 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	t.Log("E2E: Data injection")
 	e2e.setup(t)
 	defer e2e.teardown(t)

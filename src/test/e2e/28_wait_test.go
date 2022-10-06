@@ -25,6 +25,9 @@ func zarfCommandWStruct(e2e ZarfE2ETest, path string) (result zarfCommandResult)
 }
 
 func TestWait(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
 	t.Log("E2E: Helm Wait")
 	e2e.setup(t)
 	defer e2e.teardown(t)
@@ -40,11 +43,11 @@ func TestWait(t *testing.T) {
 	var stdErr string
 	var err error
 
-	select{
+	select {
 	case res := <-zarfChannel:
 		stdOut = res.stdOut
 		stdErr = res.stdErr
-		err    = res.err
+		err = res.err
 	case <-time.After(10 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
