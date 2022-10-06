@@ -58,7 +58,7 @@ jobs:
       - name: "Run Tests"
         shell: pwsh
         run: |
-          make test-e2e ARCH=amd64
+          make test-e2e ARCH=amd64 -e RUN_CLUSTER_TESTS=false
 
       - name: "Cleanup"
         shell: pwsh
