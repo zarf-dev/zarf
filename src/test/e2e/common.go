@@ -11,9 +11,10 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
-	zarfBinPath   string
-	arch          string
-	applianceMode bool
+	zarfBinPath     string
+	arch            string
+	applianceMode   bool
+	runClusterTests bool
 }
 
 // getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run

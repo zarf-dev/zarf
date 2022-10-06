@@ -1,6 +1,7 @@
 package test
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -46,6 +47,11 @@ func doAllTheThings(m *testing.M) (int, error) {
 
 	e2e.zarfBinPath = path.Join("build", GetCLIName())
 	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"
+
+	var runClusterTests bool
+	flag.BoolVar(&runClusterTests, "run-cluster-tests", true, "Whether or not to run tests that require a cluster")
+	flag.Parse()
+	e2e.runClusterTests = runClusterTests
 
 	// Validate that the Zarf binary exists. If it doesn't that means the dev hasn't built it, usually by running
 	// `make build-cli`
