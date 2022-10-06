@@ -106,7 +106,7 @@ func TestUseCLI(t *testing.T) {
 
 	// Check that ReadDir returns no such file or directory for the cachePath
 	_, err = os.ReadDir(cachePath)
-	unixErrMsg := cachePath + ": no such file or directory"
+	unixErrMsg := "open " + cachePath + ": no such file or directory"
 	winErrMsg := "open " + cachePath + ": The system cannot find the file specified."
 	if runtime.GOOS == "windows" {
 		assert.EqualError(t, err, winErrMsg, "Did not receive expected error when reading a directory that should not exist")
