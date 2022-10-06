@@ -8,7 +8,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 )
 
 // FillActiveTemplate handles setting the active variables and reloading the base template.
@@ -110,14 +109,12 @@ func InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 
 func promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
 
-	pterm.Println()
-
 	if variable.Description != "" {
-		message.Note(variable.Description)
+		message.Question(variable.Description)
 	}
 
 	prompt := &survey.Input{
-		Message: "Please provide a value for '" + variable.Name + "'",
+		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
 		Default: variable.Default,
 	}
 
