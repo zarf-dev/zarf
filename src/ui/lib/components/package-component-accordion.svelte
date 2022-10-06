@@ -50,14 +50,14 @@
 			<div style="gap: 5px;">
 				<IconButton
 					toggleable
-					iconColor="primary"
-					iconContent="toggle_on"
-					toggledIconColor="inherit"
+					iconColor="inherit"
+					iconContent="toggle_off"
+					toggledIconColor="primary"
 					id={`deploy-component-${idx}`}
-					toggledIconContent="toggle_off"
+					toggledIconContent="toggle_on"
 					iconClass="material-symbols-outlined"
 					disabled={readOnly || component.required}
-					toggled={!$pkgComponentDeployStore.includes(idx)}
+					toggled={$pkgComponentDeployStore.includes(idx)}
 					on:click={() => toggleComponentDeployment($pkgComponentDeployStore, idx)}
 				/>
 				<Typography
