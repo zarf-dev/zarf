@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,7 +106,13 @@ func TestUseCLI(t *testing.T) {
 
 	// Check that ReadDir returns no such file or directory for the cachePath
 	_, err = os.ReadDir(cachePath)
-	require.ErrorContains(t, err, cachePath+": no such file or directory", "Did not receive expected error when reading a directory that should not exist")
+	unixErrMsg := cachePath + ": no such file or directory"
+	winErrMsg := "open " + cachePath + ": The system cannot find the file specified."
+	if runtime.GOOS == "windows" {
+		assert.EqualError(t, err, winErrMsg, "Did not receive expected error when reading a directory that should not exist")
+	} else {
+		assert.EqualError(t, err, unixErrMsg, "Did not receive expected error when reading a directory that should not exist")
+	}
 
 	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
 }
