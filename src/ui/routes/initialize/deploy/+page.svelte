@@ -2,9 +2,10 @@
 	import { goto } from '$app/navigation';
 	import {
 		createComponentStepMap,
+		finalizeStepState,
 		getComponentStepMapComponents,
 		getDeployedComponents,
-		setStepSuccessful
+		getDialogContent
 	} from './deploy-utils';
 	import { onMount } from 'svelte';
 	import { Packages } from '$lib/api';
@@ -20,6 +21,7 @@
 		$pkgStore.zarfPackage.components,
 		$pkgComponentDeployStore
 	);
+	console.log(Array.from(components.keys()).join(','));
 	const deployOptions: ZarfDeployOptions = {
 		applianceMode: false,
 		components: Array.from(components.keys()).join(','),
@@ -35,6 +37,7 @@
 	let dialogOpen = false;
 	let pollDeployed: NodeJS.Timer;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);
+	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
 
 	async function updateComponentSteps(): Promise<void> {
 		return getDeployedComponents(components).then((value: StepProps[]) => {
@@ -52,7 +55,6 @@
 				finishedDeploying = true;
 			}
 		);
-
 		pollDeployed = setInterval(() => {
 			updateComponentSteps();
 		}, POLL_TIME);
@@ -64,19 +66,26 @@
 	$: if (finishedDeploying) {
 		pollDeployed && clearInterval(pollDeployed);
 		componentSteps = [
-			...componentSteps.map((step: StepProps): StepProps => setStepSuccessful(step)),
+			...finalizeStepState(componentSteps, successful),
 			{
 				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
 				variant: successful ? 'success' : 'error',
 				disabled: false
 			}
 		];
-		setTimeout(() => {
-			goto('/packages');
-		}, POLL_TIME);
+		dialogOpen = true;
+		if (successful) {
+			setTimeout(() => {
+				goto('/packages');
+			}, POLL_TIME);
+		} else {
+			setTimeout(() => {
+				goto('/');
+			}, POLL_TIME);
+		}
 	}
 	$: if (successful) {
-		dialogOpen = true;
+		dialogState = getDialogContent(successful);
 	}
 </script>
 
@@ -93,10 +102,10 @@
 	<section class="success-dialog" slot="content">
 		<img class="zarf-logo" src={bigZarf} alt="zarf-logo" />
 		<Typography variant="h6" style="color: var(--mdc-theme-on-primary)">
-			Package Sucessfully Deployed
+			{dialogState.topLine}
 		</Typography>
 		<Typography variant="body2">
-			You will be automatically redirected to the deployment details page.
+			{dialogState.bottomLine}
 		</Typography>
 	</section>
 </Dialog>

@@ -31,7 +31,7 @@
 			<span aria-hidden="true">
 				<Icon variant="component" className="invisible" />
 			</span>
-			The following components wil be deployed into the cluster. Optional components that are not selected
+			The following components will be deployed into the cluster. Optional components that are not selected
 			will not be deployed.
 		</Typography>
 	</Typography>

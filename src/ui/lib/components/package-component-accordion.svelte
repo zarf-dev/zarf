@@ -20,6 +20,7 @@
 			list = [...list, idx];
 		}
 		list.sort();
+		console.log(JSON.stringify(list, null, 2));
 		pkgComponentDeployStore.set(list);
 	};
 	$: requiredText = `(${component.required ? 'Required' : 'Optional'})`;
