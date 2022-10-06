@@ -4,7 +4,7 @@ metadata:
   description: "Test component to demonstrate script timeout feature"
 
 components:
-  - name: prepare
+  - name: prepare-linux
     only:
       localOS: linux
     required: true
@@ -13,7 +13,7 @@ components:
       prepare:
         - "touch test-prepare.txt"
   # This script will pass after 1 second
-  - name: deploy
+  - name: deploy-linux
     only:
       localOS: linux
     required: true
@@ -23,16 +23,14 @@ components:
       after:
         - "touch test-deploy-after.txt"
 
-  - name: prepare
+  - name: prepare-darwin
     only:
       localOS: darwin
     required: true
     scripts:
-      # Note this file will be created in this directory, regardless of where the package create command is called from
       prepare:
         - "touch test-prepare.txt"
-  # This script will pass after 1 second
-  - name: deploy
+  - name: deploy-darwin
     only:
       localOS: darwin
     required: true
@@ -42,16 +40,14 @@ components:
       after:
         - "touch test-deploy-after.txt"
 
-  - name: prepare
+  - name: prepare-windows
     only:
       localOS: windows
     required: true
     scripts:
-      # Note this file will be created in this directory, regardless of where the package create command is called from
       prepare:
         - "New-Item test-prepare.txt"
-  # This script will pass after 1 second
-  - name: deploy
+  - name: deploy-windows
     only:
       localOS: windows
     required: true
