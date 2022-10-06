@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestComponentScripts(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=prepare,deploy")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", fmt.Sprintf("--components=prepare-%s,deploy-%s", runtime.GOOS, runtime.GOOS))
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the deploy artifacts were created
