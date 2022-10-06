@@ -22,6 +22,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          apt install build-essential
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
