@@ -261,6 +261,7 @@ func BuildConfig(path string) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
+	// Record the name of the user creating the package
 	if runtime.GOOS == "windows" {
 		active.Build.User = os.Getenv("USERNAME")
 	} else {
@@ -285,9 +286,6 @@ func BuildConfig(path string) error {
 		// Record the hostname of the package creation terminal
 		active.Build.Terminal = hostname
 	}
-
-	// Record the name of the user creating the package
-	active.Build.User = currentUser
 
 	return utils.WriteYaml(path, active, 0400)
 }
