@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ func TestTempDirectoryDeploy(t *testing.T) {
 
 	// run `zarf package deploy` with a specified tmp location
 	var (
-		otherTmpPath = "/tmp/othertmp"
+		otherTmpPath = filepath.Join(os.TempDir(), "othertmp")
 		firstFile    = "first-choice-file.txt"
 		secondFile   = "second-choice-file.txt"
 	)

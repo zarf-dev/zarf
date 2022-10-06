@@ -16,7 +16,7 @@ ifneq ($(UNAME_S),Linux)
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:a57bb136f21441c66630403412c6f03fc7f9cd49
+AGENT_IMAGE ?= zarfdev/agent:ef08e77c3880ac64c3cc10ecd314be0869f8f70e
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -133,9 +133,13 @@ build-examples:
 
 	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-test-helm-local-chart-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-local-chart -o build -a $(ARCH) --confirm
+
 	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+
+	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 
 ## Run e2e tests. Will automatically build any required dependencies that aren't present.
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true

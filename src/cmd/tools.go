@@ -95,12 +95,26 @@ var k9sCmd = &cobra.Command{
 	},
 }
 
+var clearCacheCmd = &cobra.Command{
+	Use:     "clear-cache",
+	Aliases: []string{"c"},
+	Short:   "Clears the configured git and image cache directory",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := os.RemoveAll(config.CreateOptions.CachePath); err != nil {
+			message.Fatalf("Unable to clear the cache driectory %s: %s", config.CreateOptions.CachePath, err.Error())
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 	toolsCmd.AddCommand(archiverCmd)
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
+
+	toolsCmd.AddCommand(clearCacheCmd)
+	clearCacheCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)

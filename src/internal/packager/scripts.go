@@ -42,7 +42,7 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		case <-timeout:
 			cancel()
 			spinner.Fatalf(nil, "Script \"%s\" timed out", script)
-		// Oherwise try running the script
+		// Otherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
 			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
