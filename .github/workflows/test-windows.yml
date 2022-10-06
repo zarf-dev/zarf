@@ -50,12 +50,15 @@ jobs:
 
       - name: "Make Packages"
         shell: pwsh
-        run: make init-package build-examples ARCH=amd64
+        run: |
+          make init-package build-examples ARCH=amd64
+          ls .\build
+          exit
 
       - name: "Run Tests"
         shell: pwsh
         run: |
-          cd src/test/e2e && go test -v -timeout 30m
+          make test-e2e ARCH=amd64
 
       - name: "Cleanup"
         shell: pwsh
