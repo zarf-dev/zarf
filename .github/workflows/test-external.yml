@@ -19,8 +19,6 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: "Break out early"
-        run: exit 1
       - name: "Dependency: Install Golang"
         uses: actions/setup-go@v3
         with:
