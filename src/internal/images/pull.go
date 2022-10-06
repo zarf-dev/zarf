@@ -90,7 +90,7 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 			return tagToImage
 		case update.Error != nil && strings.HasPrefix(update.Error.Error(), "archive/tar: missed writing "):
 			// Handle potential image cache corruption with a more helpful error. See L#54 in libexec/src/archive/tar/writer.go
-			message.Fatalf(update.Error, "potential image cache corruption: %s of %v bytes", update.Error.Error(), update.Total)
+			message.Fatalf(update.Error, "potential image cache corruption: %s of %v bytes - try clearing cache with \"zarf tools clear-cache\"", update.Error.Error(), update.Total)
 		case update.Error != nil:
 			message.Fatalf(update.Error, "error writing image tarball: %s", update.Error.Error())
 		default:
