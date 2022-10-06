@@ -308,6 +308,8 @@ github.com/anchore/packageurl-go v0.1.1-0.20220428202044-a072fa3cb6d7 h1:kDrYkTS
 github.com/anchore/packageurl-go v0.1.1-0.20220428202044-a072fa3cb6d7/go.mod h1:Blo6OgJNiYF41ufcgHKkbCKF2MDOMlrqhXv/ij6ocR4=
 github.com/anchore/stereoscope v0.0.0-20221003160521-1b1b744a9199 h1:zu3mg03wtd61AHcs01jkCJXDuWt8iakBcXVRFXq+BJo=
 github.com/anchore/stereoscope v0.0.0-20221003160521-1b1b744a9199/go.mod h1:Hz5LBtvtCz3boYC8SsVPMj4btxJb9/AOSmBV8ypjEfY=
+github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33 h1:Y+9aMJMTEMH+kJJFEaxqrF6X1t9CkjpWjOzaCo1q5vM=
+github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33/go.mod h1:WOWtswyDxLkBnizq9LihYa9uw88r1FhBvJo7g//Ljcc=
 github.com/anchore/syft v0.58.0 h1:hh5k6Bkda6Q4AbT/5106FmDKB3ksc83AuELYw2hPo3k=
 github.com/anchore/syft v0.58.0/go.mod h1:EtZQE3/Twdd5HEKyIsm++v/Z3Kcw1uw5Yr2rulT8LTY=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
@@ -2101,6 +2103,8 @@ github.com/subosito/gotenv v1.4.1 h1:jyEFiXpy21Wm81FBN71l9VoMMV8H8jG+qIK3GCpY6Qs
 github.com/subosito/gotenv v1.4.1/go.mod h1:ayKnFf/c6rvx/2iiLrJUk1e6plDbT3edrFNGqEflhK0=
 github.com/sylabs/sif/v2 v2.7.2 h1:eCxtl2ub9fPfrO7g2JPagn6HKDhv+Kl92Jz6+ww2Y1Q=
 github.com/sylabs/sif/v2 v2.7.2/go.mod h1:LQOdYXC9a8i7BleTKRw9lohi0rTbXkJOeS9u0ebvgyM=
+github.com/sylabs/sif/v2 v2.8.1 h1:whr4Vz12RXfLnYyVGHoD/rD/hbF2g9OW7BJHa+WIqW8=
+github.com/sylabs/sif/v2 v2.8.1/go.mod h1:LQOdYXC9a8i7BleTKRw9lohi0rTbXkJOeS9u0ebvgyM=
 github.com/sylabs/squashfs v0.6.1 h1:4hgvHnD9JGlYWwT0bPYNt9zaz23mAV3Js+VEgQoRGYQ=
 github.com/sylabs/squashfs v0.6.1/go.mod h1:ZwpbPCj0ocIvMy2br6KZmix6Gzh6fsGQcCnydMF+Kx8=
 github.com/sylvia7788/contextcheck v1.0.4/go.mod h1:vuPKJMQ7MQ91ZTqfdyreNKwZjyUg6KO+IebVyQDedZQ=
