@@ -45,8 +45,10 @@ components:
       localOS: windows
     required: true
     scripts:
+      # Note prepare scripts run on the local system before the package is built,
+      # so this component will fail to build on Windows
       prepare:
-        - "New-Item test-prepare.txt"
+        - "touch test-prepare.txt"
   - name: deploy-windows
     only:
       localOS: windows
