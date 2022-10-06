@@ -14,4 +14,4 @@ No K8s cluster is necessary, just build with the package with:
 
 And execute with:
 
-`zard package deploy <package_name>`
+`zarf package deploy <package_name>`
