@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
@@ -87,8 +88,11 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
 			progressBar.Success("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			return tagToImage
+		case update.Error != nil && strings.HasPrefix(update.Error.Error(), "archive/tar: missed writing "):
+			// Handle potential image cache corruption with a more helpful error. See L#54 in libexec/src/archive/tar/writer.go
+			message.Fatalf(update.Error, "potential image cache corruption: %s of %v bytes", update.Error.Error(), update.Total)
 		case update.Error != nil:
-			message.Fatal(update.Error, "error writing image tarball")
+			message.Fatalf(update.Error, "error writing image tarball: %s", update.Error.Error())
 		default:
 			title = fmt.Sprintf("Pulling %d images (%s of %s)", len(imageMap),
 				utils.ByteFormat(float64(update.Complete), 2),
