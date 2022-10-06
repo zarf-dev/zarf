@@ -14,6 +14,7 @@ variables:
   - name: "DOG"
     default: "woof"
   - name: "CAT"
+    description: "What sound does a cat make?"
     prompt: true
   - name: "FOX"
     default: "###ZARF_PKG_VAR_CONFIG_MAP###"
