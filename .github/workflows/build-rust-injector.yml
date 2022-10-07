@@ -40,7 +40,7 @@ jobs:
         working-directory: src/injector/stage1
         run: |
           rustup target add aarch64-unknown-linux-musl
-          curl https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz
+          curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
           export PATH="$PWD/aarch64-linux-musl-cross/bin:$PATH"
           cargo build --target aarch64-unknown-linux-musl --release
           aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
