@@ -27,15 +27,6 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: "Build CLI"
         shell: pwsh
         run: make build-cli-windows-amd
@@ -47,8 +38,3 @@ jobs:
       - name: "Run Tests"
         shell: pwsh
         run: RUN_CLUSTER_TESTS=false make test-e2e ARCH=amd64
-
-      - name: "Cleanup"
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force .\build\
