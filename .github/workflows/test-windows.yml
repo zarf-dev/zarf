@@ -24,14 +24,6 @@ jobs:
         with:
           go-version: 1.19.x
 
-      - name: "Dependency: Install Scoop+Make+NodeJS"
-        shell: pwsh
-        run: |
-          Set-ExecutionPolicy RemoteSigned -scope CurrentUser
-          iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
-          Join-Path (Resolve-Path ~).Path "scoop\shims" >> $Env:GITHUB_PATH
-          scoop install make@4.3 nodejs@16.17.1
-
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
@@ -46,19 +38,15 @@ jobs:
 
       - name: "Build CLI"
         shell: pwsh
-        run: make build-cli-windows-amd ARCH=amd64
+        run: make build-cli-windows-amd
 
       - name: "Make Packages"
         shell: pwsh
-        run: |
-          make init-package build-examples ARCH=amd64
-          ls .\build
-          exit
+        run: make init-package build-examples ARCH=amd64
 
       - name: "Run Tests"
         shell: pwsh
-        run: |
-          make test-e2e ARCH=amd64 -e RUN_CLUSTER_TESTS=false
+        run: RUN_CLUSTER_TESTS=false make test-e2e ARCH=amd64
 
       - name: "Cleanup"
         shell: pwsh
