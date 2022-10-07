@@ -47,6 +47,14 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	}
 }
 
+// setup actions for each test that requires a K8s cluster
+func (e2e *ZarfE2ETest) setupWithCluster(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
+	e2e.setup(t)
+}
+
 // teardown actions for each test
 func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	t.Log("Test teardown")

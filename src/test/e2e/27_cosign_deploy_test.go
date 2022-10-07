@@ -10,11 +10,8 @@ import (
 )
 
 func TestCosignDeploy(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Cosign deploy")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	// Test with command from https://zarf.dev/install/

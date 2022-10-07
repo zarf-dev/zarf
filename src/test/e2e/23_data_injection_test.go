@@ -12,11 +12,8 @@ import (
 )
 
 func TestDataInjection(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Data injection")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.arch)

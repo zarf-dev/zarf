@@ -10,11 +10,8 @@ import (
 )
 
 func TestLogging(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Logging")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	tunnel := k8s.NewZarfTunnel()
