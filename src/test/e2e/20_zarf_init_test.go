@@ -10,11 +10,8 @@ import (
 )
 
 func TestZarfInit(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("Skipping cluster tests")
-	}
 	t.Log("E2E: Zarf init (limit to 10 minutes)")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	initComponents := "logging,git-server"

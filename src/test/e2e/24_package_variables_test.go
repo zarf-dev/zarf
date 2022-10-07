@@ -10,11 +10,8 @@ import (
 )
 
 func TestPackageVariables(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Package variables")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-package-variables-%s.tar.zst", e2e.arch)

@@ -25,11 +25,8 @@ func zarfCommandWStruct(e2e ZarfE2ETest, path string) (result zarfCommandResult)
 }
 
 func TestWait(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Helm Wait")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-wait-%s.tar.zst", e2e.arch)

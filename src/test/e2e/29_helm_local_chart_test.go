@@ -8,11 +8,8 @@ import (
 )
 
 func TestLocalHelm(t *testing.T) {
-	if !e2e.runClusterTests {
-		t.Skip("")
-	}
 	t.Log("E2E: Local Helm chart")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.arch)

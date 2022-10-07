@@ -62,15 +62,9 @@ The tests are run sequentially and the naming convention is set intentionally:
 - 00-19 tests run prior to `zarf init` (cluster not initialized)
 
 :::note
-Tests 20+ will require the below as the first line of each test:
+Tests 20+ should call `e2e.setupWithCluster(t)` instead of `e2e.setup(t)`
 
-```go
-    if !e2e.runClusterTests {
-        t.Skip("")
-    }
-```
-
-At this time, there is no way to run tests 20+ in the Windows CI pipeline, so we need to skip them.
+Due to resource constraints in public github runners, K8s tests are only performed on Linux
 :::
 
 - 20 is reserved for `zarf init`
