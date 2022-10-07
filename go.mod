@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20221003160521-1b1b744a9199
+	github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33
 	github.com/anchore/syft v0.58.0
 	github.com/derailed/k9s v0.26.6
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
@@ -313,7 +313,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.1.1 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	github.com/sylabs/sif/v2 v2.7.2 // indirect
+	github.com/sylabs/sif/v2 v2.8.1 // indirect
 	github.com/sylabs/squashfs v0.6.1 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
