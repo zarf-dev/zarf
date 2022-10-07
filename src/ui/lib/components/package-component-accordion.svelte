@@ -51,6 +51,7 @@
 			<div style="gap: 5px;">
 				<IconButton
 					toggleable
+					className="deploy-component-toggle"
 					iconColor="inherit"
 					iconContent="toggle_off"
 					toggledIconColor="primary"

@@ -23,14 +23,14 @@ test.describe('initialize a zarf cluster', () => {
 
 		// Components (check most functionaliy with k3s component)
 		let k3s = page.locator('.accordion:has-text("k3s (Optional)")');
-		await expect(k3s.locator('#deploy-component-0')).toHaveAttribute('aria-pressed', 'false');
+		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'false');
 		await k3s.locator('text=Deploy').click();
-		await expect(k3s.locator('#deploy-component-0')).toHaveAttribute('aria-pressed', 'true');
+		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'true');
 		await expect(
 			page.locator('.component-accordion-header:has-text("*** REQUIRES ROOT *** Install K3s")')
 		).toBeVisible();
 		await expect(k3s.locator('code')).toBeHidden();
-		await k3s.locator(':nth-match(button, 1)').click();
+		await k3s.locator('.accordion-toggle').click();
 		await expect(k3s.locator('code')).toBeVisible();
 		await expect(k3s.locator('code:has-text("name: k3s")')).toBeVisible();
 
@@ -39,13 +39,13 @@ test.describe('initialize a zarf cluster', () => {
 
 		let loggingDeployToggle = page
 			.locator('.accordion:has-text("logging (Optional)")')
-			.locator(':nth-match(button, 2)');
+			.locator('.deploy-component-toggle');
 		await loggingDeployToggle.click();
 		await expect(loggingDeployToggle).toHaveAttribute('aria-pressed', 'true');
 
 		let gitServerDeployToggle = page
 			.locator('.accordion:has-text("git-server (Optional)")')
-			.locator(':nth-match(button, 2)');
+			.locator('.deploy-component-toggle');
 		await gitServerDeployToggle.click();
 		await expect(gitServerDeployToggle).toHaveAttribute('aria-pressed', 'true');
 
