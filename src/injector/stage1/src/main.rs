@@ -11,9 +11,9 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use tar::Archive;
 
-fn chmod777(path: &str) {
-    println!("chmod 777 {}", path);
-    fs::set_permissions(path, PermissionsExt::from_mode(0o777)).unwrap();
+fn chmod755(path: &str) {
+    println!("chmod 755 {}", path);
+    fs::set_permissions(path, PermissionsExt::from_mode(0o755)).unwrap();
 }
 
 // Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
@@ -65,7 +65,7 @@ fn main() {
     // get a buffer of the final merged file contents
     let contents = collect_binary_data(&file_partials).unwrap();
 
-    // @todo: finish testing/use sha256sum
+    // verify sha256sum if it exists
     if args.len() > 1 {
         let sha_sum = &args[1];
 
@@ -81,15 +81,17 @@ fn main() {
         assert_eq!(*sha_sum, result_string);
     }
 
+    // write the merged file to disk and extract it
     let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
     archive
         .unpack("/zarf-stage2")
         .expect("Unable to unarchive the resulting tarball");
 
+    // make all stage2 files executable
     for entry in glob("/zarf-stage2/**/*").unwrap() {
         match entry {
-            Ok(path) => chmod777(path.to_str().unwrap()),
+            Ok(path) => chmod755(path.to_str().unwrap()),
             Err(e) => println!("{:?}", e),
         }
     }
