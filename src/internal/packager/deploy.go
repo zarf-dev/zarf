@@ -269,7 +269,6 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPathBase, 1)
-		message.Debugf("Copying file %s to %s", sourceFile, file.Target)
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
