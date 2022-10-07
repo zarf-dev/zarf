@@ -29,4 +29,4 @@ resources:
 fullnameOverride: "zarf-docker-registry"
 
 podLabels:
-  zarf-agent: "patched"
+  zarf.dev/agent: "ignore"
