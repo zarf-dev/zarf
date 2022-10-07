@@ -47,7 +47,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: '~/Library/Caches/ms-playwright/'
-          key: ${{ runner.os }}-browsers            
+          key: ${{ runner.os }}-browsers
 
       - name: "Build CLI"
         run: make build-cli-linux-amd ARCH=amd64

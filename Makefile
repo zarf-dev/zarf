@@ -28,81 +28,70 @@ help: ## Show a list of all targets
 	| sed -n 's/^\(.*\): \(.*\)##\(.*\)/\1:\3/p' \
 	| column -t -s ":"
 
-remove-packages: ## remove all zarf packages recursively
-	find . -type f -name 'zarf-package-*' -delete
-
-vm-init: ## usage -> make vm-init OS=ubuntu
+vm-init: ## Make a vagrant VM (usage -> make vm-init OS=ubuntu)
 	vagrant destroy -f
 	vagrant up --no-color ${OS}
 	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
 
-vm-destroy: ## Destroy the VM
+vm-destroy: ## Destroy the vagrant VM
 	vagrant destroy -f
 
-clean: ## Clean the build dir
+clean: ## Clean the build directory
 	rm -rf build
 
-destroy:
+destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
+
+remove-packages: ## Remove all zarf packages recursively
+	find . -type f -name 'zarf-package-*' -delete
 
 ensure-ui-build-dir:
 	mkdir -p build/ui
 	touch build/ui/index.html
 
-build-ui:
-	npm ci
-	npm run build
+build-ui: ## Build the Zarf UI
+	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+		npm ci;\
+		npm run build;\
+	fi
 
-build-cli-linux-amd: build-injector-registry-amd build-ui
+build-cli-linux-amd: build-injector-registry-amd build-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm build-ui
+build-cli-linux-arm: build-injector-registry-arm build-ui ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd build-ui
+build-cli-mac-intel: build-injector-registry-amd build-ui ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm build-ui
+build-cli-mac-apple: build-injector-registry-arm build-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
-build-cli-linux: build-cli-linux-amd build-cli-linux-arm
+build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the Zarf CLI
 
-build-injector-registry-amd:
+build-injector-registry-amd: ## Build the Zarf Injector Stage 2 for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
 
-build-injector-registry-arm:
+build-injector-registry-arm: ## Build the Zarf Injector Stage 2 for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
-docs-and-schema: ensure-ui-build-dir
+docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
 	go run main.go internal generate-cli-docs
 	.hooks/create-zarf-schema.sh
 
-dev: ensure-ui-build-dir
+dev: ensure-ui-build-dir ## Start a Dev Server for the UI
 	go mod download
 	npm ci
 	npm run dev
-
-test-built-ui:
-	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
-
-test-docs-and-schema:
-	$(MAKE) docs-and-schema
-	.hooks/check-zarf-docs-and-schema.sh
-
-test-cves: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype --fail-on low
-
-cve-report: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to dynamically support Kind or k3d:
 #        when using kind: kind load docker-image $(tag)
 #        when using k3d: k3d image import $(tag)
-dev-agent-image:
+dev-agent-image: ## Create a new agent image and inject it into a currently inited cluster
 	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
 	$(eval arch := $(shell uname -m))
 	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
@@ -110,13 +99,13 @@ dev-agent-image:
 	k3d image import $(tag) && \
 	kubectl -n zarf set image deployment/agent-hook server=$(tag)
 
-init-package: ## Create the zarf init package, macos "brew install coreutils" first
+init-package: ## Create the zarf init package (must `brew install coreutils` on macOS first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
-ci-release: init-package ## Create the init package
+ci-release: init-package
 
-build-examples:
+build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/game -o build -a $(ARCH) --confirm
@@ -144,13 +133,27 @@ build-examples:
 ## Run e2e tests. Will automatically build any required dependencies that aren't present.
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: build-examples
+test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
 	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
-test-external:
+.PHONY: test-external
+test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
+
+test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
+	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
+
+test-docs-and-schema:
+	$(MAKE) docs-and-schema
+	.hooks/check-zarf-docs-and-schema.sh
+
+test-cves: ensure-ui-build-dir
+	go run main.go tools sbom packages . -o json | grype --fail-on low
+
+cve-report: ensure-ui-build-dir
+	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
