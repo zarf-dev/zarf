@@ -159,39 +159,77 @@ In the more complex use case, your package consists of updates for many apps / s
 
 ## Quick Start
 
-:::info
+1.  Select your systems OS below
+2.  Ensure you have the pre-requisite applications running
+3.  Enter the commands into your terminal
 
-This quick start requires you to already have [home brew](https://brew.sh/) package manager installed on your machine.
+<Tabs>
+<TabItem value="macOS" label="macOS" default>
+  
+ :::info
+
+This quick start requires you to already have 
+- [home brew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
 For more install options please visit our [Getting Started page](3-getting-started.md)
 
 :::
 
-To download the Zarf CLI Binary,
-
-1.  Select your systems OS below
-2.  copy and past the quick start command into your computers terminal.
-
-<Tabs>
-<TabItem value="macOS" label="macOS" default>
-
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarff
+$ brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+$ brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+$ zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+$ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Linux" label="Linux">
+  
+ :::info
+
+This quick start requires you to already have 
+- [home brew](https://brew.sh/) package manager installed on your machine.
+  
+:::
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarff
+$ brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+$ brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+$ zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+$ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Windows" label="Windows">
+  
+  :::info
+
+This quick start requires you to already have 
+- [home brew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+
+:::
 
 ```bash
-Coming Soon!
+Coming with Next Release!
 ```
 
 </TabItem>
