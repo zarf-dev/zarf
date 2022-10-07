@@ -27,6 +27,22 @@ jobs:
       - name: "Checkout Repo"
         uses: actions/checkout@v3
 
+      - name: Use GNU tar for Windows
+        shell: cmd
+        run: |
+          echo "Adding GNU tar to PATH"
+          echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
+
+      # https://github.com/actions/cache/blob/main/workarounds.md#improving-cache-restore-performance-on-windows-using-cross-os-caching
+      - name: "Setup caching"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: "Build CLI"
         shell: pwsh
         run: make build-cli-windows-amd
