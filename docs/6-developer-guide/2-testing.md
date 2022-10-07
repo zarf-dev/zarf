@@ -46,15 +46,33 @@ There are a few requirements for all of our tests, that will need to be followed
 2. Each test should begin with the entries below for standardization and test setup/teardown:
 
 ```go
+func TestFooBarBaz(t *testing.T) {
     t.Log("E2E: Enter useful description here")
-	e2e.setup(t)
-	defer e2e.teardown(t)
+    e2e.setup(t)
+    defer e2e.teardown(t)
+
+    ...
+}
 ```
 
 ## Test Naming Conventions
 
 The tests are run sequentially and the naming convention is set intentionally:
+
 - 00-19 tests run prior to `zarf init` (cluster not initialized)
+
+:::note
+Tests 20+ will require the below as the first line of each test:
+
+```go
+    if !e2e.runClusterTests {
+        t.Skip("")
+    }
+```
+
+At this time, there is no way to run tests 20+ in the Windows CI pipeline, so we need to skip them.
+:::
+
 - 20 is reserved for `zarf init`
 - 21 is reserved for logging tests so they can be removed first (they take the most resources in the cluster)
 - 22 is reserved for tests required the git-server, which is removed at the end of the test
