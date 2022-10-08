@@ -24,6 +24,7 @@ In the zarf.yaml you would add the name of the variable in the `variables` secti
 ```yaml
 variables:
   name: DATABASE_USERNAME
+  description: "The username for the database"
 ```
 
 :::note

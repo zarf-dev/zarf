@@ -339,6 +339,11 @@ export interface ZarfComponentScripts {
 
 export interface ZarfPackageConstant {
     /**
+     * A description of the constant to explain its purpose on package create or deploy
+     * confirmation prompts
+     */
+    description?: string;
+    /**
      * The name to be used for the constant
      */
     name: string;
@@ -395,6 +400,10 @@ export interface ZarfPackageVariable {
      * The default value to use for the variable
      */
     default?: string;
+    /**
+     * A description of the variable to be used when prompting the user a value
+     */
+    description?: string;
     /**
      * The name to be used for the variable
      */
@@ -856,6 +865,7 @@ const typeMap: any = {
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
     "ZarfPackageConstant": o([
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "value", js: "value", typ: "" },
     ], false),
@@ -870,6 +880,7 @@ const typeMap: any = {
     ], false),
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "noPrompt", js: "noPrompt", typ: u(undefined, true) },
     ], false),

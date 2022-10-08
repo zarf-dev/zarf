@@ -27,3 +27,6 @@ resources:
     memory: "2Gi"
 
 fullnameOverride: "zarf-docker-registry"
+
+podLabels:
+  zarf.dev/agent: "ignore"

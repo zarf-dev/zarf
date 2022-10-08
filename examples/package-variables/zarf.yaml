@@ -21,6 +21,7 @@ variables:
   # This case will prompt the user interactively but provides a default as a suggestion or form use with `--confirm`
   - name: "DEFAULT"
     default: "a safe default"
+    description: "This variable demonstrates a default that can be taken from a prompt or --confirm."
 
   # This case will prompt the user interactively with a default that is set from a package variable
   - name: "VARIABLIZED_DEFAULT"
