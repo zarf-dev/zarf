@@ -54,22 +54,25 @@ ensure-ui-build-dir:
 	mkdir -p build/ui
 	touch build/ui/index.html
 
-build-ui: ## Build the Zarf UI
+check-ui: ## Build the Zarf UI if needed
 	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		npm ci;\
-		npm run build;\
+		$(MAKE) build-ui;\
 	fi
+	
+build-ui: ## Build the Zarf UI
+	npm ci
+	npm run build
 
-build-cli-linux-amd: build-injector-registry-amd build-ui ## Build the Zarf CLI for Linux on AMD64
+build-cli-linux-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm build-ui ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: build-injector-registry-arm check-ui ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd build-ui ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: build-injector-registry-amd check-ui ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm build-ui ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: build-injector-registry-arm check-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-windows-amd: build-injector-registry-amd build-ui
