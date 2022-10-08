@@ -4,60 +4,21 @@ metadata:
   description: "Test component to demonstrate script timeout feature"
 
 components:
-  - name: prepare-linux
-    only:
-      localOS: linux
+  - name: prepare
     required: true
     scripts:
       # Note this file will be created in this directory, regardless of where the package create command is called from
       prepare:
+        # on Windows, touch is replaced with New-Item
         - "touch test-prepare.txt"
   # This script will pass after 1 second
-  - name: deploy-linux
-    only:
-      localOS: linux
+  - name: deploy
     required: true
     scripts:
       before:
         - "touch test-deploy-before.txt"
       after:
         - "touch test-deploy-after.txt"
-
-  - name: prepare-darwin
-    only:
-      localOS: darwin
-    required: true
-    scripts:
-      prepare:
-        - "touch test-prepare.txt"
-  - name: deploy-darwin
-    only:
-      localOS: darwin
-    required: true
-    scripts:
-      before:
-        - "touch test-deploy-before.txt"
-      after:
-        - "touch test-deploy-after.txt"
-
-  - name: prepare-windows
-    only:
-      localOS: windows
-    required: true
-    scripts:
-      # Note prepare scripts run on the local system before the package is built,
-      # so this component will fail to build on Windows
-      prepare:
-        - "touch test-prepare.txt"
-  - name: deploy-windows
-    only:
-      localOS: windows
-    required: true
-    scripts:
-      before:
-        - "New-Item test-deploy-before.txt"
-      after:
-        - "New-Item test-deploy-after.txt"
 
   # This script will fail after 1 seconds
   - name: timeout
