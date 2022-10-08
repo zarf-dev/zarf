@@ -141,7 +141,7 @@ func Deploy() {
 func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
 	// When pushing images, the default behavior is to add a shasum of the url to the image name
 	deployedComponents := []types.DeployedComponent{}
-
+	config.SetDeployingComponents(deployedComponents)
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name}
@@ -185,8 +185,9 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		// Deploy the component
 		deployedComponent.InstalledCharts = installedCharts
 		deployedComponents = append(deployedComponents, deployedComponent)
+		config.SetDeployingComponents(deployedComponents)
 	}
-
+	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
