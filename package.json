@@ -54,7 +54,7 @@
 		"typescript": "4.8.4"
 	},
 	"dependencies": {
-		"material-symbols": "0.2.12",
+		"material-symbols": "0.2.13",
 		"typescript": "4.8.4",
 		"vite": "3.1.6",
 		"yaml": "2.1.3"
