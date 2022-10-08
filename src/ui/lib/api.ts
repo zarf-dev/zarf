@@ -1,5 +1,10 @@
 import type {
-	APIZarfPackage, ClusterSummary, DeployedPackage, ZarfDeployOptions, ZarfState
+	APIZarfPackage,
+	ClusterSummary,
+	DeployedComponent,
+	DeployedPackage,
+	ZarfDeployOptions,
+	ZarfState
 } from './api-types';
 import { HTTP } from './http';
 
@@ -10,7 +15,7 @@ const Auth = {
 		if (!token) {
 			return false;
 		}
-		
+
 		http.updateToken(token);
 		return await http.head('/');
 	}
@@ -34,4 +39,8 @@ const Packages = {
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 
-export { Auth, Cluster, Packages };
+const DeployingComponents = {
+	list: () => http.get<DeployedComponent[]>('/components/deployed')
+};
+
+export { Auth, Cluster, Packages, DeployingComponents };
