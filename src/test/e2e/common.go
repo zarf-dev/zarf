@@ -30,7 +30,7 @@ func GetCLIName() string {
 		}
 	} else if runtime.GOOS == "windows" {
 		if runtime.GOARCH == "amd64" {
-			binaryName = "zarf-windows-amd64.exe"
+			binaryName = "zarf.exe"
 		}
 	}
 	return binaryName

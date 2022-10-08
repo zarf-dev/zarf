@@ -3,7 +3,7 @@ ZARF_BIN := ./build/zarf
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
 ifeq ($(OS),Windows_NT)
-	ZARF_BIN := $(addsuffix -windows-amd64.exe,$(ZARF_BIN))
+	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
@@ -73,7 +73,7 @@ build-cli-mac-apple: build-injector-registry-arm build-ui ## Build the Zarf CLI 
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
 build-cli-windows-amd: build-injector-registry-amd build-ui
-	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-windows-amd64.exe main.go ## Build the Zarf CLI for Windows on AMD64
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe main.go ## Build the Zarf CLI for Windows on AMD64
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
