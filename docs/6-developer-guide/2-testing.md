@@ -46,15 +46,27 @@ There are a few requirements for all of our tests, that will need to be followed
 2. Each test should begin with the entries below for standardization and test setup/teardown:
 
 ```go
+func TestFooBarBaz(t *testing.T) {
     t.Log("E2E: Enter useful description here")
-	e2e.setup(t)
-	defer e2e.teardown(t)
+    e2e.setup(t)
+    defer e2e.teardown(t)
+
+    ...
+}
 ```
 
 ## Test Naming Conventions
 
 The tests are run sequentially and the naming convention is set intentionally:
+
 - 00-19 tests run prior to `zarf init` (cluster not initialized)
+
+:::note
+Tests 20+ should call `e2e.setupWithCluster(t)` instead of `e2e.setup(t)`
+
+Due to resource constraints in public github runners, K8s tests are only performed on Linux
+:::
+
 - 20 is reserved for `zarf init`
 - 21 is reserved for logging tests so they can be removed first (they take the most resources in the cluster)
 - 22 is reserved for tests required the git-server, which is removed at the end of the test

@@ -1,18 +1,22 @@
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
-UNAME_S := $(shell uname -s)
-UNAME_P := $(shell uname -p)
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-ifneq ($(UNAME_S),Linux)
-	ifeq ($(UNAME_S),Darwin)
-		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),i386)
-		ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),arm)
-		ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+ifeq ($(OS),Windows_NT)
+	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
+else
+	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
+	ifneq ($(UNAME_S),Linux)
+		ifeq ($(UNAME_S),Darwin)
+			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),i386)
+			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),arm)
+			ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+		endif
 	endif
 endif
 
@@ -50,27 +54,37 @@ ensure-ui-build-dir:
 	mkdir -p build/ui
 	touch build/ui/index.html
 
-build-ui: ## Build the Zarf UI
+check-ui: ## Build the Zarf UI if needed
 	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		npm ci;\
-		npm run build;\
+		$(MAKE) build-ui;\
+		./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
 	fi
+	
+build-ui: ## Build the Zarf UI
+	npm ci
+	npm run build
 
-build-cli-linux-amd: build-injector-registry-amd build-ui ## Build the Zarf CLI for Linux on AMD64
+build-cli-linux-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm build-ui ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: build-injector-registry-arm check-ui ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd build-ui ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: build-injector-registry-amd check-ui ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm build-ui ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: build-injector-registry-arm check-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
+
+build-cli-windows-amd: build-injector-registry-amd build-ui
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe main.go ## Build the Zarf CLI for Windows on AMD64
+
+build-cli-windows-arm: build-injector-registry-amd build-ui
+	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe main.go ## Build the Zarf CLI for Windows on ARM
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the Zarf CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 build-injector-registry-amd: ## Build the Zarf Injector Stage 2 for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go

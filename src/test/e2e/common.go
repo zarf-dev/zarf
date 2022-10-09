@@ -11,9 +11,10 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
 type ZarfE2ETest struct {
-	zarfBinPath   string
-	arch          string
-	applianceMode bool
+	zarfBinPath     string
+	arch            string
+	applianceMode   bool
+	runClusterTests bool
 }
 
 // getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
@@ -27,6 +28,10 @@ func GetCLIName() string {
 		} else {
 			binaryName = "zarf-mac-intel"
 		}
+	} else if runtime.GOOS == "windows" {
+		if runtime.GOARCH == "amd64" {
+			binaryName = "zarf.exe"
+		}
 	}
 	return binaryName
 }
@@ -35,7 +40,19 @@ func GetCLIName() string {
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
-	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	if runtime.GOOS != "windows" {
+		_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+	} else {
+		t.Log("Skipping kubectl describe nodes on Windows")
+	}
+}
+
+// setup actions for each test that requires a K8s cluster
+func (e2e *ZarfE2ETest) setupWithCluster(t *testing.T) {
+	if !e2e.runClusterTests {
+		t.Skip("")
+	}
+	e2e.setup(t)
 }
 
 // teardown actions for each test

@@ -12,7 +12,7 @@ components:
     cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:amd64-v0.20.0-31-g4e902fc
+      - source: sget://defenseunicorns/zarf-injector:amd64-v0.21.3-8f0eb2
         target: "###ZARF_TEMP###/zarf-injector"
         executable: true
       # Go Registry Binary
@@ -28,7 +28,7 @@ components:
     cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:arm64-v0.20.0-31-g4e902fc
+      - source: sget://defenseunicorns/zarf-injector:arm64-v0.21.3-8f0eb2
         target: "###ZARF_TEMP###/zarf-injector"
         executable: true
       # Go Registry Binary

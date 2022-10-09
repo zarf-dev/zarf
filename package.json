@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "API_DEV_PORT=5173 API_PORT=3333 API_TOKEN=insecure concurrently --names \"ui,api\" -c \"gray.bold,yellow\" \"vite dev\" \"nodemon -e go -x 'go run main.go dev ui -l=trace || exit 1'\"",
-		"build": "vite build && ./.hooks/print-ui-diff.sh > build/ui/git-info.txt ",
+		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
