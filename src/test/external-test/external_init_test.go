@@ -80,6 +80,8 @@ func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCm
 		case <-timeout:
 			t.Error(errorStr)
 
+			return false
+
 			// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
