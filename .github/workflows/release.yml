@@ -30,7 +30,9 @@ jobs:
           fetch-depth: 0
 
       - name: "Build CLI"
-        run: make build-cli-linux
+        run: |
+          make build-cli-linux-amd
+          make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to Docker Hub"
         uses: docker/login-action@v2

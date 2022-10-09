@@ -8,12 +8,12 @@ universal_binaries:
 
 # Build the different combination of goos/arch binaries
 builds:
-  -
-    env:
+  - env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
+      - windows
     ldflags:
       - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
     goarch:
@@ -22,17 +22,17 @@ builds:
 
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
-  -
-    format: binary
+  - format: binary
     name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
     replacements:
       darwin: Darwin
       linux: Linux
+      windows: Windows
 
 # generate a sha256 checksum of all release artifacts
 # NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
   extra_files:
     - glob: ./build/zarf-init-*
   algorithm: sha256
@@ -72,8 +72,7 @@ brews:
 
 # Upload artifact backups to s3
 blobs:
-  -
-    provider: s3
+  - provider: s3
     region: us-gov-west-1
     bucket: zarf-public
     folder: "release/{{.Version}}"
