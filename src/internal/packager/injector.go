@@ -3,6 +3,7 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -114,7 +115,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	var configMaps []string
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
-	tarPath := tempPath.base + "/payload.tgz"
+	tarPath := filepath.Join(tempPath.base, "payload.tgz")
 	tarFileList := []string{
 		tempPath.injectZarfBinary,
 		tempPath.seedImage,

@@ -516,6 +516,10 @@
         "value": {
           "type": "string",
           "description": "The value to set for the constant during deploy"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts"
         }
       },
       "additionalProperties": false,
@@ -530,6 +534,10 @@
           "pattern": "^[A-Z_]+$",
           "type": "string",
           "description": "The name to be used for the variable"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the variable to be used when prompting the user a value"
         },
         "default": {
           "type": "string",

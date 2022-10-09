@@ -1,30 +1,49 @@
 <script lang="ts">
+	import AccordionGroup from '../../../lib/components/accordion-group.svelte';
+
 	import Icon from '$lib/components/icon.svelte';
-	import PackageCard from '$lib/components/package-card.svelte';
-	import PackageComponent from '$lib/components/package-component.svelte';
+	import PackageDetails from '$lib/components/package-details-card.svelte';
+	import PackageComponent from '$lib/components/package-component-accordion.svelte';
 	import { pkgStore } from '$lib/store';
-	import { Button } from '@ui';
+	import { Button, Typography } from '@ui';
 </script>
 
 <svelte:head>
 	<title>Configure</title>
 </svelte:head>
+<section class="page-header">
+	<Typography variant="h4">Configure Package Deployment</Typography>
+</section>
 
-<h1>Configure Package Deployment</h1>
-<h2><Icon variant="package" /> Package Details</h2>
+<section class="page-section">
+	<Typography variant="h5">
+		<Icon variant="package" />
+		Package Details
+	</Typography>
+	<PackageDetails pkg={$pkgStore.zarfPackage} />
+</section>
 
-<PackageCard pkg={$pkgStore.zarfPackage} />
+<section class="page-section">
+	<Typography variant="h5">
+		<Icon variant="component" />
+		Package Components
+		<Typography variant="caption" element="p">
+			<span aria-hidden="true">
+				<Icon variant="component" className="invisible" />
+			</span>
+			The following components will be deployed into the cluster. Optional components that are not selected
+			will not be deployed.
+		</Typography>
+	</Typography>
 
-<h2><Icon variant="component" /> Package Components</h2>
+	<AccordionGroup>
+		{#each $pkgStore.zarfPackage.components as component, idx}
+			<PackageComponent {idx} {component} readOnly={false} />
+		{/each}
+	</AccordionGroup>
+</section>
 
-<div style="width: 100%;gap: 2px; display: flex; flex-direction: column;">
-	{#each $pkgStore.zarfPackage.components as component, idx}
-		<PackageComponent {idx} {component} readOnly={false} />
-	{/each}
-</div>
-
-<div class="actionButtonsContainer">
-	<Button href="/" variant="outlined">cancel deployment</Button>
-
-	<Button href="/initialize/review" variant="raised">review deployment</Button>
-</div>
+<section class="actionButtonsContainer" aria-label="action buttons">
+	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>
+	<Button href="/initialize/review" variant="raised" color="secondary">review deployment</Button>
+</section>

@@ -51,7 +51,7 @@ func Create(baseDir string) {
 
 	seedImage := config.GetSeedImage()
 
-	configFile := tempPath.base + "/zarf.yaml"
+	configFile := tempPath.zarfYaml
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
@@ -93,7 +93,7 @@ func Create(baseDir string) {
 	packageName := filepath.Join(config.CreateOptions.OutputDirectory, config.GetPackageName())
 
 	_ = os.RemoveAll(packageName)
-	err := archiver.Archive([]string{tempPath.base + "/"}, packageName)
+	err := archiver.Archive([]string{tempPath.base + string(os.PathSeparator)}, packageName)
 	if err != nil {
 		message.Fatal(err, "Unable to create the package archive")
 	}
@@ -160,7 +160,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		_ = utils.CreateDirectory(componentPath.files, 0700)
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
-			destinationFile := componentPath.files + "/" + strconv.Itoa(index)
+			destinationFile := filepath.Join(componentPath.files, strconv.Itoa(index))
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
@@ -189,7 +189,7 @@ func addComponent(tempPath tempPaths, component types.ZarfComponent) {
 		defer spinner.Success()
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			destinationFile := componentPath.dataInjections + "/" + filepath.Base(data.Target.Path)
+			destinationFile := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
 			if err := utils.CreatePathAndCopy(data.Source, destinationFile); err != nil {
 				spinner.Fatalf(err, "Unable to copy data injection %s", data.Source)
 			}

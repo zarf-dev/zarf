@@ -80,7 +80,9 @@ var (
 
 	// Private vars
 	active types.ZarfPackage
-	state  types.ZarfState
+	// Dirty Solution to getting the real time deployedComponents components.
+	deployedComponents []types.DeployedComponent
+	state              types.ZarfState
 
 	SGetPublicKey string
 	UIAssets      embed.FS
@@ -191,6 +193,18 @@ func GetComponents() []types.ZarfComponent {
 	return active.Components
 }
 
+func GetDeployingComponents() []types.DeployedComponent {
+	return deployedComponents
+}
+
+func SetDeployingComponents(components []types.DeployedComponent) {
+	deployedComponents = components
+}
+
+func ClearDeployingComponents() {
+	deployedComponents = []types.DeployedComponent{}
+}
+
 func SetComponents(components []types.ZarfComponent) {
 	active.Components = components
 }
@@ -266,7 +280,12 @@ func BuildConfig(path string) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
-	currentUser := os.Getenv("USER")
+	// Record the name of the user creating the package
+	if runtime.GOOS == "windows" {
+		active.Build.User = os.Getenv("USERNAME")
+	} else {
+		active.Build.User = os.Getenv("USER")
+	}
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
@@ -287,9 +306,6 @@ func BuildConfig(path string) error {
 		active.Build.Terminal = hostname
 	}
 
-	// Record the name of the user creating the package
-	active.Build.User = currentUser
-
 	return utils.WriteYaml(path, active, 0400)
 }
 
@@ -297,7 +313,10 @@ func BuildConfig(path string) error {
 func GetAbsCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(CreateOptions.CachePath, "~") {
+		return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	}
+	return CreateOptions.CachePath
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {

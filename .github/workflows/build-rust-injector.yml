@@ -16,12 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.7.0
+        uses: sigstore/cosign-installer@v2.8.0
 
       - name: "Dependency: Setup rust toolchain"
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          sudo apt install build-essential -y
 
       - name: "Checkout Repo"
         uses: actions/checkout@v3
@@ -31,6 +32,7 @@ jobs:
       - name: "Build Rust Binary for x86_64"
         working-directory: src/injector/stage1
         run: |
+          rustup target add x86_64-unknown-linux-musl
           cargo build --target x86_64-unknown-linux-musl --release
           strip target/x86_64-unknown-linux-musl/release/zarf-injector
 
@@ -38,7 +40,7 @@ jobs:
         working-directory: src/injector/stage1
         run: |
           rustup target add aarch64-unknown-linux-musl
-          curl https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz
+          curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
           export PATH="$PWD/aarch64-linux-musl-cross/bin:$PATH"
           cargo build --target aarch64-unknown-linux-musl --release
           aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector

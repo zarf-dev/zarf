@@ -17,7 +17,7 @@ import (
 
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-%s.tar.zst", e2e.arch)
