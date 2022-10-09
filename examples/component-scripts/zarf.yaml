@@ -11,9 +11,8 @@ components:
       prepare:
         # on Windows, touch is replaced with New-Item
         - "touch test-prepare.txt"
-  # This script will pass after 1 second
+
   - name: deploy
-    required: true
     scripts:
       before:
         - "touch test-deploy-before.txt"
