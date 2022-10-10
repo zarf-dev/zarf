@@ -354,7 +354,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 	}
 
 	// Create container definition for the injector pod
-	newHost, err := utils.SwapHostWithoutSha(seedImage, "127.0.0.1:5001")
+	newHost, err := utils.SwapHostWithoutChecksum(seedImage, "127.0.0.1:5001")
 	if err != nil {
 		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
 		return nil, err

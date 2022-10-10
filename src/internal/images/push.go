@@ -50,7 +50,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addSha
 		if addShasumToImg {
 			offlineName, err = utils.SwapHost(src, registryUrl)
 		} else {
-			offlineName, err = utils.SwapHostWithoutSha(src, registryUrl)
+			offlineName, err = utils.SwapHostWithoutChecksum(src, registryUrl)
 		}
 		if err != nil {
 			return err

@@ -1,62 +1,71 @@
 package utils
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"regexp"
-	"strings"
+	"hash/crc32"
+
+	"github.com/distribution/distribution/v3/reference"
 )
 
-// For further explanation see https://regex101.com/library/4Rl8mW and https://regex101.com/r/4Rl8mW/1
-var hostParser = regexp.MustCompile(`(?im)([a-z0-9\-\_.]+)?(\/[a-z0-9\-.]+)?(:[\w\.\-\_]+)?$`)
+type Image struct {
+	Host      string
+	Name      string
+	Path      string
+	Tag       string
+	Digest    string
+	Reference string
+}
 
-// SwapHost Perform base url replacement and adds a sha1sum of the original url to the end of the src
+// SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src
 func SwapHost(src string, targetHost string) (string, error) {
 	targetImage, err := getTargetImageFromURL(src)
 	return targetHost + "/" + targetImage, err
 }
 
-func getTargetImageFromURL(src string) (string, error) {
-	submatches := hostParser.FindStringSubmatch(src)
-	if len(submatches) == 0 {
-		return "", fmt.Errorf("unable to get the targetImage from the provided source: %s", src)
-	}
-
-	// Combine (most) of the matches we obtained
-	lastElementIndex := len(submatches) - 1
-	targetImage := ""
-	for _, match := range submatches[1:lastElementIndex] {
-		targetImage += match
-	}
-
-	// Get a sha1sum of the src without a potential image tag
-	tagMatcher := regexp.MustCompile(`(?im)(:[\w\.\-\_]+)?$`)
-	srcWithoutTag := tagMatcher.ReplaceAllString(src, "")
-	hasher := sha1.New()
-	_, err := io.WriteString(hasher, srcWithoutTag)
+// SwapHostWithoutChecksum Perform base url replacement but avoids adding a checksum of the original url.
+func SwapHostWithoutChecksum(src string, targetHost string) (string, error) {
+	image, err := parseImageURL(src)
 	if err != nil {
-		return "", fmt.Errorf("unable to get targetImage from the provided source: %w", err)
+		return "", err
 	}
-	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
-
-	// Ensure we add the sha1sum before we apply an image tag
-	if strings.HasPrefix(submatches[lastElementIndex], ":") {
-		targetImage += "-" + sha1Hash + submatches[lastElementIndex]
-	} else {
-		targetImage += submatches[lastElementIndex] + "-" + sha1Hash
-	}
-
-	return targetImage, nil
+	return fmt.Sprintf("%s/%s", targetHost, image.Path), nil
 }
 
-// SwapHostWithoutSha Perform base url replacement but avoids adding a sha1sum of the original url.
-func SwapHostWithoutSha(src string, targetHost string) (string, error) {
-	submatches := hostParser.FindStringSubmatch(src)
-	if len(submatches) == 0 {
-		return "", fmt.Errorf("unable to get the targetImage from the provided source: %s", src)
+func getTargetImageFromURL(src string) (string, error) {
+	image, err := parseImageURL(src)
+	if err != nil {
+		return "", err
 	}
 
-	return targetHost + "/" + submatches[0], nil
+	// Generate a crc32 hash of the image host + name
+	table := crc32.MakeTable(crc32.IEEE)
+	checksum := crc32.Checksum([]byte(image.Name), table)
+
+	return fmt.Sprintf("%s-%d", image.Path, checksum), nil
+}
+
+func parseImageURL(src string) (out Image, err error) {
+	ref, err := reference.Parse(src)
+	if err != nil {
+		return out, err
+	}
+
+	if named, ok := ref.(reference.Named); ok {
+		out.Name = named.Name()
+		out.Path = reference.Path(named)
+		out.Host = reference.Domain(named)
+		out.Reference = ref.String()
+	} else {
+		return out, fmt.Errorf("unable to parse image name from %s", src)
+	}
+
+	if tagged, ok := ref.(reference.Tagged); ok {
+		out.Tag = tagged.Tag()
+	}
+
+	if digested, ok := ref.(reference.Digested); ok {
+		out.Digest = digested.Digest().String()
+	}
+
+	return out, nil
 }
