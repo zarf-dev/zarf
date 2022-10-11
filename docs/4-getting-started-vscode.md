@@ -4,7 +4,7 @@ Zarf uses an internally defined [schema](https://github.com/defenseunicorns/zarf
 
 ## Adding Schema validation
 
-1. Open VS Code's `settings.json` file with `CTL/CMD + SHIFT + P` and search for `Preferences: Open User Settings (JSON)`.
+1. Open VS Code's `settings.json` file with `CTRL/CMD + SHIFT + P` and search for `Preferences: Open User Settings (JSON)`.
 2. Add the below to your config, or modify the existing `yaml.schemas` object to include the Zarf schema.
 
 ```json
