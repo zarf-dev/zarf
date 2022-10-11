@@ -194,7 +194,7 @@ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
-<TabItem value="macOS" label="macOS" default>
+<TabItem value="macOS" label="macOS">
  
 <Admonition type="info">
 
