@@ -8,31 +8,18 @@ import (
 )
 
 type Image struct {
-	Host      string
-	Name      string
-	Path      string
-	Tag       string
-	Digest    string
-	Reference string
+	Host        string
+	Name        string
+	Path        string
+	Tag         string
+	Digest      string
+	Reference   string
+	TagOrDigest string
 }
 
 // SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src
 func SwapHost(src string, targetHost string) (string, error) {
-	targetImage, err := getTargetImageFromURL(src)
-	return targetHost + "/" + targetImage, err
-}
-
-// SwapHostWithoutChecksum Perform base url replacement but avoids adding a checksum of the original url.
-func SwapHostWithoutChecksum(src string, targetHost string) (string, error) {
-	image, err := parseImageURL(src)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s/%s", targetHost, image.Path), nil
-}
-
-func getTargetImageFromURL(src string) (string, error) {
-	image, err := parseImageURL(src)
+	image, err := ParseImageURL(src)
 	if err != nil {
 		return "", err
 	}
@@ -41,15 +28,25 @@ func getTargetImageFromURL(src string) (string, error) {
 	table := crc32.MakeTable(crc32.IEEE)
 	checksum := crc32.Checksum([]byte(image.Name), table)
 
-	return fmt.Sprintf("%s-%d", image.Path, checksum), nil
+	return fmt.Sprintf("%s/%s-%d%s", targetHost, image.Path, checksum, image.TagOrDigest), nil
 }
 
-func parseImageURL(src string) (out Image, err error) {
-	ref, err := reference.Parse(src)
+// SwapHostWithoutChecksum Perform base url replacement but avoids adding a checksum of the original url.
+func SwapHostWithoutChecksum(src string, targetHost string) (string, error) {
+	image, err := ParseImageURL(src)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
+}
+
+func ParseImageURL(src string) (out Image, err error) {
+	ref, err := reference.ParseAnyReference(src)
 	if err != nil {
 		return out, err
 	}
 
+	// Parse the reference into its components
 	if named, ok := ref.(reference.Named); ok {
 		out.Name = named.Name()
 		out.Path = reference.Path(named)
@@ -59,12 +56,16 @@ func parseImageURL(src string) (out Image, err error) {
 		return out, fmt.Errorf("unable to parse image name from %s", src)
 	}
 
+	// Parse the tag and add it to digestOrReference
 	if tagged, ok := ref.(reference.Tagged); ok {
 		out.Tag = tagged.Tag()
+		out.TagOrDigest = fmt.Sprintf(":%s", tagged.Tag())
 	}
 
+	// Parse the digest and override digestOrReference
 	if digested, ok := ref.(reference.Digested); ok {
 		out.Digest = digested.Digest().String()
+		out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
 	}
 
 	return out, nil
