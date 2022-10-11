@@ -46,10 +46,6 @@ export interface ZarfPackage {
      */
     metadata?: ZarfMetadata;
     /**
-     * Special image only used for ZarfInitConfig packages when used with the Zarf Injector
-     */
-    seed?: string;
-    /**
      * Variable template values applied on deploy for K8s resources
      */
     variables?: ZarfPackageVariable[];
@@ -779,7 +775,6 @@ const typeMap: any = {
         { json: "constants", js: "constants", typ: u(undefined, a(r("ZarfPackageConstant"))) },
         { json: "kind", js: "kind", typ: r("Kind") },
         { json: "metadata", js: "metadata", typ: u(undefined, r("ZarfMetadata")) },
-        { json: "seed", js: "seed", typ: u(undefined, "") },
         { json: "variables", js: "variables", typ: u(undefined, a(r("ZarfPackageVariable"))) },
     ], false),
     "ZarfBuildData": o([

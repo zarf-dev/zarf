@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -191,7 +191,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
 		manifest := fmt.Sprintf("%s/%s", basePath, file)
-		data, err := ioutil.ReadFile(manifest)
+		data, err := os.ReadFile(manifest)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to read the manifest file contents")
 		}
