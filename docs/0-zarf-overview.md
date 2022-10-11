@@ -165,15 +165,13 @@ In the more complex use case, your package consists of updates for many apps / s
 3. `$` Enter the commands into your terminal
 
 <Tabs>
-<TabItem value="macOS" label="macOS" default>
- 
+<TabItem value="Linux" label="Linux">
+  
 <Admonition type="info">
 
-This quick start requires you to already have
+Zarf can run on Linux without any pre-requirements. However, this quick start requires:
 
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine
-  For more install options please visit our [Getting Started page](3-getting-started.md)
+- [home brew](https://brew.sh/) package manager installed on your machine.
 
 </Admonition>
 
@@ -196,13 +194,15 @@ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
-<TabItem value="Linux" label="Linux">
-  
+<TabItem value="macOS" label="macOS" default>
+ 
 <Admonition type="info">
 
-Zarf can run on Linux without any pre-requirements. However, this quick start requires:
+This quick start requires you to already have
 
-- [home brew](https://brew.sh/) package manager installed on your machine.
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
 
 </Admonition>
 
