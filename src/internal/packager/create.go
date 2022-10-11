@@ -65,7 +65,7 @@ func Create(baseDir string) {
 		os.Exit(0)
 	}
 
-	if seedImage != "" {
+	if config.IsZarfInitConfig() {
 		// Load seed images into their own happy little tarball for ease of import on init
 		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
