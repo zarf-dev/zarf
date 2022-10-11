@@ -81,7 +81,7 @@ Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following 
 Zarf is intended for use in a software deployment process that looks something like this:
 
 <a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
-  <img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
+<img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
 </a>
 
 ### (0) - Connect to Internet
@@ -166,70 +166,73 @@ In the more complex use case, your package consists of updates for many apps / s
 <Tabs>
 <TabItem value="macOS" label="macOS" default>
   
- :::info
+:::info
 
-This quick start requires you to already have 
+This quick start requires you to already have
+
 - [home brew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine
-For more install options please visit our [Getting Started page](3-getting-started.md)
+  For more install options please visit our [Getting Started page](3-getting-started.md)
 
 :::
 
 ```bash
-# To install Zarff
-$ brew tap defenseunicorns/tap brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
-$ brew install kind && kind delete cluster && kind create cluster
+brew install kind && kind delete cluster && kind create cluster
 
 
 # Then, you will need to deploy the Zarf Init Package
-$ zarf init
+zarf init
 
 
 # You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-$ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Linux" label="Linux">
   
- :::info
+:::info
 
-This quick start requires you to already have 
+Zarf can run on Linux without any pre-requirements. However, this quick start requires:
+
 - [home brew](https://brew.sh/) package manager installed on your machine.
-  
+
 :::
 
 ```bash
-# To install Zarff
-$ brew tap defenseunicorns/tap brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
-$ brew install kind && kind delete cluster && kind create cluster
+brew install kind && kind delete cluster && kind create cluster
 
 
 # Then, you will need to deploy the Zarf Init Package
-$ zarf init
+zarf init
 
 
 # You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-$ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Windows" label="Windows">
   
-  :::info
+:::info
 
-This quick start requires you to already have 
+This quick start requires you to already have
+
 - [home brew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine
 
 :::
 
-```bash
-Coming with Next Release!
+```text
+Coming in next release!
 ```
 
 </TabItem>
