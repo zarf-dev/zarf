@@ -3,7 +3,6 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -447,12 +446,12 @@ func writeSBOMFiles(sbomViewFiles []string) error {
 	// Write each of the sbom files
 	for _, file := range sbomViewFiles {
 		// Our file copy lib explodes on these files for some reason...
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
 		}
 		dst := filepath.Join(config.ZarfSBOMDir, filepath.Base(file))
-		err = ioutil.WriteFile(dst, data, 0644)
+		err = os.WriteFile(dst, data, 0644)
 		if err != nil {
 			message.Debugf("Unable to write the sbom-viewer file %s", dst)
 			return err
