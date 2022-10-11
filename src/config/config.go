@@ -54,6 +54,8 @@ const (
 	ZarfInClusterContainerRegistryNodePort = 31999
 
 	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+
+	ZarfSeedImage = "registry:2.8.1"
 )
 
 var (
@@ -157,17 +159,6 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 
 func GetSeedRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
-}
-
-// GetSeedImage returns a list of image strings specified in the package, but only for init packages
-func GetSeedImage() string {
-	message.Debugf("config.GetSeedImage()")
-	// Only allow seed images for init config
-	if IsZarfInitConfig() {
-		return active.Seed
-	} else {
-		return ""
-	}
 }
 
 func GetPackageName() string {

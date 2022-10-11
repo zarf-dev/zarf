@@ -474,10 +474,6 @@
           "type": "array",
           "description": "List of components to deploy in this package"
         },
-        "seed": {
-          "type": "string",
-          "description": "Special image only used for ZarfInitConfig packages when used with the Zarf Injector"
-        },
         "variables": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",

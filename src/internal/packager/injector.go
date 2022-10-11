@@ -3,7 +3,6 @@ package packager
 import (
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -139,7 +138,7 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	}
 
 	// Open the created archive for io.Copy
-	if tarFile, err = ioutil.ReadFile(tarPath); err != nil {
+	if tarFile, err = os.ReadFile(tarPath); err != nil {
 		return configMaps, "", err
 	}
 
@@ -200,10 +199,13 @@ func hasSeedImages(spinner *message.Spinner) bool {
 	tunnel.Connect(k8s.ZarfInjector, false)
 	defer tunnel.Close()
 
-	baseUrl := tunnel.Endpoint()
-	seedImage := config.GetSeedImage()
-	ref := fmt.Sprintf("%s/%s", baseUrl, seedImage)
 	timeout := time.After(20 * time.Second)
+
+	ref, err := utils.SwapHostWithoutChecksum(config.ZarfSeedImage, tunnel.Endpoint())
+	if err != nil {
+		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
+		return false
+	}
 
 	for {
 		// Delay check for one second
@@ -283,7 +285,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	}
 
 	// Add the seed images list env var
-	envVars["SEED_IMAGE"] = config.GetSeedImage()
+	envVars["SEED_IMAGE"] = config.ZarfSeedImage
 
 	// Setup the env vars
 	encodedEnvVars := []corev1.EnvVar{}
@@ -301,7 +303,6 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
-	seedImage := config.GetSeedImage()
 
 	pod.Labels["app"] = "zarf-injector"
 	// Ensure zarf agent doesnt break the injector on future runs
@@ -354,7 +355,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 	}
 
 	// Create container definition for the injector pod
-	newHost, err := utils.SwapHostWithoutChecksum(seedImage, "127.0.0.1:5001")
+	newHost, err := utils.SwapHostWithoutChecksum(config.ZarfSeedImage, "127.0.0.1:5001")
 	if err != nil {
 		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
 		return nil, err
@@ -371,7 +372,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 			Command: []string{
 				"/zarf-stage2/zarf-registry",
 				"/zarf-stage2/seed-image.tar",
-				seedImage,
+				config.ZarfSeedImage,
 				newHost,
 			},
 

@@ -1358,21 +1358,6 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="seed"></a>seed</strong>
-
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Special image only used for ZarfInitConfig packages when used with the Zarf Injector
-
-| Type | `string` |
-| ---- | -------- |
-
-</blockquote>
-</details>
-
-<details>
 <summary><strong> <a name="variables"></a>variables</strong>
 
 </summary>
