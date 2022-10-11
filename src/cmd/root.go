@@ -58,12 +58,14 @@ func init() {
 	v.SetDefault(V_ARCHITECTURE, "")
 	v.SetDefault(V_NO_LOG_FILE, false)
 	v.SetDefault(V_NO_PROGRESS, false)
+	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_TMP_DIR, "")
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), "Architecture for OCI images")
-	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation.")
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), "Disable fancy UI progress bars, spinners, logos, etc.")
+	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation")
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), "Disable fancy UI progress bars, spinners, logos, etc")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), "Specify the location of the Zarf cache directory")
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), "Specify the temporary directory to use for intermediate files")
 }
 
