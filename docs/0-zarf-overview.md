@@ -169,9 +169,11 @@ In the more complex use case, your package consists of updates for many apps / s
   
 <Admonition type="info">
 
-Zarf can run on Linux without any pre-requirements. However, this quick start requires:
+This quick start requires you to already have:
 
-- [home brew](https://brew.sh/) package manager installed on your machine.
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
 
 </Admonition>
 
@@ -193,12 +195,18 @@ zarf init
 zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
+<Admonition type="note">
+
+Zarf has no pre-requisites on Linux, however for this example we will use Docker and Kind.
+
+</Admonition>
+
 </TabItem>
 <TabItem value="macOS" label="macOS">
  
 <Admonition type="info">
 
-This quick start requires you to already have
+This quick start requires you to already have:
 
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine
@@ -226,15 +234,6 @@ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 
 </TabItem>
 <TabItem value="Windows" label="Windows">
-  
-<Admonition type="info">
-
-This quick start requires you to already have
-
-- [home brew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine
-
-</Admonition>
 
 ## Enter these Commands into your terminal
 
