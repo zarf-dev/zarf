@@ -2,7 +2,7 @@ package packager
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -28,7 +28,7 @@ func Inspect(packageName string) {
 	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.base)
 
 	configPath := filepath.Join(tempPath.base, "zarf.yaml")
-	content, err := ioutil.ReadFile(configPath)
+	content, err := os.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the config file in the package")
 	}
