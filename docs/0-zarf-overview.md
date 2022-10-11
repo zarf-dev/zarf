@@ -160,15 +160,13 @@ In the more complex use case, your package consists of updates for many apps / s
 
 ## Quick Start
 
-💻 Select your systems OS below
-
-❗ Ensure you have the pre-requisite applications running
-
-💲 Enter the commands into your terminal
+- 💻 Select your systems OS below
+- ❗ Ensure you have the pre-requisite applications running
+- `$` Enter the commands into your terminal
 
 <Tabs>
 <TabItem value="macOS" label="macOS" default>
-  
+ 
 <Admonition type="info">
 
 This quick start requires you to already have
