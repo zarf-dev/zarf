@@ -55,8 +55,8 @@ func configFileDefaultTests(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
-		"Disable log file creation. (default true)",
-		"Disable fancy UI progress bars, spinners, logos, etc. (default true)",
+		"Disable log file creation (default true)",
+		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
 		"tmp_dir: c457359e",
 	}
