@@ -55,9 +55,13 @@ ensure-ui-build-dir:
 	touch build/ui/index.html
 
 check-ui: ## Build the Zarf UI if needed
-	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		$(MAKE) build-ui;\
-		./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+	if [ ! -z "$(shell command -v shasum)" ]; then\
+	    if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+		    $(MAKE) build-ui;\
+		    ./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+	    fi;\
+	else\
+        $(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
