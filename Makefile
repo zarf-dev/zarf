@@ -20,7 +20,7 @@ else
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:ef08e77c3880ac64c3cc10ecd314be0869f8f70e
+AGENT_IMAGE ?= zarfdev/agent:11e53b7c872ce83d5752cb20e640eabd04956258
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -59,7 +59,7 @@ check-ui: ## Build the Zarf UI if needed
 		$(MAKE) build-ui;\
 		./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
 	fi
-	
+
 build-ui: ## Build the Zarf UI
 	npm ci
 	npm run build
