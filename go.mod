@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2
+	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.10.0
 	k8s.io/api v0.25.2
