@@ -58,9 +58,12 @@ var initCmd = &cobra.Command{
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		if utils.InvalidPath(config.DeployOptions.PackagePath) {
 			// Get the path to the executable
-			executablePath, err := utils.GetFinalExecutablePath()
-			executableDir := path.Dir(executablePath)
-			config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+			if executablePath, err := utils.GetFinalExecutablePath(); err != nil {
+				message.Errorf(err, "Unable to get the path to the executable")
+			} else {
+				executableDir := path.Dir(executablePath)
+				config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+			}
 
 			// If the init-package doesn't exist in the executable directory, try the cache directory
 			if err != nil || utils.InvalidPath(config.DeployOptions.PackagePath) {
