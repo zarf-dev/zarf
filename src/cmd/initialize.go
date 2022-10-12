@@ -5,10 +5,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
@@ -88,23 +86,8 @@ func downloadInitPackage(initPackageName string) error {
 		return fmt.Errorf("this command requires a zarf-init package, but one was not found on the local system")
 	}
 
-	// Parse the CLI version and extract its parts
-	initPackageVersion := strings.TrimLeft(config.CLIVersion, "v")
-	version, err := semver.StrictNewVersion(initPackageVersion)
-
-	if err != nil {
-		// If no CLI version exists (should only occur in dev or CI), try to get the latest release tag from Githhub
-		initPackageVersion, err = utils.GetLatestReleaseTag(config.GithubProject)
-		if err != nil {
-			return fmt.Errorf("no CLI version found and unable to get the latest release tag for the zarf cli: %w", err)
-		}
-	} else {
-		// If CLI version exists then get the latest init package for the matching major, minor and patch
-		initPackageVersion = fmt.Sprintf("v%d.%d.%d", version.Major(), version.Minor(), version.Patch())
-	}
-
 	var confirmDownload bool
-	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, initPackageVersion, initPackageName)
+	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, initPackageName)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf("It seems the init package could not be found locally, but can be downloaded from %s", url))
