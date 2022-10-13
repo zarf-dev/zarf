@@ -1,11 +1,17 @@
 # Getting started - VS Code
 
-Zarf uses an internally defined [schema](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) for its configuration files. This schema is used to validate the configuration files before they are used to build a Zarf package.
+Zarf uses its own [schema](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json) to define its configuration files. This schema is used to describe package configuration options and can be used to validate the configuration files before they are used to build a Zarf package.
 
-## Adding Schema validation
+## Adding schema validation
 
 1. Open VS Code's `settings.json` file with `CTRL/CMD + SHIFT + P` and search for `Preferences: Open User Settings (JSON)`.
 2. Add the below to your config, or modify the existing `yaml.schemas` object to include the Zarf schema.
+
+:::note
+
+The [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) by RedHat is a prerequisite for this feature.
+
+:::
 
 ```json
   "yaml.schemas": {
