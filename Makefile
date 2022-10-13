@@ -20,7 +20,7 @@ else
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:ef08e77c3880ac64c3cc10ecd314be0869f8f70e
+AGENT_IMAGE ?= zarfdev/agent:11e53b7c872ce83d5752cb20e640eabd04956258
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -55,11 +55,11 @@ ensure-ui-build-dir:
 	touch build/ui/index.html
 
 check-ui: ## Build the Zarf UI if needed
-	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+	@ if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
 		$(MAKE) build-ui;\
 		./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
 	fi
-	
+
 build-ui: ## Build the Zarf UI
 	npm ci
 	npm run build
@@ -148,14 +148,14 @@ build-examples: ## Build all of the example packages
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 

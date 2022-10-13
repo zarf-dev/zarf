@@ -555,6 +555,10 @@ export interface InstalledChart {
 
 export interface ZarfCommonOptions {
     /**
+     * Path to use to cache images and git repos on package create
+     */
+    cachePath: string;
+    /**
      * Verify that Zarf should perform an action
      */
     confirm: boolean;
@@ -566,10 +570,6 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
-    /**
-     * Path to use to cache images and git repos on package create
-     */
-    cachePath: string;
     /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
@@ -936,11 +936,11 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
     ], false),
     "ZarfCommonOptions": o([
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
