@@ -35,9 +35,9 @@
 			components: requestedComponents,
 			gitServer: {
 				address: '',
-				pushUsername: '',
+				pushUsername: 'zarf-git-user',
 				pushPassword: '',
-				pullUsername: '',
+				pullUsername: 'zarf-git-read-user',
 				pullPassword: '',
 				internalServer: true
 			},
@@ -47,9 +47,9 @@
 				internalRegistry: true,
 				nodePort: 0,
 				pullPassword: '',
-				pullUsername: '',
+				pullUsername: 'zarf-pull',
 				pushPassword: '',
-				pushUsername: '',
+				pushUsername: 'zarf-push',
 				secret: ''
 			}
 		};
