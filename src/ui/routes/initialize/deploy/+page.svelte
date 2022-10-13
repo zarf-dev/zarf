@@ -21,6 +21,7 @@
 		$pkgStore.zarfPackage.components,
 		$pkgComponentDeployStore
 	);
+	// comma-delimited string that contains only optional components that were enabled via UI
 	const requestedComponents: string = $pkgStore.zarfPackage.components
 		.filter((c, idx) => $pkgComponentDeployStore.includes(idx) && !c.required)
 		.map((c) => c.name)
