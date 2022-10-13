@@ -6,6 +6,7 @@ type RestAPI struct {
 	ZarfCommonOptions ZarfCommonOptions `json:"zarfCommonOptions"`
 	ZarfCreateOptions ZarfCreateOptions `json:"zarfCreateOptions"`
 	ZarfDeployOptions ZarfDeployOptions `json:"zarfDeployOptions"`
+	ZarfInitOptions   ZarfInitOptions   `json:"zarfInitOptions"`
 	ConnectStrings    ConnectStrings    `json:"connectStrings"`
 	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
 	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
