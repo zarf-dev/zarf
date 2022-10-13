@@ -55,6 +55,11 @@ func Fetch(url string) io.ReadCloser {
 
 func DownloadToFile(url string, target string, cosignKeyPath string) {
 
+	// Always ensure the target directory exists
+	if err := CreateFilePath(target); err != nil {
+		message.Fatalf(err, "Unable to create file path: %s", target)
+	}
+
 	// Create the file
 	destinationFile, err := os.Create(target)
 	if err != nil {
