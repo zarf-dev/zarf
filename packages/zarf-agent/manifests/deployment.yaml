@@ -17,6 +17,9 @@ spec:
         # Don't mutate this pod, that would be sad times
         zarf.dev/agent: ignore
     spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
       imagePullSecrets:
         - name: private-registry
       containers:
