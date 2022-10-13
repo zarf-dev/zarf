@@ -9,10 +9,10 @@ export function createComponentStepMap(
 	allComponents: ZarfComponent[],
 	deployComponentIdx: number[]
 ): ComponentStepMap {
-	let deployingComponentMap: ComponentStepMap = new Map();
+	const deployingComponentMap: ComponentStepMap = new Map();
 
 	deployComponentIdx.forEach((componentIndex: number, index: number) => {
-		let component = allComponents[componentIndex];
+		const component = allComponents[componentIndex];
 
 		deployingComponentMap.set(component.name, {
 			title: `Deploy ${component.name}`,
