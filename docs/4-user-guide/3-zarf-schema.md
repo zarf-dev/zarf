@@ -1,7 +1,8 @@
 # Zarf Package Schema
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfPackage                                                                                                         |
 
@@ -16,8 +17,9 @@
 
 **Description:** The kind of Zarf package
 
-| Type        | `enum (of string)`    |
+|             |                       |
 | ----------- | --------------------- |
+| **Type**    | `enum (of string)`    |
 | **Default** | `"ZarfPackageConfig"` |
 
 :::note
@@ -38,8 +40,9 @@ Must be one of:
 
 **Description:** Package metadata
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfMetadata                                                                                                        |
 
@@ -54,8 +57,9 @@ Must be one of:
 
 **Description:** Name to identify this Zarf package
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 | Restrictions                      |                                                                                   |
 | --------------------------------- | --------------------------------------------------------------------------------- |
@@ -73,8 +77,9 @@ Must be one of:
 
 **Description:** Additional information about this package
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -88,8 +93,9 @@ Must be one of:
 
 **Description:** Generic string to track the package version by a package author
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -103,8 +109,9 @@ Must be one of:
 
 **Description:** Link to package information when online
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -118,8 +125,9 @@ Must be one of:
 
 **Description:** An image URL to embed in this package for future Zarf UI listing
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -133,8 +141,9 @@ Must be one of:
 
 **Description:** Disable compression of this package
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -148,8 +157,9 @@ Must be one of:
 
 **Description:** The target cluster architecture of this package
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -166,8 +176,9 @@ Must be one of:
 
 **Description:** Zarf-generated package build data
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfBuildData                                                                                                       |
 
@@ -180,8 +191,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -195,8 +207,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -210,8 +223,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -225,8 +239,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -240,8 +255,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -260,8 +276,9 @@ Must be one of:
 
 **Description:** List of components to deploy in this package
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -273,8 +290,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_2"></a>ZarfComponent  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfComponent                                                                                                       |
 
@@ -287,8 +305,9 @@ Must be one of:
 
 **Description:** The name of the component
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 | Restrictions                      |                                                                                   |
 | --------------------------------- | --------------------------------------------------------------------------------- |
@@ -306,8 +325,9 @@ Must be one of:
 
 **Description:** Message to include during package deploy describing the purpose of this component
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -321,8 +341,9 @@ Must be one of:
 
 **Description:** Determines the default Y/N state for installing this component on package deploy
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -336,8 +357,9 @@ Must be one of:
 
 **Description:** Do not prompt user to install this component
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -351,8 +373,9 @@ Must be one of:
 
 **Description:** Filter when this component is included in package creation or deployment
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyTarget                                                                                             |
 
@@ -365,8 +388,9 @@ Must be one of:
 
 **Description:** Only deploy component to specified OS
 
-| Type | `enum (of string)` |
-| ---- | ------------------ |
+|          |                    |
+| -------- | ------------------ |
+| **Type** | `enum (of string)` |
 
 :::note
 Must be one of:
@@ -387,8 +411,9 @@ Must be one of:
 
 **Description:** Only deploy component to specified clusters
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyCluster                                                                                            |
 
@@ -401,8 +426,9 @@ Must be one of:
 
 **Description:** Only create and deploy to clusters of the given architecture
 
-| Type | `enum (of string)` |
-| ---- | ------------------ |
+|          |                    |
+| -------- | ------------------ |
+| **Type** | `enum (of string)` |
 
 :::note
 Must be one of:
@@ -422,8 +448,9 @@ Must be one of:
 
 **Description:** Future use
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -435,8 +462,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_3"></a>distros items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -456,8 +484,9 @@ Must be one of:
 
 **Description:** Create a user selector field based on all components in the same group
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -471,8 +500,9 @@ Must be one of:
 
 **Description:** Specify a path to a public key to validate signed online resources
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -486,8 +516,9 @@ Must be one of:
 
 **Description:** Import a component from another Zarf package
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentImport                                                                                                 |
 
@@ -498,8 +529,9 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -513,8 +545,9 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 | Restrictions                      |                                                                                                                       |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -535,8 +568,9 @@ Must be one of:
 
 **Description:** Custom commands to run before or after package deployment
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentScripts                                                                                                |
 
@@ -549,8 +583,9 @@ Must be one of:
 
 **Description:** Show the output of the script during package deployment
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -564,8 +599,9 @@ Must be one of:
 
 **Description:** Timeout in seconds for the script
 
-| Type | `integer` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `integer` |
 
 </blockquote>
 </details>
@@ -579,8 +615,9 @@ Must be one of:
 
 **Description:** Retry the script if it fails
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -594,8 +631,9 @@ Must be one of:
 
 **Description:** Scripts to run before the component is added during package create
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -607,8 +645,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_4"></a>prepare items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -622,8 +661,9 @@ Must be one of:
 
 **Description:** Scripts to run before the component is deployed
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -635,8 +675,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_5"></a>before items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -650,8 +691,9 @@ Must be one of:
 
 **Description:** Scripts to run after the component successfully deploys
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -663,8 +705,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_6"></a>after items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -681,8 +724,9 @@ Must be one of:
 
 **Description:** Files to place on disk during package deployment
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -694,8 +738,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_7"></a>ZarfFile  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfFile                                                                                                            |
 
@@ -710,8 +755,9 @@ Must be one of:
 
 **Description:** Local file path or remote URL to add to the package
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -725,8 +771,9 @@ Must be one of:
 
 **Description:** SHA256 checksum of the file if the source is a URL
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -742,8 +789,9 @@ Must be one of:
 
 **Description:** The absolute or relative path where the file should be copied to during package deploy
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -757,8 +805,9 @@ Must be one of:
 
 **Description:** Determines if the file should be made executable during package deploy
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -772,8 +821,9 @@ Must be one of:
 
 **Description:** List of symlinks to create during package deploy
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -785,8 +835,9 @@ Must be one of:
 
  ## <a name="autogenerated_heading_8"></a>symlinks items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -803,8 +854,9 @@ Must be one of:
 
 **Description:** Helm charts to install during package deploy
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -816,35 +868,11 @@ Must be one of:
 
  ## <a name="autogenerated_heading_9"></a>ZarfChart  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfChart                                                                                                           |
-
-<blockquote>
-
-| One of(Option)                                                |
-| ------------------------------------------------------------- |
-| [chartLocationGroup](#components_items_charts_items_oneOf_i0) |
-
-<blockquote>
-
-## <a name="components_items_charts_items_oneOf_i0"></a>Property `chartLocationGroup`
-
-**Title:** chartLocationGroup
-
-| Type                      | `object`                                                                                                                          |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-### <a name="autogenerated_heading_10"></a>The following properties are required
-* url
-* gitPath
-* localPath
-
-</blockquote>
-
-</blockquote>
 
 <details>
 <summary><strong> <a name="components_items_charts_items_name"></a>name *</strong>
@@ -857,8 +885,9 @@ Must be one of:
 
 **Description:** The name of the chart to deploy
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -872,8 +901,9 @@ Must be one of:
 
 **Description:** The name of the release to create
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -887,8 +917,9 @@ Must be one of:
 
 **Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -904,8 +935,9 @@ Must be one of:
 
 **Description:** The version of the chart to deploy
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -921,8 +953,9 @@ Must be one of:
 
 **Description:** The namespace to deploy the chart to
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -936,8 +969,9 @@ Must be one of:
 
 **Description:** List of values files to include in the package
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -947,10 +981,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_11"></a>valuesFiles items  
+ ## <a name="autogenerated_heading_10"></a>valuesFiles items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -964,8 +999,9 @@ Must be one of:
 
 **Description:** If using a git repo
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -979,8 +1015,9 @@ Must be one of:
 
 **Description:** The path to the chart folder
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -994,8 +1031,9 @@ Must be one of:
 
 **Description:** Wait for chart resources to be ready before continuing
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1010,8 +1048,9 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1021,10 +1060,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_12"></a>ZarfManifest  
+ ## <a name="autogenerated_heading_11"></a>ZarfManifest  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfManifest                                                                                                        |
 
@@ -1039,8 +1079,9 @@ Must be one of:
 
 **Description:** A name to give this collection of manifests
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1054,8 +1095,9 @@ Must be one of:
 
 **Description:** The namespace to deploy the manifests to
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1069,8 +1111,9 @@ Must be one of:
 
 **Description:** List of individual K8s YAML files to deploy (in order)
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1080,10 +1123,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_13"></a>files items  
+ ## <a name="autogenerated_heading_12"></a>files items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1097,8 +1141,9 @@ Must be one of:
 
 **Description:** Allow traversing directory above the current directory if needed for kustomization
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1112,8 +1157,9 @@ Must be one of:
 
 **Description:** List of kustomization paths to include in the package
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1123,10 +1169,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_14"></a>kustomizations items  
+ ## <a name="autogenerated_heading_13"></a>kustomizations items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1140,8 +1187,9 @@ Must be one of:
 
 **Description:** Wait for manifest resources to be ready before continuing
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1158,8 +1206,9 @@ Must be one of:
 
 **Description:** List of OCI images to include in the package
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1169,10 +1218,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_15"></a>images items  
+ ## <a name="autogenerated_heading_14"></a>images items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1186,8 +1236,9 @@ Must be one of:
 
 **Description:** List of git repos to include in the package
 
-| Type | `array of string` |
-| ---- | ----------------- |
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1197,10 +1248,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_16"></a>repos items  
+ ## <a name="autogenerated_heading_15"></a>repos items  
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1214,8 +1266,9 @@ Must be one of:
 
 **Description:** Datasets to inject into a pod in the target cluster
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1225,10 +1278,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_17"></a>ZarfDataInjection  
+ ## <a name="autogenerated_heading_16"></a>ZarfDataInjection  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfDataInjection                                                                                                   |
 
@@ -1243,8 +1297,9 @@ Must be one of:
 
 **Description:** A path to a local folder or file to inject into the given target pod + container
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1260,8 +1315,9 @@ Must be one of:
 
 **Description:** The target pod + container to inject the data into
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfContainerTarget                                                                                                 |
 
@@ -1276,8 +1332,9 @@ Must be one of:
 
 **Description:** The namespace to target for data injection
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1293,8 +1350,9 @@ Must be one of:
 
 **Description:** The K8s selector to target for data injection
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1310,8 +1368,9 @@ Must be one of:
 
 **Description:** The container to target for data injection
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1327,8 +1386,9 @@ Must be one of:
 
 **Description:** The path to copy the data to in the container
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1345,8 +1405,9 @@ Must be one of:
 
 **Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1366,8 +1427,9 @@ Must be one of:
 
 **Description:** Variable template values applied on deploy for K8s resources
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1377,10 +1439,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_18"></a>ZarfPackageVariable  
+ ## <a name="autogenerated_heading_17"></a>ZarfPackageVariable  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageVariable                                                                                                 |
 
@@ -1395,8 +1458,9 @@ Must be one of:
 
 **Description:** The name to be used for the variable
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 | Restrictions                      |                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------- |
@@ -1414,8 +1478,9 @@ Must be one of:
 
 **Description:** A description of the variable to be used when prompting the user a value
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1429,8 +1494,9 @@ Must be one of:
 
 **Description:** The default value to use for the variable
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1444,8 +1510,9 @@ Must be one of:
 
 **Description:** Whether to prompt the user for input for this variable
 
-| Type | `boolean` |
-| ---- | --------- |
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1462,8 +1529,9 @@ Must be one of:
 
 **Description:** Constant template values applied on deploy for K8s resources
 
-| Type | `array` |
-| ---- | ------- |
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
 
 |                      | Array restrictions |
 | -------------------- | ------------------ |
@@ -1473,10 +1541,11 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_19"></a>ZarfPackageConstant  
+ ## <a name="autogenerated_heading_18"></a>ZarfPackageConstant  
 
-| Type                      | `object`                                                                                                                          |
+|                           |                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageConstant                                                                                                 |
 
@@ -1491,8 +1560,9 @@ Must be one of:
 
 **Description:** The name to be used for the constant
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 | Restrictions                      |                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------- |
@@ -1512,8 +1582,9 @@ Must be one of:
 
 **Description:** The value to set for the constant during deploy
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1527,8 +1598,9 @@ Must be one of:
 
 **Description:** A description of the constant to explain its purpose on package create or deploy confirmation prompts
 
-| Type | `string` |
-| ---- | -------- |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>

@@ -1,7 +1,6 @@
 package packages
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"regexp"
@@ -13,7 +12,7 @@ import (
 )
 
 var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
-var initPattern = regexp.MustCompile(fmt.Sprintf("zarf-init-%s.tar.zst", config.GetArch()))
+var initPattern = regexp.MustCompile(config.GetInitPackageName())
 
 // Find returns all packages anywhere down the directory tree of the working directory.
 func Find(w http.ResponseWriter, r *http.Request) {

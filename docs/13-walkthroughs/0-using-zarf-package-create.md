@@ -24,7 +24,7 @@ zarf package create .     # Run the command to create the zarf package
                           # Type `y` when prompted and then hit the enter key
 ```
 
-This set of commands will create a zarf package in the current directory. In this case, the package name should look something like `zarf-init-amd64.tar.zst`, although it might be slightly different depending on your system architecture.
+This set of commands will create a zarf package in the current directory. In this case, the package name should look something like `zarf-init-amd64-v0.24.0.tar.zst`, although it might be slightly different depending on your system architecture.
 
 :::note
 
