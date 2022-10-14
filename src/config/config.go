@@ -71,6 +71,9 @@ var (
 	// DeployOptions tracks user-defined values for the active deployment
 	DeployOptions types.ZarfDeployOptions
 
+	// GenerateOptions tracks user-defined values for package generation.
+	GenerateOptions types.ZarfGenerateOptions
+
 	// InitOptions tracks user-defined values for the active Zarf initialization.
 	InitOptions types.ZarfInitOptions
 

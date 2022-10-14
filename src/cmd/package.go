@@ -13,6 +13,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/generator"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/mholt/archiver/v3"
@@ -67,6 +68,28 @@ var packageDeployCmd = &cobra.Command{
 		config.DeployOptions.PackagePath, done = packager.HandleIfURL(packageName, shasum, insecureDeploy)
 		defer done()
 		packager.Deploy()
+	},
+}
+
+var packageGenerateCmd = &cobra.Command{
+	Use:     "generate [PACKAGE_NAME]",
+	Aliases: []string{"g"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Use to generate a zarf.yaml from a given set of resources",
+	Long: "Each instance of \"--component-name\" creates a new component. " +
+		"Every component needs at least one \"--component-type\". If the " +
+		"component type is not \"other\" then \"--component-data\" is required. " +
+		"If component type is \"other\" then \"--component-data\" is not allowed. " +
+		"Component data is an array of objects in json, these objects must conform " +
+		"to the schema for a given component data type. A component can have " +
+		"multiple component data types, but not any duplicates.",
+	Run: func(cmd *cobra.Command, args []string) {
+		rawComponents := generator.ValidateAndFormatFlags(args)
+		generatedPackage := generator.CreateZarfPackage(args, rawComponents)
+		err := utils.WriteYaml("test.zarf.yaml", generatedPackage, 0644)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	},
 }
 
@@ -183,11 +206,13 @@ func init() {
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageInspectCmd)
+	packageCmd.AddCommand(packageGenerateCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()
+	bindGenerateFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
 }
@@ -228,6 +253,17 @@ func bindDeployFlags() {
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
 	deployFlags.StringVar(&config.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
+}
+
+func bindGenerateFlags() {
+	generateFlags := packageGenerateCmd.Flags()
+
+	emptyArray := make([]string, 0)
+
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
+	generateFlags.BoolVar(&config.GenerateOptions.Required, "required", false, "is this component required")
 }
 
 func bindInspectFlags() {

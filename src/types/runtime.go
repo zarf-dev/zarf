@@ -14,6 +14,14 @@ type ZarfDeployOptions struct {
 	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
+// ZarfGenerateOptions tracks the user-defined options during package generation.
+type ZarfGenerateOptions struct {
+	ComponentNames     []string `json:"componentNames" jsonschema:"description=Array of component names"`
+	ComponentDataTypes []string `json:"componentDataTypes" jsonschema:"description=Array of types of componentData"`
+	ComponentData      []string `json:"componentData" jsonschema:"description=Array of component data"`
+	Required           bool     `json:"required" jsonschema:"description=Bool for if component is required"`
+}
+
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
 	// Zarf init is installing the k3s component
