@@ -26,6 +26,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/defenseunicorns/zarf/src/internal/generator"
 )
 
 var packageCmd = &cobra.Command{
@@ -109,6 +111,28 @@ var packageMirrorCmd = &cobra.Command{
 		// Deploy the package
 		if err := pkgClient.Mirror(); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+		}
+	},
+}
+
+var packageGenerateCmd = &cobra.Command{
+	Use:     "generate [PACKAGE_NAME]",
+	Aliases: []string{"g"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   "Use to generate a zarf.yaml from a given set of resources",
+	Long: "Each instance of \"--component-name\" creates a new component. " +
+		"Every component needs at least one \"--component-type\". If the " +
+		"component type is not \"other\" then \"--component-data\" is required. " +
+		"If component type is \"other\" then \"--component-data\" is not allowed. " +
+		"Component data is an array of objects in json, these objects must conform " +
+		"to the schema for a given component data type. A component can have " +
+		"multiple component data types, but not any duplicates.",
+	Run: func(cmd *cobra.Command, args []string) {
+		rawComponents := generator.ValidateAndFormatFlags(args)
+		generatedPackage := generator.CreateZarfPackage(args, rawComponents)
+		err := utils.WriteYaml("test.zarf.yaml", generatedPackage, 0644)
+		if err != nil {
+			message.Fatal(err, err.Error())
 		}
 	},
 }
@@ -315,6 +339,7 @@ func init() {
 	packageCmd.AddCommand(packageDeployCmd)
 	packageCmd.AddCommand(packageMirrorCmd)
 	packageCmd.AddCommand(packageInspectCmd)
+	packageCmd.AddCommand(packageGenerateCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
 	packageCmd.AddCommand(packagePublishCmd)
@@ -323,6 +348,7 @@ func init() {
 	bindPackageFlags(v)
 	bindCreateFlags(v)
 	bindDeployFlags(v)
+	bindGenerateFlags()
 	bindMirrorFlags(v)
 	bindInspectFlags(v)
 	bindRemoveFlags(v)
@@ -415,6 +441,17 @@ func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+}
+
+func bindGenerateFlags() {
+	generateFlags := packageGenerateCmd.Flags()
+
+	emptyArray := make([]string, 0)
+
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
+	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
+	generateFlags.BoolVar(&config.GenerateOptions.Required, "required", false, "is this component required")
 }
 
 func bindInspectFlags(_ *viper.Viper) {

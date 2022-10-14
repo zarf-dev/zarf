@@ -68,7 +68,19 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands
 	CommonOptions types.ZarfCommonOptions
 
-	// CLIArch is the computer architecture of the device executing the CLI commands
+	// CreeateOptions tracks the user-defined options used to create the package
+	CreateOptions types.ZarfCreateOptions
+
+	// DeployOptions tracks user-defined values for the active deployment
+	DeployOptions types.ZarfDeployOptions
+
+	// GenerateOptions tracks user-defined values for package generation.
+	GenerateOptions types.ZarfGenerateOptions
+
+	// InitOptions tracks user-defined values for the active Zarf initialization.
+	InitOptions types.ZarfInitOptions
+
+	// CliArch is the computer architecture of the device executing the CLI commands
 	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
