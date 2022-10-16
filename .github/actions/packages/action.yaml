@@ -15,7 +15,7 @@ runs:
     - run: make build-cli-linux-amd
       shell: bash
 
-    - uses: ../actions/agent-image
+    - uses: ./.github/actions/agent-image
       with:
         username: ${{ inputs.username }}
         password: ${{ inputs.password }}

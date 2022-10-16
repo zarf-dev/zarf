@@ -22,15 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ../actions/golang
-      - uses: ../actions/node
-      - uses: ../actions/k3d
+      - uses: ./.github/actions/golang
+      - uses: ./.github/actions/node
+      - uses: ./.github/actions/k3d
 
-      - uses: ../actions/packages
+      - uses: ./.github/actions/packages
         with:
           username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
       - run: make test-e2e ARCH=amd64
 
-      - uses: ../actions/save-logs
+      - uses: ./.github/actions/save-logs

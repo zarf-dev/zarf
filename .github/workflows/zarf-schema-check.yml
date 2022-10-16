@@ -18,6 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ../actions/golang
+      - uses: ./.github/actions/golang
       - run: "make test-docs-and-schema"
-      - uses: ../actions/save-logs
+      - uses: ./.github/actions/save-logs
