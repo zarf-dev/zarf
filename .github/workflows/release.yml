@@ -14,8 +14,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - uses: ../actions/golang
+      - uses: ../actions/node
 
       - name: "Dependency: Install cosign"
         uses: sigstore/cosign-installer@v2.8.0
@@ -65,7 +65,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-      - uses: ./.github/actions/logs
+      - uses: ../actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: "Create release time CVE report"

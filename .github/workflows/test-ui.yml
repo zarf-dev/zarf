@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
-      - uses: ./.github/actions/k3d
+      - uses: ../actions/golang
+      - uses: ../actions/node
+      - uses: ../actions/k3d
 
       - name: Cache browsers
         uses: actions/cache@v3
@@ -30,16 +30,14 @@ jobs:
           path: "~/Library/Caches/ms-playwright/"
           key: ${{ runner.os }}-browsers
 
-      - run: make build-cli-linux-amd
-
-      - uses: ./.github/actions/packages
+      - uses: ../actions/packages
         with:
           username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
       - run: npm test
 
-      - uses: ./.github/actions/logs
+      - uses: ../actions/save-logs
 
       - name: "Save ui test reports"
         uses: actions/upload-artifact@v3

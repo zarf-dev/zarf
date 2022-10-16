@@ -22,12 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - uses: ../actions/golang
+      - uses: ../actions/node
 
-      - run: make build-cli-linux-amd
-
-      - uses: ./.github/actions/packages
+      - uses: ../actions/packages
         with:
           username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
@@ -41,4 +39,4 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-      - uses: ./.github/actions/logs
+      - uses: ../actions/save-logs

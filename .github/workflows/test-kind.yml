@@ -22,21 +22,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - uses: ../actions/golang
+      - uses: ../actions/node
 
       - name: "Dependency: Kind Cluster Init"
         run: |
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
 
-      - run: make build-cli-linux-amd
-
-      - uses: ./.github/actions/packages
+      - uses: ../actions/packages
         with:
           username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
       - run: make test-e2e ARCH=amd64
 
-      - uses: ./.github/actions/logs
+      - uses: ../actions/save-logs

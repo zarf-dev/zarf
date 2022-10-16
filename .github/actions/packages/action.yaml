@@ -12,7 +12,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/agent-image
+    - run: make build-cli-linux-amd
+      shell: bash
+
+    - uses: ../actions/agent-image
       with:
         username: ${{ inputs.username }}
         password: ${{ inputs.password }}

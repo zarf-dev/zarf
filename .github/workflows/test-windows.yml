@@ -24,8 +24,8 @@ jobs:
       - run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
         shell: cmd
 
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - uses: ../actions/golang
+      - uses: ../actions/node
 
       - run: make build-cli-windows-amd
         shell: pwsh

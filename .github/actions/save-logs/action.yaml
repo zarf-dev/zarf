@@ -4,8 +4,7 @@ description: "Save debug logs"
 runs:
   using: composite
   steps:
-    - name: "Save test debug logs"
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v3
       if: always()
       with:
         name: debug-log

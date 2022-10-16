@@ -17,12 +17,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repo"
-        uses: actions/checkout@v3
-
-      - uses: ./.github/actions/golang
-
-      - name: "Regenerate Schema and Check that it Matches Generated"
-        run: "make test-docs-and-schema"
-
-      - uses: ./.github/actions/logs
+      - uses: actions/checkout@v3
+      - uses: ../actions/golang
+      - run: "make test-docs-and-schema"
+      - uses: ../actions/save-logs

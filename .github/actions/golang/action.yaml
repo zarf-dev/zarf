@@ -4,8 +4,7 @@ description: "Setup Go binary and caching"
 runs:
   using: composite
   steps:
-    - name: "Dependency: Setup Golang"
-      uses: actions/setup-go@v3
+    - uses: actions/setup-go@v3
       with:
         go-version: 1.19.x
         cache: true
