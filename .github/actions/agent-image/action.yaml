@@ -1,0 +1,25 @@
+name: agent-image
+description: "Create and push the Zarf Agent image"
+
+inputs:
+  username:
+    description: "Docker Hub username"
+    required: true
+  password:
+    description: "Docker Hub password"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: "Zarf Agent: Login to Docker Hub"
+      uses: docker/login-action@v2
+      with:
+        username: ${{ inputs.username }}
+        password: ${{ input.password }}
+
+    - name: "Zarf Agent: Build and Publish the Image"
+      shell: bash
+      run: |
+        cp build/zarf build/zarf-linux-amd64
+        docker buildx build --push --platform linux/amd64 --tag zarfdev/agent:$GITHUB_SHA .

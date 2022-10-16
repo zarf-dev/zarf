@@ -19,25 +19,19 @@ jobs:
   validate:
     runs-on: windows-latest
     steps:
-      - name: "Checkout Repo"
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Use GNU tar for Windows
+      - run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
         shell: cmd
-        run: |
-          echo "Adding GNU tar to PATH"
-          echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
 
       - uses: ./.github/actions/golang
+      - uses: ./.github/actions/node
 
-      - name: "Build CLI"
+      - run: make build-cli-windows-amd
         shell: pwsh
-        run: make build-cli-windows-amd
 
-      - name: "Make Packages"
+      - run: make build-examples ARCH=amd64
         shell: pwsh
-        run: make init-package build-examples ARCH=amd64
 
-      - name: "Run Tests"
+      - run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
         shell: pwsh
-        run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
