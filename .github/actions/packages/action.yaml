@@ -15,7 +15,7 @@ runs:
     - uses: ./.github/actions/agent-image
       with:
         username: ${{ inputs.username }}
-        password: ${{ input.password }}
+        password: ${{ inputs.password }}
 
     - run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
       shell: bash

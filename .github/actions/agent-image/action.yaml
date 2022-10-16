@@ -16,7 +16,7 @@ runs:
       uses: docker/login-action@v2
       with:
         username: ${{ inputs.username }}
-        password: ${{ input.password }}
+        password: ${{ inputs.password }}
 
     - name: "Zarf Agent: Build and Publish the Image"
       shell: bash
