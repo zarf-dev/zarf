@@ -1,0 +1,16 @@
+name: cleanup
+description: "Save debug logs and cleanup the cluster"
+
+runs:
+  using: composite
+  steps:
+    - name: "Save test debug logs"
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: debug-log
+        path: /tmp/zarf-*.log
+
+    - name: "Cleanup"
+      shell: bash
+      run: sudo make destroy

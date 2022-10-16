@@ -9,10 +9,12 @@ jobs:
   push-resources:
     runs-on: ubuntu-latest
     steps:
-      - name: "Dependency: Install Golang"
-        uses: actions/setup-go@v3
+      - name: "Checkout Repo"
+        uses: actions/checkout@v3
         with:
-          go-version: 1.19.x
+          fetch-depth: 0
+
+      - uses: ./.github/actions/golang
 
       - name: "Dependency: Install cosign"
         uses: sigstore/cosign-installer@v2.8.0
@@ -26,21 +28,6 @@ jobs:
 
       - name: "Dependency: Install Grype"
         run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
-
-      - name: "Checkout Repo"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-          
 
       - name: "Build CLI"
         run: |
@@ -77,12 +64,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-      - name: "Save test debug logs"
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: debug-log
-          path: /tmp/zarf-*.log
+      - uses: ./.github/actions/logs
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: "Create release time CVE report"
