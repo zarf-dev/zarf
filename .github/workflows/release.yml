@@ -15,6 +15,7 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/golang
+      - uses: ./.github/actions/node
 
       - name: "Dependency: Install cosign"
         uses: sigstore/cosign-installer@v2.8.0

@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/golang
+      - uses: ./.github/actions/node
       - uses: ./.github/actions/k3d
 
       - name: "Build CLI"

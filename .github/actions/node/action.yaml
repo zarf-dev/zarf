@@ -1,0 +1,14 @@
+name: node-cache
+description: "Node cache"
+
+runs:
+  using: composite
+  steps:
+    - name: Cache UI artifacts
+      uses: actions/cache@v3
+      with:
+        path: |
+          "build/ui"
+           "~/.npm"
+        key: ${{ runner.OS }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: npm-cache-
