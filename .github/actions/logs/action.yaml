@@ -1,5 +1,5 @@
-name: cleanup
-description: "Save debug logs and cleanup the cluster"
+name: save-logs
+description: "Save debug logs"
 
 runs:
   using: composite
@@ -10,7 +10,3 @@ runs:
       with:
         name: debug-log
         path: /tmp/zarf-*.log
-
-    - name: "Cleanup"
-      shell: bash
-      run: sudo make destroy

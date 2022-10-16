@@ -53,7 +53,7 @@ jobs:
         # NOTE: This test run will create its own K3d cluster. A single cluster will be used throughout the test run.
         run: npm test
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
       - name: "Save ui test reports"
         uses: actions/upload-artifact@v3

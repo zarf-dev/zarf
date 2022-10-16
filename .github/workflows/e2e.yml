@@ -53,9 +53,11 @@ jobs:
       - uses: ./.github/actions/k3d
 
       - name: "Run Tests"
-        run: make test-e2e ARCH=amd64
+        run: |
+          make test-e2e ARCH=amd64
+          make destroy
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
   test-k3s:
     runs-on: ubuntu-latest
@@ -73,8 +75,9 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
+          sudo make destroy
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
   test-kind:
     runs-on: ubuntu-latest
@@ -90,12 +93,11 @@ jobs:
           kubectl scale deploy -n kube-system coredns --replicas=1
 
       - name: "Run Tests"
-        # NOTE: We want to test providing a cluster to the test framework so this one creates its own KinD cluster
-        #       rather than having the test suite do it. The K3d tests do a self-provisioned cluster and the K3s tests
-        #       use Zarf to create the cluster. In this test a single cluster will be used throughout the test run.
-        run: make test-e2e ARCH=amd64
+        run: |
+          make test-e2e ARCH=amd64
+          make destroy
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
   test-web-ui:
     runs-on: ubuntu-latest
@@ -113,9 +115,9 @@ jobs:
           key: ${{ runner.os }}-browsers
 
       - name: "Run Tests"
-        run: npm test       
+        run: npm test
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
       - name: "Save ui test reports"
         uses: actions/upload-artifact@v3
@@ -132,17 +134,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/golang
       - uses: ./.github/actions/build-cache
+      - uses: ./.github/actions/k3d
 
       - name: "Run Tests"
-        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
-        #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
-        #       used for each test
-        # chown the logs since they were orignally created as root
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-external ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
+          make test-external ARCH=amd64
+          make destroy
 
-      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/logs
 
   test-windows:
     runs-on: windows-latest
