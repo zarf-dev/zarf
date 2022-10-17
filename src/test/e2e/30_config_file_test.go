@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -48,6 +49,11 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEAPORD COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
+
+	// Verify the configmap was properly templated
+	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
+	require.Contains(t, string(kubectlOut), "zebra=lion food")
+	require.Contains(t, string(kubectlOut), "leopard=stealth lion")
 }
 
 func configFileDefaultTests(t *testing.T) {

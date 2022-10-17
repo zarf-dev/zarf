@@ -11,3 +11,7 @@ leopard = 'spots'
 
 [package.deploy]
 components = 'lion'
+
+[package.deploy.set]
+deploy_zebra = 'lion food'
+deploy_leopard = 'stealth lion'
