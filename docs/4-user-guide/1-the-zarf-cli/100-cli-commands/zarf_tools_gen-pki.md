@@ -1,15 +1,16 @@
-## zarf tools archiver compress
+## zarf tools gen-pki
 
-Compress a collection of sources based off of the destination file extension
+Generates a Certificate Authority and PKI chain of trust for the given host
 
 ```
-zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
+zarf tools gen-pki {HOST} [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for compress
+  -h, --help                       help for gen-pki
+      --sub-alt-name stringArray   Specify Subject Alternative Names for the certificate
 ```
 
 ### Options inherited from parent commands
@@ -25,4 +26,4 @@ zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
 
 ### SEE ALSO
 
-* [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress tools for Zarf packages
+* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier

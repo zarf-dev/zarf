@@ -1,9 +1,9 @@
 ## zarf tools archiver decompress
 
-Decompress an archive (package) to a specified location.
+Decompress an archive (package) to a specified location
 
 ```
-zarf tools archiver decompress [ARCHIVE] [DESTINATION] [flags]
+zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 ```
 
 ### Options
@@ -26,4 +26,3 @@ zarf tools archiver decompress [ARCHIVE] [DESTINATION] [flags]
 ### SEE ALSO
 
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress tools for Zarf packages
-
