@@ -21,16 +21,25 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
-      - uses: ./.github/actions/k3d
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - uses: ./.github/actions/packages
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
         with:
-          username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
-      - run: make test-e2e ARCH=amd64
+      - name: Setup K3d
+        uses: ./.github/actions/k3d
 
-      - uses: ./.github/actions/save-logs
+      - name: Run tests
+        run: make test-e2e ARCH=amd64
+
+      - name: Save logs
+        uses: ./.github/actions/save-logs

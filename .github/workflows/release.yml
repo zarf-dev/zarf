@@ -9,28 +9,19 @@ jobs:
   push-resources:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repo"
+      - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-      - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.8.0
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
 
-      - name: "Dependency: Install Syft"
-        uses: anchore/sbom-action/download-syft@v0.12.0
+      - name: Install tools
+        uses: ./.github/actions/install-tools
 
-      - name: "Dependency: Install Docker Buildx"
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: "Dependency: Install Grype"
-        run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
-
-      - name: "Build CLI"
+      - name: Build CLI
         run: |
           make build-cli-linux-amd
           make build-cli-linux-arm
@@ -55,20 +46,21 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
 
       # Builds init packages since GoReleaser won't handle this for us
-      - name: "Build init-packages For Release"
+      - name: Build init-packages For Release
         run: |
           make init-package ARCH=amd64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
           make init-package ARCH=arm64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
 
-      - name: "Run Tests"
+      - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-      - uses: ./.github/actions/save-logs
+      - name: Save logs
+        uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
-      - name: "Create release time CVE report"
+      - name: Create release time CVE report
         run: "make cve-report"
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
@@ -90,7 +82,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
 
-      - name: "Save CVE report"
+      - name: Save CVE report
         uses: actions/upload-artifact@v3
         with:
           name: cve-report

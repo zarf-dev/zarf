@@ -19,10 +19,22 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
-      - uses: ./.github/actions/k3d
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+        with:
+          password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
+
+      - name: Setup K3d
+        uses: ./.github/actions/k3d
 
       - name: Cache browsers
         uses: actions/cache@v3
@@ -30,16 +42,13 @@ jobs:
           path: "~/Library/Caches/ms-playwright/"
           key: ${{ runner.os }}-browsers
 
-      - uses: ./.github/actions/packages
-        with:
-          username: zarfdev
-          password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
+      - name: Run UI tests
+        run: npm test
 
-      - run: npm test
+      - name: Save logs
+        uses: ./.github/actions/save-logs
 
-      - uses: ./.github/actions/save-logs
-
-      - name: "Save ui test reports"
+      - name: Save playright logs
         uses: actions/upload-artifact@v3
         if: always()
         with:

@@ -19,22 +19,24 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
-      - uses: ./.github/actions/k3d
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - run: "curl -s https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-      - run: make build-cli-linux-amd
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
 
-      - uses: ./.github/actions/agent-image
+      - name: Build binary and zarf packages
         with:
-          username: zarfdev
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
-      - run: make init-package AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
+      - name: Setup k3d
+        uses: ./.github/actions/k3d
 
-      - run: make test-external
+      - name: Run external service test
+        run: make test-external
 
-      - uses: ./.github/actions/save-logs
+      - name: Save logs
+        uses: ./.github/actions/save-logs

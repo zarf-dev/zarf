@@ -19,19 +19,27 @@ jobs:
   validate:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
+      - name: Optimize caching
+        run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
         shell: cmd
 
-      - uses: ./.github/actions/golang
-      - uses: ./.github/actions/node
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-      - run: make build-cli-windows-amd
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build windows binary
+        run: make build-cli-windows-amd64
         shell: pwsh
 
-      - run: make build-examples ARCH=amd64
+      - name: Build zarf packages
+        run: make build-examples ARCH=amd64
         shell: pwsh
 
-      - run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
+      - name: Run winodws tests
+        run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
         shell: pwsh
