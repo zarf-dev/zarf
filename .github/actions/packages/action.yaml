@@ -3,10 +3,10 @@ description: "Create agent image, init package and example packages"
 
 inputs:
   username:
-    description: "Docker Hub username"
-    required: true
+    description: "Registry username"
+    default: zarfdev
   password:
-    description: "Docker Hub password"
+    description: "Registry password"
     required: true
 
 runs:
@@ -20,5 +20,5 @@ runs:
         username: ${{ inputs.username }}
         password: ${{ inputs.password }}
 
-    - run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=zarfdev/agent:$GITHUB_SHA
+    - run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=${{inputs.username}}/agent:$GITHUB_SHA
       shell: bash
