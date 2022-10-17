@@ -114,5 +114,22 @@ func TestUseCLI(t *testing.T) {
 		assert.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
 	}
 
-	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
+	// Test generation of PKI
+	tlsCA := "tls.ca"
+	tlsCert := "tls.crt"
+	tlsKey := "tls.key"
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
+
+	_, err = os.ReadFile(tlsCA)
+	require.NoError(t, err)
+
+	_, err = os.ReadFile(tlsCert)
+	require.NoError(t, err)
+
+	_, err = os.ReadFile(tlsKey)
+	require.NoError(t, err)
+
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName, tlsCA, tlsCert, tlsKey)
 }
