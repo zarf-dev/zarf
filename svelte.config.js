@@ -2,6 +2,7 @@ import adapter from "@sveltejs/adapter-static";
 import preprocess from 'svelte-preprocess';
 
 const config = {
+  // TODO: (@JMCCOY) blah blah blah
   onwarn: (warning, handler) => {
     // disable css-unused warnings
     if (warning.code.startsWith("css-unused-")) return;
