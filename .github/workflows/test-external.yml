@@ -29,6 +29,7 @@ jobs:
         uses: ./.github/actions/node
 
       - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
         with:
           password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
 
