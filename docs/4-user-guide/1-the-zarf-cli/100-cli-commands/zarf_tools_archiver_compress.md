@@ -3,7 +3,7 @@
 Compress a collection of sources based off of the destination file extension
 
 ```
-zarf tools archiver compress [SOURCES] [ARCHIVE] [flags]
+zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
 ```
 
 ### Options

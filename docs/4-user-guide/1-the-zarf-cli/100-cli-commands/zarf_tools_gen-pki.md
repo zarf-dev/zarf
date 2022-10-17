@@ -1,15 +1,16 @@
-## zarf tools archiver decompress
+## zarf tools gen-pki
 
-Decompress an archive (package) to a specified location
+Generates a Certificate Authority and PKI chain of trust for the given host
 
 ```
-zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
+zarf tools gen-pki {HOST} [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for decompress
+  -h, --help                       help for gen-pki
+      --sub-alt-name stringArray   Specify Subject Alternative Names for the certificate
 ```
 
 ### Options inherited from parent commands
@@ -25,5 +26,5 @@ zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 
 ### SEE ALSO
 
-* [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress tools for Zarf packages
+* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
 
