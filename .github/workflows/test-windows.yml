@@ -33,7 +33,7 @@ jobs:
         uses: ./.github/actions/node
 
       - name: Build windows binary
-        run: make build-cli-windows-amd64
+        run: make build-cli-windows-amd
         shell: pwsh
 
       - name: Build zarf packages
