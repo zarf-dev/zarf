@@ -1,4 +1,4 @@
-name: E2E
+name: Test Web UI
 on:
   pull_request:
     paths-ignore:
@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   validate:
-    name: Test Web UI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -1,4 +1,4 @@
-name: Scan
+name:  Validate Docs and Schema
 on:
   pull_request:
     paths:
@@ -10,7 +10,6 @@ on:
 
 jobs:
   validate:
-    name: Validate Docs and Schema
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

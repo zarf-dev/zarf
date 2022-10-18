@@ -1,9 +1,8 @@
-name: Scan
+name: Analyze CVEs
 on: pull_request
 
 jobs:
   validate:
-    name: Analyze CVEs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

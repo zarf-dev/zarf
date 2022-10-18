@@ -1,4 +1,4 @@
-name: E2E
+name: Test K3d Cluster
 on:
   pull_request:
     paths-ignore:
@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   validate:
-    name: Test K3d Cluster
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

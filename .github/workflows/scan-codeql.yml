@@ -1,4 +1,4 @@
-name: Scan
+name: Analyze CodeQL
 
 on:
   push:
@@ -19,7 +19,6 @@ on:
 
 jobs:
   validate:
-    name: Analyze CodeQL
     runs-on: ubuntu-latest
     permissions:
       actions: read

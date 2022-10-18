@@ -1,4 +1,4 @@
-name: E2E
+name: Test Windows Binary
 on:
   pull_request:
     paths-ignore:
@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   validate:
-    name: Test Windows Binary
     runs-on: windows-latest
     steps:
       - name: Checkout
