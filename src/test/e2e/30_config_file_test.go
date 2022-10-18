@@ -13,7 +13,7 @@ import (
 
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	var (
