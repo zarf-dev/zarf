@@ -1,4 +1,4 @@
-name: scan-docs-and-schema
+name: Scan
 on:
   pull_request:
     paths:
@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   validate:
+    name: Validate Docs and Schema
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

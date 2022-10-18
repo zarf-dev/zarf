@@ -1,4 +1,4 @@
-name: scan-labels
+name: Scan
 on:
   pull_request:
     types: [labeled, unlabeled, opened, edited, synchronize]
@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   enforce:
+    name: Validate Labels
     runs-on: ubuntu-latest
     steps:
       - uses: yogevbd/enforce-label-action@2.2.2

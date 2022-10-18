@@ -1,4 +1,4 @@
-name: test-k3s
+name: E2E
 on:
   pull_request:
     paths-ignore:
@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   validate:
+    name: Test w/K3s
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

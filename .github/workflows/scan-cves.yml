@@ -1,4 +1,4 @@
-name: scan-cves
+name: Scan
 on: pull_request
 
 # Abort prior jobs in the same workflow / PR
@@ -8,6 +8,7 @@ concurrency:
 
 jobs:
   validate:
+    name: Analyze CVEs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
