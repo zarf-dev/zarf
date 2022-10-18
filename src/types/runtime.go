@@ -86,12 +86,16 @@ type ZarfPullOptions struct {
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
 }
 
-// ZarfGenerateOptions tracks the user-defined options during package generation.
-type ZarfGenerateOptions struct {
+// ZarfPackageGenerateOptions tracks the user-defined options during package generation.
+type ZarfPackageGenerateOptions struct {
 	ComponentNames     []string `json:"componentNames" jsonschema:"description=Array of component names"`
 	ComponentDataTypes []string `json:"componentDataTypes" jsonschema:"description=Array of types of componentData"`
 	ComponentData      []string `json:"componentData" jsonschema:"description=Array of component data"`
 	Required           bool     `json:"required" jsonschema:"description=Bool for if component is required"`
+}
+
+type ZarfGenerateOptions struct {
+	FilePath  string `json:"filepath" jsonschema:"description=Path to zarf package yaml to create or modify"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -123,6 +127,7 @@ type ZarfCreateOptions struct {
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
 	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
 	NoYOLO             bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
+	OutputDirectory string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 }
 
 // ZarfSplitPackageData contains info about a split package.

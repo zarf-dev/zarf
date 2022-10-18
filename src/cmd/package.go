@@ -348,7 +348,7 @@ func init() {
 	bindPackageFlags(v)
 	bindCreateFlags(v)
 	bindDeployFlags(v)
-	bindGenerateFlags()
+	bindPackageGenerateFlags()
 	bindMirrorFlags(v)
 	bindInspectFlags(v)
 	bindRemoveFlags(v)
@@ -443,15 +443,15 @@ func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 }
 
-func bindGenerateFlags() {
+func bindPackageGenerateFlags() {
 	generateFlags := packageGenerateCmd.Flags()
 
 	emptyArray := make([]string, 0)
 
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
-	generateFlags.BoolVar(&config.GenerateOptions.Required, "required", false, "is this component required")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
+	generateFlags.BoolVar(&config.PackageGenerateOptions.Required, "required", false, "is this component required")
 }
 
 func bindInspectFlags(_ *viper.Viper) {
