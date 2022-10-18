@@ -13,5 +13,5 @@ leopard = 'spots'
 components = 'lion'
 
 [package.deploy.set]
-deploy_zebra = 'lion food'
-deploy_leopard = 'stealth lion'
+scorpion = 'iridescent'
+camel_spider = 'matte'

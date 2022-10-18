@@ -52,8 +52,8 @@ func configFileTests(t *testing.T, dir, path string) {
 
 	// Verify the configmap was properly templated
 	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
-	require.Contains(t, string(kubectlOut), "zebra=lion food")
-	require.Contains(t, string(kubectlOut), "leopard=stealth lion")
+	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
+	require.Contains(t, string(kubectlOut), "camel_spider=matte")
 }
 
 func configFileDefaultTests(t *testing.T) {

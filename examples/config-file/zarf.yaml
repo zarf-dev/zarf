@@ -4,8 +4,8 @@ metadata:
   description: 'Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"'
 
 variables:
-  - name: DEPLOY_ZEBRA
-  - name: DEPLOY_LEOPARD
+  - name: SCORPION
+  - name: CAMEL_SPIDER
 
 components:
   - name: lion
