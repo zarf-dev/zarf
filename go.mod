@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33
 	github.com/anchore/syft v0.59.0
-	github.com/derailed/k9s v0.26.6
+	github.com/derailed/k9s v0.26.7
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/fatih/color v1.13.0
 	github.com/go-chi/chi/v5 v5.0.7
@@ -156,7 +156,7 @@ require (
 	github.com/facebookincubator/nvdtools v0.1.4 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fullstorydev/grpcurl v1.8.7 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.0 // indirect
@@ -249,7 +249,7 @@ require (
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microsoft/go-rustaudit v0.0.0-20220730194248-4b17361d90a5 // indirect
@@ -287,7 +287,7 @@ require (
 	github.com/rakyll/hey v0.1.4 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/rs/zerolog v1.27.0 // indirect
+	github.com/rs/zerolog v1.28.0 // indirect
 	github.com/rubenv/sql-migrate v1.1.2 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -379,7 +379,7 @@ require (
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	golang.org/x/term v0.0.0-20220919170432-7a66f970e087 // indirect
-	golang.org/x/text v0.3.8-0.20211004125949-5bd84dd9b33b // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
@@ -395,13 +395,13 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.25.2 // indirect
-	k8s.io/apiserver v0.25.2 // indirect
-	k8s.io/cli-runtime v0.25.2 // indirect
-	k8s.io/component-base v0.25.2 // indirect
+	k8s.io/apiextensions-apiserver v0.25.3 // indirect
+	k8s.io/apiserver v0.25.3 // indirect
+	k8s.io/cli-runtime v0.25.3 // indirect
+	k8s.io/component-base v0.25.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
-	k8s.io/kubectl v0.25.2 // indirect
-	k8s.io/metrics v0.25.2 // indirect
+	k8s.io/kubectl v0.25.3 // indirect
+	k8s.io/metrics v0.25.3 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.36.1 // indirect
 	modernc.org/ccgo/v3 v3.16.8 // indirect
