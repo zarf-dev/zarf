@@ -23,6 +23,12 @@ import (
 var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
+type foundImages struct {
+	maybeImages   k8s.ImageMap
+	realImages    k8s.ImageMap
+	componentName string
+}
+
 // FindImages iterates over a zarf.yaml and attempts to parse any images
 func FindImages(baseDir, repoHelmChartPath string) {
 
@@ -48,9 +54,6 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 	components := config.GetComponents()
 
-	tempPath := createPaths()
-	defer tempPath.clean()
-
 	for _, component := range components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
@@ -62,11 +65,28 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 	fmt.Printf("components:\n")
 
+	allImages := GetImagesFromComponents(components, repoHelmChartPath)
+
+	printFoundImages(allImages)
+
+	// In case the directory was changed, reset to prevent breaking relative target paths
+	if originalDir != "" {
+		_ = os.Chdir(originalDir)
+	}
+
+}
+
+func GetImagesFromComponents(components []types.ZarfComponent, repoHelmChartPath string) (allImages []foundImages) {
+
+	tempPath := createPaths()
+	defer tempPath.clean()
+	
 	for _, component := range components {
 
 		// matchedImages holds the collection of images, reset per-component
 		matchedImages = make(k8s.ImageMap)
 		maybeImages = make(k8s.ImageMap)
+		var componentImages foundImages
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -112,6 +132,8 @@ func FindImages(baseDir, repoHelmChartPath string) {
 					path := helm.DownloadChartFromGit(chart, componentPath.charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
+				} else if (len(chart.LocalPath) != 0) {
+					helm.CreateChartFromLocalFiles(chart, componentPath.charts)
 				} else {
 					helm.DownloadPublishedChart(chart, componentPath.charts)
 				}
@@ -138,7 +160,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 				})
 
 				if err != nil {
-					message.Errorf(err, "Problem rendering the helm template for %s", chart.Url)
+					message.Errorf(err, "Problem rendering the helm template for %s", chart.Name)
 					continue
 				}
 
@@ -186,9 +208,21 @@ func FindImages(baseDir, repoHelmChartPath string) {
 			}
 		}
 
-		if sortedImages := k8s.SortImages(matchedImages, nil); len(sortedImages) > 0 {
+		componentImages.maybeImages = maybeImages
+		componentImages.realImages  = matchedImages
+		componentImages.componentName = component.Name
+
+		allImages = append(allImages, componentImages)
+	}
+	return allImages
+}
+
+func printFoundImages(allImages []foundImages) {
+
+	for _, images := range allImages {
+		if sortedImages := k8s.SortImages(images.realImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
-			fmt.Printf("\n  - name: %s\n    images:\n", component.Name)
+			fmt.Printf("\n  - name: %s\n    images:\n", images.componentName)
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
 				fmt.Println("      - " + image)
@@ -196,7 +230,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		}
 
 		// Handle the "maybes"
-		if sortedImages := k8s.SortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
+		if sortedImages := k8s.SortImages(images.maybeImages, images.realImages); len(sortedImages) > 0 {
 			var realImages []string
 			for _, image := range sortedImages {
 				if descriptor, err := crane.Head(image, config.GetCraneOptions()...); err != nil {
@@ -210,19 +244,13 @@ func FindImages(baseDir, repoHelmChartPath string) {
 			}
 
 			if len(realImages) > 0 {
-				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, component.Name)
+				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, images.componentName)
 				for _, image := range realImages {
 					fmt.Println("      - " + image)
 				}
 			}
 		}
 	}
-
-	// In case the directory was changed, reset to prevent breaking relative target paths
-	if originalDir != "" {
-		_ = os.Chdir(originalDir)
-	}
-
 }
 
 func processUnstructured(resource *unstructured.Unstructured) error {
