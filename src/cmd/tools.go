@@ -8,11 +8,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
+
+var subAltNames []string
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -28,7 +31,7 @@ var archiverCmd = &cobra.Command{
 }
 
 var archiverCompressCmd = &cobra.Command{
-	Use:     "compress [SOURCES] [ARCHIVE]",
+	Use:     "compress {SOURCES} {ARCHIVE}",
 	Aliases: []string{"c"},
 	Short:   "Compress a collection of sources based off of the destination file extension",
 	Args:    cobra.MinimumNArgs(2),
@@ -42,9 +45,9 @@ var archiverCompressCmd = &cobra.Command{
 }
 
 var archiverDecompressCmd = &cobra.Command{
-	Use:     "decompress [ARCHIVE] [DESTINATION]",
+	Use:     "decompress {ARCHIVE} {DESTINATION}",
 	Aliases: []string{"d"},
-	Short:   "Decompress an archive (package) to a specified location.",
+	Short:   "Decompress an archive (package) to a specified location",
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
@@ -104,6 +107,27 @@ var clearCacheCmd = &cobra.Command{
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			message.Fatalf("Unable to clear the cache driectory %s: %s", config.GetAbsCachePath(), err.Error())
 		}
+		message.SuccessF("Successfully cleared the cache from %s", config.GetAbsCachePath())
+	},
+}
+
+var generatePKICmd = &cobra.Command{
+	Use:     "gen-pki {HOST}",
+	Aliases: []string{"pki"},
+	Short:   "Generates a Certificate Authority and PKI chain of trust for the given host",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pki := pki.GeneratePKI(args[0], subAltNames...)
+		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
+			message.Fatalf(err, "Failed to write the CA file: %s", err.Error())
+		}
+		if err := os.WriteFile("tls.crt", pki.Cert, 0644); err != nil {
+			message.Fatalf(err, "Failed to write the Certificate file: %s", err.Error())
+		}
+		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
+			message.Fatalf(err, "Failed to write the Key file: %s", err.Error())
+		}
+		message.SuccessF("Successfully created a chain of trust for %s", args[0])
 	},
 }
 
@@ -115,7 +139,10 @@ func init() {
 	toolsCmd.AddCommand(registryCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
-	clearCacheCmd.Flags().StringVar(&config.CreateOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+
+	toolsCmd.AddCommand(generatePKICmd)
+	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, "Specify Subject Alternative Names for the certificate")
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)

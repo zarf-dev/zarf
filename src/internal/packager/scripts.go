@@ -3,6 +3,8 @@ package packager
 import (
 	"context"
 	"os"
+	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,14 +17,6 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Success()
 
-	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
-	binaryPath, err := os.Executable()
-	if err != nil {
-		spinner.Errorf(err, "Unable to determine the current zarf binary path")
-	} else {
-		script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
-	}
-
 	var ctx context.Context
 	var cancel context.CancelFunc
 
@@ -33,6 +27,11 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 
 	duration := time.Duration(scripts.TimeoutSeconds) * time.Second
 	timeout := time.After(duration)
+
+	script, err := scriptMutation(script)
+	if err != nil {
+		spinner.Errorf(err, "Error mutating script: %s", script)
+	}
 
 	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
 
@@ -45,7 +44,19 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 		// Otherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, "sh", "-c", script)
+
+			var shell string
+			var shellArgs string
+
+			if runtime.GOOS == "windows" {
+				shell = "powershell"
+				shellArgs = "-Command"
+			} else {
+				shell = "sh"
+				shellArgs = "-c"
+			}
+			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, shell, shellArgs, script)
+
 			defer cancel()
 
 			if err != nil {
@@ -67,4 +78,25 @@ func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 			return
 		}
 	}
+}
+
+// Perform some basic string mutations to make scripts more useful
+func scriptMutation(script string) (string, error) {
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return script, err
+	}
+
+	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
+	script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
+
+	// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliases by M$
+	// See https://mathieubuisson.github.io/powershell-linux-bash/ &
+	// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details
+	if runtime.GOOS == "windows" {
+		script = regexp.MustCompile(`^touch `).ReplaceAllString(script, `New-Item `)
+	}
+
+	return script, nil
 }

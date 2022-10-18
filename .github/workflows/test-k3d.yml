@@ -46,7 +46,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: "Build CLI"
-        run: make build-cli-linux-amd ARCH=amd64
+        run: make build-cli-linux-amd
 
       - name: "Zarf Agent: Login to Docker Hub"
         uses: docker/login-action@v2

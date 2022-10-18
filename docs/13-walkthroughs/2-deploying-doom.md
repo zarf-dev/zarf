@@ -1,6 +1,6 @@
 # Deploying Doom
 
-In this walkthrough, we are going to deploy a fun application onto your cluster. In some of the previous walkthroughs, we have figured out how to [create a package](./0-creating-a-zarf-package.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
+In this walkthrough, we are going to deploy a fun application onto your cluster. In some of the previous walkthroughs, we have figured out how to [create a package](./0-using-zarf-package-create.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
 
 
 ## Walkthrough Prerequisites

@@ -55,8 +55,9 @@ func configFileDefaultTests(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
-		"Disable log file creation. (default true)",
-		"Disable fancy UI progress bars, spinners, logos, etc. (default true)",
+		"Disable log file creation (default true)",
+		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
+		"zarf_cache: 978499a5",
 		"tmp_dir: c457359e",
 	}
 
@@ -81,7 +82,6 @@ func configFileDefaultTests(t *testing.T) {
 		"Allow insecure registry connections when pulling OCI images (default true)",
 		"create.output_directory: 52d061d5",
 		"Skip generating SBOM for this package (default true)",
-		"create.zarf_cache: 978499a5",
 		"[thing1=1a2b3c4d]",
 	}
 
