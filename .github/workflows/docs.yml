@@ -1,4 +1,4 @@
-name: docs
+name: Validate Docs
 on:
   pull_request:
     paths:

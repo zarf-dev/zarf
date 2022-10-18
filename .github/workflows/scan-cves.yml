@@ -16,6 +16,3 @@ jobs:
 
       - name: Check for CVEs in Dependencies
         run: "make test-cves"
-
-      - name: Save logs
-        uses: ./.github/actions/save-logs
