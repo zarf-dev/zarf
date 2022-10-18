@@ -212,7 +212,7 @@ func init() {
 
 	bindCreateFlags()
 	bindDeployFlags()
-	bindGenerateFlags()
+	bindPackageGenerateFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
 }
@@ -255,15 +255,15 @@ func bindDeployFlags() {
 	deployFlags.StringVar(&config.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }
 
-func bindGenerateFlags() {
+func bindPackageGenerateFlags() {
 	generateFlags := packageGenerateCmd.Flags()
 
 	emptyArray := make([]string, 0)
 
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
-	generateFlags.StringArrayVar(&config.GenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
-	generateFlags.BoolVar(&config.GenerateOptions.Required, "required", false, "is this component required")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
+	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
+	generateFlags.BoolVar(&config.PackageGenerateOptions.Required, "required", false, "is this component required")
 }
 
 func bindInspectFlags() {

@@ -14,12 +14,16 @@ type ZarfDeployOptions struct {
 	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
-// ZarfGenerateOptions tracks the user-defined options during package generation.
-type ZarfGenerateOptions struct {
+// ZarfPackageGenerateOptions tracks the user-defined options during package generation.
+type ZarfPackageGenerateOptions struct {
 	ComponentNames     []string `json:"componentNames" jsonschema:"description=Array of component names"`
 	ComponentDataTypes []string `json:"componentDataTypes" jsonschema:"description=Array of types of componentData"`
 	ComponentData      []string `json:"componentData" jsonschema:"description=Array of component data"`
 	Required           bool     `json:"required" jsonschema:"description=Bool for if component is required"`
+}
+
+type ZarfGenerateOptions struct {
+	FilePath  string `json:"filepath" jsonschema:"description=Path to zarf package yaml to create or modify"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -43,7 +47,7 @@ type ZarfCreateOptions struct {
 	Insecure        bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
 	OutputDirectory string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	SetVariables    map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	CachePath       string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
+	CachePath       string            `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 }
 
 type ConnectString struct {
