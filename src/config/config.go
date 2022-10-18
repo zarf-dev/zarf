@@ -90,7 +90,7 @@ var (
 	UIAssets      embed.FS
 
 	// Variables set by the user
-	SetVariableMap map[string]string
+	SetVariableMap = map[string]string{}
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -167,13 +167,17 @@ func GetPackageName() string {
 	suffix := "tar.zst"
 
 	if IsZarfInitConfig() {
-		return fmt.Sprintf("zarf-init-%s.tar.zst", GetArch())
+		return GetInitPackageName()
 	}
 
 	if metadata.Uncompressed {
 		suffix = "tar"
 	}
 	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
+}
+
+func GetInitPackageName() string {
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", GetArch(), CLIVersion)
 }
 
 func GetMetaData() types.ZarfMetadata {
@@ -299,10 +303,10 @@ func BuildConfig(path string) error {
 func GetAbsCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	if strings.HasPrefix(CreateOptions.CachePath, "~") {
-		return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(CommonOptions.CachePath, "~") {
+		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
 	}
-	return CreateOptions.CachePath
+	return CommonOptions.CachePath
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {

@@ -156,11 +156,11 @@ As stated before, Zarf was built to make deploying applications into disconnecte
 
 ## Using a config file to make CLI command flags declarative
 
-The `zarf init`, `zarf package create`, `zarf package deploy` command flags and any global flags can also be set via a config file. The default config file Zarf looks for is `zarf-config.toml` in the current working directory. Use the command `zarf prepare generate-config` with an optional filename to create a config template for use by Zarf. Note there are several config file formats supported including: `toml`, `json`, `yaml`, `ini` and `props`. For example, to create an template config file with the `my-cool-env` and the yaml format use the command `zarf prepare generate-config my-cool-env.yaml`.
+The `zarf init`, `zarf package create`, `zarf package deploy` command flags and any global flags can also be set via a config file. The default config file Zarf looks for by default is `zarf-config.toml` in the current working directory. Use the command `zarf prepare generate-config` with an optional filename to create a config template for use by Zarf. Note there are several config file formats supported including: `toml`, `json`, `yaml`, `ini` and `props`. For example, to create an template config file with the `my-cool-env` and the yaml format use the command `zarf prepare generate-config my-cool-env.yaml`.
 
 To use a custom config file, set the `ZARF_CONFIG` environment variable to the path of the config file. For example, to use the `my-cool-env.yaml` config file, set the `ZARF_CONFIG` environment variable to `my-cool-env.yaml`. The `ZARF_CONFIG` environment variable can be set in the shell or in the `.env` file in the current working directory. The `ZARF_CONFIG` environment variable takes precedence over the default config file.
 
-Additionally, any supported config paramater can also be set via env variable using the `ZARF_` prefix. For example, to set the `zarf init` `--stroage-class` flag via env variable, set the `ZARF_INIT.STORAGE_CLASS` environment variable. The `ZARF_` environment variable takes precedence over the config file.
+Additionally, any supported config paramater can also be set via env variable using the `ZARF_` prefix. For example, to set the `zarf init` `--storage-class` flag via env variable, set the `ZARF_INIT.STORAGE_CLASS` environment variable. The `ZARF_` environment variable takes precedence over the config file.
 
 Config files set default values, but can still be overwritten by command line flags. For example, if the config file sets the log level to `info` and the command line flag is set to `debug`, the log level will be `debug`. The order of precedence for command line configuration is:
 
@@ -170,4 +170,3 @@ Config files set default values, but can still be overwritten by command line fl
 4. Default values
 
 See the [Config File Example](../../../examples/config-file/README.md) for an example of using a config file.
-
