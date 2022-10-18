@@ -22,10 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Have to run early for now since UI tests are a little brittle around cluster state 
+      # Have to run early for now since UI tests are a little brittle around cluster state
       - name: Setup K3d
         uses: ./.github/actions/k3d
-      
+
       - name: Setup golang
         uses: ./.github/actions/golang
 
@@ -34,9 +34,6 @@ jobs:
 
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
-        with:
-          password: ${{ secrets.ZARF_DEV_DOCKERHUB }}
-
 
       - name: Cache browsers
         uses: actions/cache@v3

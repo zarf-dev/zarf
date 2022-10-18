@@ -2,23 +2,29 @@ name: packages
 description: "Create agent image, init package and example packages"
 
 inputs:
-  username:
-    description: "Registry username"
-    default: zarfdev
-  password:
-    description: "Registry password"
-    required: true
+  tag:
+    description: "Image tag"
+    default: ghcr.io/defenseunicorns/zarf/dev-agent:$GITHUB_SHA
+  architecture:
+    description: "Image architecture"
+    default: amd64
 
 runs:
   using: composite
   steps:
-    - run: make build-cli-linux-amd
+    - run: |
+        if [ "${{inputs.architecture}}" == "amd64" ]; then
+          make build-cli-linux-amd
+          cp build/zarf build/zarf-linux-amd64
+        else 
+          make build-cli-linux-arm
+          cp build/zarf-arm build/zarf-linux-arm64
+        fi
       shell: bash
 
     - uses: ./.github/actions/agent-image
       with:
-        username: ${{ inputs.username }}
-        password: ${{ inputs.password }}
+        tag: ${{inputs.tag}}
 
-    - run: make init-package build-examples ARCH=amd64 AGENT_IMAGE=${{inputs.username}}/agent:$GITHUB_SHA
+    - run: make init-package build-examples ARCH=${{inputs.architecture}} AGENT_IMAGE=${{inputs.tag}}
       shell: bash

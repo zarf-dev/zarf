@@ -17,7 +17,14 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/golang
-      - run: "make test-docs-and-schema"
-      - uses: ./.github/actions/save-logs
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Docs and schemas
+        run: "make test-docs-and-schema"
+
+      - name: Save logs
+        uses: ./.github/actions/save-logs
