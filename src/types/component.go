@@ -77,7 +77,7 @@ type ZarfChart struct {
 	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy, for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package, these will be merged together"`
-	GitPath     string   `json:"gitPath,omitempty" jsonschema:"oneof_required=gitPath,description=If using a git repo, the path to the chart in the repo"`
+	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=If using a git repo, the path to the chart in the repo"`
 	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=localPath,description=The path to the chart folder"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
 }
