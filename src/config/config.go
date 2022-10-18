@@ -90,7 +90,7 @@ var (
 	UIAssets      embed.FS
 
 	// Variables set by the user
-	SetVariableMap map[string]string
+	SetVariableMap = map[string]string{}
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
