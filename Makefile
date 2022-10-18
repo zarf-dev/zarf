@@ -20,7 +20,7 @@ else
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:11e53b7c872ce83d5752cb20e640eabd04956258
+AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'

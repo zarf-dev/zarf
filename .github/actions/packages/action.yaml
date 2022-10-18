@@ -4,7 +4,7 @@ description: "Create agent image, init package and example packages"
 inputs:
   tag:
     description: "Image tag"
-    default: ghcr.io/defenseunicorns/zarf/dev-agent:$GITHUB_SHA
+    default: dev-agent:$GITHUB_SHA
   architecture:
     description: "Image architecture"
     default: amd64

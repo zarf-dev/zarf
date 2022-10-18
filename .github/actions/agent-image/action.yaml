@@ -18,5 +18,5 @@ runs:
         username: dummy
         password: ${{ github.token }}
 
-    - run: docker buildx build --push --platform linux/${{inputs.architecture}} --tag ${{inputs.tag}} .
+    - run: docker buildx build --push --platform linux/${{inputs.architecture}} --tag ghcr.io/defenseunicorns/zarf/${{inputs.tag}} .
       shell: bash
