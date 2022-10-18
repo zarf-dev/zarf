@@ -8,11 +8,6 @@ on:
       - "src/cmd/**"
       - "docs/4-user-guide/1-the-zarf-cli/100-cli-commands/**"
 
-# Abort prior jobs in the same workflow / PR
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   validate:
     name: Validate Docs and Schema

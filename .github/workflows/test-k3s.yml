@@ -14,12 +14,12 @@ on:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: e2e-k3s-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    name: Test w/K3s
+    name: Test K3s Cluster
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -12,7 +12,7 @@ on:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: e2e-ui-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

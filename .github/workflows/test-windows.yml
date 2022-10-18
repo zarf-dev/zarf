@@ -12,12 +12,12 @@ on:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: e2e-windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    name: Test Windows
+    name: Test Windows Binary
     runs-on: windows-latest
     steps:
       - name: Checkout

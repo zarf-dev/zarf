@@ -1,11 +1,6 @@
 name: Scan
 on: pull_request
 
-# Abort prior jobs in the same workflow / PR
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   validate:
     name: Analyze CVEs
