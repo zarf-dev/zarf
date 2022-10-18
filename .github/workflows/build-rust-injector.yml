@@ -1,4 +1,4 @@
-name: Publish Injector Stage I
+name: Zarf Injector Rust Binaries
 
 on:
   workflow_dispatch:

@@ -1,12 +1,5 @@
-name: zarf-schema-check
-on:
-  pull_request:
-    paths:
-      - "src/types/**"
-      - "zarf.schema.json"
-      - "docs/4-user-guide/1-the-zarf-cli/3-zarf-schema.md"
-      - "src/cmd/**"
-      - "docs/4-user-guide/1-the-zarf-cli/100-cli-commands/**"
+name: scan-cves
+on: pull_request
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
@@ -23,8 +16,11 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Docs and schemas
-        run: "make test-docs-and-schema"
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Check for CVEs in Dependencies
+        run: "make test-cves"
 
       - name: Save logs
         uses: ./.github/actions/save-logs

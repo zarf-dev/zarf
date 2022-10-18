@@ -1,4 +1,4 @@
-name: labels
+name: scan-labels
 on:
   pull_request:
     types: [labeled, unlabeled, opened, edited, synchronize]
