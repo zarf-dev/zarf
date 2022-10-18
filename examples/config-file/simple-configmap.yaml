@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simple-configmap
+  namespace: zarf
+data:
+  templateme.properties: |
+    scorpion=###ZARF_VAR_SCORPION###
+    camel_spider=###ZARF_VAR_CAMEL_SPIDER###
+    cow=moo
