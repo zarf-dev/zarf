@@ -11,3 +11,7 @@ leopard = 'spots'
 
 [package.deploy]
 components = 'lion'
+
+[package.deploy.set]
+scorpion = 'iridescent'
+camel_spider = 'matte'
