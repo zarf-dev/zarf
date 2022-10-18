@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+var skipLogFile bool
 var logLevel string
 var arch string
 
@@ -21,14 +22,11 @@ var v *viper.Viper
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLogLevel()
-		config.CliArch = arch
-
-		// Disable progress bars for CI envs
-		if os.Getenv("CI") == "true" {
-			message.Debug("CI environment detected, disabling progress bars")
-			message.NoProgress = true
+		// Don't add the logo to the help command
+		if cmd.Parent() == nil {
+			skipLogFile = true
 		}
+		alwaysRun()
 	},
 	Short: "DevSecOps Airgap Toolkit",
 	Args:  cobra.MaximumNArgs(1),
@@ -63,13 +61,15 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), "Architecture for OCI images")
-	rootCmd.PersistentFlags().BoolVar(&message.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation")
+	rootCmd.PersistentFlags().BoolVar(&skipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation")
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), "Disable fancy UI progress bars, spinners, logos, etc")
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), "Specify the location of the Zarf cache directory")
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), "Specify the temporary directory to use for intermediate files")
 }
 
-func setLogLevel() {
+func alwaysRun() {
+	config.CliArch = arch
+
 	match := map[string]message.LogLevel{
 		"warn":  message.WarnLevel,
 		"info":  message.InfoLevel,
@@ -78,14 +78,22 @@ func setLogLevel() {
 	}
 
 	// No log level set, so use the default
-	if logLevel == "" {
-		return
+	if logLevel != "" {
+		if lvl, ok := match[logLevel]; ok {
+			message.SetLogLevel(lvl)
+			message.Debug("Log level set to " + logLevel)
+		} else {
+			message.Warn("invalid log level setting")
+		}
 	}
 
-	if lvl, ok := match[logLevel]; ok {
-		message.SetLogLevel(lvl)
-		message.Debug("Log level set to " + logLevel)
-	} else {
-		message.Warn("invalid log level setting")
+	// Disable progress bars for CI envs
+	if os.Getenv("CI") == "true" {
+		message.Debug("CI environment detected, disabling progress bars")
+		message.NoProgress = true
+	}
+
+	if !skipLogFile {
+		message.UseLogFile()
 	}
 }

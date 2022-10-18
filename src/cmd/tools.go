@@ -17,7 +17,11 @@ import (
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
 	Aliases: []string{"t"},
-	Short:   "Collection of additional tools to make airgap easier",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		skipLogFile = true
+		alwaysRun()
+	},
+	Short: "Collection of additional tools to make airgap easier",
 }
 
 // destroyCmd represents the init command
