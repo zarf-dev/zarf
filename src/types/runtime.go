@@ -23,7 +23,8 @@ type ZarfPackageGenerateOptions struct {
 }
 
 type ZarfGenerateOptions struct {
-	FilePath  string `json:"filepath" jsonschema:"description=Path to zarf package yaml to create or modify"`
+	FilePath           string `json:"filepath" jsonschema:"description=Path to zarf package yaml to create or modify"`
+	PackageDescription string `json:"packageDescription" jsonschema:"description=The description meta field of the zarf package"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

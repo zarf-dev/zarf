@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"errors"
-	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/generator"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 )
 
@@ -34,40 +33,15 @@ var generatePackageCmd = &cobra.Command{
 	Short: "Create or modify a package",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var dest string
-		message.Info("hit1")
-		if config.GenerateOptions.FilePath == "" {
-			dest = "zarf.yaml"
-		} else {
-			dest = config.GenerateOptions.FilePath
+		generatePackage, fileExists, computedDest := generator.GetPackageFromDestination(config.GenerateOptions.FilePath)
+
+		if cmd.Flags().Changed("description") || !fileExists {
+			generatePackage.Metadata.Description = config.GenerateOptions.PackageDescription
 		}
+		
+		generatePackage.Metadata.Name = args[0]
 
-		_, err := os.Stat(dest)
-
-		packageToGenerate := types.ZarfPackage{}
-		message.Info("hit2")
-
-		if err == nil {
-			message.Info("hit3")
-		// Specified zarf file exists
-			err = utils.ReadYaml(dest, &packageToGenerate)
-			if err != nil {
-				message.Fatal(err, err.Error())
-			}
-
-			packageToGenerate.Metadata.Name = args[0]
-
-		} else if errors.Is(err, os.ErrNotExist) {
-		// Specified zarf file does not exist
-
-		packageToGenerate.Metadata.Name = args[0]
-		packageToGenerate.Kind = "ZarfPackageConfig"
-
-		} else {
-			message.Fatalf(err, "Unkown error when checking for specified zarf file: %s", err.Error())
-		}
-
-		err = utils.WriteYaml(dest, packageToGenerate, 0644)
+		err := utils.WriteYaml(computedDest, generatePackage, 0644)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}
@@ -144,7 +118,9 @@ func bindWizardFlags() {
 }
 
 func bindPackageFlags() {
-	generatePackageCmd.Flags()
+	packageFlags := generatePackageCmd.Flags()
+
+	packageFlags.StringVarP(&config.GenerateOptions.PackageDescription, "description", "d", "", "The description of the package")
 }
 
 func bindComponentFlags() {
