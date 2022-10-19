@@ -57,10 +57,19 @@ var generatePackageCmd = &cobra.Command{
 }
 
 var generateComponentCmd = &cobra.Command{
-	Use:     "component COMPONENT_NAME [PROPERTY_SELECTOR] []",
+	Use: "component COMPONENT_NAME [PROPERTY_PATH VALUE]",
 	Aliases: []string{"com"},
-	Short:   "Create or modify a component",
-	Args:    cobra.MinimumNArgs(1),
+	Short: "Create or modify a component",
+	Args: func(cmd *cobra.Command, args []string) error {
+		argLength := len(args)
+		if argLength == 0 {
+			return errors.New("a component name must be provided")
+		} else if argLength != 1 && argLength != 3 {
+			return errors.New("a property_path must be accompanied by a value to set it to")
+		} else {
+			return nil
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		generatePackage, fileExists, computedDest := generator.GetPackageFromDestination(config.GenerateOptions.FilePath)
 
@@ -171,7 +180,9 @@ func bindSelfPackageGenerateFlags() {
 }
 
 func bindComponentFlags() {
-	generateComponentCmd.Flags()
+	componentFlags := generateComponentCmd.Flags()
+
+	componentFlags.StringVarP(&config.GenerateOptions.PropertySelector, "selector", "s", "", "The key value pair for picking an object from a list. Format is KEY:VALUE")
 }
 
 func bindImageFlags() {
