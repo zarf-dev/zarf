@@ -4,7 +4,7 @@ description: "Install pipeline tools"
 runs:
   using: composite
   steps:
-    - uses: sigstore/cosign-installer@v2.8.0
+    - uses: sigstore/cosign-installer@v2.8.1
 
     - uses: anchore/sbom-action/download-syft@v0.12.0
 
