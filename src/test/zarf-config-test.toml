@@ -3,6 +3,7 @@ log_level = 'log_level: 6a845a41'
 no_log_file = true
 no_progress = true
 tmp_dir = 'tmp_dir: c457359e'
+zarf_cache = 'zarf_cache: 978499a5'
 
 [init]
 components = 'components: 359049b9'
@@ -29,7 +30,6 @@ url = 'registry.url: c0ac2e47'
 insecure = true
 output_directory = 'create.output_directory: 52d061d5'
 skip_sbom = true
-zarf_cache = 'create.zarf_cache: 978499a5'
 
 [package.create.set]
 thing1 = '1a2b3c4d'

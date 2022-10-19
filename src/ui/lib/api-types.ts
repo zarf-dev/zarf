@@ -15,6 +15,7 @@ export interface APITypes {
     zarfCommonOptions: ZarfCommonOptions;
     zarfCreateOptions: ZarfCreateOptions;
     zarfDeployOptions: ZarfDeployOptions;
+    zarfInitOptions:   ZarfInitOptions;
     zarfPackage:       ZarfPackage;
     zarfState:         ZarfState;
 }
@@ -45,10 +46,6 @@ export interface ZarfPackage {
      * Package metadata
      */
     metadata?: ZarfMetadata;
-    /**
-     * Special image only used for ZarfInitConfig packages when used with the Zarf Injector
-     */
-    seed?: string;
     /**
      * Variable template values applied on deploy for K8s resources
      */
@@ -339,6 +336,11 @@ export interface ZarfComponentScripts {
 
 export interface ZarfPackageConstant {
     /**
+     * A description of the constant to explain its purpose on package create or deploy
+     * confirmation prompts
+     */
+    description?: string;
+    /**
      * The name to be used for the constant
      */
     name: string;
@@ -396,6 +398,10 @@ export interface ZarfPackageVariable {
      */
     default?: string;
     /**
+     * A description of the variable to be used when prompting the user a value
+     */
+    description?: string;
+    /**
      * The name to be used for the variable
      */
     name: string;
@@ -449,6 +455,8 @@ export interface GeneratedPKI {
 
 /**
  * Information about the repository Zarf is configured to use
+ *
+ * Information about the repository Zarf is going to be using
  */
 export interface GitServerInfo {
     /**
@@ -481,6 +489,8 @@ export interface GitServerInfo {
 
 /**
  * Information about the registry Zarf is configured to use
+ *
+ * Information about the registry Zarf is going to be using
  */
 export interface RegistryInfo {
     /**
@@ -550,6 +560,10 @@ export interface InstalledChart {
 
 export interface ZarfCommonOptions {
     /**
+     * Path to use to cache images and git repos on package create
+     */
+    cachePath: string;
+    /**
      * Verify that Zarf should perform an action
      */
     confirm: boolean;
@@ -561,10 +575,6 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
-    /**
-     * Path to use to cache images and git repos on package create
-     */
-    cachePath: string;
     /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
@@ -602,6 +612,29 @@ export interface ZarfDeployOptions {
      * Location where the public key component of a cosign key-pair can be found
      */
     sGetKeyPath: string;
+}
+
+export interface ZarfInitOptions {
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
+    applianceMode: boolean;
+    /**
+     * Comma separated list of optional components to deploy
+     */
+    components: string;
+    /**
+     * Information about the repository Zarf is going to be using
+     */
+    gitServer: GitServerInfo;
+    /**
+     * Information about the registry Zarf is going to be using
+     */
+    registryInfo: RegistryInfo;
+    /**
+     * StorageClass of the k8s cluster Zarf is initializing
+     */
+    storageClass: string;
 }
 
 // Converts JSON strings to/from your types
@@ -757,6 +790,7 @@ const typeMap: any = {
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
         { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
+        { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
@@ -770,7 +804,6 @@ const typeMap: any = {
         { json: "constants", js: "constants", typ: u(undefined, a(r("ZarfPackageConstant"))) },
         { json: "kind", js: "kind", typ: r("Kind") },
         { json: "metadata", js: "metadata", typ: u(undefined, r("ZarfMetadata")) },
-        { json: "seed", js: "seed", typ: u(undefined, "") },
         { json: "variables", js: "variables", typ: u(undefined, a(r("ZarfPackageVariable"))) },
     ], false),
     "ZarfBuildData": o([
@@ -855,6 +888,7 @@ const typeMap: any = {
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
     "ZarfPackageConstant": o([
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "value", js: "value", typ: "" },
     ], false),
@@ -869,6 +903,7 @@ const typeMap: any = {
     ], false),
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
     ], false),
@@ -930,11 +965,11 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
     ], false),
     "ZarfCommonOptions": o([
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
@@ -945,6 +980,13 @@ const typeMap: any = {
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+    ], false),
+    "ZarfInitOptions": o([
+        { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "components", js: "components", typ: "" },
+        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
+        { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
+        { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
     "Architecture": [
         "amd64",

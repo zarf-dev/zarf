@@ -26,7 +26,7 @@ func zarfCommandWStruct(e2e ZarfE2ETest, path string) (result zarfCommandResult)
 
 func TestWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-wait-%s.tar.zst", e2e.arch)
@@ -40,11 +40,11 @@ func TestWait(t *testing.T) {
 	var stdErr string
 	var err error
 
-	select{
+	select {
 	case res := <-zarfChannel:
 		stdOut = res.stdOut
 		stdErr = res.stdErr
-		err    = res.err
+		err = res.err
 	case <-time.After(10 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")

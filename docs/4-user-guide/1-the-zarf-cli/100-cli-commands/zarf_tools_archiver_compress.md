@@ -3,7 +3,7 @@
 Compress a collection of sources based off of the destination file extension
 
 ```
-zarf tools archiver compress [SOURCES] [ARCHIVE] [flags]
+zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
 ```
 
 ### Options
@@ -17,9 +17,10 @@ zarf tools archiver compress [SOURCES] [ARCHIVE] [flags]
 ```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation.
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc.
+      --no-log-file           Disable log file creation
+      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
       --tmpdir string         Specify the temporary directory to use for intermediate files
+      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

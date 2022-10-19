@@ -11,7 +11,7 @@ import (
 
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init (limit to 10 minutes)")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	initComponents := "logging,git-server"

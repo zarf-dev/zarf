@@ -6,7 +6,6 @@ type ZarfPackage struct {
 	Metadata   ZarfMetadata          `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
 	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
 	Components []ZarfComponent       `json:"components" jsonschema:"description=List of components to deploy in this package"`
-	Seed       string                `json:"seed,omitempty" jsonschema:"description=Special image only used for ZarfInitConfig packages when used with the Zarf Injector"`
 	Variables  []ZarfPackageVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
 	Constants  []ZarfPackageConstant `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
 }
@@ -31,15 +30,18 @@ type ZarfBuildData struct {
 	Version      string `json:"version"`
 }
 
-// ZarfPackageVariable are variables that can be used to dynaically template K8s resources.
+// ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
 type ZarfPackageVariable struct {
-	Name    string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z_]+$"`
-	Default string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
-	Prompt  bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+	Name        string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z_]+$"`
+	Description string `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
+	Default     string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
+	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
 }
 
-// ZarfPackageConstant are constants that can be used to dynaically template K8s resources.
+// ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
 type ZarfPackageConstant struct {
 	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z_]+$"`
 	Value string `json:"value" jsonschema:"description=The value to set for the constant during deploy"`
+	// Include a description that will only be displayed during package create/deploy confirm prompts
+	Description string `json:"description,omitempty" jsonschema:"description=A description of the constant to explain its purpose on package create or deploy confirmation prompts"`
 }

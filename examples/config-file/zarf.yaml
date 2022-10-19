@@ -4,12 +4,17 @@ metadata:
   description: 'Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"'
 
 variables:
-  - name: ZEBRA
-  - name: LEOPARD
+  - name: SCORPION
+  - name: CAMEL_SPIDER
 
 components:
   - name: lion
     description: "By default, only this component will be deployed when using the config file"
+    required: true
+    manifests:
+      - name: config-example-configmap
+        files:
+          - simple-configmap.yaml
 
   - name: zebra
     description: "This is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
