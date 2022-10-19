@@ -56,6 +56,4 @@ Once the init command is finished, you can run `kubectl get pods -n zarf` to ver
 
 # Setup Complete!
 
-<!-- TODO: FIX THIS LINK -->
-
 At this point, you have the Zarf CLI installed and a k8s cluster running and initialized. You are now ready to start deploying packages to your cluster! The Walkthroughs section of the documentation will guide you through the process of deploying packages to your cluster, a good one to start with is the [Doom Walkthrough](../13-walkthroughs/2-deploying-doom.md).
