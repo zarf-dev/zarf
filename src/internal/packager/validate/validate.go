@@ -17,7 +17,7 @@ import (
 func Run() {
 	components := config.GetComponents()
 
-	if err := validatePackageName(config.GetMetaData().Name); err != nil {
+	if err := ValidatePackageName(config.GetMetaData().Name); err != nil {
 		message.Fatalf(err, "Invalid package name: %s", err.Error())
 	}
 
@@ -45,6 +45,17 @@ func Run() {
 		validateComponent(component)
 	}
 
+}
+
+func ValidatePackageName(subject string) error {
+	// https://regex101.com/r/vpi8a8/1
+	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+
+	if !isValid(subject) {
+		return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
+	}
+
+	return nil
 }
 
 func oneIfNotEmpty(testString string) int {
@@ -75,17 +86,6 @@ func validateComponent(component types.ZarfComponent) {
 			message.Fatalf(err, "Invalid manifest definition in the %s component: %s (%s)", component.Name, manifest.Name, err.Error())
 		}
 	}
-}
-
-func validatePackageName(subject string) error {
-	// https://regex101.com/r/vpi8a8/1
-	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
-
-	if !isValid(subject) {
-		return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
-	}
-
-	return nil
 }
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
