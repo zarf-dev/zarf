@@ -9,8 +9,8 @@ import (
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
-// This function will optionally shorten the image name while appending a sha1sum of the original image name
-func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addShasumToImg bool) error {
+// This function will optionally shorten the image name while appending a checksum of the original image name
+func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChecksum bool) error {
 	message.Debugf("images.PushToZarfRegistry(%s, %s)", imageTarballPath, buildImageList)
 
 	registryUrl := ""
@@ -47,14 +47,16 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addSha
 			return err
 		}
 		offlineName := ""
-		if addShasumToImg {
+		if addChecksum {
 			offlineName, err = utils.SwapHost(src, registryUrl)
 		} else {
-			offlineName, err = utils.SwapHostWithoutSha(src, registryUrl)
+			offlineName, err = utils.SwapHostWithoutChecksum(src, registryUrl)
 		}
 		if err != nil {
 			return err
 		}
+
+		message.Debugf("crane.Push() %s:%s -> %s)", imageTarballPath, src, offlineName)
 
 		if err = crane.Push(img, offlineName, pushOptions); err != nil {
 			return err

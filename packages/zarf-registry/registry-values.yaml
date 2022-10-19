@@ -4,6 +4,7 @@ persistence:
   size: 20Gi
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
+  tag: 2.8.1
 imagePullSecrets:
   - name: private-registry
 secrets:
@@ -11,10 +12,6 @@ secrets:
   configData:
     http:
       secret: "###ZARF_REGISTRY_SECRET###"
-
-# https://github.com/containerd/containerd/blob/v1.5.8/pkg/cri/server/image_pull.go#L412
-# thx containerd *magic* :-D
-# tlsSecretName: tls-pem
 service:
   type: NodePort
   nodePort: "###ZARF_NODEPORT###"
@@ -25,5 +22,6 @@ resources:
   limits:
     cpu: "3"
     memory: "2Gi"
-
 fullnameOverride: "zarf-docker-registry"
+podLabels:
+  zarf.dev/agent: "ignore"

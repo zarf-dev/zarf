@@ -23,7 +23,7 @@ func TestComponentScripts(t *testing.T) {
 	defer e2e.cleanFiles(allArtifacts...)
 
 	// Try creating the package to test the create scripts
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-scripts/", "--confirm")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-scripts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test for package create prepare artirfact
@@ -34,22 +34,16 @@ func TestComponentScripts(t *testing.T) {
 		require.NoFileExists(t, artifact)
 	}
 
-	// Remove the prepare artifact before running package deploy
-	e2e.cleanFiles(prepareArtifact)
-
 	path := fmt.Sprintf("build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=prepare,deploy")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=deploy")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the deploy artifacts were created
 	for _, artifact := range deployArtifacts {
 		require.FileExists(t, artifact)
 	}
-
-	// Check that the prepare artifact were not created
-	require.NoFileExists(t, prepareArtifact)
 
 	// Deploy the simple script that should fail the timeout
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=timeout")

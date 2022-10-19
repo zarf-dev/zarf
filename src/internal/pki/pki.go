@@ -25,8 +25,7 @@ const org = "Zarf Cluster"
 const validFor = time.Hour * 24 * 375
 
 // GeneratePKI create a CA and signed server keypair
-func GeneratePKI(host string) types.GeneratedPKI {
-
+func GeneratePKI(host string, dnsNames ...string) types.GeneratedPKI {
 	results := types.GeneratedPKI{}
 
 	ca, caKey, err := generateCA(validFor)
@@ -34,7 +33,7 @@ func GeneratePKI(host string) types.GeneratedPKI {
 		message.Fatal(err, "Unable to generate the ephemeral CA")
 	}
 
-	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor)
+	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor, dnsNames...)
 	if err != nil {
 		message.Fatalf(err, "Unable to generate the cert for %s", host)
 	}
@@ -120,7 +119,7 @@ func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, err
 // generateCert generates a new certificate for the given host using the
 // provided certificate authority. The cert and key files are stored in
 // the provided files.
-func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, error) {
+func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	template := newCertificate(validFor)
 
 	template.IPAddresses = append(template.IPAddresses, net.ParseIP(config.IPV4Localhost))
@@ -130,6 +129,7 @@ func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, vali
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
 		template.DNSNames = append(template.DNSNames, host)
+		template.DNSNames = append(template.DNSNames, dnsNames...)
 	}
 
 	template.Subject.CommonName = host
