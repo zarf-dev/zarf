@@ -6,8 +6,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/generator"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +36,10 @@ var generatePackageCmd = &cobra.Command{
 	Short:   "Create or modify a package",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := validate.ValidatePackageName(args[0]); err != nil {
+			message.Fatalf(err, "Invalid package name: %s", err.Error())
+		}
+
 		generatePackage, fileExists, computedDest := generator.GetPackageFromDestination(config.GenerateOptions.FilePath)
 
 		if cmd.Flags().Changed("description") || !fileExists {
@@ -51,12 +57,52 @@ var generatePackageCmd = &cobra.Command{
 }
 
 var generateComponentCmd = &cobra.Command{
-	Use:     "component COMPONENT_NAME",
+	Use:     "component COMPONENT_NAME [PROPERTY_SELECTOR] []",
 	Aliases: []string{"com"},
 	Short:   "Create or modify a component",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := errors.New("Unimplemented")
-		return err
+	Args:    cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		generatePackage, fileExists, computedDest := generator.GetPackageFromDestination(config.GenerateOptions.FilePath)
+
+		if !fileExists {
+			message.Fatal("", "The given file must exist to be able to create/modify components")
+		}
+
+		var generateComponentP *types.ZarfComponent
+
+		for idx, component := range generatePackage.Components {
+			if component.Name == args[0] {
+				generateComponentP = &generatePackage.Components[idx]
+				break
+			}
+		}
+
+		// Pointer is nil so component doesn't exist
+		if generateComponentP == nil {
+			newComponent := types.ZarfComponent{Name: args[0]}
+
+			// Check if more than a component name was specified
+			if len(args) > 1 {
+				message.Fatal(errors.New("Unimplemented"), "Unimplemented")
+			} else {
+				generatePackage.Components = append(generatePackage.Components, newComponent)
+			}
+
+			// Pointer has value so component exists
+		} else {
+
+			// Check if more than a component name was specified
+			if len(args) > 1 {
+				message.Fatal(errors.New("Unimplemented"), "Unimplemented")
+			} else {
+				message.Info("Component already exists, exiting...")
+			}
+		}
+
+		err := utils.WriteYaml(computedDest, generatePackage, 0644)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	},
 }
 

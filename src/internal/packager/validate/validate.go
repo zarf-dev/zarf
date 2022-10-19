@@ -116,6 +116,17 @@ func ImportDefinition(component *types.ZarfComponent) error {
 	return nil
 }
 
+func ValidatePackageName(subject string) error {
+	// https://regex101.com/r/vpi8a8/1
+	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+
+	if !isValid(subject) {
+		return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
+	}
+
+	return nil
+}
+
 func oneIfNotEmpty(testString string) int {
 	if testString == "" {
 		return 0
