@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -53,7 +54,11 @@ var archiverDecompressCmd = &cobra.Command{
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
-			message.Fatal(err, "Unable to perform decompression")
+			errMsg := "Unable to perform decompression"
+			if strings.Contains(err.Error(), "file already exists") {
+				errMsg = fmt.Sprintf("Dest folder %s already exists (use --overwrite flag to overwrite contents)", destinationPath)
+			}
+			message.Fatal(err, errMsg)
 		}
 	},
 }
