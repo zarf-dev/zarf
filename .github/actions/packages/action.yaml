@@ -14,5 +14,5 @@ runs:
         make build-cli-linux-amd
         cp build/zarf build/zarf-linux-amd64
         docker buildx build --push --platform linux/amd64 --tag ghcr.io/defenseunicorns/zarf/dev-agent:$GITHUB_SHA .
-        make init-package build-examples ARCH=${{inputs.architecture}} AGENT_IMAGE=${{inputs.tag}}
+        make init-package build-examples ARCH=amd64 AGENT_IMAGE="dev-agent:$GITHUB_SHA"
       shell: bash
