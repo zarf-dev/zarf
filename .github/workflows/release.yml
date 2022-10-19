@@ -15,7 +15,7 @@ jobs:
           go-version: 1.19.x
 
       - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.8.0
+        uses: sigstore/cosign-installer@v2.8.1
 
       - name: "Dependency: Install Syft"
         uses: anchore/sbom-action/download-syft@v0.12.0
