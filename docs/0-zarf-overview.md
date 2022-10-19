@@ -95,7 +95,7 @@ Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local file
 
 This part of the process requires access to the internet. You feed the `zarf` binary a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
 
-Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-creating-a-zarf-package.md) section.
+Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-using-zarf-package-create.md) section.
 
 ### (2) - Ship the Package to system location
 

@@ -6,7 +6,7 @@ Before you're able to deploy an application package to a cluster, you need to in
 ## Walkthrough Prerequisites
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
-1. An init-package built/downloaded: ([init-package Build Instructions](./0-creating-a-zarf-package.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
+1. An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 1. A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
 
 ## Running the init Command

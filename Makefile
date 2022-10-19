@@ -1,22 +1,26 @@
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
-UNAME_S := $(shell uname -s)
-UNAME_P := $(shell uname -p)
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-ifneq ($(UNAME_S),Linux)
-	ifeq ($(UNAME_S),Darwin)
-		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),i386)
-		ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
-	endif
-	ifeq ($(UNAME_P),arm)
-		ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+ifeq ($(OS),Windows_NT)
+	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
+else
+	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
+	ifneq ($(UNAME_S),Linux)
+		ifeq ($(UNAME_S),Darwin)
+			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),i386)
+			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+		endif
+		ifeq ($(UNAME_P),arm)
+			ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+		endif
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:ef08e77c3880ac64c3cc10ecd314be0869f8f70e
+AGENT_IMAGE ?= zarfdev/agent:11e53b7c872ce83d5752cb20e640eabd04956258
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -50,27 +54,41 @@ ensure-ui-build-dir:
 	mkdir -p build/ui
 	touch build/ui/index.html
 
-build-ui: ## Build the Zarf UI
-	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		npm ci;\
-		npm run build;\
+check-ui: ## Build the Zarf UI if needed
+	@ if [ ! -z "$(shell command -v shasum)" ]; then\
+	    if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+		    $(MAKE) build-ui;\
+		    ./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+	    fi;\
+	else\
+        $(MAKE) build-ui;\
 	fi
 
-build-cli-linux-amd: build-injector-registry-amd build-ui ## Build the Zarf CLI for Linux on AMD64
+build-ui: ## Build the Zarf UI
+	npm ci
+	npm run build
+
+build-cli-linux-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm build-ui ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: build-injector-registry-arm check-ui ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd build-ui ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: build-injector-registry-amd check-ui ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm build-ui ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: build-injector-registry-arm check-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
+
+build-cli-windows-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on AMD64
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe main.go ## Build the Zarf CLI for Windows on AMD64
+
+build-cli-windows-arm: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on ARM
+	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe main.go ## Build the Zarf CLI for Windows on ARM
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple ## Build the Zarf CLI
+build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 build-injector-registry-amd: ## Build the Zarf Injector Stage 2 for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
@@ -134,14 +152,14 @@ build-examples: ## Build all of the example packages
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 

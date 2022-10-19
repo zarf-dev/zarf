@@ -50,7 +50,11 @@ func FillActiveTemplate() error {
 
 // SetActiveVariables handles setting the active variables used to template component files.
 func SetActiveVariables() error {
-	SetVariableMap = DeployOptions.SetVariables
+	for key := range DeployOptions.SetVariables {
+		value := DeployOptions.SetVariables[key]
+		// Ensure uppercase for VIPER
+		SetVariableMap[strings.ToUpper(key)] = value
+	}
 
 	for _, variable := range active.Variables {
 		_, present := SetVariableMap[variable.Name]

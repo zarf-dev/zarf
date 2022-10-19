@@ -1,6 +1,6 @@
 image:
   repository: registry
-  tag: 2.7.1
+  tag: 2.8.1
   pullPolicy: IfNotPresent
 imagePullSecrets:
     - name: private-registry
