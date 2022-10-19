@@ -1,4 +1,4 @@
-name: Test KInd Cluster
+name: Test Kind Cluster
 on:
   pull_request:
     paths-ignore:
@@ -33,7 +33,7 @@ jobs:
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
-      - name: Setup KInD
+      - name: Setup Kind
         run: |
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1

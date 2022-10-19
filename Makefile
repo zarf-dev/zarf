@@ -44,7 +44,7 @@ clean: ## Clean the build directory
 	rm -rf build
 
 destroy: ## Run `zarf destroy` on the current cluster
-	$(ZARF_BIN) destroy --confirm --remove-components 
+	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
 remove-packages: ## Remove all zarf packages recursively

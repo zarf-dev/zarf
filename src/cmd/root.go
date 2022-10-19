@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 		if cmd.Parent() == nil {
 			skipLogFile = true
 		}
-		alwaysRun()
+		cliSetup()
 	},
 	Short: "DevSecOps Airgap Toolkit",
 	Args:  cobra.MaximumNArgs(1),
@@ -67,7 +67,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), "Specify the temporary directory to use for intermediate files")
 }
 
-func alwaysRun() {
+func cliSetup() {
 	config.CliArch = arch
 
 	match := map[string]message.LogLevel{

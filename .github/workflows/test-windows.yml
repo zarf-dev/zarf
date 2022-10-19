@@ -40,6 +40,6 @@ jobs:
         run: make build-examples ARCH=amd64
         shell: pwsh
 
-      - name: Run winodws tests
+      - name: Run windows tests
         run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
         shell: pwsh

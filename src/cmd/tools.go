@@ -22,7 +22,7 @@ var toolsCmd = &cobra.Command{
 	Aliases: []string{"t"},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		skipLogFile = true
-		alwaysRun()
+		cliSetup()
 	},
 	Short: "Collection of additional tools to make airgap easier",
 }

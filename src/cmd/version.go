@@ -12,7 +12,7 @@ var versionCmd = &cobra.Command{
 	Aliases: []string{"v"},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		skipLogFile = true
-		alwaysRun()
+		cliSetup()
 	},
 	Short: "Displays the version of the Zarf binary",
 	Long:  "Displays the version of the Zarf release that the Zarf binary was built from.",
