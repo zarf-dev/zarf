@@ -1,0 +1,21 @@
+* @defenseunicorns/zarf
+
+# Privileged code that requires admin approval
+/.golangci.yml @jeff-mccoy @YrrepNoj @Racer159
+/.goreleaser.yml @jeff-mccoy @YrrepNoj @Racer159
+/.grype.yaml @jeff-mccoy @YrrepNoj @Racer159
+/.github/ @jeff-mccoy @YrrepNoj @Racer159
+/.hooks/ @jeff-mccoy @YrrepNoj @Racer159
+
+/CODEOWNERS @jeff-mccoy @runyontr @JasonvanBrackel
+/cosign.pub @jeff-mccoy @runyontr 
+
+/docs/ @Madeline-UX @JasonvanBrackel @RothAndrew @defenseunicorns/zarf-admin
+
+/src/ @jeff-mccoy @YrrepNoj @Racer159
+
+# Web UI-specific 
+/package*.json @mike-winberry @Racer159 @Noxsios @defenseunicorns/zarf-admin
+/src/internal/api @mike-winberry @Racer159 @Noxsios @defenseunicorns/zarf-admin
+/src/ui/ @mike-winberry @Racer159 @Noxsios @defenseunicorns/zarf-admin
+
