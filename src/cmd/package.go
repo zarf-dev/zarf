@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	internalPackager "github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -115,16 +116,17 @@ var packageMirrorCmd = &cobra.Command{
 }
 
 var packageGenerateCmd = &cobra.Command{
-	Use:     "generate NAME",
+	Use:     "generate NAME [--from data]...",
 	Aliases: []string{"g"},
-	Args:    cobra.MaximumNArgs(1),
-	Short:   "Use to generate either an example package or a package from a resource",
+	Args:    cobra.ExactArgs(1),
+	Short:   "Use to generate either an example package or a package from resources",
 	Run: func(cmd *cobra.Command, args []string) {
+		pkgName := args[0]
 		if cmd.Flags().Changed("from") {
-			// switch expression {
-			// case condition:
-
-			// }
+			for _, componentResource := range config.GenerateOptions.From {
+				result := internalPackager.DeduceResourceType(componentResource)
+				message.Info(pkgName + "'s " + componentResource + " is " + result + ", probably...")
+			}
 		} else {
 			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		}
@@ -440,7 +442,7 @@ func bindMirrorFlags(v *viper.Viper) {
 func bindPackageGenerateFlags() {
 	generateFlags := packageGenerateCmd.Flags()
 
-	generateFlags.StringVar(&config.GenerateOptions.From, "from", "", "The location of the resource to generate a package from")
+	generateFlags.StringArrayVar(&config.GenerateOptions.From, "from", []string{}, "The location of the resource to generate a package from")
 }
 
 func bindInspectFlags(_ *viper.Viper) {

@@ -88,7 +88,7 @@ type ZarfPullOptions struct {
 
 // ZarfGenerateOptions tracks the user-defined options during package generation.
 type ZarfGenerateOptions struct {
-	From	string `json:"from" jsonschema:"description=The location of a resource to generate a package from"`
+	From	[]string `json:"from" jsonschema:"description=The location of a resource to generate a package from"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
