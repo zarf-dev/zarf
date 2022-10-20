@@ -1,72 +1,114 @@
 kind: ZarfInitConfig
 metadata:
   name: "distro-rke2"
-  description: "Used to establish a new Zarf cluster"
   architecture: amd64  # arm64 not yet supported by RKE2.  Remove when it is.
-
 components:
-  # AMD-64 version of the rke2 stack
   - name: rke2
-    import:
-      path: common
-      name: rke2
     only:
-      cluster:
-        architecture: amd64
+      localOS: linux
+    description: >
+      *** REQUIRES ROOT ***
+      RKE2, also known as RKE Government, is Rancher's next-generation Kubernetes distribution.
+      It is a fully conformant Kubernetes distribution that focuses on security and compliance within the U.S. Federal Government sector.
+      To meet these goals, RKE2 does the following:
+      Provides defaults and configuration options that allow clusters to pass the CIS Kubernetes Benchmark v1.6 with minimal operator intervention
+      Enables FIPS 140-2 compliance
+      Regularly scans components for CVEs using trivy in our build pipeline
+    scripts:
+      retry: true
+      before:
+        # If running RHEL variant, disable firewalld and configure NetworkManager
+        # https://docs.rke2.io/known_issues/
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+        - "[ -e /etc/redhat-release ] && mv /tmp/rke2-canal.conf /etc/NetworkManager/conf.d/ || echo ''"
+      after:
+        - /tmp/rke2-install.sh
+        - systemctl daemon-reload
+        - systemctl enable rke2-server.service
+        - systemctl start rke2-server.service
+    images:
+      - docker.io/rancher/hardened-calico:v3.24.1-build20221011
+      - docker.io/rancher/hardened-cluster-autoscaler:v1.8.5-build20211119
+      - docker.io/rancher/hardened-cni-plugins:v1.0.1-build20220223
+      - docker.io/rancher/hardened-coredns:v1.9.3-build20220613
+      - docker.io/rancher/hardened-dns-node-cache:1.21.2-build20211119
+      - docker.io/rancher/hardened-etcd:v3.5.4-k3s1-build20220504
+      - docker.io/rancher/hardened-flannel:v0.19.1-build20220810
+      - docker.io/rancher/hardened-ib-sriov-cni:v1.0.2-build20220419
+      - docker.io/rancher/hardened-k8s-metrics-server:v0.5.0-build20211119
+      - docker.io/rancher/hardened-kubernetes:v1.22.15-rke2r2-build20220930
+      - docker.io/rancher/hardened-multus-cni:v3.8-build20211104
+      - docker.io/rancher/hardened-sriov-cni:v2.6.2-build20220419
+      - docker.io/rancher/hardened-sriov-network-config-daemon:v1.1.0-build20220419
+      - docker.io/rancher/hardened-sriov-network-device-plugin:v3.4.0-build20220419
+      - docker.io/rancher/hardened-sriov-network-operator:v1.1.0-build20220419
+      - docker.io/rancher/hardened-sriov-network-resources-injector:v1.3-build20220419
+      - docker.io/rancher/hardened-sriov-network-webhook:v1.1.0-build20220419
+      - docker.io/rancher/hardened-whereabouts:v0.5.3-build20220610
+      - docker.io/rancher/harvester-cloud-provider:v0.1.4
+      - docker.io/rancher/harvester-csi-driver:v0.1.3
+      - docker.io/rancher/klipper-helm:v0.7.3-build20220613
+      - docker.io/rancher/longhornio-csi-attacher:v3.2.1
+      - docker.io/rancher/longhornio-csi-node-driver-registrar:v2.3.0
+      - docker.io/rancher/longhornio-csi-provisioner:v2.1.2
+      - docker.io/rancher/longhornio-csi-resizer:v1.2.0
+      - docker.io/rancher/mirrored-calico-apiserver:v3.21.5
+      - docker.io/rancher/mirrored-calico-cni:v3.21.5
+      - docker.io/rancher/mirrored-calico-ctl:v3.21.5
+      - docker.io/rancher/mirrored-calico-kube-controllers:v3.21.5
+      - docker.io/rancher/mirrored-calico-node:v3.21.5
+      - docker.io/rancher/mirrored-calico-operator:v1.23.7
+      - docker.io/rancher/mirrored-calico-pod2daemon-flexvol:v3.21.5
+      - docker.io/rancher/mirrored-calico-typha:v3.21.5
+      - docker.io/rancher/mirrored-cilium-cilium:v1.12.1
+      - docker.io/rancher/mirrored-cilium-operator-aws:v1.12.1
+      - docker.io/rancher/mirrored-cilium-operator-azure:v1.12.1
+      - docker.io/rancher/mirrored-cilium-operator-generic:v1.12.1
+      - docker.io/rancher/mirrored-cloud-provider-vsphere-cpi-release-manager:v1.22.5
+      - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v2.4.1
+      - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v2.4.1
+      - docker.io/rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.1.1
+      - docker.io/rancher/mirrored-sig-storage-csi-attacher:v3.3.0
+      - docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.3.0
+      - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v3.0.0
+      - docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.3.0
+      - docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.4.0
+      - docker.io/rancher/nginx-ingress-controller:nginx-1.2.1-hardened7
+      - docker.io/rancher/pause:3.6
+      - docker.io/rancher/rke2-cloud-provider:v0.0.3-build20211118
+      - docker.io/rancher/rke2-runtime:v1.22.15-rke2r2
     files:
-      # Include the actual rke2 binary
-      - source: https://github.com/rancher/rke2/releases/download/v1.25.2%2Brke2r1/rke2.linux-amd64
-        shasum: 262c21a71b2e0381c1193800717a143bc80defac16541249546d6e208a22a6db
-        target: /usr/sbin/rke2
+      - source: rke2-canal.conf
+        target: /tmp/rke2-canal.conf
+        executable: false
+      - source: rke2-install.sh
+        target: /tmp/rke2-install.sh
         executable: true
-        # rke2 magic provides these tools when symlinking
-        symlinks:
-          - /usr/sbin/kubectl
-          - /usr/sbin/ctr
-          - /usr/sbin/crictl
-      # Transfer the rke2 images for containerd to pick them up
-      - source: https://github.com/rancher/rke2/releases/download/v1.25.2%2Brke2r1/rke2-images.linux-amd64.tar.zst
-        shasum: 5f09dd42e7876f8ca9485e2a06370bdf8baf586c29c373ef5ece7e62723fe46a
-        target: /var/lib/rancher/rke2/agent/images/rke2.tar.zst
+      - source: registries.yaml
+        target: /etc/rancher/rke2/registries.yaml
+        executable: false
   # Placeholder for the ARM 64 Version when it's supported
   - name: rke2
     description: >
-      ****** READ THIS ARM 64 NOT SUPPORTED ********* 
-      rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be 
+      ****** READ THIS ARM 64 NOT SUPPORTED *********
+      rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be
       added when rke2 supports arm64 architecture.
 
       If you would like to buid the amd64 version of this package on a arm64 based machine use the -a flag.
 
       ex: `zarf package create . -a amd64`
-    import:
-      path: common
-      name: rke2
     only:
       cluster:
         architecture: arm64
-    components:
-      files:
-        - common/empty-file
-    scripts:
-      retry: false
-      after:
-        # Force the return of a non-zero exit code.
-        - |
-          'echo "rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be 
-           added when rke2 supports arm64 architecture.'
-        - 'exit(1)'
-    # files:
-    #   # Include the actual rke2 binary
-    #   - source tbd
-    #     shasum: tbd
-    #     target: /usr/sbin/rke2
-    #     executable: true
-    #     # rke2 magic provides these tools when symlinking
-    #     symlinks:
-    #       - /usr/sbin/kubectl
-    #       - /usr/sbin/ctr
-    #       - /usr/sbin/crictl
-    #   # Transfer the rke2 images for containerd to pick them up
-    #   - source: tbd
-    #     shasum: tbd
-    #     target: /var/lib/rancher/rke2/agent/images/rke2.tar.zst
+        components:
+          files:
+            - common/empty-file
+            scripts:
+              retry: false
+              after:
+                # Force the return of a non-zero exit code.
+                - |
+                'echo "rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be
+                added when rke2 supports arm64 architecture.'
+                - 'exit(1)'
