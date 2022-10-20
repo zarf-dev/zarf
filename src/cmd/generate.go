@@ -60,6 +60,13 @@ var generateComponentCmd = &cobra.Command{
 	Use: "component COMPONENT_NAME [PROPERTY_PATH VALUE]",
 	Aliases: []string{"com"},
 	Short: "Create or modify a component",
+	Long: "Command for creating or modifying components. Creating a component is as simple \n" +
+	  "as providing just a name. To modify properties of a component a yaml path is required. \n" +
+	  "If that path includes an array of objects then the selector flag is necessary to pick a \n" +
+	  "specific object from the list. Properties that require a selector are files, charts, \n" +
+	  "manifests, images, repos, and dataInjections. The selector must only match one of the \n" +
+	  "given object type, if a selector doesn't match any objects a new one will be created \n" +
+	  "with the given data and selector.",
 	Args: func(cmd *cobra.Command, args []string) error {
 		argLength := len(args)
 		if argLength == 0 {
