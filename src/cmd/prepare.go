@@ -10,15 +10,15 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
-	Use:   "prepare",
+	Use:     "prepare",
 	Aliases: []string{"prep"},
-	Short: "Tools to help prepare assets for packaging",
+	Short:   "Tools to help prepare assets for packaging",
 }
 
 var prepareTransformGitLinks = &cobra.Command{

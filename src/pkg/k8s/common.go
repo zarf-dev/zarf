@@ -16,7 +16,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/template"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-logr/logr/funcr"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"

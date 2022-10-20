@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/spf13/cobra"
 )
 

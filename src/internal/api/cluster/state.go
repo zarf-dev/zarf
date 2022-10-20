@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 

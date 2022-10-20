@@ -24,7 +24,7 @@ func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string
 
 	// Validate the chart
 	_, err := loader.LoadDir(chart.LocalPath)
-	if err!= nil {
+	if err != nil {
 		spinner.Fatalf(err, "Validation failed for chart from %s (%s)", chart.LocalPath, err.Error())
 	}
 
@@ -57,7 +57,7 @@ func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 
 	// Validate the chart
 	_, err := loader.LoadDir(filepath.Join(tempPath, chart.GitPath))
-	if err!= nil {
+	if err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
 	}
 
@@ -107,7 +107,7 @@ func DownloadPublishedChart(chart types.ZarfChart, destination string) {
 
 	// Validate the chart
 	_, err = loader.LoadFile(saved)
-	if err!= nil {
+	if err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
 	}
 
