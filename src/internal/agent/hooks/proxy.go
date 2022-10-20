@@ -65,7 +65,7 @@ func HTTPProxy(w http.ResponseWriter, r *http.Request) {
 			} else {
 				transformedURL := ""
 
-				if strings.HasPrefix(req.UserAgent(), "pip") || strings.HasPrefix(req.UserAgent(), "twine") || strings.HasPrefix(req.UserAgent(), "Mozilla") {
+				if strings.HasPrefix(req.UserAgent(), "pip") || strings.HasPrefix(req.UserAgent(), "twine") {
 					transformedURL = pipTransformURL(zarfState.GitServer.Address, "https://"+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 					// TODO: (@WSTARR) We will need to support separate git repos and package registries in the future
 				} else if strings.HasPrefix(req.UserAgent(), "npm") || strings.HasPrefix(req.UserAgent(), "yarn") {
