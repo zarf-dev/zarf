@@ -111,5 +111,5 @@ func transformRegistryPath(baseURL string, reqURL string, username string, regex
 
 	// TODO: (@WSTARR) %s/api/packages/%s is very Gitea specific but with a config option this could be adapted to GitLab easily
 	// transformedURL := fmt.Sprintf("%s/api/v4/projects/39799997/packages/%s%s", baseURL, regType, matches[idx("pipPath")])
-	return fmt.Sprintf("%s/api/packages/%s/%s%s", baseURL, username, regType, matches[idx("pipPath")]), nil
+	return fmt.Sprintf("%s/api/packages/%s/%s%s", baseURL, username, regType, matches[idx(pathGroup)]), nil
 }
