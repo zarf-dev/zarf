@@ -8,8 +8,8 @@ import (
 	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
@@ -142,7 +142,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 	}
 
-	existingNamespaces, _ := k8s.GetNamespaces()
+	c := r.options.Cluster
+	existingNamespaces, _ := c.Kube.GetNamespaces()
 
 	for name, namespace := range r.namespaces {
 
@@ -156,31 +157,31 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := k8s.CreateNamespace(name, namespace); err != nil {
+			if _, err := c.Kube.CreateNamespace(name, namespace); err != nil {
 				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		}
 
 		// Create the secret
-		validSecret := k8s.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
+		validSecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
 
 		// Try to get a valid existing secret
-		currentSecret, _ := k8s.GetSecret(name, config.ZarfImagePullSecretName)
+		currentSecret, _ := c.Kube.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
 			// create/update the missing zarf registry secret
-			if err := k8s.ReplaceSecret(validSecret); err != nil {
+			if err := c.Kube.ReplaceSecret(validSecret); err != nil {
 				message.Errorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
 			// Generate the git server secret
-			gitServerSecret := k8s.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
 			gitServerSecret.StringData = map[string]string{
 				"username": config.GetGitServerInfo().PullUsername,
 				"password": config.GetGitServerInfo().PullPassword,
 			}
 
 			// Update the git server secret
-			if err := k8s.ReplaceSecret(gitServerSecret); err != nil {
+			if err := c.Kube.ReplaceSecret(gitServerSecret); err != nil {
 				message.Errorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}

@@ -16,9 +16,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/template"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
@@ -137,7 +137,7 @@ func Deploy() {
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them
-func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
+func deployComponents(tempPath types.TempPaths, componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
 	// When pushing images, the default behavior is to add a shasum of the url to the image name
 	deployedComponents := []types.DeployedComponent{}
 	config.SetDeployingComponents(deployedComponents)
@@ -191,7 +191,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 }
 
 // Deploy a Zarf Component
-func deployComponent(tempPath tempPaths, component types.ZarfComponent, addShasumToImgs bool) []types.InstalledChart {
+func deployComponent(tempPath types.TempPaths, component types.ZarfComponent, addShasumToImgs bool) []types.InstalledChart {
 	var installedCharts []types.InstalledChart
 	message.Debugf("packager.deployComponent(%#v, %#v", tempPath, component)
 
@@ -330,7 +330,7 @@ func getUpdatedValueTemplate(component types.ZarfComponent) template.Values {
 }
 
 // Push all of the components images to the configured container registry
-func pushImagesToRegistry(tempPath tempPaths, componentImages []string, addShasumToImg bool) {
+func pushImagesToRegistry(tempPath types.TempPaths, componentImages []string, addShasumToImg bool) {
 	if len(componentImages) == 0 {
 		return
 	}
@@ -367,7 +367,7 @@ func pushReposToRepository(reposPath string, repos []string) {
 }
 
 // Async'ly move data into a container running in a pod on the k8s cluster
-func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPaths, dataInjections []types.ZarfDataInjection) {
+func performDataInjections(waitGroup *sync.WaitGroup, componentPath ComponentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")
 	}
@@ -379,7 +379,7 @@ func performDataInjections(waitGroup *sync.WaitGroup, componentPath componentPat
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster
-func installChartAndManifests(componentPath componentPaths, component types.ZarfComponent) []types.InstalledChart {
+func installChartAndManifests(componentPath ComponentPaths, component types.ZarfComponent) []types.InstalledChart {
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {

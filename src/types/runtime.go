@@ -44,3 +44,23 @@ type ConnectString struct {
 }
 
 type ConnectStrings map[string]ConnectString
+
+type ComponentPaths struct {
+	Base           string
+	Files          string
+	Charts         string
+	Values         string
+	Repos          string
+	Manifests      string
+	DataInjections string
+}
+type TempPaths struct {
+	Base             string
+	InjectZarfBinary string
+	InjectBinary     string
+	SeedImage        string
+	Images           string
+	Components       string
+	Sboms            string
+	ZarfYaml         string
+}

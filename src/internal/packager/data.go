@@ -8,19 +8,19 @@ import (
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Wait for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath componentPaths) {
+func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
-	injectionCompletionMarker := filepath.Join(componentPath.dataInjections, config.GetDataInjectionMarker())
+	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
 		message.Errorf(err, "Unable to create the data injection completion marker")
 		return
@@ -35,7 +35,7 @@ iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
-		source := filepath.Join(componentPath.dataInjections, filepath.Base(data.Target.Path))
+		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 
 		// Wait until the pod we are injecting data into becomes available
 		pods := k8s.WaitForPodsAndContainers(data.Target, true)
@@ -73,7 +73,7 @@ iterator:
 				// Leave a marker in the target container for pods to track the sync action
 				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
 					tarExec,
-					componentPath.dataInjections,
+					componentPath.DataInjections,
 					config.GetDataInjectionMarker(),
 					kubectlExec,
 					untarExec,

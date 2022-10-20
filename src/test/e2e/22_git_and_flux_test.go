@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,8 +26,8 @@ func TestGitAndFlux(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfGit, false)
+	tunnel := cluster.NewZarfTunnel()
+	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
 	testGitServerConnect(t, tunnel.HttpEndpoint())
@@ -51,7 +51,7 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 
 func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := k8s.LoadZarfState()
+	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err)
 	config.InitState(state)
 
@@ -72,7 +72,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 
 func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := k8s.LoadZarfState()
+	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
 	config.InitState(state)
 	repoName := "zarf-1211668992"

@@ -1,4 +1,4 @@
-package k8s
+package cluster
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,14 +19,14 @@ const (
 )
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState
-func LoadZarfState() (types.ZarfState, error) {
+func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	message.Debug("k8s.LoadZarfState()")
 
 	// The empty state that we will try to fill
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secret, err := GetSecret(ZarfNamespace, ZarfStateSecretName)
+	secret, err := c.Kube.GetSecret(ZarfNamespace, ZarfStateSecretName)
 	if err != nil {
 		return state, err
 	}
@@ -39,7 +39,7 @@ func LoadZarfState() (types.ZarfState, error) {
 }
 
 // SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret
-func SaveZarfState(state types.ZarfState) error {
+func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
 	message.Debug(message.JsonValue(state))
 
@@ -71,7 +71,7 @@ func SaveZarfState(state types.ZarfState) error {
 	}
 
 	// Attempt to create or replace the secret and return
-	if err := ReplaceSecret(secret); err != nil {
+	if err := c.Kube.ReplaceSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 

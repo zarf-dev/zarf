@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and

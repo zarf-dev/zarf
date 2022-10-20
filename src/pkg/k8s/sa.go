@@ -8,39 +8,24 @@ import (
 )
 
 // GetAllServiceAccounts returns a list of services accounts for all namespaces.
-func GetAllServiceAccounts() (*corev1.ServiceAccountList, error) {
-	return GetServiceAccounts(corev1.NamespaceAll)
+func (k *K8sClient) GetAllServiceAccounts() (*corev1.ServiceAccountList, error) {
+	return k.GetServiceAccounts(corev1.NamespaceAll)
 }
 
 // GetServiceAccounts returns a list of service accounts in a given namespace
-func GetServiceAccounts(namespace string) (*corev1.ServiceAccountList, error) {
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) GetServiceAccounts(namespace string) (*corev1.ServiceAccountList, error) {
 	metaOptions := metav1.ListOptions{}
-	return clientset.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metaOptions)
+	return k.Clientset.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metaOptions)
 }
 
 // GetServiceAccount reutrns a single service account by namespace and name.
-func GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
 	metaOptions := metav1.GetOptions{}
-	return clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metaOptions)
+	return k.Clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metaOptions)
 }
 
 // SaveServiceAccount updates the given service account in the cluster
-func SaveServiceAccount(svcAccount *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) SaveServiceAccount(svcAccount *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
 	metaOptions := metav1.UpdateOptions{}
-	return clientset.CoreV1().ServiceAccounts(svcAccount.Namespace).Update(context.TODO(), svcAccount, metaOptions)
+	return k.Clientset.CoreV1().ServiceAccounts(svcAccount.Namespace).Update(context.TODO(), svcAccount, metaOptions)
 }

@@ -18,65 +18,39 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-type componentPaths struct {
-	base           string
-	files          string
-	charts         string
-	values         string
-	repos          string
-	manifests      string
-	dataInjections string
-}
-type tempPaths struct {
-	base             string
-	injectZarfBinary string
-	injectBinary     string
-	seedImage        string
-	images           string
-	components       string
-	sboms            string
-	zarfYaml         string
-}
-
-func createPaths() tempPaths {
+func createPaths() types.TempPaths {
 	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
 	}
-	return tempPaths{
-		base: basePath,
+	return types.TempPaths{
+		Base: basePath,
 
-		injectZarfBinary: filepath.Join(basePath, "zarf-registry"),
-		injectBinary:     filepath.Join(basePath, "zarf-injector"),
-		seedImage:        filepath.Join(basePath, "seed-image.tar"),
-		images:           filepath.Join(basePath, "images.tar"),
-		components:       filepath.Join(basePath, "components"),
-		sboms:            filepath.Join(basePath, "sboms"),
-		zarfYaml:         filepath.Join(basePath, "zarf.yaml"),
+		InjectZarfBinary: filepath.Join(basePath, "zarf-registry"),
+		InjectBinary:     filepath.Join(basePath, "zarf-injector"),
+		SeedImage:        filepath.Join(basePath, "seed-image.tar"),
+		Images:           filepath.Join(basePath, "images.tar"),
+		Components:       filepath.Join(basePath, "components"),
+		Sboms:            filepath.Join(basePath, "sboms"),
+		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
 	}
 }
 
-func (t tempPaths) clean() {
-	message.Debug("Cleaning up temp files")
-	_ = os.RemoveAll(t.base)
-	_ = os.RemoveAll("zarf-sbom")
-}
-
-func createComponentPaths(basePath string, component types.ZarfComponent) componentPaths {
+func createComponentPaths(basePath string, component types.ZarfComponent) types.ComponentPaths {
 	basePath = filepath.Join(basePath, component.Name)
 	_ = utils.CreateDirectory(basePath, 0700)
-	return componentPaths{
-		base:           basePath,
-		files:          filepath.Join(basePath, "files"),
-		charts:         filepath.Join(basePath, "charts"),
-		repos:          filepath.Join(basePath, "repos"),
-		manifests:      filepath.Join(basePath, "manifests"),
-		dataInjections: filepath.Join(basePath, "data"),
-		values:         filepath.Join(basePath, "values"),
+	return types.ComponentPaths{
+		Base:           basePath,
+		Files:          filepath.Join(basePath, "files"),
+		Charts:         filepath.Join(basePath, "charts"),
+		Repos:          filepath.Join(basePath, "repos"),
+		Manifests:      filepath.Join(basePath, "manifests"),
+		DataInjections: filepath.Join(basePath, "data"),
+		Values:         filepath.Join(basePath, "values"),
 	}
 }
 
@@ -122,11 +96,11 @@ func confirmAction(userMessage string, sbomViewFiles []string) bool {
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
-func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string, func()) {
+func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
-		return packagePath, func() {}
+		return packagePath
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -153,7 +127,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 	// Write the package to a local file
 	tempPath := createPaths()
 
-	localPackagePath := tempPath.base + providedURL.Path
+	localPackagePath := tempPath.Base + providedURL.Path
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)
 	_, err = io.Copy(packageFile, resp.Body)
@@ -176,15 +150,15 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) (string
 		}
 	}
 
-	return localPackagePath, tempPath.clean
+	return localPackagePath
 }
 
-func handleSgetPackage(sgetPackagePath string) (string, func()) {
+func handleSgetPackage(sgetPackagePath string) string {
 	// Write the package to a local file in a temp path
 	tempPath := createPaths()
 
 	// Create the local file for the package
-	localPackagePath := filepath.Join(tempPath.base, "remote.tar.zst")
+	localPackagePath := filepath.Join(tempPath.Base, "remote.tar.zst")
 	destinationFile, err := os.Create(localPackagePath)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
@@ -206,7 +180,7 @@ func handleSgetPackage(sgetPackagePath string) (string, func()) {
 		message.Fatal(err, "Unable to get the remote package via sget")
 	}
 
-	return localPackagePath, tempPath.clean
+	return localPackagePath
 }
 
 func isValidFileExtension(filename string) bool {

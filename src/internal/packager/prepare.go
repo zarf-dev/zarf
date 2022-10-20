@@ -10,8 +10,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -49,7 +49,6 @@ func FindImages(baseDir, repoHelmChartPath string) {
 	components := config.GetComponents()
 
 	tempPath := createPaths()
-	defer tempPath.clean()
 
 	for _, component := range components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
@@ -98,26 +97,26 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath := createComponentPaths(tempPath.components, component)
+		componentPath := createComponentPaths(tempPath.Components, component)
 		chartNames := make(map[string]string)
 
 		if len(component.Charts) > 0 {
-			_ = utils.CreateDirectory(componentPath.charts, 0700)
-			_ = utils.CreateDirectory(componentPath.values, 0700)
+			_ = utils.CreateDirectory(componentPath.Charts, 0700)
+			_ = utils.CreateDirectory(componentPath.Values, 0700)
 			gitUrlRegex := regexp.MustCompile(`\.git$`)
 
 			for _, chart := range component.Charts {
 				isGitURL := gitUrlRegex.MatchString(chart.Url)
 				if isGitURL {
-					path := helm.DownloadChartFromGit(chart, componentPath.charts)
+					path := helm.DownloadChartFromGit(chart, componentPath.Charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
 				} else {
-					helm.DownloadPublishedChart(chart, componentPath.charts)
+					helm.DownloadPublishedChart(chart, componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					chartValueName := helm.StandardName(componentPath.values, chart) + "-" + strconv.Itoa(idx)
+					chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 					if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
 						message.Fatalf(err, "Unable to copy values file %s", path)
 					}
@@ -132,7 +131,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 				// Generate helm templates to pass to gitops engine
 				template, err := helm.TemplateChart(helm.ChartOptions{
-					BasePath:          componentPath.base,
+					BasePath:          componentPath.Base,
 					Chart:             chart,
 					ChartLoadOverride: override,
 				})
@@ -149,14 +148,14 @@ func FindImages(baseDir, repoHelmChartPath string) {
 		}
 
 		if len(component.Manifests) > 0 {
-			if err := utils.CreateDirectory(componentPath.manifests, 0700); err != nil {
-				message.Errorf(err, "Unable to create the manifest path %s", componentPath.manifests)
+			if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
+				message.Errorf(err, "Unable to create the manifest path %s", componentPath.Manifests)
 			}
 
 			for _, manifest := range component.Manifests {
 				for idx, kustomization := range manifest.Kustomizations {
 					// Generate manifests from kustomizations and place in the package
-					destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.manifests, manifest.Name, idx)
+					destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
 					if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						message.Errorf(err, "unable to build the kustomization for %s", kustomization)
 					} else {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // NewServer creates and return a http.Server

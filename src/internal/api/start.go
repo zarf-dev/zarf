@@ -14,8 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -34,7 +33,7 @@ func LaunchAPIServer() {
 	// Otherwise, use a random available port
 	if port == "" {
 		// If we can't find an available port, just use the default
-		if portRaw, err := k8s.GetAvailablePort(); err != nil {
+		if portRaw, err := utils.GetAvailablePort(); err != nil {
 			port = "8080"
 		} else {
 			port = fmt.Sprintf("%d", portRaw)

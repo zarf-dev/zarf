@@ -4,7 +4,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 func ValidHostname(hostname string) bool {

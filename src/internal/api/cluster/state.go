@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -13,7 +13,7 @@ import (
 func ReadState(w http.ResponseWriter, r *http.Request) {
 	message.Debug("state.Read()")
 
-	data, err := k8s.LoadZarfState()
+	data, err := cluster.NewClusterOrDie().LoadZarfState()
 	if err != nil {
 		message.ErrorWebf(err, w, "unable to load zarf state")
 	}
@@ -31,7 +31,7 @@ func UpdateState(w http.ResponseWriter, r *http.Request) {
 
 	var data types.ZarfState
 
-	if err := k8s.SaveZarfState(data); err != nil {
+	if err := cluster.NewClusterOrDie().SaveZarfState(data); err != nil {
 		message.ErrorWebf(err, w, "unable to update zarf state")
 	} else {
 		common.WriteJSONResponse(w, data, http.StatusCreated)

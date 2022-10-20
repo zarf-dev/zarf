@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 func ValidateSha256Sum(expectedChecksum string, path string) {

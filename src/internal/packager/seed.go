@@ -2,18 +2,18 @@ package packager
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/images"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func seedZarfState(tempPath tempPaths) {
+func seedZarfState(tempPath types.TempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -25,19 +25,15 @@ func seedZarfState(tempPath tempPaths) {
 	spinner := message.NewProgressSpinner("Gathering cluster information")
 	defer spinner.Stop()
 
-	if err := k8s.WaitForHealthyCluster(5 * time.Minute); err != nil {
-		spinner.Fatalf(err, "The cluster we are using never reported 'healthy'")
-	}
-
 	spinner.Updatef("Getting cluster architecture")
-	if clusterArch, err = k8s.GetArchitecture(); err != nil {
+	if clusterArch, err = c.Kube.GetArchitecture(); err != nil {
 		spinner.Errorf(err, "Unable to validate the cluster system architecture")
 	}
 
 	// Attempt to load an existing state prior to init
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, _ := k8s.LoadZarfState()
+	state, _ := c.LoadZarfState()
 
 	// If the distro isn't populated in the state, assume this is a new cluster
 	if state.Distro == "" {
@@ -49,7 +45,7 @@ func seedZarfState(tempPath tempPaths) {
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type
-			distro, err = k8s.DetectDistro()
+			distro, err = c.Kube.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve
 				spinner.Fatalf(err, "Unable to connect to the cluster to verify the distro")
@@ -68,7 +64,7 @@ func seedZarfState(tempPath tempPaths) {
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := k8s.GetNamespaces()
+		namespaces, err := c.Kube.GetNamespaces()
 		if err != nil {
 			message.Fatalf(err, "Unable to get k8s namespaces")
 		}
@@ -81,7 +77,7 @@ func seedZarfState(tempPath tempPaths) {
 			}
 			// This label will tell the Zarf Agent to ignore this namespace
 			namespace.Labels["zarf.dev/agent"] = "ignore"
-			if _, err = k8s.UpdateNamespace(&namespace); err != nil {
+			if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
 				// This is not a hard failure, but we should log it
 				message.Errorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -114,7 +110,7 @@ func seedZarfState(tempPath tempPaths) {
 	spinner.Success()
 
 	// Save the state back to K8s
-	if err := k8s.SaveZarfState(state); err != nil {
+	if err := c.SaveZarfState(state); err != nil {
 		message.Fatal(err, "Unable to save the Zarf state data back to the cluster")
 	}
 
@@ -122,27 +118,27 @@ func seedZarfState(tempPath tempPaths) {
 	config.InitState(state)
 }
 
-func postSeedRegistry(tempPath tempPaths) error {
+func postSeedRegistry(tempPath types.TempPaths) error {
 	message.Debugf("packager.postSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
-	if err := k8s.DeletePod(k8s.ZarfNamespace, "injector"); err != nil {
+	if err := c.Kube.DeletePod(cluster.ZarfNamespace, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := k8s.DeleteConfigMapsByLabel(k8s.ZarfNamespace, labelMatch); err != nil {
+	if err := c.Kube.DeleteConfigMapsByLabel(cluster.ZarfNamespace, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	if err := k8s.DeleteService(k8s.ZarfNamespace, "zarf-injector"); err != nil {
+	if err := c.Kube.DeleteService(cluster.ZarfNamespace, "zarf-injector"); err != nil {
 		return err
 	}
 
 	// Push the seed images into to Zarf registry
-	err := images.PushToZarfRegistry(tempPath.seedImage, []string{config.ZarfSeedImage}, false)
+	err := images.PushToZarfRegistry(tempPath.SeedImage, []string{config.ZarfSeedImage}, false)
 
 	return err
 }

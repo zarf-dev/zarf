@@ -7,8 +7,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/strings/slices"
@@ -16,10 +16,6 @@ import (
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
 func Remove(packageName string) error {
-	// Create temp paths to temporarily extract the package into
-	tempPath := createPaths()
-	defer tempPath.clean()
-
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 

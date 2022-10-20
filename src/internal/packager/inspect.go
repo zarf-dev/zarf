@@ -7,7 +7,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 )
@@ -18,16 +18,15 @@ var ViewSBOM bool
 // Inspect list the contents of a package
 func Inspect(packageName string) {
 	tempPath := createPaths()
-	defer tempPath.clean()
 
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.base)
+	_ = archiver.Extract(packageName, config.ZarfYAML, tempPath.Base)
 
-	configPath := filepath.Join(tempPath.base, "zarf.yaml")
+	configPath := filepath.Join(tempPath.Base, "zarf.yaml")
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the config file in the package")
@@ -40,18 +39,18 @@ func Inspect(packageName string) {
 
 	// Load the config to get the build version
 	if err := config.LoadConfig(configPath, false); err != nil {
-		message.Fatalf(err, "Unable to read %s", tempPath.base)
+		message.Fatalf(err, "Unable to read %s", tempPath.Base)
 	}
 
 	message.Infof("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
 
 	if ViewSBOM {
-		err = archiver.Extract(packageName, "sboms", tempPath.base)
+		err = archiver.Extract(packageName, "sboms", tempPath.Base)
 		if err != nil {
 			message.Fatalf(err, "Unable to extract sbom information from the package.")
 		}
 
-		sbomViewFiles, _ := filepath.Glob(filepath.Join(tempPath.sboms, "sbom-viewer-*"))
+		sbomViewFiles, _ := filepath.Glob(filepath.Join(tempPath.Sboms, "sbom-viewer-*"))
 		if len(sbomViewFiles) > 1 {
 			link := sbomViewFiles[0]
 			msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n\n", len(sbomViewFiles), link)

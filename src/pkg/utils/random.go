@@ -3,7 +3,7 @@ package utils
 import (
 	"crypto/rand"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // Very limited special chars for git / basic auth

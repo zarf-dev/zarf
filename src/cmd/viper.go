@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
 )
 

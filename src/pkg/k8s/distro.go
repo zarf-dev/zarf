@@ -3,8 +3,6 @@ package k8s
 import (
 	"errors"
 	"regexp"
-
-	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
 const (
@@ -23,9 +21,7 @@ const (
 )
 
 // DetectDistro returns the matching distro or unknown if not found
-func DetectDistro() (string, error) {
-	message.Debugf("k8s.DetectDistro()")
-
+func (k *K8sClient) DetectDistro() (string, error) {
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
 	eksNodeRegex := regexp.MustCompile(`^aws:///`)
@@ -34,8 +30,8 @@ func DetectDistro() (string, error) {
 	rke2Regex := regexp.MustCompile(`^rancher/rancher-agent:v2`)
 	tkgRegex := regexp.MustCompile(`^projects\.registry\.vmware\.com/tkg/tanzu_core/`)
 
-	nodes, err := GetNodes()
-	message.Debug(nodes)
+	nodes, err := k.GetNodes()
+	k.Log("%#v", nodes)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting cluster nodes")
 	}
@@ -96,8 +92,8 @@ func DetectDistro() (string, error) {
 		}
 	}
 
-	namespaces, err := GetNamespaces()
-	message.Debug(namespaces)
+	namespaces, err := k.GetNamespaces()
+	k.Log("%#v", namespaces)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting namespace list")
 	}
@@ -113,11 +109,10 @@ func DetectDistro() (string, error) {
 }
 
 // GetArchitecture returns the cluster system architecture if found or an error if not
-func GetArchitecture() (string, error) {
-	message.Debugf("k8s.GetArchitecture()")
-	nodes, err := GetNodes()
+func (k *K8sClient) GetArchitecture() (string, error) {
+	nodes, err := k.GetNodes()
 
-	message.Debug(nodes)
+	k.Log("%#v", nodes)
 
 	if err != nil {
 		return "", err

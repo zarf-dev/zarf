@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -19,13 +19,12 @@ func Summary(w http.ResponseWriter, r *http.Request) {
 	var distro string
 	var hasZarf bool
 
-	if err := k8s.WaitForHealthyCluster(5 * time.Second); err == nil {
-		reachable = true
-	}
+	c, err := cluster.NewClusterWithWait(5 * time.Second)
+	reachable = (err == nil)
 
 	if reachable {
-		distro, _ = k8s.DetectDistro()
-		state, _ = k8s.LoadZarfState()
+		distro, _ = c.Kube.DetectDistro()
+		state, _ = c.LoadZarfState()
 		hasZarf = state.Distro != ""
 	}
 

@@ -1,0 +1,14 @@
+package cluster
+
+import (
+	"context"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+)
+
+func (c *Cluster) DeleteZarfNamespace() {
+	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
+	defer spinner.Stop()
+
+	c.Kube.DeleteNamespace(context.TODO(), ZarfNamespace)
+}

@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 const SGETProtocol = "sget://"
@@ -73,6 +75,30 @@ func DownloadToFile(url string, target string, cosignKeyPath string) {
 	} else {
 		httpGetFile(url, destinationFile)
 	}
+}
+
+// GetAvailablePort retrieves an available port on the host machine. This delegates the port selection to the golang net
+// library by starting a server and then checking the port that the server is using.
+func GetAvailablePort() (int, error) {
+	message.Debug("tunnel.GetAvailablePort()")
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	defer func(l net.Listener) {
+		// ignore this error because it won't help us to tell the user
+		_ = l.Close()
+	}(l)
+
+	_, p, err := net.SplitHostPort(l.Addr().String())
+	if err != nil {
+		return 0, err
+	}
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		return 0, err
+	}
+	return port, err
 }
 
 func httpGetFile(url string, destinationFile *os.File) {

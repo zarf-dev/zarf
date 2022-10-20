@@ -2,8 +2,8 @@ package images
 
 import (
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 )
@@ -16,8 +16,8 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChe
 	registryUrl := ""
 	if config.GetContainerRegistryInfo().InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
-		tunnel := k8s.NewZarfTunnel()
-		tunnel.Connect(k8s.ZarfRegistry, false)
+		tunnel := cluster.NewZarfTunnel()
+		tunnel.Connect(cluster.ZarfRegistry, false)
 		defer tunnel.Close()
 
 		registryUrl = tunnel.Endpoint()
@@ -25,7 +25,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChe
 		registryUrl = config.GetContainerRegistryInfo().Address
 
 		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err := k8s.NewTunnelFromServiceURL(registryUrl); err != nil {
+		if tunnel, err := cluster.NewTunnelFromServiceURL(registryUrl); err != nil {
 			message.Debug(err)
 		} else {
 			tunnel.Connect("", false)

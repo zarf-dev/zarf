@@ -4,44 +4,22 @@ import (
 	"context"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func GetNamespaces() (*corev1.NamespaceList, error) {
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) GetNamespaces() (*corev1.NamespaceList, error) {
 	metaOptions := metav1.ListOptions{}
-	return clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
+	return k.Clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
-func UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	message.Debugf("k8s.UpdateNamespace(%s)", message.JsonValue(namespace))
-
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
-
-	return clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
+	return k.Clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
 }
 
-func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	message.Debugf("k8s.CreateNamespace(%s)", name)
-
-	clientset, err := getClientset()
-	if err != nil {
-		return nil, err
-	}
-
+func (k *K8sClient) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	if namespace == nil {
 		// if only a name was provided create the namespace object
 		namespace = &corev1.Namespace{
@@ -50,11 +28,8 @@ func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespac
 				Kind:       "Namespace",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Labels: map[string]string{
-					// track the creation of this ns by zarf
-					config.ZarfManagedByLabel: "zarf",
-				},
+				Name:   name,
+				Labels: k.Labels,
 			},
 		}
 	}
@@ -62,45 +37,32 @@ func CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespac
 	metaOptions := metav1.GetOptions{}
 	createOptions := metav1.CreateOptions{}
 
-	match, err := clientset.CoreV1().Namespaces().Get(context.TODO(), name, metaOptions)
+	match, err := k.Clientset.CoreV1().Namespaces().Get(context.TODO(), name, metaOptions)
 
-	message.Debug(match)
+	k.Log("%#v", match)
 
 	if err != nil || match.Name != name {
-		return clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, createOptions)
+		return k.Clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, createOptions)
 	}
 
 	return match, err
 }
 
-func DeleteZarfNamespace() {
-	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
-	defer spinner.Stop()
-
-	clientset, err := getClientset()
-	if err != nil {
-		spinner.Fatalf(err, "Failed to get k8s clientset")
-	}
-
-	// Get the zarf ns and ignore errors
-	namespace, _ := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
-	// Remove the k8s finalizer to speed up destroy
-	_, _ = clientset.CoreV1().Namespaces().Finalize(context.TODO(), namespace, metav1.UpdateOptions{})
-
-	// Attempt to delete the namespace
+func (k *K8sClient) DeleteNamespace(ctx context.Context, name string) error {
+	// Attempt to delete the namespace immediately
 	gracePeriod := int64(0)
-	err = clientset.CoreV1().Namespaces().Delete(context.TODO(), ZarfNamespace, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
+	err := k.Clientset.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
+	// If an error besides "not found" is returned, return it
 	if err != nil && !errors.IsNotFound(err) {
-		spinner.Fatalf(err, "the Zarf namespace could not be deleted")
+		return err
 	}
 
-	spinner.Updatef("Zarf namespace deletion scheduled, waiting for all resources to be removed")
+	// Indefinitely wait for the namespace to be deleted, use context.WithTimeout to limit this
 	for {
-		// Keep checking for the
-		_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ZarfNamespace, metav1.GetOptions{})
+		// Keep checking for the namespace to be deleted
+		_, err := k.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
-			spinner.Successf("Zarf removed from this cluster")
-			return
+			return nil
 		}
 		time.Sleep(1 * time.Second)
 	}

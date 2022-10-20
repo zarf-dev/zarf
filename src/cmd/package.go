@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
@@ -62,10 +62,8 @@ var packageDeployCmd = &cobra.Command{
 	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var done func()
 		packageName := choosePackage(args)
-		config.DeployOptions.PackagePath, done = packager.HandleIfURL(packageName, shasum, insecureDeploy)
-		defer done()
+		config.DeployOptions.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
 		packager.Deploy()
 	},
 }
@@ -90,7 +88,7 @@ var packageListCmd = &cobra.Command{
 	Short:   "List out all of the packages that have been deployed to the cluster",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
-		deployedZarfPackages, err := k8s.GetDeployedZarfPackages()
+		deployedZarfPackages, err := cluster.NewClusterOrDie().GetDeployedZarfPackages()
 		if err != nil {
 			message.Fatalf(err, "Unable to get the packages deployed to the cluster")
 		}
