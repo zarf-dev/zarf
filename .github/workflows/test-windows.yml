@@ -1,4 +1,4 @@
-name: test-windows
+name: Test Windows Binary
 on:
   pull_request:
     paths-ignore:
@@ -12,46 +12,34 @@ on:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: e2e-windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: windows-latest
     steps:
-      - name: "Dependency: Install Golang"
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.19.x
-
-      - name: "Checkout Repo"
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Use GNU tar for Windows
+      - name: Optimize caching
+        run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
         shell: cmd
-        run: |
-          echo "Adding GNU tar to PATH"
-          echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
 
-      # https://github.com/actions/cache/blob/main/workarounds.md#improving-cache-restore-performance-on-windows-using-cross-os-caching
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~\AppData\Local\go-build            
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-      - name: "Build CLI"
-        shell: pwsh
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build windows binary
         run: make build-cli-windows-amd
-
-      - name: "Make Packages"
         shell: pwsh
-        run: make init-package build-examples ARCH=amd64
 
-      - name: "Run Tests"
+      - name: Build zarf packages
+        run: make build-examples ARCH=amd64
         shell: pwsh
+
+      - name: Run windows tests
         run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
+        shell: pwsh

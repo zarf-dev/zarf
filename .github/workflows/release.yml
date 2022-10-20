@@ -9,57 +9,38 @@ jobs:
   push-resources:
     runs-on: ubuntu-latest
     steps:
-      - name: "Dependency: Install Golang"
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.19.x
-
-      - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.8.1
-
-      - name: "Dependency: Install Syft"
-        uses: anchore/sbom-action/download-syft@v0.12.0
-
-      - name: "Dependency: Install Docker Buildx"
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: "Dependency: Install Grype"
-        run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
-
-      - name: "Checkout Repo"
+      - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      - name: "Setup caching"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-          
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-      - name: "Build CLI"
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Build CLI
         run: |
           make build-cli-linux-amd
           make build-cli-linux-arm
 
-      - name: "Zarf Agent: Login to Docker Hub"
+      - name: "Zarf Agent: Login to GHCR"
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
 
       - name: "Zarf Agent: Build and Publish the Image"
         run: |
-          cp build/zarf build/zarf-linux-amd64 && cp build/zarf-arm build/zarf-linux-arm64
-          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag defenseunicorns/zarf-agent:$GITHUB_REF_NAME .
+          cp build/zarf build/zarf-linux-amd64
+          cp build/zarf-arm build/zarf-linux-arm64
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/defenseunicorns/zarf/agent:$GITHUB_REF_NAME .
 
       - name: "Zarf Agent: Sign the Image"
-        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME defenseunicorns/zarf-agent:$GITHUB_REF_NAME
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME ghcr.io/defenseunicorns/zarf/agent:$GITHUB_REF_NAME
         env:
           COSIGN_EXPERIMENTAL: 1
           AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
@@ -67,25 +48,21 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
 
       # Builds init packages since GoReleaser won't handle this for us
-      - name: "Build init-packages For Release"
+      - name: Build init-packages For Release
         run: |
-          make init-package ARCH=amd64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
-          make init-package ARCH=arm64 AGENT_IMAGE=defenseunicorns/zarf-agent:$GITHUB_REF_NAME
+          make init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
+          make init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
 
-      - name: "Run Tests"
+      - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-      - name: "Save test debug logs"
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: debug-log
-          path: /tmp/zarf-*.log
+      - name: Save logs
+        uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
-      - name: "Create release time CVE report"
+      - name: Create release time CVE report
         run: "make cve-report"
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
@@ -107,7 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
 
-      - name: "Save CVE report"
+      - name: Save CVE report
         uses: actions/upload-artifact@v3
         with:
           name: cve-report
