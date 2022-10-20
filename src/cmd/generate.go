@@ -1,5 +1,5 @@
 package cmd
-
+/*
 import (
 	"errors"
 
@@ -30,9 +30,9 @@ var generateWizardCmd = &cobra.Command{
 	},
 }
 var generatePackageCmd = &cobra.Command{
-	Use: "package PACKAGE_NAME",
+	Use: "package NAME",
 	Aliases: []string{"pkg"},
-	Short: "Create or modify a package",
+	Short: "Generate an example package or from a given resource",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := validate.ValidatePackageName(args[0]); err != nil {
@@ -202,3 +202,4 @@ func bindConstantFlags() {
 func bindVariableFlags() {
 	generateVariableCmd.Flags()
 }
+*/

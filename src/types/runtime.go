@@ -14,18 +14,9 @@ type ZarfDeployOptions struct {
 	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
-// ZarfPackageGenerateOptions tracks the user-defined options during package generation.
-type ZarfPackageGenerateOptions struct {
-	ComponentNames     []string `json:"componentNames" jsonschema:"description=Array of component names"`
-	ComponentDataTypes []string `json:"componentDataTypes" jsonschema:"description=Array of types of componentData"`
-	ComponentData      []string `json:"componentData" jsonschema:"description=Array of component data"`
-	Required           bool     `json:"required" jsonschema:"description=Bool for if component is required"`
-}
-
+// ZarfGenerateOptions tracks the user-defined options during package generation.
 type ZarfGenerateOptions struct {
-	FilePath           string `json:"filepath" jsonschema:"description=Path to zarf package yaml to create or modify"`
-	PackageDescription string `json:"packageDescription" jsonschema:"description=The description meta field of the zarf package"`
-	PropertySelector   string `json:"propertySelector" jsonschema:"description=The selector for an element"`
+	From	string `json:"from" jsonschema:"description=The location of a resource to generate a package from"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
