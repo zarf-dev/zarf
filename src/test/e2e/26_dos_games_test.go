@@ -12,7 +12,7 @@ import (
 
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)

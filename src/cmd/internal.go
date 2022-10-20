@@ -34,16 +34,16 @@ var agentCmd = &cobra.Command{
 	},
 }
 
-var gitProxyCmd = &cobra.Command{
-	Use:   "git-proxy",
-	Short: "Runs the zarf agent git proxy",
+var httpProxyCmd = &cobra.Command{
+	Use:   "http-proxy",
+	Short: "Runs the zarf agent http proxy",
 	Long: "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
-		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
-		"with the Zarf container registry and Gitea server URLs.",
+		"This command starts up a http proxy that can be used by running pods to transform queries " +
+		"that confrom to Gitea server URLs in the airgap",
 	// this command should not be advertised on the cli as it has no value outside the k8s env
 	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		agent.StartGitProxy()
+		agent.StartHTTPProxy()
 	},
 }
 
@@ -118,7 +118,7 @@ func init() {
 	rootCmd.AddCommand(internalCmd)
 
 	internalCmd.AddCommand(agentCmd)
-	internalCmd.AddCommand(gitProxyCmd)
+	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
 	internalCmd.AddCommand(apiSchemaCmd)

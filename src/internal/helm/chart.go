@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -26,7 +26,6 @@ type ChartOptions struct {
 	ChartOverride     *chart.Chart
 	ValueOverride     map[string]any
 	Component         types.ZarfComponent
-	NoWait            bool
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart
@@ -53,7 +52,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 	// Do not wait for the chart to be ready if data injections are present
 	if len(options.Component.DataInjections) > 0 {
 		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		options.NoWait = true
+		options.Chart.NoWait = true
 	}
 
 	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
@@ -72,7 +71,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 		histClient := action.NewHistory(actionConfig)
 		histClient.Max = 1
 
-		if attempt > 2 {
+		if attempt > 4 {
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
@@ -81,7 +80,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 				spinner.Updatef("Performing chart uninstall")
 				_, _ = uninstallChart(actionConfig, options.ReleaseName)
 			}
-			spinner.Errorf(nil, "Unable to complete helm chart install/upgrade")
+			spinner.Fatalf(nil, "Unable to complete helm chart install/upgrade")
 			break
 		}
 
@@ -192,7 +191,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
 		manifest := fmt.Sprintf("%s/%s", basePath, file)
-		data, err := ioutil.ReadFile(manifest)
+		data, err := os.ReadFile(manifest)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to read the manifest file contents")
 		}
@@ -207,6 +206,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 			ReleaseName: sha1ReleaseName,
 			Version:     tmpChart.Metadata.Version,
 			Namespace:   manifest.Namespace,
+			NoWait:      manifest.NoWait,
 		},
 		ChartOverride: tmpChart,
 		// We don't have any values because we do not expose them in the zarf.yaml currently
@@ -229,7 +229,7 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
-	client.Wait = !options.NoWait
+	client.Wait = !options.Chart.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly
 	client.SkipCRDs = false
@@ -260,7 +260,7 @@ func upgradeChart(actionConfig *action.Configuration, options ChartOptions, post
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)k3
-	client.Wait = !options.NoWait
+	client.Wait = !options.Chart.NoWait
 
 	client.SkipCRDs = true
 

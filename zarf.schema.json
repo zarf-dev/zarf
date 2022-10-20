@@ -33,7 +33,6 @@
     "ZarfChart": {
       "required": [
         "name",
-        "url",
         "version",
         "namespace"
       ],
@@ -68,10 +67,32 @@
         "gitPath": {
           "type": "string",
           "description": "If using a git repo"
+        },
+        "localPath": {
+          "type": "string",
+          "description": "The path to the chart folder"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for chart resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ],
+          "title": "url"
+        },
+        {
+          "required": [
+            "localPath"
+          ],
+          "title": "localPath"
+        }
+      ]
     },
     "ZarfComponent": {
       "required": [
@@ -330,7 +351,7 @@
         },
         "target": {
           "type": "string",
-          "description": "The absolute or relative path wher the file should be copied to during package deploy"
+          "description": "The absolute or relative path where the file should be copied to during package deploy"
         },
         "executable": {
           "type": "boolean",
@@ -377,6 +398,10 @@
           },
           "type": "array",
           "description": "List of kustomization paths to include in the package"
+        },
+        "noWait": {
+          "type": "boolean",
+          "description": "Wait for manifest resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
@@ -453,10 +478,6 @@
           "type": "array",
           "description": "List of components to deploy in this package"
         },
-        "seed": {
-          "type": "string",
-          "description": "Special image only used for ZarfInitConfig packages when used with the Zarf Injector"
-        },
         "variables": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -491,6 +512,10 @@
         "value": {
           "type": "string",
           "description": "The value to set for the constant during deploy"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts"
         }
       },
       "additionalProperties": false,
@@ -505,6 +530,10 @@
           "pattern": "^[A-Z_]+$",
           "type": "string",
           "description": "The name to be used for the variable"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the variable to be used when prompting the user a value"
         },
         "default": {
           "type": "string",

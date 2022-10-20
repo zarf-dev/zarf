@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-	page.on('pageerror', (err) => console.log(err.message));	
+	page.on('pageerror', (err) => console.log(err.message));
 });
 
 test.describe('start page without an initialized cluster', () => {
@@ -22,7 +22,7 @@ test.describe('start page without an initialized cluster', () => {
 		await expect(page.locator('text=No Active Zarf Clusters')).toBeVisible();
 		await expect(
 			page.locator(
-				'h2:has-text("cluster was found, click initialize cluster to initialize it now with Zarf")'
+				'.hero-subtitle:has-text("cluster was found, click initialize cluster to initialize it now with Zarf")'
 			)
 		).toBeVisible();
 

@@ -2,6 +2,8 @@ package validate
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -45,6 +47,14 @@ func Run() {
 
 }
 
+func oneIfNotEmpty(testString string) int {
+	if testString == "" {
+		return 0
+	} else {
+		return 1
+	}
+}
+
 func validateComponent(component types.ZarfComponent) {
 	if component.Required {
 		if component.Default {
@@ -57,12 +67,12 @@ func validateComponent(component types.ZarfComponent) {
 
 	for _, chart := range component.Charts {
 		if err := validateChart(chart); err != nil {
-			message.Fatalf(err, "Invalid chart definition in the %s component: %s", component.Name, chart.Name)
+			message.Fatalf(err, "Invalid chart definition in the %s component: %s (%s)", component.Name, chart.Name, err.Error())
 		}
 	}
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
-			message.Fatalf(err, "Invalid manifest definition in the %s component: %s", component.Name, manifest.Name)
+			message.Fatalf(err, "Invalid manifest definition in the %s component: %s (%s)", component.Name, manifest.Name, err.Error())
 		}
 	}
 }
@@ -120,9 +130,10 @@ func validateChart(chart types.ZarfChart) error {
 		return fmt.Errorf("%s must include a namespace", intro)
 	}
 
-	// Must have a url
-	if chart.Url == "" {
-		return fmt.Errorf("%s must include a url", intro)
+	// Must only have a url or localPath
+	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath)
+	if count != 1 {
+		return fmt.Errorf("%s must only have a url or localPath", intro)
 	}
 
 	// Must have a version
@@ -173,7 +184,7 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 
 	// add a forward slash to end of path if it does not have one
 	if !strings.HasSuffix(path, "/") {
-		path = path + "/"
+		path = filepath.Clean(path) + string(os.PathSeparator)
 	}
 
 	// ensure there is a zarf.yaml in provided path

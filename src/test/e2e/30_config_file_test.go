@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	var (
@@ -48,6 +49,11 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEAPORD COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
+
+	// Verify the configmap was properly templated
+	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
+	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
+	require.Contains(t, string(kubectlOut), "camel_spider=matte")
 }
 
 func configFileDefaultTests(t *testing.T) {
@@ -55,8 +61,9 @@ func configFileDefaultTests(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
-		"Disable log file creation. (default true)",
-		"Disable fancy UI progress bars, spinners, logos, etc. (default true)",
+		"Disable log file creation (default true)",
+		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
+		"zarf_cache: 978499a5",
 		"tmp_dir: c457359e",
 	}
 
@@ -81,7 +88,6 @@ func configFileDefaultTests(t *testing.T) {
 		"Allow insecure registry connections when pulling OCI images (default true)",
 		"create.output_directory: 52d061d5",
 		"Skip generating SBOM for this package (default true)",
-		"create.zarf_cache: 978499a5",
 		"[thing1=1a2b3c4d]",
 	}
 

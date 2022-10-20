@@ -13,7 +13,6 @@ import (
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
-	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"             // used for embedded registry
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem" // used for embedded registry
 )
 

@@ -3,14 +3,14 @@ package git
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"io"
 	netHttp "net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -61,14 +61,10 @@ func transformURLtoRepoName(url string) (string, error) {
 	// resolve to the same repp (as they would in real life)
 	sanitizedURL := fmt.Sprintf("%s/%s%s", matches[idx("hostPath")], repoName, matches[idx("atRef")])
 
-	// Add sha1 hash of the repoName to the end of the repo
-	hasher := sha1.New()
-	if _, err := io.WriteString(hasher, sanitizedURL); err != nil {
-		return "", fmt.Errorf("unable to create a hash from the sanitized git url %s", sanitizedURL)
-	}
-
-	sha1Hash := hex.EncodeToString(hasher.Sum(nil))
-	newRepoName := fmt.Sprintf("%s-%s", repoName, sha1Hash)
+	// Add crc32 hash of the repoName to the end of the repo
+	table := crc32.MakeTable(crc32.IEEE)
+	checksum := crc32.Checksum([]byte(sanitizedURL), table)
+	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
 	return newRepoName, nil
 }
@@ -96,7 +92,7 @@ func TransformURL(baseURL string, url string, username string) (string, error) {
 
 func credentialFilePath() string {
 	homePath, _ := os.UserHomeDir()
-	return homePath + "/.git-credentials"
+	return filepath.Join(homePath, ".git-credentials")
 }
 
 func credentialParser() []Credential {
