@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -26,8 +27,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/defenseunicorns/zarf/src/internal/generator"
 )
 
 var packageCmd = &cobra.Command{
@@ -116,23 +115,18 @@ var packageMirrorCmd = &cobra.Command{
 }
 
 var packageGenerateCmd = &cobra.Command{
-	Use:     "generate [PACKAGE_NAME]",
+	Use:     "generate NAME",
 	Aliases: []string{"g"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Use to generate a zarf.yaml from a given set of resources",
-	Long: "Each instance of \"--component-name\" creates a new component. " +
-		"Every component needs at least one \"--component-type\". If the " +
-		"component type is not \"other\" then \"--component-data\" is required. " +
-		"If component type is \"other\" then \"--component-data\" is not allowed. " +
-		"Component data is an array of objects in json, these objects must conform " +
-		"to the schema for a given component data type. A component can have " +
-		"multiple component data types, but not any duplicates.",
+	Short:   "Use to generate either an example package or a package from a resource",
 	Run: func(cmd *cobra.Command, args []string) {
-		rawComponents := generator.ValidateAndFormatFlags(args)
-		generatedPackage := generator.CreateZarfPackage(args, rawComponents)
-		err := utils.WriteYaml("test.zarf.yaml", generatedPackage, 0644)
-		if err != nil {
-			message.Fatal(err, err.Error())
+		if cmd.Flags().Changed("from") {
+			// switch expression {
+			// case condition:
+
+			// }
+		} else {
+			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		}
 	},
 }
@@ -446,12 +440,7 @@ func bindMirrorFlags(v *viper.Viper) {
 func bindPackageGenerateFlags() {
 	generateFlags := packageGenerateCmd.Flags()
 
-	emptyArray := make([]string, 0)
-
-	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentNames, "component-name", emptyArray, "name of the component")
-	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentDataTypes, "component-data-type", emptyArray, "type of componentData")
-	generateFlags.StringArrayVar(&config.PackageGenerateOptions.ComponentData, "component-data", emptyArray, "component data in json")
-	generateFlags.BoolVar(&config.PackageGenerateOptions.Required, "required", false, "is this component required")
+	generateFlags.StringVar(&config.GenerateOptions.From, "from", "", "The location of the resource to generate a package from")
 }
 
 func bindInspectFlags(_ *viper.Viper) {
