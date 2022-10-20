@@ -16,7 +16,7 @@ Before the magic can happen you have to do a few things:
 
 1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
 
-1. Install [KinD](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using KinD for this example since it is easy and tested frequently and thoroughly.
+1. Install [Kind](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using Kind for this example since it is easy and tested frequently and thoroughly.
 
 1. Clone the Zarf project &mdash; for the example configuration files.
 
