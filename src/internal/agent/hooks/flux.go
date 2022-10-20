@@ -6,13 +6,12 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	v1 "k8s.io/api/admission/v1"
 )
-
-const zarfStatePath = "/etc/zarf-state/state"
 
 type SecretRef struct {
 	Name string `json:"name"`
@@ -39,7 +38,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (*operations.Result, error) {
 	var patches []operations.PatchOperation
 
 	// Form the gitServerURL from the state
-	zarfState, err := getStateFromAgentPod(zarfStatePath)
+	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load zarf state from file: %w", err)
 	}

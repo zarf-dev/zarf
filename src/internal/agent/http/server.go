@@ -8,9 +8,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 )
 
-// NewServer creates and return a http.Server
-func NewServer(port string) *http.Server {
-	message.Debugf("http.NewServer(%s)", port)
+// NewAdmissionServer creates and returns a http admission webhook server.
+func NewAdmissionServer(port string) *http.Server {
+	message.Debugf("http.NewAdmissionServer(%s)", port)
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()
@@ -29,14 +29,23 @@ func NewServer(port string) *http.Server {
 	}
 }
 
-// NewHTTPProxy creates and returns an http proxy server.
-func NewHTTPProxy(port string) *http.Server {
+// NewProxyServer creates and returns an http proxy server.
+func NewProxyServer(port string) *http.Server {
+	message.Debugf("http.NewHTTPProxy(%s)", port)
+
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
-	mux.Handle("/", http.HandlerFunc(hooks.HTTPProxy))
+	mux.Handle("/", ProxyHandler())
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: mux,
+	}
+}
+
+func healthz() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
 	}
 }

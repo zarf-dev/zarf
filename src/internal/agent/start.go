@@ -26,7 +26,7 @@ const (
 func StartWebhook() {
 	message.Debug("agent.StartWebhook()")
 
-	server := agentHttp.NewServer(httpPort)
+	server := agentHttp.NewAdmissionServer(httpPort)
 	go func() {
 		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
 			message.Fatal(err, "Failed to start the web server")
@@ -50,7 +50,7 @@ func StartWebhook() {
 func StartHTTPProxy() {
 	message.Debug("agent.StartHttpProxy()")
 
-	server := agentHttp.NewHTTPProxy(proxyPort)
+	server := agentHttp.NewProxyServer(proxyPort)
 	go func() {
 		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
 			message.Fatal(err, "Failed to start the web server")

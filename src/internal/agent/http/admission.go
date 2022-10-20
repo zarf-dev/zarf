@@ -106,10 +106,3 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 		w.Write(jsonResponse)
 	}
 }
-
-func healthz() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	}
-}
