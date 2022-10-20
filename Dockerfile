@@ -1,9 +1,8 @@
-FROM scratch
+FROM gcr.io/distroless/static:nonroot
 ARG TARGETARCH
 
-ADD "build/zarf-linux-$TARGETARCH" /zarf
-EXPOSE 8443
+USER nonroot:nonroot
+ 
+COPY --chown=nonroot:nonroot "build/zarf-linux-$TARGETARCH" /zarf
 
-ENV USER=zarf
-
-CMD ["/zarf", "internal", "agent", "-l=trace"]
+CMD ["/zarf", "internal", "agent", "-l=trace", "--no-log-file"]

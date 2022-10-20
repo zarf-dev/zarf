@@ -1,0 +1,25 @@
+name:  Validate Docs and Schema
+on:
+  pull_request:
+    paths:
+      - "src/types/**"
+      - "zarf.schema.json"
+      - "docs/4-user-guide/1-the-zarf-cli/3-zarf-schema.md"
+      - "src/cmd/**"
+      - "docs/4-user-guide/1-the-zarf-cli/100-cli-commands/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Docs and schemas
+        run: "make test-docs-and-schema"
+
+      - name: Save logs
+        uses: ./.github/actions/save-logs
