@@ -35,7 +35,7 @@ Depending on the permissions of your user, if you are installing k3s through the
 
 ### Any Other Cluster
 <!-- TODO: Link to a support matrix of k8 distros -->
-Zarf deploys to almost any cluster, you are not tied down to the K3s cluster that the [init package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) provides!  You could use local dockerized k8s cluster such as [k3d](https://k3d.io/v5.4.1/) or [KinD](https://kind.sigs.k8s.io/), Rancher's next-generation k8s distribution [RKE2](https://docs.rke2.io/), or cloud-provided clusters such as [eks](https://aws.amazon.com/eks/)
+Zarf deploys to almost any cluster, you are not tied down to the K3s cluster that the [init package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) provides!  You could use local dockerized k8s cluster such as [k3d](https://k3d.io/v5.4.1/) or [Kind](https://kind.sigs.k8s.io/), Rancher's next-generation k8s distribution [RKE2](https://docs.rke2.io/), or cloud-provided clusters such as [eks](https://aws.amazon.com/eks/)
 
 
 # Initializing a Cluster

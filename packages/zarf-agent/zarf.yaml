@@ -11,7 +11,7 @@ components:
   - name: zarf-agent
     required: true
     images:
-      - "###ZARF_PKG_VAR_AGENT_IMAGE###"
+      - "ghcr.io/defenseunicorns/zarf/###ZARF_PKG_VAR_AGENT_IMAGE###"
     manifests:
       - name: zarf-agent
         namespace: zarf

@@ -29,16 +29,12 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates
 var NoProgress bool
 
-var SkipLogFile bool
-
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logfile generation
 var logFile *os.File
 
 func init() {
-	var err error
-
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -55,16 +51,15 @@ func init() {
 
 	pterm.DefaultProgressbar.MaxWidth = 85
 	pterm.SetDefaultOutput(os.Stderr)
+}
 
-	if SkipLogFile {
-		return
-	}
-
+// UseLogfile writes output to stderr and a logfile
+func UseLogFile() {
 	// Prepend the log filename with a timestampe
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
 	// Try to create a temp log file
-	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+	if logFile, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		Error(err, "Error saving a log file")
 	} else {
 		// Otherwise fallback to stderr
@@ -73,28 +68,6 @@ func init() {
 		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
 		Note(message)
 	}
-}
-
-func debugPrinter(offset int, a ...any) {
-	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
-	printer.Println(a...)
-
-	// Always write to the log file
-	if logFile != nil && !pterm.PrintDebugMessages {
-		now := time.Now().Format(time.RFC3339)
-		// prepend to a
-		a = append([]any{now, " - "}, a...)
-		pterm.Debug.
-			WithShowLineNumber(true).
-			WithLineNumberOffset(offset).
-			WithDebugger(false).
-			WithWriter(logFile).
-			Println(a...)
-	}
-}
-
-func errorPrinter(offset int) *pterm.PrefixPrinter {
-	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
 
 func SetLogLevel(lvl LogLevel) {
@@ -211,4 +184,26 @@ func JsonValue(value any) string {
 
 func paragraph(format string, a ...any) string {
 	return pterm.DefaultParagraph.WithMaxWidth(100).Sprintf(format, a...)
+}
+
+func debugPrinter(offset int, a ...any) {
+	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
+	printer.Println(a...)
+
+	// Always write to the log file
+	if logFile != nil && !pterm.PrintDebugMessages {
+		now := time.Now().Format(time.RFC3339)
+		// prepend to a
+		a = append([]any{now, " - "}, a...)
+		pterm.Debug.
+			WithShowLineNumber(true).
+			WithLineNumberOffset(offset).
+			WithDebugger(false).
+			WithWriter(logFile).
+			Println(a...)
+	}
+}
+
+func errorPrinter(offset int) *pterm.PrefixPrinter {
+	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
