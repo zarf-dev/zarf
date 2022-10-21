@@ -79,8 +79,8 @@ func GenTransformURL(baseURL string, reqURL string, username string) (string, er
 	}
 
 	packageName := matches[idx("startPath")]
-	// NOTE: We remove the protocol and file name that https://zarf.dev/package/package1.zip and http://zarf.dev/package/package2.zip
-	// resolve to the same folder (as they would in real life)
+	// NOTE: We remove the protocol and file name so that https://zarf.dev/package/package1.zip and http://zarf.dev/package/package2.zip
+	// resolve to the same "folder" (as they would in real life)
 	sanitizedURL := fmt.Sprintf("%s%s%s", matches[idx("host")], matches[idx("startPath")], matches[idx("midPath")])
 
 	// Add crc32 hash of the url to the end of the package name
