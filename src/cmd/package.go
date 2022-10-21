@@ -134,7 +134,7 @@ var packageGenerateCmd = &cobra.Command{
 				message.Info(pkgName + "'s " + componentSource + " is " + result + ", probably...")
 				switch result {
 				case "localChart":
-					newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource, pkgName))
+					newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource))
 				case "manifests":
 					newPkg.Components = append(newPkg.Components, generator.GenManifests(componentSource))
 				case "localFiles":
