@@ -18,7 +18,12 @@ func getTopLevelFiles(path string) (topLevelFiles []string) {
 	}
 	for _, content := range dirContents {
 		if !content.IsDir() {
-			topLevelFiles = append(topLevelFiles, path+"/"+content.Name())
+			lastCharIsForwardSlash := regexp.MustCompile(`\/$`).MatchString
+			if lastCharIsForwardSlash(path) {
+				topLevelFiles = append(topLevelFiles, path + content.Name())
+			} else {
+				topLevelFiles = append(topLevelFiles, path + "/" + content.Name())
+			}
 		}
 	}
 	return topLevelFiles

@@ -57,6 +57,8 @@ func separateManifestsAndKustomizations(dirPath string) (manifests []string, kus
 		} else if currentYaml.Kind != "" {
 			if currentYaml.Kind == "Kustomization" {
 				kustomizations = append(kustomizations, yamlFile)
+			} else if currentYaml.Kind == "ZarfPackageConfig" {
+				continue
 			} else {
 				manifests = append(manifests, yamlFile)
 			}
