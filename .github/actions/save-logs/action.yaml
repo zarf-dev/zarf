@@ -1,0 +1,11 @@
+name: save-logs
+description: "Save debug logs"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: debug-log
+        path: /tmp/zarf-*.log
