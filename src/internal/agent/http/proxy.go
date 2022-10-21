@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,6 +32,7 @@ func proxyDirector(req *http.Request) {
 	// We remove this so that go will encode and decode on our behalf (see https://pkg.go.dev/net/http#Transport DisableCompression)
 	req.Header.Del("Accept-Encoding")
 
+	// TODO: (@WSTARR) we will eventually need to support a separate git host and package registry host (potential to expand the NPM job)
 	zarfState, npmToken := proxy.GetProxyState()
 
 	// Setup authentication for the given service
@@ -52,14 +54,13 @@ func proxyDirector(req *http.Request) {
 	} else {
 		switch {
 		case isGitUserAgent(req.UserAgent()):
-			// TODO: (@WSTARR) Remove hardcoded https from these, this doesn't come through on scheme, but we could check it from req.TLS (though we only serve https right now anyway)
-			transformedURL, err = git.TransformURL(zarfState.GitServer.Address, "https://"+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
+			transformedURL, err = git.TransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		case isPipUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, "https://"+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		case isNpmUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.NpmTransformURL(zarfState.GitServer.Address, "https://"+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.NpmTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		default:
-			transformedURL, err = proxy.GenTransformURL(zarfState.GitServer.Address, "https://"+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.GenTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		}
 
 		if err != nil {
@@ -81,8 +82,6 @@ func proxyDirector(req *http.Request) {
 func proxyResponse(resp *http.Response) error {
 	message.Debugf("Before Resp %#v", resp)
 
-	zarfState, _ := proxy.GetProxyState()
-
 	// Handle redirection codes (3xx) by adding a marker to let Zarf know this has been redirected
 	if resp.StatusCode/100 == 3 {
 		message.Debugf("Before Resp Location %#v", resp.Header.Get("Location"))
@@ -99,28 +98,60 @@ func proxyResponse(resp *http.Response) error {
 
 	contentType := resp.Header.Get("Content-Type")
 
-	// TODO: (@WSTARR) Refactor to be more concise/descriptive
+	// Handle text content returns that may contain links
 	if strings.HasPrefix(contentType, "text") || strings.HasPrefix(contentType, "application/json") || strings.HasPrefix(contentType, "application/xml") {
-		message.Debugf("Resp Request: %#v", resp.Request)
-		forwardedHost := resp.Request.Header.Get("X-Forwarded-Host")
-		body, err := io.ReadAll(resp.Body)
-		message.Debugf("%#v", err)
-		err = resp.Body.Close()
-		message.Debugf("%#v", err)
-		bodyString := string(body)
-		message.Warnf("%s", bodyString)
-		// TODO: (@WSTARR) Remove hardcoded https, this doesn't come through on scheme, but we could check it from resp.TLS (though we only serve https right now anyway)
-		// TODO: (@WSTARR) This is also our only use of state in the response.  We should likely just use the request object instead
-		bodyString = strings.ReplaceAll(bodyString, zarfState.GitServer.Address, "https://"+forwardedHost+proxy.NoTransform)
-		message.Warnf("%s", bodyString)
-		resp.Body = io.NopCloser(strings.NewReader(bodyString))
-		resp.ContentLength = int64(len(bodyString))
-		resp.Header.Set("Content-Length", fmt.Sprint(int64(len(bodyString))))
+		err := replaceBodyLinks(resp)
+
+		if err != nil {
+			message.Debugf("%#v", err)
+		}
 	}
 
 	message.Debugf("After Resp %#v", resp)
 
 	return nil
+}
+
+func replaceBodyLinks(resp *http.Response) error {
+	message.Debugf("Resp Request: %#v", resp.Request)
+
+	// Create the forwarded (online) and target (offline) URL prefixes to replace
+	forwardedPrefix := fmt.Sprintf("%s%s%s", getTLSScheme(resp.Request.TLS), resp.Request.Header.Get("X-Forwarded-Host"), proxy.NoTransform)
+	targetPrefix := fmt.Sprintf("%s%s", getTLSScheme(resp.TLS), resp.Request.Host)
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	bodyString := string(body)
+	message.Warnf("%s", bodyString)
+
+	bodyString = strings.ReplaceAll(bodyString, targetPrefix, forwardedPrefix)
+
+	message.Warnf("%s", bodyString)
+
+	// Setup the new reader, and correct the content length
+	resp.Body = io.NopCloser(strings.NewReader(bodyString))
+	resp.ContentLength = int64(len(bodyString))
+	resp.Header.Set("Content-Length", fmt.Sprint(int64(len(bodyString))))
+
+	return nil
+}
+
+func getTLSScheme(tls *tls.ConnectionState) string {
+	scheme := "https://"
+
+	if tls == nil {
+		scheme = "http://"
+	}
+
+	return scheme
 }
 
 func isGitUserAgent(userAgent string) bool {
