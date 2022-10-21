@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -17,7 +18,7 @@ func getTopLevelFiles(path string) (topLevelFiles []string) {
 	}
 	for _, content := range dirContents {
 		if !content.IsDir() {
-			topLevelFiles = append(topLevelFiles, path + "/" + content.Name())
+			topLevelFiles = append(topLevelFiles, path+"/"+content.Name())
 		}
 	}
 	return topLevelFiles
@@ -32,16 +33,33 @@ func isDir(path string) bool {
 }
 
 func isLocalFiles(data string) bool {
-	return false
+	if len(getTopLevelFiles(data)) > 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func isGitChart(data string) bool {
-	return false
-
+	isGitRepo := regexp.MustCompile(`\.git$`).MatchString
+	return isGitRepo(data)
 }
 
 func isHelmRepoChart(data string) bool {
-	return false
+	indexReqUrl := data
+	if (len(indexReqUrl) > 10 ) && (indexReqUrl[len(indexReqUrl)-10:] == "index.yaml") {
+		//already exact url which is weird but requires no modification
+	} else if indexReqUrl[len(indexReqUrl)-1:] == "/" {
+		indexReqUrl = indexReqUrl + "index.yaml"
+	} else {
+		indexReqUrl = indexReqUrl + "/index.yaml"
+	}
+	response, err := http.Get(indexReqUrl)
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	message.Info(response.Status)
+	return response.Status == "200 OK"
 }
 
 func isLocalChart(data string) bool {
@@ -74,16 +92,27 @@ func isManifests(data string) bool {
 }
 
 func isRemoteFile(data string) bool {
-	return false
+	response, err := http.Get(data)
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	return response.Status == "200 OK"
 }
 
 func isUrl(data string) bool {
 	urlData, err := url.ParseRequestURI(data)
-	return err == nil && urlData.Host != ""
+	if err == nil && urlData.Host != "" {
+		_, err = http.Get(data)
+		if err != nil {
+			message.Fatalf(err, "URL: %s is unreachable", data)
+		} else {
+			return true
+		}
+	}
+	return false
 }
 
 var ManifestFiles []string
-
 
 func DeduceResourceType(componentResource string) string {
 	if !utils.InvalidPath(componentResource) {
