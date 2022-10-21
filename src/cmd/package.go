@@ -15,6 +15,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
+	"github.com/defenseunicorns/zarf/src/internal/packager/generator"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
@@ -78,13 +79,43 @@ var packageGenerateCmd = &cobra.Command{
 	Short:   "Use to generate either an example package or a package from resources",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
+		newPkg := types.ZarfPackage{
+			Metadata: types.ZarfMetadata{
+				Name: pkgName,
+			},
+			Kind: "ZarfPackageConfig",
+		}
 		if cmd.Flags().Changed("from") {
-			for _, componentResource := range config.GenerateOptions.From {
-				result := packager.DeduceResourceType(componentResource)
-				message.Info(pkgName + "'s " + componentResource + " is " + result + ", probably...")
+			for _, componentSource := range config.GenerateOptions.From {
+				result := generator.DeduceResourceType(componentSource)
+				message.Info(pkgName + "'s " + componentSource + " is " + result + ", probably...")
+				switch result {
+				case "localChart":
+					newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource, pkgName))
+				case "manifests":
+					newPkg.Components = append(newPkg.Components, generator.GenManifests(componentSource))
+				case "localFiles":
+					newPkg.Components = append(newPkg.Components, generator.GenLocalFiles(componentSource))
+				case "unknown path":
+					message.Fatalf(errors.New("invalid path"), "The path %s is not valid or an empty folder", componentSource)
+				case "gitChart":
+					newPkg.Components = append(newPkg.Components, generator.GenGitChart(componentSource))
+				case "helmRepoChart":
+					newPkg.Components = append(newPkg.Components, generator.GenHelmRepoChart(componentSource))
+				case "remoteFile":
+					newPkg.Components = append(newPkg.Components, generator.GenRemoteFile(componentSource))
+				case "unknown url":
+					message.Fatalf(errors.New("invalid url"), "The url %s could not be reconciled into a component type", componentSource)
+				case "unparsable":
+					message.Fatalf(errors.New("invalid from arg"), "The value %s could not be reconciled into a url or path", componentSource)
+				}
 			}
 		} else {
 			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
+		}
+		err := utils.WriteYaml("./" + pkgName + ".zarf.yaml", newPkg, 0644)
+		if err != nil {
+			message.Fatal(err, err.Error())
 		}
 	},
 }
@@ -255,6 +286,7 @@ func bindPackageGenerateFlags() {
 	generateFlags := packageGenerateCmd.Flags()
 
 	generateFlags.StringArrayVar(&config.GenerateOptions.From, "from", []string{}, "The location of the resource to generate a package from")
+	generateFlags.StringVar(&config.GenerateOptions.Namespace, "namespace", "", "The namespace to deploy the package into")
 }
 
 func bindInspectFlags() {
