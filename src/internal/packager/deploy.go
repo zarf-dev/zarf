@@ -137,7 +137,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (installedC
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
 
-	// Always inii the state on the seed registry component
+	// Always init the state on the seed registry component
 	if isSeedRegistry {
 		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
 		if err != nil {
