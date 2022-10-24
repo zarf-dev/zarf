@@ -37,7 +37,7 @@ func (p *Package) Create(baseDir string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	ComposeComponents()
+	p.composeComponents()
 
 	// After components are composed, template the active package
 	if err := config.FillActiveTemplate(); err != nil {
@@ -46,11 +46,9 @@ func (p *Package) Create(baseDir string) {
 
 	components := config.GetComponents()
 
-	tempPath := createPaths()
-
 	seedImage := config.ZarfSeedImage
 
-	configFile := tempPath.ZarfYaml
+	configFile := p.tempPath.ZarfYaml
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
@@ -66,8 +64,11 @@ func (p *Package) Create(baseDir string) {
 
 	if config.IsZarfInitConfig() {
 		// Load seed images into their own happy little tarball for ease of import on init
-		pulledImages := images.PullAll([]string{seedImage}, tempPath.SeedImage)
-		sbom.CatalogImages(pulledImages, tempPath.Sboms, tempPath.SeedImage)
+		pulledImages := images.PullAll([]string{seedImage}, p.tempPath.SeedImage)
+		// Ignore SBOM creation if there the flag is set
+		if !p.config.CreateOptions.SkipSBOM {
+			sbom.CatalogImages(pulledImages, p.tempPath.Sboms, p.tempPath.SeedImage)
+		}
 	}
 
 	var combinedImageList []string
@@ -80,8 +81,13 @@ func (p *Package) Create(baseDir string) {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := utils.Unique(combinedImageList)
-		pulledImages := images.PullAll(uniqueList, tempPath.Images)
-		sbom.CatalogImages(pulledImages, tempPath.Sboms, tempPath.Images)
+		pulledImages := images.PullAll(uniqueList, p.tempPath.Images)
+
+		if p.config.CreateOptions.SkipSBOM {
+			message.Debug("Skipping SBOM processing per --skip-sbom flag")
+		} else {
+			sbom.CatalogImages(pulledImages, p.tempPath.Sboms, p.tempPath.Images)
+		}
 	}
 
 	// In case the directory was changed, reset to prevent breaking relative target paths
@@ -89,10 +95,10 @@ func (p *Package) Create(baseDir string) {
 		_ = os.Chdir(originalDir)
 	}
 
-	packageName := filepath.Join(config.CreateOptions.OutputDirectory, config.GetPackageName())
+	packageName := filepath.Join(p.config.CreateOptions.OutputDirectory, config.GetPackageName())
 
 	_ = os.RemoveAll(packageName)
-	err := archiver.Archive([]string{tempPath.Base + string(os.PathSeparator)}, packageName)
+	err := archiver.Archive([]string{p.tempPath.Base + string(os.PathSeparator)}, packageName)
 	if err != nil {
 		message.Fatal(err, "Unable to create the package archive")
 	}
@@ -100,11 +106,14 @@ func (p *Package) Create(baseDir string) {
 
 func (p *Package) addComponent(component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-	componentPath := createComponentPaths(p.tempPath.Components, component)
+	componentPath, err := p.createComponentPaths(component)
+	if err != nil {
+		message.Fatal(err, "Unable to create component paths")
+	}
 
 	// Loop through each component prepare script and execute it
 	for _, script := range component.Scripts.Prepare {
-		loopScriptUntilSuccess(script, component.Scripts)
+		p.loopScriptUntilSuccess(script, component.Scripts)
 	}
 
 	if len(component.Charts) > 0 {

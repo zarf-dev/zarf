@@ -11,7 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
+func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.ZarfInitOptions) error {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -38,7 +38,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection
-		if config.InitOptions.ApplianceMode {
+		if initOptions.ApplianceMode {
 			distro = k8s.DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
@@ -64,7 +64,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
 
 		namespaces, err := c.Kube.GetNamespaces()
 		if err != nil {
-			message.Fatalf(err, "Unable to get k8s namespaces")
+			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own
 		for _, namespace := range namespaces.Items {
@@ -84,7 +84,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
 	}
 
 	if clusterArch != state.Architecture {
-		spinner.Fatalf(nil, "The current Zarf package architecture %s does not match the cluster architecture %s", state.Architecture, clusterArch)
+		return fmt.Errorf("cluster architecture %s does not match the Zarf state architecture %s", clusterArch, state.Architecture)
 	}
 
 	switch state.Distro {
@@ -98,22 +98,24 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
 		state.StorageClass = "hostpath"
 	}
 
-	if config.InitOptions.StorageClass != "" {
-		state.StorageClass = config.InitOptions.StorageClass
+	if initOptions.StorageClass != "" {
+		state.StorageClass = initOptions.StorageClass
 	}
 
-	state.GitServer = c.fillInEmptyGitServerValues(config.InitOptions.GitServer)
-	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(config.InitOptions.RegistryInfo)
+	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
+	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
 
 	spinner.Success()
 
 	// Save the state back to K8s
 	if err := c.SaveZarfState(state); err != nil {
-		message.Fatal(err, "Unable to save the Zarf state data back to the cluster")
+		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
 	// Load state for the rest of the operations
 	config.InitState(state)
+
+	return nil
 }
 
 func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {

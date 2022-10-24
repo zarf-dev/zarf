@@ -37,7 +37,7 @@ func (p *Package) Remove(packageName string) error {
 	}
 
 	// If components were provided; just remove the things we were asked to remove and return
-	requestedComponents := strings.Split(config.DeployOptions.Components, ",")
+	requestedComponents := strings.Split(p.config.DeployOptions.Components, ",")
 	if len(requestedComponents) > 0 && requestedComponents[0] != "" {
 		for i := len(packages.DeployedComponents) - 1; i >= 0; i-- {
 			installedComponent := packages.DeployedComponents[i]

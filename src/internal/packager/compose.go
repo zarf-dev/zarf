@@ -10,8 +10,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// ComposeComponents builds the composed components list for the current config.
-func ComposeComponents() {
+// composeComponents builds the composed components list for the current config.
+func (p *Package) composeComponents() {
 	message.Debugf("packager.ComposeComponents()")
 
 	components := []types.ZarfComponent{}
@@ -20,7 +20,7 @@ func ComposeComponents() {
 		if component.Import.Path == "" {
 			components = append(components, component)
 		} else {
-			components = append(components, GetComposedComponent(component))
+			components = append(components, p.getComposedComponent(component))
 		}
 	}
 
@@ -29,34 +29,34 @@ func ComposeComponents() {
 	config.SetComponents(components)
 }
 
-// GetComposedComponent recursively retrieves a composed zarf component
+// getComposedComponent recursively retrieves a composed zarf component
 // --------------------------------------------------------------------
 // For composed components, we build the tree of components starting at the root and adding children as we go;
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
 // where 1 component parent is made up of 0...n composite or leaf children.
-func GetComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
+func (p *Package) getComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
 	// Make sure the component we're trying to import cant be accessed
-	validateOrBail(&parentComponent)
+	p.validateOrBail(&parentComponent)
 
 	// Keep track of the composed components import path to build nestedily composed components
 	everGrowingComposePath := ""
 
 	// Get the component that we are trying to import
 	// NOTE: This function is recursive and will continue getting the children until there are no more 'imported' components left
-	childComponent := getChildComponent(parentComponent, everGrowingComposePath)
+	childComponent := p.getChildComponent(parentComponent, everGrowingComposePath)
 
 	// Merge the overrides from the child that we just received with the parent we were provided
-	mergeComponentOverrides(&childComponent, parentComponent)
+	p.mergeComponentOverrides(&childComponent, parentComponent)
 
 	return childComponent
 }
 
-func getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
+func (p *Package) getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parentComponent, everGrowingComposePath)
 
-	importedPackage := getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
+	importedPackage := p.getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
 
 	// Figure out which component we are actually importing
 	// NOTE: Default to the component name if a custom one was not provided
@@ -95,55 +95,55 @@ func getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePa
 		tempEverGrowingComposePath := filepath.Join(everGrowingComposePath, parentComponent.Import.Path)
 
 		// Recursively call this function to get the next layer of children
-		grandchildComponent := getChildComponent(childComponent, tempEverGrowingComposePath)
+		grandchildComponent := p.getChildComponent(childComponent, tempEverGrowingComposePath)
 
 		// Merge the grandchild values into the child
-		mergeComponentOverrides(&grandchildComponent, childComponent)
+		p.mergeComponentOverrides(&grandchildComponent, childComponent)
 
 		// Set the grandchild as the child component now that we're done with recursively importing
 		childComponent = grandchildComponent
 	}
 
 	// Fix the filePaths of imported components to be accessible from our current location
-	childComponent = fixComposedFilepaths(parentComponent, childComponent)
+	childComponent = p.fixComposedFilepaths(parentComponent, childComponent)
 
 	return
 }
 
-func fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
+func (p *Package) fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", childComponent, parentComponent)
 
 	// Prefix composed component file paths.
 	for fileIdx, file := range childComponent.Files {
-		childComponent.Files[fileIdx].Source = getComposedFilePath(file.Source, parentComponent.Import.Path)
+		childComponent.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parentComponent.Import.Path)
 	}
 
 	// Prefix non-url composed component chart values files.
 	for chartIdx, chart := range childComponent.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			childComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = getComposedFilePath(valuesFile, parentComponent.Import.Path)
+			childComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(valuesFile, parentComponent.Import.Path)
 		}
 	}
 
 	// Prefix non-url composed manifest files and kustomizations.
 	for manifestIdx, manifest := range childComponent.Manifests {
 		for fileIdx, file := range manifest.Files {
-			childComponent.Manifests[manifestIdx].Files[fileIdx] = getComposedFilePath(file, parentComponent.Import.Path)
+			childComponent.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(file, parentComponent.Import.Path)
 		}
 		for kustomIdx, kustomization := range manifest.Kustomizations {
-			childComponent.Manifests[manifestIdx].Kustomizations[kustomIdx] = getComposedFilePath(kustomization, parentComponent.Import.Path)
+			childComponent.Manifests[manifestIdx].Kustomizations[kustomIdx] = p.getComposedFilePath(kustomization, parentComponent.Import.Path)
 		}
 	}
 
 	if childComponent.CosignKeyPath != "" {
-		childComponent.CosignKeyPath = getComposedFilePath(childComponent.CosignKeyPath, parentComponent.Import.Path)
+		childComponent.CosignKeyPath = p.getComposedFilePath(childComponent.CosignKeyPath, parentComponent.Import.Path)
 	}
 
 	return childComponent
 }
 
 // Validates the sub component, exits program if validation fails.
-func validateOrBail(component *types.ZarfComponent) {
+func (p *Package) validateOrBail(component *types.ZarfComponent) {
 	message.Debugf("packager.validateOrBail(%+v)", component)
 
 	if err := validate.ValidateImportPackage(component); err != nil {
@@ -152,7 +152,7 @@ func validateOrBail(component *types.ZarfComponent) {
 }
 
 // Sets Name, Default, Required and Description to the original components values
-func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
+func (p *Package) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
 
 	target.Name = override.Name
@@ -203,7 +203,7 @@ func mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfCom
 }
 
 // Reads the locally imported zarf.yaml
-func getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
+func (p *Package) getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
@@ -225,7 +225,7 @@ func getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func getComposedFilePath(originalPath string, pathPrefix string) string {
+func (p *Package) getComposedFilePath(originalPath string, pathPrefix string) string {
 	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, pathPrefix)
 
 	// Return original if it is a remote file.

@@ -6,7 +6,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	globalConfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -18,6 +18,8 @@ import (
 func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	isInitPkg := r.URL.Query().Get("isInitPkg") == "true"
 
+	config := packager.PackageConfig{}
+
 	if isInitPkg {
 		var body = types.ZarfInitOptions{}
 		err := json.NewDecoder(r.Body).Decode(&body)
@@ -26,7 +28,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		config.InitOptions = body
-		initPackageName := config.GetInitPackageName()
+		initPackageName := globalConfig.GetInitPackageName()
 		config.DeployOptions.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
@@ -41,7 +43,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 
 			// If the init-package doesn't exist in the executable directory, try the cache directory
 			if err != nil || utils.InvalidPath(config.DeployOptions.PackagePath) {
-				config.DeployOptions.PackagePath = filepath.Join(config.GetAbsCachePath(), initPackageName)
+				config.DeployOptions.PackagePath = filepath.Join(globalConfig.GetAbsCachePath(), initPackageName)
 
 				// If the init-package doesn't exist in the cache directory, return an error
 				if utils.InvalidPath(config.DeployOptions.PackagePath) {
@@ -60,9 +62,17 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 		config.DeployOptions = body
 	}
 
-	config.CommonOptions.Confirm = true
-	pkg := packager.NewPackage()
-	pkg.Deploy()
+	globalConfig.CommonOptions.Confirm = true
+
+	pkg, err := packager.NewPackage(&config)
+	if err != nil {
+		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+	}
+
+	if err := pkg.Deploy(); err != nil {
+		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+		return
+	}
 
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }

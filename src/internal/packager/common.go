@@ -25,19 +25,45 @@ import (
 )
 
 type Package struct {
+	config   *PackageConfig
 	cluster  *cluster.Cluster
 	kube     *k8s.Client
 	tempPath types.TempPaths
 }
 
-func NewPackage() *Package {
-	return &Package{
-		tempPath: createPaths(),
+type PackageConfig struct {
+	// CreeateOptions tracks the user-defined options used to create the package
+	CreateOptions types.ZarfCreateOptions
+
+	// DeployOptions tracks user-defined values for the active deployment
+	DeployOptions types.ZarfDeployOptions
+
+	// InitOptions tracks user-defined values for the active Zarf initialization.
+	InitOptions types.ZarfInitOptions
+}
+
+// NewPackage creates a new package instance with the provided config
+func NewPackage(config *PackageConfig) (*Package, error) {
+	paths, err := createPaths()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
+
+	return &Package{config: config, tempPath: paths}, nil
+}
+
+// NewPackageOrDie creates a new package instance with the provided config or throws a fatal error
+func NewPackageOrDie(config *PackageConfig) *Package {
+	pkg, err := NewPackage(config)
+	if err != nil {
+		message.Fatal(err, "Unable to create package the package")
+	}
+
+	return pkg
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
-func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
+func (p *Package) HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
@@ -46,7 +72,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 
 	// Handle case where deploying remote package validated via sget
 	if strings.HasPrefix(packagePath, "sget://") {
-		return handleSgetPackage(packagePath)
+		return p.handleSgetPackage(packagePath)
 	}
 
 	if !insecureDeploy && shasum == "" {
@@ -65,10 +91,7 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 	}
 	defer resp.Body.Close()
 
-	// Write the package to a local file
-	tempPath := createPaths()
-
-	localPackagePath := tempPath.Base + providedURL.Path
+	localPackagePath := p.tempPath.Base + providedURL.Path
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)
 	_, err = io.Copy(packageFile, resp.Body)
@@ -94,12 +117,10 @@ func HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string 
 	return localPackagePath
 }
 
-func handleSgetPackage(sgetPackagePath string) string {
-	// Write the package to a local file in a temp path
-	tempPath := createPaths()
+func (p *Package) handleSgetPackage(sgetPackagePath string) string {
 
 	// Create the local file for the package
-	localPackagePath := filepath.Join(tempPath.Base, "remote.tar.zst")
+	localPackagePath := filepath.Join(p.tempPath.Base, "remote.tar.zst")
 	destinationFile, err := os.Create(localPackagePath)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
@@ -109,14 +130,14 @@ func handleSgetPackage(sgetPackagePath string) string {
 	// If this is a DefenseUnicorns package, use an internal sget public key
 	if strings.HasPrefix(sgetPackagePath, "sget://defenseunicorns") {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
-		config.DeployOptions.SGetKeyPath = "env://DU_SGET_KEY"
+		p.config.DeployOptions.SGetKeyPath = "env://DU_SGET_KEY"
 	}
 
 	// Remove the 'sget://' header for the actual sget call
 	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
 
 	// Sget the package
-	err = utils.Sget(sgetPackagePath, config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
+	err = utils.Sget(sgetPackagePath, p.config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatal(err, "Unable to get the remote package via sget")
 	}
@@ -134,12 +155,10 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func createPaths() types.TempPaths {
+func createPaths() (paths types.TempPaths, err error) {
 	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
-	}
-	return types.TempPaths{
+
+	paths = types.TempPaths{
 		Base: basePath,
 
 		InjectZarfBinary: filepath.Join(basePath, "zarf-registry"),
@@ -150,12 +169,15 @@ func createPaths() types.TempPaths {
 		Sboms:            filepath.Join(basePath, "sboms"),
 		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
 	}
+
+	return paths, err
 }
 
-func createComponentPaths(basePath string, component types.ZarfComponent) types.ComponentPaths {
-	basePath = filepath.Join(basePath, component.Name)
-	_ = utils.CreateDirectory(basePath, 0700)
-	return types.ComponentPaths{
+func (p *Package) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+	basePath := filepath.Join(p.tempPath.Base, component.Name)
+	err = utils.CreateDirectory(basePath, 0700)
+
+	paths = types.ComponentPaths{
 		Base:           basePath,
 		Files:          filepath.Join(basePath, "files"),
 		Charts:         filepath.Join(basePath, "charts"),
@@ -164,6 +186,8 @@ func createComponentPaths(basePath string, component types.ZarfComponent) types.
 		DataInjections: filepath.Join(basePath, "data"),
 		Values:         filepath.Join(basePath, "values"),
 	}
+
+	return paths, err
 }
 
 func confirmAction(userMessage string, sbomViewFiles []string) bool {

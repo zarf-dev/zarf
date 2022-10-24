@@ -27,11 +27,11 @@ func (p *Package) getValidComponents() []types.ZarfComponent {
 	componentGroups := make(map[string][]types.ZarfComponent)
 
 	// The component list is comma-delimited list
-	requestedNames := strings.Split(config.DeployOptions.Components, ",")
+	requestedNames := strings.Split(p.config.DeployOptions.Components, ",")
 
 	// Init packages use a different component list
 	if config.IsZarfInitConfig() {
-		requestedNames = strings.Split(config.InitOptions.Components, ",")
+		requestedNames = strings.Split(p.config.InitOptions.Components, ",")
 	}
 
 	// Break up components into choice groups
@@ -73,7 +73,7 @@ func (p *Package) getValidComponents() []types.ZarfComponent {
 			if requested {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
 				if component.Name == k8s.DistroIsK3s && config.IsZarfInitConfig() {
-					config.InitOptions.ApplianceMode = true
+					p.config.InitOptions.ApplianceMode = true
 				}
 				// Add the component to the list of valid components
 				validComponentsList = append(validComponentsList, component)

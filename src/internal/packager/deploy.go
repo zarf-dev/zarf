@@ -33,17 +33,17 @@ var connectStrings = make(types.ConnectStrings)
 func (p *Package) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", config.DeployOptions.PackagePath)
+	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.config.DeployOptions.PackagePath)
 	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(config.DeployOptions.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", config.DeployOptions.PackagePath)
+	if utils.InvalidPath(p.config.DeployOptions.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.config.DeployOptions.PackagePath)
 	}
 
 	// Extract the archive
 	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(config.DeployOptions.PackagePath, p.tempPath.Base); err != nil {
+	if err := archiver.Unarchive(p.config.DeployOptions.PackagePath, p.tempPath.Base); err != nil {
 		return fmt.Errorf("unable to extract the package: %w", err)
 	}
 
@@ -131,7 +131,7 @@ func (p *Package) deployComponents() (deployedComponents []types.DeployedCompone
 }
 
 func (p *Package) deployInitComponent(component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
-	hasExternalRegistry := config.InitOptions.RegistryInfo.Address != ""
+	hasExternalRegistry := p.config.InitOptions.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -143,7 +143,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (installedC
 		if err != nil {
 			return installedCharts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
-		p.cluster.InitZarfState(p.tempPath)
+		p.cluster.InitZarfState(p.tempPath, p.config.InitOptions)
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -181,7 +181,10 @@ func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToIm
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tempPath, component)
 
 	// Toggles for general deploy operations
-	componentPath := createComponentPaths(p.tempPath.Components, component)
+	componentPath, err := p.createComponentPaths(component)
+	if err != nil {
+		message.Fatalf(err, "Unable to create the component paths")
+	}
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -193,7 +196,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToIm
 	hasDataInjections := len(component.DataInjections) > 0
 
 	// Run the 'before' scripts and move files before we do anything else
-	runComponentScripts(component.Scripts.Before, component.Scripts)
+	p.runComponentScripts(component.Scripts.Before, component.Scripts)
 	p.processComponentFiles(component.Files, componentPath.Files)
 
 	// Generate a value template
@@ -222,7 +225,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToIm
 	}
 
 	// Run the 'after' scripts after all other attributes of the component has been deployed
-	runComponentScripts(component.Scripts.After, component.Scripts)
+	p.runComponentScripts(component.Scripts.After, component.Scripts)
 
 	return installedCharts
 }

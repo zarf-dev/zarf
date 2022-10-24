@@ -39,7 +39,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
-	ComposeComponents()
+	p.composeComponents()
 
 	// After components are composed, template the active package
 	if err := config.FillActiveTemplate(); err != nil {
@@ -47,8 +47,6 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 	}
 
 	components := config.GetComponents()
-
-	tempPath := createPaths()
 
 	for _, component := range components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
@@ -97,7 +95,11 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath := createComponentPaths(tempPath.Components, component)
+		componentPath, err := p.createComponentPaths(component)
+		if err != nil {
+			message.Fatal(err, "Unable to create component paths")
+		}
+
 		chartNames := make(map[string]string)
 
 		if len(component.Charts) > 0 {

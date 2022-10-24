@@ -38,7 +38,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text, config.InitOptions.GitServer.PushUsername)
+		processedText := git.MutateGitUrlsInText(host, text, pkgConfig.InitOptions.GitServer.PushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false
@@ -91,8 +91,7 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		pkg := packager.NewPackage()
-		pkg.FindImages(baseDir, repoHelmChartPath)
+		packager.NewPackageOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
 	},
 }
 
@@ -132,7 +131,7 @@ func init() {
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
 
-	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
+	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
 }

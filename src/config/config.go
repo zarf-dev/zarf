@@ -65,15 +65,6 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands.
 	CommonOptions types.ZarfCommonOptions
 
-	// CreeateOptions tracks the user-defined options used to create the package
-	CreateOptions types.ZarfCreateOptions
-
-	// DeployOptions tracks user-defined values for the active deployment
-	DeployOptions types.ZarfDeployOptions
-
-	// InitOptions tracks user-defined values for the active Zarf initialization.
-	InitOptions types.ZarfInitOptions
-
 	// CliArch is the computer architecture of the device executing the CLI commands
 	CliArch string
 

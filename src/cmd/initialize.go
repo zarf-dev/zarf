@@ -51,24 +51,24 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		initPackageName := config.GetInitPackageName()
-		config.DeployOptions.PackagePath = initPackageName
+		pkgConfig.DeployOptions.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		if utils.InvalidPath(config.DeployOptions.PackagePath) {
+		if utils.InvalidPath(pkgConfig.DeployOptions.PackagePath) {
 			// Get the path to the executable
 			if executablePath, err := utils.GetFinalExecutablePath(); err != nil {
 				message.Errorf(err, "Unable to get the path to the executable")
 			} else {
 				executableDir := path.Dir(executablePath)
-				config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+				pkgConfig.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
 			}
 
 			// If the init-package doesn't exist in the executable directory, try the cache directory
-			if err != nil || utils.InvalidPath(config.DeployOptions.PackagePath) {
-				config.DeployOptions.PackagePath = filepath.Join(config.GetAbsCachePath(), initPackageName)
+			if err != nil || utils.InvalidPath(pkgConfig.DeployOptions.PackagePath) {
+				pkgConfig.DeployOptions.PackagePath = filepath.Join(config.GetAbsCachePath(), initPackageName)
 
 				// If the init-package doesn't exist in the cache directory, suggest downloading it
-				if utils.InvalidPath(config.DeployOptions.PackagePath) {
+				if utils.InvalidPath(pkgConfig.DeployOptions.PackagePath) {
 					if err := downloadInitPackage(initPackageName); err != nil {
 						message.Fatal(err, "Failed to download the init package")
 					}
@@ -77,8 +77,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Run everything
-		pkg := packager.NewPackage()
-		pkg.Deploy()
+		packager.NewPackageOrDie(&pkgConfig).Deploy()
 	},
 }
 
@@ -107,7 +106,7 @@ func downloadInitPackage(initPackageName string) error {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		utils.DownloadToFile(url, config.DeployOptions.PackagePath, "")
+		utils.DownloadToFile(url, pkgConfig.DeployOptions.PackagePath, "")
 	} else {
 		// Otherwise, exit and tell the user to manually download the init-package
 		return fmt.Errorf("you must download the init package manually and place it in the current working directory")
@@ -118,15 +117,15 @@ func downloadInitPackage(initPackageName string) error {
 
 func validateInitFlags() error {
 	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
-	if config.InitOptions.GitServer.Address != "" {
-		if config.InitOptions.GitServer.PushUsername == "" || config.InitOptions.GitServer.PushPassword == "" {
+	if pkgConfig.InitOptions.GitServer.Address != "" {
+		if pkgConfig.InitOptions.GitServer.PushUsername == "" || pkgConfig.InitOptions.GitServer.PushPassword == "" {
 			return fmt.Errorf("the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided")
 		}
 	}
 
 	//If 'registry-url' is provided, make sure they provided values for the username and password of the push user
-	if config.InitOptions.RegistryInfo.Address != "" {
-		if config.InitOptions.RegistryInfo.PushUsername == "" || config.InitOptions.RegistryInfo.PushPassword == "" {
+	if pkgConfig.InitOptions.RegistryInfo.Address != "" {
+		if pkgConfig.InitOptions.RegistryInfo.PushUsername == "" || pkgConfig.InitOptions.RegistryInfo.PushPassword == "" {
 			return fmt.Errorf("the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided ")
 		}
 	}
@@ -157,24 +156,24 @@ func init() {
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")
-	initCmd.Flags().StringVar(&config.InitOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
-	initCmd.Flags().StringVar(&config.InitOptions.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), "Describe the StorageClass to be used")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.Components, "components", v.GetString(V_INIT_COMPONENTS), "Comma-separated list of components to install.")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), "Describe the StorageClass to be used")
 
 	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), "External git server url to use for this Zarf cluster")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), "Password for the push-user to access the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), "Username for pull-only access to the git server")
-	initCmd.Flags().StringVar(&config.InitOptions.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), "Password for the pull-only user to access the git server")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), "External git server url to use for this Zarf cluster")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), "Password for the push-user to access the git server")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), "Username for pull-only access to the git server")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), "Password for the pull-only user to access the git server")
 
 	// Flags for using an external registry
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), "External registry url address to use for this Zarf cluster")
-	initCmd.Flags().IntVar(&config.InitOptions.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), "Username to access to the registry Zarf is configured to use")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), "Password for the push-user to connect to the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), "Username for pull-only access to the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), "Password for the pull-only user to access the registry")
-	initCmd.Flags().StringVar(&config.InitOptions.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), "Registry secret value")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), "External registry url address to use for this Zarf cluster")
+	initCmd.Flags().IntVar(&pkgConfig.InitOptions.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), "Username to access to the registry Zarf is configured to use")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), "Password for the push-user to connect to the registry")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), "Username for pull-only access to the registry")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), "Password for the pull-only user to access the registry")
+	initCmd.Flags().StringVar(&pkgConfig.InitOptions.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), "Registry secret value")
 
 	initCmd.Flags().SortFlags = true
 }

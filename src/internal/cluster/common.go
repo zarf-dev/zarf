@@ -12,12 +12,13 @@ type Cluster struct {
 	Kube *k8s.Client
 }
 
-var defaultTimeout = 30 * time.Second
+const defaultTimeout = 30 * time.Second
 
 var labels = k8s.Labels{
 	config.ZarfManagedByLabel: "zarf",
 }
 
+// NewClusterOrDie creates a new cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error
 func NewClusterOrDie() *Cluster {
 	c, err := NewClusterWithWait(defaultTimeout)
 	if err != nil {
@@ -27,12 +28,14 @@ func NewClusterOrDie() *Cluster {
 	return c
 }
 
+// NewClusterWithWait creates a new cluster instance and waits for the given timeout for the cluster to be ready
 func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 	c := &Cluster{}
 	c.Kube, _ = k8s.NewK8sClient(message.Debugf, labels)
 	return c, c.Kube.WaitForHealthyCluster(timeout)
 }
 
+// NewCluster creates a new cluster instance without waiting for the cluster to be ready
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	c.Kube, _ = k8s.NewK8sClient(message.Debugf, labels)

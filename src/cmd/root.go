@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/pterm/pterm"
 
@@ -15,6 +16,9 @@ import (
 var skipLogFile bool
 var logLevel string
 var arch string
+
+// Default global config for the CLI
+var pkgConfig = packager.PackageConfig{}
 
 // Viper instance used by the cmd package
 var v *viper.Viper

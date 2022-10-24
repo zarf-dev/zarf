@@ -51,8 +51,7 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		pkg := packager.NewPackage()
-		pkg.Create(baseDir)
+		packager.NewPackageOrDie(&pkgConfig).Create(baseDir)
 	},
 }
 
@@ -64,9 +63,8 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		config.DeployOptions.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
-		pkg := packager.NewPackage()
-		pkg.Deploy()
+		pkgConfig.DeployOptions.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
+		packager.NewPackageOrDie(&pkgConfig).Deploy()
 	},
 }
 
@@ -131,9 +129,9 @@ var packageRemoveCmd = &cobra.Command{
 				message.Fatalf(nil, "Invalid tarball path provided")
 			}
 
-			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			tempPath, err := utils.MakeTempDir(pkgConfig.CommonOptions.TempDirectory)
 			if err != nil {
-				message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+				message.Fatalf(err, "Unable to create tmpdir: %s", pkgConfig.CommonOptions.TempDirectory)
 			}
 			defer os.RemoveAll(tempPath)
 
@@ -197,24 +195,24 @@ func bindCreateFlags() {
 	createFlags := packageCreateCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
+	createFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 
-	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
-	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
-	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
-	createFlags.BoolVar(&config.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
+	createFlags.StringToStringVar(&pkgConfig.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	createFlags.StringVarP(&pkgConfig.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
+	createFlags.BoolVar(&pkgConfig.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
+	createFlags.BoolVar(&pkgConfig.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
 }
 
 func bindDeployFlags() {
 	deployFlags := packageDeployCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
+	deployFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
 
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
@@ -222,11 +220,11 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&config.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
-	deployFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
+	deployFlags.StringToStringVar(&pkgConfig.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	deployFlags.StringVar(&pkgConfig.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
-	deployFlags.StringVar(&config.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
+	deployFlags.StringVar(&pkgConfig.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }
 
 func bindInspectFlags() {
@@ -236,7 +234,7 @@ func bindInspectFlags() {
 
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
-	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-	removeFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
+	removeFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
+	removeFlags.StringVar(&pkgConfig.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
