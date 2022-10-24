@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -272,8 +272,8 @@ func deleteBranchIfExists(gitDirectory string, branchName plumbing.ReferenceName
 // CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user
 func CreateReadOnlyUser() error {
 	// Establish a git tunnel to send the repo
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfGit, false)
+	tunnel := cluster.NewZarfTunnel()
+	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
 	tunnelUrl := tunnel.Endpoint()

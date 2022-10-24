@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5"
@@ -23,7 +23,7 @@ func PushAllDirectories(localPath string) error {
 	gitServerURL := gitServerInfo.Address
 
 	// If this is a serviceURL, create a port-forward tunnel to that resource
-	if tunnel, err := k8s.NewTunnelFromServiceURL(gitServerURL); err != nil {
+	if tunnel, err := cluster.NewTunnelFromServiceURL(gitServerURL); err != nil {
 		message.Debug(err)
 	} else {
 		tunnel.Connect("", false)

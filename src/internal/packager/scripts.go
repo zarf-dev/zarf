@@ -13,6 +13,13 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// Run scripts that a component has provided
+func runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) {
+	for _, script := range scripts {
+		loopScriptUntilSuccess(script, componentScript)
+	}
+}
+
 func loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Success()

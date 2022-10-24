@@ -24,7 +24,7 @@ var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
-func FindImages(baseDir, repoHelmChartPath string) {
+func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 
 	var originalDir string
 
@@ -142,7 +142,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 				}
 
 				// Break the template into separate resources
-				yamls, _ := k8s.SplitYAML([]byte(template))
+				yamls, _ := utils.SplitYAML([]byte(template))
 				resources = append(resources, yamls...)
 			}
 		}
@@ -173,14 +173,14 @@ func FindImages(baseDir, repoHelmChartPath string) {
 					}
 
 					// Break the manifest into separate resources
-					yamls, _ := k8s.SplitYAML(contents)
+					yamls, _ := utils.SplitYAML(contents)
 					resources = append(resources, yamls...)
 				}
 			}
 		}
 
 		for _, resource := range resources {
-			if err := processUnstructured(resource); err != nil {
+			if err := p.processUnstructured(resource); err != nil {
 				message.Errorf(err, "Problem processing K8s resource %s", resource.GetName())
 			}
 		}
@@ -224,7 +224,7 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 }
 
-func processUnstructured(resource *unstructured.Unstructured) error {
+func (p *Package) processUnstructured(resource *unstructured.Unstructured) error {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-./]+:[\w][\w.\-]{0,127})"`)
 	var json string
@@ -241,28 +241,28 @@ func processUnstructured(resource *unstructured.Unstructured) error {
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
 			return fmt.Errorf("could not parse deployment: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
+		matchedImages = p.kube.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
 
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
 			return fmt.Errorf("could not parse daemonset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
+		matchedImages = p.kube.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
 			return fmt.Errorf("could not parse statefulset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
+		matchedImages = p.kube.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
 			return fmt.Errorf("could not parse replicaset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
+		matchedImages = p.kube.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 
 	default:
 		// Capture any custom images

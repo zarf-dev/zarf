@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/types"
-
 	"github.com/pterm/pterm"
 )
 

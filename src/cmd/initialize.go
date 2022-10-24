@@ -77,7 +77,8 @@ var initCmd = &cobra.Command{
 		}
 
 		// Run everything
-		packager.Deploy()
+		pkg := packager.NewPackage()
+		pkg.Deploy()
 	},
 }
 

@@ -5,22 +5,21 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *K8sClient) GetSecret(namespace, name string) (*corev1.Secret, error) {
+func (k *Client) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return k.Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (k *K8sClient) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
+func (k *Client) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
 	return k.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 }
 
-func (k *K8sClient) GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
+func (k *Client) GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -36,7 +35,7 @@ func (k *K8sClient) GenerateSecret(namespace, name string, secretType corev1.Sec
 	}
 }
 
-func (k *K8sClient) GenerateTLSSecret(namespace, name string, conf types.GeneratedPKI) (*corev1.Secret, error) {
+func (k *Client) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*corev1.Secret, error) {
 	if _, err := tls.X509KeyPair(conf.Cert, conf.Key); err != nil {
 		return nil, err
 	}
@@ -48,7 +47,7 @@ func (k *K8sClient) GenerateTLSSecret(namespace, name string, conf types.Generat
 	return secretTLS, nil
 }
 
-func (k *K8sClient) ReplaceTLSSecret(namespace, name string, conf types.GeneratedPKI) error {
+func (k *Client) ReplaceTLSSecret(namespace, name string, conf GeneratedPKI) error {
 	secret, err := k.GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
 		return err
@@ -57,7 +56,7 @@ func (k *K8sClient) ReplaceTLSSecret(namespace, name string, conf types.Generate
 	return k.ReplaceSecret(secret)
 }
 
-func (k *K8sClient) ReplaceSecret(secret *corev1.Secret) error {
+func (k *Client) ReplaceSecret(secret *corev1.Secret) error {
 	if _, err := k.CreateNamespace(secret.Namespace, nil); err != nil {
 		return fmt.Errorf("unable to create or read the namespace: %w", err)
 	}
@@ -69,7 +68,7 @@ func (k *K8sClient) ReplaceSecret(secret *corev1.Secret) error {
 	return k.CreateSecret(secret)
 }
 
-func (k *K8sClient) DeleteSecret(secret *corev1.Secret) error {
+func (k *Client) DeleteSecret(secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
 	err := namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
@@ -80,7 +79,7 @@ func (k *K8sClient) DeleteSecret(secret *corev1.Secret) error {
 	return nil
 }
 
-func (k *K8sClient) CreateSecret(secret *corev1.Secret) error {
+func (k *Client) CreateSecret(secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
 	// create the given secret

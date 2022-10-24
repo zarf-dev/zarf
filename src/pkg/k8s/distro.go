@@ -21,7 +21,7 @@ const (
 )
 
 // DetectDistro returns the matching distro or unknown if not found
-func (k *K8sClient) DetectDistro() (string, error) {
+func (k *Client) DetectDistro() (string, error) {
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
 	eksNodeRegex := regexp.MustCompile(`^aws:///`)
@@ -109,7 +109,7 @@ func (k *K8sClient) DetectDistro() (string, error) {
 }
 
 // GetArchitecture returns the cluster system architecture if found or an error if not
-func (k *K8sClient) GetArchitecture() (string, error) {
+func (k *Client) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
 
 	k.Log("%#v", nodes)

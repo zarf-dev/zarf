@@ -12,87 +12,28 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-func createPaths() types.TempPaths {
-	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
-	}
-	return types.TempPaths{
-		Base: basePath,
-
-		InjectZarfBinary: filepath.Join(basePath, "zarf-registry"),
-		InjectBinary:     filepath.Join(basePath, "zarf-injector"),
-		SeedImage:        filepath.Join(basePath, "seed-image.tar"),
-		Images:           filepath.Join(basePath, "images.tar"),
-		Components:       filepath.Join(basePath, "components"),
-		Sboms:            filepath.Join(basePath, "sboms"),
-		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
-	}
+type Package struct {
+	cluster  *cluster.Cluster
+	kube     *k8s.Client
+	tempPath types.TempPaths
 }
 
-func createComponentPaths(basePath string, component types.ZarfComponent) types.ComponentPaths {
-	basePath = filepath.Join(basePath, component.Name)
-	_ = utils.CreateDirectory(basePath, 0700)
-	return types.ComponentPaths{
-		Base:           basePath,
-		Files:          filepath.Join(basePath, "files"),
-		Charts:         filepath.Join(basePath, "charts"),
-		Repos:          filepath.Join(basePath, "repos"),
-		Manifests:      filepath.Join(basePath, "manifests"),
-		DataInjections: filepath.Join(basePath, "data"),
-		Values:         filepath.Join(basePath, "values"),
+func NewPackage() *Package {
+	return &Package{
+		tempPath: createPaths(),
 	}
-}
-
-func confirmAction(userMessage string, sbomViewFiles []string) bool {
-	active := config.GetActiveConfig()
-
-	content, err := yaml.Marshal(active)
-	if err != nil {
-		message.Fatal(err, "Unable to open the package config file")
-	}
-
-	// Convert []byte to string and print to screen
-	text := string(content)
-
-	pterm.Println()
-	utils.ColorPrintYAML(text)
-
-	if len(sbomViewFiles) > 0 {
-		cwd, _ := os.Getwd()
-		link := filepath.Join(cwd, "zarf-sbom", filepath.Base(sbomViewFiles[0]))
-		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
-		message.Note(msg)
-	}
-
-	pterm.Println()
-
-	// Display prompt if not auto-confirmed
-	var confirmFlag bool
-	if config.CommonOptions.Confirm {
-		message.SuccessF("%s Zarf package confirmed", userMessage)
-
-		return config.CommonOptions.Confirm
-	} else {
-		prompt := &survey.Confirm{
-			Message: userMessage + " this Zarf package?",
-		}
-		if err := survey.AskOne(prompt, &confirmFlag); err != nil {
-			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
-		}
-	}
-
-	return confirmFlag
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -193,19 +134,75 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-// removeDuplicates reduces a string slice to unique values only, https://www.dotnetperls.com/duplicates-go
-func removeDuplicates(elements []string) []string {
-	seen := map[string]bool{}
+func createPaths() types.TempPaths {
+	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
+	}
+	return types.TempPaths{
+		Base: basePath,
 
-	// Create a map of all unique elements.
-	for v := range elements {
-		seen[elements[v]] = true
+		InjectZarfBinary: filepath.Join(basePath, "zarf-registry"),
+		InjectBinary:     filepath.Join(basePath, "zarf-injector"),
+		SeedImage:        filepath.Join(basePath, "seed-image.tar"),
+		Images:           filepath.Join(basePath, "images.tar"),
+		Components:       filepath.Join(basePath, "components"),
+		Sboms:            filepath.Join(basePath, "sboms"),
+		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
+	}
+}
+
+func createComponentPaths(basePath string, component types.ZarfComponent) types.ComponentPaths {
+	basePath = filepath.Join(basePath, component.Name)
+	_ = utils.CreateDirectory(basePath, 0700)
+	return types.ComponentPaths{
+		Base:           basePath,
+		Files:          filepath.Join(basePath, "files"),
+		Charts:         filepath.Join(basePath, "charts"),
+		Repos:          filepath.Join(basePath, "repos"),
+		Manifests:      filepath.Join(basePath, "manifests"),
+		DataInjections: filepath.Join(basePath, "data"),
+		Values:         filepath.Join(basePath, "values"),
+	}
+}
+
+func confirmAction(userMessage string, sbomViewFiles []string) bool {
+	active := config.GetActiveConfig()
+
+	content, err := yaml.Marshal(active)
+	if err != nil {
+		message.Fatal(err, "Unable to open the package config file")
 	}
 
-	// Place all keys from the map into a slice.
-	var result []string
-	for key := range seen {
-		result = append(result, key)
+	// Convert []byte to string and print to screen
+	text := string(content)
+
+	pterm.Println()
+	utils.ColorPrintYAML(text)
+
+	if len(sbomViewFiles) > 0 {
+		cwd, _ := os.Getwd()
+		link := filepath.Join(cwd, "zarf-sbom", filepath.Base(sbomViewFiles[0]))
+		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
+		message.Note(msg)
 	}
-	return result
+
+	pterm.Println()
+
+	// Display prompt if not auto-confirmed
+	var confirmFlag bool
+	if config.CommonOptions.Confirm {
+		message.SuccessF("%s Zarf package confirmed", userMessage)
+
+		return config.CommonOptions.Confirm
+	} else {
+		prompt := &survey.Confirm{
+			Message: userMessage + " this Zarf package?",
+		}
+		if err := survey.AskOne(prompt, &confirmFlag); err != nil {
+			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+		}
+	}
+
+	return confirmFlag
 }

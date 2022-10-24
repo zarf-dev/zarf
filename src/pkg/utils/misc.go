@@ -1,0 +1,14 @@
+package utils
+
+// Unique returns a new slice with only unique elements
+func Unique[T comparable](s []T) []T {
+	exists := make(map[T]bool)
+	var result []T
+	for _, str := range s {
+		if _, ok := exists[str]; !ok {
+			exists[str] = true
+			result = append(result, str)
+		}
+	}
+	return result
+}

@@ -9,17 +9,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *K8sClient) GetNamespaces() (*corev1.NamespaceList, error) {
+func (k *Client) GetNamespaces() (*corev1.NamespaceList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
-func (k *K8sClient) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func (k *Client) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
 	return k.Clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
 }
 
-func (k *K8sClient) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func (k *Client) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	if namespace == nil {
 		// if only a name was provided create the namespace object
 		namespace = &corev1.Namespace{
@@ -48,7 +48,7 @@ func (k *K8sClient) CreateNamespace(name string, namespace *corev1.Namespace) (*
 	return match, err
 }
 
-func (k *K8sClient) DeleteNamespace(ctx context.Context, name string) error {
+func (k *Client) DeleteNamespace(ctx context.Context, name string) error {
 	// Attempt to delete the namespace immediately
 	gracePeriod := int64(0)
 	err := k.Clientset.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})

@@ -107,7 +107,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 		}
 
 		if err != nil {
-			spinner.Debugf(err.Error())
+			spinner.Errorf(err, "Unable to complete helm chart install/upgrade, waiting 10 seconds and trying again")
 			// Simply wait for dust to settle and try again
 			time.Sleep(10 * time.Second)
 		} else {

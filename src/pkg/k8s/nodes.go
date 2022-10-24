@@ -8,7 +8,7 @@ import (
 )
 
 // GetNodes returns a list of nodes from the k8s cluster.
-func (k *K8sClient) GetNodes() (*corev1.NodeList, error) {
+func (k *Client) GetNodes() (*corev1.NodeList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Nodes().List(context.TODO(), metaOptions)
 }

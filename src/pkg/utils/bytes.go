@@ -6,7 +6,6 @@ import (
 )
 
 // forked from https://www.socketloop.com/tutorials/golang-byte-format-example
-
 func RoundUp(input float64, places int) (newVal float64) {
 	var round float64
 	pow := math.Pow(10, float64(places))

@@ -1,4 +1,4 @@
-package packager
+package cluster
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 // Wait for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
-func handleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
+func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
@@ -37,8 +37,14 @@ iterator:
 		message.Debugf("Attempting to inject data into %s", data.Target)
 		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 
+		target := k8s.PodLookup{
+			Namespace: data.Target.Namespace,
+			Selector:  data.Target.Selector,
+			Container: data.Target.Container,
+		}
+
 		// Wait until the pod we are injecting data into becomes available
-		pods := k8s.WaitForPodsAndContainers(data.Target, true)
+		pods := c.Kube.WaitForPodsAndContainers(target, true)
 		if len(pods) < 1 {
 			continue
 		}
@@ -86,13 +92,13 @@ iterator:
 		}
 
 		// Do not look for a specific container after injection in case they are running an init container
-		podOnlyTarget := types.ZarfContainerTarget{
+		podOnlyTarget := k8s.PodLookup{
 			Namespace: data.Target.Namespace,
 			Selector:  data.Target.Selector,
 		}
 
 		// Block one final time to make sure at least one pod has come up and injected the data
-		_ = k8s.WaitForPodsAndContainers(podOnlyTarget, false)
+		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, false)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)

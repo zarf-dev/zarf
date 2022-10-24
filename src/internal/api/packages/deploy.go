@@ -61,7 +61,8 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config.CommonOptions.Confirm = true
-	packager.Deploy()
+	pkg := packager.NewPackage()
+	pkg.Deploy()
 
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }

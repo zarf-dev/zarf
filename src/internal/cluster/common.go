@@ -9,12 +9,12 @@ import (
 )
 
 type Cluster struct {
-	Kube *k8s.K8sClient
+	Kube *k8s.Client
 }
 
 var defaultTimeout = 30 * time.Second
 
-var labels = k8s.K8sLabels{
+var labels = k8s.Labels{
 	config.ZarfManagedByLabel: "zarf",
 }
 

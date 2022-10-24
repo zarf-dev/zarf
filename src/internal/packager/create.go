@@ -23,7 +23,7 @@ import (
 )
 
 // Create generates a zarf package tarball for consumption by
-func Create(baseDir string) {
+func (p *Package) Create(baseDir string) {
 	var originalDir string
 
 	// Change the working directory if this run has an alternate base dir
@@ -72,14 +72,14 @@ func Create(baseDir string) {
 
 	var combinedImageList []string
 	for _, component := range components {
-		addComponent(tempPath, component)
+		p.addComponent(component)
 		// Combine all component images into a single entry for efficient layer reuse
 		combinedImageList = append(combinedImageList, component.Images...)
 	}
 
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
-		uniqueList := removeDuplicates(combinedImageList)
+		uniqueList := utils.Unique(combinedImageList)
 		pulledImages := images.PullAll(uniqueList, tempPath.Images)
 		sbom.CatalogImages(pulledImages, tempPath.Sboms, tempPath.Images)
 	}
@@ -98,9 +98,9 @@ func Create(baseDir string) {
 	}
 }
 
-func addComponent(tempPath types.TempPaths, component types.ZarfComponent) {
+func (p *Package) addComponent(component types.ZarfComponent) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-	componentPath := createComponentPaths(tempPath.Components, component)
+	componentPath := createComponentPaths(p.tempPath.Components, component)
 
 	// Loop through each component prepare script and execute it
 	for _, script := range component.Scripts.Prepare {

@@ -1,5 +1,7 @@
 package types
 
+import "github.com/defenseunicorns/zarf/src/pkg/k8s"
+
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
@@ -104,10 +106,8 @@ type ZarfComponentScripts struct {
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
-	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
-	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
-	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+	k8s.PodLookup
+	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
 // ZarfDataInjection is a data-injection definition

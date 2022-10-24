@@ -12,7 +12,7 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
-func (k *K8sClient) GetAllImages() (ImageNodeMap, error) {
+func (k *Client) GetAllImages() (ImageNodeMap, error) {
 	timeout := time.After(5 * time.Minute)
 
 	for {
@@ -38,7 +38,7 @@ func (k *K8sClient) GetAllImages() (ImageNodeMap, error) {
 }
 
 // GetImagesWithNodes returns all images and their nodes in a given namespace.
-func (k *K8sClient) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
+func (k *Client) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 
 	pods, err := k.GetPods(namespace)
@@ -63,7 +63,7 @@ func (k *K8sClient) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 }
 
 // BuildImageMap looks for init container, ephemeral and regular container images.
-func (k *K8sClient) BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
+func (k *Client) BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	for _, container := range pod.InitContainers {
 		images[container.Image] = true
 	}

@@ -1,11 +1,9 @@
-package packager
+package cluster
 
 import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/images"
 	"github.com/defenseunicorns/zarf/src/internal/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -13,7 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func seedZarfState(tempPath types.TempPaths) {
+func (c *Cluster) SeedZarfState(tempPath types.TempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (
@@ -104,8 +102,8 @@ func seedZarfState(tempPath types.TempPaths) {
 		state.StorageClass = config.InitOptions.StorageClass
 	}
 
-	state.GitServer = fillInEmptyGitServerValues(config.InitOptions.GitServer)
-	state.RegistryInfo = fillInEmptyContainerRegistryValues(config.InitOptions.RegistryInfo)
+	state.GitServer = c.fillInEmptyGitServerValues(config.InitOptions.GitServer)
+	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(config.InitOptions.RegistryInfo)
 
 	spinner.Success()
 
@@ -118,32 +116,29 @@ func seedZarfState(tempPath types.TempPaths) {
 	config.InitState(state)
 }
 
-func postSeedRegistry(tempPath types.TempPaths) error {
-	message.Debugf("packager.postSeedRegistry(%#v)", tempPath)
+func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
+	message.Debugf("cluster.PostSeedRegistry(%#v)", tempPath)
 
 	// Try to kill the injector pod now
-	if err := c.Kube.DeletePod(cluster.ZarfNamespace, "injector"); err != nil {
+	if err := c.Kube.DeletePod(ZarfNamespace, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := c.Kube.DeleteConfigMapsByLabel(cluster.ZarfNamespace, labelMatch); err != nil {
+	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespace, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	if err := c.Kube.DeleteService(cluster.ZarfNamespace, "zarf-injector"); err != nil {
+	if err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector"); err != nil {
 		return err
 	}
 
-	// Push the seed images into to Zarf registry
-	err := images.PushToZarfRegistry(tempPath.SeedImage, []string{config.ZarfSeedImage}, false)
-
-	return err
+	return nil
 }
 
-func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
@@ -182,7 +177,7 @@ func fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) ty
 }
 
 // Fill in empty GitServerInfo values with the defaults
-func fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
+func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
 	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {
 		gitServer.Address = config.ZarfInClusterGitServiceURL

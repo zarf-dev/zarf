@@ -43,7 +43,7 @@ const (
 
 // Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
 type Tunnel struct {
-	kube         *k8s.K8sClient
+	kube         *k8s.Client
 	out          io.Writer
 	autoOpen     bool
 	localPort    int
@@ -407,7 +407,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	}
 	selectorLabelsOfPods := makeLabels(service.Spec.Selector)
 
-	servicePods := tunnel.kube.WaitForPodsAndContainers(k8s.K8sPodLookup{
+	servicePods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
 		Namespace: tunnel.namespace,
 		Selector:  selectorLabelsOfPods,
 	}, false)

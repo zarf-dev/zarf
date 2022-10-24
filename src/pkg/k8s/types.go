@@ -5,19 +5,25 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type K8sLog func(string, ...any)
+type Log func(string, ...any)
 
-type K8sLabels map[string]string
+type Labels map[string]string
 
-type K8sClient struct {
+type Client struct {
 	Clientset  *kubernetes.Clientset
 	RestConfig *rest.Config
-	Log        K8sLog
-	Labels     K8sLabels
+	Log        Log
+	Labels     Labels
 }
 
-type K8sPodLookup struct {
+type PodLookup struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
+}
+
+type GeneratedPKI struct {
+	CA   []byte `json:"ca"`
+	Cert []byte `json:"cert"`
+	Key  []byte `json:"key"`
 }

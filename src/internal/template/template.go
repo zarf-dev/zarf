@@ -8,6 +8,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -16,7 +17,7 @@ type Values struct {
 	state        types.ZarfState
 	seedRegistry string
 	registry     string
-	agentTLS     types.GeneratedPKI
+	agentTLS     k8s.GeneratedPKI
 	secret       struct {
 		htpasswd       string
 		registryPush   string

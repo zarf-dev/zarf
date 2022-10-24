@@ -14,12 +14,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func NewK8sClientWithWait(logger K8sLog, defaultLabels K8sLabels, timeout time.Duration) (*K8sClient, error) {
+func NewK8sClientWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*Client, error) {
 	k, _ := NewK8sClient(logger, defaultLabels)
 	return k, k.WaitForHealthyCluster(timeout)
 }
 
-func NewK8sClient(logger K8sLog, defaultLabels K8sLabels) (*K8sClient, error) {
+func NewK8sClient(logger Log, defaultLabels Labels) (*Client, error) {
 	logger("k8s.NewK8sClient()")
 
 	klog.SetLogger(funcr.New(func(prefix, args string) {
@@ -31,7 +31,7 @@ func NewK8sClient(logger K8sLog, defaultLabels K8sLabels) (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to connect to k8s cluster: %w", err)
 	}
 
-	return &K8sClient{
+	return &Client{
 		RestConfig: config,
 		Clientset:  clientset,
 		Log:        logger,
@@ -40,7 +40,7 @@ func NewK8sClient(logger K8sLog, defaultLabels K8sLabels) (*K8sClient, error) {
 }
 
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
-func (k *K8sClient) WaitForHealthyCluster(timeout time.Duration) error {
+func (k *Client) WaitForHealthyCluster(timeout time.Duration) error {
 	var err error
 	var nodes *v1.NodeList
 	var pods *v1.PodList

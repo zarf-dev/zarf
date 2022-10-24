@@ -7,7 +7,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
@@ -15,13 +14,13 @@ import (
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
-func Remove(packageName string) error {
+func (p *Package) Remove(packageName string) error {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
 	// Get the secret for the deployed package
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
-	packageSecret, err := k8s.GetSecret("zarf", secretName)
+	packageSecret, err := p.kube.GetSecret("zarf", secretName)
 	if err != nil {
 		spinner.Errorf(err, "Unable to get the secret for the package we are attempting to remove")
 
@@ -54,14 +53,14 @@ func Remove(packageName string) error {
 
 			if len(packages.DeployedComponents) == 0 {
 				// All the installed components were deleted, there for this package is no longer actually deployed
-				_ = k8s.DeleteSecret(packageSecret)
+				_ = p.kube.DeleteSecret(packageSecret)
 			} else {
 				// Save the new secret with the removed components removed from the secret
-				newPackageSecret := k8s.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+				newPackageSecret := p.kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
 				newPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
 				newPackageSecretData, _ := json.Marshal(packages)
 				newPackageSecret.Data["data"] = newPackageSecretData
-				err = k8s.ReplaceSecret(newPackageSecret)
+				err = p.kube.ReplaceSecret(newPackageSecret)
 				if err != nil {
 					message.Warnf("Unable to replace the %s package secret: %#v", secretName, err)
 				}
@@ -85,7 +84,7 @@ func Remove(packageName string) error {
 				}
 			}
 		}
-		k8s.DeleteSecret(packageSecret)
+		p.kube.DeleteSecret(packageSecret)
 	}
 
 	return nil

@@ -20,7 +20,8 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	// Remove the package
-	err := packager.Remove(name)
+	pkg := packager.NewPackage()
+	err := pkg.Remove(name)
 	if err != nil {
 		message.ErrorWebf(err, w, "Unable to remove the zarf package from the cluster")
 		return
