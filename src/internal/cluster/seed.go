@@ -11,7 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (c *Cluster) SeedZarfState(tempPath types.TempPaths) {
+func (c *Cluster) InitZarfState(tempPath types.TempPaths) {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
 	var (

@@ -16,14 +16,23 @@ import (
 
 const horizontalRule = "───────────────────────────────────────────────────────────────────────────────────────"
 
-func getValidComponents(allComponents []types.ZarfComponent, requestedComponentNames []string) []types.ZarfComponent {
-	message.Debugf("packager.getValidComponents(%#v, %#v)", allComponents, requestedComponentNames)
+func (p *Package) getValidComponents() []types.ZarfComponent {
+	message.Debugf("packager.getValidComponents()")
 
 	var validComponentsList []types.ZarfComponent
 	var orderedKeys []string
 	var choiceComponents []string
 
+	allComponents := config.GetComponents()
 	componentGroups := make(map[string][]types.ZarfComponent)
+
+	// The component list is comma-delimited list
+	requestedNames := strings.Split(config.DeployOptions.Components, ",")
+
+	// Init packages use a different component list
+	if config.IsZarfInitConfig() {
+		requestedNames = strings.Split(config.InitOptions.Components, ",")
+	}
 
 	// Break up components into choice groups
 	for _, component := range allComponents {
@@ -33,11 +42,11 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 			key = component.Name
 		} else {
 			// Otherwise, add the component name to the choice group list for later validation
-			choiceComponents = appendIfNotExists(choiceComponents, component.Name)
+			choiceComponents = p.appendIfNotExists(choiceComponents, component.Name)
 		}
 
 		// Preserve component order
-		orderedKeys = appendIfNotExists(orderedKeys, key)
+		orderedKeys = p.appendIfNotExists(orderedKeys, key)
 
 		// Append the component to the list of components in the group
 		componentGroups[key] = append(componentGroups[key], component)
@@ -54,11 +63,11 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 		// Loop through the components in the group
 		for _, component := range componentGroup {
 			// First check if the component is required or requested via CLI flag
-			requested := isRequiredOrRequested(component, requestedComponentNames)
+			requested := p.isRequiredOrRequested(component, requestedNames)
 
 			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
 			if !requested && !userChoicePrompt {
-				requested = confirmOptionalComponent(component)
+				requested = p.confirmOptionalComponent(component)
 			}
 
 			if requested {
@@ -77,13 +86,13 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 
 		// If the user has requested a choice group, then prompt them
 		if userChoicePrompt {
-			selectedComponent := confirmChoiceGroup(componentGroup)
+			selectedComponent := p.confirmChoiceGroup(componentGroup)
 			validComponentsList = append(validComponentsList, selectedComponent)
 		}
 	}
 
 	// Ensure all user requested components are valid
-	if err := validateRequests(validComponentsList, requestedComponentNames, choiceComponents); err != nil {
+	if err := p.validateRequests(validComponentsList, requestedNames, choiceComponents); err != nil {
 		message.Fatalf(err, "Invalid component argument, %s", err)
 	}
 
@@ -91,7 +100,7 @@ func getValidComponents(allComponents []types.ZarfComponent, requestedComponentN
 }
 
 // Match on the first requested component that is not in the list of valid components and return the component name
-func validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
+func (p *Package) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	message.Debugf("packager.validateRequests(%#v, %#v, %#v)", validComponentsList, requestedComponentNames, choiceComponents)
 
 	// Loop through each requested component names
@@ -121,7 +130,7 @@ func validateRequests(validComponentsList []types.ZarfComponent, requestedCompon
 	return nil
 }
 
-func isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
+func (p *Package) isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
 	message.Debugf("packager.isRequiredOrRequested(%#v, %#v)", component, requestedComponentNames)
 
 	// If the component is required, then just return true
@@ -144,7 +153,7 @@ func isRequiredOrRequested(component types.ZarfComponent, requestedComponentName
 }
 
 // Confirm optional component
-func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+func (p *Package) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	message.Debugf("packager.confirmOptionalComponent(%#v)", component)
 
 	// Confirm flag passed, just use defaults
@@ -173,7 +182,7 @@ func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 	return confirmComponent
 }
 
-func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+func (p *Package) confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.confirmChoiceGroup(%#v)", componentGroup)
 
 	// Confirm flag passed, just use defaults
@@ -213,7 +222,7 @@ func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 	return componentGroup[chosen]
 }
 
-func appendIfNotExists(slice []string, item string) []string {
+func (p *Package) appendIfNotExists(slice []string, item string) []string {
 	message.Debugf("packager.appendIfNotExists(%#v, %s)", slice, item)
 
 	for _, s := range slice {

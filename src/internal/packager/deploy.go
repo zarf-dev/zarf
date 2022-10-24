@@ -1,7 +1,6 @@
 package packager
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
@@ -33,7 +33,7 @@ var connectStrings = make(types.ConnectStrings)
 func (p *Package) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	spinner := message.NewProgressSpinner("Preparing zarf package %s", config.DeployOptions.PackagePath)
+	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", config.DeployOptions.PackagePath)
 	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
@@ -54,8 +54,8 @@ func (p *Package) Deploy() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tempPath.Base, err)
 	}
 
+	// If init config, make sure things are ready
 	if config.IsZarfInitConfig() {
-		// If init config, make sure things are ready
 		utils.RunPreflightChecks()
 	}
 
@@ -81,104 +81,43 @@ func (p *Package) Deploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	// Verify the components requested all exist
-	components := config.GetComponents()
-	componentOptions := config.DeployOptions.Components
-
-	// Init packages use a different component list
-	if config.IsZarfInitConfig() {
-		componentOptions = config.InitOptions.Components
-	}
-
-	// The component list is comma-delimited list
-	var requestedComponents []string
-	if componentOptions != "" {
-		requestedComponents = strings.Split(componentOptions, ",")
-	}
-
 	// Get a list of all the components we are deploying and actually deploy them
-	componentsToDeploy := getValidComponents(components, requestedComponents)
-	deployedComponents, err := p.deployComponents(componentsToDeploy)
+	deployedComponents, err := p.deployComponents()
 	if err != nil {
 		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
 	}
 
 	// Notify all the things about the successful deployment
 	message.SuccessF("Zarf deployment complete")
-	pterm.Println()
-	p.printTablesForDeployment(componentsToDeploy)
+	p.printTablesForDeployment(deployedComponents)
 
 	// Save deployed package information to k8s
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
-	if p.packageUsesK8s() {
-		// Generate a secret that describes the package that is being deployed
-		secretName := fmt.Sprintf("zarf-package-%s", config.GetActiveConfig().Metadata.Name)
-		deployedPackageSecret := p.kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
-		deployedPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
-		deployedPackageSecret.StringData = make(map[string]string)
-
-		installedZarfPackage := types.DeployedPackage{
-			Name:               config.GetActiveConfig().Metadata.Name,
-			CLIVersion:         config.CLIVersion,
-			Data:               config.GetActiveConfig(),
-			DeployedComponents: deployedComponents,
-		}
-		stateData, _ := json.Marshal(installedZarfPackage)
-		deployedPackageSecret.Data = map[string][]byte{"data": stateData}
-		p.kube.ReplaceSecret(deployedPackageSecret)
+	if p.cluster != nil {
+		p.cluster.RecordPackageDeployment(config.GetActiveConfig(), deployedComponents)
 	}
 
 	return nil
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them
-func (p *Package) deployComponents(componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
-	// When pushing images, the default behavior is to add a shasum of the url to the image name
-	deployedComponents := []types.DeployedComponent{}
+func (p *Package) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
+	componentsToDeploy := p.getValidComponents()
 	config.SetDeployingComponents(deployedComponents)
-	// Deploy all the components
+
 	for _, component := range componentsToDeploy {
+		var installedCharts []types.InstalledChart
+
 		deployedComponent := types.DeployedComponent{Name: component.Name}
-		addShasumToImg := true
+		addChecksumToImg := true
 
-		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
-		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
-		if (config.IsZarfInitConfig() && config.InitOptions.RegistryInfo.Address != "") &&
-			(component.Name == "zarf-seed-registry" || component.Name == "zarf-injector" || component.Name == "zarf-registry") {
-			message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-			continue
-		}
-
-		// Do somewhat custom pre-configuration for the seed and agent components
-		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" && config.InitOptions.RegistryInfo.Address == "" {
-			// The zarf-seed-registry component is responsible for seeding the state and finding a pod to inject a registry into
-			p.cluster.SeedZarfState(p.tempPath)
-			p.cluster.RunInjectionMadness(p.tempPath)
-		} else if config.IsZarfInitConfig() && component.Name == "zarf-agent" {
-			// The zarf-agent cannot mutate itself, so don't change the img url
-			addShasumToImg = false
-
-			// If we are using an external registry, we will need to seed the ZarfState as part of the zarf-agent component
-			if !config.GetContainerRegistryInfo().InternalRegistry {
-				p.cluster.SeedZarfState(p.tempPath)
-			}
-		}
-
-		// Actually deploy the component
-		installedCharts := p.deployComponent(component, addShasumToImg)
-
-		// Do cleanup for when we inject the seed registry during initialization
-		if config.IsZarfInitConfig() && component.Name == "zarf-seed-registry" {
-			err := p.cluster.PostSeedRegistry(p.tempPath)
+		if config.IsZarfInitConfig() {
+			installedCharts, err = p.deployInitComponent(component)
 			if err != nil {
-				return deployedComponents, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+				return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 			}
-
-			// Push the seed images into to Zarf registry
-			err = images.PushToZarfRegistry(p.tempPath.SeedImage, []string{config.ZarfSeedImage}, false)
-			if err != nil {
-				return deployedComponents, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
-			}
+		} else {
+			installedCharts = p.deployComponent(component, addChecksumToImg)
 		}
 
 		// Deploy the component
@@ -186,12 +125,58 @@ func (p *Package) deployComponents(componentsToDeploy []types.ZarfComponent) ([]
 		deployedComponents = append(deployedComponents, deployedComponent)
 		config.SetDeployingComponents(deployedComponents)
 	}
+
 	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
+func (p *Package) deployInitComponent(component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+	hasExternalRegistry := config.InitOptions.RegistryInfo.Address != ""
+	isSeedRegistry := component.Name == "seed-registry"
+	isRegistry := component.Name == "zarf-registry"
+	isInjector := component.Name == "zarf-injector"
+	isAgent := component.Name == "zarf-agent"
+
+	// Always inii the state on the seed registry component
+	if isSeedRegistry {
+		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
+		if err != nil {
+			return installedCharts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+		}
+		p.cluster.InitZarfState(p.tempPath)
+	}
+
+	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+		return installedCharts, nil
+	}
+
+	// Before deploying the seed registry, start the injector
+	if isSeedRegistry {
+		p.cluster.RunInjectionMadness(p.tempPath)
+	}
+
+	installedCharts = p.deployComponent(component, !isAgent)
+
+	// Do cleanup for when we inject the seed registry during initialization
+	if isSeedRegistry {
+		err := p.cluster.PostSeedRegistry(p.tempPath)
+		if err != nil {
+			return installedCharts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+		}
+
+		// Push the seed images into to Zarf registry
+		err = images.PushToZarfRegistry(p.tempPath.SeedImage, []string{config.ZarfSeedImage}, false)
+		if err != nil {
+			return installedCharts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
+		}
+	}
+
+	return installedCharts, nil
+}
+
 // Deploy a Zarf Component
-func (p *Package) deployComponent(component types.ZarfComponent, addShasumToImgs bool) []types.InstalledChart {
+func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToImgs bool) []types.InstalledChart {
 	var installedCharts []types.InstalledChart
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tempPath, component)
 
@@ -209,7 +194,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addShasumToImgs
 
 	// Run the 'before' scripts and move files before we do anything else
 	runComponentScripts(component.Scripts.Before, component.Scripts)
-	p.processComponentFiles(component.Files, componentPath.Files, p.tempPath.Base)
+	p.processComponentFiles(component.Files, componentPath.Files)
 
 	// Generate a value template
 	valueTemplate = template.Generate()
@@ -219,7 +204,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addShasumToImgs
 
 	/* Install all the parts of the component */
 	if hasImages {
-		p.pushImagesToRegistry(component.Images, addShasumToImgs)
+		p.pushImagesToRegistry(component.Images, addChecksumToImgs)
 	}
 
 	if hasRepos {
@@ -243,7 +228,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addShasumToImgs
 }
 
 // Move files onto the host of the machine performing the deployment
-func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, tempPathBase string) {
+func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) {
 	var spinner message.Spinner
 	if len(componentFiles) > 0 {
 		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
@@ -261,7 +246,7 @@ func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceL
 		}
 
 		// Replace temp target directories
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", tempPathBase, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tempPath.Base, 1)
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
@@ -421,7 +406,9 @@ func (p *Package) installChartAndManifests(componentPath types.ComponentPaths, c
 	return installedCharts
 }
 
-func (p *Package) printTablesForDeployment(componentsToDeploy []types.ZarfComponent) {
+func (p *Package) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
+	pterm.Println()
+
 	// If not init config, print the application connection table
 	if !config.IsZarfInitConfig() {
 		message.PrintConnectStringTable(connectStrings)
@@ -455,17 +442,4 @@ func (p *Package) printTablesForDeployment(componentsToDeploy []types.ZarfCompon
 			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
 		}
 	}
-}
-
-func (p *Package) packageUsesK8s() bool {
-	for _, component := range config.GetComponents() {
-		// If the component is using anything that depends on the cluster, return true
-		if len(component.Charts) > 0 ||
-			len(component.Images) > 0 ||
-			len(component.Repos) > 0 ||
-			len(component.Manifests) > 0 {
-			return true
-		}
-	}
-	return false
 }

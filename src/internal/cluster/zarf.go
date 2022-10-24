@@ -3,10 +3,12 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -75,4 +77,23 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 	}
 
 	spinner.Success()
+}
+
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent) {
+	// Generate a secret that describes the package that is being deployed
+	packageName := pkg.Metadata.Name
+	secretName := fmt.Sprintf("zarf-package-%s", packageName)
+	deployedPackageSecret := c.Kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+	deployedPackageSecret.Labels["package-deploy-info"] = packageName
+
+	stateData, _ := json.Marshal(types.DeployedPackage{
+		Name:               packageName,
+		CLIVersion:         config.CLIVersion,
+		Data:               pkg,
+		DeployedComponents: components,
+	})
+
+	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
+
+	c.Kube.ReplaceSecret(deployedPackageSecret)
 }
