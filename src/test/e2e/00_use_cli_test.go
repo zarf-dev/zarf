@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,8 +22,8 @@ func TestUseCLI(t *testing.T) {
 
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
-	imageCachePath := cachePath + "/images"
-	gitCachePath := cachePath + "/repos"
+	imageCachePath := filepath.Join(cachePath, "images")
+	gitCachePath := filepath.Join(cachePath, "repos")
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
@@ -88,7 +89,7 @@ func TestUseCLI(t *testing.T) {
 	pkgName = fmt.Sprintf("zarf-package-git-data-%s.tar.zst", e2e.arch)
 
 	// Pull once to test git cloning
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	files, err = os.ReadDir(gitCachePath)
@@ -96,16 +97,39 @@ func TestUseCLI(t *testing.T) {
 	assert.Greater(t, len(files), 1)
 
 	// Pull twice to test git fetching (from cache)
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test removal of cache
-	stdOut, stdErr, err = e2e.execZarfCommand("tools", "clear-cache", "--zarf-cache", cachePath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "clear-cache", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that ReadDir returns no such file or directory for the cachePath
 	_, err = os.ReadDir(cachePath)
-	require.ErrorContains(t, err, cachePath+": no such file or directory", "Did not receive expected error when reading a directory that should not exist")
+	if runtime.GOOS == "windows" {
+		msg := fmt.Sprintf("open %s: The system cannot find the file specified.", cachePath)
+		assert.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
+	} else {
+		msg := fmt.Sprintf("open %s: no such file or directory", cachePath)
+		assert.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
+	}
 
-	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName)
+	// Test generation of PKI
+	tlsCA := "tls.ca"
+	tlsCert := "tls.crt"
+	tlsKey := "tls.key"
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
+
+	_, err = os.ReadFile(tlsCA)
+	require.NoError(t, err)
+
+	_, err = os.ReadFile(tlsCert)
+	require.NoError(t, err)
+
+	_, err = os.ReadFile(tlsKey)
+	require.NoError(t, err)
+
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName, tlsCA, tlsCert, tlsKey)
 }

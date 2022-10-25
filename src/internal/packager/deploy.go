@@ -3,9 +3,7 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -68,7 +66,7 @@ func Deploy() {
 	spinner.Success()
 
 	// If SBOM files exist, temporary place them in the deploy directory
-	sbomViewFiles, _ := filepath.Glob(tempPath.sboms + "/sbom-viewer-*")
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(tempPath.sboms, "sbom-viewer-*"))
 	err = writeSBOMFiles(sbomViewFiles)
 	if err != nil {
 		message.Errorf(err, "Unable to process the SBOM files for this package")
@@ -142,7 +140,7 @@ func Deploy() {
 func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfComponent) ([]types.DeployedComponent, error) {
 	// When pushing images, the default behavior is to add a shasum of the url to the image name
 	deployedComponents := []types.DeployedComponent{}
-
+	config.SetDeployingComponents(deployedComponents)
 	// Deploy all the components
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name}
@@ -186,8 +184,9 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		// Deploy the component
 		deployedComponent.InstalledCharts = installedCharts
 		deployedComponents = append(deployedComponents, deployedComponent)
+		config.SetDeployingComponents(deployedComponents)
 	}
-
+	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
@@ -260,7 +259,7 @@ func processComponentFiles(componentFiles []types.ZarfFile, sourceLocation, temp
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
-		sourceFile := path.Join(sourceLocation, strconv.Itoa(index))
+		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
@@ -447,12 +446,12 @@ func writeSBOMFiles(sbomViewFiles []string) error {
 	// Write each of the sbom files
 	for _, file := range sbomViewFiles {
 		// Our file copy lib explodes on these files for some reason...
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
 		}
 		dst := filepath.Join(config.ZarfSBOMDir, filepath.Base(file))
-		err = ioutil.WriteFile(dst, data, 0644)
+		err = os.WriteFile(dst, data, 0644)
 		if err != nil {
 			message.Debugf("Unable to write the sbom-viewer file %s", dst)
 			return err

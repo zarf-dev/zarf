@@ -5,7 +5,7 @@ package utils
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -72,7 +72,7 @@ func ColorPrintYAML(text string) {
 
 func ReadYaml(path string, destConfig any) error {
 	message.Debugf("Loading zarf config %s", path)
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, content, perm)
+	return os.WriteFile(path, content, perm)
 }
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.

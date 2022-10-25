@@ -17,7 +17,7 @@ import (
 
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
-	e2e.setup(t)
+	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-%s.tar.zst", e2e.arch)
@@ -56,7 +56,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	config.InitState(state)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-11acfc2404b6e9e39ddcc5f41d9cbb226a6fbf31"
+	repoName := "zarf-1211668992"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
 	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
 	assert.NoError(t, err)
@@ -75,7 +75,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	state, err := k8s.LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
 	config.InitState(state)
-	repoName := "zarf-11acfc2404b6e9e39ddcc5f41d9cbb226a6fbf31"
+	repoName := "zarf-1211668992"
 
 	// Get the Zarf repo tag
 	repoTag := "v0.15.0"

@@ -1,5 +1,6 @@
 import TabItem from "@theme/TabItem";
 import Tabs from "@theme/Tabs";
+import Admonition from "@theme/Admonition";
 
 # Overview
 
@@ -81,7 +82,7 @@ Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following 
 Zarf is intended for use in a software deployment process that looks something like this:
 
 <a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
-  <img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
+<img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
 </a>
 
 ### (0) - Connect to Internet
@@ -94,7 +95,7 @@ Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local file
 
 This part of the process requires access to the internet. You feed the `zarf` binary a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
 
-Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-creating-a-zarf-package.md) section.
+Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-using-zarf-package-create.md) section.
 
 ### (2) - Ship the Package to system location
 
@@ -159,39 +160,85 @@ In the more complex use case, your package consists of updates for many apps / s
 
 ## Quick Start
 
-:::info
-
-This quick start requires you to already have [home brew](https://brew.sh/) package manager installed on your machine.
-For more install options please visit our [Getting Started page](3-getting-started.md)
-
-:::
-
-To download the Zarf CLI Binary,
-
-1.  Select your systems OS below
-2.  copy and past the quick start command into your computers terminal.
+1. 💻 Select your systems OS below
+2. ❗ Ensure you have the pre-requisite applications running
+3. `$` Enter the commands into your terminal
 
 <Tabs>
-<TabItem value="macOS" label="macOS" default>
+<TabItem value="Linux" label="Linux">
+  
+<Admonition type="info">
+
+This quick start requires you to already have:
+
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
+
+</Admonition>
+
+## Enter these Commands into your terminal
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
+<Admonition type="note">
+
+Zarf has no pre-requisites on Linux, however for this example we will use Docker and Kind.
+
+</Admonition>
+
 </TabItem>
-<TabItem value="Linux" label="Linux">
+<TabItem value="macOS" label="macOS">
+ 
+<Admonition type="info">
+
+This quick start requires you to already have:
+
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
+
+</Admonition>
+
+## Enter these Commands into your terminal
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Windows" label="Windows">
 
-```bash
-Coming Soon!
+## Enter these Commands into your terminal
+
+```text
+Coming in next release!
 ```
 
 </TabItem>

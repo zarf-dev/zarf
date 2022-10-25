@@ -1,0 +1,45 @@
+name: Test Windows Binary
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Optimize caching
+        run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
+        shell: cmd
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build windows binary
+        run: make build-cli-windows-amd
+        shell: pwsh
+
+      - name: Build zarf packages
+        run: make build-examples ARCH=amd64
+        shell: pwsh
+
+      - name: Run windows tests
+        run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
+        shell: pwsh

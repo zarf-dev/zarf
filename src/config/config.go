@@ -54,6 +54,8 @@ const (
 	ZarfInClusterContainerRegistryNodePort = 31999
 
 	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+
+	ZarfSeedImage = "registry:2.8.1"
 )
 
 var (
@@ -80,13 +82,15 @@ var (
 
 	// Private vars
 	active types.ZarfPackage
-	state  types.ZarfState
+	// Dirty Solution to getting the real time deployedComponents components.
+	deployedComponents []types.DeployedComponent
+	state              types.ZarfState
 
 	SGetPublicKey string
 	UIAssets      embed.FS
 
 	// Variables set by the user
-	SetVariableMap map[string]string
+	SetVariableMap = map[string]string{}
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -157,24 +161,13 @@ func GetSeedRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
 }
 
-// GetSeedImage returns a list of image strings specified in the package, but only for init packages
-func GetSeedImage() string {
-	message.Debugf("config.GetSeedImage()")
-	// Only allow seed images for init config
-	if IsZarfInitConfig() {
-		return active.Seed
-	} else {
-		return ""
-	}
-}
-
 func GetPackageName() string {
 	metadata := GetMetaData()
 	prefix := PackagePrefix
 	suffix := "tar.zst"
 
 	if IsZarfInitConfig() {
-		return fmt.Sprintf("zarf-init-%s.tar.zst", GetArch())
+		return GetInitPackageName()
 	}
 
 	if metadata.Uncompressed {
@@ -183,12 +176,28 @@ func GetPackageName() string {
 	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
 }
 
+func GetInitPackageName() string {
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", GetArch(), CLIVersion)
+}
+
 func GetMetaData() types.ZarfMetadata {
 	return active.Metadata
 }
 
 func GetComponents() []types.ZarfComponent {
 	return active.Components
+}
+
+func GetDeployingComponents() []types.DeployedComponent {
+	return deployedComponents
+}
+
+func SetDeployingComponents(components []types.DeployedComponent) {
+	deployedComponents = components
+}
+
+func ClearDeployingComponents() {
+	deployedComponents = []types.DeployedComponent{}
 }
 
 func SetComponents(components []types.ZarfComponent) {
@@ -261,7 +270,12 @@ func BuildConfig(path string) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
-	currentUser := os.Getenv("USER")
+	// Record the name of the user creating the package
+	if runtime.GOOS == "windows" {
+		active.Build.User = os.Getenv("USERNAME")
+	} else {
+		active.Build.User = os.Getenv("USER")
+	}
 	hostname, hostErr := os.Hostname()
 
 	// Need to ensure the arch is updated if injected
@@ -282,9 +296,6 @@ func BuildConfig(path string) error {
 		active.Build.Terminal = hostname
 	}
 
-	// Record the name of the user creating the package
-	active.Build.User = currentUser
-
 	return utils.WriteYaml(path, active, 0400)
 }
 
@@ -292,7 +303,10 @@ func BuildConfig(path string) error {
 func GetAbsCachePath() string {
 	homePath, _ := os.UserHomeDir()
 
-	return strings.Replace(CreateOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(CommonOptions.CachePath, "~") {
+		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
+	}
+	return CommonOptions.CachePath
 }
 
 func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
