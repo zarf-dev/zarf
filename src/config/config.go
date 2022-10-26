@@ -22,8 +22,6 @@ const (
 	GithubProject = "defenseunicorns/zarf"
 	IPV4Localhost = "127.0.0.1"
 
-	PackagePrefix = "zarf-package"
-
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength   = 40
 	ZarfGitPushUser          = "zarf-git-user"
@@ -99,11 +97,6 @@ func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
 
-func IsZarfInitConfig() bool {
-	message.Debug("config.IsZarfInitConfig")
-	return strings.ToLower(active.Kind) == "zarfinitconfig"
-}
-
 func GetArch() string {
 	// If CLI-orverriden then reflect that
 	if CliArch != "" {
@@ -152,33 +145,6 @@ func GetSeedRegistry() string {
 	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
 }
 
-func GetPackageName() string {
-	metadata := GetMetaData()
-	prefix := PackagePrefix
-	suffix := "tar.zst"
-
-	if IsZarfInitConfig() {
-		return GetInitPackageName()
-	}
-
-	if metadata.Uncompressed {
-		suffix = "tar"
-	}
-	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
-}
-
-func GetInitPackageName() string {
-	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", GetArch(), CLIVersion)
-}
-
-func GetMetaData() types.ZarfMetadata {
-	return active.Metadata
-}
-
-func GetComponents() []types.ZarfComponent {
-	return active.Components
-}
-
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
@@ -193,10 +159,6 @@ func ClearDeployingComponents() {
 
 func SetComponents(components []types.ZarfComponent) {
 	active.Components = components
-}
-
-func GetBuildData() types.ZarfBuildData {
-	return active.Build
 }
 
 func GetValidPackageExtensions() [3]string {
@@ -239,10 +201,6 @@ func LoadConfig(path string, filterByOS bool) error {
 	active.Components = filteredComponents
 
 	return nil
-}
-
-func GetActiveConfig() types.ZarfPackage {
-	return active
 }
 
 // GetGitServerInfo returns the GitServerInfo for the git server Zarf is configured to use from the state

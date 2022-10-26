@@ -14,20 +14,18 @@ import (
 )
 
 // Run performs config validations and runs message.Fatal() on errors
-func Run() {
-	components := config.GetComponents()
-
-	if err := validatePackageName(config.GetMetaData().Name); err != nil {
+func Run(pkg types.ZarfPackage) {
+	if err := validatePackageName(pkg.Metadata.Name); err != nil {
 		message.Fatalf(err, "Invalid package name: %s", err.Error())
 	}
 
-	for _, variable := range config.GetActiveConfig().Variables {
+	for _, variable := range pkg.Variables {
 		if err := validatePackageVariable(variable); err != nil {
 			message.Fatalf(err, "Invalid package variable: %s", err.Error())
 		}
 	}
 
-	for _, constant := range config.GetActiveConfig().Constants {
+	for _, constant := range pkg.Constants {
 		if err := validatePackageConstant(constant); err != nil {
 			message.Fatalf(err, "Invalid package constant: %s", err.Error())
 		}
@@ -35,7 +33,7 @@ func Run() {
 
 	uniqueNames := make(map[string]bool)
 
-	for _, component := range components {
+	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
 			message.Fatalf(nil, "Component names must be unique")

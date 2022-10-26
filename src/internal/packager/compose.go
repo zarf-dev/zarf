@@ -16,7 +16,7 @@ func (p *Package) composeComponents() {
 
 	components := []types.ZarfComponent{}
 
-	for _, component := range config.GetComponents() {
+	for _, component := range p.cfg.pkg.Components {
 		if component.Import.Path == "" {
 			components = append(components, component)
 		} else {

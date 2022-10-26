@@ -33,36 +33,36 @@ var connectStrings = make(types.ConnectStrings)
 func (p *Package) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.config.DeployOptions.PackagePath)
+	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(p.config.DeployOptions.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.config.DeployOptions.PackagePath)
+	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
 	}
 
 	// Extract the archive
 	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(p.config.DeployOptions.PackagePath, p.tempPath.Base); err != nil {
+	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
 		return fmt.Errorf("unable to extract the package: %w", err)
 	}
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(p.tempPath.Base, "zarf.yaml")
+	configPath := filepath.Join(p.tmp.Base, "zarf.yaml")
 	if err := config.LoadConfig(configPath, true); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tempPath.Base, err)
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
 	// If init config, make sure things are ready
-	if config.IsZarfInitConfig() {
+	if p.cfg.IsInitConfig {
 		utils.RunPreflightChecks()
 	}
 
 	spinner.Success()
 
 	// If SBOM files exist, temporary place them in the deploy directory
-	sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tempPath.Sboms, "sbom-viewer-*"))
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.WriteSBOMFiles(sbomViewFiles); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment
 		message.Errorf(err, "Unable to process the SBOM files for this package")
@@ -94,7 +94,7 @@ func (p *Package) Deploy() error {
 	// Save deployed package information to k8s
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 	if p.cluster != nil {
-		p.cluster.RecordPackageDeployment(config.GetActiveConfig(), deployedComponents)
+		p.cluster.RecordPackageDeployment(p.cfg.pkg, deployedComponents)
 	}
 
 	return nil
@@ -111,7 +111,7 @@ func (p *Package) deployComponents() (deployedComponents []types.DeployedCompone
 		deployedComponent := types.DeployedComponent{Name: component.Name}
 		addChecksumToImg := true
 
-		if config.IsZarfInitConfig() {
+		if p.cfg.IsInitConfig {
 			installedCharts, err = p.deployInitComponent(component)
 			if err != nil {
 				return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
@@ -131,7 +131,7 @@ func (p *Package) deployComponents() (deployedComponents []types.DeployedCompone
 }
 
 func (p *Package) deployInitComponent(component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
-	hasExternalRegistry := p.config.InitOptions.RegistryInfo.Address != ""
+	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -143,7 +143,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (installedC
 		if err != nil {
 			return installedCharts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
-		p.cluster.InitZarfState(p.tempPath, p.config.InitOptions)
+		p.cluster.InitZarfState(p.tmp, p.cfg.InitOpts)
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -153,20 +153,20 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (installedC
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.RunInjectionMadness(p.tempPath)
+		p.cluster.RunInjectionMadness(p.tmp)
 	}
 
 	installedCharts = p.deployComponent(component, !isAgent)
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		err := p.cluster.PostSeedRegistry(p.tempPath)
+		err := p.cluster.PostSeedRegistry(p.tmp)
 		if err != nil {
 			return installedCharts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 
 		// Push the seed images into to Zarf registry
-		err = images.PushToZarfRegistry(p.tempPath.SeedImage, []string{config.ZarfSeedImage}, false)
+		err = images.PushToZarfRegistry(p.tmp.SeedImage, []string{config.ZarfSeedImage}, false)
 		if err != nil {
 			return installedCharts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
 		}
@@ -178,7 +178,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (installedC
 // Deploy a Zarf Component
 func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToImgs bool) []types.InstalledChart {
 	var installedCharts []types.InstalledChart
-	message.Debugf("packager.deployComponent(%#v, %#v", p.tempPath, component)
+	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
 	componentPath, err := p.createComponentPaths(component)
@@ -249,7 +249,7 @@ func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceL
 		}
 
 		// Replace temp target directories
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tempPath.Base, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
@@ -318,7 +318,7 @@ func (p *Package) pushImagesToRegistry(componentImages []string, addShasumToImg 
 
 	// Try image push up to 3 times
 	for retry := 0; retry < 3; retry++ {
-		if err := images.PushToZarfRegistry(p.tempPath.Images, componentImages, addShasumToImg); err != nil {
+		if err := images.PushToZarfRegistry(p.tmp.Images, componentImages, addShasumToImg); err != nil {
 			message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			continue

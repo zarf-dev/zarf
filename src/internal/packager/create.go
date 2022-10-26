@@ -44,11 +44,9 @@ func (p *Package) Create(baseDir string) {
 		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
 	}
 
-	components := config.GetComponents()
-
 	seedImage := config.ZarfSeedImage
 
-	configFile := p.tempPath.ZarfYaml
+	configFile := p.tmp.ZarfYaml
 
 	// Save the transformed config
 	if err := config.BuildConfig(configFile); err != nil {
@@ -56,23 +54,23 @@ func (p *Package) Create(baseDir string) {
 	}
 
 	// Perform early package validation
-	validate.Run()
+	validate.Run(p.cfg.pkg)
 
 	if !confirmAction("Create", nil) {
 		os.Exit(0)
 	}
 
-	if config.IsZarfInitConfig() {
+	if p.cfg.IsInitConfig {
 		// Load seed images into their own happy little tarball for ease of import on init
-		pulledImages := images.PullAll([]string{seedImage}, p.tempPath.SeedImage)
+		pulledImages := images.PullAll([]string{seedImage}, p.tmp.SeedImage)
 		// Ignore SBOM creation if there the flag is set
-		if !p.config.CreateOptions.SkipSBOM {
-			sbom.CatalogImages(pulledImages, p.tempPath.Sboms, p.tempPath.SeedImage)
+		if !p.cfg.CreateOpts.SkipSBOM {
+			sbom.CatalogImages(pulledImages, p.tmp.Sboms, p.tmp.SeedImage)
 		}
 	}
 
 	var combinedImageList []string
-	for _, component := range components {
+	for _, component := range p.cfg.pkg.Components {
 		p.addComponent(component)
 		// Combine all component images into a single entry for efficient layer reuse
 		combinedImageList = append(combinedImageList, component.Images...)
@@ -81,12 +79,12 @@ func (p *Package) Create(baseDir string) {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := utils.Unique(combinedImageList)
-		pulledImages := images.PullAll(uniqueList, p.tempPath.Images)
+		pulledImages := images.PullAll(uniqueList, p.tmp.Images)
 
-		if p.config.CreateOptions.SkipSBOM {
+		if p.cfg.CreateOpts.SkipSBOM {
 			message.Debug("Skipping SBOM processing per --skip-sbom flag")
 		} else {
-			sbom.CatalogImages(pulledImages, p.tempPath.Sboms, p.tempPath.Images)
+			sbom.CatalogImages(pulledImages, p.tmp.Sboms, p.tmp.Images)
 		}
 	}
 
@@ -95,10 +93,10 @@ func (p *Package) Create(baseDir string) {
 		_ = os.Chdir(originalDir)
 	}
 
-	packageName := filepath.Join(p.config.CreateOptions.OutputDirectory, config.GetPackageName())
+	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
 
 	_ = os.RemoveAll(packageName)
-	err := archiver.Archive([]string{p.tempPath.Base + string(os.PathSeparator)}, packageName)
+	err := archiver.Archive([]string{p.tmp.Base + string(os.PathSeparator)}, packageName)
 	if err != nil {
 		message.Fatal(err, "Unable to create the package archive")
 	}

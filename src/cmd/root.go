@@ -18,7 +18,7 @@ var logLevel string
 var arch string
 
 // Default global config for the CLI
-var pkgConfig = packager.PackageConfig{}
+var pkgConfig = packager.Config{}
 
 // Viper instance used by the cmd package
 var v *viper.Viper

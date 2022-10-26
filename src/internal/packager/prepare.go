@@ -46,9 +46,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
 	}
 
-	components := config.GetComponents()
-
-	for _, component := range components {
+	for _, component := range p.cfg.pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
 				"if any repos contain helm charts you want to template and " +
@@ -59,7 +57,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 
 	fmt.Printf("components:\n")
 
-	for _, component := range components {
+	for _, component := range p.cfg.pkg.Components {
 
 		// matchedImages holds the collection of images, reset per-component
 		matchedImages = make(k8s.ImageMap)
@@ -211,7 +209,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 			}
 
 			if len(realImages) > 0 {
-				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, component.Name)
+				fmt.Printf("      # Possible images - %s - %s\n", p.cfg.pkg.Metadata.Name, component.Name)
 				for _, image := range realImages {
 					fmt.Println("      - " + image)
 				}

@@ -16,15 +16,15 @@ import (
 var ViewSBOM bool
 
 // Inspect list the contents of a package
-func(p *Package) Inspect(packageName string) {
+func (p *Package) Inspect(packageName string) {
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
 	}
 
 	// Extract the archive
-	_ = archiver.Extract(packageName, config.ZarfYAML, p.tempPath.Base)
+	_ = archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base)
 
-	configPath := filepath.Join(p.tempPath.Base, "zarf.yaml")
+	configPath := filepath.Join(p.tmp.Base, "zarf.yaml")
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		message.Fatal(err, "Unable to read the config file in the package")
@@ -37,18 +37,18 @@ func(p *Package) Inspect(packageName string) {
 
 	// Load the config to get the build version
 	if err := config.LoadConfig(configPath, false); err != nil {
-		message.Fatalf(err, "Unable to read %s", p.tempPath.Base)
+		message.Fatalf(err, "Unable to read %s", p.tmp.Base)
 	}
 
-	message.Infof("The package was built with Zarf CLI version %s\n", config.GetBuildData().Version)
+	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.pkg.Build.Version)
 
 	if ViewSBOM {
-		err = archiver.Extract(packageName, "sboms", p.tempPath.Base)
+		err = archiver.Extract(packageName, "sboms", p.tmp.Base)
 		if err != nil {
 			message.Fatalf(err, "Unable to extract sbom information from the package.")
 		}
 
-		sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tempPath.Sboms, "sbom-viewer-*"))
+		sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 		if len(sbomViewFiles) > 1 {
 			link := sbomViewFiles[0]
 			msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n\n", len(sbomViewFiles), link)

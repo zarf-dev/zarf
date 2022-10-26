@@ -25,41 +25,76 @@ import (
 )
 
 type Package struct {
-	config   *PackageConfig
-	cluster  *cluster.Cluster
-	kube     *k8s.Client
-	tempPath types.TempPaths
+	cfg     *Config
+	cluster *cluster.Cluster
+	kube    *k8s.Client
+	tmp     types.TempPaths
 }
 
-type PackageConfig struct {
-	// CreeateOptions tracks the user-defined options used to create the package
-	CreateOptions types.ZarfCreateOptions
+type Config struct {
+	// CreeateOpts tracks the user-defined options used to create the package
+	CreateOpts types.ZarfCreateOptions
 
-	// DeployOptions tracks user-defined values for the active deployment
-	DeployOptions types.ZarfDeployOptions
+	// DeployOpts tracks user-defined values for the active deployment
+	DeployOpts types.ZarfDeployOptions
 
-	// InitOptions tracks user-defined values for the active Zarf initialization.
-	InitOptions types.ZarfInitOptions
+	// InitOpts tracks user-defined values for the active Zarf initialization.
+	InitOpts types.ZarfInitOptions
+
+	// Track if CLI prompts should be generated
+	IsInteractive bool
+
+	// Track if the package is an init package
+	IsInitConfig bool
+
+	// The package data
+	pkg types.ZarfPackage
 }
 
-// NewPackage creates a new package instance with the provided config
-func NewPackage(config *PackageConfig) (*Package, error) {
+// NewPackage creates a new package instance with the provided config.
+func NewPackage(config *Config) (*Package, error) {
 	paths, err := createPaths()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	return &Package{config: config, tempPath: paths}, nil
+	// Track if this is an init package
+	config.IsInitConfig = strings.ToLower(config.pkg.Kind) == "zarfinitconfig"
+
+	return &Package{cfg: config, tmp: paths}, nil
 }
 
-// NewPackageOrDie creates a new package instance with the provided config or throws a fatal error
-func NewPackageOrDie(config *PackageConfig) *Package {
+// NewPackageOrDie creates a new package instance with the provided config or throws a fatal error.
+func NewPackageOrDie(config *Config) *Package {
 	pkg, err := NewPackage(config)
 	if err != nil {
 		message.Fatal(err, "Unable to create package the package")
 	}
 
 	return pkg
+}
+
+// GetInitPackageName returns the formatted name of the init package
+func GetInitPackageName() string {
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", config.GetArch(), config.CLIVersion)
+}
+
+// GetPackagename returns the formatted name of the package given the metadata
+func GetPackageName(metadata types.ZarfMetadata) string {
+	suffix := "tar.zst"
+	if metadata.Uncompressed {
+		suffix = "tar"
+	}
+	return fmt.Sprintf("zarf-package-%s-%s.%s", metadata.Name, config.GetArch(), suffix)
+}
+
+// GetPackageName returns the formatted name of the package
+func (p *Package) GetPackageName() string {
+	if p.cfg.IsInitConfig {
+		return GetInitPackageName()
+	}
+
+	return GetPackageName(p.cfg.pkg.Metadata)
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -91,7 +126,7 @@ func (p *Package) HandleIfURL(packagePath string, shasum string, insecureDeploy 
 	}
 	defer resp.Body.Close()
 
-	localPackagePath := p.tempPath.Base + providedURL.Path
+	localPackagePath := p.tmp.Base + providedURL.Path
 	message.Debugf("Creating local package with the path: %s", localPackagePath)
 	packageFile, _ := os.Create(localPackagePath)
 	_, err = io.Copy(packageFile, resp.Body)
@@ -120,7 +155,7 @@ func (p *Package) HandleIfURL(packagePath string, shasum string, insecureDeploy 
 func (p *Package) handleSgetPackage(sgetPackagePath string) string {
 
 	// Create the local file for the package
-	localPackagePath := filepath.Join(p.tempPath.Base, "remote.tar.zst")
+	localPackagePath := filepath.Join(p.tmp.Base, "remote.tar.zst")
 	destinationFile, err := os.Create(localPackagePath)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
@@ -130,19 +165,36 @@ func (p *Package) handleSgetPackage(sgetPackagePath string) string {
 	// If this is a DefenseUnicorns package, use an internal sget public key
 	if strings.HasPrefix(sgetPackagePath, "sget://defenseunicorns") {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
-		p.config.DeployOptions.SGetKeyPath = "env://DU_SGET_KEY"
+		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
 
 	// Remove the 'sget://' header for the actual sget call
 	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
 
 	// Sget the package
-	err = utils.Sget(sgetPackagePath, p.config.DeployOptions.SGetKeyPath, destinationFile, context.TODO())
+	err = utils.Sget(sgetPackagePath, p.cfg.DeployOpts.SGetKeyPath, destinationFile, context.TODO())
 	if err != nil {
 		message.Fatal(err, "Unable to get the remote package via sget")
 	}
 
 	return localPackagePath
+}
+
+func (p *Package) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+	basePath := filepath.Join(p.tmp.Base, component.Name)
+	err = utils.CreateDirectory(basePath, 0700)
+
+	paths = types.ComponentPaths{
+		Base:           basePath,
+		Files:          filepath.Join(basePath, "files"),
+		Charts:         filepath.Join(basePath, "charts"),
+		Repos:          filepath.Join(basePath, "repos"),
+		Manifests:      filepath.Join(basePath, "manifests"),
+		DataInjections: filepath.Join(basePath, "data"),
+		Values:         filepath.Join(basePath, "values"),
+	}
+
+	return paths, err
 }
 
 func isValidFileExtension(filename string) bool {
@@ -168,23 +220,6 @@ func createPaths() (paths types.TempPaths, err error) {
 		Components:       filepath.Join(basePath, "components"),
 		Sboms:            filepath.Join(basePath, "sboms"),
 		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
-	}
-
-	return paths, err
-}
-
-func (p *Package) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	basePath := filepath.Join(p.tempPath.Base, component.Name)
-	err = utils.CreateDirectory(basePath, 0700)
-
-	paths = types.ComponentPaths{
-		Base:           basePath,
-		Files:          filepath.Join(basePath, "files"),
-		Charts:         filepath.Join(basePath, "charts"),
-		Repos:          filepath.Join(basePath, "repos"),
-		Manifests:      filepath.Join(basePath, "manifests"),
-		DataInjections: filepath.Join(basePath, "data"),
-		Values:         filepath.Join(basePath, "values"),
 	}
 
 	return paths, err

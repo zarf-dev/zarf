@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -37,7 +36,7 @@ func (p *Package) Remove(packageName string) error {
 	}
 
 	// If components were provided; just remove the things we were asked to remove and return
-	requestedComponents := strings.Split(p.config.DeployOptions.Components, ",")
+	requestedComponents := strings.Split(p.cfg.DeployOpts.Components, ",")
 	if len(requestedComponents) > 0 && requestedComponents[0] != "" {
 		for i := len(packages.DeployedComponents) - 1; i >= 0; i-- {
 			installedComponent := packages.DeployedComponents[i]
@@ -57,7 +56,7 @@ func (p *Package) Remove(packageName string) error {
 			} else {
 				// Save the new secret with the removed components removed from the secret
 				newPackageSecret := p.kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
-				newPackageSecret.Labels["package-deploy-info"] = config.GetActiveConfig().Metadata.Name
+				newPackageSecret.Labels["package-deploy-info"] = p.cfg.pkg.Metadata.Name
 				newPackageSecretData, _ := json.Marshal(packages)
 				newPackageSecret.Data["data"] = newPackageSecretData
 				err = p.kube.ReplaceSecret(newPackageSecret)

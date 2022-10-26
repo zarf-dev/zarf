@@ -63,7 +63,7 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		pkgConfig.DeployOptions.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
+		pkgConfig.DeployOpts.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
 		packager.NewPackageOrDie(&pkgConfig).Deploy()
 	},
 }
@@ -78,7 +78,7 @@ var packageInspectCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Inspect(packageName)
+		packager.NewPackageOrDie(&pkgConfig).Inspect(packageName)
 	},
 }
 
@@ -129,9 +129,9 @@ var packageRemoveCmd = &cobra.Command{
 				message.Fatalf(nil, "Invalid tarball path provided")
 			}
 
-			tempPath, err := utils.MakeTempDir(pkgConfig.CommonOptions.TempDirectory)
+			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
-				message.Fatalf(err, "Unable to create tmpdir: %s", pkgConfig.CommonOptions.TempDirectory)
+				message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
 			}
 			defer os.RemoveAll(tempPath)
 
@@ -148,8 +148,8 @@ var packageRemoveCmd = &cobra.Command{
 
 			pkgName = pkgConfig.Metadata.Name
 		}
-		pkg := packager.NewPackage()
-		if err := pkg.Remove(pkgName); err != nil {
+
+		if err := packager.NewPackageOrDie(&pkgConfig).Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},
@@ -163,7 +163,7 @@ func choosePackage(args []string) string {
 	prompt := &survey.Input{
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar*")
+			files, _ := filepath.Glob(fmt.Sprintf("zarf-package-%s*.tar*", toComplete))
 			return files
 		},
 	}
@@ -195,24 +195,24 @@ func bindCreateFlags() {
 	createFlags := packageCreateCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	createFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
+	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 
-	createFlags.StringToStringVar(&pkgConfig.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
-	createFlags.StringVarP(&pkgConfig.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
-	createFlags.BoolVar(&pkgConfig.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
-	createFlags.BoolVar(&pkgConfig.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
+	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
+	createFlags.BoolVar(&pkgConfig.CreateOpts.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
 }
 
 func bindDeployFlags() {
 	deployFlags := packageDeployCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	deployFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
+	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
 
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
@@ -220,11 +220,11 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&pkgConfig.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
-	deployFlags.StringVar(&pkgConfig.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
+	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
-	deployFlags.StringVar(&pkgConfig.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
+	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }
 
 func bindInspectFlags() {
@@ -234,7 +234,7 @@ func bindInspectFlags() {
 
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
-	removeFlags.BoolVar(&pkgConfig.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-	removeFlags.StringVar(&pkgConfig.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
+	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
+	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }

@@ -18,7 +18,7 @@ import (
 func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	isInitPkg := r.URL.Query().Get("isInitPkg") == "true"
 
-	config := packager.PackageConfig{}
+	config := packager.Config{}
 
 	if isInitPkg {
 		var body = types.ZarfInitOptions{}
@@ -27,26 +27,26 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			message.ErrorWebf(err, w, "Unable to decode the request to deploy the cluster")
 			return
 		}
-		config.InitOptions = body
-		initPackageName := globalConfig.GetInitPackageName()
-		config.DeployOptions.PackagePath = initPackageName
+		config.InitOpts = body
+		initPackageName := packager.GetInitPackageName()
+		config.DeployOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		if utils.InvalidPath(config.DeployOptions.PackagePath) {
+		if utils.InvalidPath(config.DeployOpts.PackagePath) {
 			// Get the path to the executable
 			if executablePath, err := utils.GetFinalExecutablePath(); err != nil {
 				message.Errorf(err, "Unable to get the path to the executable")
 			} else {
 				executableDir := path.Dir(executablePath)
-				config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+				config.DeployOpts.PackagePath = filepath.Join(executableDir, initPackageName)
 			}
 
 			// If the init-package doesn't exist in the executable directory, try the cache directory
-			if err != nil || utils.InvalidPath(config.DeployOptions.PackagePath) {
-				config.DeployOptions.PackagePath = filepath.Join(globalConfig.GetAbsCachePath(), initPackageName)
+			if err != nil || utils.InvalidPath(config.DeployOpts.PackagePath) {
+				config.DeployOpts.PackagePath = filepath.Join(globalConfig.GetAbsCachePath(), initPackageName)
 
 				// If the init-package doesn't exist in the cache directory, return an error
-				if utils.InvalidPath(config.DeployOptions.PackagePath) {
+				if utils.InvalidPath(config.DeployOpts.PackagePath) {
 					common.WriteJSONResponse(w, false, http.StatusBadRequest)
 					return
 				}
@@ -59,7 +59,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			message.ErrorWebf(err, w, "Unable to decode the request to deploy the cluster")
 			return
 		}
-		config.DeployOptions = body
+		config.DeployOpts = body
 	}
 
 	globalConfig.CommonOptions.Confirm = true
