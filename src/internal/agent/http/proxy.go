@@ -54,13 +54,13 @@ func proxyDirector(req *http.Request) {
 	} else {
 		switch {
 		case isGitUserAgent(req.UserAgent()):
-			transformedURL, err = git.TransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.Path, zarfState.GitServer.PushUsername)
+			transformedURL, err = git.TransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		case isPipUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.Path, zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		case isNpmUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.NpmTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.Path, zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.NpmTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		default:
-			transformedURL, err = proxy.GenTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.Path, zarfState.GitServer.PushUsername)
+			transformedURL, err = proxy.GenTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		}
 
 		if err != nil {

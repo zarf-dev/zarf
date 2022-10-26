@@ -48,10 +48,10 @@ func NoTransformTarget(address string, path string) (*url.URL, error) {
 
 // NpmTransformURL finds the npm API path on a given URL and transforms that to align with the offline registry.
 func NpmTransformURL(baseURL string, reqURL string, username string) (string, error) {
-	// For further explanation: https://regex101.com/r/guYXVV/2
+	// For further explanation: https://regex101.com/r/RRyazc/2
 	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
 	npmURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)` +
-		`(?P<npmPath>(\/(@[\w\.\-\~]+\/)?[\w\.\-\~]+(\/-\/([\w\.\-\~]+\/)?[\w\.\-\~]+\.[\w]+)?(\/-rev\/.+)?)|(-\/(npm|v1|user|package)\/.+))$`)
+		`(?P<npmPath>(\/(@[\w\.\-\~]+(\/|%2[fF]))?[\w\.\-\~]+(\/-\/([\w\.\-\~]+\/)?[\w\.\-\~]+\.[\w]+)?(\/-rev\/.+)?)|(-\/(npm|v1|user|package)\/.+))$`)
 
 	return transformRegistryPath(baseURL, reqURL, username, npmURLRegex, "npmPath", "npm")
 }
