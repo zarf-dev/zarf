@@ -15,7 +15,7 @@ import (
 
 const (
 	// NoTransform is the URL prefix added to HTTP 3xx or text URLs that instructs Zarf not to transform on a subsequest request.
-	NoTransform = "/zarf-3xx-no-transform-%F0%9F%A6%84"
+	NoTransform = "/zarf-3xx-no-transform"
 )
 
 // GetProxyState gets the ZarfState and the NPM token for the proxy to use for a request.
