@@ -34,7 +34,7 @@ func (p *Package) getValidComponents() []types.ZarfComponent {
 	}
 
 	// Break up components into choice groups
-	for _, component := range p.cfg.pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		key := component.Group
 		// If not a choice group, then use the component name as the key
 		if key == "" {

@@ -1,5 +1,9 @@
 package utils
 
+import (
+	"time"
+)
+
 // Unique returns a new slice with only unique elements
 func Unique[T comparable](s []T) []T {
 	exists := make(map[T]bool)
@@ -11,4 +15,18 @@ func Unique[T comparable](s []T) []T {
 		}
 	}
 	return result
+}
+
+// Retry will retry a function until it succeeds or the timeout is reached
+func Retry(fn func() error, retries int, delay time.Duration) (err error) {
+	for r := 0; r < retries; r++ {
+		err = fn()
+		if err == nil {
+			break
+		}
+
+		time.Sleep(delay)
+	}
+
+	return err
 }

@@ -16,7 +16,7 @@ func (p *Package) composeComponents() {
 
 	components := []types.ZarfComponent{}
 
-	for _, component := range p.cfg.pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" {
 			components = append(components, component)
 		} else {
@@ -213,12 +213,12 @@ func (p *Package) getSubPackage(packagePath string) (importedPackage types.ZarfP
 
 	// Merge in child package variables (only if the variable does not exist in parent)
 	for _, importedVariable := range importedPackage.Variables {
-		config.InjectImportedVariable(importedVariable)
+		p.InjectImportedVariable(importedVariable)
 	}
 
 	// Merge in child package constants (only if the constant does not exist in parent)
 	for _, importedConstant := range importedPackage.Constants {
-		config.InjectImportedConstant(importedConstant)
+		p.InjectImportedConstant(importedConstant)
 	}
 
 	return importedPackage

@@ -25,47 +25,27 @@ import (
 )
 
 type Package struct {
-	cfg     *Config
+	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	kube    *k8s.Client
 	tmp     types.TempPaths
 }
 
-type Config struct {
-	// CreeateOpts tracks the user-defined options used to create the package
-	CreateOpts types.ZarfCreateOptions
-
-	// DeployOpts tracks user-defined values for the active deployment
-	DeployOpts types.ZarfDeployOptions
-
-	// InitOpts tracks user-defined values for the active Zarf initialization.
-	InitOpts types.ZarfInitOptions
-
-	// Track if CLI prompts should be generated
-	IsInteractive bool
-
-	// Track if the package is an init package
-	IsInitConfig bool
-
-	// The package data
-	pkg types.ZarfPackage
-}
-
 // NewPackage creates a new package instance with the provided config.
-func NewPackage(config *Config) (*Package, error) {
+func NewPackage(config *types.PackagerConfig) (*Package, error) {
 	paths, err := createPaths()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
 	// Track if this is an init package
-	config.IsInitConfig = strings.ToLower(config.pkg.Kind) == "zarfinitconfig"
+	config.IsInitConfig = strings.ToLower(config.Pkg.Kind) == "zarfinitconfig"
 
 	return &Package{cfg: config, tmp: paths}, nil
 }
 
 // NewPackageOrDie creates a new package instance with the provided config or throws a fatal error.
-func NewPackageOrDie(config *Config) *Package {
+func NewPackageOrDie(config *types.PackagerConfig) *Package {
 	pkg, err := NewPackage(config)
 	if err != nil {
 		message.Fatal(err, "Unable to create package the package")
@@ -94,7 +74,7 @@ func (p *Package) GetPackageName() string {
 		return GetInitPackageName()
 	}
 
-	return GetPackageName(p.cfg.pkg.Metadata)
+	return GetPackageName(p.cfg.Pkg.Metadata)
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -226,7 +206,6 @@ func createPaths() (paths types.TempPaths, err error) {
 }
 
 func confirmAction(userMessage string, sbomViewFiles []string) bool {
-	active := config.GetActiveConfig()
 
 	content, err := yaml.Marshal(active)
 	if err != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.Image {
+func PullAll(buildImageList []string, imageTarballPath string) (map[name.Tag]v1.Image, error) {
 	var (
 		longer     string
 		imageCount = len(buildImageList)
@@ -45,7 +45,7 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
 		img, err := crane.Pull(src, config.GetCraneOptions()...)
 		if err != nil {
-			spinner.Fatalf(err, "Unable to pull the image \"%s\"", src)
+			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
@@ -59,14 +59,14 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 	for src, img := range imageMap {
 		ref, err := name.ParseReference(src)
 		if err != nil {
-			spinner.Fatalf(err, "parsing ref %q", src)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
 		}
 
 		tag, ok := ref.(name.Tag)
 		if !ok {
 			d, ok := ref.(name.Digest)
 			if !ok {
-				spinner.Fatalf(nil, "image reference %s wasn't a tag or digest", src)
+				return nil, fmt.Errorf("image reference %s wasn't a tag or digest", src)
 			}
 			tag = d.Repository.Tag("digest-only")
 		}
@@ -87,12 +87,13 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		switch {
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
 			progressBar.Success("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
-			return tagToImage
+			return tagToImage, nil
 		case update.Error != nil && strings.HasPrefix(update.Error.Error(), "archive/tar: missed writing "):
 			// Handle potential image cache corruption with a more helpful error. See L#54 in libexec/src/archive/tar/writer.go
-			message.Fatalf(update.Error, "potential image cache corruption: %s of %v bytes - try clearing cache with \"zarf tools clear-cache\"", update.Error.Error(), update.Total)
+			message.Warnf("Potential image cache corruption: %s of %v bytes - try clearing cache with \"zarf tools clear-cache\"", update.Error.Error(), update.Total)
+			return nil, fmt.Errorf("failed to write image tarball: %w", update.Error)
 		case update.Error != nil:
-			message.Fatalf(update.Error, "error writing image tarball: %s", update.Error.Error())
+			return nil, fmt.Errorf("failed to write image tarball: %w", update.Error)
 		default:
 			title = fmt.Sprintf("Pulling %d images (%s of %s)", len(imageMap),
 				utils.ByteFormat(float64(update.Complete), 2),
@@ -105,5 +106,5 @@ func PullAll(buildImageList []string, imageTarballPath string) map[name.Tag]v1.I
 		}
 	}
 
-	return tagToImage
+	return tagToImage, nil
 }

@@ -109,7 +109,7 @@ var clearCacheCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		message.Debugf("Cache directory set to: %s", config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
-			message.Fatalf("Unable to clear the cache driectory %s: %s", config.GetAbsCachePath(), err.Error())
+			message.Fatalf(err, "Unable to clear the cache driectory %s", config.GetAbsCachePath())
 		}
 		message.SuccessF("Successfully cleared the cache from %s", config.GetAbsCachePath())
 	},

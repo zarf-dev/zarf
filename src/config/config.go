@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -78,9 +77,6 @@ var (
 	SGetPublicKey string
 	UIAssets      embed.FS
 
-	// Variables set by the user
-	SetVariableMap = map[string]string{}
-
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
@@ -141,10 +137,6 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 		}))
 }
 
-func GetSeedRegistry() string {
-	return fmt.Sprintf("%s:%s", IPV4Localhost, ZarfSeedPort)
-}
-
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
@@ -170,10 +162,6 @@ func InitState(tmpState types.ZarfState) {
 	state = tmpState
 }
 
-func GetState() types.ZarfState {
-	return state
-}
-
 func GetRegistry() string {
 	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
 	if state.RegistryInfo.NodePort >= 30000 {
@@ -183,69 +171,9 @@ func GetRegistry() string {
 	return state.RegistryInfo.Address
 }
 
-// LoadConfig loads the config from the given path and removes
-// components not matching the current OS if filterByOS is set.
-func LoadConfig(path string, filterByOS bool) error {
-	if err := utils.ReadYaml(path, &active); err != nil {
-		return err
-	}
-
-	// Filter each component to only compatible platforms
-	filteredComponents := []types.ZarfComponent{}
-	for _, component := range active.Components {
-		if isCompatibleComponent(component, filterByOS) {
-			filteredComponents = append(filteredComponents, component)
-		}
-	}
-	// Update the active package with the filtered components
-	active.Components = filteredComponents
-
-	return nil
-}
-
 // GetGitServerInfo returns the GitServerInfo for the git server Zarf is configured to use from the state
 func GetGitServerInfo() types.GitServerInfo {
 	return state.GitServer
-}
-
-// GetContainerRegistryInfo returns the ContainerRegistryInfo for the docker registry Zarf is configured to use from the state
-func GetContainerRegistryInfo() types.RegistryInfo {
-	return state.RegistryInfo
-}
-
-// BuildConfig adds build information and writes the config to the given path
-func BuildConfig(path string) error {
-	message.Debugf("config.BuildConfig(%s)", path)
-	now := time.Now()
-	// Just use $USER env variable to avoid CGO issue
-	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84
-	// Record the name of the user creating the package
-	if runtime.GOOS == "windows" {
-		active.Build.User = os.Getenv("USERNAME")
-	} else {
-		active.Build.User = os.Getenv("USER")
-	}
-	hostname, hostErr := os.Hostname()
-
-	// Need to ensure the arch is updated if injected
-	arch := GetArch()
-
-	// Normalize these for the package confirmation
-	active.Metadata.Architecture = arch
-	active.Build.Architecture = arch
-
-	// Record the time of package creation
-	active.Build.Timestamp = now.Format(time.RFC1123Z)
-
-	// Record the Zarf Version the CLI was built with
-	active.Build.Version = CLIVersion
-
-	if hostErr == nil {
-		// Record the hostname of the package creation terminal
-		active.Build.Terminal = hostname
-	}
-
-	return utils.WriteYaml(path, active, 0400)
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.

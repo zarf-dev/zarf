@@ -36,11 +36,11 @@ func (p *Package) Inspect(packageName string) {
 	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
-	if err := config.LoadConfig(configPath, false); err != nil {
+	if err := p.readYaml(configPath, false); err != nil {
 		message.Fatalf(err, "Unable to read %s", p.tmp.Base)
 	}
 
-	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.pkg.Build.Version)
+	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.Pkg.Build.Version)
 
 	if ViewSBOM {
 		err = archiver.Extract(packageName, "sboms", p.tmp.Base)

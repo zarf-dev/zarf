@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/internal/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
@@ -56,7 +56,7 @@ func (p *Package) Remove(packageName string) error {
 			} else {
 				// Save the new secret with the removed components removed from the secret
 				newPackageSecret := p.kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
-				newPackageSecret.Labels["package-deploy-info"] = p.cfg.pkg.Metadata.Name
+				newPackageSecret.Labels["package-deploy-info"] = p.cfg.Pkg.Metadata.Name
 				newPackageSecretData, _ := json.Marshal(packages)
 				newPackageSecret.Data["data"] = newPackageSecretData
 				err = p.kube.ReplaceSecret(newPackageSecret)

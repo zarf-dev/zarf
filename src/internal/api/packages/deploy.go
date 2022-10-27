@@ -18,7 +18,7 @@ import (
 func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	isInitPkg := r.URL.Query().Get("isInitPkg") == "true"
 
-	config := packager.Config{}
+	config := types.PackagerConfig{}
 
 	if isInitPkg {
 		var body = types.ZarfInitOptions{}

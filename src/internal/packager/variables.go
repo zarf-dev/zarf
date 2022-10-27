@@ -1,31 +1,32 @@
-package config
+package packager
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // FillActiveTemplate handles setting the active variables and reloading the base template.
-func FillActiveTemplate() error {
-	packageVariables, err := utils.FindYamlTemplates(&active, "###ZARF_PKG_VAR_", "###")
+func (p *Package) FillActiveTemplate() error {
+	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
 		return err
 	}
 
-	for key := range CreateOptions.SetVariables {
-		value := CreateOptions.SetVariables[key]
+	for key := range p.cfg.CreateOpts.SetVariables {
+		value := p.cfg.CreateOpts.SetVariables[key]
 		// Ensure uppercase for VIPER
 		packageVariables[strings.ToUpper(key)] = &value
 	}
 
 	for key, value := range packageVariables {
-		if value == nil && !CommonOptions.Confirm {
-			setVal, err := promptVariable(types.ZarfPackageVariable{
+		if value == nil && !config.CommonOptions.Confirm {
+			setVal, err := p.promptVariable(types.ZarfPackageVariable{
 				Name: key,
 			})
 
@@ -45,19 +46,19 @@ func FillActiveTemplate() error {
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
 	}
 
-	return utils.ReloadYamlTemplate(&active, templateMap)
+	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
 
 // SetActiveVariables handles setting the active variables used to template component files.
-func SetActiveVariables() error {
-	for key := range DeployOptions.SetVariables {
-		value := DeployOptions.SetVariables[key]
+func (p *Package) SetActiveVariables() error {
+	for key := range p.cfg.DeployOpts.SetVariables {
+		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase for VIPER
-		SetVariableMap[strings.ToUpper(key)] = value
+		p.cfg.SetVariableMap[strings.ToUpper(key)] = value
 	}
 
-	for _, variable := range active.Variables {
-		_, present := SetVariableMap[variable.Name]
+	for _, variable := range p.cfg.Pkg.Variables {
+		_, present := p.cfg.SetVariableMap[variable.Name]
 
 		// Variable is present, no need to continue checking
 		if present {
@@ -65,18 +66,18 @@ func SetActiveVariables() error {
 		}
 
 		// First set default (may be overridden by prompt)
-		SetVariableMap[variable.Name] = variable.Default
+		p.cfg.SetVariableMap[variable.Name] = variable.Default
 
 		// Variable is set to prompt the user
-		if variable.Prompt && !CommonOptions.Confirm {
+		if variable.Prompt && !config.CommonOptions.Confirm {
 			// Prompt the user for the variable
-			val, err := promptVariable(variable)
+			val, err := p.promptVariable(variable)
 
 			if err != nil {
 				return err
 			}
 
-			SetVariableMap[variable.Name] = val
+			p.cfg.SetVariableMap[variable.Name] = val
 		}
 	}
 
@@ -84,34 +85,34 @@ func SetActiveVariables() error {
 }
 
 // InjectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
+func (p *Package) InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
 	presentInActive := false
-	for _, configVariable := range active.Variables {
+	for _, configVariable := range p.cfg.Pkg.Variables {
 		if configVariable.Name == importedVariable.Name {
 			presentInActive = true
 		}
 	}
 
 	if !presentInActive {
-		active.Variables = append(active.Variables, importedVariable)
+		p.cfg.Pkg.Variables = append(p.cfg.Pkg.Variables, importedVariable)
 	}
 }
 
 // InjectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
+func (p *Package) InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	presentInActive := false
-	for _, configVariable := range active.Constants {
+	for _, configVariable := range p.cfg.Pkg.Constants {
 		if configVariable.Name == importedConstant.Name {
 			presentInActive = true
 		}
 	}
 
 	if !presentInActive {
-		active.Constants = append(active.Constants, importedConstant)
+		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
 }
 
-func promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
+func (p *Package) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
 
 	if variable.Description != "" {
 		message.Question(variable.Description)

@@ -9,7 +9,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/git"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"

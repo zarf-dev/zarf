@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/helm"
-	"github.com/defenseunicorns/zarf/src/internal/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -35,18 +35,18 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err := config.LoadConfig(config.ZarfYAML, false); err != nil {
+	if err := p.readYaml(config.ZarfYAML, false); err != nil {
 		message.Fatal(err, "Unable to read the zarf.yaml file")
 	}
 
 	p.composeComponents()
 
 	// After components are composed, template the active package
-	if err := config.FillActiveTemplate(); err != nil {
+	if err := p.FillActiveTemplate(); err != nil {
 		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
 	}
 
-	for _, component := range p.cfg.pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
 				"if any repos contain helm charts you want to template and " +
@@ -57,7 +57,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 
 	fmt.Printf("components:\n")
 
-	for _, component := range p.cfg.pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 
 		// matchedImages holds the collection of images, reset per-component
 		matchedImages = make(k8s.ImageMap)
@@ -209,7 +209,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 			}
 
 			if len(realImages) > 0 {
-				fmt.Printf("      # Possible images - %s - %s\n", p.cfg.pkg.Metadata.Name, component.Name)
+				fmt.Printf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
 				for _, image := range realImages {
 					fmt.Println("      - " + image)
 				}
