@@ -48,8 +48,8 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn unpack() {
+    let sha_sum = &env::args().nth(2).unwrap().to_owned();
 
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")
@@ -64,21 +64,16 @@ fn main() {
     // get a buffer of the final merged file contents
     let contents = collect_binary_data(&file_partials).unwrap();
 
-    // verify sha256sum if it exists
-    if args.len() > 1 {
-        let sha_sum = &args[1];
+    // create a Sha256 object
+    let mut hasher = Sha256::new();
 
-        // create a Sha256 object
-        let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(&contents);
 
-        // write input message
-        hasher.update(&contents);
-
-        // read hash digest and consume hasher
-        let result = hasher.finalize();
-        let result_string = result.encode_hex::<String>();
-        assert_eq!(*sha_sum, result_string);
-    }
+    // read hash digest and consume hasher
+    let result = hasher.finalize();
+    let result_string = result.encode_hex::<String>();
+    assert_eq!(*sha_sum, result_string);
 
     // write the merged file to disk and extract it
     let tar = GzDecoder::new(&contents[..]);
@@ -87,11 +82,14 @@ fn main() {
         .unpack("/zarf-stage2")
         .expect("Unable to unarchive the resulting tarball");
 
-    start_seed_registry(Path::new("/zarf-stage2"));
+    let seed_image_tar = Archive::new(File::open("/zarf-stage2/seed-image.tar").unwrap());
+    seed_image_tar
+        .unpack("/zarf-stage2/seed-image")
+        .expect("Unable to unarchive the seed image tarball");
 }
 
-fn start_seed_registry(root: &Path) {
-    let root = root.to_path_buf();
+fn start_seed_registry() {
+    let root = Path::new("/zarf-stage2/seed-image").to_owned();
     rouille::start_server("0.0.0.0:5001", move |request| {
         rouille::log(request, io::stdout(), || {
             router!(request,
@@ -199,4 +197,14 @@ fn start_seed_registry(root: &Path) {
             )
         })
     });
+}
+
+fn main() {
+    let cmd = &env::args().nth(1).unwrap().to_owned();
+
+    if cmd == "unpack" {
+        unpack();
+    } else if cmd == "serve" {
+        start_seed_registry();
+    }
 }
