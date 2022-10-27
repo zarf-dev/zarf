@@ -68,33 +68,27 @@ build-ui: ## Build the Zarf UI
 	npm ci
 	npm run build
 
-build-cli-linux-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Linux on AMD64
+build-cli-linux-amd: check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
 
-build-cli-linux-arm: build-injector-registry-arm check-ui ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: check-ui ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm main.go
 
-build-cli-mac-intel: build-injector-registry-amd check-ui ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: check-ui ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel main.go
 
-build-cli-mac-apple: build-injector-registry-arm check-ui ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: check-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
-build-cli-windows-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on AMD64
+build-cli-windows-amd: check-ui ## Build the Zarf CLI for Windows on AMD64
 	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe main.go ## Build the Zarf CLI for Windows on AMD64
 
-build-cli-windows-arm: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on ARM
+build-cli-windows-arm: check-ui ## Build the Zarf CLI for Windows on ARM
 	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe main.go ## Build the Zarf CLI for Windows on ARM
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
-
-build-injector-registry-amd: ## Build the Zarf Injector Stage 2 for Linux on AMD64
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/zarf-registry-amd64 src/injector/stage2/registry.go
-
-build-injector-registry-arm: ## Build the Zarf Injector Stage 2 for Linux on ARM
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/zarf-registry-arm64 src/injector/stage2/registry.go
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
 	go run main.go internal generate-cli-docs
