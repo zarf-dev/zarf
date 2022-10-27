@@ -50,13 +50,12 @@ func createPaths() tempPaths {
 	return tempPaths{
 		base: basePath,
 
-		injectZarfBinary: filepath.Join(basePath, "zarf-registry"),
-		injectBinary:     filepath.Join(basePath, "zarf-injector"),
-		seedImage:        filepath.Join(basePath, "seed-image.tar"),
-		images:           filepath.Join(basePath, "images.tar"),
-		components:       filepath.Join(basePath, "components"),
-		sboms:            filepath.Join(basePath, "sboms"),
-		zarfYaml:         filepath.Join(basePath, "zarf.yaml"),
+		injectBinary: filepath.Join(basePath, "zarf-injector"),
+		seedImage:    filepath.Join(basePath, "seed-image.tar"),
+		images:       filepath.Join(basePath, "images.tar"),
+		components:   filepath.Join(basePath, "components"),
+		sboms:        filepath.Join(basePath, "sboms"),
+		zarfYaml:     filepath.Join(basePath, "zarf.yaml"),
 	}
 }
 
