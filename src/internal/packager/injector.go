@@ -324,7 +324,7 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			// This directory is filled via the configmap injections
 			WorkingDir: "/zarf-stage1",
-			Command:    []string{"/zarf-stage1/zarf-injector", payloadShasum},
+			Command:    []string{"/zarf-stage1/zarf-injector", "unpack", payloadShasum},
 
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -354,12 +354,6 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 		},
 	}
 
-	// Create container definition for the injector pod
-	newHost, err := utils.SwapHostWithoutChecksum(config.ZarfSeedImage, "127.0.0.1:5001")
-	if err != nil {
-		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
-		return nil, err
-	}
 	pod.Spec.Containers = []corev1.Container{
 		{
 			Name: "injector",
@@ -370,14 +364,17 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 			// This directory's contents come from the init container output
 			WorkingDir: "/zarf-stage2",
 			Command: []string{
-				"/zarf-stage2/zarf-registry",
-				"/zarf-stage2/seed-image.tar",
-				config.ZarfSeedImage,
-				newHost,
+				"/zarf-stage1/zarf-injector",
+				"serve",
 			},
 
 			// Shared mount between the init and regular containers
 			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "stage1",
+					MountPath: "/zarf-stage1/zarf-injector",
+					SubPath:   "zarf-injector",
+				},
 				{
 					Name:      "stage2",
 					MountPath: "/zarf-stage2",
