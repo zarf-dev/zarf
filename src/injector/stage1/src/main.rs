@@ -82,7 +82,7 @@ fn unpack() {
         .unpack("/zarf-stage2")
         .expect("Unable to unarchive the resulting tarball");
 
-    let seed_image_tar = Archive::new(File::open("/zarf-stage2/seed-image.tar").unwrap());
+    let mut seed_image_tar = Archive::new(File::open("/zarf-stage2/seed-image.tar").unwrap());
     seed_image_tar
         .unpack("/zarf-stage2/seed-image")
         .expect("Unable to unarchive the seed image tarball");
