@@ -15,6 +15,11 @@ jobs:
   build-injector:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout Repo"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branchName }}
+
       - name: Install tools
         uses: ./.github/actions/install-tools
 
@@ -23,11 +28,6 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           sudo apt install build-essential -y
-
-      - name: "Checkout Repo"
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branchName }}
 
       - name: "Build Rust Binary for x86_64"
         working-directory: src/injector/stage1
