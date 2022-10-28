@@ -2,7 +2,7 @@ use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
 use oci_spec::image::{
-    Descriptor, DescriptorBuilder, ImageManifestBuilder, MediaType, SCHEMA_VERSION,
+    Descriptor, DescriptorBuilder, ImageManifest, ImageManifestBuilder, MediaType, SCHEMA_VERSION,
 };
 use rouille::{router, Response, ResponseBody};
 use serde::{Deserialize, Serialize};
@@ -96,10 +96,15 @@ struct CraneManifest {
     layers: Vec<String>,
 }
 
+fn get_file_size(path: &PathBuf) -> i64 {
+    let metadata = std::fs::metadata(path).unwrap();
+    metadata.len() as i64
+}
+
 fn start_seed_registry() {
-    let root = Path::new("/zarf-stage2/seed-image").to_owned();
-    // let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
-    rouille::start_server("0.0.0.0:5000", move |request| {
+    // let root = Path::new("/zarf-stage2/seed-image").to_owned();
+    let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
+    rouille::start_server("0.0.0.0:9000", move |request| {
         rouille::log(request, io::stdout(), || {
             router!(request,
                 (GET) (/v2) => {
@@ -121,29 +126,30 @@ fn start_seed_registry() {
                 },
 
                 (GET) (/v2/registry/manifests/{_tag :String}) => {
-                    get_manifest(&root)
-                },
-
-                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
-                    let mut file = File::open(root.join("manifest.json")).unwrap();
-                    let mut data = String::new();
-                    file.read_to_string(&mut data).unwrap();
-                    let crane_manifest: Vec<CraneManifest> = serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
-                    Response::text("")
-                        .with_unique_header(
-                            "Content-Type",
-                            "application/vnd.docker.distribution.manifest.v2+json",
-                        )
-                        .with_additional_header(
-                            "Docker-Content-Digest",
-                            crane_manifest[0].config.clone(),
-                        )
-                        .with_additional_header("Etag", crane_manifest[0].config.clone())
+                    let manifest = get_manifest(&root);
+                    Response::json(&manifest)
+                        .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+                        .with_additional_header("Docker-Content-Digest", manifest.config().digest().to_string())
+                        .with_additional_header("Etag", manifest.config().digest().to_string())
                         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
                 },
 
                 (GET) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
-                    get_manifest(&root)
+                    let manifest = get_manifest(&root);
+                    Response::json(&manifest)
+                        .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+                        .with_additional_header("Docker-Content-Digest", manifest.config().digest().to_string())
+                        .with_additional_header("Etag", manifest.config().digest().to_string())
+                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+                },
+
+                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
+                    let manifest = get_manifest(&root);
+                    Response::json(&manifest)
+                        .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+                        .with_additional_header("Docker-Content-Digest", manifest.config().digest().to_string())
+                        .with_additional_header("Etag", manifest.config().digest().to_string())
+                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
                 },
 
                 (GET) (/v2/registry/blobs/{digest :String}) => {
@@ -175,18 +181,13 @@ fn start_seed_registry() {
     });
 }
 
-fn get_manifest(root: &PathBuf) -> Response {
+fn get_manifest(root: &PathBuf) -> ImageManifest {
     let mut file = File::open(root.join("manifest.json")).unwrap();
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
     let crane_manifest: Vec<CraneManifest> =
         serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
-
-    fn get_file_size(path: &PathBuf) -> i64 {
-        let metadata = std::fs::metadata(path).unwrap();
-        metadata.len() as i64
-    }
 
     let config_digest = root.join(crane_manifest[0].config.clone());
 
@@ -227,19 +228,7 @@ fn get_manifest(root: &PathBuf) -> Response {
         .layers(layers)
         .build()
         .expect("build image manifest");
-
-    let response = Response::json(&manifest)
-        .with_unique_header(
-            "Content-Type",
-            "application/vnd.docker.distribution.manifest.v2+json",
-        )
-        .with_additional_header(
-            "Docker-Content-Digest",
-            manifest.config().digest().to_string(),
-        )
-        .with_additional_header("Etag", manifest.config().digest().to_string())
-        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0");
-    response
+    manifest
 }
 
 fn main() {
