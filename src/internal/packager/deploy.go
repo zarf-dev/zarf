@@ -149,7 +149,7 @@ func deployComponents(tempPath tempPaths, componentsToDeploy []types.ZarfCompone
 		// If this is an init-package and we are using an external registry, don't deploy the components to stand up an internal registry
 		// TODO: Figure out a better way to do this (I don't like how these components are still `required` according to the yaml definition)
 		if (config.IsZarfInitConfig() && config.InitOptions.RegistryInfo.Address != "") &&
-			(component.Name == "zarf-seed-registry" || component.Name == "zarf-injector") {
+			(component.Name == "zarf-seed-registry" || component.Name == "zarf-injector" || component.Name == "zarf-registry") {
 			message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 			continue
 		}

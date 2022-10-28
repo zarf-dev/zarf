@@ -99,7 +99,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(values.agentTLS.Key)
 		builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(values.agentTLS.CA)
 
-	case "zarf-seed-registry":
+	case "zarf-seed-registry", "zarf-registry":
 		builtinMap["SEED_REGISTRY"] = values.seedRegistry
 		builtinMap["HTPASSWD"] = values.secret.htpasswd
 		builtinMap["REGISTRY_SECRET"] = values.secret.registrySecret
