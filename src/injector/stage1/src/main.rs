@@ -4,7 +4,7 @@ use hex::ToHex;
 use oci_spec::image::{
     Descriptor, DescriptorBuilder, ImageManifest, ImageManifestBuilder, MediaType, SCHEMA_VERSION,
 };
-use rouille::{router, Response, ResponseBody};
+use rouille::{router, Response};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::env;
@@ -102,21 +102,10 @@ fn get_file_size(path: &PathBuf) -> i64 {
 }
 
 fn start_seed_registry() {
-    // let root = Path::new("/zarf-stage2/seed-image").to_owned();
-    let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
-    rouille::start_server("0.0.0.0:9000", move |request| {
+    let root = Path::new("/zarf-stage2/seed-image").to_owned();
+    rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
             router!(request,
-                (GET) (/v2) => {
-                    // mirror from docker api, redirect to /v2/
-                    Response {
-                        status_code: 301,
-                        data: ResponseBody::from_string("<a href=\"/v2/\">Moved Permanently</a>.\n"),
-                        headers: vec![("Location".into(), "/v2/".into())],
-                        upgrade: None,
-                    }.with_unique_header("Content-Type", "text/html; charset=utf-8")
-                },
-
                 (GET) (/v2/) => {
                     // mirror from docker api, returns empty json w/ Docker-Distribution-Api-Version header set
                     Response::text("{}")
