@@ -40,7 +40,7 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     // add contents of all files in paths to buffer
     for path in paths {
         println!("Processing {}", path.display());
-        let new_content = get_file(&path);
+        let new_content = get_file(path);
         buffer
             .write(&new_content.unwrap())
             .expect("Could not add the file contents to the merged file buffer");
@@ -49,9 +49,7 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn unpack() {
-    let sha_sum = &env::args().nth(2).unwrap().to_owned();
-
+fn unpack(sha_sum: &String) {
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")
         .expect("Failed to read glob pattern")
@@ -141,15 +139,15 @@ fn start_seed_registry(file_root: &Path) {
 
 fn handle_get_manifest(root: &Path) -> Response {
     let sha_manifest = fs::read_to_string(root.join("link")).expect("unable to read pointer file");
-    let file = File::open(&root.join(sha_manifest.clone())).unwrap();
+    let file = File::open(&root.join(&sha_manifest)).unwrap();
     Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-        .with_additional_header("Docker-Content-Digest", sha_manifest.clone())
-        .with_additional_header("Etag", sha_manifest.clone())
+        .with_additional_header("Docker-Content-Digest", sha_manifest.to_owned())
+        .with_additional_header("Etag", sha_manifest)
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
 }
 
 fn handle_get_digest(root: &Path, digest: &String) -> Response {
-    let mut path = root.join(digest.clone());
+    let mut path = root.join(digest);
 
     match path.try_exists() {
         Ok(true) => {
@@ -163,8 +161,8 @@ fn handle_get_digest(root: &Path, digest: &String) -> Response {
     }
     let file = File::open(&path).unwrap();
     Response::from_file("application/octet-stream", file)
-        .with_additional_header("Docker-Content-Digest", digest.clone())
-        .with_additional_header("Etag", digest.clone())
+        .with_additional_header("Docker-Content-Digest", digest.to_owned())
+        .with_additional_header("Etag", digest.to_owned())
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
         .with_additional_header("Cache-Control", "max-age=31536000")
 }
@@ -182,7 +180,7 @@ fn get_file_size(path: &PathBuf) -> i64 {
     metadata.len() as i64
 }
 
-fn create_v2_manifest(root: &PathBuf) {
+fn create_v2_manifest(root: &Path) {
     let data = fs::read_to_string(root.join("manifest.json")).expect("unable to read pointer file");
 
     let crane_manifest: Vec<CraneManifest> =
@@ -248,10 +246,12 @@ fn create_v2_manifest(root: &PathBuf) {
 }
 
 fn main() {
-    let cmd = &env::args().nth(1).unwrap().to_owned();
+    let args: Vec<String> = env::args().collect();
+    let cmd = &args[1];
+    let sha_sum = &args[2];
 
     if cmd == "unpack" {
-        unpack();
+        unpack(sha_sum);
     } else if cmd == "serve" {
         let root = Path::new("/zarf-stage2/seed-image").to_owned();
         create_v2_manifest(&root);
