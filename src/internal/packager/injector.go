@@ -124,7 +124,6 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.base, "payload.tgz")
 	tarFileList := []string{
-		tempPath.injectZarfBinary,
 		tempPath.seedImage,
 	}
 	labels := map[string]string{
@@ -276,11 +275,6 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 
 	// Add the seed images shasum env var
 	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(tempPath.seedImage); err != nil {
-		return nil, err
-	}
-
-	// Add the zarf registry binary shasum env var
-	if envVars["SHA256_ZARF"], err = utils.GetSha256Sum(tempPath.injectZarfBinary); err != nil {
 		return nil, err
 	}
 

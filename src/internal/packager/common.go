@@ -32,14 +32,13 @@ type componentPaths struct {
 	dataInjections string
 }
 type tempPaths struct {
-	base             string
-	injectZarfBinary string
-	injectBinary     string
-	seedImage        string
-	images           string
-	components       string
-	sboms            string
-	zarfYaml         string
+	base         string
+	injectBinary string
+	seedImage    string
+	images       string
+	components   string
+	sboms        string
+	zarfYaml     string
 }
 
 func createPaths() tempPaths {
