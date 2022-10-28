@@ -248,9 +248,9 @@ fn create_v2_manifest(root: &Path) {
 fn main() {
     let args: Vec<String> = env::args().collect();
     let cmd = &args[1];
-    let sha_sum = &args[2];
 
     if cmd == "unpack" {
+        let sha_sum = &args[2];
         unpack(sha_sum);
     } else if cmd == "serve" {
         let root = Path::new("/zarf-stage2/seed-image").to_owned();
