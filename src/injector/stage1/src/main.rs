@@ -89,6 +89,87 @@ fn unpack() {
         .expect("Unable to unarchive the seed image tarball");
 }
 
+fn start_seed_registry() {
+    let root = Path::new("/zarf-stage2/seed-image").to_owned();
+    create_v2_manifest(&root);
+    println!("Starting seed registry at {} on port 5000", root.display());
+    rouille::start_server("0.0.0.0:5000", move |request| {
+        rouille::log(request, io::stdout(), || {
+            router!(request,
+                (GET) (/v2/) => {
+                    // returns empty json w/ Docker-Distribution-Api-Version header set
+                    Response::text("{}")
+                    .with_unique_header("Content-Type", "application/json; charset=utf-8")
+                    .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+                    .with_additional_header("X-Content-Type-Options", "nosniff")
+                },
+
+                (GET) (/v2/registry/manifests/{_tag :String}) => {
+                    handle_get_manifest(&root)
+                },
+
+                (GET) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
+                    handle_get_manifest(&root)
+                },
+
+                (HEAD) (/v2/registry/manifests/{_ref :String}) => {
+                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                    // on Content-Length, we respond the same as a GET
+                    handle_get_manifest(&root)
+                },
+
+                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
+                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                    // on Content-Length, we respond the same as a GET
+                    handle_get_manifest(&root)
+                },
+
+                (GET) (/v2/registry/blobs/{digest :String}) => {
+                    handle_get_digest(&root, &digest)
+                },
+
+                (GET) (/v2/{_namespace :String}/registry/blobs/{digest :String}) => {
+                    handle_get_digest(&root, &digest)
+                },
+
+                _ => {
+                    Response::empty_404()
+                }
+            )
+        })
+    });
+}
+
+fn handle_get_manifest(root: &Path) -> Response {
+    let sha_manifest = fs::read_to_string(root.join("link")).expect("unable to read pointer file");
+    let file = File::open(&root.join(sha_manifest.clone())).unwrap();
+    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
+        .with_additional_header("Docker-Content-Digest", sha_manifest.clone())
+        .with_additional_header("Etag", sha_manifest.clone())
+        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+}
+
+fn handle_get_digest(root: &Path, digest: &String) -> Response {
+    let mut path = root.join(digest.clone());
+
+    match path.try_exists() {
+        Ok(true) => {
+            // means they queried the config json
+        }
+        _ => {
+            // means they queried a layer
+            path = root.join(digest.strip_prefix("sha256:").unwrap());
+            path.set_extension("tar.gz");
+        }
+    }
+    let file = File::open(&path).unwrap();
+    Response::from_file("application/octet-stream", file)
+        .with_additional_header("Docker-Content-Digest", digest.clone())
+        .with_additional_header("Etag", digest.clone())
+        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+        .with_additional_header("Cache-Control", "max-age=31536000")
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct CraneManifest {
@@ -100,99 +181,6 @@ struct CraneManifest {
 fn get_file_size(path: &PathBuf) -> i64 {
     let metadata = std::fs::metadata(path).unwrap();
     metadata.len() as i64
-}
-
-fn start_seed_registry() {
-    let root = Path::new("/zarf-stage2/seed-image").to_owned();
-    // let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
-    create_v2_manifest(&root);
-    println!("Starting seed registry at {} on port 5000", root.display());
-    rouille::start_server("0.0.0.0:5000", move |request| {
-        rouille::log(request, io::stdout(), || {
-            router!(request,
-                (GET) (/v2/) => {
-                    // mirror from docker api, returns empty json w/ Docker-Distribution-Api-Version header set
-                    Response::text("{}")
-                    .with_unique_header("Content-Type", "application/json; charset=utf-8")
-                    .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                    .with_additional_header("X-Content-Type-Options", "nosniff")
-                },
-
-                (GET) (/v2/registry/manifests/{_tag :String}) => {
-                    let digest = fs::read_to_string(root.join("manifestv2.sha256")).expect("unable to read pointer file");
-                    let file = File::open(&root.join(digest.clone())).unwrap();
-                    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-                        .with_additional_header("Docker-Content-Digest", digest.clone())
-                        .with_additional_header("Etag", digest.clone())
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                },
-
-                (GET) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
-                    let digest = fs::read_to_string(root.join("manifestv2.sha256")).expect("unable to read pointer file");
-                    let file = File::open(&root.join(digest.clone())).unwrap();
-                    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-                        .with_additional_header("Docker-Content-Digest", digest.clone())
-                        .with_additional_header("Etag", digest.clone())
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                },
-
-                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
-                    let digest = fs::read_to_string(root.join("manifestv2.sha256")).expect("unable to read pointer file");
-                    let file = File::open(&root.join(digest.clone())).unwrap();
-                    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-                        .with_additional_header("Docker-Content-Digest", digest.clone())
-                        .with_additional_header("Etag", digest.clone())
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                },
-
-                (GET) (/v2/{_namespace :String}/registry/blobs/{digest :String}) => {
-                    let mut path = root.join(digest.clone());
-
-                    match path.try_exists() {
-                        Ok(true) => {
-                            // means they queried the config json
-                        },
-                        _ => {
-                            // means they queried a layer
-                            path = root.join(digest.strip_prefix("sha256:").unwrap());
-                            path.set_extension("tar.gz");
-                        }
-                    }
-                    let file = File::open(&path).unwrap();
-                        Response::from_file("application/octet-stream", file)
-                        .with_additional_header("Docker-Content-Digest", digest.clone())
-                        .with_additional_header("Etag", digest)
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                        .with_additional_header("Cache-Control", "max-age=31536000")
-                },
-
-                (GET) (/v2/registry/blobs/{digest :String}) => {
-                    let mut path = root.join(digest.clone());
-
-                    match path.try_exists() {
-                        Ok(true) => {
-                            // means they queried the config json
-                        },
-                        _ => {
-                            // means they queried a layer
-                            path = root.join(digest.strip_prefix("sha256:").unwrap());
-                            path.set_extension("tar.gz");
-                        }
-                    }
-                    let file = File::open(&path).unwrap();
-                        Response::from_file("application/octet-stream", file)
-                        .with_additional_header("Docker-Content-Digest", digest.clone())
-                        .with_additional_header("Etag", digest)
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                        .with_additional_header("Cache-Control", "max-age=31536000")
-                },
-
-                _ => {
-                    Response::empty_404()
-                }
-            )
-        })
-    });
 }
 
 fn create_v2_manifest(root: &PathBuf) {
@@ -245,21 +233,20 @@ fn create_v2_manifest(root: &PathBuf) {
         .build()
         .expect("build image manifest");
 
+    println!("{:#?}", manifest.to_string_pretty().unwrap());
+
     manifest
         .to_file_pretty(root.join("manifestv2.json"))
         .unwrap();
 
-    // get sha256 of file
     let mut file = File::open(root.join("manifestv2.json")).unwrap();
     let mut hasher = Sha256::new();
     std::io::copy(&mut file, &mut hasher).unwrap();
     let result = hasher.finalize();
     let sha_digest = format!("sha256:{:x}", result);
 
-    // rename file to digest
     std::fs::rename(root.join("manifestv2.json"), root.join(sha_digest.clone())).unwrap();
-    // write sha_digest to text file
-    let mut file = File::create(root.join("manifestv2.sha256")).unwrap();
+    let mut file = File::create(root.join("link")).unwrap();
     file.write_all(sha_digest.as_bytes()).unwrap();
 }
 
