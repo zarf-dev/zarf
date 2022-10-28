@@ -103,10 +103,13 @@ fn get_file_size(path: &PathBuf) -> i64 {
 
 fn start_seed_registry() {
     let root = Path::new("/zarf-stage2/seed-image").to_owned();
+    // let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
+    println!("Starting seed registry at {} on port 5000", root.display());
     rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
             router!(request,
                 (GET) (/v2/) => {
+                    println!("\n{:?}\n", request);
                     // mirror from docker api, returns empty json w/ Docker-Distribution-Api-Version header set
                     Response::text("{}")
                     .with_unique_header("Content-Type", "application/json; charset=utf-8")
@@ -115,6 +118,7 @@ fn start_seed_registry() {
                 },
 
                 (GET) (/v2/registry/manifests/{_tag :String}) => {
+                    println!("\n{:?}\n", request);
                     let manifest = get_manifest(&root);
                     Response::json(&manifest)
                         .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
@@ -123,7 +127,8 @@ fn start_seed_registry() {
                         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
                 },
 
-                (GET) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
+                (GET) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
+                    println!("\n{:?}\n", request);
                     let manifest = get_manifest(&root);
                     Response::json(&manifest)
                         .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
@@ -132,7 +137,8 @@ fn start_seed_registry() {
                         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
                 },
 
-                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
+                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
+                    println!("\n{:?}\n", request);
                     let manifest = get_manifest(&root);
                     Response::json(&manifest)
                         .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
@@ -142,6 +148,7 @@ fn start_seed_registry() {
                 },
 
                 (GET) (/v2/registry/blobs/{digest :String}) => {
+                    println!("\n{:?}\n", request);
                     let mut path = root.join(digest.clone());
 
                     match path.try_exists() {
