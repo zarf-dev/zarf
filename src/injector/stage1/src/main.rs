@@ -89,9 +89,8 @@ fn unpack() {
         .expect("Unable to unarchive the seed image tarball");
 }
 
-fn start_seed_registry() {
-    let root = Path::new("/zarf-stage2/seed-image").to_owned();
-    create_v2_manifest(&root);
+fn start_seed_registry(file_root: &Path) {
+    let root = PathBuf::from(file_root);
     println!("Starting seed registry at {} on port 5000", root.display());
     rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
@@ -184,9 +183,7 @@ fn get_file_size(path: &PathBuf) -> i64 {
 }
 
 fn create_v2_manifest(root: &PathBuf) {
-    let mut file = File::open(root.join("manifest.json")).unwrap();
-    let mut data = String::new();
-    file.read_to_string(&mut data).unwrap();
+    let data = fs::read_to_string(root.join("manifest.json")).expect("unable to read pointer file");
 
     let crane_manifest: Vec<CraneManifest> =
         serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
@@ -233,7 +230,7 @@ fn create_v2_manifest(root: &PathBuf) {
         .build()
         .expect("build image manifest");
 
-    println!("{:#?}", manifest.to_string_pretty().unwrap());
+    println!("{}", manifest.to_string_pretty().unwrap());
 
     manifest
         .to_file_pretty(root.join("manifestv2.json"))
@@ -256,6 +253,8 @@ fn main() {
     if cmd == "unpack" {
         unpack();
     } else if cmd == "serve" {
-        start_seed_registry();
+        let root = Path::new("/zarf-stage2/seed-image").to_owned();
+        create_v2_manifest(&root);
+        start_seed_registry(&root);
     }
 }
