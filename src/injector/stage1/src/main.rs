@@ -88,8 +88,17 @@ fn unpack() {
         .expect("Unable to unarchive the seed image tarball");
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct CraneManifest {
+    config: String,
+    repo_tags: Vec<String>,
+    layers: Vec<String>,
+}
+
 fn start_seed_registry() {
     let root = Path::new("/zarf-stage2/seed-image").to_owned();
+    // let root = Path::new("/Users/razzle/dev/docker-registry-rust/mnt/registry-rust/").to_owned();
     rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
             router!(request,
@@ -112,62 +121,29 @@ fn start_seed_registry() {
                 },
 
                 (GET) (/v2/registry/manifests/{_tag :String}) => {
+                    get_manifest(&root)
+                },
+
+                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
                     let mut file = File::open(root.join("manifest.json")).unwrap();
                     let mut data = String::new();
                     file.read_to_string(&mut data).unwrap();
-
-                    #[derive(Serialize, Deserialize)]
-                    #[serde(rename_all = "PascalCase")]
-                    struct CraneManifest {
-                        config: String,
-                        repo_tags: Vec<String>,
-                        layers: Vec<String>,
-                    }
-
                     let crane_manifest: Vec<CraneManifest> = serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
+                    Response::text("")
+                        .with_unique_header(
+                            "Content-Type",
+                            "application/vnd.docker.distribution.manifest.v2+json",
+                        )
+                        .with_additional_header(
+                            "Docker-Content-Digest",
+                            crane_manifest[0].config.clone(),
+                        )
+                        .with_additional_header("Etag", crane_manifest[0].config.clone())
+                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+                },
 
-                    fn get_file_size(path: &PathBuf) -> i64 {
-                        let metadata = std::fs::metadata(path).unwrap();
-                        metadata.len() as i64
-                    }
-
-                    let config_digest = root.join(crane_manifest[0].config.clone());
-
-                    let config = DescriptorBuilder::default()
-                        .media_type(MediaType::ImageConfig)
-                        .size(get_file_size(&config_digest))
-                        .digest(crane_manifest[0].config.clone())
-                        .build()
-                        .expect("build config descriptor");
-
-                    let layers: Vec<Descriptor> = crane_manifest[0].layers.iter().map(|layer| {
-                        let digest = root.join(layer);
-                        let full_digest = format!("sha256:{}", layer.to_string().strip_suffix(".tar.gz").unwrap());
-
-                        const ROOTF_DIFF_TAR_GZIP: &str = "application/vnd.docker.image.rootfs.diff.tar.gzip";
-
-                        DescriptorBuilder::default()
-                            .media_type(MediaType::Other(ROOTF_DIFF_TAR_GZIP.to_string()))
-                            .size(get_file_size(&digest))
-                            .digest(full_digest)
-                            .build()
-                            .expect("build layer")
-                    }).collect();
-
-                    let manifest = ImageManifestBuilder::default()
-                        .schema_version(SCHEMA_VERSION)
-                        .media_type(MediaType::Other("application/vnd.docker.distribution.manifest.v2+json".to_string()))
-                        .config(config)
-                        .layers(layers)
-                        .build()
-                        .expect("build image manifest");
-
-                    let response = Response::json(&manifest)
-                        .with_unique_header("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
-                        .with_additional_header("Docker-Content-Digest", manifest.config().digest().to_string())
-                        .with_additional_header("Etag", manifest.config().digest().to_string())
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0");
-                    response
+                (GET) (/v2/{_namespace :String}/registry/manifests/{_tag :String}) => {
+                    get_manifest(&root)
                 },
 
                 (GET) (/v2/registry/blobs/{digest :String}) => {
@@ -197,6 +173,73 @@ fn start_seed_registry() {
             )
         })
     });
+}
+
+fn get_manifest(root: &PathBuf) -> Response {
+    let mut file = File::open(root.join("manifest.json")).unwrap();
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
+
+    let crane_manifest: Vec<CraneManifest> =
+        serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
+
+    fn get_file_size(path: &PathBuf) -> i64 {
+        let metadata = std::fs::metadata(path).unwrap();
+        metadata.len() as i64
+    }
+
+    let config_digest = root.join(crane_manifest[0].config.clone());
+
+    let config = DescriptorBuilder::default()
+        .media_type(MediaType::ImageConfig)
+        .size(get_file_size(&config_digest))
+        .digest(crane_manifest[0].config.clone())
+        .build()
+        .expect("build config descriptor");
+
+    let layers: Vec<Descriptor> = crane_manifest[0]
+        .layers
+        .iter()
+        .map(|layer| {
+            let digest = root.join(layer);
+            let full_digest = format!(
+                "sha256:{}",
+                layer.to_string().strip_suffix(".tar.gz").unwrap()
+            );
+
+            const ROOTF_DIFF_TAR_GZIP: &str = "application/vnd.docker.image.rootfs.diff.tar.gzip";
+
+            DescriptorBuilder::default()
+                .media_type(MediaType::Other(ROOTF_DIFF_TAR_GZIP.to_string()))
+                .size(get_file_size(&digest))
+                .digest(full_digest)
+                .build()
+                .expect("build layer")
+        })
+        .collect();
+
+    let manifest = ImageManifestBuilder::default()
+        .schema_version(SCHEMA_VERSION)
+        .media_type(MediaType::Other(
+            "application/vnd.docker.distribution.manifest.v2+json".to_string(),
+        ))
+        .config(config)
+        .layers(layers)
+        .build()
+        .expect("build image manifest");
+
+    let response = Response::json(&manifest)
+        .with_unique_header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.v2+json",
+        )
+        .with_additional_header(
+            "Docker-Content-Digest",
+            manifest.config().digest().to_string(),
+        )
+        .with_additional_header("Etag", manifest.config().digest().to_string())
+        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0");
+    response
 }
 
 fn main() {
