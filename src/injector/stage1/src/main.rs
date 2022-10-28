@@ -16,9 +16,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 
-// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
-
-// read the binary contents of a file
+/// Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
     // open the file
     let mut f = File::open(path)?;
@@ -32,7 +30,7 @@ fn get_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
     }
 }
 
-// merge all given files into one buffer
+/// Merges all given files into one buffer
 fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     // create an empty buffer
     let mut buffer = Vec::new();
@@ -49,6 +47,9 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     Ok(buffer)
 }
 
+/// Unpacks the zarf-payload-* configmaps back into a tarball, then unpacks into /zarf/stage2
+///
+/// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 fn unpack(sha_sum: &String) {
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")
@@ -87,6 +88,9 @@ fn unpack(sha_sum: &String) {
         .expect("Unable to unarchive the seed image tarball");
 }
 
+/// Starts a static docker compliant registry server that only serves the single image from /zarf-stage2/seed-image
+///
+/// (which is a docker registry image in crane's tarball format) - https://github.com/google/go-containerregistry/tree/main/pkg/v1/tarball
 fn start_seed_registry(file_root: &Path) {
     let root = PathBuf::from(file_root);
     println!("Starting seed registry at {} on port 5000", root.display());
@@ -137,6 +141,7 @@ fn start_seed_registry(file_root: &Path) {
     });
 }
 
+/// Handles the GET request for the manifest (only returns a Docker V2 manifest regardless of Accept header)
 fn handle_get_manifest(root: &Path) -> Response {
     let sha_manifest = fs::read_to_string(root.join("link")).expect("unable to read pointer file");
     let file = File::open(&root.join(&sha_manifest)).unwrap();
@@ -146,6 +151,7 @@ fn handle_get_manifest(root: &Path) -> Response {
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
 }
 
+/// Handles the GET request for a blob
 fn handle_get_digest(root: &Path, digest: &String) -> Response {
     let mut path = root.join(digest);
 
@@ -175,11 +181,19 @@ struct CraneManifest {
     layers: Vec<String>,
 }
 
+/// Calculates the file size of a file
 fn get_file_size(path: &PathBuf) -> i64 {
     let metadata = std::fs::metadata(path).unwrap();
     metadata.len() as i64
 }
 
+/// Takes crane's tarball format and converts it to a Docker V2 manifest
+///
+/// Creates:
+///
+/// /zarf-stage2/link - a pointer file to the manifest
+///
+/// /zarf-stage2/manifestv2.json - the manifest
 fn create_v2_manifest(root: &Path) {
     let data = fs::read_to_string(root.join("manifest.json")).expect("unable to read pointer file");
 
