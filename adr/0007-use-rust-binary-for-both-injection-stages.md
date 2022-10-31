@@ -23,7 +23,7 @@ The rust binary is already being injected via configmap and unpacking the tarbal
 
 - not only re-assemble + unpack the tarball, but also unpack the `registry:2` image (stored as a [crane tarball format](https://github.com/google/go-containerregistry/tree/main/pkg/v1/tarball))
 - transform the `registry:2` crane manifest to a docker v2 manifest
-- spin up a HTTP server compliant with the v2 docker registry API to serve the `registry:2` image
+- spin up an HTTP server compliant with the v2 docker registry API to serve the `registry:2` image
 
 ## Consequences
 
