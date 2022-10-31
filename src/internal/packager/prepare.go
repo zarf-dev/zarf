@@ -130,11 +130,12 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 				}
 
 				// Generate helm templates to pass to gitops engine
-				template, err := helm.TemplateChart(helm.ChartOptions{
+				helmCfg := helm.Helm{
 					BasePath:          componentPath.Base,
 					Chart:             chart,
 					ChartLoadOverride: override,
-				})
+				}
+				template, err := helmCfg.TemplateChart()
 
 				if err != nil {
 					message.Errorf(err, "Problem rendering the helm template for %s", chart.Url)

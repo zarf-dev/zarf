@@ -23,7 +23,7 @@ func (g *Git) CheckoutTag(tag string) {
 func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) {
 	message.Debugf("git.checkoutTagAsBranch(%s,%s)", tag, branch.String())
 
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}
@@ -43,7 +43,7 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 
 	_ = g.deleteBranchIfExists(branch)
 
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}
@@ -79,7 +79,7 @@ func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) {
 	message.Debugf("git.checkout(%#v)", checkoutOptions)
 
 	// Open the given repo
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}

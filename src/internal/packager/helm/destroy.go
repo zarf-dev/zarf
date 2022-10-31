@@ -7,12 +7,12 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 )
 
-func Destroy(purgeAllZarfInstallations bool) {
+func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
 
 	// Initially load the actionConfig without a namespace
-	actionConfig, err := createActionConfig("", spinner)
+	actionConfig, err := h.createActionConfig("", spinner)
 	if err != nil {
 		// Don't fatal since this is a removal action
 		spinner.Errorf(err, "Unable to initialize the K8s client")
@@ -45,7 +45,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 		// Filter on zarf releases
 		if zarfPrefix.MatchString(release.Name) {
 			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)
-			if err = RemoveChart(release.Namespace, release.Name, spinner); err != nil {
+			if err = h.RemoveChart(release.Namespace, release.Name, spinner); err != nil {
 				// Don't fatal since this is a removal action
 				spinner.Errorf(err, "Unable to uninstall the chart")
 			}
@@ -55,11 +55,11 @@ func Destroy(purgeAllZarfInstallations bool) {
 	spinner.Success()
 }
 
-func RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace
-	actionConfig, _ := createActionConfig(namespace, spinner)
+	h.actionConfig, _ = h.createActionConfig(namespace, spinner)
 	// Perform the uninstall
-	response, err := uninstallChart(actionConfig, name)
+	response, err := h.uninstallChart(name)
 	message.Debug(response)
 	return err
 }

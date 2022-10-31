@@ -7,12 +7,12 @@ import (
 )
 
 type Git struct {
-	server types.GitServerInfo
+	Server types.GitServerInfo
 
-	spinner *message.Spinner
+	Spinner *message.Spinner
 
 	// Target working directory for the git repository
-	gitPath string
+	GitPath string
 }
 
 type Credential struct {
@@ -26,13 +26,13 @@ const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
 func New(server types.GitServerInfo) *Git {
 	return &Git{
-		server: server,
+		Server: server,
 	}
 }
 
 func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
 	return &Git{
-		server:  server,
-		spinner: spinner,
+		Server:  server,
+		Spinner: spinner,
 	}
 }

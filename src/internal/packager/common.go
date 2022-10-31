@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -37,7 +36,7 @@ func NewPackager(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	pkgConfig.arch = getArch(pkgConfig.cfg.Pkg.Metadata.Architecture, pkgConfig.cfg.Pkg.Build.Architecture)
+	pkgConfig.arch = config.GetArch(pkgConfig.cfg.Pkg.Metadata.Architecture, pkgConfig.cfg.Pkg.Build.Architecture)
 
 	// Track if this is an init package
 	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
@@ -57,8 +56,10 @@ func NewPackagerOrDie(config *types.PackagerConfig) (pkgConfig *Packager) {
 }
 
 // GetInitPackageName returns the formatted name of the init package
-func GetInitPackageName(archs ...string) string {
-	arch := getArch(archs...)
+func GetInitPackageName(arch string) string {
+	if arch == "" {
+		arch = config.GetArch()
+	}
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
@@ -201,19 +202,4 @@ func createPaths() (paths types.TempPaths, err error) {
 	}
 
 	return paths, err
-}
-
-// getArch returns the arch based on a priority list
-func getArch(archs ...string) string {
-	// List of architecture overrides.
-	priority := append([]string{config.CliArch}, archs...)
-
-	// Find the first architecture that is specified.
-	for _, arch := range priority {
-		if arch != "" {
-			return arch
-		}
-	}
-
-	return runtime.GOARCH
 }

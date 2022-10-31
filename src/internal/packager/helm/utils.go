@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/defenseunicorns/zarf/src/types"
-
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -18,17 +16,12 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
 
-// StandardName generates a predictable full path for a helm chart for Zarf
-func StandardName(destination string, chart types.ZarfChart) string {
-	return filepath.Join(destination, chart.Name+"-"+chart.Version)
-}
-
 // loadChartFromTarball returns a helm chart from a tarball
-func loadChartFromTarball(options ChartOptions) (*chart.Chart, error) {
+func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(filepath.Join(options.BasePath, "charts"), options.Chart) + ".tgz"
-	if options.ChartLoadOverride != "" {
-		sourceFile = options.ChartLoadOverride
+	sourceFile := StandardName(filepath.Join(h.BasePath, "charts"), h.Chart) + ".tgz"
+	if h.ChartLoadOverride != "" {
+		sourceFile = h.ChartLoadOverride
 	}
 
 	// Load the loadedChart tarball
@@ -45,13 +38,13 @@ func loadChartFromTarball(options ChartOptions) (*chart.Chart, error) {
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists
-func parseChartValues(options ChartOptions) (map[string]any, error) {
+func (h *Helm) parseChartValues() (map[string]any, error) {
 	valueOpts := &values.Options{}
 
-	for idx, file := range options.Chart.ValuesFiles {
-		path := StandardName(filepath.Join(options.BasePath, "values"), options.Chart) + "-" + strconv.Itoa(idx)
+	for idx, file := range h.Chart.ValuesFiles {
+		path := StandardName(filepath.Join(h.BasePath, "values"), h.Chart) + "-" + strconv.Itoa(idx)
 		// If we are overriding the chart path, assuming this is for zarf prepare
-		if options.ChartLoadOverride != "" {
+		if h.ChartLoadOverride != "" {
 			path = file
 		}
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
@@ -66,7 +59,7 @@ func parseChartValues(options ChartOptions) (map[string]any, error) {
 	return valueOpts.MergeValues(providers)
 }
 
-func createActionConfig(namespace string, spinner *message.Spinner) (*action.Configuration, error) {
+func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) (*action.Configuration, error) {
 	// OMG THIS IS SOOOO GROSS PPL... https://github.com/helm/helm/issues/8780
 	_ = os.Setenv("HELM_NAMESPACE", namespace)
 

@@ -56,7 +56,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 
 		// Defaults
 		state.Distro = distro
-		state.Architecture = config.GetArch()
+		state.Architecture = clusterArch
 		state.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 
 		// Setup zarf agent PKI
@@ -111,9 +111,6 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 	if err := c.SaveZarfState(state); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
-
-	// Load state for the rest of the operations
-	config.InitState(state)
 
 	return nil
 }

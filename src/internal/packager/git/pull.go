@@ -14,7 +14,7 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
+func (g *Git) DownloadRepoToTemp(gitURL string) string {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
@@ -22,7 +22,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	g.pull(gitURL, path, spinner, "")
+	g.pull(gitURL, path, "")
 	return path
 }
 
@@ -39,8 +39,8 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 	return path, nil
 }
 
-func (g *Git) pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string) {
-	spinner.Updatef("Processing git repo %s", gitURL)
+func (g *Git) pull(gitURL, targetFolder string, repoName string) {
+	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
 	if repoName != "" {
@@ -58,20 +58,20 @@ func (g *Git) pull(gitURL, targetFolder string, spinner *message.Spinner, repoNa
 	onlyFetchRef := matches[idx("atRef")] != ""
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
 
-	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
+	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		spinner.Debugf("Repo already cloned, fetching upstream changes...")
+		g.Spinner.Debugf("Repo already cloned, fetching upstream changes...")
 
 		err = g.fetch(gitCachePath)
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			spinner.Debugf("Repo already up to date")
+			g.Spinner.Debugf("Repo already up to date")
 		} else if err != nil {
-			spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
+			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
 		}
 	} else if err != nil {
-		spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		g.Spinner.Fatalf(err, "Not a valid git repo or unable to clone")
 	}
 
 	if gitCachePath != targetFolder {
@@ -90,13 +90,13 @@ func (g *Git) pull(gitURL, targetFolder string, spinner *message.Spinner, repoNa
 
 		if err != nil {
 			// No repo head available
-			spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
+			g.Spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
 			// Valid repo head and it is a branch
 			trunkBranchName = head.Name()
 		} else {
 			// Valid repo head but not a branch
-			spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
+			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
 		_, _ = g.removeLocalBranchRefs()

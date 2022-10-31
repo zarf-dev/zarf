@@ -392,11 +392,12 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		}
 
 		// Generate helm templates to pass to gitops engine
-		addedConnectStrings, installedChartName := helm.InstallOrUpgradeChart(helm.ChartOptions{
+		helmCfg := helm.Helm{
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
-		})
+		}
+		addedConnectStrings, installedChartName := helmCfg.InstallOrUpgradeChart()
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map
@@ -418,7 +419,11 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		}
 
 		// Iterate over any connectStrings and add to the main map
-		addedConnectStrings, installedChartName := helm.GenerateChart(componentPath.Manifests, manifest, component)
+		helmCfg := helm.Helm{
+			BasePath:  componentPath.Manifests,
+			Component: component,
+		}
+		addedConnectStrings, installedChartName := helmCfg.GenerateChart(manifest)
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map

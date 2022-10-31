@@ -12,7 +12,7 @@ import (
 )
 
 var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
-var initPattern = regexp.MustCompile(packager.GetInitPackageName())
+var initPattern = regexp.MustCompile(packager.GetInitPackageName(""))
 
 // Find returns all packages anywhere down the directory tree of the working directory.
 func Find(w http.ResponseWriter, r *http.Request) {

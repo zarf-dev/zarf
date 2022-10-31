@@ -148,7 +148,7 @@ func init() {
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	cranePlatformOptions := config.GetCraneOptions()
+	cranePlatformOptions := config.GetCraneOptions(false)
 
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""

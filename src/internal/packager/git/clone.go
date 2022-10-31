@@ -10,10 +10,10 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinner *message.Spinner) (*git.Repository, error) {
+func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git.Repository, error) {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
-		Progress:   spinner,
+		Progress:   g.Spinner,
 		RemoteName: onlineRemoteName,
 	}
 
@@ -40,7 +40,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinn
 
 		return repo, git.ErrRepositoryAlreadyExists
 	} else if err != nil {
-		spinner.Debugf("Failed to clone repo: %s", err)
+		g.Spinner.Debugf("Failed to clone repo: %s", err)
 		message.Infof("Falling back to host git for %s", gitURL)
 
 		// If we can't clone with go-git, fallback to the host clone
@@ -52,8 +52,8 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinn
 		}
 
 		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", cmdArgs...)
-		spinner.Updatef(stdOut)
-		spinner.Debugf(stdErr)
+		g.Spinner.Updatef(stdOut)
+		g.Spinner.Debugf(stdErr)
 
 		if err != nil {
 			return nil, err

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -19,46 +18,35 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-type ChartOptions struct {
-	BasePath          string
-	Chart             types.ZarfChart
-	ReleaseName       string
-	ChartLoadOverride string
-	ChartOverride     *chart.Chart
-	ValueOverride     map[string]any
-	Component         types.ZarfComponent
-	Cluster           *cluster.Cluster
-}
-
 // InstallOrUpgradeChart performs a helm install of the given chart
-func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) {
+func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string) {
 	var installedChartName string
-	fromMessage := options.Chart.Url
+	fromMessage := h.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
 	}
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
-		options.Chart.Name,
-		options.Chart.Version,
+		h.Chart.Name,
+		h.Chart.Version,
 		fromMessage)
 	defer spinner.Stop()
 
 	var output *release.Release
 
-	options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
-	if options.Chart.ReleaseName != "" {
-		options.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
+	h.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.Name)
+	if h.Chart.ReleaseName != "" {
+		h.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.ReleaseName)
 	}
-	installedChartName = options.ReleaseName
+	installedChartName = h.ReleaseName
 
 	// Do not wait for the chart to be ready if data injections are present
-	if len(options.Component.DataInjections) > 0 {
+	if len(h.Component.DataInjections) > 0 {
 		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		options.Chart.NoWait = true
+		h.Chart.NoWait = true
 	}
 
-	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
-	postRender := NewRenderer(options, actionConfig)
+	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
+	postRender := h.NewRenderer()
 
 	// Setup K8s connection
 	if err != nil {
@@ -77,10 +65,10 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
-				_ = rollbackChart(actionConfig, options.ReleaseName)
+				_ = h.rollbackChart(h.ReleaseName)
 			} else {
 				spinner.Updatef("Performing chart uninstall")
-				_, _ = uninstallChart(actionConfig, options.ReleaseName)
+				_, _ = h.uninstallChart(h.ReleaseName)
 			}
 			spinner.Fatalf(nil, "Unable to complete helm chart install/upgrade")
 			break
@@ -88,18 +76,18 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 
 		spinner.Updatef("Checking for existing helm deployment")
 
-		_, histErr := histClient.Run(options.ReleaseName)
+		_, histErr := histClient.Run(h.ReleaseName)
 
 		switch histErr {
 		case driver.ErrReleaseNotFound:
 			// No prior release, try to install it
 			spinner.Updatef("Attempting chart installation")
-			output, err = installChart(actionConfig, options, postRender)
+			output, err = h.installChart(postRender)
 
 		case nil:
 			// Otherwise, there is a prior release so upgrade it
 			spinner.Updatef("Attempting chart upgrade")
-			output, err = upgradeChart(actionConfig, options, postRender)
+			output, err = h.upgradeChart(postRender)
 
 		default:
 			// 😭 things aren't working
@@ -123,12 +111,12 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 }
 
 // TemplateChart generates a helm template from a given chart
-func TemplateChart(options ChartOptions) (string, error) {
-	message.Debugf("helm.TemplateChart(%#v)", options)
-	spinner := message.NewProgressSpinner("Templating helm chart %s", options.Chart.Name)
+func (h *Helm) TemplateChart() (string, error) {
+	message.Debugf("helm.TemplateChart()")
+	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
 
-	actionConfig, err := createActionConfig(options.Chart.Namespace, spinner)
+	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
 
 	// Setup K8s connection
 	if err != nil {
@@ -143,16 +131,16 @@ func TemplateChart(options ChartOptions) (string, error) {
 	client.ClientOnly = true
 	client.IncludeCRDs = true
 
-	if options.Chart.ReleaseName != "" {
-		client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.ReleaseName)
+	if h.Chart.ReleaseName != "" {
+		client.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.ReleaseName)
 	} else {
-		client.ReleaseName = fmt.Sprintf("zarf-%s", options.Chart.Name)
+		client.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.Name)
 	}
 
 	// Namespace must be specified
-	client.Namespace = options.Chart.Namespace
+	client.Namespace = h.Chart.Namespace
 
-	loadedChart, chartValues, err := loadChartData(options)
+	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
 		return "", fmt.Errorf("unable to load chart data: %w", err)
 	}
@@ -169,8 +157,8 @@ func TemplateChart(options ChartOptions) (string, error) {
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
-func GenerateChart(basePath string, manifest types.ZarfManifest, component types.ZarfComponent) (types.ConnectStrings, string) {
-	message.Debugf("helm.GenerateChart(%s, %#v, %s)", basePath, manifest, component.Name)
+func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings, string) {
+	message.Debugf("helm.GenerateChart(%#v)", manifest)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -179,7 +167,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	tmpChart.Metadata = new(chart.Metadata)
 
 	// Generate a hashed chart name
-	rawChartName := fmt.Sprintf("raw-%s-%s-%s", config.GetActiveConfig().Metadata.Name, component.Name, manifest.Name)
+	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.Cfg.Pkg.Metadata.Name, h.Component.Name, manifest.Name)
 	hasher := sha1.New()
 	hasher.Write([]byte(rawChartName))
 	tmpChart.Metadata.Name = rawChartName
@@ -192,7 +180,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	// Add the manifest files so helm does its thing
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
-		manifest := fmt.Sprintf("%s/%s", basePath, file)
+		manifest := fmt.Sprintf("%s/%s", h.BasePath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to read the manifest file contents")
@@ -201,51 +189,47 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart()
-	options := ChartOptions{
-		BasePath: basePath,
-		Chart: types.ZarfChart{
-			Name:        tmpChart.Metadata.Name,
-			ReleaseName: sha1ReleaseName,
-			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.Namespace,
-			NoWait:      manifest.NoWait,
-		},
-		ChartOverride: tmpChart,
-		// We don't have any values because we do not expose them in the zarf.yaml currently
-		ValueOverride: map[string]any{},
-		// Images needed for eventual post-render templating
-		Component: component,
+	h.Chart = types.ZarfChart{
+		Name:        tmpChart.Metadata.Name,
+		ReleaseName: sha1ReleaseName,
+		Version:     tmpChart.Metadata.Version,
+		Namespace:   manifest.Namespace,
+		NoWait:      manifest.NoWait,
 	}
+	h.ChartOverride = tmpChart
+
+	// We don't have any values because we do not expose them in the zarf.yaml currently
+	h.ValueOverride = map[string]any{}
 
 	spinner.Success()
 
-	return InstallOrUpgradeChart(options)
+	return h.InstallOrUpgradeChart()
 }
 
-func installChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.installChart(%#v, %#v, %#v)", actionConfig, options, postRender)
+func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
+	message.Debugf("helm.installChart(%#v)", postRender)
 	// Bind the helm action
-	client := action.NewInstall(actionConfig)
+	client := action.NewInstall(h.actionConfig)
 
 	// Let each chart run for 15 minutes
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
-	client.Wait = !options.Chart.NoWait
+	client.Wait = !h.Chart.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly
 	client.SkipCRDs = false
 
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this
-	client.ReleaseName = options.ReleaseName
+	client.ReleaseName = h.ReleaseName
 
 	// Namespace must be specified
-	client.Namespace = options.Chart.Namespace
+	client.Namespace = h.Chart.Namespace
 
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
 
-	loadedChart, chartValues, err := loadChartData(options)
+	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
@@ -254,36 +238,36 @@ func installChart(actionConfig *action.Configuration, options ChartOptions, post
 	return client.Run(loadedChart, chartValues)
 }
 
-func upgradeChart(actionConfig *action.Configuration, options ChartOptions, postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.upgradeChart(%#v, %#v, %#v)", actionConfig, options, postRender)
-	client := action.NewUpgrade(actionConfig)
+func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
+	message.Debugf("helm.upgradeChart(%#v)", postRender)
+	client := action.NewUpgrade(h.actionConfig)
 
 	// Let each chart run for 15 minutes
 	client.Timeout = 15 * time.Minute
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)k3
-	client.Wait = !options.Chart.NoWait
+	client.Wait = !h.Chart.NoWait
 
 	client.SkipCRDs = true
 
 	// Namespace must be specified
-	client.Namespace = options.Chart.Namespace
+	client.Namespace = h.Chart.Namespace
 
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
 
-	loadedChart, chartValues, err := loadChartData(options)
+	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
 	// Perform the loadedChart upgrade
-	return client.Run(options.ReleaseName, loadedChart, chartValues)
+	return client.Run(h.ReleaseName, loadedChart, chartValues)
 }
 
-func rollbackChart(actionConfig *action.Configuration, name string) error {
-	message.Debugf("helm.rollbackChart(%#v, %s)", actionConfig, name)
-	client := action.NewRollback(actionConfig)
+func (h *Helm) rollbackChart(name string) error {
+	message.Debugf("helm.rollbackChart(%s)", name)
+	client := action.NewRollback(h.actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
 	client.Wait = true
@@ -291,39 +275,39 @@ func rollbackChart(actionConfig *action.Configuration, name string) error {
 	return client.Run(name)
 }
 
-func uninstallChart(actionConfig *action.Configuration, name string) (*release.UninstallReleaseResponse, error) {
-	message.Debugf("helm.uninstallChart(%#v, %s)", actionConfig, name)
-	client := action.NewUninstall(actionConfig)
+func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
+	message.Debugf("helm.uninstallChart(%s)", name)
+	client := action.NewUninstall(h.actionConfig)
 	client.KeepHistory = false
 	client.Timeout = 3 * time.Minute
 	client.Wait = true
 	return client.Run(name)
 }
 
-func loadChartData(options ChartOptions) (*chart.Chart, map[string]any, error) {
-	message.Debugf("helm.loadChartData(%#v)", options)
+func (h *Helm) loadChartData() (*chart.Chart, map[string]any, error) {
+	message.Debugf("helm.loadChartData()")
 	var (
 		loadedChart *chart.Chart
 		chartValues map[string]any
 		err         error
 	)
 
-	if options.ChartOverride == nil || options.ValueOverride == nil {
+	if h.ChartOverride == nil || h.ValueOverride == nil {
 		// If there is no override, get the chart and values info
-		loadedChart, err = loadChartFromTarball(options)
+		loadedChart, err = h.loadChartFromTarball()
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
 		}
 
-		chartValues, err = parseChartValues(options)
+		chartValues, err = h.parseChartValues()
 		if err != nil {
 			return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 		}
 		message.Debug(chartValues)
 	} else {
 		// Otherwise, use the overrides instead
-		loadedChart = options.ChartOverride
-		chartValues = options.ValueOverride
+		loadedChart = h.ChartOverride
+		chartValues = h.ValueOverride
 	}
 
 	return loadedChart, chartValues, nil

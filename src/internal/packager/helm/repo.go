@@ -43,17 +43,23 @@ func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string
 }
 
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
-func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
+func (h *Helm) DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", chart.Name)
 	defer spinner.Stop()
 
 	client := action.NewPackage()
 
 	// Get the git repo
-	tempPath := git.DownloadRepoToTemp(chart.Url, spinner)
+	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
+	gitCfg := git.Git{
+		Server: h.Cfg.State.GitServer,
+		Spinner: spinner,
+		GitPath: ,
+	}
+	tempPath := gitCfg.DownloadRepoToTemp(chart.Url)
 
 	// Switch to the correct tag
-	git.CheckoutTag(tempPath, chart.Version)
+	gitCfg.CheckoutTag(tempPath, chart.Version)
 
 	// Validate the chart
 	_, err := loader.LoadDir(filepath.Join(tempPath, chart.GitPath))
@@ -76,7 +82,7 @@ func DownloadChartFromGit(chart types.ZarfChart, destination string) string {
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo
-func DownloadPublishedChart(chart types.ZarfChart, destination string) {
+func (h *Helm) DownloadPublishedChart(chart types.ZarfChart, destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.Url)
 	defer spinner.Stop()
 

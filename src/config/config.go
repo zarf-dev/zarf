@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -79,6 +80,21 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
 
+// GetArch returns the arch based on a priority list with options for overriding
+func GetArch(archs ...string) string {
+	// List of architecture overrides.
+	priority := append([]string{CliArch}, archs...)
+
+	// Find the first architecture that is specified.
+	for _, arch := range priority {
+		if arch != "" {
+			return arch
+		}
+	}
+
+	return runtime.GOARCH
+}
+
 // Timestamp of when the CLI was started
 func GetStartTime() int64 {
 	return operationStartTime
@@ -88,11 +104,11 @@ func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
 
-func GetCraneOptions() []crane.Option {
+func GetCraneOptions(insecure bool) []crane.Option {
 	var options []crane.Option
 
 	// Handle insecure registry option
-	if CreateOptions.Insecure {
+	if insecure {
 		options = append(options, crane.Insecure)
 	}
 
@@ -128,7 +144,7 @@ func ClearDeployingComponents() {
 }
 
 func SetComponents(components []types.ZarfComponent) {
-	active.Components = components
+	// active.Components = components
 }
 
 func GetValidPackageExtensions() [3]string {

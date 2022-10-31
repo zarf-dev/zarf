@@ -29,7 +29,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 		}
 		config.IsInitConfig = true
 		config.InitOpts = body
-		initPackageName := packager.GetInitPackageName()
+		initPackageName := packager.GetInitPackageName("")
 		config.DeployOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory

@@ -34,7 +34,7 @@ func (g *Git) removeOnlineRemoteRefs() ([]*plumbing.Reference, error) {
 func (g *Git) removeHeadCopies() ([]*plumbing.Reference, error) {
 	message.Debugf("git.removeHeadCopies()")
 
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -58,7 +58,7 @@ func (g *Git) removeHeadCopies() ([]*plumbing.Reference, error) {
 // It returns a slice of references deleted
 func (g *Git) removeReferences(shouldRemove func(*plumbing.Reference) bool) ([]*plumbing.Reference, error) {
 	message.Debugf("git.removeReferences()")
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -99,7 +99,7 @@ func (g *Git) removeReferences(shouldRemove func(*plumbing.Reference) bool) ([]*
 // It is intended to be used with references returned by a Remove function
 func (g *Git) addRefs(refs []*plumbing.Reference) error {
 	message.Debugf("git.addRefs()")
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -118,7 +118,7 @@ func (g *Git) addRefs(refs []*plumbing.Reference) error {
 func (g *Git) deleteBranchIfExists(branchName plumbing.ReferenceName) error {
 	message.Debugf("g.deleteBranchIfExists(%s)", branchName.String())
 
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}

@@ -36,10 +36,12 @@ var prepareTransformGitLinks = &cobra.Command{
 			message.Fatalf(err, "Unable to read the file %s", fileName)
 		}
 
+		pkgConfig.InitOpts.GitServer.Address = host
+
 		// Perform git url transformation via regex
 		text := string(content)
 		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
-		processedText := gitCfg.MutateGitUrlsInText(host, text, pkgConfig.InitOpts.GitServer.PushUsername)
+		processedText := gitCfg.MutateGitUrlsInText(text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false

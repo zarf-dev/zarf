@@ -23,20 +23,19 @@ import (
 
 type renderer struct {
 	actionConfig   *action.Configuration
+	options        *Helm
 	connectStrings types.ConnectStrings
-	options        ChartOptions
 	namespaces     map[string]*corev1.Namespace
 }
 
-func NewRenderer(options ChartOptions, actionConfig *action.Configuration) *renderer {
-	message.Debugf("helm.NewRenderer(%#v)", options)
+func (h *Helm) NewRenderer() *renderer {
+	message.Debugf("helm.NewRenderer()")
 	return &renderer{
-		actionConfig:   actionConfig,
 		connectStrings: make(types.ConnectStrings),
-		options:        options,
+		options:        h,
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
-			options.Chart.Namespace: nil,
+			h.Chart.Namespace: nil,
 		},
 	}
 }
@@ -176,8 +175,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			// Generate the git server secret
 			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
 			gitServerSecret.StringData = map[string]string{
-				"username": config.GetGitServerInfo().PullUsername,
-				"password": config.GetGitServerInfo().PullPassword,
+				"username": r.options.Cfg.State.GitServer.PullUsername,
+				"password": r.options.Cfg.State.GitServer.PullPassword,
 			}
 
 			// Update the git server secret

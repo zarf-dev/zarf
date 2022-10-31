@@ -43,7 +43,8 @@ func (p *Packager) Remove(packageName string) error {
 
 			if slices.Contains(requestedComponents, installedComponent.Name) {
 				for _, installedChart := range installedComponent.InstalledCharts {
-					helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
+					helmCfg := helm.Helm{}
+					helmCfg.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				}
 
 				// Remove the component we just removed from the array
@@ -74,7 +75,8 @@ func (p *Packager) Remove(packageName string) error {
 			for _, installedChart := range installedComponent.InstalledCharts {
 				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, installedComponent.Name)
 
-				err = helm.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
+				helmCfg := helm.Helm{}
+				err = helmCfg.RemoveChart(installedChart.Namespace, installedChart.ChartName, spinner)
 				if err != nil {
 					message.Errorf(err, "Unable to remove the installed helm chart (%s) from the namespace (%s) of component (%s) (were dependent components removed first?)",
 						installedChart.ChartName, installedChart.Namespace, installedComponent.Name)

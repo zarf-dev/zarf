@@ -45,12 +45,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	var err error
 
 	// Set up constants in the global variable that all the tests are able to access
-	if config.CliArch != "" {
-		e2e.arch = config.CliArch
-	} else {
-		e2e.arch = runtime.GOARCH
-	}
-
+	e2e.arch = config.GetArch()
 	e2e.zarfBinPath = path.Join("build", GetCLIName())
 	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.runClusterTests = os.Getenv(skipK8sEnvVar) != "true"

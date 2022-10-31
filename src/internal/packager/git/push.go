@@ -81,7 +81,7 @@ func (g *Git) PushAllDirectories(localPath string) error {
 
 func (g *Git) prepRepoForPush(tunnelUrl, username string) (*git.Repository, error) {
 	// Open the given repo
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -111,8 +111,8 @@ func (g *Git) prepRepoForPush(tunnelUrl, username string) (*git.Repository, erro
 
 func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	gitCred := http.BasicAuth{
-		Username: g.server.PushUsername,
-		Password: g.server.PushPassword,
+		Username: g.Server.PushUsername,
+		Password: g.Server.PushPassword,
 	}
 
 	// Since we are pushing HEAD:refs/heads/master on deployment, leaving

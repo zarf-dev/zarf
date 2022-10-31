@@ -29,7 +29,7 @@ func (g *Git) fetchHash(hash string) {
 
 	refspec := goConfig.RefSpec(hash + ":" + hash)
 
-	err := g.fetch(goConfig.RefSpec(g.gitPath), refspec)
+	err := g.fetch(goConfig.RefSpec(g.GitPath), refspec)
 
 	if err != nil {
 		message.Fatal(err, "Not a valid hash or unable to fetch")
@@ -40,7 +40,7 @@ func (g *Git) fetchHash(hash string) {
 func (g *Git) fetch(refspecs ...goConfig.RefSpec) error {
 	message.Debugf("git.fetch(%#v)", refspecs)
 
-	repo, err := git.PlainOpen(g.gitPath)
+	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
 		message.Fatal(err, "Unable to load the git repo")
 	}
@@ -80,7 +80,7 @@ func (g *Git) fetch(refspecs ...goConfig.RefSpec) error {
 		for _, refspec := range refspecs {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
-		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), g.gitPath, false, "git", cmdArgs...)
+		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), g.GitPath, false, "git", cmdArgs...)
 
 		return err
 	}
