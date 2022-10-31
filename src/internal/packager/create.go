@@ -1,10 +1,7 @@
 package packager
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -73,75 +70,17 @@ func Create(baseDir string) {
 		// Load seed images into their own happy little tarball for ease of import on init
 		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
+		_ = os.Remove(tempPath.seedImage)
 		ociPath := path.Join(tempPath.base, "seed-image")
 		for _, image := range pulledImages {
-			crane.SaveOCI(image, ociPath)
-		}
-		_ = os.Remove(tempPath.seedImage)
-
-		type IndexJSON struct {
-			SchemaVersion int `json:"schemaVersion"`
-			Manifests     []struct {
-				MediaType string `json:"mediaType"`
-				Size      int    `json:"size"`
-				Digest    string `json:"digest"`
-			} `json:"manifests"`
+			if err := crane.SaveOCI(image, ociPath); err != nil {
+				message.Fatalf(err, "Unable to save image %s as OCI", image)
+			}
 		}
 
-		indexJson, err := os.Open(path.Join(ociPath, "index.json"))
-		if err != nil {
-			message.Fatal(err, "Unable to open seed-image/index.json")
+		if err := images.FormatCraneOCILayout(ociPath); err != nil {
+			message.Fatalf(err, "Unable to format crane OCI layout")
 		}
-		var index IndexJSON
-		byteValue, _ := io.ReadAll(indexJson)
-		json.Unmarshal(byteValue, &index)
-
-		digest := strings.TrimPrefix(index.Manifests[0].Digest, "sha256:")
-		b, err := os.ReadFile(path.Join(ociPath, "blobs", "sha256", digest))
-		if err != nil {
-			message.Fatalf(err, "Unable to open seed-image/blobs/sha256/%s", digest)
-		}
-		manifest := string(b)
-		// replace all docker media types w/ oci media types
-		manifest = strings.ReplaceAll(manifest, "application/vnd.docker.distribution.manifest.v2+json", "application/vnd.oci.image.manifest.v1+json")
-		manifest = strings.ReplaceAll(manifest, "application/vnd.docker.image.rootfs.diff.tar.gzip", "application/vnd.oci.image.layer.v1.tar+gzip")
-
-		h := sha256.New()
-		h.Write([]byte(manifest))
-		bs := h.Sum(nil)
-
-		// Write the manifest to the blobs directory w/ the sha256 hash as the filename
-		manifestPath := path.Join(ociPath, "blobs", "sha256", fmt.Sprintf("%x", bs))
-		manifestFile, err := os.Create(manifestPath)
-		if err != nil {
-			message.Fatalf(err, "Unable to create seed-image/blobs/sha256/%x", bs)
-		}
-		defer manifestFile.Close()
-		_, err = manifestFile.WriteString(manifest)
-		if err != nil {
-			message.Fatalf(err, "Unable to write to seed-image/blobs/sha256/%x", bs)
-		}
-
-		// Update the index.json to point to the new manifest
-		index.SchemaVersion = 2
-		index.Manifests[0].Digest = fmt.Sprintf("sha256:%x", bs)
-		index.Manifests[0].Size = len(manifest)
-		index.Manifests[0].MediaType = "application/vnd.oci.image.manifest.v1+json"
-		indexJson.Close()
-		_ = os.Remove(path.Join(ociPath, "index.json"))
-		indexJson, err = os.Create(path.Join(ociPath, "index.json"))
-		if err != nil {
-			message.Fatalf(err, "Unable to create seed-image/index.json")
-		}
-		indexJsonBytes, err := json.Marshal(index)
-		if err != nil {
-			message.Fatalf(err, "Unable to marshal index.json")
-		}
-		_, err = indexJson.Write(indexJsonBytes)
-		if err != nil {
-			message.Fatalf(err, "Unable to write to seed-image/index.json")
-		}
-		indexJson.Close()
 	}
 
 	var combinedImageList []string
