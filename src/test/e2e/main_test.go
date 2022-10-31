@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"runtime"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
 )
 
 var (

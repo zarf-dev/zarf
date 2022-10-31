@@ -42,7 +42,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions()...)
+		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
 		if err != nil {
 			return err
 		}

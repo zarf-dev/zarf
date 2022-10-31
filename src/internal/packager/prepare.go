@@ -107,12 +107,16 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 
 			for _, chart := range component.Charts {
 				isGitURL := gitUrlRegex.MatchString(chart.Url)
+				helmCfg := helm.Helm{
+					Chart: chart,
+				}
+
 				if isGitURL {
-					path := helm.DownloadChartFromGit(chart, componentPath.Charts)
+					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
 				} else {
-					helm.DownloadPublishedChart(chart, componentPath.Charts)
+					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {
@@ -130,7 +134,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 				}
 
 				// Generate helm templates to pass to gitops engine
-				helmCfg := helm.Helm{
+				helmCfg = helm.Helm{
 					BasePath:          componentPath.Base,
 					Chart:             chart,
 					ChartLoadOverride: override,

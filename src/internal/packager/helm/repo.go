@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/types"
-
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
@@ -18,20 +16,20 @@ import (
 )
 
 // CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os
-func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", chart.Name, chart.Version, chart.LocalPath)
+func (h *Helm) CreateChartFromLocalFiles(destination string) string {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
 
 	// Validate the chart
-	_, err := loader.LoadDir(chart.LocalPath)
+	_, err := loader.LoadDir(h.Chart.LocalPath)
 	if err != nil {
-		spinner.Fatalf(err, "Validation failed for chart from %s (%s)", chart.LocalPath, err.Error())
+		spinner.Fatalf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 	}
 
 	client := action.NewPackage()
 
 	client.Destination = destination
-	path, err := client.Run(chart.LocalPath, nil)
+	path, err := client.Run(h.Chart.LocalPath, nil)
 
 	if err != nil {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", path)
@@ -43,8 +41,8 @@ func CreateChartFromLocalFiles(chart types.ZarfChart, destination string) string
 }
 
 // DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
-func (h *Helm) DownloadChartFromGit(chart types.ZarfChart, destination string) string {
-	spinner := message.NewProgressSpinner("Processing helm chart %s", chart.Name)
+func (h *Helm) DownloadChartFromGit(destination string) string {
+	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
 
 	client := action.NewPackage()
@@ -52,24 +50,24 @@ func (h *Helm) DownloadChartFromGit(chart types.ZarfChart, destination string) s
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 	gitCfg := git.Git{
-		Server: h.Cfg.State.GitServer,
+		Server:  h.Cfg.State.GitServer,
 		Spinner: spinner,
-		GitPath: ,
+		// GitPath: ,
 	}
-	tempPath := gitCfg.DownloadRepoToTemp(chart.Url)
+	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
 
 	// Switch to the correct tag
-	gitCfg.CheckoutTag(tempPath, chart.Version)
+	gitCfg.CheckoutTag(tempPath, h.Chart.Version)
 
 	// Validate the chart
-	_, err := loader.LoadDir(filepath.Join(tempPath, chart.GitPath))
+	_, err := loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
 	if err != nil {
-		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
+		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 	}
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	name, err := client.Run(filepath.Join(tempPath, chart.GitPath), nil)
+	name, err := client.Run(filepath.Join(tempPath, h.Chart.GitPath), nil)
 
 	if err != nil {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
@@ -82,8 +80,8 @@ func (h *Helm) DownloadChartFromGit(chart types.ZarfChart, destination string) s
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo
-func (h *Helm) DownloadPublishedChart(chart types.ZarfChart, destination string) {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.Url)
+func (h *Helm) DownloadPublishedChart(destination string) {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.Url)
 	defer spinner.Stop()
 
 	// Set up the helm pull config
@@ -100,7 +98,7 @@ func (h *Helm) DownloadPublishedChart(chart types.ZarfChart, destination string)
 	// @todo: process OCI-based charts
 
 	// Perform simple chart download
-	chartURL, err := repo.FindChartInRepoURL(chart.Url, chart.Name, chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+	chartURL, err := repo.FindChartInRepoURL(h.Chart.Url, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to pull the helm chart")
 	}
@@ -114,11 +112,11 @@ func (h *Helm) DownloadPublishedChart(chart types.ZarfChart, destination string)
 	// Validate the chart
 	_, err = loader.LoadFile(saved)
 	if err != nil {
-		spinner.Fatalf(err, "Validation failed for chart %s (%s)", chart.Name, err.Error())
+		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 	}
 
 	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(destination, chart) + ".tgz"
+	destinationTarball := StandardName(destination, h.Chart) + ".tgz"
 	err = os.Rename(saved, destinationTarball)
 	if err != nil {
 		spinner.Fatalf(err, "Unable to save the chart tarball")

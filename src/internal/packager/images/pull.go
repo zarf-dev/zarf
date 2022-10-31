@@ -43,7 +43,7 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
-		img, err := crane.Pull(src, config.GetCraneOptions()...)
+		img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}

@@ -10,4 +10,6 @@ type ImgConfig struct {
 	RegInfo types.RegistryInfo
 
 	NoChecksum bool
+
+	Insecure bool
 }

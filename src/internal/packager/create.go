@@ -45,8 +45,6 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
 	}
 
-	seedImage := config.ZarfSeedImage
-
 	// Save the transformed config
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
@@ -61,7 +59,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	if p.cfg.IsInitConfig {
 		// Load seed images into their own happy little tarball for ease of import on init
-		if err := p.pullImages([]string{seedImage}, p.tmp.SeedImage); err != nil {
+		if err := p.pullImages([]string{config.ZarfSeedImage}, p.tmp.SeedImage); err != nil {
 			return fmt.Errorf("unable to pull the seed image after 3 attempts: %w", err)
 		}
 	}
@@ -109,6 +107,7 @@ func (p *Packager) pullImages(imgList []string, path string) error {
 		imgConfig := images.ImgConfig{
 			TarballPath: path,
 			ImgList:     imgList,
+			Insecure:    p.cfg.CreateOpts.Insecure,
 		}
 
 		pulledImages, err := imgConfig.PullAll()
@@ -145,20 +144,25 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 		_ = utils.CreateDirectory(componentPath.Charts, 0700)
 		_ = utils.CreateDirectory(componentPath.Values, 0700)
 		re := regexp.MustCompile(`\.git$`)
+
 		for _, chart := range component.Charts {
 			isGitURL := re.MatchString(chart.Url)
-			URLLen := len(chart.Url)
+			helmCfg := helm.Helm{
+				Chart: chart,
+			}
+
 			if isGitURL {
-				_ = helm.DownloadChartFromGit(chart, componentPath.Charts)
-			} else if URLLen > 0 {
-				helm.DownloadPublishedChart(chart, componentPath.Charts)
+				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
+			} else if len(chart.Url) > 0 {
+				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
-				path := helm.CreateChartFromLocalFiles(chart, componentPath.Charts)
+				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
 				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 				if !strings.HasSuffix(path, zarfFilename) {
 					return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
 				}
 			}
+
 			for idx, path := range chart.ValuesFiles {
 				chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
@@ -170,9 +174,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 
 	if len(component.Files) > 0 {
 		_ = utils.CreateDirectory(componentPath.Files, 0700)
+
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
 			destinationFile := filepath.Join(componentPath.Files, strconv.Itoa(index))
+
 			if utils.IsUrl(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
@@ -199,6 +205,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 	if len(component.DataInjections) > 0 {
 		spinner := message.NewProgressSpinner("Loading data injections")
 		defer spinner.Success()
+
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			destinationFile := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
@@ -211,6 +218,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 	if len(component.Manifests) > 0 {
 		// Get the proper count of total manifests to add
 		manifestCount := 0
+
 		for _, manifest := range component.Manifests {
 			manifestCount += len(manifest.Files)
 			manifestCount += len(manifest.Kustomizations)
@@ -233,6 +241,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 					return fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
 			}
+
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
 				spinner.Updatef("Building kustomization for %s", k)
@@ -248,6 +257,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 	if len(component.Repos) > 0 {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Success()
+
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)

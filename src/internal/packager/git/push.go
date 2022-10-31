@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -16,16 +15,13 @@ import (
 )
 
 func (g *Git) PushAllDirectories(localPath string) error {
-	gitServerInfo := config.GetGitServerInfo()
-	gitServerURL := gitServerInfo.Address
-
 	// If this is a serviceURL, create a port-forward tunnel to that resource
-	if tunnel, err := cluster.NewTunnelFromServiceURL(gitServerURL); err != nil {
+	if tunnel, err := cluster.NewTunnelFromServiceURL(g.Server.Address); err != nil {
 		message.Debug(err)
 	} else {
 		tunnel.Connect("", false)
 		defer tunnel.Close()
-		gitServerURL = fmt.Sprintf("http://%s", tunnel.Endpoint())
+		g.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
 	}
 
 	paths, err := utils.ListDirectories(localPath)
@@ -41,7 +37,7 @@ func (g *Git) PushAllDirectories(localPath string) error {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
 
-		repo, err := g.prepRepoForPush(gitServerURL, gitServerInfo.PushUsername)
+		repo, err := g.prepRepoForPush(g.Server.Address, g.Server.PushUsername)
 		if err != nil {
 			message.Warnf("error when preping the repo for push.. %v", err)
 			return err
@@ -53,7 +49,7 @@ func (g *Git) PushAllDirectories(localPath string) error {
 		}
 
 		// Add the read-only user to this repo
-		if gitServerInfo.InternalServer {
+		if g.Server.InternalServer {
 			// Get the upstream URL
 			remote, err := repo.Remote(onlineRemoteName)
 			if err != nil {
@@ -67,7 +63,7 @@ func (g *Git) PushAllDirectories(localPath string) error {
 				return err
 			}
 
-			err = g.addReadOnlyUserToRepo(gitServerURL, repoName)
+			err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
 			if err != nil {
 				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 				return err
