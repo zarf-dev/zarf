@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -46,11 +47,6 @@ func runInjectionMadness(tempPath tempPaths) {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
-	spinner.Updatef("Generating bootstrap payload SHASUMs")
-	if envVars, err = buildEnvVars(tempPath); err != nil {
-		spinner.Fatalf(err, "Unable to build the injection pod environment variables")
-	}
-
 	spinner.Updatef("Creating the injector configmap")
 	if err = createInjectorConfigmap(tempPath); err != nil {
 		spinner.Fatalf(err, "Unable to create the injector configmap")
@@ -66,6 +62,11 @@ func runInjectionMadness(tempPath tempPaths) {
 	spinner.Updatef("Loading the seed registry configmaps")
 	if payloadConfigmaps, sha256sum, err = createPayloadConfigmaps(tempPath, spinner); err != nil {
 		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
+	}
+
+	spinner.Updatef("Generating bootstrap payload SHASUMs")
+	if envVars, err = buildEnvVars(tempPath); err != nil {
+		spinner.Fatalf(err, "Unable to build the injection pod environment variables")
 	}
 
 	// https://regex101.com/r/eLS3at/1
@@ -123,8 +124,9 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.base, "payload.tgz")
-	tarFileList := []string{
-		tempPath.seedImage,
+	tarFileList, err := filepath.Glob(filepath.Join(tempPath.base, "seed-image", "*"))
+	if err != nil {
+		return configMaps, "", err
 	}
 	labels := map[string]string{
 		"zarf-injector": "payload",
@@ -274,7 +276,7 @@ func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
 	envVars := make(map[string]string)
 
 	// Add the seed images shasum env var
-	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(tempPath.seedImage); err != nil {
+	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(path.Join(tempPath.base, "payload.tgz")); err != nil {
 		return nil, err
 	}
 
