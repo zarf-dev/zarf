@@ -19,7 +19,7 @@ In ADR 3, the decision was made to create a rust binary (`stage1`) that would re
 
 ## Decision
 
-The rust binary is already being injected via configmap and unpacking the tarball. There is little need to bring everthing but the kitchen sink to just serve a single image. Therefore the decision is to use the rust binary to perform the entire injection process. This required a few changes to the rust binary:
+The rust binary is already being injected via configmap and unpacking the tarball. There is little need to bring everything but the kitchen sink to just serve a single image. Therefore the decision is to use the rust binary to perform the entire injection process. This required a few changes to the rust binary:
 
 - not only re-assemble + unpack the tarball, but also unpack the `registry:2` image (stored as a [crane tarball format](https://github.com/google/go-containerregistry/tree/main/pkg/v1/tarball))
 - transform the `registry:2` crane manifest to a docker v2 manifest
