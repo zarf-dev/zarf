@@ -63,7 +63,9 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		pkgConfig.DeployOpts.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
+		packagerClient := packager.NewPackagerOrDie(&pkgConfig)
+
+		pkgConfig.DeployOpts.PackagePath = packagerClient.HandleIfURL(packageName, shasum, insecureDeploy)
 		packager.NewPackagerOrDie(&pkgConfig).Deploy()
 	},
 }
