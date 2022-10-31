@@ -80,9 +80,13 @@ fn unpack(sha_sum: &String) {
         .expect("Unable to unarchive the resulting tarball");
 }
 
-/// Starts a static docker compliant registry server that only serves the single image from /zarf-stage2/seed-image
+/// Starts a static docker compliant registry server that only serves the single image from /zarf-stage2
 ///
-/// (which is a docker registry image in crane's tarball format) - https://github.com/google/go-containerregistry/tree/main/pkg/v1/tarball
+/// (which is a OCI image layout):
+///
+/// index.json - the image index
+/// blobs/sha256/<sha256sum> - the image layers
+/// oci-layout - the OCI image layout
 fn start_seed_registry(file_root: &Path) {
     let root = PathBuf::from(file_root);
     println!("Starting seed registry at {} on port 5000", root.display());
