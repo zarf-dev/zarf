@@ -60,8 +60,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		message.Debugf("Unable to load the ZarfState file so that the Agent can mutate pods: %#v", err)
 		return nil, err
 	}
-	config.InitState(zarfState)
-	containerRegistryURL := config.GetRegistry()
+	containerRegistryURL := config.GetRegistry(zarfState)
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {

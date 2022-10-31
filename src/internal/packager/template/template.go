@@ -42,7 +42,7 @@ func Generate(cfg *types.PackagerConfig) (Values, error) {
 
 	generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 
-	generated.registry = config.GetRegistry()
+	generated.registry = config.GetRegistry(cfg.State)
 
 	return generated, nil
 }
@@ -52,7 +52,6 @@ func (values Values) Ready() bool {
 }
 
 func (values Values) GetRegistry() string {
-	message.Debug("template.GetRegistry()")
 	return values.registry
 }
 

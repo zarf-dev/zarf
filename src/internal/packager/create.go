@@ -23,8 +23,8 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// Create generates a zarf package tarball for consumption by
-func (p *Package) Create(baseDir string) error {
+// Create generates a zarf package tarball for a given PackageConfg and optional base directory.
+func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
 	// Change the working directory if this run has an alternate base dir
@@ -55,7 +55,7 @@ func (p *Package) Create(baseDir string) error {
 	// Perform early package validation
 	validate.Run(p.cfg.Pkg)
 
-	if !confirmAction("Create", nil) {
+	if !p.confirmAction("Create", nil) {
 		return nil
 	}
 
@@ -89,20 +89,29 @@ func (p *Package) Create(baseDir string) error {
 		_ = os.Chdir(originalDir)
 	}
 
+	// Use the output path if the user specified it.
 	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
 
+	// Try to remove the package if it already exists.
 	_ = os.RemoveAll(packageName)
-	err := archiver.Archive([]string{p.tmp.Base + string(os.PathSeparator)}, packageName)
-	if err != nil {
+
+	// Make the archive
+	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
+	if err := archiver.Archive(archiveSrc, packageName); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
 
 	return nil
 }
 
-func (p *Package) pullImages(imgList []string, path string) error {
+func (p *Packager) pullImages(imgList []string, path string) error {
 	return utils.Retry(func() error {
-		pulledImages, err := images.PullAll(imgList, path)
+		imgConfig := images.ImgConfig{
+			TarballPath: path,
+			ImgList:     imgList,
+		}
+
+		pulledImages, err := imgConfig.PullAll()
 
 		if err != nil {
 			// Ignore SBOM creation if there the flag is set
@@ -117,18 +126,21 @@ func (p *Package) pullImages(imgList []string, path string) error {
 	}, 3, 5*time.Second)
 }
 
-func (p *Package) addComponent(component types.ZarfComponent) error {
+func (p *Packager) addComponent(component types.ZarfComponent) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	// Create the component directory.
 	componentPath, err := p.createComponentPaths(component)
 	if err != nil {
 		return fmt.Errorf("unable to create component paths: %w", err)
 	}
 
-	// Loop through each component prepare script and execute it
+	// Loop through each component prepare script and execute it.
 	for _, script := range component.Scripts.Prepare {
 		p.loopScriptUntilSuccess(script, component.Scripts)
 	}
 
+	// If any helm charts are defined, process them.
 	if len(component.Charts) > 0 {
 		_ = utils.CreateDirectory(componentPath.Charts, 0700)
 		_ = utils.CreateDirectory(componentPath.Values, 0700)
@@ -213,20 +225,20 @@ func (p *Package) addComponent(component types.ZarfComponent) error {
 
 		// Iterate over all manifests
 		for _, manifest := range component.Manifests {
-			for _, file := range manifest.Files {
+			for _, f := range manifest.Files {
 				// Copy manifests without any processing
-				spinner.Updatef("Copying manifest %s", file)
-				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, file)
-				if err := utils.CreatePathAndCopy(file, destination); err != nil {
-					return fmt.Errorf("unable to copy manifest %s: %w", file, err)
+				spinner.Updatef("Copying manifest %s", f)
+				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
+				if err := utils.CreatePathAndCopy(f, destination); err != nil {
+					return fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
 			}
-			for idx, kustomization := range manifest.Kustomizations {
+			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
-				spinner.Updatef("Building kustomization for %s", kustomization)
+				spinner.Updatef("Building kustomization for %s", k)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return fmt.Errorf("unable to build kustomization %s: %w", kustomization, err)
+				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
 			}
 		}
@@ -238,13 +250,12 @@ func (p *Package) addComponent(component types.ZarfComponent) error {
 		defer spinner.Success()
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
-			_, err := git.Pull(url, componentPath.Repos, spinner)
-			if err != nil {
+			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
+			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
 	}
 
 	return nil
-
 }

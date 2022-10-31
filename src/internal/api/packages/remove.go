@@ -19,7 +19,7 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	// Setup the packager
-	pkg, err := packager.NewPackage(&types.PackagerConfig{
+	pkg, err := packager.NewPackager(&types.PackagerConfig{
 		DeployOpts: types.ZarfDeployOptions{
 			Components: components,
 		},

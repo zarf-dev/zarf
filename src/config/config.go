@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -68,11 +66,8 @@ var (
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
 
-	// Private vars
-	active types.ZarfPackage
 	// Dirty Solution to getting the real time deployedComponents components.
 	deployedComponents []types.DeployedComponent
-	state              types.ZarfState
 
 	SGetPublicKey string
 	UIAssets      embed.FS
@@ -91,23 +86,6 @@ func GetStartTime() int64 {
 
 func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
-}
-
-func GetArch() string {
-	// If CLI-orverriden then reflect that
-	if CliArch != "" {
-		return CliArch
-	}
-
-	if active.Metadata.Architecture != "" {
-		return active.Metadata.Architecture
-	}
-
-	if active.Build.Architecture != "" {
-		return active.Build.Architecture
-	}
-
-	return runtime.GOARCH
 }
 
 func GetCraneOptions() []crane.Option {
@@ -157,23 +135,13 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
-func InitState(tmpState types.ZarfState) {
-	message.Debugf("config.InitState()")
-	state = tmpState
-}
-
-func GetRegistry() string {
+func GetRegistry(state types.ZarfState) string {
 	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
 	if state.RegistryInfo.NodePort >= 30000 {
 		return fmt.Sprintf("%s:%d", IPV4Localhost, state.RegistryInfo.NodePort)
 	}
 
 	return state.RegistryInfo.Address
-}
-
-// GetGitServerInfo returns the GitServerInfo for the git server Zarf is configured to use from the state
-func GetGitServerInfo() types.GitServerInfo {
-	return state.GitServer
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
@@ -184,29 +152,4 @@ func GetAbsCachePath() string {
 		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
 	}
 	return CommonOptions.CachePath
-}
-
-func isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
-	message.Debugf("config.isCompatibleComponent(%s, %v)", component.Name, filterByOS)
-
-	// Ignore only filters that are empty
-	var validArch, validOS bool
-
-	targetArch := GetArch()
-
-	// Test for valid architecture
-	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == targetArch {
-		validArch = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, targetArch)
-	}
-
-	// Test for a valid OS
-	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
-		validOS = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
-	}
-
-	return validArch && validOS
 }

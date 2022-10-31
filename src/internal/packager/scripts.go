@@ -14,13 +14,13 @@ import (
 )
 
 // Run scripts that a component has provided
-func (p *Package) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) {
+func (p *Packager) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) {
 	for _, script := range scripts {
 		p.loopScriptUntilSuccess(script, componentScript)
 	}
 }
 
-func (p *Package) loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
+func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Success()
 
@@ -88,7 +88,7 @@ func (p *Package) loopScriptUntilSuccess(script string, scripts types.ZarfCompon
 }
 
 // Perform some basic string mutations to make scripts more useful
-func (p *Package) scriptMutation(script string) (string, error) {
+func (p *Packager) scriptMutation(script string) (string, error) {
 
 	binaryPath, err := os.Executable()
 	if err != nil {

@@ -38,7 +38,8 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text, pkgConfig.InitOpts.GitServer.PushUsername)
+		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
+		processedText := gitCfg.MutateGitUrlsInText(host, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false
@@ -91,7 +92,7 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		packager.NewPackageOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
+		packager.NewPackagerOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
 	},
 }
 

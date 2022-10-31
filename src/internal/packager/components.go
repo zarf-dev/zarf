@@ -2,6 +2,7 @@ package packager
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -16,7 +17,7 @@ import (
 
 const horizontalRule = "───────────────────────────────────────────────────────────────────────────────────────"
 
-func (p *Package) getValidComponents() []types.ZarfComponent {
+func (p *Packager) getValidComponents() []types.ZarfComponent {
 	message.Debugf("packager.getValidComponents()")
 
 	var validComponentsList []types.ZarfComponent
@@ -98,8 +99,31 @@ func (p *Package) getValidComponents() []types.ZarfComponent {
 	return validComponentsList
 }
 
+func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
+	message.Debugf("config.isCompatibleComponent(%s, %v)", component.Name, filterByOS)
+
+	// Ignore only filters that are empty
+	var validArch, validOS bool
+
+	// Test for valid architecture
+	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.arch {
+		validArch = true
+	} else {
+		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.arch)
+	}
+
+	// Test for a valid OS
+	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
+		validOS = true
+	} else {
+		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
+	}
+
+	return validArch && validOS
+}
+
 // Match on the first requested component that is not in the list of valid components and return the component name
-func (p *Package) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
+func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	message.Debugf("packager.validateRequests(%#v, %#v, %#v)", validComponentsList, requestedComponentNames, choiceComponents)
 
 	// Loop through each requested component names
@@ -129,7 +153,7 @@ func (p *Package) validateRequests(validComponentsList []types.ZarfComponent, re
 	return nil
 }
 
-func (p *Package) isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
+func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
 	message.Debugf("packager.isRequiredOrRequested(%#v, %#v)", component, requestedComponentNames)
 
 	// If the component is required, then just return true
@@ -152,7 +176,7 @@ func (p *Package) isRequiredOrRequested(component types.ZarfComponent, requested
 }
 
 // Confirm optional component
-func (p *Package) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	message.Debugf("packager.confirmOptionalComponent(%#v)", component)
 
 	// Confirm flag passed, just use defaults
@@ -181,7 +205,7 @@ func (p *Package) confirmOptionalComponent(component types.ZarfComponent) (confi
 	return confirmComponent
 }
 
-func (p *Package) confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.confirmChoiceGroup(%#v)", componentGroup)
 
 	// Confirm flag passed, just use defaults
@@ -221,7 +245,7 @@ func (p *Package) confirmChoiceGroup(componentGroup []types.ZarfComponent) types
 	return componentGroup[chosen]
 }
 
-func (p *Package) appendIfNotExists(slice []string, item string) []string {
+func (p *Packager) appendIfNotExists(slice []string, item string) []string {
 	message.Debugf("packager.appendIfNotExists(%#v, %s)", slice, item)
 
 	for _, s := range slice {

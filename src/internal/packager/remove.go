@@ -13,7 +13,7 @@ import (
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
-func (p *Package) Remove(packageName string) error {
+func (p *Packager) Remove(packageName string) error {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 

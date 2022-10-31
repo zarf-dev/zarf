@@ -51,7 +51,7 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		packager.NewPackageOrDie(&pkgConfig).Create(baseDir)
+		packager.NewPackagerOrDie(&pkgConfig).Create(baseDir)
 	},
 }
 
@@ -64,7 +64,7 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
 		pkgConfig.DeployOpts.PackagePath = packager.HandleIfURL(packageName, shasum, insecureDeploy)
-		packager.NewPackageOrDie(&pkgConfig).Deploy()
+		packager.NewPackagerOrDie(&pkgConfig).Deploy()
 	},
 }
 
@@ -78,7 +78,7 @@ var packageInspectCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.NewPackageOrDie(&pkgConfig).Inspect(packageName)
+		packager.NewPackagerOrDie(&pkgConfig).Inspect(packageName)
 	},
 }
 
@@ -149,7 +149,7 @@ var packageRemoveCmd = &cobra.Command{
 			pkgName = pkgConfig.Metadata.Name
 		}
 
-		if err := packager.NewPackageOrDie(&pkgConfig).Remove(pkgName); err != nil {
+		if err := packager.NewPackagerOrDie(&pkgConfig).Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},

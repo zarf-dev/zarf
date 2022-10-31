@@ -18,20 +18,20 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func PullAll(buildImageList []string, imageTarballPath string) (map[name.Tag]v1.Image, error) {
+func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	var (
 		longer     string
-		imageCount = len(buildImageList)
+		imgCount = len(i.ImgList)
 	)
 
 	// Give some additional user feedback on larger image sets
-	if imageCount > 15 {
+	if imgCount > 15 {
 		longer = "This step may take a couple of minutes to complete."
-	} else if imageCount > 5 {
+	} else if imgCount > 5 {
 		longer = "This step may take several seconds to complete."
 	}
 
-	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imageCount, longer)
+	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imgCount, longer)
 	defer spinner.Stop()
 
 	imageMap := map[string]v1.Image{}
@@ -41,8 +41,8 @@ func PullAll(buildImageList []string, imageTarballPath string) (map[name.Tag]v1.
 		logs.Progress.SetOutput(spinner)
 	}
 
-	for idx, src := range buildImageList {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imageCount, src)
+	for idx, src := range i.ImgList {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
 		img, err := crane.Pull(src, config.GetCraneOptions()...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
@@ -77,7 +77,7 @@ func PullAll(buildImageList []string, imageTarballPath string) (map[name.Tag]v1.
 	progress := make(chan v1.Update, 200)
 
 	go func() {
-		_ = tarball.MultiWriteToFile(imageTarballPath, tagToImage, tarball.WithProgress(progress))
+		_ = tarball.MultiWriteToFile(i.TarballPath, tagToImage, tarball.WithProgress(progress))
 	}()
 
 	var progressBar *message.ProgressBar

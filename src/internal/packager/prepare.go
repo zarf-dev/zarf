@@ -24,7 +24,7 @@ var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
-func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 
 	var originalDir string
 
@@ -224,7 +224,7 @@ func (p *Package) FindImages(baseDir, repoHelmChartPath string) {
 
 }
 
-func (p *Package) processUnstructured(resource *unstructured.Unstructured) error {
+func (p *Packager) processUnstructured(resource *unstructured.Unstructured) error {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-./]+:[\w][\w.\-]{0,127})"`)
 	var json string

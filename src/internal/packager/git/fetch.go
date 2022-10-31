@@ -3,7 +3,6 @@ package git
 import (
 	"context"
 	"errors"
-	"path"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -12,12 +11,12 @@ import (
 )
 
 // fetchTag performs a `git fetch` of _only_ the provided tag.
-func fetchTag(gitDirectory string, tag string) {
-	message.Debugf("Fetch git tag %s from repo %s", tag, path.Base(gitDirectory))
+func (g *Git) fetchTag(tag string) {
+	message.Debugf("git.fetchTag(%s)", tag)
 
 	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
 
-	err := fetch(gitDirectory, refspec)
+	err := g.fetch(refspec)
 
 	if err != nil {
 		message.Fatal(err, "Not a valid tag or unable to fetch")
@@ -25,12 +24,12 @@ func fetchTag(gitDirectory string, tag string) {
 }
 
 // fetchHash performs a `git fetch` of _only_ the provided commit hash.
-func fetchHash(gitDirectory string, hash string) {
-	message.Debugf("Fetch git hash %s from repo %s", hash, path.Base(gitDirectory))
+func (g *Git) fetchHash(hash string) {
+	message.Debugf("git.fetchHash(%s)", hash)
 
 	refspec := goConfig.RefSpec(hash + ":" + hash)
 
-	err := fetch(gitDirectory, refspec)
+	err := g.fetch(goConfig.RefSpec(g.gitPath), refspec)
 
 	if err != nil {
 		message.Fatal(err, "Not a valid hash or unable to fetch")
@@ -38,8 +37,10 @@ func fetchHash(gitDirectory string, hash string) {
 }
 
 // fetch performs a `git fetch` of _only_ the provided git refspec(s).
-func fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
-	repo, err := git.PlainOpen(gitDirectory)
+func (g *Git) fetch(refspecs ...goConfig.RefSpec) error {
+	message.Debugf("git.fetch(%#v)", refspecs)
+
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		message.Fatal(err, "Unable to load the git repo")
 	}
@@ -54,7 +55,7 @@ func fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 	gitURL := remotes[0].Config().URLs[0]
 	message.Debugf("Attempting to find ref: %#v for %s", refspecs, gitURL)
 
-	gitCred := FindAuthForHost(gitURL)
+	gitCred := g.FindAuthForHost(gitURL)
 
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
@@ -79,7 +80,7 @@ func fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 		for _, refspec := range refspecs {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
-		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), gitDirectory, false, "git", cmdArgs...)
+		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), g.gitPath, false, "git", cmdArgs...)
 
 		return err
 	}

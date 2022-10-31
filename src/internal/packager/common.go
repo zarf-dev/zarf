@@ -10,75 +10,73 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
-	"gopkg.in/yaml.v2"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-type Package struct {
+type Packager struct {
+	ctx     context.Context
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	kube    *k8s.Client
 	tmp     types.TempPaths
+	arch    string
 }
 
-// NewPackage creates a new package instance with the provided config.
-func NewPackage(config *types.PackagerConfig) (*Package, error) {
-	paths, err := createPaths()
-	if err != nil {
+// NewPackager creates a new package instance with the provided config.
+func NewPackager(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
+	if pkgConfig.tmp, err = createPaths(); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	// Track if this is an init package
-	config.IsInitConfig = strings.ToLower(config.Pkg.Kind) == "zarfinitconfig"
+	pkgConfig.arch = getArch(pkgConfig.cfg.Pkg.Metadata.Architecture, pkgConfig.cfg.Pkg.Build.Architecture)
 
-	return &Package{cfg: config, tmp: paths}, nil
+	// Track if this is an init package
+	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
+
+	return pkgConfig, nil
 }
 
-// NewPackageOrDie creates a new package instance with the provided config or throws a fatal error.
-func NewPackageOrDie(config *types.PackagerConfig) *Package {
-	pkg, err := NewPackage(config)
-	if err != nil {
+// NewPackagerOrDie creates a new package instance with the provided config or throws a fatal error.
+func NewPackagerOrDie(config *types.PackagerConfig) (pkgConfig *Packager) {
+	var err error
+
+	if pkgConfig, err = NewPackager(config); err != nil {
 		message.Fatal(err, "Unable to create package the package")
 	}
 
-	return pkg
+	return pkgConfig
 }
 
 // GetInitPackageName returns the formatted name of the init package
-func GetInitPackageName() string {
-	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", config.GetArch(), config.CLIVersion)
-}
-
-// GetPackagename returns the formatted name of the package given the metadata
-func GetPackageName(metadata types.ZarfMetadata) string {
-	suffix := "tar.zst"
-	if metadata.Uncompressed {
-		suffix = "tar"
-	}
-	return fmt.Sprintf("zarf-package-%s-%s.%s", metadata.Name, config.GetArch(), suffix)
+func GetInitPackageName(archs ...string) string {
+	arch := getArch(archs...)
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
 // GetPackageName returns the formatted name of the package
-func (p *Package) GetPackageName() string {
+func (p *Packager) GetPackageName() string {
 	if p.cfg.IsInitConfig {
-		return GetInitPackageName()
+		return GetInitPackageName(p.arch)
 	}
 
-	return GetPackageName(p.cfg.Pkg.Metadata)
+	suffix := "tar.zst"
+	if p.cfg.Pkg.Metadata.Uncompressed {
+		suffix = "tar"
+	}
+	return fmt.Sprintf("zarf-package-%s-%s.%s", p.cfg.Pkg.Metadata.Name, p.arch, suffix)
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
-func (p *Package) HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
+func (p *Packager) HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
@@ -132,7 +130,7 @@ func (p *Package) HandleIfURL(packagePath string, shasum string, insecureDeploy 
 	return localPackagePath
 }
 
-func (p *Package) handleSgetPackage(sgetPackagePath string) string {
+func (p *Packager) handleSgetPackage(sgetPackagePath string) string {
 
 	// Create the local file for the package
 	localPackagePath := filepath.Join(p.tmp.Base, "remote.tar.zst")
@@ -160,7 +158,7 @@ func (p *Package) handleSgetPackage(sgetPackagePath string) string {
 	return localPackagePath
 }
 
-func (p *Package) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
 	basePath := filepath.Join(p.tmp.Base, component.Name)
 	err = utils.CreateDirectory(basePath, 0700)
 
@@ -205,42 +203,17 @@ func createPaths() (paths types.TempPaths, err error) {
 	return paths, err
 }
 
-func confirmAction(userMessage string, sbomViewFiles []string) bool {
+// getArch returns the arch based on a priority list
+func getArch(archs ...string) string {
+	// List of architecture overrides.
+	priority := append([]string{config.CliArch}, archs...)
 
-	content, err := yaml.Marshal(active)
-	if err != nil {
-		message.Fatal(err, "Unable to open the package config file")
-	}
-
-	// Convert []byte to string and print to screen
-	text := string(content)
-
-	pterm.Println()
-	utils.ColorPrintYAML(text)
-
-	if len(sbomViewFiles) > 0 {
-		cwd, _ := os.Getwd()
-		link := filepath.Join(cwd, "zarf-sbom", filepath.Base(sbomViewFiles[0]))
-		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
-		message.Note(msg)
-	}
-
-	pterm.Println()
-
-	// Display prompt if not auto-confirmed
-	var confirmFlag bool
-	if config.CommonOptions.Confirm {
-		message.SuccessF("%s Zarf package confirmed", userMessage)
-
-		return config.CommonOptions.Confirm
-	} else {
-		prompt := &survey.Confirm{
-			Message: userMessage + " this Zarf package?",
-		}
-		if err := survey.AskOne(prompt, &confirmFlag); err != nil {
-			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+	// Find the first architecture that is specified.
+	for _, arch := range priority {
+		if arch != "" {
+			return arch
 		}
 	}
 
-	return confirmFlag
+	return runtime.GOARCH
 }

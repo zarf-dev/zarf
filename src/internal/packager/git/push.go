@@ -15,10 +15,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-const offlineRemoteName = "offline-downstream"
-const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
-
-func PushAllDirectories(localPath string) error {
+func (g *Git) PushAllDirectories(localPath string) error {
 	gitServerInfo := config.GetGitServerInfo()
 	gitServerURL := gitServerInfo.Address
 
@@ -44,13 +41,13 @@ func PushAllDirectories(localPath string) error {
 		basename := filepath.Base(path)
 		spinner.Updatef("Pushing git repo %s", basename)
 
-		repo, err := prepRepoForPush(path, gitServerURL, gitServerInfo.PushUsername)
+		repo, err := g.prepRepoForPush(gitServerURL, gitServerInfo.PushUsername)
 		if err != nil {
 			message.Warnf("error when preping the repo for push.. %v", err)
 			return err
 		}
 
-		if err := push(repo, path, spinner); err != nil {
+		if err := g.push(repo, spinner); err != nil {
 			spinner.Warnf("Unable to push the git repo %s", basename)
 			return err
 		}
@@ -64,13 +61,13 @@ func PushAllDirectories(localPath string) error {
 				return err
 			}
 			remoteUrl := remote.Config().URLs[0]
-			repoName, err := transformURLtoRepoName(remoteUrl)
+			repoName, err := g.transformURLtoRepoName(remoteUrl)
 			if err != nil {
 				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 				return err
 			}
 
-			err = addReadOnlyUserToRepo(gitServerURL, repoName)
+			err = g.addReadOnlyUserToRepo(gitServerURL, repoName)
 			if err != nil {
 				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 				return err
@@ -82,9 +79,9 @@ func PushAllDirectories(localPath string) error {
 	return nil
 }
 
-func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, error) {
+func (g *Git) prepRepoForPush(tunnelUrl, username string) (*git.Repository, error) {
 	// Open the given repo
-	repo, err := git.PlainOpen(localPath)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -96,7 +93,7 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 	}
 
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl, err := transformURL(tunnelUrl, remoteUrl, username)
+	targetUrl, err := g.transformURL(tunnelUrl, remoteUrl, username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
@@ -112,16 +109,16 @@ func prepRepoForPush(localPath, tunnelUrl, username string) (*git.Repository, er
 	return repo, nil
 }
 
-func push(repo *git.Repository, localPath string, spinner *message.Spinner) error {
+func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	gitCred := http.BasicAuth{
-		Username: config.GetState().GitServer.PushUsername,
-		Password: config.GetState().GitServer.PushPassword,
+		Username: g.server.PushUsername,
+		Password: g.server.PushPassword,
 	}
 
 	// Since we are pushing HEAD:refs/heads/master on deployment, leaving
 	// duplicates of the HEAD ref (ex. refs/heads/master,
 	// refs/remotes/online-upstream/master, will cause the push to fail)
-	removedRefs, err := removeHeadCopies(localPath)
+	removedRefs, err := g.removeHeadCopies()
 	if err != nil {
 		return fmt.Errorf("unable to remove unused git refs from the repo: %w", err)
 	}
@@ -146,7 +143,7 @@ func push(repo *git.Repository, localPath string, spinner *message.Spinner) erro
 	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debugf("Repo already up-to-date, skipping fetch...")
 	} else if err != nil {
-		message.Warnf("unable to fetch remote cleanly prior to push: %#v", err)
+		message.Warnf("unable to fetch remote cleanly prior to push: %w", err)
 	}
 
 	// Push all heads and tags to the offline remote
@@ -170,7 +167,7 @@ func push(repo *git.Repository, localPath string, spinner *message.Spinner) erro
 
 	// Add back the refs we removed just incase this push isn't the last thing
 	// being run and a later task needs to reference them.
-	addRefs(localPath, removedRefs)
+	g.addRefs(removedRefs)
 
 	return nil
 }

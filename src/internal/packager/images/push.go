@@ -10,11 +10,11 @@ import (
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
 // This function will optionally shorten the image name while appending a checksum of the original image name
-func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChecksum bool) error {
-	message.Debugf("images.PushToZarfRegistry(%s, %s)", imageTarballPath, buildImageList)
+func (i *ImgConfig) PushToZarfRegistry() error {
+	message.Debugf("images.PushToZarfRegistry(%#v)", i)
 
 	registryUrl := ""
-	if config.GetContainerRegistryInfo().InternalRegistry {
+	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
 		tunnel := cluster.NewZarfTunnel()
 		tunnel.Connect(cluster.ZarfRegistry, false)
@@ -22,7 +22,7 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChe
 
 		registryUrl = tunnel.Endpoint()
 	} else {
-		registryUrl = config.GetContainerRegistryInfo().Address
+		registryUrl = i.RegInfo.Address
 
 		// If this is a serviceURL, create a port-forward tunnel to that resource
 		if tunnel, err := cluster.NewTunnelFromServiceURL(registryUrl); err != nil {
@@ -37,26 +37,26 @@ func PushToZarfRegistry(imageTarballPath string, buildImageList []string, addChe
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(config.GetContainerRegistryInfo().PushUsername, config.GetContainerRegistryInfo().PushPassword)
+	pushOptions := config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword)
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
-	for _, src := range buildImageList {
+	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(imageTarballPath, src, config.GetCraneOptions()...)
+		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions()...)
 		if err != nil {
 			return err
 		}
 		offlineName := ""
-		if addChecksum {
-			offlineName, err = utils.SwapHost(src, registryUrl)
-		} else {
+		if i.NoChecksum {
 			offlineName, err = utils.SwapHostWithoutChecksum(src, registryUrl)
+		} else {
+			offlineName, err = utils.SwapHost(src, registryUrl)
 		}
 		if err != nil {
 			return err
 		}
 
-		message.Debugf("crane.Push() %s:%s -> %s)", imageTarballPath, src, offlineName)
+		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
 
 		if err = crane.Push(img, offlineName, pushOptions); err != nil {
 			return err

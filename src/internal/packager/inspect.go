@@ -16,7 +16,7 @@ import (
 var ViewSBOM bool
 
 // Inspect list the contents of a package
-func (p *Package) Inspect(packageName string) {
+func (p *Packager) Inspect(packageName string) {
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
 	}

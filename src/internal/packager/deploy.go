@@ -29,8 +29,8 @@ import (
 var valueTemplate template.Values
 var connectStrings = make(types.ConnectStrings)
 
-// Deploy attempts to deploy a Zarf package that is define within the global DeployOptions struct
-func (p *Package) Deploy() error {
+// Deploy attempts to deploy the given PackageConfig.
+func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
 	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
@@ -69,7 +69,7 @@ func (p *Package) Deploy() error {
 	}
 
 	// Confirm the overall package deployment
-	confirm := confirmAction("Deploy", sbomViewFiles)
+	confirm := p.confirmAction("Deploy", sbomViewFiles)
 
 	// Don't continue unless the user says so
 	if !confirm {
@@ -101,7 +101,7 @@ func (p *Package) Deploy() error {
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them
-func (p *Package) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
+func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
 	config.SetDeployingComponents(deployedComponents)
 
@@ -109,12 +109,11 @@ func (p *Package) deployComponents() (deployedComponents []types.DeployedCompone
 		var charts []types.InstalledChart
 
 		deployedComponent := types.DeployedComponent{Name: component.Name}
-		addChecksumToImg := true
 
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
 		} else {
-			charts, err = p.deployComponent(component, addChecksumToImg)
+			charts, err = p.deployComponent(component, false /* keep img checksum */)
 		}
 
 		if err != nil {
@@ -131,7 +130,7 @@ func (p *Package) deployComponents() (deployedComponents []types.DeployedCompone
 	return deployedComponents, nil
 }
 
-func (p *Package) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "seed-registry"
 	isRegistry := component.Name == "zarf-registry"
@@ -157,7 +156,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (charts []t
 		p.cluster.RunInjectionMadness(p.tmp)
 	}
 
-	charts, err = p.deployComponent(component, !isAgent)
+	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
 	if err != nil {
 		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 	}
@@ -169,9 +168,14 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (charts []t
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 
+		imgConfig := images.ImgConfig{
+			TarballPath: p.tmp.SeedImage,
+			ImgList:     []string{config.ZarfSeedImage},
+			NoChecksum:  true,
+		}
+
 		// Push the seed images into to Zarf registry
-		err = images.PushToZarfRegistry(p.tmp.SeedImage, []string{config.ZarfSeedImage}, false)
-		if err != nil {
+		if err = imgConfig.PushToZarfRegistry(); err != nil {
 			return charts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
 		}
 	}
@@ -180,7 +184,7 @@ func (p *Package) deployInitComponent(component types.ZarfComponent) (charts []t
 }
 
 // Deploy a Zarf Component
-func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToImgs bool) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
@@ -216,7 +220,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToIm
 	}
 
 	if hasImages {
-		p.pushImagesToRegistry(component.Images, addChecksumToImgs)
+		p.pushImagesToRegistry(component.Images, noImgChecksum)
 	}
 
 	if hasRepos {
@@ -240,7 +244,7 @@ func (p *Package) deployComponent(component types.ZarfComponent, addChecksumToIm
 }
 
 // Move files onto the host of the machine performing the deployment
-func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) {
+func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) {
 	var spinner message.Spinner
 	if len(componentFiles) > 0 {
 		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
@@ -289,7 +293,7 @@ func (p *Package) processComponentFiles(componentFiles []types.ZarfFile, sourceL
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values
-func (p *Package) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -305,16 +309,15 @@ func (p *Package) getUpdatedValueTemplate(component types.ZarfComponent) (values
 	}
 
 	// Continue loading state data if it is valid
-	config.InitState(state)
 	values, err = template.Generate(p.cfg)
 	if err != nil {
 		return values, err
 	}
 
-	if len(component.Images) > 0 && state.Architecture != config.GetArch() {
+	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 		spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-			config.GetArch(),
+			p.arch,
 			state.Architecture)
 	}
 
@@ -323,14 +326,20 @@ func (p *Package) getUpdatedValueTemplate(component types.ZarfComponent) (values
 }
 
 // Push all of the components images to the configured container registry
-func (p *Package) pushImagesToRegistry(componentImages []string, addShasumToImg bool) {
+func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) {
 	if len(componentImages) == 0 {
 		return
 	}
 
+	imgConfig := images.ImgConfig{
+		TarballPath: p.tmp.Images,
+		ImgList:     componentImages,
+		NoChecksum:  noImgChecksum,
+	}
+
 	// Try image push up to 3 times
 	for retry := 0; retry < 3; retry++ {
-		if err := images.PushToZarfRegistry(p.tmp.Images, componentImages, addShasumToImg); err != nil {
+		if err := imgConfig.PushToZarfRegistry(); err != nil {
 			message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			continue
@@ -341,7 +350,7 @@ func (p *Package) pushImagesToRegistry(componentImages []string, addShasumToImg 
 }
 
 // Push all of the components git repos to the configured git server
-func (p *Package) pushReposToRepository(reposPath string, repos []string) {
+func (p *Packager) pushReposToRepository(reposPath string, repos []string) {
 	if len(repos) == 0 {
 		return
 	}
@@ -349,7 +358,7 @@ func (p *Package) pushReposToRepository(reposPath string, repos []string) {
 	// Try repo push up to 3 times
 	for retry := 0; retry < 3; retry++ {
 		// Push all the repos from the extracted archive
-		if err := git.PushAllDirectories(reposPath); err != nil {
+		if err := git.New(p.cfg.State.GitServer).PushAllDirectories(reposPath); err != nil {
 			message.Errorf(err, "Unable to push repos to the Git Server, retrying in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			continue
@@ -360,7 +369,7 @@ func (p *Package) pushReposToRepository(reposPath string, repos []string) {
 }
 
 // Async'ly move data into a container running in a pod on the k8s cluster
-func (p *Package) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
+func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")
 	}
@@ -372,7 +381,7 @@ func (p *Package) performDataInjections(waitGroup *sync.WaitGroup, componentPath
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster
-func (p *Package) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) []types.InstalledChart {
+func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) []types.InstalledChart {
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
@@ -421,7 +430,7 @@ func (p *Package) installChartAndManifests(componentPath types.ComponentPaths, c
 	return installedCharts
 }
 
-func (p *Package) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
+func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 	pterm.Println()
 
 	// If not init config, print the application connection table
@@ -446,8 +455,8 @@ func (p *Package) printTablesForDeployment(componentsToDeploy []types.DeployedCo
 			// Show message if including git-server
 			if component.Name == "git-server" {
 				loginTable = append(loginTable, pterm.TableData{
-					{"     Git", config.GetGitServerInfo().PushUsername, p.cfg.State.GitServer.PushPassword, "zarf connect git"},
-					{"     Git (read-only)", config.GetGitServerInfo().PullUsername, p.cfg.State.GitServer.PullPassword, "zarf connect git"},
+					{"     Git", p.cfg.State.GitServer.PushUsername, p.cfg.State.GitServer.PushPassword, "zarf connect git"},
+					{"     Git (read-only)", p.cfg.State.GitServer.PullUsername, p.cfg.State.GitServer.PullPassword, "zarf connect git"},
 				}...)
 			}
 		}

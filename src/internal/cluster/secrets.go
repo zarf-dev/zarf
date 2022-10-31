@@ -39,7 +39,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) *corev1.Secr
 	fieldValue := zarfState.RegistryInfo.PullUsername + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
-	registry := config.GetRegistry()
+	registry := config.GetRegistry(zarfState)
 	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{

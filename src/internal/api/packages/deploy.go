@@ -27,6 +27,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			message.ErrorWebf(err, w, "Unable to decode the request to deploy the cluster")
 			return
 		}
+		config.IsInitConfig = true
 		config.InitOpts = body
 		initPackageName := packager.GetInitPackageName()
 		config.DeployOpts.PackagePath = initPackageName
@@ -64,7 +65,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 
 	globalConfig.CommonOptions.Confirm = true
 
-	pkg, err := packager.NewPackage(&config)
+	pkg, err := packager.NewPackager(&config)
 	if err != nil {
 		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
 	}

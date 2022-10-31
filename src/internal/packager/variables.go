@@ -12,7 +12,7 @@ import (
 )
 
 // FillActiveTemplate handles setting the active variables and reloading the base template.
-func (p *Package) FillActiveTemplate() error {
+func (p *Packager) FillActiveTemplate() error {
 	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (p *Package) FillActiveTemplate() error {
 }
 
 // SetActiveVariables handles setting the active variables used to template component files.
-func (p *Package) SetActiveVariables() error {
+func (p *Packager) SetActiveVariables() error {
 	for key := range p.cfg.DeployOpts.SetVariables {
 		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase for VIPER
@@ -85,7 +85,7 @@ func (p *Package) SetActiveVariables() error {
 }
 
 // InjectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func (p *Package) InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
+func (p *Packager) InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
 	presentInActive := false
 	for _, configVariable := range p.cfg.Pkg.Variables {
 		if configVariable.Name == importedVariable.Name {
@@ -99,7 +99,7 @@ func (p *Package) InjectImportedVariable(importedVariable types.ZarfPackageVaria
 }
 
 // InjectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func (p *Package) InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
+func (p *Packager) InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	presentInActive := false
 	for _, configVariable := range p.cfg.Pkg.Constants {
 		if configVariable.Name == importedConstant.Name {
@@ -112,7 +112,7 @@ func (p *Package) InjectImportedConstant(importedConstant types.ZarfPackageConst
 	}
 }
 
-func (p *Package) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
+func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
 
 	if variable.Description != "" {
 		message.Question(variable.Description)

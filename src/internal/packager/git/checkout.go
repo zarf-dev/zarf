@@ -8,19 +8,22 @@ import (
 )
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD
-func CheckoutTag(path string, tag string) {
+func (g *Git) CheckoutTag(tag string) {
+	message.Debugf("git.CheckoutTag(%s)", tag)
+
 	options := &git.CheckoutOptions{
 		Branch: plumbing.ReferenceName("refs/tags/" + tag),
 	}
-	checkout(path, options)
+	g.checkout(options)
 }
 
 // checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
 // than checking out to a detached head, checks out to the provided branch ref
 // It will delete the branch provided if it exists
-func checkoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName) {
-	message.Debugf("Checkout tag %s as branch %s for %s", tag, branch.String(), path)
-	repo, err := git.PlainOpen(path)
+func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) {
+	message.Debugf("git.checkoutTagAsBranch(%s,%s)", tag, branch.String())
+
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}
@@ -29,18 +32,18 @@ func checkoutTagAsBranch(path string, tag string, branch plumbing.ReferenceName)
 	if err != nil {
 		message.Fatal(err, "Failed to locate tag in repository.")
 	}
-	checkoutHashAsBranch(path, tagRef.Hash(), branch)
+	g.checkoutHashAsBranch(tagRef.Hash(), branch)
 }
 
 // checkoutHashAsBranch performs a `git checkout` of the commit hash associated
 // with the provided hash
 // It will delete the branch provided if it exists
-func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.ReferenceName) {
-	message.Debugf("Checkout hash %s as branch %s for %s", hash.String(), branch.String(), path)
+func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.ReferenceName) {
+	message.Debugf("git.checkoutHasAsBranch(%s,%s)", hash.String(), branch.String())
 
-	_ = deleteBranchIfExists(path, branch)
+	_ = g.deleteBranchIfExists(branch)
 
-	repo, err := git.PlainOpen(path)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}
@@ -67,16 +70,16 @@ func checkoutHashAsBranch(path string, hash plumbing.Hash, branch plumbing.Refer
 		Branch: branch,
 		Create: true,
 	}
-	checkout(path, options)
+	g.checkout(options)
 }
 
 // checkout performs a `git checkout` on the path provided using the options provided
 // It assumes the caller knows what to do and does not perform any safety checks
-func checkout(path string, checkoutOptions *git.CheckoutOptions) {
-	message.Debugf("Git checkout %s", path)
+func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) {
+	message.Debugf("git.checkout(%#v)", checkoutOptions)
 
 	// Open the given repo
-	repo, err := git.PlainOpen(path)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		message.Fatal(err, "Not a valid git repo or unable to open")
 	}

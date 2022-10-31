@@ -13,7 +13,7 @@ import (
 
 // readYaml loads the config from the given path and removes
 // components not matching the current OS if filterByOS is set.
-func (p *Package) readYaml(path string, filterByOS bool) error {
+func (p *Packager) readYaml(path string, filterByOS bool) error {
 	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (p *Package) readYaml(path string, filterByOS bool) error {
 	// Filter each component to only compatible platforms
 	filteredComponents := []types.ZarfComponent{}
 	for _, component := range p.cfg.Pkg.Components {
-		if isCompatibleComponent(component, filterByOS) {
+		if p.isCompatibleComponent(component, filterByOS) {
 			filteredComponents = append(filteredComponents, component)
 		}
 	}
@@ -32,7 +32,7 @@ func (p *Package) readYaml(path string, filterByOS bool) error {
 }
 
 // writeYaml adds build information and writes the config to the given path
-func (p *Package) writeYaml() error {
+func (p *Packager) writeYaml() error {
 	message.Debug("config.BuildConfig()")
 
 	now := time.Now()
@@ -46,12 +46,9 @@ func (p *Package) writeYaml() error {
 	}
 	hostname, hostErr := os.Hostname()
 
-	// Need to ensure the arch is updated if injected
-	arch := config.GetArch()
-
 	// Normalize these for the package confirmation
-	p.cfg.Pkg.Metadata.Architecture = arch
-	p.cfg.Pkg.Build.Architecture = arch
+	p.cfg.Pkg.Metadata.Architecture = p.arch
+	p.cfg.Pkg.Build.Architecture = p.arch
 
 	// Record the time of package creation
 	p.cfg.Pkg.Build.Timestamp = now.Format(time.RFC1123Z)

@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager"
 )
 
 var (
@@ -43,7 +45,11 @@ func doAllTheThings(m *testing.M) (int, error) {
 	var err error
 
 	// Set up constants in the global variable that all the tests are able to access
-	e2e.arch = config.GetArch()
+	if config.CliArch != "" {
+		e2e.arch = config.CliArch
+	} else {
+		e2e.arch = runtime.GOARCH
+	}
 
 	e2e.zarfBinPath = path.Join("build", GetCLIName())
 	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"

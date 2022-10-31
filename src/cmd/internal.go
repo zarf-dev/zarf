@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/jsonschema"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -83,11 +82,9 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		if err != nil {
 			message.Error(err, "Unable to load the Zarf state")
 		}
-		config.InitState(state)
 
 		// Create the non-admin user
-		err = git.CreateReadOnlyUser()
-		if err != nil {
+		if err = git.New(state.GitServer).CreateReadOnlyUser(); err != nil {
 			message.Error(err, "Unable to create a read-only user in the Gitea service.")
 		}
 	},

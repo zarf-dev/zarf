@@ -11,7 +11,7 @@ import (
 )
 
 // composeComponents builds the composed components list for the current config.
-func (p *Package) composeComponents() {
+func (p *Packager) composeComponents() {
 	message.Debugf("packager.ComposeComponents()")
 
 	components := []types.ZarfComponent{}
@@ -34,7 +34,7 @@ func (p *Package) composeComponents() {
 // For composed components, we build the tree of components starting at the root and adding children as we go;
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
 // where 1 component parent is made up of 0...n composite or leaf children.
-func (p *Package) getComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
+func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
 	// Make sure the component we're trying to import cant be accessed
@@ -53,7 +53,7 @@ func (p *Package) getComposedComponent(parentComponent types.ZarfComponent) type
 	return childComponent
 }
 
-func (p *Package) getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
+func (p *Packager) getChildComponent(parentComponent types.ZarfComponent, everGrowingComposePath string) (childComponent types.ZarfComponent) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parentComponent, everGrowingComposePath)
 
 	importedPackage := p.getSubPackage(filepath.Join(everGrowingComposePath, parentComponent.Import.Path))
@@ -65,7 +65,6 @@ func (p *Package) getChildComponent(parentComponent types.ZarfComponent, everGro
 		childComponentName = parentComponent.Name
 	}
 
-	targetArch := config.GetArch()
 	// Find the child component from the imported package that matches our arch
 	for _, importedComponent := range importedPackage.Components {
 		if importedComponent.Name == childComponentName {
@@ -77,7 +76,7 @@ func (p *Package) getChildComponent(parentComponent types.ZarfComponent, everGro
 			}
 
 			// Only add this component if it is valid for the target architecture.
-			if filterArch == "" || filterArch == targetArch {
+			if filterArch == "" || filterArch == p.arch {
 				childComponent = importedComponent
 				break
 			}
@@ -110,7 +109,7 @@ func (p *Package) getChildComponent(parentComponent types.ZarfComponent, everGro
 	return
 }
 
-func (p *Package) fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
+func (p *Packager) fixComposedFilepaths(parentComponent, childComponent types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", childComponent, parentComponent)
 
 	// Prefix composed component file paths.
@@ -143,7 +142,7 @@ func (p *Package) fixComposedFilepaths(parentComponent, childComponent types.Zar
 }
 
 // Validates the sub component, exits program if validation fails.
-func (p *Package) validateOrBail(component *types.ZarfComponent) {
+func (p *Packager) validateOrBail(component *types.ZarfComponent) {
 	message.Debugf("packager.validateOrBail(%+v)", component)
 
 	if err := validate.ValidateImportPackage(component); err != nil {
@@ -152,7 +151,7 @@ func (p *Package) validateOrBail(component *types.ZarfComponent) {
 }
 
 // Sets Name, Default, Required and Description to the original components values
-func (p *Package) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
+func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
 
 	target.Name = override.Name
@@ -203,7 +202,7 @@ func (p *Package) mergeComponentOverrides(target *types.ZarfComponent, override 
 }
 
 // Reads the locally imported zarf.yaml
-func (p *Package) getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
+func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
@@ -225,7 +224,7 @@ func (p *Package) getSubPackage(packagePath string) (importedPackage types.ZarfP
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func (p *Package) getComposedFilePath(originalPath string, pathPrefix string) string {
+func (p *Packager) getComposedFilePath(originalPath string, pathPrefix string) string {
 	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, pathPrefix)
 
 	// Return original if it is a remote file.

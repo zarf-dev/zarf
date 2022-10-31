@@ -10,7 +10,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinner *message.Spinner) (*git.Repository, error) {
+func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinner *message.Spinner) (*git.Repository, error) {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   spinner,
@@ -21,7 +21,7 @@ func clone(gitDirectory string, gitURL string, onlyFetchRef bool, spinner *messa
 		cloneOptions.Tags = git.NoTags
 	}
 
-	gitCred := FindAuthForHost(gitURL)
+	gitCred := g.FindAuthForHost(gitURL)
 
 	// Gracefully handle no git creds on the system (like our CI/CD)
 	if gitCred.Auth.Username != "" {

@@ -83,9 +83,6 @@ var readCredsCmd = &cobra.Command{
 			message.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
 		}
 
-		// Continue loading state data if it is valid
-		config.InitState(state)
-
 		message.Note("Git Server Push Password: ")
 		fmt.Println(state.GitServer.PushPassword)
 	},

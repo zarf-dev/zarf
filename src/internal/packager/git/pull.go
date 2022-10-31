@@ -13,10 +13,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
-const onlineRemoteName = "online-upstream"
-
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
+func (g *Git) DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
@@ -24,24 +22,24 @@ func DownloadRepoToTemp(gitURL string, spinner *message.Spinner) string {
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	pull(gitURL, path, spinner, "")
+	g.pull(gitURL, path, spinner, "")
 	return path
 }
 
 // Pull clones or updates a git repository into the target folder.
-func Pull(gitURL, targetFolder string, spinner *message.Spinner) (string, error) {
-	repoName, err := transformURLtoRepoName(gitURL)
+func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
+	repoName, err := g.transformURLtoRepoName(gitURL)
 	if err != nil {
 		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
 		return "", err
 	}
 
-	path := targetFolder + "/" + repoName
-	pull(gitURL, path, spinner, repoName)
+	path = targetFolder + "/" + repoName
+	g.pull(gitURL, path, repoName)
 	return path, nil
 }
 
-func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string) {
+func (g *Git) pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string) {
 	spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
@@ -60,12 +58,12 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 	onlyFetchRef := matches[idx("atRef")] != ""
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
 
-	repo, err := clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
+	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef, spinner)
 
 	if err == git.ErrRepositoryAlreadyExists {
 		spinner.Debugf("Repo already cloned, fetching upstream changes...")
 
-		err = fetch(gitCachePath)
+		err = g.fetch(gitCachePath)
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			spinner.Debugf("Repo already up to date")
@@ -101,17 +99,17 @@ func pull(gitURL, targetFolder string, spinner *message.Spinner, repoName string
 			spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
-		_, _ = removeLocalBranchRefs(targetFolder)
-		_, _ = removeOnlineRemoteRefs(targetFolder)
+		_, _ = g.removeLocalBranchRefs()
+		_, _ = g.removeOnlineRemoteRefs()
 
 		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
 
 		if isHash(ref) {
-			fetchHash(targetFolder, ref)
-			checkoutHashAsBranch(targetFolder, plumbing.NewHash(ref), trunkBranchName)
+			g.fetchHash(ref)
+			g.checkoutHashAsBranch(plumbing.NewHash(ref), trunkBranchName)
 		} else {
-			fetchTag(targetFolder, ref)
-			checkoutTagAsBranch(targetFolder, ref, trunkBranchName)
+			g.fetchTag(ref)
+			g.checkoutTagAsBranch(ref, trunkBranchName)
 		}
 	}
 }
