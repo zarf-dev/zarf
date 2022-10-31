@@ -1,6 +1,6 @@
 # zarf-injector
 
-A tiny (<512kb) binary statically-linked with musl in order to fit as a configmap
+A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap
 
 ## Building on Ubuntu
 
@@ -18,6 +18,8 @@ cargo build --target x86_64-unknown-linux-musl --release
 ```
 
 ## Checking Binary Size
+
+Due to the ConfigMap size limit (1MiB for binary data), we need to make sure the binary is small enough to fit.
 
 ```bash
 cargo build --target x86_64-unknown-linux-musl --release
