@@ -1,11 +1,8 @@
 use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
-use oci_spec::image::{
-    Descriptor, DescriptorBuilder, ImageManifestBuilder, MediaType, SCHEMA_VERSION,
-};
 use rouille::{router, Response};
-use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::env;
 use std::fs;
@@ -81,11 +78,6 @@ fn unpack(sha_sum: &String) {
     archive
         .unpack("/zarf-stage2")
         .expect("Unable to unarchive the resulting tarball");
-
-    let mut seed_image_tar = Archive::new(File::open("/zarf-stage2/seed-image.tar").unwrap());
-    seed_image_tar
-        .unpack("/zarf-stage2/seed-image")
-        .expect("Unable to unarchive the seed image tarball");
 }
 
 /// Starts a static docker compliant registry server that only serves the single image from /zarf-stage2/seed-image
@@ -141,122 +133,37 @@ fn start_seed_registry(file_root: &Path) {
     });
 }
 
-/// Handles the GET request for the manifest (only returns a Docker V2 manifest regardless of Accept header)
+/// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
 fn handle_get_manifest(root: &Path) -> Response {
-    let sha_manifest = fs::read_to_string(root.join("link")).expect("unable to read pointer file");
-    let file = File::open(&root.join(&sha_manifest)).unwrap();
-    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-        .with_additional_header("Docker-Content-Digest", sha_manifest.to_owned())
-        .with_additional_header("Etag", sha_manifest)
+    let index = fs::read_to_string(root.join("index.json")).expect("read index.json");
+    let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
+    let sha_manifest = json["manifests"][0]["digest"]
+        .as_str()
+        .unwrap()
+        .strip_prefix("sha256:")
+        .unwrap()
+        .to_owned();
+    let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
+    Response::from_file("application/vnd.oci.image.manifest.v1+json", file)
+        .with_additional_header(
+            "Docker-Content-Digest",
+            format!("sha256:{}", sha_manifest.to_owned()),
+        )
+        .with_additional_header("Etag", format!("sha256:{}", sha_manifest))
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
 }
 
 /// Handles the GET request for a blob
 fn handle_get_digest(root: &Path, digest: &String) -> Response {
-    let mut path = root.join(digest);
+    let blob_root = root.join("blobs").join("sha256");
+    let path = blob_root.join(digest.strip_prefix("sha256:").unwrap());
 
-    match path.try_exists() {
-        Ok(true) => {
-            // means they queried the config json
-        }
-        _ => {
-            // means they queried a layer
-            path = root.join(digest.strip_prefix("sha256:").unwrap());
-            path.set_extension("tar.gz");
-        }
-    }
     let file = File::open(&path).unwrap();
     Response::from_file("application/octet-stream", file)
         .with_additional_header("Docker-Content-Digest", digest.to_owned())
         .with_additional_header("Etag", digest.to_owned())
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
         .with_additional_header("Cache-Control", "max-age=31536000")
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct CraneManifest {
-    config: String,
-    repo_tags: Vec<String>,
-    layers: Vec<String>,
-}
-
-/// Calculates the file size of a file
-fn get_file_size(path: &PathBuf) -> i64 {
-    let metadata = std::fs::metadata(path).unwrap();
-    metadata.len() as i64
-}
-
-/// Takes crane's tarball format and converts it to a Docker V2 manifest
-///
-/// Creates:
-///
-/// /zarf-stage2/link - a pointer file to the manifest
-///
-/// /zarf-stage2/manifestv2.json - the manifest
-fn create_v2_manifest(root: &Path) {
-    let data = fs::read_to_string(root.join("manifest.json")).expect("unable to read pointer file");
-
-    let crane_manifest: Vec<CraneManifest> =
-        serde_json::from_str(&data).expect("manifest.json was not of struct CraneManifest");
-
-    let config_digest = root.join(crane_manifest[0].config.clone());
-
-    let config = DescriptorBuilder::default()
-        .media_type(MediaType::Other(
-            "application/vnd.docker.container.image.v1+json".to_string(),
-        ))
-        .size(get_file_size(&config_digest))
-        .digest(crane_manifest[0].config.clone())
-        .build()
-        .expect("build config descriptor");
-
-    let layers: Vec<Descriptor> = crane_manifest[0]
-        .layers
-        .iter()
-        .map(|layer| {
-            let digest = root.join(layer);
-            let full_digest = format!(
-                "sha256:{}",
-                layer.to_string().strip_suffix(".tar.gz").unwrap()
-            );
-
-            const ROOTF_DIFF_TAR_GZIP: &str = "application/vnd.docker.image.rootfs.diff.tar.gzip";
-
-            DescriptorBuilder::default()
-                .media_type(MediaType::Other(ROOTF_DIFF_TAR_GZIP.to_string()))
-                .size(get_file_size(&digest))
-                .digest(full_digest)
-                .build()
-                .expect("build layer")
-        })
-        .collect();
-
-    let manifest = ImageManifestBuilder::default()
-        .schema_version(SCHEMA_VERSION)
-        .media_type(MediaType::Other(
-            "application/vnd.docker.distribution.manifest.v2+json".to_string(),
-        ))
-        .config(config)
-        .layers(layers)
-        .build()
-        .expect("build image manifest");
-
-    println!("{}", manifest.to_string_pretty().unwrap());
-
-    manifest
-        .to_file_pretty(root.join("manifestv2.json"))
-        .unwrap();
-
-    let mut file = File::open(root.join("manifestv2.json")).unwrap();
-    let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher).unwrap();
-    let result = hasher.finalize();
-    let sha_digest = format!("sha256:{:x}", result);
-
-    std::fs::rename(root.join("manifestv2.json"), root.join(sha_digest.clone())).unwrap();
-    let mut file = File::create(root.join("link")).unwrap();
-    file.write_all(sha_digest.as_bytes()).unwrap();
 }
 
 fn main() {
@@ -267,8 +174,7 @@ fn main() {
         let sha_sum = &args[2];
         unpack(sha_sum);
     } else if cmd == "serve" {
-        let root = Path::new("/zarf-stage2/seed-image").to_owned();
-        create_v2_manifest(&root);
+        let root = Path::new("/zarf-stage2").to_owned();
         start_seed_registry(&root);
     }
 }
