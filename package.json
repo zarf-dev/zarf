@@ -35,10 +35,10 @@
 		"@testing-library/svelte": "3.2.2",
 		"@tsconfig/svelte": "3.0.0",
 		"@types/prismjs": "1.26.0",
-		"@typescript-eslint/eslint-plugin": "5.40.1",
-		"@typescript-eslint/parser": "5.40.1",
-		"concurrently": "7.4.0",
-		"eslint": "8.25.0",
+		"@typescript-eslint/eslint-plugin": "5.42.0",
+		"@typescript-eslint/parser": "5.42.0",
+		"concurrently": "7.5.0",
+		"eslint": "8.26.0",
 		"eslint-config-prettier": "8.5.0",
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
@@ -51,13 +51,13 @@
 		"svelte": "3.52.0",
 		"svelte-check": "2.9.2",
 		"svelte-preprocess": "4.10.7",
-		"tslib": "2.4.0",
+		"tslib": "2.4.1",
 		"typescript": "4.8.4"
 	},
 	"dependencies": {
-		"material-symbols": "0.2.13",
+		"material-symbols": "0.2.14",
 		"typescript": "4.8.4",
-		"vite": "3.1.8",
+		"vite": "3.2.2",
 		"yaml": "2.1.3"
 	}
 }
