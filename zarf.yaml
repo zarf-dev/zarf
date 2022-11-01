@@ -4,9 +4,9 @@ metadata:
   description: "Used to establish a new Zarf cluster"
 
 components:
-  - name: k3s
+  - name: rke2
     import:
-      path: packages/distros/k3s
+      path: packages/distros/rke2
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
