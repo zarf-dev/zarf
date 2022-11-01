@@ -1,7 +1,7 @@
 use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
-use rouille::{router, Response};
+use rouille::{accept, router, Response};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::env;
@@ -112,13 +112,25 @@ fn start_seed_registry(file_root: &Path) {
                 (HEAD) (/v2/registry/manifests/{_ref :String}) => {
                     // a normal HEAD response has an empty body, but due to rouille not allowing for an override
                     // on Content-Length, we respond the same as a GET
-                    handle_get_manifest(&root)
+                    accept!(
+                        request,
+                        "application/vnd.oci.image.manifest.v1+json" => {
+                            handle_get_manifest(&root)
+                        },
+                        "*/*" => Response::empty_406()
+                    )
                 },
 
                 (HEAD) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
                     // a normal HEAD response has an empty body, but due to rouille not allowing for an override
                     // on Content-Length, we respond the same as a GET
-                    handle_get_manifest(&root)
+                    accept!(
+                        request,
+                        "application/vnd.oci.image.manifest.v1+json" => {
+                            handle_get_manifest(&root)
+                        },
+                        "*/*" => Response::empty_406()
+                    )
                 },
 
                 (GET) (/v2/registry/blobs/{digest :String}) => {
