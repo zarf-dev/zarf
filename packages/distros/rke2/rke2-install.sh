@@ -1,3 +1,5 @@
+# This file was created using instructions from https://docs.rke2.io/install/airgap/#rke2-installsh-script-install
+
 #!/bin/sh
 
 set -e
