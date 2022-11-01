@@ -24,7 +24,7 @@
     {
       "fileMatch": ["^zarf.yaml$"],
       "matchStrings": [
-        "(.|\n)*name: (?<depName>.+)(.|\n)*url: (?<registryUrl>.+)(.|\n)*version: (?<currentValue>.+)\\s"
+        "(.|\n)*name: (?<depName>.+)(.|\n)*url: (?<registryUrl>.+)(.|\n)*version: (?<currentValue>.+)"
       ],
       "datasourceTemplate": "helm"
     }
