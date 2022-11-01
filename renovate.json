@@ -19,5 +19,14 @@
     }
   ],
   "platformAutomerge": true,
-  "platformCommit": true
+  "platformCommit": true,
+  "regexManagers": [
+    {
+      "fileMatch": ["^zarf.yaml$"],
+      "matchStrings": [
+        "(.|\n)*name: (?<depName>.+)(.|\n)*url: (?<registryUrl>.+)(.|\n)*version: (?<currentValue>.+)\\s"
+      ],
+      "datasourceTemplate": "helm"
+    }
+  ]
 }
