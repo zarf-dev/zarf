@@ -82,11 +82,15 @@
       "oneOf": [
         {
           "required": [
-            "url",
-            "gitPath",
+            "url"
+          ],
+          "title": "url"
+        },
+        {
+          "required": [
             "localPath"
           ],
-          "title": "chartLocationGroup"
+          "title": "localPath"
         }
       ]
     },

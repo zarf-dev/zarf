@@ -1,4 +1,4 @@
-name: docs
+name: Validate Docs
 on:
   pull_request:
     paths:
@@ -9,11 +9,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-
-# Abort prior jobs in the same workflow / PR
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:

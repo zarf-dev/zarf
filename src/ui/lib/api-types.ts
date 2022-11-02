@@ -127,11 +127,11 @@ export interface ZarfChart {
     /**
      * If using a git repo
      */
-    gitPath: string;
+    gitPath?: string;
     /**
      * The path to the chart folder
      */
-    localPath: string;
+    localPath?: string;
     /**
      * The name of the chart to deploy
      */
@@ -152,7 +152,7 @@ export interface ZarfChart {
      * The URL of the chart repository or git url if the chart is using a git repo instead of
      * helm repo
      */
-    url: string;
+    url?: string;
     /**
      * List of values files to include in the package
      */
@@ -832,13 +832,13 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
     "ZarfChart": o([
-        { json: "gitPath", js: "gitPath", typ: "" },
-        { json: "localPath", js: "localPath", typ: "" },
+        { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
+        { json: "localPath", js: "localPath", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
-        { json: "url", js: "url", typ: "" },
+        { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
     ], false),

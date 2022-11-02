@@ -134,15 +134,10 @@ func validateChart(chart types.ZarfChart) error {
 		return fmt.Errorf("%s must include a namespace", intro)
 	}
 
-	// Must only have one of url, localPath, or gitPath
-	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath) + oneIfNotEmpty(chart.GitPath)
+	// Must only have a url or localPath
+	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
-		return fmt.Errorf("%s must only have one of url, localPath or gitPath", intro)
-	}
-	
-	// Must have a url
-	if (chart.Url == "" && chart.LocalPath == "") {
-		return fmt.Errorf("%s must include a url or localPath", intro)
+		return fmt.Errorf("%s must only have a url or localPath", intro)
 	}
 
 	// Must have a version
