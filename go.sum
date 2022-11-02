@@ -324,6 +324,8 @@ github.com/anchore/syft v0.59.0 h1:rGq200rPTC+4AGJKhm9ajj60dmlCgcHAxtVflNLtL/Y=
 github.com/anchore/syft v0.59.0/go.mod h1:s5Rrt0yt4rQfQVKyH3rXszanIhyrjx37KEtynHdUCh0=
 github.com/anchore/syft v0.60.0 h1:bVx46MdSCcvnVqlRQP/L3IWKl8etC7FZ3LcBIDRQXXA=
 github.com/anchore/syft v0.60.0/go.mod h1:liCRoNZiQeiZeafaptjizcr/V7+ZAEYra/RhwqKldgw=
+github.com/anchore/syft v0.60.1 h1:QEmdjhIHWSlOc7t96j1Det6ZwivoTOKC+YCTpZeZlJU=
+github.com/anchore/syft v0.60.1/go.mod h1:liCRoNZiQeiZeafaptjizcr/V7+ZAEYra/RhwqKldgw=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.2/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
@@ -3481,6 +3483,8 @@ k8s.io/utils v0.0.0-20221011040102-427025108f67 h1:ZmUY7x0cwj9e7pGyCTIalBi5jpNfi
 k8s.io/utils v0.0.0-20221011040102-427025108f67/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 k8s.io/utils v0.0.0-20221012122500-cfd413dd9e85 h1:cTdVh7LYu82xeClmfzGtgyspNh6UxpwLWGi8R4sspNo=
 k8s.io/utils v0.0.0-20221012122500-cfd413dd9e85/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+k8s.io/utils v0.0.0-20221101230645-61b03e2f6476 h1:L14f2LWkOxG2rYsuSA3ltQnnST1vMfek/GUk+VemxD4=
+k8s.io/utils v0.0.0-20221101230645-61b03e2f6476/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 lukechampine.com/uint128 v1.1.1/go.mod h1:c4eWIwlEGaxC/+H1VguhU4PHXNWDCDMUlWdIWl2j1gk=
 lukechampine.com/uint128 v1.2.0 h1:mBi/5l91vocEN8otkC5bDLhi2KdCticRiwbdB0O+rjI=
 lukechampine.com/uint128 v1.2.0/go.mod h1:c4eWIwlEGaxC/+H1VguhU4PHXNWDCDMUlWdIWl2j1gk=

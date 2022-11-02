@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33
-	github.com/anchore/syft v0.60.0
+	github.com/anchore/syft v0.60.1
 	github.com/derailed/k9s v0.26.7
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/fatih/color v1.13.0
@@ -31,7 +31,7 @@ require (
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.3
 	k8s.io/klog/v2 v2.80.1
-	k8s.io/utils v0.0.0-20221012122500-cfd413dd9e85
+	k8s.io/utils v0.0.0-20221101230645-61b03e2f6476
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
