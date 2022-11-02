@@ -70,7 +70,6 @@ func Create(baseDir string) {
 		// Load seed images into their own happy little tarball for ease of import on init
 		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
-		_ = os.Remove(tempPath.seedImage)
 		ociPath := path.Join(tempPath.base, "seed-image")
 		for _, image := range pulledImages {
 			if err := crane.SaveOCI(image, ociPath); err != nil {
