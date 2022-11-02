@@ -121,7 +121,6 @@ var ManifestFiles []string
 
 func DeduceResourceType(componentResource string) string {
 	if !utils.InvalidPath(componentResource) {
-		message.Info("Is path")
 		if isLocalChart(componentResource) {
 			return "localChart"
 		} else if isManifests(componentResource) {
@@ -132,7 +131,6 @@ func DeduceResourceType(componentResource string) string {
 			return "unknown path"
 		}
 	} else if isUrl(componentResource) {
-		message.Info("Is url")
 		if isGitChart(componentResource) {
 			return "gitChart"
 		} else if isHelmRepoChart(componentResource) {
