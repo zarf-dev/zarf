@@ -38,6 +38,10 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
+	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+		p.cfg.IsInitConfig = true
+	}
+
 	p.composeComponents()
 
 	// After components are composed, template the active package
