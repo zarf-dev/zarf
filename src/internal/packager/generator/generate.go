@@ -20,22 +20,6 @@ type yamlKind struct {
 	Kind string `json:"kind"`
 }
 
-func askQuestion(question string, required bool) (answer string) {
-	prompt := &survey.Input{
-		Message: fmt.Sprint(question),
-	}
-	var err error
-	if required {
-		err = survey.AskOne(prompt, &answer, survey.WithValidator(survey.Required))
-	} else {
-		err = survey.AskOne(prompt, &answer)
-	}
-	if err != nil {
-		message.Fatal("", err.Error())
-	}
-	return answer
-}
-
 func getOrAskNamespace(source string, componentType string, required bool) (namespace string) {
 	if config.GenerateOptions.Namespace != "" {
 		return config.GenerateOptions.Namespace
