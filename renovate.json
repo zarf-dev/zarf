@@ -22,9 +22,11 @@
   "platformCommit": true,
   "regexManagers": [
     {
-      "fileMatch": ["^zarf.yaml$"],
+      "fileMatch": ["(^|/)zarf.yaml$"],
+      "matchStringsStrategy": "recursive",
       "matchStrings": [
-        "(.|\n)*name: (?<depName>.+)(.|\n)*url: (?<registryUrl>.+)(.|\n)*version: (?<currentValue>.+)"
+        "charts:(.|\n)*?((^\\s{4}[\\w:]+)|\n$|^\\s{2}-)",
+        "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)"
       ],
       "datasourceTemplate": "helm"
     }
