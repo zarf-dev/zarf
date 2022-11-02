@@ -2,6 +2,8 @@ package generator
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -16,6 +18,22 @@ import (
 
 type yamlKind struct {
 	Kind string `json:"kind"`
+}
+
+func askQuestion(question string, required bool) (answer string) {
+	prompt := &survey.Input{
+		Message: fmt.Sprint(question),
+	}
+	var err error
+	if required {
+		err = survey.AskOne(prompt, &answer, survey.WithValidator(survey.Required))
+	} else {
+		err = survey.AskOne(prompt, &answer)
+	}
+	if err != nil {
+		message.Fatal("", err.Error())
+	}
+	return answer
 }
 
 func getOrAskNamespace(source string, componentType string, required bool) (namespace string) {
@@ -54,7 +72,9 @@ func separateManifestsAndKustomizations(dirPath string) (manifests []string, kus
 		err := utils.ReadYaml(yamlFile, &currentYaml)
 		if err != nil {
 			message.Fatalf(err, "Error reading manifest %s", yamlFile)
-		} else if currentYaml.Kind != "" {
+		}
+		message.Info("TEST" + currentYaml.Kind)
+		if currentYaml.Kind != "" {
 			if currentYaml.Kind == "Kustomization" {
 				kustomizations = append(kustomizations, yamlFile)
 			} else if currentYaml.Kind == "ZarfPackageConfig" {
@@ -108,6 +128,28 @@ func GenManifests(path string) (newComponent types.ZarfComponent) {
 }
 
 func GenLocalFiles(path string) (newComponent types.ZarfComponent) {
+	newComponent.Name = "component-files-" + uuid.NewString()
+	var filePaths []string
+	if isDir(path) {
+		dirEntries, err := os.ReadDir(path)
+		if err != nil {
+			message.Fatal(err, "Error reading directory")
+		}
+		for _, entry := range dirEntries {
+			filePaths = append(filePaths, filepath.Join(path, entry.Name()))
+		}
+	} else {
+		filePaths = append(filePaths, path)
+	}
+	
+	for _, file := range filePaths {
+		dest := askQuestion("What is the destination for " + file + "?", true)
+		newZarfFile := types.ZarfFile{
+			Source: file,
+			Target: dest,
+		}
+		newComponent.Files = append(newComponent.Files, newZarfFile)
+	}
 	return newComponent
 }
 

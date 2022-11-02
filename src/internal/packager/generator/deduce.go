@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -12,19 +13,20 @@ import (
 )
 
 func getTopLevelFiles(path string) (topLevelFiles []string) {
-	dirContents, err := os.ReadDir(path)
-	if err != nil {
-		message.Fatal(err, "FS error")
-	}
-	for _, content := range dirContents {
-		if !content.IsDir() {
-			lastCharIsForwardSlash := regexp.MustCompile(`\/$`).MatchString
-			if lastCharIsForwardSlash(path) {
-				topLevelFiles = append(topLevelFiles, path + content.Name())
-			} else {
-				topLevelFiles = append(topLevelFiles, path + "/" + content.Name())
-			}
+	if isDir(path) {
+		dirContents, err := os.ReadDir(path)
+		if err != nil {
+			message.Fatal(err, "Error reading directory")
 		}
+		for _, content := range dirContents {
+			topLevelFiles = append(topLevelFiles, filepath.Join(path, content.Name()))
+		}
+	} else {
+		_, err := os.ReadFile(path)
+		if err != nil {
+			message.Fatal(err, "Error reading file")
+		}
+		topLevelFiles = append(topLevelFiles, path)
 	}
 	return topLevelFiles
 }
@@ -32,17 +34,13 @@ func getTopLevelFiles(path string) (topLevelFiles []string) {
 func isDir(path string) bool {
 	pathData, err := os.Stat(path)
 	if err != nil {
-		message.Fatal(err, "FS error")
+		message.Fatal(err, "Error stat-ing path")
 	}
 	return pathData.IsDir()
 }
 
 func isLocalFiles(data string) bool {
-	if len(getTopLevelFiles(data)) > 0 {
-		return true
-	} else {
-		return false
-	}
+	return len(getTopLevelFiles(data)) > 0
 }
 
 func isGitChart(data string) bool {
@@ -78,7 +76,7 @@ func isManifests(data string) bool {
 	if isDir(data) {
 		topLevelFiles := getTopLevelFiles(data)
 		for _, topLevelFile := range topLevelFiles {
-			if isYaml(topLevelFile) {
+			if isYaml(topLevelFile) && isValidManifest(topLevelFile) {
 				ManifestFiles = append(ManifestFiles, topLevelFile)
 			}
 		}
@@ -88,7 +86,7 @@ func isManifests(data string) bool {
 			return false
 		}
 	} else {
-		if isYaml(data) {
+		if isYaml(data) && isValidManifest(data) {
 			return true
 		} else {
 			return false
@@ -115,6 +113,16 @@ func isUrl(data string) bool {
 		}
 	}
 	return false
+}
+
+func isValidManifest(path string) (isManifest bool) {
+	var currentYaml yamlKind
+		err := utils.ReadYaml(path, &currentYaml)
+		if err != nil {
+			message.Fatalf(err, "Error reading manifest %s", path)
+		}
+	message.Info(currentYaml.Kind)
+	return currentYaml.Kind != ""
 }
 
 var ManifestFiles []string
