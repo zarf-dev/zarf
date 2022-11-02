@@ -203,7 +203,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 		if sortedImages := k8s.SortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
 			var realImages []string
 			for _, image := range sortedImages {
-				if descriptor, err := crane.Head(image, config.GetCraneOptions()...); err != nil {
+				if descriptor, err := crane.Head(image, config.GetCraneOptions(p.cfg.CreateOpts.Insecure)...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 				} else {

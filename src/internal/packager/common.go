@@ -30,8 +30,8 @@ type Packager struct {
 	arch    string
 }
 
-// NewPackager creates a new package instance with the provided config.
-func NewPackager(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
+// New creates a new package instance with the provided config.
+func New(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
 	if pkgConfig.tmp, err = createPaths(); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
@@ -44,11 +44,11 @@ func NewPackager(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
 	return pkgConfig, nil
 }
 
-// NewPackagerOrDie creates a new package instance with the provided config or throws a fatal error.
-func NewPackagerOrDie(config *types.PackagerConfig) (pkgConfig *Packager) {
+// NewOrDie creates a new package instance with the provided config or throws a fatal error.
+func NewOrDie(config *types.PackagerConfig) (pkgConfig *Packager) {
 	var err error
 
-	if pkgConfig, err = NewPackager(config); err != nil {
+	if pkgConfig, err = New(config); err != nil {
 		message.Fatal(err, "Unable to create package the package")
 	}
 

@@ -13,3 +13,7 @@ type ImgConfig struct {
 
 	Insecure bool
 }
+
+func New(config *ImgConfig) *ImgConfig {
+	return config
+}

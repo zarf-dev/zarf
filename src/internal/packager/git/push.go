@@ -7,14 +7,13 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func (g *Git) PushAllDirectories(localPath string) error {
+func (g *Git) PushRepo(localPath string) error {
 	// If this is a serviceURL, create a port-forward tunnel to that resource
 	if tunnel, err := cluster.NewTunnelFromServiceURL(g.Server.Address); err != nil {
 		message.Debug(err)
@@ -24,50 +23,43 @@ func (g *Git) PushAllDirectories(localPath string) error {
 		g.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
 	}
 
-	paths, err := utils.ListDirectories(localPath)
+	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
+	defer spinner.Stop()
+
+	g.GitPath = localPath
+	basename := filepath.Base(localPath)
+	spinner.Updatef("Pushing git repo %s", basename)
+
+	repo, err := g.prepRepoForPush(g.Server.Address, g.Server.PushUsername)
 	if err != nil {
-		message.Warnf("Unable to list the %s directory", localPath)
+		message.Warnf("error when prepping the repo for push.. %v", err)
 		return err
 	}
 
-	spinner := message.NewProgressSpinner("Processing %d git repos", len(paths))
-	defer spinner.Stop()
+	if err := g.push(repo, spinner); err != nil {
+		spinner.Warnf("Unable to push the git repo %s", basename)
+		return err
+	}
 
-	for _, path := range paths {
-		basename := filepath.Base(path)
-		spinner.Updatef("Pushing git repo %s", basename)
-
-		repo, err := g.prepRepoForPush(g.Server.Address, g.Server.PushUsername)
+	// Add the read-only user to this repo
+	if g.Server.InternalServer {
+		// Get the upstream URL
+		remote, err := repo.Remote(onlineRemoteName)
 		if err != nil {
-			message.Warnf("error when preping the repo for push.. %v", err)
+			message.Warn("unable to get the information needed to add the read-only user to the repo")
+			return err
+		}
+		remoteUrl := remote.Config().URLs[0]
+		repoName, err := g.transformURLtoRepoName(remoteUrl)
+		if err != nil {
+			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
 		}
 
-		if err := g.push(repo, spinner); err != nil {
-			spinner.Warnf("Unable to push the git repo %s", basename)
+		err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
+		if err != nil {
+			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
-		}
-
-		// Add the read-only user to this repo
-		if g.Server.InternalServer {
-			// Get the upstream URL
-			remote, err := repo.Remote(onlineRemoteName)
-			if err != nil {
-				message.Warn("unable to get the information needed to add the read-only user to the repo")
-				return err
-			}
-			remoteUrl := remote.Config().URLs[0]
-			repoName, err := g.transformURLtoRepoName(remoteUrl)
-			if err != nil {
-				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
-				return err
-			}
-
-			err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
-			if err != nil {
-				message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
-				return err
-			}
 		}
 	}
 

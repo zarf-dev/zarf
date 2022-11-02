@@ -49,11 +49,6 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
-	gitCfg := git.Git{
-		Server:  h.Cfg.State.GitServer,
-		Spinner: spinner,
-		// GitPath: ,
-	}
 	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
 
 	// Switch to the correct tag

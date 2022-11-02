@@ -65,7 +65,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 
 	globalConfig.CommonOptions.Confirm = true
 
-	pkg, err := packager.NewPackager(&config)
+	pkg, err := packager.New(&config)
 	if err != nil {
 		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
 	}

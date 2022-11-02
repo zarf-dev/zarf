@@ -94,7 +94,7 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		packager.NewPackagerOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
+		packager.NewOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
 	},
 }
 

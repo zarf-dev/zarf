@@ -63,7 +63,8 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	if err == git.ErrRepositoryAlreadyExists {
 		g.Spinner.Debugf("Repo already cloned, fetching upstream changes...")
 
-		err = g.fetch(gitCachePath)
+		g.GitPath = gitCachePath
+		err = g.fetch()
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			g.Spinner.Debugf("Repo already up to date")

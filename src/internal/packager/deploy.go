@@ -224,7 +224,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasRepos {
-		p.pushReposToRepository(componentPath.Repos, component.Repos)
+		_ = p.pushReposToRepository(componentPath.Repos, component.Repos)
 	}
 
 	if hasDataInjections {
@@ -350,22 +350,33 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 }
 
 // Push all of the components git repos to the configured git server
-func (p *Packager) pushReposToRepository(reposPath string, repos []string) {
+func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
 	if len(repos) == 0 {
-		return
+		return nil
 	}
+	totalFailed := 0
 
 	// Try repo push up to 3 times
-	for retry := 0; retry < 3; retry++ {
-		// Push all the repos from the extracted archive
-		if err := git.New(p.cfg.State.GitServer).PushAllDirectories(reposPath); err != nil {
-			message.Errorf(err, "Unable to push repos to the Git Server, retrying in 5 seconds...")
-			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			break
-		}
+	for _, repoPath := range repos {
+		gitClient := git.New(p.cfg.InitOpts.GitServer)
+
+		utils.Retry(func() error {
+			if totalFailed < 3 {
+				err := gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+				if err != nil {
+					totalFailed++
+					return err
+				}
+				return nil
+			} else {
+				return fmt.Errorf("hit total failed-ness")
+			}
+			return nil
+
+		}, 3, 5*time.Second)
 	}
+
+	return nil
 }
 
 // Async'ly move data into a container running in a pod on the k8s cluster

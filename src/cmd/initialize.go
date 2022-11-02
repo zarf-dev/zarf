@@ -77,7 +77,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Run everything
-		packager.NewPackagerOrDie(&pkgConfig).Deploy()
+		packager.NewOrDie(&pkgConfig).Deploy()
 	},
 }
 
