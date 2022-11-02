@@ -31,14 +31,6 @@ func getTopLevelFiles(path string) (topLevelFiles []string) {
 	return topLevelFiles
 }
 
-func isDir(path string) bool {
-	pathData, err := os.Stat(path)
-	if err != nil {
-		message.Fatal(err, "Error stat-ing path")
-	}
-	return pathData.IsDir()
-}
-
 func isLocalFiles(data string) bool {
 	return len(getTopLevelFiles(data)) > 0
 }
