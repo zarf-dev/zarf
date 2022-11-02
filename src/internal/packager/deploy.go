@@ -54,6 +54,11 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
+	// TODO: @jperry this should be done during the constructor of `p *Packager'` instead of here.. REFACTOR..
+	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+		p.cfg.IsInitConfig = true
+	}
+
 	// If init config, make sure things are ready
 	if p.cfg.IsInitConfig {
 		utils.RunPreflightChecks()

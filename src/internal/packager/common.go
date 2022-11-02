@@ -216,3 +216,11 @@ func createPaths() (paths types.TempPaths, err error) {
 
 	return paths, err
 }
+
+func getRequestedComponentList(requestedComponents string) []string {
+	if requestedComponents != "" {
+		return strings.Split(requestedComponents, ",")
+	}
+
+	return []string{}
+}
