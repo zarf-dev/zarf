@@ -136,7 +136,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-git-data-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-git-data-$(ARCH)-v1.0.0.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
 

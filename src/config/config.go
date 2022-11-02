@@ -173,7 +173,12 @@ func GetPackageName() string {
 	if metadata.Uncompressed {
 		suffix = "tar"
 	}
-	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
+
+	if metadata.Version == "" {
+		return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
+	}
+
+	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, metadata.Name, GetArch(), metadata.Version, suffix)
 }
 
 func GetInitPackageName() string {
