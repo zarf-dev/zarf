@@ -2,6 +2,7 @@ package packager
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 	"runtime"
@@ -14,13 +15,17 @@ import (
 )
 
 // Run scripts that a component has provided
-func (p *Packager) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) {
+func (p *Packager) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) error {
 	for _, script := range scripts {
-		p.loopScriptUntilSuccess(script, componentScript)
+		if err := p.loopScriptUntilSuccess(script, componentScript); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) {
+func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) error {
 	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
 	defer spinner.Success()
 
@@ -47,10 +52,12 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 		// On timeout abort
 		case <-timeout:
 			cancel()
-			spinner.Fatalf(nil, "Script \"%s\" timed out", script)
+			return fmt.Errorf("script \"%s\" timed out", script)
+
 		// Otherwise try running the script
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			defer cancel()
 
 			var shell string
 			var shellArgs string
@@ -62,9 +69,8 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 				shell = "sh"
 				shellArgs = "-c"
 			}
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, shell, shellArgs, script)
 
-			defer cancel()
+			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, shell, shellArgs, script)
 
 			if err != nil {
 				message.Debug(err, output, errOut)
@@ -72,8 +78,8 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 				if scripts.Retry {
 					continue
 				}
-				// Otherwise fatal
-				spinner.Fatalf(err, "Script \"%s\" failed (%s)", script, err.Error())
+				// Otherwise, fail
+				return fmt.Errorf("script \"%s\" failed: %w", script, err)
 			}
 
 			// Dump the script output in debug if output not already streamed
@@ -82,7 +88,7 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 			}
 
 			// Close the function now that we are done
-			return
+			return nil
 		}
 	}
 }

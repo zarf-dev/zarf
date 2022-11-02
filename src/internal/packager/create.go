@@ -41,7 +41,7 @@ func (p *Packager) Create(baseDir string) error {
 	p.composeComponents()
 
 	// After components are composed, template the active package
-	if err := p.FillActiveTemplate(); err != nil {
+	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
 	}
 
@@ -54,7 +54,7 @@ func (p *Packager) Create(baseDir string) error {
 	validate.Run(p.cfg.Pkg)
 
 	if !p.confirmAction("Create", nil) {
-		return nil
+		return fmt.Errorf("package creation canceled")
 	}
 
 	if p.cfg.IsInitConfig {

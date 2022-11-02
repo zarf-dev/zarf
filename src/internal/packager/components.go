@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
-	"gopkg.in/yaml.v2"
 )
 
 const horizontalRule = "───────────────────────────────────────────────────────────────────────────────────────"
@@ -188,8 +187,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 
 	displayComponent := component
 	displayComponent.Description = ""
-	content, _ := yaml.Marshal(displayComponent)
-	utils.ColorPrintYAML(string(content))
+	utils.ColorPrintYAML(displayComponent)
 	if component.Description != "" {
 		message.Question(component.Description)
 	}

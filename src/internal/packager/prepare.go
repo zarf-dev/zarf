@@ -24,7 +24,7 @@ var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 	var originalDir string
 
@@ -36,14 +36,14 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 	}
 
 	if err := p.readYaml(config.ZarfYAML, false); err != nil {
-		message.Fatal(err, "Unable to read the zarf.yaml file")
+		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
 	p.composeComponents()
 
 	// After components are composed, template the active package
-	if err := p.FillActiveTemplate(); err != nil {
-		message.Fatalf(err, "Unable to fill variables in template: %s", err.Error())
+	if err := p.fillActiveTemplate(); err != nil {
+		return fmt.Errorf("unable to fill variables in template: %w", err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -95,7 +95,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 
 		componentPath, err := p.createComponentPaths(component)
 		if err != nil {
-			message.Fatal(err, "Unable to create component paths")
+			return fmt.Errorf("unable to create component paths: %w", err)
 		}
 
 		chartNames := make(map[string]string)
@@ -122,7 +122,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 				for idx, path := range chart.ValuesFiles {
 					chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 					if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
-						message.Fatalf(err, "Unable to copy values file %s", path)
+						return fmt.Errorf("unable to copy values file %s: %w", path, err)
 					}
 				}
 
@@ -227,6 +227,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) {
 		_ = os.Chdir(originalDir)
 	}
 
+	return nil
 }
 
 func (p *Packager) processUnstructured(resource *unstructured.Unstructured) error {

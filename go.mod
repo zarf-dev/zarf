@@ -15,7 +15,6 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/goccy/go-yaml v1.9.6
 	github.com/google/go-containerregistry v0.12.0
-	github.com/mattn/go-colorable v0.1.13
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
@@ -246,6 +245,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect

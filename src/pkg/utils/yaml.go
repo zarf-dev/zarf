@@ -16,7 +16,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
-	"github.com/mattn/go-colorable"
+	"github.com/pterm/pterm"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -28,8 +28,10 @@ func yamlFormat(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
 
-func ColorPrintYAML(text string) {
-	tokens := lexer.Tokenize(text)
+func ColorPrintYAML(data any) {
+
+	text, _ := yaml.Marshal(data)
+	tokens := lexer.Tokenize(string(text))
 
 	var p printer.Printer
 	p.Bool = func() *printer.Property {
@@ -68,11 +70,8 @@ func ColorPrintYAML(text string) {
 			Suffix: yamlFormat(color.Reset),
 		}
 	}
-	writer := colorable.NewColorableStdout()
-	_, err := writer.Write([]byte(p.PrintTokens(tokens) + "\n"))
-	if err != nil {
-		message.Error(err, "Unable to print the config yaml contents")
-	}
+
+	pterm.Print(p.PrintTokens(tokens))
 }
 
 func ReadYaml(path string, destConfig any) error {

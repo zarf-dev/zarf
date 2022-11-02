@@ -69,15 +69,12 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Confirm the overall package deployment
-	confirm := p.confirmAction("Deploy", sbomViewFiles)
-
-	// Don't continue unless the user says so
-	if !confirm {
-		return fmt.Errorf("user cancelled the deployment")
+	if !p.confirmAction("Deploy", sbomViewFiles) {
+		return fmt.Errorf("deployment cancelled")
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.SetActiveVariables(); err != nil {
+	if err := p.setActiveVariables(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -224,7 +221,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasRepos {
-		_ = p.pushReposToRepository(componentPath.Repos, component.Repos)
+		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+			return charts /* empty */, fmt.Errorf("unable to push the repos to the repository: %w", err)
+		}
 	}
 
 	if hasDataInjections {

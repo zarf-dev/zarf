@@ -11,8 +11,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// FillActiveTemplate handles setting the active variables and reloading the base template.
-func (p *Packager) FillActiveTemplate() error {
+// fillActiveTemplate handles setting the active variables and reloading the base template.
+func (p *Packager) fillActiveTemplate() error {
 	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
 		return err
@@ -49,8 +49,8 @@ func (p *Packager) FillActiveTemplate() error {
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
 
-// SetActiveVariables handles setting the active variables used to template component files.
-func (p *Packager) SetActiveVariables() error {
+// setActiveVariables handles setting the active variables used to template component files.
+func (p *Packager) setActiveVariables() error {
 	for key := range p.cfg.DeployOpts.SetVariables {
 		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase for VIPER

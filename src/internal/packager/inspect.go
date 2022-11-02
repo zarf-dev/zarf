@@ -2,7 +2,6 @@ package packager
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -25,15 +24,6 @@ func (p *Packager) Inspect(packageName string) {
 	_ = archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base)
 
 	configPath := filepath.Join(p.tmp.Base, "zarf.yaml")
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		message.Fatal(err, "Unable to read the config file in the package")
-	}
-
-	// Convert []byte to string and print to screen
-	text := string(content)
-
-	utils.ColorPrintYAML(text)
 
 	// Load the config to get the build version
 	if err := p.readYaml(configPath, false); err != nil {
@@ -41,9 +31,10 @@ func (p *Packager) Inspect(packageName string) {
 	}
 
 	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.Pkg.Build.Version)
+	utils.ColorPrintYAML(p.cfg.Pkg)
 
 	if ViewSBOM {
-		err = archiver.Extract(packageName, "sboms", p.tmp.Base)
+		err := archiver.Extract(packageName, "sboms", p.tmp.Base)
 		if err != nil {
 			message.Fatalf(err, "Unable to extract sbom information from the package.")
 		}
