@@ -149,6 +149,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			isGitURL := re.MatchString(chart.Url)
 			helmCfg := helm.Helm{
 				Chart: chart,
+				Cfg:   p.cfg,
 			}
 
 			if isGitURL {
