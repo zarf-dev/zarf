@@ -55,7 +55,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	template.ProcessYamlFilesInPath(tempDir, r.options.Component)
+	// @todo: fix args
+	template.ProcessYamlFilesInPath(tempDir, r.options.Component, template.Values{})
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)

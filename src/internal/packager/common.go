@@ -22,7 +22,7 @@ import (
 )
 
 type Packager struct {
-	ctx     context.Context
+	// ctx     context.Context
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	kube    *k8s.Client
@@ -31,12 +31,26 @@ type Packager struct {
 }
 
 // New creates a new package instance with the provided config.
-func New(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
+func New(cfg *types.PackagerConfig) (*Packager, error) {
+
+	if cfg == nil {
+		return nil, fmt.Errorf("no config provided")
+	}
+
+	var (
+		err       error
+		pkgConfig = &Packager{
+			cfg: cfg,
+		}
+	)
+
+	// Create a temp directory for the package
 	if pkgConfig.tmp, err = createPaths(); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	pkgConfig.arch = config.GetArch(pkgConfig.cfg.Pkg.Metadata.Architecture, pkgConfig.cfg.Pkg.Build.Architecture)
+	// Set the arch
+	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
 
 	// Track if this is an init package
 	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
@@ -45,14 +59,13 @@ func New(cfg *types.PackagerConfig) (pkgConfig *Packager, err error) {
 }
 
 // NewOrDie creates a new package instance with the provided config or throws a fatal error.
-func NewOrDie(config *types.PackagerConfig) (pkgConfig *Packager) {
-	var err error
-
-	if pkgConfig, err = New(config); err != nil {
+func NewOrDie(config *types.PackagerConfig) *Packager {
+	if pkgConfig, err := New(config); err != nil {
 		message.Fatal(err, "Unable to create package the package")
+		return nil
+	} else {
+		return pkgConfig
 	}
-
-	return pkgConfig
 }
 
 // GetInitPackageName returns the formatted name of the init package

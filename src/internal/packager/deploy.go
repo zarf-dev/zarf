@@ -217,12 +217,14 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasImages {
-		p.pushImagesToRegistry(component.Images, noImgChecksum)
+		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
+			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
+		}
 	}
 
 	if hasRepos {
 		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
-			return charts /* empty */, fmt.Errorf("unable to push the repos to the repository: %w", err)
+			return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
 
@@ -325,9 +327,9 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 }
 
 // Push all of the components images to the configured container registry
-func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) {
+func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) error {
 	if len(componentImages) == 0 {
-		return
+		return nil
 	}
 
 	imgConfig := images.ImgConfig{
@@ -336,43 +338,24 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		NoChecksum:  noImgChecksum,
 	}
 
-	// Try image push up to 3 times
-	for retry := 0; retry < 3; retry++ {
-		if err := imgConfig.PushToZarfRegistry(); err != nil {
-			message.Errorf(err, "Unable to push images to the Registry, retrying in 5 seconds...")
-			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			break
-		}
-	}
+	return utils.Retry(func() error {
+		return imgConfig.PushToZarfRegistry()
+	}, 3, 5*time.Second)
 }
 
 // Push all of the components git repos to the configured git server
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
-	if len(repos) == 0 {
-		return nil
-	}
-	totalFailed := 0
-
 	// Try repo push up to 3 times
 	for _, repoPath := range repos {
 		gitClient := git.New(p.cfg.InitOpts.GitServer)
 
-		utils.Retry(func() error {
-			if totalFailed < 3 {
-				err := gitClient.PushRepo(filepath.Join(reposPath, repoPath))
-				if err != nil {
-					totalFailed++
-					return err
-				}
-				return nil
-			} else {
-				return fmt.Errorf("hit total failed-ness")
-			}
-			return nil
-
+		err := utils.Retry(func() error {
+			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
 		}, 3, 5*time.Second)
+
+		if err != nil {
+			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoPath, err)
+		}
 	}
 
 	return nil

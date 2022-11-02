@@ -52,7 +52,8 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
 
 	// Switch to the correct tag
-	gitCfg.CheckoutTag(tempPath, h.Chart.Version)
+	// @todo: fix args
+	gitCfg.CheckoutTag(h.Chart.Version)
 
 	// Validate the chart
 	_, err := loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
