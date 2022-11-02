@@ -143,10 +143,6 @@ func ClearDeployingComponents() {
 	deployedComponents = []types.DeployedComponent{}
 }
 
-func SetComponents(components []types.ZarfComponent) {
-	// active.Components = components
-}
-
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }

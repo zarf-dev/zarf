@@ -26,7 +26,7 @@ func (p *Packager) composeComponents() {
 
 	// Update the parent package config with the expanded sub components.
 	// This is important when the deploy package is created.
-	config.SetComponents(components)
+	p.cfg.Pkg.Components = components
 }
 
 // getComposedComponent recursively retrieves a composed zarf component
