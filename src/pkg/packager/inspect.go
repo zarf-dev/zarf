@@ -11,7 +11,6 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-
 // Inspect list the contents of a package
 func (p *Packager) Inspect(packageName string, includeSBOM bool) {
 	if utils.InvalidPath(packageName) {

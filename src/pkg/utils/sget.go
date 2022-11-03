@@ -66,7 +66,7 @@ func Sget(image, key string, out io.Writer, ctx context.Context) error {
 	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
 	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
 	// was performed so we don't need to use this fragile logic here.
-	fulcioVerified := (co.SigVerifier == nil)
+	fulcioVerified := co.SigVerifier == nil
 
 	co.RootCerts, err = fulcio.GetRoots()
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// WriteSBOMFiles 
+// WriteSBOMFiles
 func WriteSBOMFiles(sbomViewFiles []string) error {
 	// Check if we even have any SBOM files to process
 	if len(sbomViewFiles) == 0 {

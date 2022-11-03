@@ -20,7 +20,7 @@ import (
 
 func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	var (
-		longer     string
+		longer   string
 		imgCount = len(i.ImgList)
 	)
 

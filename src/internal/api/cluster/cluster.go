@@ -20,7 +20,7 @@ func Summary(w http.ResponseWriter, r *http.Request) {
 	var hasZarf bool
 
 	c, err := cluster.NewClusterWithWait(5 * time.Second)
-	reachable = (err == nil)
+	reachable = err == nil
 
 	if reachable {
 		distro, _ = c.Kube.DetectDistro()
