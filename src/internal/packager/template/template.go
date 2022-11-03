@@ -86,7 +86,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 		builtinMap["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
 	}
 
-	// Don't template component-specifric variables for every component
+	// Don't template component-specific variables for every component
 	switch component.Name {
 	case "zarf-agent":
 		agentTLS := values.config.State.AgentTLS
