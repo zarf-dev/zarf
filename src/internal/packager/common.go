@@ -32,6 +32,7 @@ type Packager struct {
 
 // New creates a new package instance with the provided config.
 func New(cfg *types.PackagerConfig) (*Packager, error) {
+	message.Debugf("packager.New(%s)", message.JsonValue(cfg))
 
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
@@ -60,6 +61,8 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 
 // NewOrDie creates a new package instance with the provided config or throws a fatal error.
 func NewOrDie(config *types.PackagerConfig) *Packager {
+	message.Debug("packager.NewOrDie()")
+
 	if pkgConfig, err := New(config); err != nil {
 		message.Fatal(err, "Unable to create package the package")
 		return nil
@@ -70,6 +73,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 
 // GetInitPackageName returns the formatted name of the init package
 func GetInitPackageName(arch string) string {
+	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
 		arch = config.GetArch()
 	}
@@ -78,6 +82,8 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package
 func (p *Packager) GetPackageName() string {
+	message.Debugf("packager.GetPackageName(%s)", message.JsonValue(p))
+
 	if p.cfg.IsInitConfig {
 		return GetInitPackageName(p.arch)
 	}
@@ -90,7 +96,9 @@ func (p *Packager) GetPackageName() string {
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
-func (p *Packager) HandleIfURL(packagePath string, shasum string, insecureDeploy bool) string {
+func (p *Packager) HandleIfURL(packagePath, shasum string, insecureDeploy bool) string {
+	message.Debugf("packager.HandleIfURL(%s, %s, %t)", packagePath, shasum, insecureDeploy)
+
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(packagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
@@ -145,6 +153,7 @@ func (p *Packager) HandleIfURL(packagePath string, shasum string, insecureDeploy
 }
 
 func (p *Packager) handleSgetPackage(sgetPackagePath string) string {
+	message.Debugf("packager.handleSgetPackage(%s)", sgetPackagePath)
 
 	// Create the local file for the package
 	localPackagePath := filepath.Join(p.tmp.Base, "remote.tar.zst")
@@ -173,6 +182,8 @@ func (p *Packager) handleSgetPackage(sgetPackagePath string) string {
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+	message.Debugf("packager.createComponentPaths(%s)", message.JsonValue(component))
+
 	basePath := filepath.Join(p.tmp.Base, component.Name)
 	err = utils.CreateDirectory(basePath, 0700)
 
@@ -200,8 +211,9 @@ func isValidFileExtension(filename string) bool {
 }
 
 func createPaths() (paths types.TempPaths, err error) {
-	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	message.Debug("packager.createPaths()")
 
+	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	paths = types.TempPaths{
 		Base: basePath,
 

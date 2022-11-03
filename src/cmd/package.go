@@ -66,6 +66,9 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 
 		pkgConfig.DeployOpts.PackagePath = pkgClient.HandleIfURL(packageName, shasum, insecureDeploy)
+		if err := pkgClient.Deploy(); err != nil {
+			message.Fatalf(err, "Failed to deploy package")
+		}
 	},
 }
 
