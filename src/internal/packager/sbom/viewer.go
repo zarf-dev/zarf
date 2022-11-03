@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package sbom contains tools for generating SBOMs
 package sbom
 
 import (
@@ -42,11 +46,7 @@ func (builder *Builder) createSBOMViewerAsset(tag name.Tag, jsonData []byte) err
 	}
 
 	// Write the sbomviewer template to disk
-	if err := tpl.Execute(sbomViewerFile, tplData); err != nil {
-		return err
-	}
-
-	return nil
+	return tpl.Execute(sbomViewerFile, tplData)
 }
 
 func (builder *Builder) loadFileCSS(name string) template.CSS {

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package pki provides a simple way to generate a CA and signed server keypair
 package pki
 
 import (

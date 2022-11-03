@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cluster contains zarf-specific cluster management functions
 package cluster
 
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go

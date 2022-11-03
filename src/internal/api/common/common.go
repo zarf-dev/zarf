@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package common provides common functions for the api
 package common
 
 import (

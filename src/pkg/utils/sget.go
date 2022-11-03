@@ -1,4 +1,8 @@
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package utils provides generic helper functions
 package utils
 
 import (

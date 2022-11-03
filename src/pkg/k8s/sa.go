@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
 package k8s
 
 import (

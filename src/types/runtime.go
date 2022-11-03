@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package types contains all the types used by Zarf
 package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.

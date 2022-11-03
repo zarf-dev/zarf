@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package // Package types contains all the types used by Zarf
+
 package types
 
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"

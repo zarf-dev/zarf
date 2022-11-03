@@ -175,3 +175,6 @@ test-cves: ensure-ui-build-dir
 
 cve-report: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
+
+lint-go:
+	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

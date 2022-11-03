@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package api provides the UI API server
 package api
 
 import (
