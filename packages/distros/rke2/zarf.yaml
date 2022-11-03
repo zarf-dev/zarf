@@ -16,6 +16,8 @@ components:
       Regularly scans components for CVEs using trivy in our build pipeline
     scripts:
       retry: true
+      showOutput: true
+      timeoutSeconds: 600
       before:
         # If running RHEL variant, disable firewalld and configure NetworkManager
         # https://docs.rke2.io/known_issues/
@@ -29,8 +31,9 @@ components:
         - systemctl daemon-reload
         - systemctl enable rke2-server.service
         - systemctl start rke2-server.service
-        - export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
-        - chmod 644 $KUBECONFIG
+        - "[ ! -d '~/.kube' ] && mkdir ~/.kube || echo ''"
+        - "[ ! -f '~/.kube/config' ] && ln -s /etc/rancher/rke2/rke2.yaml ~/.kube/config || echo ''"
+
     files:
       # Canal CNI Configuration to work properly with NetworkManager
       - source: rke2-canal.conf
@@ -71,11 +74,9 @@ components:
         components:
           files:
             - common/empty-file
-            scripts:
-              retry: false
-              after:
-                # Force the return of a non-zero exit code.
-                - |
-                'echo "rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be
-                added when rke2 supports arm64 architecture.'
-                - 'exit(1)'
+          scripts:
+            retry: false
+            after:
+              # Force the return of a non-zero exit code.
+              - 'echo "rke2 is not currently supported on arm64 architecture, due to upstream dependencies. This functionality will be added when rke2 supports arm64 architecture.'
+              - 'exit(1)'
