@@ -13,24 +13,24 @@ import (
 func (i *ImgConfig) PushToZarfRegistry() error {
 	message.Debugf("images.PushToZarfRegistry(%#v)", i)
 
-	registryUrl := ""
+	registryURL := ""
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
 		tunnel := cluster.NewZarfTunnel()
 		tunnel.Connect(cluster.ZarfRegistry, false)
 		defer tunnel.Close()
 
-		registryUrl = tunnel.Endpoint()
+		registryURL = tunnel.Endpoint()
 	} else {
-		registryUrl = i.RegInfo.Address
+		registryURL = i.RegInfo.Address
 
 		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err := cluster.NewTunnelFromServiceURL(registryUrl); err != nil {
+		if tunnel, err := cluster.NewTunnelFromServiceURL(registryURL); err != nil {
 			message.Debug(err)
 		} else {
 			tunnel.Connect("", false)
 			defer tunnel.Close()
-			registryUrl = tunnel.Endpoint()
+			registryURL = tunnel.Endpoint()
 		}
 	}
 
@@ -48,9 +48,9 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		}
 		offlineName := ""
 		if i.NoChecksum {
-			offlineName, err = utils.SwapHostWithoutChecksum(src, registryUrl)
+			offlineName, err = utils.SwapHostWithoutChecksum(src, registryURL)
 		} else {
-			offlineName, err = utils.SwapHost(src, registryUrl)
+			offlineName, err = utils.SwapHost(src, registryURL)
 		}
 		if err != nil {
 			return err

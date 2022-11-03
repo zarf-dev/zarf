@@ -28,7 +28,6 @@ main.go @jeff-mccoy @YrrepNoj @Racer159
 /.github/ @jeff-mccoy @YrrepNoj @Racer159
 /.hooks/ @jeff-mccoy @YrrepNoj @Racer159
 /.gitignore @jeff-mccoy @YrrepNoj @Racer159
-/.golangci.yml @jeff-mccoy @YrrepNoj @Racer159
 /.goreleaser.yml @jeff-mccoy @YrrepNoj @Racer159
 /.grype.yaml @jeff-mccoy @YrrepNoj @Racer159
 /Dockerfile @jeff-mccoy @YrrepNoj @Racer159
