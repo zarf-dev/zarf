@@ -13,7 +13,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
@@ -21,6 +21,7 @@ import (
 
 var insecureDeploy bool
 var shasum string
+var includeInsepectSBOM bool
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -82,7 +83,7 @@ var packageInspectCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.NewOrDie(&pkgConfig).Inspect(packageName)
+		packager.NewOrDie(&pkgConfig).Inspect(packageName, includeInsepectSBOM)
 	},
 }
 
@@ -233,7 +234,7 @@ func bindDeployFlags() {
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
-	inspectFlags.BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
+	inspectFlags.BoolVarP(&includeInsepectSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
 }
 
 func bindRemoveFlags() {

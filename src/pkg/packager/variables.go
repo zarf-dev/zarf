@@ -84,8 +84,8 @@ func (p *Packager) setActiveVariables() error {
 	return nil
 }
 
-// InjectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func (p *Packager) InjectImportedVariable(importedVariable types.ZarfPackageVariable) {
+// injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
+func (p *Packager) injectImportedVariable(importedVariable types.ZarfPackageVariable) {
 	presentInActive := false
 	for _, configVariable := range p.cfg.Pkg.Variables {
 		if configVariable.Name == importedVariable.Name {
@@ -98,8 +98,8 @@ func (p *Packager) InjectImportedVariable(importedVariable types.ZarfPackageVari
 	}
 }
 
-// InjectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func (p *Packager) InjectImportedConstant(importedConstant types.ZarfPackageConstant) {
+// injectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
+func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageConstant) {
 	presentInActive := false
 	for _, configVariable := range p.cfg.Pkg.Constants {
 		if configVariable.Name == importedConstant.Name {

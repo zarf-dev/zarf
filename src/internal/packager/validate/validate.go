@@ -45,6 +45,34 @@ func Run(pkg types.ZarfPackage) {
 
 }
 
+func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
+	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
+	path := composedComponent.Import.Path
+	packageSuffix := "zarf.yaml"
+
+	// ensure path exists
+	if !(len(path) > 0) {
+		return fmt.Errorf("%s must include a path", intro)
+	}
+
+	// remove zarf.yaml from path if path has zarf.yaml suffix
+	if strings.HasSuffix(path, packageSuffix) {
+		path = strings.Split(path, packageSuffix)[0]
+	}
+
+	// add a forward slash to end of path if it does not have one
+	if !strings.HasSuffix(path, "/") {
+		path = filepath.Clean(path) + string(os.PathSeparator)
+	}
+
+	// ensure there is a zarf.yaml in provided path
+	if utils.InvalidPath(path + packageSuffix) {
+		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
+	}
+
+	return nil
+}
+
 func oneIfNotEmpty(testString string) int {
 	if testString == "" {
 		return 0
@@ -160,34 +188,6 @@ func validateManifest(manifest types.ZarfManifest) error {
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
 		return fmt.Errorf("%s must have at least one file or kustomization", intro)
-	}
-
-	return nil
-}
-
-func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
-	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
-	path := composedComponent.Import.Path
-	packageSuffix := "zarf.yaml"
-
-	// ensure path exists
-	if !(len(path) > 0) {
-		return fmt.Errorf("%s must include a path", intro)
-	}
-
-	// remove zarf.yaml from path if path has zarf.yaml suffix
-	if strings.HasSuffix(path, packageSuffix) {
-		path = strings.Split(path, packageSuffix)[0]
-	}
-
-	// add a forward slash to end of path if it does not have one
-	if !strings.HasSuffix(path, "/") {
-		path = filepath.Clean(path) + string(os.PathSeparator)
-	}
-
-	// ensure there is a zarf.yaml in provided path
-	if utils.InvalidPath(path + packageSuffix) {
-		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
 	}
 
 	return nil

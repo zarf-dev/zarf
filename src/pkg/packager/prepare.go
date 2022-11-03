@@ -20,9 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var matchedImages k8s.ImageMap
-var maybeImages k8s.ImageMap
-
 // FindImages iterates over a zarf.yaml and attempts to parse any images
 func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
@@ -58,10 +55,6 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 	fmt.Printf("components:\n")
 
 	for _, component := range p.cfg.Pkg.Components {
-
-		// matchedImages holds the collection of images, reset per-component
-		matchedImages = make(k8s.ImageMap)
-		maybeImages = make(k8s.ImageMap)
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -184,8 +177,12 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			}
 		}
 
+		// matchedImages holds the collection of images, reset per-component
+		matchedImages := make(k8s.ImageMap)
+		maybeImages := make(k8s.ImageMap)
+
 		for _, resource := range resources {
-			if err := p.processUnstructured(resource); err != nil {
+			if matchedImages, maybeImages, err = p.processUnstructured(resource, matchedImages, maybeImages); err != nil {
 				message.Errorf(err, "Problem processing K8s resource %s", resource.GetName())
 			}
 		}
@@ -230,7 +227,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 	return nil
 }
 
-func (p *Packager) processUnstructured(resource *unstructured.Unstructured) error {
+func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-./]+:[\w][\w.\-]{0,127})"`)
 	var json string
@@ -245,28 +242,28 @@ func (p *Packager) processUnstructured(resource *unstructured.Unstructured) erro
 	case "Deployment":
 		var deployment v1.Deployment
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
-			return fmt.Errorf("could not parse deployment: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse deployment: %w", err)
 		}
 		matchedImages = p.kube.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
 
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
-			return fmt.Errorf("could not parse daemonset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse daemonset: %w", err)
 		}
 		matchedImages = p.kube.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
-			return fmt.Errorf("could not parse statefulset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse statefulset: %w", err)
 		}
 		matchedImages = p.kube.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
-			return fmt.Errorf("could not parse replicaset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse replicaset: %w", err)
 		}
 		matchedImages = p.kube.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 
@@ -285,5 +282,6 @@ func (p *Packager) processUnstructured(resource *unstructured.Unstructured) erro
 		message.Debugf("Found possible fuzzy match, Kind: %s, Value: %s", resource.GetKind(), group[1])
 		maybeImages[group[1]] = true
 	}
-	return nil
+
+	return matchedImages, maybeImages, nil
 }

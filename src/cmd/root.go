@@ -8,7 +8,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -11,11 +11,9 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// ViewSBOM indicates if image SBOM information should be displayed when inspecting a package
-var ViewSBOM bool
 
 // Inspect list the contents of a package
-func (p *Packager) Inspect(packageName string) {
+func (p *Packager) Inspect(packageName string, includeSBOM bool) {
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
 	}
@@ -33,7 +31,7 @@ func (p *Packager) Inspect(packageName string) {
 	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.Pkg.Build.Version)
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
-	if ViewSBOM {
+	if includeSBOM {
 		err := archiver.Extract(packageName, "sboms", p.tmp.Base)
 		if err != nil {
 			message.Fatalf(err, "Unable to extract sbom information from the package.")

@@ -22,7 +22,6 @@ import (
 )
 
 type Packager struct {
-	// ctx     context.Context
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	kube    *k8s.Client
