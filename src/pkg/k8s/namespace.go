@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -13,17 +13,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *Client) GetNamespaces() (*corev1.NamespaceList, error) {
+// GetNamespaces returns a list of namespaces in the cluster.
+func (k *K8s) GetNamespaces() (*corev1.NamespaceList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
-func (k *Client) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+// UpdateNamespace updates the given namespace in the cluster.
+func (k *K8s) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
 	return k.Clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
 }
 
-func (k *Client) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+// CreateNamespace creates the given namespace in the cluster.
+func (k *K8s) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	if namespace == nil {
 		// if only a name was provided create the namespace object
 		namespace = &corev1.Namespace{
@@ -52,7 +55,8 @@ func (k *Client) CreateNamespace(name string, namespace *corev1.Namespace) (*cor
 	return match, err
 }
 
-func (k *Client) DeleteNamespace(ctx context.Context, name string) error {
+// DeleteNamespace deletes the given namespace from the cluster.
+func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 	// Attempt to delete the namespace immediately
 	gracePeriod := int64(0)
 	err := k.Clientset.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})

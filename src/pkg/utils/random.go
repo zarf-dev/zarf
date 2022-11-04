@@ -14,6 +14,7 @@ import (
 // https://owasp.org/www-community/password-special-characters has complete list of safe chars
 const randomStringChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!~-"
 
+// RandomString generates a secure random string of the specified length
 func RandomString(length int) string {
 	bytes := make([]byte, length)
 

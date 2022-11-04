@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -12,7 +12,7 @@ import (
 )
 
 // ReplaceService deletes and re-creates a service
-func (k *Client) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
+func (k *K8s) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 	if err := k.DeleteService(service.Namespace, service.Name); err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func (k *Client) ReplaceService(service *corev1.Service) (*corev1.Service, error
 }
 
 // GenerateService returns a K8s service struct without writing to the cluster
-func (k *Client) GenerateService(namespace, name string) *corev1.Service {
+func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -37,23 +37,23 @@ func (k *Client) GenerateService(namespace, name string) *corev1.Service {
 }
 
 // DeleteService removes a service from the cluster by namespace and name.
-func (k *Client) DeleteService(namespace, name string) error {
+func (k *K8s) DeleteService(namespace, name string) error {
 	return k.Clientset.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 // CreateService creates the given service in the cluster.
-func (k *Client) CreateService(service *corev1.Service) (*corev1.Service, error) {
+func (k *K8s) CreateService(service *corev1.Service) (*corev1.Service, error) {
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)
 }
 
 // GetService returns a Kubernetes service resource in the provided namespace with the given name.
-func (k *Client) GetService(namespace, serviceName string) (*corev1.Service, error) {
+func (k *K8s) GetService(namespace, serviceName string) (*corev1.Service, error) {
 	return k.Clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 }
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg
-func (k *Client) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
+func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
 	// Creat the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: Labels{
@@ -66,7 +66,7 @@ func (k *Client) GetServicesByLabel(namespace, label, value string) (*corev1.Ser
 }
 
 // GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg
-func (k *Client) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
+func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
 	// Creat the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{

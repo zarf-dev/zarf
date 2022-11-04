@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -17,7 +17,7 @@ import (
 const waitLimit = 30
 
 // GeneratePod creates a new pod without adding it to the k8s cluster
-func (k *Client) GeneratePod(name, namespace string) *corev1.Pod {
+func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -32,7 +32,7 @@ func (k *Client) GeneratePod(name, namespace string) *corev1.Pod {
 }
 
 // DeletePod removees a pod from the cluster by namespace & name
-func (k *Client) DeletePod(namespace string, name string) error {
+func (k *K8s) DeletePod(namespace string, name string) error {
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
 	err := k.Clientset.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{
@@ -55,24 +55,24 @@ func (k *Client) DeletePod(namespace string, name string) error {
 }
 
 // CreatePod inserts the given pod into the cluster
-func (k *Client) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
+func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
 }
 
 // GetAllPods returns a list of pods from the cluster for all namesapces
-func (k *Client) GetAllPods() (*corev1.PodList, error) {
+func (k *K8s) GetAllPods() (*corev1.PodList, error) {
 	return k.GetPods(corev1.NamespaceAll)
 }
 
 // GetPods returns a list of pods from the cluster by namespace
-func (k *Client) GetPods(namespace string) (*corev1.PodList, error) {
+func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
 }
 
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
-func (k *Client) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []string {
+func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []string {
 	for count := 0; count < waitLimit; count++ {
 
 		pods, err := k.Clientset.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{

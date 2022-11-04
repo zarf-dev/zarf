@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 // ReplaceConfigmap deletes and recreates a configmap
-func (k *Client) ReplaceConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func (k *K8s) ReplaceConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	if err := k.DeleteConfigmap(namespace, name); err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (k *Client) ReplaceConfigmap(namespace, name string, data map[string][]byte
 }
 
 // CreateConfigmap applys a configmap to the cluster
-func (k *Client) CreateConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
+func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -38,7 +38,7 @@ func (k *Client) CreateConfigmap(namespace, name string, data map[string][]byte)
 }
 
 // DeleteConfigmap delets a confimap by name
-func (k *Client) DeleteConfigmap(namespace, name string) error {
+func (k *K8s) DeleteConfigmap(namespace, name string) error {
 	namespaceConfigmap := k.Clientset.CoreV1().ConfigMaps(namespace)
 
 	err := namespaceConfigmap.Delete(context.TODO(), name, metav1.DeleteOptions{})
@@ -50,7 +50,7 @@ func (k *Client) DeleteConfigmap(namespace, name string) error {
 }
 
 // DeleteConfigMapsByLabel deletes a configmap by label(s)
-func (k *Client) DeleteConfigMapsByLabel(namespace string, labels Labels) error {
+func (k *K8s) DeleteConfigMapsByLabel(namespace string, labels Labels) error {
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: labels,
 	})

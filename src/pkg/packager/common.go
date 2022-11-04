@@ -28,7 +28,7 @@ import (
 type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
-	kube    *k8s.Client
+	kube    *k8s.K8s
 	tmp     types.TempPaths
 	arch    string
 }

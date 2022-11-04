@@ -35,13 +35,15 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		message.SuccessF("%s Zarf package confirmed", userMessage)
 
 		return config.CommonOptions.Confirm
-	} else {
-		prompt := &survey.Confirm{
-			Message: userMessage + " this Zarf package?",
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
-		}
+	}
+
+	prompt := &survey.Confirm{
+		Message: userMessage + " this Zarf package?",
+	}
+
+	// Prompt the user for confirmation, on abort return false
+	if err := survey.AskOne(prompt, &confirm); err != nil {
+		return false
 	}
 
 	return confirm

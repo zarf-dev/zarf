@@ -23,7 +23,7 @@ type Image struct {
 
 // SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src
 func SwapHost(src string, targetHost string) (string, error) {
-	image, err := ParseImageURL(src)
+	image, err := parseImageURL(src)
 	if err != nil {
 		return "", err
 	}
@@ -37,14 +37,14 @@ func SwapHost(src string, targetHost string) (string, error) {
 
 // SwapHostWithoutChecksum Perform base url replacement but avoids adding a checksum of the original url.
 func SwapHostWithoutChecksum(src string, targetHost string) (string, error) {
-	image, err := ParseImageURL(src)
+	image, err := parseImageURL(src)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
 }
 
-func ParseImageURL(src string) (out Image, err error) {
+func parseImageURL(src string) (out Image, err error) {
 	ref, err := reference.ParseAnyReference(src)
 	if err != nil {
 		return out, err

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -13,17 +13,15 @@ import (
 
 	"github.com/go-logr/logr/funcr"
 	"k8s.io/client-go/kubernetes"
+
+	// Include the cloud auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func NewK8sClientWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*Client, error) {
-	k, _ := NewK8sClient(logger, defaultLabels)
-	return k, k.WaitForHealthyCluster(timeout)
-}
-
-func NewK8sClient(logger Log, defaultLabels Labels) (*Client, error) {
+// New creates a new K8s client.
+func New(logger Log, defaultLabels Labels) (*K8s, error) {
 	logger("k8s.NewK8sClient()")
 
 	klog.SetLogger(funcr.New(func(prefix, args string) {
@@ -35,7 +33,7 @@ func NewK8sClient(logger Log, defaultLabels Labels) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to k8s cluster: %w", err)
 	}
 
-	return &Client{
+	return &K8s{
 		RestConfig: config,
 		Clientset:  clientset,
 		Log:        logger,
@@ -43,8 +41,14 @@ func NewK8sClient(logger Log, defaultLabels Labels) (*Client, error) {
 	}, nil
 }
 
+// NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
+func NewWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*K8s, error) {
+	k, _ := New(logger, defaultLabels)
+	return k, k.WaitForHealthyCluster(timeout)
+}
+
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
-func (k *Client) WaitForHealthyCluster(timeout time.Duration) error {
+func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 	var err error
 	var nodes *v1.NodeList
 	var pods *v1.PodList

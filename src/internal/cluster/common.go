@@ -13,7 +13,7 @@ import (
 )
 
 type Cluster struct {
-	Kube *k8s.Client
+	Kube *k8s.K8s
 }
 
 const defaultTimeout = 30 * time.Second
@@ -35,13 +35,13 @@ func NewClusterOrDie() *Cluster {
 // NewClusterWithWait creates a new cluster instance and waits for the given timeout for the cluster to be ready
 func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 	c := &Cluster{}
-	c.Kube, _ = k8s.NewK8sClient(message.Debugf, labels)
+	c.Kube, _ = k8s.New(message.Debugf, labels)
 	return c, c.Kube.WaitForHealthyCluster(timeout)
 }
 
 // NewCluster creates a new cluster instance without waiting for the cluster to be ready
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
-	c.Kube, _ = k8s.NewK8sClient(message.Debugf, labels)
+	c.Kube, _ = k8s.New(message.Debugf, labels)
 	return c, nil
 }

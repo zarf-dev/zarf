@@ -27,6 +27,7 @@ import (
 // We may need to make this dynamic in the future
 var payloadChunkSize = 1024 * 512
 
+// RunInjectionMadness initializes a zarf injection into the cluster
 func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 

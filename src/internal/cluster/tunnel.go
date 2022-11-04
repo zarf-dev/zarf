@@ -47,7 +47,7 @@ const (
 
 // Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
 type Tunnel struct {
-	kube         *k8s.Client
+	kube         *k8s.K8s
 	out          io.Writer
 	autoOpen     bool
 	localPort    int
@@ -319,7 +319,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		defer spinner.Stop()
 	}
 
-	kube, err := k8s.NewK8sClientWithWait(spinner.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(spinner.Debugf, labels, defaultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}

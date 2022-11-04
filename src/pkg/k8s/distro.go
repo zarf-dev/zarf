@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -25,7 +25,7 @@ const (
 )
 
 // DetectDistro returns the matching distro or unknown if not found
-func (k *Client) DetectDistro() (string, error) {
+func (k *K8s) DetectDistro() (string, error) {
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
 	eksNodeRegex := regexp.MustCompile(`^aws:///`)
@@ -113,7 +113,7 @@ func (k *Client) DetectDistro() (string, error) {
 }
 
 // GetArchitecture returns the cluster system architecture if found or an error if not
-func (k *Client) GetArchitecture() (string, error) {
+func (k *K8s) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
 
 	k.Log("%#v", nodes)

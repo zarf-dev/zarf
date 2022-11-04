@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -13,7 +13,7 @@ type Log func(string, ...any)
 
 type Labels map[string]string
 
-type Client struct {
+type K8s struct {
 	Clientset  *kubernetes.Clientset
 	RestConfig *rest.Config
 	Log        Log

@@ -25,7 +25,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 
 	path := chi.URLParam(r, "path")
 
-	if pkg, err := readPackage(w, path); err != nil {
+	if pkg, err := readPackage(path); err != nil {
 		message.ErrorWebf(err, w, "Unable to read the package")
 	} else {
 		common.WriteJSONResponse(w, pkg, http.StatusOK)
@@ -33,7 +33,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 }
 
 // internal function to read a package from the local filesystem
-func readPackage(w http.ResponseWriter, path string) (pkg types.APIZarfPackage, err error) {
+func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 	pkg.Path, err = url.QueryUnescape(path)
 	if err != nil {
 		return pkg, err

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package k8s provides a client for interacting with a Kubernetes cluster.	 	
+// Package k8s provides a client for interacting with a Kubernetes cluster.
 package k8s
 
 import (
@@ -12,7 +12,7 @@ import (
 )
 
 // GetNodes returns a list of nodes from the k8s cluster.
-func (k *Client) GetNodes() (*corev1.NodeList, error) {
+func (k *K8s) GetNodes() (*corev1.NodeList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Nodes().List(context.TODO(), metaOptions)
 }

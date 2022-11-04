@@ -11,6 +11,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// PrintConnectStringTable prints a table of connect strings.
 func PrintConnectStringTable(connectStrings types.ConnectStrings) {
 	Debugf("message.PrintConnectStringTable(%#v)", connectStrings)
 
