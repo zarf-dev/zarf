@@ -408,6 +408,8 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
+			Cfg:       p.cfg,
+			Cluster:   p.cluster,
 		}
 
 		addedConnectStrings, installedChartName := helmCfg.InstallOrUpgradeChart()
@@ -435,6 +437,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		helmCfg := helm.Helm{
 			BasePath:  componentPath.Manifests,
 			Component: component,
+			Cfg:       p.cfg,
 		}
 		addedConnectStrings, installedChartName := helmCfg.GenerateChart(manifest)
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})

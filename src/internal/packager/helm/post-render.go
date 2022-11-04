@@ -30,10 +30,15 @@ type renderer struct {
 	options        *Helm
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
+	values         template.Values
 }
 
 func (h *Helm) NewRenderer() *renderer {
 	message.Debugf("helm.NewRenderer()")
+
+	// TODO: @JPERRY Stop being lazy and don't ignore this.. or do.. it's up to you
+	valueTemplate, _ := template.Generate(h.Cfg)
+
 	return &renderer{
 		connectStrings: make(types.ConnectStrings),
 		options:        h,
@@ -41,6 +46,8 @@ func (h *Helm) NewRenderer() *renderer {
 			// Add the passed-in namespace to the list
 			h.Chart.Namespace: nil,
 		},
+		values:       valueTemplate,
+		actionConfig: h.actionConfig,
 	}
 }
 
@@ -60,7 +67,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	// Run the template engine against the chart output
 	// @todo: fix args
-	template.ProcessYamlFilesInPath(tempDir, r.options.Component, template.Values{})
+	// TODO: @JPERRY this value template is bad and it should feel bad
+	template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values)
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
