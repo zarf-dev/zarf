@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
@@ -32,19 +33,19 @@ func StartWebhook() {
 	server := agentHttp.NewServer(httpPort)
 	go func() {
 		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
-			message.Fatal(err, "Failed to start the web server")
+			message.Fatal(err, lang.AgentErrStart)
 		}
 	}()
 
-	message.Infof("Server running in port: %s", httpPort)
+	message.Infof(lang.AgentErrStart, httpPort)
 
 	// listen shutdown signal
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 
-	message.Infof("Shutdown gracefully...")
+	message.Infof(lang.AgentInfoShutdown)
 	if err := server.Shutdown(context.Background()); err != nil {
-		message.Fatal(err, "unable to properly shutdown the web server")
+		message.Fatal(err, lang.AgentErrShutdown)
 	}
 }

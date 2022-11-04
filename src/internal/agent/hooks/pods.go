@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -61,8 +62,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	zarfState, err := getStateFromAgentPod(zarfStatePath)
 	if err != nil {
-		message.Debugf("Unable to load the ZarfState file so that the Agent can mutate pods: %#v", err)
-		return nil, err
+		return nil, fmt.Errorf(lang.AgentHooksErrGetState, err)
 	}
 	containerRegistryURL := config.GetRegistry(zarfState)
 
@@ -71,7 +71,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -82,7 +82,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -93,7 +93,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -115,18 +115,9 @@ func getStateFromAgentPod(zarfStatePath string) (types.ZarfState, error) {
 	// Read the state file
 	stateFile, err := os.ReadFile(zarfStatePath)
 	if err != nil {
-		message.Warnf("Unable to read the zarfState file within the zarf-agent pod.")
 		return zarfState, err
 	}
 
 	// Unmarshal the json file into a Go struct
-	err = json.Unmarshal(stateFile, &zarfState)
-	if err != nil {
-		message.Warnf("Unable to unmarshal the zarfState file into a useable object.")
-		return zarfState, err
-	}
-
-	message.Debugf("ZarfState from file = %#v", zarfState)
-
-	return zarfState, err
+	return zarfState, json.Unmarshal(stateFile, &zarfState)
 }

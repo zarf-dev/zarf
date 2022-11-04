@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -53,15 +54,15 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Form the state.GitServer.Address from the state
 	if state, err = getStateFromAgentPod(zarfStatePath); err != nil {
-		return nil, fmt.Errorf("failed to load zarf state from file: %w", err)
+		return nil, fmt.Errorf(lang.AgentHooksErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux repository", state.GitServer.Address)
+	message.Debugf(lang.AgentHooksDebugGitURL, state.GitServer.Address)
 
 	// parse to simple struct to read the git url
 	src := &GenericGitRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
+		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 	patchedURL := src.Spec.URL
 
@@ -71,7 +72,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if isUpdate {
 		isPatched, err = utils.DoesHostnamesMatch(state.GitServer.Address, src.Spec.URL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to complete hostname matching: %w", err)
+			return nil, fmt.Errorf(lang.AgentHooksErrHostnameMatch, err)
 		}
 	}
 
@@ -79,7 +80,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		patchedURL = git.New(state.GitServer).MutateGitUrlsInText(patchedURL, state.GitServer.PushUsername)
-		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+		message.Debugf(lang.AgentHooksDebugGitMutate, src.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec
