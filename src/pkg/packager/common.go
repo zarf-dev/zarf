@@ -20,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -28,7 +27,6 @@ import (
 type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
-	kube    *k8s.K8s
 	tmp     types.TempPaths
 	arch    string
 }
@@ -57,6 +55,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
 
 	// Track if this is an init package
+	// TODO: We need to read the yaml of the package before 'cfg.Pkg.Kind' will be populated for us to read
 	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
 
 	return pkgConfig, nil
@@ -187,7 +186,7 @@ func (p *Packager) handleSgetPackage(sgetPackagePath string) string {
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
 	message.Debugf("packager.createComponentPaths(%s)", message.JsonValue(component))
 
-	basePath := filepath.Join(p.tmp.Base, component.Name)
+	basePath := filepath.Join(p.tmp.Components, component.Name)
 	err = utils.CreateDirectory(basePath, 0700)
 
 	paths = types.ComponentPaths{

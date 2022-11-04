@@ -23,7 +23,7 @@ func (p *Packager) Remove(packageName string) error {
 
 	// Get the secret for the deployed package
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
-	packageSecret, err := p.kube.GetSecret("zarf", secretName)
+	packageSecret, err := p.cluster.Kube.GetSecret("zarf", secretName)
 	if err != nil {
 		spinner.Errorf(err, "Unable to get the secret for the package we are attempting to remove")
 
@@ -57,14 +57,14 @@ func (p *Packager) Remove(packageName string) error {
 
 			if len(packages.DeployedComponents) == 0 {
 				// All the installed components were deleted, there for this package is no longer actually deployed
-				_ = p.kube.DeleteSecret(packageSecret)
+				_ = p.cluster.Kube.DeleteSecret(packageSecret)
 			} else {
 				// Save the new secret with the removed components removed from the secret
-				newPackageSecret := p.kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+				newPackageSecret := p.cluster.Kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
 				newPackageSecret.Labels["package-deploy-info"] = p.cfg.Pkg.Metadata.Name
 				newPackageSecretData, _ := json.Marshal(packages)
 				newPackageSecret.Data["data"] = newPackageSecretData
-				err = p.kube.ReplaceSecret(newPackageSecret)
+				err = p.cluster.Kube.ReplaceSecret(newPackageSecret)
 				if err != nil {
 					message.Warnf("Unable to replace the %s package secret: %#v", secretName, err)
 				}
@@ -89,7 +89,7 @@ func (p *Packager) Remove(packageName string) error {
 				}
 			}
 		}
-		p.kube.DeleteSecret(packageSecret)
+		p.cluster.Kube.DeleteSecret(packageSecret)
 	}
 
 	return nil

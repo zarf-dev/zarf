@@ -68,6 +68,10 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
+
+		// TODO: @JPERRY this pkgClient constructor does not populate the following (which we will need)
+		//     - cluster -> this will get loaded if we notice we are including images, charts, manifests, or repos
+		//	   - kube
 		pkgClient := packager.NewOrDie(&pkgConfig)
 
 		pkgConfig.DeployOpts.PackagePath = pkgClient.HandleIfURL(packageName, shasum, insecureDeploy)

@@ -110,6 +110,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	componentsToDeploy := p.getValidComponents()
 	config.SetDeployingComponents(deployedComponents)
 
+	// Generate a value template
+	valueTemplate, err = template.Generate(p.cfg)
+	if err != nil {
+		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
+	}
+
 	for _, component := range componentsToDeploy {
 		var charts []types.InstalledChart
 
@@ -137,7 +143,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
-	isSeedRegistry := component.Name == "seed-registry"
+	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
@@ -211,13 +217,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	p.runComponentScripts(component.Scripts.Before, component.Scripts)
 	p.processComponentFiles(component.Files, componentPath.Files)
 
-	// Generate a value template
-	valueTemplate, err = template.Generate(p.cfg)
-	if err != nil {
-		return charts, fmt.Errorf("unable to generate the value template: %w", err)
-	}
-
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
+
+		// Make sure we have access to the cluster
+		if p.cluster == nil {
+			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			if err != nil {
+				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
 		valueTemplate, err = p.getUpdatedValueTemplate(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
@@ -317,6 +326,8 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
 	}
 
+	p.cfg.State = state
+
 	// Continue loading state data if it is valid
 	values, err = template.Generate(p.cfg)
 	if err != nil {
@@ -393,11 +404,14 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		}
 
 		// Generate helm templates to pass to gitops engine
-		helmCfg := helm.Helm{
+		helmCfg := &helm.Helm{
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
+			Cfg:       p.cfg,
+			Cluster:   p.cluster,
 		}
+
 		addedConnectStrings, installedChartName := helmCfg.InstallOrUpgradeChart()
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName})
 
@@ -423,6 +437,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		helmCfg := helm.Helm{
 			BasePath:  componentPath.Manifests,
 			Component: component,
+			Cfg:       p.cfg,
 		}
 		addedConnectStrings, installedChartName := helmCfg.GenerateChart(manifest)
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
