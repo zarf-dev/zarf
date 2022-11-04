@@ -74,5 +74,9 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) (*
 	// Setup K8s connection
 	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
+	// TODO: @JPERRY does it make sense for this receiver to return the actionConfig?
+	//       Would it be good enough to just set it into the helm object?
+	h.actionConfig = actionConfig
+
 	return actionConfig, err
 }

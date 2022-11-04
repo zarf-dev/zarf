@@ -248,28 +248,28 @@ func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matc
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse deployment: %w", err)
 		}
-		matchedImages = p.kube.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
+		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
 
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse daemonset: %w", err)
 		}
-		matchedImages = p.kube.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
+		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse statefulset: %w", err)
 		}
-		matchedImages = p.kube.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
+		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse replicaset: %w", err)
 		}
-		matchedImages = p.kube.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
+		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 
 	default:
 		// Capture any custom images
