@@ -78,7 +78,7 @@ func getOrAskNamespace(source string, componentType string, required bool, defau
 	}
 }
 
-func separateManifestsAndKustomizations(dirPath string) (manifests []string, kustomizations []string) {
+func getManifestNames(dirPath string) (manifests []string) {
 	topLevelFilesPaths := getTopLevelFiles(dirPath)
 	yamlFilesPaths := []string{}
 	isYaml := regexp.MustCompile(`.*\.yaml$`).MatchString
@@ -94,16 +94,14 @@ func separateManifestsAndKustomizations(dirPath string) (manifests []string, kus
 			message.Fatalf(err, "Error reading manifest %s", yamlFile)
 		}
 		if currentYaml.Kind != "" {
-			if currentYaml.Kind == "Kustomization" {
-				kustomizations = append(kustomizations, yamlFile)
-			} else if currentYaml.Kind == "ZarfPackageConfig" {
+			if currentYaml.Kind == "ZarfPackageConfig" {
 				continue
 			} else {
 				manifests = append(manifests, yamlFile)
 			}
 		}
 	}
-	return manifests, kustomizations
+	return manifests
 }
 
 func transformSlice[InputType any, ReturnType any](slice []InputType, transformFunction func(InputType) ReturnType) []ReturnType {
@@ -120,11 +118,11 @@ func GenLocalChart(path string) (newComponent types.ZarfComponent) {
 	if err != nil {
 		message.Fatal(err, "Error loading chart")
 	}
-	namespace := getOrAskNamespace(path, "local-chart", true, "zarf-generated-local-chart-" + chart.Name())
+	namespace := getOrAskNamespace(path, "local-chart", true, "zarf-generated-local-chart-"+chart.Name())
 	newComponent.Name = "component-local-chart-" + strings.ToLower(chart.Name()) + "-" + uuid.NewString()
 	newChart := types.ZarfChart{
-		Name:    chart.Name(),
-		Version: chart.Metadata.Version,
+		Name:      chart.Name(),
+		Version:   chart.Metadata.Version,
 		Namespace: namespace,
 		LocalPath: path,
 	}
@@ -137,19 +135,18 @@ func GenManifests(path string) (newComponent types.ZarfComponent) {
 	namespace := getOrAskNamespace(path, "manifests", false, "")
 	newComponent.Name = "component-manifests-" + uuid.NewString()
 	if isDir(path) {
-		manifests, kustomizations := separateManifestsAndKustomizations(path)
+		manifests := getManifestNames(path)
 		newZarfManifest := types.ZarfManifest{
-			Name: "manifests-" + uuid.NewString(),
+			Name:      "manifests-" + uuid.NewString(),
 			Namespace: namespace,
-			Files: manifests,
-			Kustomizations: kustomizations,
+			Files:     manifests,
 		}
 		newComponent.Manifests = append(newComponent.Manifests, newZarfManifest)
 	} else {
 		newZarfManifest := types.ZarfManifest{
-			Name: "manifests-" + uuid.NewString(),
+			Name:      "manifests-" + uuid.NewString(),
 			Namespace: namespace,
-			Files: []string{path},
+			Files:     []string{path},
 		}
 		newComponent.Manifests = append(newComponent.Manifests, newZarfManifest)
 	}
@@ -171,13 +168,13 @@ func GenLocalFiles(path string) (newComponent types.ZarfComponent) {
 	} else {
 		filePaths = append(filePaths, path)
 	}
-	
+
 	for _, file := range filePaths {
 		dest := ""
 		if config.CommonOptions.Confirm {
 			dest = "/tmp/zarf"
 		} else {
-			dest = askQuestion("What is the destination for " + file + "?", true, "/tmp/zarf/")
+			dest = askQuestion("What is the destination for "+file+"?", true, "/tmp/zarf/")
 		}
 		newZarfFile := types.ZarfFile{
 			Source: file,
@@ -192,25 +189,19 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 	defer message.SuccessF("Git chart component successfully generated")
 	newComponent.Name = "component-git-chart-" + uuid.NewString()
 	newComponent.Repos = append(newComponent.Repos, url)
-	tempDirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
-	}
 
 	spinner := message.NewProgressSpinner("Loading git repository")
-	
 
-	repoPath, err := git.Pull(url, tempDirPath, spinner)
-	if err != nil {
-		message.Fatalf(err, fmt.Sprintf("Unable to pull the repo with the url of (%s}", url))
-	}
+	repoPath := git.DownloadRepoToTemp(url, spinner)
 	spinner.Successf("Git repository loaded")
 
 	var chartYamlPaths []string
 
 	filepath.WalkDir(repoPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil { return err }
-		if (d.Name() == "Chart.yaml") {
+		if err != nil {
+			return err
+		}
+		if d.Name() == "Chart.yaml" {
 			dir, _ := filepath.Split(path)
 			if !checkStringContainsInSlice(chartYamlPaths, dir) {
 				chartYamlPaths = append(chartYamlPaths, path)
@@ -233,34 +224,37 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 
 	var selectedChartNames []string
 	var filteredChartsWithPaths []chartWithPath
-	foundChartNames := transformSlice(charts, func(c chartWithPath) string {return c.chart.Name()})
+	foundChartNames := transformSlice(charts, func(c chartWithPath) string { return c.chart.Name() })
 	if len(charts) > 1 {
-		if !config.CommonOptions.Confirm {
+		if config.CommonOptions.Confirm {
+			selectedChartNames = foundChartNames
+		} else {
 			prompt := &survey.MultiSelect{
 				Message: "Please select the charts you want included:",
 				Options: foundChartNames,
-				Default: foundChartNames,
+				Default: nil,
 			}
-			err = survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
+			err := survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
 			if err != nil {
 				message.Fatalf("Survey error", err.Error())
 			}
 		}
 		for _, selectedChartName := range selectedChartNames {
-			filteredChartsWithPaths = append(filteredChartsWithPaths, filterSlice(charts, func(c chartWithPath) bool {return c.chart.Name() == selectedChartName})...)
+			filteredChartsWithPaths = append(filteredChartsWithPaths, filterSlice(charts, func(c chartWithPath) bool { return c.chart.Name() == selectedChartName })...)
 		}
 	} else {
 		filteredChartsWithPaths = charts
 	}
 
 	for _, chartWithPath := range filteredChartsWithPaths {
-		namespace := getOrAskNamespace("the " + chartWithPath.chart.Name() + " chart", "git repo", true, "zarf-generated-git-chart-" + chartWithPath.chart.Name())
+		namespace := getOrAskNamespace("the "+chartWithPath.chart.Name()+" chart", "git repo", true, "zarf-generated-git-chart-"+chartWithPath.chart.Name())
 		chartDir, _ := filepath.Split(chartWithPath.path)
 		newZarfChart := types.ZarfChart{
-			Name: chartWithPath.chart.Name(),
-			Version: chartWithPath.chart.Metadata.Version,
+			Name:      chartWithPath.chart.Name(),
+			Version:   chartWithPath.chart.Metadata.Version,
 			Namespace: namespace,
-			GitPath: chartDir,
+			GitPath:   strings.TrimPrefix(chartDir, repoPath+string(filepath.Separator)),
+			Url:       url,
 		}
 		newComponent.Charts = append(newComponent.Charts, newZarfChart)
 	}
@@ -302,7 +296,7 @@ func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
 	sort.Strings(chartsInIndex)
 
 	spinner.Successf("Loaded Helm Repo Entries")
-	
+
 	var selectedChartNames []string
 	if len(helmIndex.Entries) > 1 {
 		if config.CommonOptions.Confirm {
@@ -311,19 +305,21 @@ func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
 			prompt := &survey.MultiSelect{
 				Message: "Please select which chart(s) you would like from the repo:",
 				Options: chartsInIndex,
-				Default: chartsInIndex,
+				Default: selectedChartNames,
 			}
 			err = survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
 			if err != nil {
 				message.Fatalf("Survey error", err.Error())
 			}
 		}
+	} else {
+		selectedChartNames = chartsInIndex
 	}
 
 	for _, chartName := range selectedChartNames {
 		newZarfChart := types.ZarfChart{
 			Name: chartName,
-			Url: url,
+			Url:  url,
 		}
 		for repoChartName, chartVersion := range helmIndex.Entries {
 			if repoChartName == chartName {
@@ -349,7 +345,7 @@ func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
 					selectedVersion = versionList[1]
 				}
 				newZarfChart.Version = selectedVersion
-				newZarfChart.Namespace = getOrAskNamespace(url, chartName + "-chart", true, "zarf-generated-helm-repo-chart-" + chartName)
+				newZarfChart.Namespace = getOrAskNamespace(url, chartName+"-chart", true, "zarf-generated-helm-repo-chart-"+chartName)
 				break
 			}
 		}
@@ -361,7 +357,7 @@ func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
 
 func GenRemoteFile(url string) (newComponent types.ZarfComponent) {
 	defer message.SuccessF("Remote file component successfully generated")
-	newComponent.Name = "component-remote-file" + uuid.NewString()
+	newComponent.Name = "component-remote-file-" + uuid.NewString()
 	remoteFileName := strings.Split(strings.Trim(url, "/"), "/")
 
 	remoteFileDest := ""
@@ -369,7 +365,7 @@ func GenRemoteFile(url string) (newComponent types.ZarfComponent) {
 		remoteFileDest = "/tmp/zarf"
 	} else {
 		prompt := &survey.Input{
-			Message: fmt.Sprintf("Where would you like to place %s", remoteFileName[len(remoteFileName) -1]),
+			Message: fmt.Sprintf("Where would you like to place %s", remoteFileName[len(remoteFileName)-1]),
 			Default: "/tmp/zarf/",
 		}
 		if err := survey.AskOne(prompt, &remoteFileDest, survey.WithValidator(survey.Required)); err != nil {
@@ -381,6 +377,6 @@ func GenRemoteFile(url string) (newComponent types.ZarfComponent) {
 		Target: remoteFileDest,
 	}
 	newComponent.Files = append(newComponent.Files, newZarfFile)
-	
+
 	return newComponent
 }
