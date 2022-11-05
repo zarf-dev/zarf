@@ -19,5 +19,16 @@
     }
   ],
   "platformAutomerge": true,
-  "platformCommit": true
+  "platformCommit": true,
+  "regexManagers": [
+    {
+      "fileMatch": ["(^|/)zarf.yaml$"],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "charts:(.|\n)*?(^\\s{4}[\\w:]+|\n$|^\\s{2}-)",
+        "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)"
+      ],
+      "datasourceTemplate": "helm"
+    }
+  ]
 }
