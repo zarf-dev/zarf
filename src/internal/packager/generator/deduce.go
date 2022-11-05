@@ -53,7 +53,6 @@ func isHelmRepoChart(data string) bool {
 	if err != nil {
 		message.Fatal(err, err.Error())
 	}
-	message.Info(response.Status)
 	return response.Status == "200 OK"
 }
 
@@ -113,7 +112,6 @@ func isValidManifest(path string) (isManifest bool) {
 		if err != nil {
 			message.Fatalf(err, "Error reading manifest %s", path)
 		}
-	message.Info(currentYaml.Kind)
 	return currentYaml.Kind != ""
 }
 

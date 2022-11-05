@@ -9,9 +9,10 @@ import (
 )
 
 
-func askQuestion(question string, required bool) (answer string) {
+func askQuestion(question string, required bool, defaultAnswer string) (answer string) {
 	prompt := &survey.Input{
 		Message: fmt.Sprint(question),
+		Default: defaultAnswer,
 	}
 	var err error
 	if required {
