@@ -43,7 +43,7 @@ func isGitChart(data string) bool {
 func isHelmRepoChart(data string) bool {
 	indexReqUrl := data
 	if (len(indexReqUrl) > 10 ) && (indexReqUrl[len(indexReqUrl)-10:] == "index.yaml") {
-		//already exact url which is weird but requires no modification
+		message.Fatal("", "The url of a chart must not end with \"index.yaml\"")
 	} else if indexReqUrl[len(indexReqUrl)-1:] == "/" {
 		indexReqUrl = indexReqUrl + "index.yaml"
 	} else {

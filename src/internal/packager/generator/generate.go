@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -15,8 +16,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/uuid"
+	"helm.sh/helm/v3/pkg/action"
 	helmChart "helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v3/pkg/repo"
 )
 
 type chartWithPath struct {
@@ -260,7 +265,80 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 	return newComponent
 }
 
-func GenHelmRepoChart(path string) (newComponent types.ZarfComponent) {
+func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
+	spinner := message.NewProgressSpinner("Loading Helm Repo Entries")
+	newComponent.Name = "component-helm-repo-chart-" + uuid.NewString()
+	entry := repo.Entry{
+		URL: url,
+	}
+
+	// Set up the helm pull config
+	pull := action.NewPull()
+	pull.Settings = cli.New()
+
+	helmRepo, err := repo.NewChartRepository(&entry, getter.All(pull.Settings))
+	if err != nil {
+		message.Fatalf(err, err.Error())
+	}
+
+	cachedIndexPath, err := helmRepo.DownloadIndexFile()
+	if err != nil {
+		message.Fatalf(err, err.Error())
+	}
+
+	helmIndex, err := repo.LoadIndexFile(cachedIndexPath)
+	if err != nil {
+		message.Fatalf(err, err.Error())
+	}
+
+	var chartsInIndex []string
+	for k := range helmIndex.Entries {
+		chartsInIndex = append(chartsInIndex, k)
+	}
+	sort.Strings(chartsInIndex)
+
+	spinner.Successf("Loaded Helm Repo Entries")
+	
+	var selectedChartNames []string
+	if len(helmIndex.Entries) > 1 {
+		prompt := &survey.MultiSelect{
+			Message: "Please select which chart(s) you would like from the repo:",
+			Options: chartsInIndex,
+		}
+		err = survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
+		if err != nil {
+			message.Fatalf("Survey error", err.Error())
+		}
+	}
+
+	for _, chartName := range selectedChartNames {
+		newZarfChart := types.ZarfChart{
+			Name: chartName,
+			Url: url,
+		}
+		for repoChartName, chartVersion := range helmIndex.Entries {
+			if repoChartName == chartName {
+				var versionList []string
+				for _, version := range chartVersion {
+					versionList = append(versionList, version.Version)
+				}
+				selectedVersion := ""
+				prompt := &survey.Select{
+					Message: "Please select which chart version you would like for " + chartName + ":",
+					Options: versionList,
+				}
+				err = survey.AskOne(prompt, &selectedVersion, survey.WithValidator(survey.Required))
+				if err != nil {
+					message.Fatalf("Survey error", err.Error())
+				}
+				newZarfChart.Version = selectedVersion
+				newZarfChart.Namespace = getOrAskNamespace(url, chartName + " chart", true)
+				break
+			}
+		}
+		newComponent.Charts = append(newComponent.Charts, newZarfChart)
+	}
+
 	return newComponent
 }
 
