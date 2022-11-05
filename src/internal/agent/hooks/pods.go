@@ -62,7 +62,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	zarfState, err := getStateFromAgentPod(zarfStatePath)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentHooksErrGetState, err)
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 	containerRegistryURL := config.GetRegistry(zarfState)
 
@@ -71,7 +71,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -82,7 +82,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -93,7 +93,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf(lang.AgentHooksErrImageSwap, container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))

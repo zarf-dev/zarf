@@ -54,10 +54,10 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Form the state.GitServer.Address from the state
 	if state, err = getStateFromAgentPod(zarfStatePath); err != nil {
-		return nil, fmt.Errorf(lang.AgentHooksErrGetState, err)
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf(lang.AgentHooksDebugGitURL, state.GitServer.Address)
+	message.Debugf("Using the url of (%s) to mutate the flux repository", state.GitServer.Address)
 
 	// parse to simple struct to read the git url
 	src := &GenericGitRepo{}
@@ -72,7 +72,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if isUpdate {
 		isPatched, err = utils.DoesHostnamesMatch(state.GitServer.Address, src.Spec.URL)
 		if err != nil {
-			return nil, fmt.Errorf(lang.AgentHooksErrHostnameMatch, err)
+			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
 	}
 
@@ -80,7 +80,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		patchedURL = git.New(state.GitServer).MutateGitUrlsInText(patchedURL, state.GitServer.PushUsername)
-		message.Debugf(lang.AgentHooksDebugGitMutate, src.Spec.URL, patchedURL)
+		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec

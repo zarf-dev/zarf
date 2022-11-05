@@ -9,7 +9,8 @@ package lang
 
 // All language strings should be in the form of a constant
 // The constants should be grouped by the top level package they are used in (or common)
-// The format should be <PachaName><Err/Debug/Info><ShortDescription>
+// The format should be <PathName><Err/Info><ShortDescription>
+// Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed
 const (
 	ErrUnmarshal = "failed to unmarshal file: %w"
@@ -18,19 +19,22 @@ const (
 // Zarf Agent messages
 // These are only seen in the Kubernetes logs
 const (
-	AgentErrStart    = "Failed to start the web server"
-	AgentErrShutdown = "unable to properly shutdown the web server"
+	AgentInfoWebhookAllowed = "Webhook [%s - %s] - Allowed: %t"
+	AgentInfoShutdown       = "Shutdown gracefully..."
+	AgentInfoPort           = "Server running in port: %s"
 
-	AgentInfoPort     = "Server running in port: %s"
-	AgentInfoShutdown = "Shutdown gracefully..."
-
-	AgentHooksErrGetState      = "failed to load zarf state from file: %w"
-	AgentHooksErrHostnameMatch = "failed to complete hostname matching: %w"
-
-	AgentHooksDebugGitURL    = "Using the url of (%s) to mutate the flux repository"
-	AgentHooksDebugGitMutate = "original git URL of (%s) got mutated to (%s)"
-
-	AgentHooksErrImageSwap = "Unable to swap the host for (%s)"
-
-	
+	AgentErrStart                  = "Failed to start the web server"
+	AgentErrShutdown               = "unable to properly shutdown the web server"
+	AgentErrNilReq                 = "malformed admission review: request is nil"
+	AgentErrMarshalResponse        = "unable to marshal the response"
+	AgentErrMarshallJSONPatch      = "unable to marshall the json patch"
+	AgentErrInvalidType            = "only content type 'application/json' is supported"
+	AgentErrInvalidOp              = "invalid operation: %s"
+	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"
+	AgentErrImageSwap              = "Unable to swap the host for (%s)"
+	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
+	AgentErrGetState               = "failed to load zarf state from file: %w"
+	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
+	AgentErrBindHandler            = "Unable to bind the webhook handler"
+	AgentErrBadRequest             = "could not read request body: %s"
 )
