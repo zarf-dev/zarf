@@ -78,7 +78,7 @@ func getOrAskNamespace(source string, componentType string, required bool, defau
 	}
 }
 
-func separateManifestsAndKustomizations(dirPath string) (manifests []string, kustomizations []string) {
+func getManifestNames(dirPath string) (manifests []string) {
 	topLevelFilesPaths := getTopLevelFiles(dirPath)
 	yamlFilesPaths := []string{}
 	isYaml := regexp.MustCompile(`.*\.yaml$`).MatchString
@@ -94,16 +94,14 @@ func separateManifestsAndKustomizations(dirPath string) (manifests []string, kus
 			message.Fatalf(err, "Error reading manifest %s", yamlFile)
 		}
 		if currentYaml.Kind != "" {
-			if currentYaml.Kind == "Kustomization" {
-				kustomizations = append(kustomizations, yamlFile)
-			} else if currentYaml.Kind == "ZarfPackageConfig" {
+			if currentYaml.Kind == "ZarfPackageConfig" {
 				continue
 			} else {
 				manifests = append(manifests, yamlFile)
 			}
 		}
 	}
-	return manifests, kustomizations
+	return manifests
 }
 
 func transformSlice[InputType any, ReturnType any](slice []InputType, transformFunction func(InputType) ReturnType) []ReturnType {
@@ -137,12 +135,11 @@ func GenManifests(path string) (newComponent types.ZarfComponent) {
 	namespace := getOrAskNamespace(path, "manifests", false, "")
 	newComponent.Name = "component-manifests-" + uuid.NewString()
 	if isDir(path) {
-		manifests, kustomizations := separateManifestsAndKustomizations(path)
+		manifests := getManifestNames(path)
 		newZarfManifest := types.ZarfManifest{
-			Name:           "manifests-" + uuid.NewString(),
-			Namespace:      namespace,
-			Files:          manifests,
-			Kustomizations: kustomizations,
+			Name:      "manifests-" + uuid.NewString(),
+			Namespace: namespace,
+			Files:     manifests,
 		}
 		newComponent.Manifests = append(newComponent.Manifests, newZarfManifest)
 	} else {
@@ -192,18 +189,15 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 	defer message.Successf("Git chart component successfully generated")
 	newComponent.Name = "component-git-chart-" + uuid.NewString()
 	newComponent.Repos = append(newComponent.Repos, url)
-	tempDirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir:  %s", config.CommonOptions.TempDirectory)
-	}
 
 	spinner := message.NewProgressSpinner("Loading git repository")
 
 	repo := git.New(types.GitServerInfo{
 		Address: url,
 	})
-
-	err = repo.Pull(url, tempDirPath, false)
+	//TODO: merge real or replace
+	tempDirPath := config.CommonOptions.TempDirectory
+	err := repo.Pull(url, tempDirPath, false)
 	if err != nil {
 		message.Fatalf(err, fmt.Sprintf("Unable to pull the repo with the url of (%s}", url))
 	}
@@ -240,13 +234,15 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 	var filteredChartsWithPaths []chartWithPath
 	foundChartNames := transformSlice(charts, func(c chartWithPath) string { return c.chart.Name() })
 	if len(charts) > 1 {
-		if !config.CommonOptions.Confirm {
+		if config.CommonOptions.Confirm {
+			selectedChartNames = foundChartNames
+		} else {
 			prompt := &survey.MultiSelect{
 				Message: "Please select the charts you want included:",
 				Options: foundChartNames,
-				Default: foundChartNames,
+				Default: nil,
 			}
-			err = survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
+			err := survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
 			if err != nil {
 				message.Fatalf("Survey error", err.Error())
 			}
@@ -265,7 +261,8 @@ func GenGitChart(url string) (newComponent types.ZarfComponent) {
 			Name:      chartWithPath.chart.Name(),
 			Version:   chartWithPath.chart.Metadata.Version,
 			Namespace: namespace,
-			GitPath:   chartDir,
+			GitPath:   strings.TrimPrefix(chartDir, tempDirPath+string(filepath.Separator)),
+			URL:       url,
 		}
 		newComponent.Charts = append(newComponent.Charts, newZarfChart)
 	}
@@ -316,13 +313,15 @@ func GenHelmRepoChart(url string) (newComponent types.ZarfComponent) {
 			prompt := &survey.MultiSelect{
 				Message: "Please select which chart(s) you would like from the repo:",
 				Options: chartsInIndex,
-				Default: chartsInIndex,
+				Default: selectedChartNames,
 			}
 			err = survey.AskOne(prompt, &selectedChartNames, survey.WithValidator(survey.Required))
 			if err != nil {
 				message.Fatalf("Survey error", err.Error())
 			}
 		}
+	} else {
+		selectedChartNames = chartsInIndex
 	}
 
 	for _, chartName := range selectedChartNames {

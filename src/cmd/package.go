@@ -166,6 +166,10 @@ var packageGenerateCmd = &cobra.Command{
 		}
 		packageLocation := "./" + pkgName + ".zarf.yaml"
 		message.Note("Component Generation Complete!")
+		// spinner := message.NewProgressSpinner("Generating images...")
+		// images := packager.GetImagesFromComponents(newPkg.Components, "")
+		// message.Infof("%v", images)
+		// spinner.Success()
 		spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
 		err := utils.WriteYaml(packageLocation, newPkg, 0644)
 		if err != nil {
