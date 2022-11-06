@@ -179,10 +179,13 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 
+		// TODO: @JPERRY as of writing this comment, p.cfg.InitOpts.RegistryInfo is an empty struct while p.cfg.State.RegistryInfo is populated..
+		//       This is something that should be more streamlined and consistent..
 		imgConfig := images.ImgConfig{
 			TarballPath: p.tmp.SeedImage,
 			ImgList:     []string{config.ZarfSeedImage},
 			NoChecksum:  true,
+			RegInfo:     p.cfg.State.RegistryInfo,
 		}
 
 		// Push the seed images into to Zarf registry
@@ -355,6 +358,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		TarballPath: p.tmp.Images,
 		ImgList:     componentImages,
 		NoChecksum:  noImgChecksum,
+		RegInfo:     p.cfg.State.RegistryInfo,
 	}
 
 	return utils.Retry(func() error {
@@ -438,6 +442,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			BasePath:  componentPath.Manifests,
 			Component: component,
 			Cfg:       p.cfg,
+			Cluster:   p.cluster,
 		}
 		addedConnectStrings, installedChartName := helmCfg.GenerateChart(manifest)
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})

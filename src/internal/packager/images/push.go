@@ -62,6 +62,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
 
+		// TODO: @JPERRY if the `i.RegInfo` is an empty struct this is not returning an error.. That's pretty suspicious..
 		if err = crane.Push(img, offlineName, pushOptions); err != nil {
 			return err
 		}
