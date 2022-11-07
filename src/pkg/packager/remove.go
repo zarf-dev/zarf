@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -20,6 +22,14 @@ import (
 func (p *Packager) Remove(packageName string) error {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
+
+	var err error
+	if p.cluster == nil {
+		p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+		if err != nil {
+			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+		}
+	}
 
 	// Get the secret for the deployed package
 	secretName := fmt.Sprintf("zarf-package-%s", packageName)
