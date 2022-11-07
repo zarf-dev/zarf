@@ -18,7 +18,8 @@ func TestLogging(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	tunnel := cluster.NewZarfTunnel()
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
 	tunnel.Connect(cluster.ZarfLogging, false)
 	defer tunnel.Close()
 

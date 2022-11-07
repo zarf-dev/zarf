@@ -25,7 +25,8 @@ func TestDosGames(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	tunnel := cluster.NewZarfTunnel()
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
 	tunnel.Connect("doom", false)
 	defer tunnel.Close()
 
