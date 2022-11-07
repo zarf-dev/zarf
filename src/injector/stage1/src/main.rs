@@ -182,15 +182,47 @@ fn handle_get_digest(root: &Path, digest: &String) -> Response {
         .with_additional_header("Cache-Control", "max-age=31536000")
 }
 
+fn help(args: &[String]) {
+    println!(
+        "Invalid arguments: {:?}
+
+Usage: 
+  zarf-injector unpack <payload_sha>
+  zarf-injector serve
+",
+        args
+    );
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let cmd = &args[1];
 
-    if cmd == "unpack" {
-        let sha_sum = &args[2];
-        unpack(sha_sum);
-    } else if cmd == "serve" {
-        let root = Path::new("/zarf-stage2").to_owned();
-        start_seed_registry(&root);
+    match args.len() {
+        1 => {
+            help(&args);
+        }
+        2 => match args[1].as_str() {
+            "serve" => {
+                start_seed_registry(Path::new("/zarf-stage2"));
+            }
+            _ => {
+                help(&args);
+            }
+        },
+        3 => {
+            let cmd = args[1].as_str();
+            let payload_sha = &args[2];
+            match cmd {
+                "unpack" => {
+                    unpack(payload_sha);
+                }
+                _ => {
+                    help(&args);
+                }
+            }
+        }
+        _ => {
+            help(&args);
+        }
     }
 }
