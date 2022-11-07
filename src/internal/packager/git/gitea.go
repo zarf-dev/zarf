@@ -22,7 +22,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	message.Debugf("git.CreateReadOnlyUser()")
 
 	// Establish a git tunnel to send the repo
-	tunnel := cluster.NewZarfTunnel()
+	tunnel, err := cluster.NewZarfTunnel()
+	if err != nil {
+		return err
+	}
 	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 

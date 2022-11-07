@@ -20,7 +20,10 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	registryURL := ""
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
-		tunnel := cluster.NewZarfTunnel()
+		tunnel, err := cluster.NewZarfTunnel()
+		if err != nil {
+			return err
+		}
 		tunnel.Connect(cluster.ZarfRegistry, false)
 		defer tunnel.Close()
 

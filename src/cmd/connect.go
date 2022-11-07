@@ -7,6 +7,7 @@ package cmd
 import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,10 @@ var (
 				target = args[0]
 			}
 
-			tunnel := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
+			tunnel, err := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
+			if err != nil {
+				message.Fatal(err, "Unable to create a tunnel into the cluster")
+			}
 			// If the cliOnly flag is false (default), enable auto-open
 			if !cliOnly {
 				tunnel.EnableAutoOpen()

@@ -114,14 +114,20 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 	name := matches[pattern.SubexpIndex("name")]
 	namespace := matches[pattern.SubexpIndex("namespace")]
 
-	return NewTunnel(namespace, SvcResource, name, 0, remotePort), nil
+	return NewTunnel(namespace, SvcResource, name, 0, remotePort)
 }
 
 // NewTunnel will create a new Tunnel struct
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
-func NewTunnel(namespace, resourceType, resourceName string, local, remote int) *Tunnel {
+func NewTunnel(namespace, resourceType, resourceName string, local, remote int) (*Tunnel, error) {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
+
+	var spinner *message.Spinner
+	kube, err := k8s.NewWithWait(spinner.Debugf, labels, defaultTimeout)
+	if err != nil {
+		return &Tunnel{}, err
+	}
 
 	return &Tunnel{
 		out:          io.Discard,
@@ -132,10 +138,11 @@ func NewTunnel(namespace, resourceType, resourceName string, local, remote int) 
 		resourceName: resourceName,
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
-	}
+		kube:         kube,
+	}, nil
 }
 
-func NewZarfTunnel() *Tunnel {
+func NewZarfTunnel() (*Tunnel, error) {
 	return NewTunnel(ZarfNamespace, SvcResource, "", 0, 0)
 }
 
@@ -251,6 +258,18 @@ func (tunnel *Tunnel) Close() {
 
 func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 	message.Debugf("tunnel.checkForZarfConnectLabel(%s)", name)
+	var spinner *message.Spinner
+	var err error
+
+	spinnerMessage := "Looking for a Zarf Connect Label in the cluster"
+	if tunnel.spinner != nil {
+		spinner = tunnel.spinner
+		spinner.Updatef(spinnerMessage)
+	} else {
+		spinner = message.NewProgressSpinner(spinnerMessage)
+		defer spinner.Stop()
+	}
+
 	matches, err := tunnel.kube.GetServicesByLabel("", config.ZarfConnectLabelName, name)
 	if err != nil {
 		return fmt.Errorf("unable to lookup the service: %w", err)
@@ -323,8 +342,6 @@ func (tunnel *Tunnel) establish() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}
-
-	tunnel.kube = kube
 
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource()

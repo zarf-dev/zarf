@@ -197,7 +197,11 @@ func (c *Cluster) hasSeedImages(spinner *message.Spinner) bool {
 	message.Debugf("packager.hasSeedImages()")
 
 	// Establish the zarf connect tunnel
-	tunnel := NewZarfTunnel()
+	tunnel, err := NewZarfTunnel()
+	if err != nil {
+		message.Warnf("Unable to establish a tunnel to look for seed images: %#v", err)
+		return false
+	}
 	tunnel.AddSpinner(spinner)
 	tunnel.Connect(ZarfInjector, false)
 	defer tunnel.Close()
