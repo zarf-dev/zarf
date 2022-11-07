@@ -33,7 +33,7 @@ func (g *Git) fetchHash(hash string) {
 
 	refspec := goConfig.RefSpec(hash + ":" + hash)
 
-	err := g.fetch(goConfig.RefSpec(g.GitPath), refspec)
+	err := g.fetch(refspec)
 
 	if err != nil {
 		message.Fatal(err, "Not a valid hash or unable to fetch")

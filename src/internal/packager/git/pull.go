@@ -39,6 +39,7 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 	}
 
 	path = targetFolder + "/" + repoName
+	g.GitPath = path
 	g.pull(gitURL, path, repoName)
 	return path, nil
 }
