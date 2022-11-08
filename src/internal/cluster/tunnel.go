@@ -123,8 +123,7 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) (*Tunnel, error) {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 
-	var spinner *message.Spinner
-	kube, err := k8s.NewWithWait(spinner.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
 	if err != nil {
 		return &Tunnel{}, err
 	}
