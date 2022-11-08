@@ -54,7 +54,7 @@ func (g *Git) PushRepo(localPath string) error {
 			return err
 		}
 		remoteUrl := remote.Config().URLs[0]
-		repoName, err := g.transformURLtoRepoName(remoteUrl)
+		repoName, err := g.TransformURLtoRepoName(remoteUrl)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err

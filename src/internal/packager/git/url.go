@@ -29,7 +29,7 @@ func (g *Git) MutateGitUrlsInText(text string, gitUser string) string {
 	return output
 }
 
-func (g *Git) transformURLtoRepoName(url string) (string, error) {
+func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
 	idx := gitURLRegex.SubexpIndex
 
@@ -52,7 +52,7 @@ func (g *Git) transformURLtoRepoName(url string) (string, error) {
 }
 
 func (g *Git) transformURL(baseURL string, url string, username string) (string, error) {
-	repoName, err := g.transformURLtoRepoName(url)
+	repoName, err := g.TransformURLtoRepoName(url)
 	if err != nil {
 		return "", err
 	}

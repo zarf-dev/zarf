@@ -32,7 +32,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) string {
 
 // Pull clones or updates a git repository into the target folder.
 func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
-	repoName, err := g.transformURLtoRepoName(gitURL)
+	repoName, err := g.TransformURLtoRepoName(gitURL)
 	if err != nil {
 		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
 		return "", err
