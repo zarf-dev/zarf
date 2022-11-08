@@ -50,7 +50,7 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	seedImage := config.ZarfSeedImage
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 
 	configFile := tempPath.zarfYaml
 

@@ -3,7 +3,7 @@ ARCH ?= amd64
 # The image tag used for the zarf agent, defaults to a dev image tag
 AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
 # The zarf injector registry binary to use
-INJECTOR_VERSION := v0.22.35-9g1fc3
+INJECTOR_VERSION := dev-c844e74
 
 ######################################################################################
 

@@ -77,7 +77,7 @@ fn unpack(sha_sum: &String) {
     let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
     archive
-        .unpack(".")
+        .unpack("/zarf-seed")
         .expect("Unable to unarchive the resulting tarball");
 }
 
@@ -89,7 +89,7 @@ fn unpack(sha_sum: &String) {
 /// blobs/sha256/<sha256sum> - the image layers
 /// oci-layout - the OCI image layout
 fn start_seed_registry() {
-    let root = PathBuf::from(".");
+    let root = PathBuf::from("/zarf-seed");
     println!("Starting seed registry at {} on port 5000", root.display());
     rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
