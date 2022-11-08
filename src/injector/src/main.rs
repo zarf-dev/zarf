@@ -1,9 +1,3 @@
-use flate2::read::GzDecoder;
-use glob::glob;
-use hex::ToHex;
-use rouille::{accept, router, Response};
-use serde_json::Value;
-use sha2::{Digest, Sha256};
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -11,10 +5,17 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use flate2::read::GzDecoder;
+use glob::glob;
+use hex::ToHex;
+use rouille::{accept, router, Response};
+use serde_json::Value;
+use sha2::{Digest, Sha256};
 use tar::Archive;
 
-/// Reads the binary contents of a file
-fn get_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
+// Reads the binary contents of a file
+fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
     // open the file
     let mut f = File::open(path)?;
     // create an empty buffer
@@ -27,8 +28,8 @@ fn get_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
     }
 }
 
-/// Merges all given files into one buffer
-fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
+// Merges all given files into one buffer
+fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
     // create an empty buffer
     let mut buffer = Vec::new();
 
@@ -44,7 +45,7 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> std::io::Result<Vec<u8>> {
     Ok(buffer)
 }
 
-/// Unpacks the zarf-payload-* configmaps back into a tarball, then unpacks into /zarf/stage2
+/// Unpacks the zarf-payload-* configmaps back into a tarball, then unpacks into the CWD
 ///
 /// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 fn unpack(sha_sum: &String) {
@@ -76,19 +77,19 @@ fn unpack(sha_sum: &String) {
     let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
     archive
-        .unpack("/zarf-stage2")
+        .unpack(".")
         .expect("Unable to unarchive the resulting tarball");
 }
 
-/// Starts a static docker compliant registry server that only serves the single image from /zarf-stage2
+/// Starts a static docker compliant registry server that only serves the single image from the CWD
 ///
 /// (which is a OCI image layout):
 ///
 /// index.json - the image index
 /// blobs/sha256/<sha256sum> - the image layers
 /// oci-layout - the OCI image layout
-fn start_seed_registry(file_root: &Path) {
-    let root = PathBuf::from(file_root);
+fn start_seed_registry() {
+    let root = PathBuf::from(".");
     println!("Starting seed registry at {} on port 5000", root.display());
     rouille::start_server("0.0.0.0:5000", move |request| {
         rouille::log(request, io::stdout(), || {
@@ -182,47 +183,11 @@ fn handle_get_digest(root: &Path, digest: &String) -> Response {
         .with_additional_header("Cache-Control", "max-age=31536000")
 }
 
-fn help(args: &[String]) {
-    println!(
-        "Invalid arguments: {:?}
-
-Usage: 
-  zarf-injector unpack <payload_sha>
-  zarf-injector serve
-",
-        args
-    );
-}
-
 fn main() {
     let args: Vec<String> = env::args().collect();
+    let payload_sha = &args[1];
 
-    match args.len() {
-        1 => {
-            help(&args);
-        }
-        2 => match args[1].as_str() {
-            "serve" => {
-                start_seed_registry(Path::new("/zarf-stage2"));
-            }
-            _ => {
-                help(&args);
-            }
-        },
-        3 => {
-            let cmd = args[1].as_str();
-            let payload_sha = &args[2];
-            match cmd {
-                "unpack" => {
-                    unpack(payload_sha);
-                }
-                _ => {
-                    help(&args);
-                }
-            }
-        }
-        _ => {
-            help(&args);
-        }
-    }
+    unpack(payload_sha);
+
+    start_seed_registry();
 }
