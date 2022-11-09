@@ -39,6 +39,10 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		return nil, fmt.Errorf("no config provided")
 	}
 
+	if cfg.SetVariableMap == nil {
+		cfg.SetVariableMap = make(map[string]string)
+	}
+
 	var (
 		err       error
 		pkgConfig = &Packager{
