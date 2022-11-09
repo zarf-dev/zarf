@@ -1,7 +1,14 @@
-# Figure out which Zarf binary we should use based on the operating system we are on
-ZARF_BIN := ./build/zarf
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
+# The image tag used for the zarf agent, defaults to a dev image tag
+AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
+# The zarf injector registry binary to use
+INJECTOR_VERSION := e72c69c
+
+######################################################################################
+
+# Figure out which Zarf binary we should use based on the operating system we are on
+ZARF_BIN := ./build/zarf
 ifeq ($(OS),Windows_NT)
 	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
 else
@@ -19,8 +26,6 @@ else
 		endif
 	endif
 endif
-
-AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -113,7 +118,7 @@ dev-agent-image: ## Create a new agent image and inject it into a currently init
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --set INJECTOR_TAG=$(ARCH)-$(INJECTOR_VERSION) --confirm .
 
 ci-release: init-package
 
@@ -146,7 +151,6 @@ build-examples: ## Build all of the example packages
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
-	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 

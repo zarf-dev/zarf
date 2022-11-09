@@ -6,24 +6,9 @@ metadata:
 components:
   - name: zarf-injector
     required: true
-    only:
-      cluster:
-        architecture: amd64
     cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:amd64-v0.22.35-9g1fc3
-        target: "###ZARF_TEMP###/zarf-injector"
-        executable: true
-
-  - name: zarf-injector
-    required: true
-    only:
-      cluster:
-        architecture: arm64
-    cosignKeyPath: ../../cosign.pub
-    files:
-      # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:arm64-v0.22.35-9g1fc3
+      - source: sget://defenseunicorns/zarf-injector:###ZARF_PKG_VAR_INJECTOR_TAG###
         target: "###ZARF_TEMP###/zarf-injector"
         executable: true
