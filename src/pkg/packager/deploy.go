@@ -217,7 +217,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasDataInjections := len(component.DataInjections) > 0
 
 	// Run the 'before' scripts and move files before we do anything else
-	p.runComponentScripts(component.Scripts.Before, component.Scripts)
+	if err = p.runComponentScripts(component.Scripts.Before, component.Scripts); err != nil {
+		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
+	}
 	p.processComponentFiles(component.Files, componentPath.Files)
 
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
