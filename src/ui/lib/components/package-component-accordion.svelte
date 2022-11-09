@@ -10,7 +10,7 @@
 
 	import type { ZarfComponent } from '$lib/api-types';
 	import { pkgComponentDeployStore } from '$lib/store';
-	import { Accordion, IconButton, Typography } from '@defense-unicorns/unicorn-ui';
+	import { Accordion, IconButton, Typography } from '@ui';
 
 	export let idx: number;
 	export let readOnly: boolean = true;
@@ -31,7 +31,7 @@
 	$: componentTitle = `${component.name} ${requiredText}`;
 </script>
 
-<Accordion id={`component-accordion-${idx}`} wrapperClass="package-component-accordion">
+<Accordion id={`component-accordion-${idx}`} class="package-component-accordion">
 	<div slot="headerContent" class="component-accordion-header">
 		<div style="flex: 1">
 			<Typography variant="subtitle2" element="div" class="component-title" title={componentTitle}>
@@ -55,7 +55,7 @@
 			<div style="gap: 5px;">
 				<IconButton
 					toggleable
-					className="deploy-component-toggle"
+					class="deploy-component-toggle"
 					iconColor="inherit"
 					iconContent="toggle_off"
 					toggledIconColor="primary"
