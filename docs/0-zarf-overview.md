@@ -89,7 +89,7 @@ Zarf is intended for use in a software deployment process that looks something l
 
 Zarf doesn't build software—it helps you distribute software that already exists.
 
-Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local filesystems, etc. but you have to make sure that Zarf has a clear path & appropriate access credentials. Be sure you know what you want pack & how to access it before you begin using Zarf.
+Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local filesystems, etc. but you have to make sure that Zarf has a clear path & appropriate access credentials. Be sure you know what you want to pack & how to access it before you begin using Zarf.
 
 ### (1) - Create a Package
 
@@ -106,7 +106,7 @@ When it comes to remote / constrained / independent / air gapped systems, everyo
 Once your package has landed you will need to:
 
 - install the binary onto the system,
-- run the you have run the zarf init package
+- run the zarf init package
 - deploy your package to your cluster.
 
 ## Cluster Configuration Options
@@ -128,8 +128,8 @@ In the more complex use case, your package consists of updates for many apps / s
 ## Why Use Zarf?
 
 - 💸 **Free and Open Source.** Zarf will always be free to use and maintained by the open source community.
-- 🔓 **No Vender Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your help charts to deploy your software manually.
-- 💻 **OS Agnostic.** Zarf supports numerous operating systems.For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
+- 🔓 **No Vender Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
+- 💻 **OS Agnostic.** Zarf supports numerous operating systems. For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple, secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
 - 🚀 **Develop Connected Deploy Disconnected.** Teams can build, and configure individual applications or entire DevSecOps environments while connected to the internet and then package and ship them to a disconnected environment to be deployed.
 - 💿 **Single File Deployments.** Zarf allows you to package the parts of the internet your app needs into a single compressed file to be installed without connectivity.
