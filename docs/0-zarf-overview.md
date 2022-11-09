@@ -1,5 +1,6 @@
 import TabItem from "@theme/TabItem";
 import Tabs from "@theme/Tabs";
+import Admonition from "@theme/Admonition";
 
 # Overview
 
@@ -81,14 +82,14 @@ Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following 
 Zarf is intended for use in a software deployment process that looks something like this:
 
 <a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
-  <img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
+<img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
 </a>
 
 ### (0) - Connect to Internet
 
 Zarf doesn't build software—it helps you distribute software that already exists.
 
-Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local filesystems, etc. but you have to make sure that Zarf has a clear path & appropriate access credentials. Be sure you know what you want pack & how to access it before you begin using Zarf.
+Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local filesystems, etc. but you have to make sure that Zarf has a clear path & appropriate access credentials. Be sure you know what you want to pack & how to access it before you begin using Zarf.
 
 ### (1) - Create a Package
 
@@ -105,7 +106,7 @@ When it comes to remote / constrained / independent / air gapped systems, everyo
 Once your package has landed you will need to:
 
 - install the binary onto the system,
-- run the you have run the zarf init package
+- run the zarf init package
 - deploy your package to your cluster.
 
 ## Cluster Configuration Options
@@ -127,8 +128,8 @@ In the more complex use case, your package consists of updates for many apps / s
 ## Why Use Zarf?
 
 - 💸 **Free and Open Source.** Zarf will always be free to use and maintained by the open source community.
-- 🔓 **No Vender Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your help charts to deploy your software manually.
-- 💻 **OS Agnostic.** Zarf supports numerous operating systems.For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
+- 🔓 **No Vender Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
+- 💻 **OS Agnostic.** Zarf supports numerous operating systems. For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple, secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
 - 🚀 **Develop Connected Deploy Disconnected.** Teams can build, and configure individual applications or entire DevSecOps environments while connected to the internet and then package and ship them to a disconnected environment to be deployed.
 - 💿 **Single File Deployments.** Zarf allows you to package the parts of the internet your app needs into a single compressed file to be installed without connectivity.
@@ -159,39 +160,85 @@ In the more complex use case, your package consists of updates for many apps / s
 
 ## Quick Start
 
-:::info
-
-This quick start requires you to already have [home brew](https://brew.sh/) package manager installed on your machine.
-For more install options please visit our [Getting Started page](3-getting-started.md)
-
-:::
-
-To download the Zarf CLI Binary,
-
-1.  Select your systems OS below
-2.  copy and past the quick start command into your computers terminal.
+1. 💻 Select your systems OS below
+2. ❗ Ensure you have the pre-requisite applications running
+3. `$` Enter the commands into your terminal
 
 <Tabs>
-<TabItem value="macOS" label="macOS" default>
+<TabItem value="Linux" label="Linux">
+  
+<Admonition type="info">
+
+This quick start requires you to already have:
+
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
+
+</Admonition>
+
+## Enter these Commands into your terminal
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
+<Admonition type="note">
+
+Zarf has no pre-requisites on Linux, however for this example we will use Docker and Kind.
+
+</Admonition>
+
 </TabItem>
-<TabItem value="Linux" label="Linux">
+<TabItem value="macOS" label="macOS">
+ 
+<Admonition type="info">
+
+This quick start requires you to already have:
+
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine
+  For more install options please visit our [Getting Started page](3-getting-started.md)
+
+</Admonition>
+
+## Enter these Commands into your terminal
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+# To install Zarf
+brew tap defenseunicorns/tap brew install zarf
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+brew install kind && kind delete cluster && kind create cluster
+
+
+# Then, you will need to deploy the Zarf Init Package
+zarf init
+
+
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
 <TabItem value="Windows" label="Windows">
 
-```bash
-Coming Soon!
+## Enter these Commands into your terminal
+
+```text
+Coming in next release!
 ```
 
 </TabItem>

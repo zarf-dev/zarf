@@ -15,6 +15,7 @@ export interface APITypes {
     zarfCommonOptions: ZarfCommonOptions;
     zarfCreateOptions: ZarfCreateOptions;
     zarfDeployOptions: ZarfDeployOptions;
+    zarfInitOptions:   ZarfInitOptions;
     zarfPackage:       ZarfPackage;
     zarfState:         ZarfState;
 }
@@ -126,11 +127,11 @@ export interface ZarfChart {
     /**
      * If using a git repo
      */
-    gitPath: string;
+    gitPath?: string;
     /**
      * The path to the chart folder
      */
-    localPath: string;
+    localPath?: string;
     /**
      * The name of the chart to deploy
      */
@@ -151,7 +152,7 @@ export interface ZarfChart {
      * The URL of the chart repository or git url if the chart is using a git repo instead of
      * helm repo
      */
-    url: string;
+    url?: string;
     /**
      * List of values files to include in the package
      */
@@ -454,6 +455,8 @@ export interface GeneratedPKI {
 
 /**
  * Information about the repository Zarf is configured to use
+ *
+ * Information about the repository Zarf is going to be using
  */
 export interface GitServerInfo {
     /**
@@ -486,6 +489,8 @@ export interface GitServerInfo {
 
 /**
  * Information about the registry Zarf is configured to use
+ *
+ * Information about the registry Zarf is going to be using
  */
 export interface RegistryInfo {
     /**
@@ -555,6 +560,10 @@ export interface InstalledChart {
 
 export interface ZarfCommonOptions {
     /**
+     * Path to use to cache images and git repos on package create
+     */
+    cachePath: string;
+    /**
      * Verify that Zarf should perform an action
      */
     confirm: boolean;
@@ -566,10 +575,6 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
-    /**
-     * Path to use to cache images and git repos on package create
-     */
-    cachePath: string;
     /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
@@ -607,6 +612,29 @@ export interface ZarfDeployOptions {
      * Location where the public key component of a cosign key-pair can be found
      */
     sGetKeyPath: string;
+}
+
+export interface ZarfInitOptions {
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
+    applianceMode: boolean;
+    /**
+     * Comma separated list of optional components to deploy
+     */
+    components: string;
+    /**
+     * Information about the repository Zarf is going to be using
+     */
+    gitServer: GitServerInfo;
+    /**
+     * Information about the registry Zarf is going to be using
+     */
+    registryInfo: RegistryInfo;
+    /**
+     * StorageClass of the k8s cluster Zarf is initializing
+     */
+    storageClass: string;
 }
 
 // Converts JSON strings to/from your types
@@ -762,6 +790,7 @@ const typeMap: any = {
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
         { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
+        { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
@@ -802,13 +831,13 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
     "ZarfChart": o([
-        { json: "gitPath", js: "gitPath", typ: "" },
-        { json: "localPath", js: "localPath", typ: "" },
+        { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
+        { json: "localPath", js: "localPath", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
-        { json: "url", js: "url", typ: "" },
+        { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
     ], false),
@@ -936,11 +965,11 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
     ], false),
     "ZarfCommonOptions": o([
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
@@ -951,6 +980,13 @@ const typeMap: any = {
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+    ], false),
+    "ZarfInitOptions": o([
+        { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "components", js: "components", typ: "" },
+        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
+        { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
+        { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
     "Architecture": [
         "amd64",

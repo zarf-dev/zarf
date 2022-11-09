@@ -71,7 +71,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 		histClient := action.NewHistory(actionConfig)
 		histClient.Max = 1
 
-		if attempt > 2 {
+		if attempt > 4 {
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
@@ -80,7 +80,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 				spinner.Updatef("Performing chart uninstall")
 				_, _ = uninstallChart(actionConfig, options.ReleaseName)
 			}
-			spinner.Errorf(nil, "Unable to complete helm chart install/upgrade")
+			spinner.Fatalf(nil, "Unable to complete helm chart install/upgrade")
 			break
 		}
 

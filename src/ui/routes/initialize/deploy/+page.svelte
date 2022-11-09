@@ -11,7 +11,7 @@
 	import { Packages } from '$lib/api';
 	import { Dialog, Stepper, Typography } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import type { ZarfDeployOptions } from '$lib/api-types';
+	import type { ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
 
@@ -21,16 +21,47 @@
 		$pkgStore.zarfPackage.components,
 		$pkgComponentDeployStore
 	);
-	console.log(Array.from(components.keys()).join(','));
-	const deployOptions: ZarfDeployOptions = {
-		applianceMode: false,
-		components: Array.from(components.keys()).join(','),
-		nodePort: '',
-		storageClass: '',
-		sGetKeyPath: '',
-		secret: '',
-		packagePath: $pkgStore.path
-	};
+	// comma-delimited string that contains only optional components that were enabled via UI
+	const requestedComponents: string = $pkgStore.zarfPackage.components
+		.filter((c, idx) => $pkgComponentDeployStore.includes(idx) && !c.required)
+		.map((c) => c.name)
+		.join(',');
+
+	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
+	let options: ZarfDeployOptions | ZarfInitOptions;
+
+	if (isInitPkg) {
+		options = {
+			applianceMode: false,
+			components: requestedComponents,
+			gitServer: {
+				address: '',
+				pushUsername: 'zarf-git-user',
+				pushPassword: '',
+				pullUsername: 'zarf-git-read-user',
+				pullPassword: '',
+				internalServer: true
+			},
+			storageClass: '',
+			registryInfo: {
+				address: '',
+				internalRegistry: true,
+				nodePort: 0,
+				pullPassword: '',
+				pullUsername: 'zarf-pull',
+				pushPassword: '',
+				pushUsername: 'zarf-push',
+				secret: ''
+			}
+		};
+	} else {
+		options = {
+			components: requestedComponents,
+			sGetKeyPath: '',
+			packagePath: $pkgStore.path,
+			setVariables: {}
+		};
+	}
 
 	let successful = false;
 	let finishedDeploying = false;
@@ -46,7 +77,7 @@
 	}
 
 	onMount(() => {
-		Packages.deploy(deployOptions).then(
+		Packages.deploy(options, isInitPkg).then(
 			(value: boolean) => {
 				finishedDeploying = true;
 				successful = value;

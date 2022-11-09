@@ -1,0 +1,11 @@
+name: setup-k3d
+description: "Install k3d and create a cluster"
+
+runs:
+  using: composite
+  steps:
+    - run: "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash"
+      shell: bash
+
+    - run: k3d cluster delete && k3d cluster create
+      shell: bash

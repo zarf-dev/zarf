@@ -1,4 +1,4 @@
-name: Publish Injector Stage I
+name: Zarf Injector Rust Binaries
 
 on:
   workflow_dispatch:
@@ -15,8 +15,8 @@ jobs:
   build-injector:
     runs-on: ubuntu-latest
     steps:
-      - name: "Dependency: Install cosign"
-        uses: sigstore/cosign-installer@v2.8.0
+      - name: Install tools
+        uses: ./.github/actions/install-tools
 
       - name: "Dependency: Setup rust toolchain"
         run: |

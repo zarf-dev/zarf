@@ -20,7 +20,7 @@ else
 	endif
 endif
 
-AGENT_IMAGE ?= zarfdev/agent:11e53b7c872ce83d5752cb20e640eabd04956258
+AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
@@ -55,9 +55,13 @@ ensure-ui-build-dir:
 	touch build/ui/index.html
 
 check-ui: ## Build the Zarf UI if needed
-	if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		$(MAKE) build-ui;\
-		./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+	@ if [ ! -z "$(shell command -v shasum)" ]; then\
+	    if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+		    $(MAKE) build-ui;\
+		    ./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+	    fi;\
+	else\
+        $(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
@@ -76,10 +80,10 @@ build-cli-mac-intel: build-injector-registry-amd check-ui ## Build the Zarf CLI 
 build-cli-mac-apple: build-injector-registry-arm check-ui ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple main.go
 
-build-cli-windows-amd: build-injector-registry-amd build-ui
+build-cli-windows-amd: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on AMD64
 	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe main.go ## Build the Zarf CLI for Windows on AMD64
 
-build-cli-windows-arm: build-injector-registry-amd build-ui
+build-cli-windows-arm: build-injector-registry-amd check-ui ## Build the Zarf CLI for Windows on ARM
 	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe main.go ## Build the Zarf CLI for Windows on ARM
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
@@ -148,14 +152,14 @@ build-examples: ## Build all of the example packages
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	@test -s ./build/zarf-init-$(ARCH).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 

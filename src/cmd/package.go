@@ -48,9 +48,9 @@ var packageCreateCmd = &cobra.Command{
 		}
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
-		if !isCleanPathRegex.MatchString(config.CreateOptions.CachePath) {
+		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
 			message.Warnf("Invalid characters in Zarf cache path, defaulting to %s", config.ZarfDefaultCachePath)
-			config.CreateOptions.CachePath = config.ZarfDefaultCachePath
+			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
 		packager.Create(baseDir)
@@ -267,13 +267,11 @@ func bindCreateFlags() {
 	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
-	v.SetDefault(V_PKG_CREATE_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 
 	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
-	createFlags.StringVar(&config.CreateOptions.CachePath, "zarf-cache", v.GetString(V_PKG_CREATE_ZARF_CACHE), "Specify the location of the Zarf image cache")
 	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
 	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
 	createFlags.BoolVar(&config.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
