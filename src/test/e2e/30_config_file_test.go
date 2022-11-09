@@ -43,12 +43,12 @@ func TestConfigFile(t *testing.T) {
 }
 
 func configFileTests(t *testing.T, dir, path string) {
-	stdOut, _, err := e2e.execZarfCommand("package", "create", dir, "--confirm")
+	_, stdErr, err := e2e.execZarfCommand("package", "create", dir, "--confirm")
 	require.NoError(t, err)
-	require.Contains(t, string(stdOut), "This is a zebra and they have stripes")
-	require.Contains(t, string(stdOut), "This is a leopard and they have spots")
+	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
+	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	_, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEAPORD COMPONENT")

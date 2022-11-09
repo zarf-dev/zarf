@@ -49,8 +49,7 @@ func TestComponentScripts(t *testing.T) {
 		require.FileExists(t, artifact)
 	}
 
-	// TODO: @JPERRY uncomment this code
 	// Deploy the simple script that should fail the timeout
-	// stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=timeout")
-	// require.Error(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=timeout")
+	require.Error(t, err, stdOut, stdErr)
 }

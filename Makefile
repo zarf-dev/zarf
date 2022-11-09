@@ -155,8 +155,8 @@ build-examples: ## Build all of the example packages
 ## Requires an existing cluster for the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
-	# @test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
-	# @test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
 .PHONY: test-external
