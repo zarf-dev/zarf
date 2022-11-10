@@ -185,9 +185,16 @@ fn handle_get_digest(root: &Path, digest: &String) -> Response {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let payload_sha = &args[1];
 
-    unpack(payload_sha);
+    match args.len() {
+        2 => {
+            let payload_sha = &args[1];
+            unpack(payload_sha);
 
-    start_seed_registry();
+            start_seed_registry();
+        }
+        _ => {
+            println!("Usage: {} <sha256sum>", args[0]);
+        }
+    }
 }
