@@ -1174,6 +1174,8 @@ github.com/google/go-containerregistry v0.11.0 h1:Xt8x1adcREjFcmDoDK8OdOsjxu90PH
 github.com/google/go-containerregistry v0.11.0/go.mod h1:BBaYtsHPHA42uEgAvd/NejvAfPSlz281sJWqupjSxfk=
 github.com/google/go-containerregistry v0.12.0 h1:nidOEtFYlgPCRqxCKj/4c/js940HVWplCWc5ftdfdUA=
 github.com/google/go-containerregistry v0.12.0/go.mod h1:sdIK+oHQO7B93xI8UweYdl887YhuIwg9vz8BSLH3+8k=
+github.com/google/go-containerregistry v0.12.1 h1:W1mzdNUTx4Zla4JaixCRLhORcR7G6KxE5hHl5fkPsp8=
+github.com/google/go-containerregistry v0.12.1/go.mod h1:sdIK+oHQO7B93xI8UweYdl887YhuIwg9vz8BSLH3+8k=
 github.com/google/go-github/v28 v28.1.1/go.mod h1:bsqJWQX05omyWVmc00nEUql9mhQyv38lDZ8kPZcQVoM=
 github.com/google/go-github/v45 v45.2.0 h1:5oRLszbrkvxDDqBCNj2hjDZMKmvexaZ1xw/FCD+K3FI=
 github.com/google/go-github/v45 v45.2.0/go.mod h1:FObaZJEDSTa/WGCzZ2Z3eoCDXWJKMenWWTrd8jrta28=
