@@ -155,7 +155,7 @@ var packageGenerateCmd = &cobra.Command{
 		}
 		message.Note("Component Generation Complete!")
 		writeFile := true
-		if _, err := os.Stat("zarf.yaml"); err == nil {
+		if _, err := os.Stat("zarf.yaml"); !config.CommonOptions.Confirm && err == nil {
 			prompt := &survey.Confirm{
 				Message: "A zarf.yaml already exists in your directory, would you like to overwite it?",
 			}
