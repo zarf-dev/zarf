@@ -126,7 +126,7 @@ var packageGenerateCmd = &cobra.Command{
 					newComponent = generator.GenRemoteFile(componentSource)
 				}
 
-				spinner = message.NewProgressSpinner("Finding images...")
+				message.Info("Finding images...")
 
 				// Gitrepo charts can never work reliably given message.fatal calls in underlying functions
 				imageList := packager.GetImagesFromComponents([]types.ZarfComponent{newComponent}, "")
@@ -145,7 +145,7 @@ var packageGenerateCmd = &cobra.Command{
 					}
 				}
 
-				spinner.Successf("Finished finding images. They may not be correct so please check!")
+				message.SuccessF("Finished finding images. They may not be correct so please check!")
 
 				newPkg.Components = append(newPkg.Components, newComponent)
 
