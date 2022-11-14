@@ -19,10 +19,9 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 /*
-TODO: @JPERRY fix up this doc a bit more
-GetAllImages returns a list of images and their nodes found in pods in the cluster.
+GetAllImages returns a map of all the images and their nodes, obtained from pods in the cluster.
 
-Timeout after 5 minutes.
+Times out with an error after 5 minutes.
 */
 func (k *K8s) GetAllImages() (ImageNodeMap, error) {
 	timeout := time.After(5 * time.Minute)
@@ -49,7 +48,7 @@ func (k *K8s) GetAllImages() (ImageNodeMap, error) {
 	}
 }
 
-// GetImagesWithNodes returns all images and their nodes in a given namespace.
+// GetImagesWithNodes returns a map of all images and their nodes in a given namespace.
 func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 

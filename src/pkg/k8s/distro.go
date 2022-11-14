@@ -26,7 +26,7 @@ const (
 	EKSAnywhereNamespace = "eksa-system"
 )
 
-// DetectDistro returns the matching distro or unknown if not found
+// DetectDistro returns the name of the distro of the connected cluster or unknown if not found.
 func (k *K8s) DetectDistro() (string, error) {
 	kindNodeRegex := regexp.MustCompile(`^kind://`)
 	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
@@ -114,7 +114,7 @@ func (k *K8s) DetectDistro() (string, error) {
 	return DistroIsUnknown, nil
 }
 
-// GetArchitecture returns the cluster system architecture if found or an error if not
+// GetArchitecture returns the cluster system architecture if found or an error if not.
 func (k *K8s) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
 	if err != nil {

@@ -23,8 +23,7 @@ import (
 /*
 New creates a new K8s client.
 
-The client is initialized with a *rest.Config and *kubernetes.Clientset that is generated
-from the currently active kube context.
+The client connection is initialized from the currently active kube context.
 */
 func New(logger Log, defaultLabels Labels) (*K8s, error) {
 	logger("k8s.NewK8sClient()")
@@ -49,15 +48,19 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 /*
 NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
 
-The client is initialized with a *rest.Config and *kubernetes.Clientset that is generated
-from the currently active kube context.
+The client connection is initialized from the currently active kube context.
 */
 func NewWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*K8s, error) {
 	k, _ := New(logger, defaultLabels)
 	return k, k.WaitForHealthyCluster(timeout)
 }
 
-// WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
+/*
+WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
+
+A 'healthy cluster' is determined by finding a pod within the cluster that is in the
+'succeeded' or 'running' phase.
+*/
 func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 	var err error
 	var nodes *v1.NodeList
@@ -110,7 +113,7 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 }
 
 // Use the K8s "client-go" library to get the currently active kube context, in the same way that
-// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed
+// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed.
 func connect() (config *rest.Config, clientset *kubernetes.Clientset, err error) {
 	// Build the config from the currently active kube context in the default way that the k8s client-go gets it, which
 	// is to look at the KUBECONFIG env var

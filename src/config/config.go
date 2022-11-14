@@ -100,7 +100,7 @@ func GetArch(archs ...string) string {
 	return runtime.GOARCH
 }
 
-// Timestamp of when the CLI was started
+// TGetStartTime returns a timestamp of when the CLI was started
 func GetStartTime() int64 {
 	return operationStartTime
 }

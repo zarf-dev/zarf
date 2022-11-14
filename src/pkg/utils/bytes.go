@@ -9,8 +9,12 @@ import (
 	"strconv"
 )
 
-// forked from https://www.socketloop.com/tutorials/golang-byte-format-example
-func RoundUp(input float64, places int) (newVal float64) {
+/*
+RoundUp rounds a float to the specified precision.
+
+Forked from https://www.socketloop.com/tutorials/golang-byte-format-example
+*/
+func roundUp(input float64, places int) (newVal float64) {
 	var round float64
 	pow := math.Pow(10, float64(places))
 	digit := pow * input
@@ -19,6 +23,11 @@ func RoundUp(input float64, places int) (newVal float64) {
 	return
 }
 
+/*
+ByteFormat will convert a float that represents byte size into a human readable size format.
+
+Forked from https://www.socketloop.com/tutorials/golang-byte-format-example
+*/
 func ByteFormat(inputNum float64, precision int) string {
 	if precision <= 0 {
 		precision = 1
@@ -28,13 +37,13 @@ func ByteFormat(inputNum float64, precision int) string {
 	var returnVal float64
 
 	if inputNum >= 1000000000 {
-		returnVal = RoundUp(inputNum/1073741824, precision)
+		returnVal = roundUp(inputNum/1073741824, precision)
 		unit = " GB" // gigabyte
 	} else if inputNum >= 1000000 {
-		returnVal = RoundUp(inputNum/1048576, precision)
+		returnVal = roundUp(inputNum/1048576, precision)
 		unit = " MB" // megabyte
 	} else if inputNum >= 1000 {
-		returnVal = RoundUp(inputNum/1024, precision)
+		returnVal = roundUp(inputNum/1024, precision)
 		unit = " KB" // kilobyte
 	} else {
 		returnVal = inputNum

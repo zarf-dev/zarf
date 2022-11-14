@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/reference"
 )
 
+// Image is a struct that ... TODO @JPERRY
 type Image struct {
 	Host        string
 	Name        string

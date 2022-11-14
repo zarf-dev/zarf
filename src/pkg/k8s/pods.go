@@ -31,7 +31,7 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 	}
 }
 
-// DeletePod removees a pod from the cluster by namespace & name
+// DeletePod removes a pod from the cluster by namespace and name.
 func (k *K8s) DeletePod(namespace string, name string) error {
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
@@ -54,25 +54,32 @@ func (k *K8s) DeletePod(namespace string, name string) error {
 	}
 }
 
-// CreatePod inserts the given pod into the cluster
+// CreatePod creates the given pod into the cluster.
 func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
 }
 
-// GetAllPods returns a list of pods from the cluster for all namesapces
+// GetAllPods returns a list of pods from the cluster for all namespaces.
 func (k *K8s) GetAllPods() (*corev1.PodList, error) {
 	return k.GetPods(corev1.NamespaceAll)
 }
 
-// GetPods returns a list of pods from the cluster by namespace
+// GetPods returns a list of pods from the cluster by namespace.
 func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
 }
 
-// WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
+/*
+WaitForPodsAndContainers holds execution until pods that has been identified by a PodLookup are in the 'running' phase.
+
+If the PodLookup has a container name specified, this function will also wait for that container to be in the 'running' phase.
+
+This function times out after 90 seconds (without an error).
+*/
 func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []string {
+	// TODO: This function is using our old method of retry/timeout, we should be using a channel to better control the timeout operation
 	for count := 0; count < waitLimit; count++ {
 
 		pods, err := k.Clientset.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
@@ -95,7 +102,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []
 				k.Log("Testing pod %s", pod.Name)
 				k.Log("%#v", pod)
 
-				// Handle container targetting
+				// Handle container targeting
 				if target.Container != "" {
 					k.Log("Testing for container")
 					var matchesInitContainer bool
