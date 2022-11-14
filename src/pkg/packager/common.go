@@ -70,7 +70,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 	}
 }
 
-// GetInitPackageName returns the formatted name of the init package
+// GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
@@ -79,7 +79,7 @@ func GetInitPackageName(arch string) string {
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
-// GetPackageName returns the formatted name of the package
+// GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
 	message.Debugf("packager.GetPackageName(%s)", message.JsonValue(p))
 
@@ -92,10 +92,6 @@ func (p *Packager) GetPackageName() string {
 	suffix := "tar.zst"
 	if p.cfg.Pkg.Metadata.Uncompressed {
 		suffix = "tar"
-	}
-
-	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s-%s-%s.%s", prefix, packageName, p.arch, suffix)
 	}
 
 	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)

@@ -79,7 +79,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				// Trim the first char to match how the packager expects it, this is messy,need to clean up better
 				repoHelmChartPath = strings.TrimPrefix(repoHelmChartPath, "/")
 
-				// If a repo helmchartpath is specified,
+				// If a repo helmChartPath is specified,
 				component.Charts = append(component.Charts, types.ZarfChart{
 					Name:    repo,
 					Url:     matches[0],
@@ -152,7 +152,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		}
 
 		if len(component.Manifests) > 0 {
-			if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
+			if err = utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
 				message.Errorf(err, "Unable to create the manifest path %s", componentPath.Manifests)
 			}
 
@@ -255,21 +255,21 @@ func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matc
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
-			return matchedImages, maybeImages, fmt.Errorf("could not parse daemonset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse DaemonSet: %w", err)
 		}
 		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
-			return matchedImages, maybeImages, fmt.Errorf("could not parse statefulset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse StatefulSet: %w", err)
 		}
 		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
-			return matchedImages, maybeImages, fmt.Errorf("could not parse replicaset: %w", err)
+			return matchedImages, maybeImages, fmt.Errorf("could not parse ReplicaSet: %w", err)
 		}
 		matchedImages = p.cluster.Kube.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 

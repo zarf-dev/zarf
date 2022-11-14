@@ -12,10 +12,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// ImageMap
 type ImageMap map[string]bool
+
+// ImageNodeMap
 type ImageNodeMap map[string][]string
 
-// GetAllImages returns a list of images and their nodes found in pods in the cluster.
+/*
+TODO: @JPERRY fix up this doc a bit more
+GetAllImages returns a list of images and their nodes found in pods in the cluster.
+
+Timeout after 5 minutes.
+*/
 func (k *K8s) GetAllImages() (ImageNodeMap, error) {
 	timeout := time.After(5 * time.Minute)
 

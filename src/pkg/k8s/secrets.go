@@ -14,15 +14,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// GetSecret ... @JPERRY
 func (k *K8s) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return k.Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
+// GetSecretsWithLabel ... @JPERRY
 func (k *K8s) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
 	return k.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 }
 
+// GenerateSecret ... @JPERRY
 func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{

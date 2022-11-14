@@ -14,13 +14,18 @@ import (
 	"github.com/go-logr/logr/funcr"
 	"k8s.io/client-go/kubernetes"
 
-	// Include the cloud auth plugins
+	// Include the cloud auth plugins.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// New creates a new K8s client.
+/*
+New creates a new K8s client.
+
+The client is initialized with a *rest.Config and *kubernetes.Clientset that is generated
+from the currently active kube context.
+*/
 func New(logger Log, defaultLabels Labels) (*K8s, error) {
 	logger("k8s.NewK8sClient()")
 
@@ -41,7 +46,12 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 	}, nil
 }
 
-// NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
+/*
+NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
+
+The client is initialized with a *rest.Config and *kubernetes.Clientset that is generated
+from the currently active kube context.
+*/
 func NewWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*K8s, error) {
 	k, _ := New(logger, defaultLabels)
 	return k, k.WaitForHealthyCluster(timeout)
@@ -66,14 +76,11 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 		// after delay, try running
 		default:
 			if k.RestConfig == nil || k.Clientset == nil {
-				config, clientset, err := connect()
+				k.RestConfig, k.Clientset, err = connect()
 				if err != nil {
 					k.Log("Cluster connection not available yet: %w", err)
 					continue
 				}
-
-				k.RestConfig = config
-				k.Clientset = clientset
 			}
 
 			// Make sure there is at least one running Node

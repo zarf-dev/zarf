@@ -21,14 +21,14 @@ import (
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
 
-// Use 2048 because we are aiming for low-resource / max-compatibility
+// Use 2048 because we are aiming for low-resource / max-compatibility.
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
-// 13 months is the max length allowed by browsers
+// 13 months is the max length allowed by browsers.
 const validFor = time.Hour * 24 * 375
 
-// GeneratePKI create a CA and signed server keypair
+// GeneratePKI create a CA and signed server keypair.
 func GeneratePKI(host string, dnsNames ...string) k8s.GeneratedPKI {
 	results := k8s.GeneratedPKI{}
 
@@ -60,7 +60,7 @@ func GeneratePKI(host string, dnsNames ...string) k8s.GeneratedPKI {
 	return results
 }
 
-// newCertificate creates a new template
+// newCertificate creates a new template.
 func newCertificate(validFor time.Duration) *x509.Certificate {
 	notBefore := time.Now()
 	notAfter := notBefore.Add(validFor)
@@ -85,7 +85,7 @@ func newCertificate(validFor time.Duration) *x509.Certificate {
 	}
 }
 
-// newPrivateKey creates a new private key
+// newPrivateKey creates a new private key.
 func newPrivateKey() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, rsaBits)
 }

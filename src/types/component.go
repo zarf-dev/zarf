@@ -10,7 +10,7 @@ type ZarfComponent struct {
 	// Name is the unique identifier for this component
 	Name string `json:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9\\-]+$"`
 
-	// Description is a message given to a user when deciding to enable this componenent or not
+	// Description is a message given to a user when deciding to enable this component or not
 	Description string `json:"description,omitempty" jsonschema:"description=Message to include during package deploy describing the purpose of this component"`
 
 	// Default changes the default option when deploying this component
@@ -50,7 +50,7 @@ type ZarfComponent struct {
 	// Repos are any git repos that need to be pushed into the git server
 	Repos []string `json:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
 
-	// Data pacakges to push into a running cluster
+	// Data packages to push into a running cluster
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 

@@ -22,6 +22,8 @@ const (
 	DistroIsAKS           = "aks"
 	DistroIsRKE2          = "rke2"
 	DistroIsTKG           = "tkg"
+
+	EKSAnywhereNamespace = "eksa-system"
 )
 
 // DetectDistro returns the matching distro or unknown if not found
@@ -36,7 +38,7 @@ func (k *K8s) DetectDistro() (string, error) {
 
 	nodes, err := k.GetNodes()
 	k.Log("%#v", nodes)
-	if err != nil {
+	if err != nil || len(nodes.Items) == 0 {
 		return DistroIsUnknown, errors.New("error getting cluster nodes")
 	}
 
@@ -97,14 +99,14 @@ func (k *K8s) DetectDistro() (string, error) {
 	}
 
 	namespaces, err := k.GetNamespaces()
-	k.Log("%#v", namespaces)
+	k.Log("Namespace: %#v", namespaces)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting namespace list")
 	}
 
 	// kubectl get ns eksa-system for EKS Anywhere
 	for _, namespace := range namespaces.Items {
-		if namespace.Name == "eksa-system" {
+		if namespace.Name == EKSAnywhereNamespace {
 			return DistroIsEKSAnywhere, nil
 		}
 	}
@@ -115,12 +117,10 @@ func (k *K8s) DetectDistro() (string, error) {
 // GetArchitecture returns the cluster system architecture if found or an error if not
 func (k *K8s) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
-
-	k.Log("%#v", nodes)
-
 	if err != nil {
 		return "", err
 	}
+	k.Log("Nodes: %#v", nodes)
 
 	for _, node := range nodes.Items {
 		return node.Status.NodeInfo.Architecture, nil
