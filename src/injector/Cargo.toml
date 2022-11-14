@@ -3,6 +3,7 @@ opt-level = "z"  # Optimize for size.
 lto = true
 codegen-units = 1
 panic = "abort"
+strip = true
 
 [package]
 name = "zarf-injector"
@@ -17,3 +18,5 @@ flate2 = "1.0.24"
 tar = "0.4.38"
 sha2 = "0.10.6"
 hex = "0.4.3"
+rouille = "3.6.1"
+serde_json = "1.0.87"

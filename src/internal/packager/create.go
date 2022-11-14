@@ -3,22 +3,23 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/internal/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/types"
-
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/git"
 	"github.com/defenseunicorns/zarf/src/internal/helm"
 	"github.com/defenseunicorns/zarf/src/internal/images"
+	"github.com/defenseunicorns/zarf/src/internal/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/internal/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -49,7 +50,7 @@ func Create(baseDir string) {
 	tempPath := createPaths()
 	defer tempPath.clean()
 
-	seedImage := config.ZarfSeedImage
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 
 	configFile := tempPath.zarfYaml
 
@@ -69,6 +70,16 @@ func Create(baseDir string) {
 		// Load seed images into their own happy little tarball for ease of import on init
 		pulledImages := images.PullAll([]string{seedImage}, tempPath.seedImage)
 		sbom.CatalogImages(pulledImages, tempPath.sboms, tempPath.seedImage)
+		ociPath := path.Join(tempPath.base, "seed-image")
+		for _, image := range pulledImages {
+			if err := crane.SaveOCI(image, ociPath); err != nil {
+				message.Fatalf(err, "Unable to save image %s as OCI", image)
+			}
+		}
+
+		if err := images.FormatCraneOCILayout(ociPath); err != nil {
+			message.Fatalf(err, "Unable to format crane OCI layout")
+		}
 	}
 
 	var combinedImageList []string
