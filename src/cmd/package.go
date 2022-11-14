@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager"
 	"github.com/defenseunicorns/zarf/src/internal/packager/generator"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
@@ -79,6 +80,10 @@ var packageGenerateCmd = &cobra.Command{
 	Short:   "Use to generate either an example package or a package from resources",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
+		err := validate.ValidatePackageName(pkgName)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 		newPkg := types.ZarfPackage{
 			Metadata: types.ZarfMetadata{
 				Name: pkgName,
@@ -128,7 +133,7 @@ var packageGenerateCmd = &cobra.Command{
 		// message.Infof("%v", images)
 		// spinner.Success()
 		spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
-		err := utils.WriteYaml(packageLocation, newPkg, 0644)
+		err = utils.WriteYaml(packageLocation, newPkg, 0644)
 		if err != nil {
 			spinner.Fatalf(err, err.Error())
 		}
