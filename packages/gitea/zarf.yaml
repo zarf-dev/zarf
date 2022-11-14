@@ -15,7 +15,7 @@ components:
     charts:
       - name: gitea
         url: https://dl.gitea.io/charts
-        version: 6.0.1
+        version: 6.0.3
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
