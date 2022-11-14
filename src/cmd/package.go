@@ -170,18 +170,31 @@ var packageGenerateCmd = &cobra.Command{
 		} else {
 			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		}
-		packageLocation := "./" + pkgName + ".zarf.yaml"
 		message.Note("Component Generation Complete!")
 		// spinner := message.NewProgressSpinner("Generating images...")
 		// images := packager.GetImagesFromComponents(newPkg.Components, "")
 		// message.Infof("%v", images)
 		// spinner.Success()
-		spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
-		err = utils.WriteYaml(packageLocation, newPkg, 0644)
-		if err != nil {
-			spinner.Fatalf(err, err.Error())
+		writeFile := true
+		if _, err := os.Stat("zarf.yaml"); err == nil {
+			prompt := &survey.Confirm{
+				Message: "A zarf.yaml already exists in your directory, would you like to overwite it?",
+			}
+			err := survey.AskOne(prompt, &writeFile)
+			if err != nil {
+				message.Fatal("Survey error", err.Error())
+			}
 		}
-		spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
+		if writeFile {
+			spinner := message.NewProgressSpinner("Writing package file to %s", "zarf.yaml")
+			err = utils.WriteYaml("zarf.yaml", newPkg, 0644)
+			if err != nil {
+				spinner.Fatalf(err, err.Error())
+			}
+			spinner.Successf("Package generated successfully! Package saved to %s", "zarf.yaml")
+		} else {
+			message.Error("write aborted", "Zarf package generation aborted.")
+		}
 	},
 }
 
