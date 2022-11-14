@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"golang.org/x/exp/slices"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -108,29 +109,51 @@ var packageGenerateCmd = &cobra.Command{
 				}
 				spinner.Successf("%s's component from %s is a %s", pkgName, componentSource, result)
 
+				newComponent := types.ZarfComponent{}
+
 				switch result {
 				case "localChart":
-					newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource))
+					newComponent = generator.GenLocalChart(componentSource)
 				case "manifests":
-					newPkg.Components = append(newPkg.Components, generator.GenManifests(componentSource))
+					newComponent = generator.GenManifests(componentSource)
 				case "localFiles":
-					newPkg.Components = append(newPkg.Components, generator.GenLocalFiles(componentSource))
+					newComponent = generator.GenLocalFiles(componentSource)
 				case "gitChart":
-					newPkg.Components = append(newPkg.Components, generator.GenGitChart(componentSource))
+					newComponent = generator.GenGitChart(componentSource)
 				case "helmRepoChart":
-					newPkg.Components = append(newPkg.Components, generator.GenHelmRepoChart(componentSource))
+					newComponent = generator.GenHelmRepoChart(componentSource)
 				case "remoteFile":
-					newPkg.Components = append(newPkg.Components, generator.GenRemoteFile(componentSource))
+					newComponent = generator.GenRemoteFile(componentSource)
 				}
+
+				spinner = message.NewProgressSpinner("Finding images...")
+
+				// Gitrepo charts can never work reliably given message.fatal calls in underlying functions
+				imageList := packager.GetImagesFromComponents([]types.ZarfComponent{newComponent}, "")
+
+				// Put images from the FoundImages var into the component's images array, making sure to not create dupes
+				for _, foundImages := range imageList {
+					for realImage := range foundImages.RealImages {
+						if !slices.Contains(newComponent.Images, realImage) {
+							newComponent.Images = append(newComponent.Images, realImage)
+						}
+					}
+					for maybeImage := range foundImages.MaybeImages {
+						if !slices.Contains(newComponent.Images, maybeImage) {
+							newComponent.Images = append(newComponent.Images, maybeImage)
+						}
+					}
+				}
+
+				spinner.Successf("Finished finding images. They may not be correct so please check!")
+
+				newPkg.Components = append(newPkg.Components, newComponent)
+
 			}
 		} else {
 			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		}
 		message.Note("Component Generation Complete!")
-		// spinner := message.NewProgressSpinner("Generating images...")
-		// images := packager.GetImagesFromComponents(newPkg.Components, "")
-		// message.Infof("%v", images)
-		// spinner.Success()
 		writeFile := true
 		if _, err := os.Stat("zarf.yaml"); err == nil {
 			prompt := &survey.Confirm{

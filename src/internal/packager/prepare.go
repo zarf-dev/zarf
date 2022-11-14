@@ -23,10 +23,10 @@ import (
 var matchedImages k8s.ImageMap
 var maybeImages k8s.ImageMap
 
-type foundImages struct {
-	maybeImages   k8s.ImageMap
-	realImages    k8s.ImageMap
-	componentName string
+type FoundImages struct {
+	MaybeImages   k8s.ImageMap
+	RealImages    k8s.ImageMap
+	ComponentName string
 }
 
 // FindImages iterates over a zarf.yaml and attempts to parse any images
@@ -76,17 +76,17 @@ func FindImages(baseDir, repoHelmChartPath string) {
 
 }
 
-func GetImagesFromComponents(components []types.ZarfComponent, repoHelmChartPath string) (allImages []foundImages) {
+func GetImagesFromComponents(components []types.ZarfComponent, repoHelmChartPath string) (allImages []FoundImages) {
 
 	tempPath := createPaths()
 	defer tempPath.clean()
-	
+
 	for _, component := range components {
 
 		// matchedImages holds the collection of images, reset per-component
 		matchedImages = make(k8s.ImageMap)
 		maybeImages = make(k8s.ImageMap)
-		var componentImages foundImages
+		var componentImages FoundImages
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -132,7 +132,7 @@ func GetImagesFromComponents(components []types.ZarfComponent, repoHelmChartPath
 					path := helm.DownloadChartFromGit(chart, componentPath.charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
-				} else if (len(chart.LocalPath) != 0) {
+				} else if len(chart.LocalPath) != 0 {
 					helm.CreateChartFromLocalFiles(chart, componentPath.charts)
 				} else {
 					helm.DownloadPublishedChart(chart, componentPath.charts)
@@ -208,21 +208,21 @@ func GetImagesFromComponents(components []types.ZarfComponent, repoHelmChartPath
 			}
 		}
 
-		componentImages.maybeImages = maybeImages
-		componentImages.realImages  = matchedImages
-		componentImages.componentName = component.Name
+		componentImages.MaybeImages = maybeImages
+		componentImages.RealImages = matchedImages
+		componentImages.ComponentName = component.Name
 
 		allImages = append(allImages, componentImages)
 	}
 	return allImages
 }
 
-func printFoundImages(allImages []foundImages) {
+func printFoundImages(allImages []FoundImages) {
 
 	for _, images := range allImages {
-		if sortedImages := k8s.SortImages(images.realImages, nil); len(sortedImages) > 0 {
+		if sortedImages := k8s.SortImages(images.RealImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
-			fmt.Printf("\n  - name: %s\n    images:\n", images.componentName)
+			fmt.Printf("\n  - name: %s\n    images:\n", images.ComponentName)
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
 				fmt.Println("      - " + image)
@@ -230,7 +230,7 @@ func printFoundImages(allImages []foundImages) {
 		}
 
 		// Handle the "maybes"
-		if sortedImages := k8s.SortImages(images.maybeImages, images.realImages); len(sortedImages) > 0 {
+		if sortedImages := k8s.SortImages(images.MaybeImages, images.RealImages); len(sortedImages) > 0 {
 			var realImages []string
 			for _, image := range sortedImages {
 				if descriptor, err := crane.Head(image, config.GetCraneOptions()...); err != nil {
@@ -244,7 +244,7 @@ func printFoundImages(allImages []foundImages) {
 			}
 
 			if len(realImages) > 0 {
-				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, images.componentName)
+				fmt.Printf("      # Possible images - %s - %s\n", config.GetMetaData().Name, images.ComponentName)
 				for _, image := range realImages {
 					fmt.Println("      - " + image)
 				}
