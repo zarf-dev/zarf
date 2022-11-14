@@ -28,8 +28,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 )
 
 var packageCmd = &cobra.Command{
@@ -124,10 +122,6 @@ var packageGenerateCmd = &cobra.Command{
 	Short:   "Use to generate either an example package or a package from resources",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
-		err := validate.ValidatePackageName(pkgName)
-		if err != nil {
-			message.Fatal(err, err.Error())
-		}
 		newPkg := types.ZarfPackage{
 			Metadata: types.ZarfMetadata{
 				Name: pkgName,
@@ -170,31 +164,14 @@ var packageGenerateCmd = &cobra.Command{
 		} else {
 			message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		}
+		packageLocation := "./" + pkgName + ".zarf.yaml"
 		message.Note("Component Generation Complete!")
-		// spinner := message.NewProgressSpinner("Generating images...")
-		// images := packager.GetImagesFromComponents(newPkg.Components, "")
-		// message.Infof("%v", images)
-		// spinner.Success()
-		writeFile := true
-		if _, err := os.Stat("zarf.yaml"); err == nil {
-			prompt := &survey.Confirm{
-				Message: "A zarf.yaml already exists in your directory, would you like to overwite it?",
-			}
-			err := survey.AskOne(prompt, &writeFile)
-			if err != nil {
-				message.Fatal("Survey error", err.Error())
-			}
+		spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
+		err := utils.WriteYaml(packageLocation, newPkg, 0644)
+		if err != nil {
+			spinner.Fatalf(err, err.Error())
 		}
-		if writeFile {
-			spinner := message.NewProgressSpinner("Writing package file to %s", "zarf.yaml")
-			err = utils.WriteYaml("zarf.yaml", newPkg, 0644)
-			if err != nil {
-				spinner.Fatalf(err, err.Error())
-			}
-			spinner.Successf("Package generated successfully! Package saved to %s", "zarf.yaml")
-		} else {
-			message.Error("write aborted", "Zarf package generation aborted.")
-		}
+		spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
 	},
 }
 
