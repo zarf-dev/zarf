@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: multi-part
   description: A Zarf package broken into multiple parts for easier distribution
-  chunkSize: 5
 
 components:
   - name: big-ol-file

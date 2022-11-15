@@ -18,7 +18,6 @@ type ZarfMetadata struct {
 	Url          string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
 	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package for future Zarf UI listing"`
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	ChunkSize    int    `json:"chunkSize,omitempty" jsonschema:"description=The size of each chunk in Megabytes when chunking the package into multiple files"`
 	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package"`
 }
 

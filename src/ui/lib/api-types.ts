@@ -367,10 +367,6 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
-     * The size of each chunk in Megabytes when chunking the package into multiple files
-     */
-    chunkSize?: number;
-    /**
      * Additional information about this package
      */
     description?: string;
@@ -580,9 +576,17 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * Path to use to cache images and git repos on package create
+     */
+    cachePath: string;
+    /**
      * Disable the need for shasum validations when pulling down files from the internet
      */
     insecure: boolean;
+    /**
+     * Size of chunks to use when splitting a zarf package into multiple files
+     */
+    maxPackageSize: number;
     /**
      * Location where the finalized Zarf package will be placed
      */
@@ -898,7 +902,6 @@ const typeMap: any = {
     ], false),
     "ZarfMetadata": o([
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
-        { json: "chunkSize", js: "chunkSize", typ: u(undefined, 0) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "image", js: "image", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
@@ -975,7 +978,9 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "cachePath", js: "cachePath", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
+        { json: "maxPackageSize", js: "maxPackageSize", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },

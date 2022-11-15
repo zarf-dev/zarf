@@ -165,6 +165,8 @@ func choosePackage(args []string) string {
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
 			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar*")
+			partialFiles, _ := filepath.Glob(config.PackagePrefix + toComplete + "*-000.partial-tar*")
+			files = append(files, partialFiles...)
 			return files
 		},
 	}
@@ -202,13 +204,13 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
-	v.SetDefault(V_PKG_CREATE_CHUNK_SIZE, 0)
+	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 1024)
 
 	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
 	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
 	createFlags.BoolVar(&config.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
-	createFlags.IntVar(&config.CreateOptions.ChunkSize, "chunk-size", v.GetInt(V_PKG_CREATE_CHUNK_SIZE), "Specify a size in Megabytes to break a package into multiple files")
+	createFlags.IntVar(&config.CreateOptions.MaxPackageSize, "max-package-size", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple packages. Use 0 to disable splitting.")
 }
 
 func bindDeployFlags() {

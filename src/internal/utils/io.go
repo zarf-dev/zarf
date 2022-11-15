@@ -165,7 +165,7 @@ func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum stri
 		return chunks, sha256sum, err
 	}
 
-	//Calculate the sha256sum of the tarFile before we split it up
+	//Calculate the sha256sum of the file before we split it up
 	sha256sum = fmt.Sprintf("%x", sha256.Sum256(file))
 
 	// Loop over the tarball breaking it into chunks based on the payloadChunkSize

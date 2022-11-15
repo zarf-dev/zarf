@@ -110,9 +110,9 @@ func Create(baseDir string) {
 	}
 
 	// If a chunk size was specified, split the package into chunks
-	if config.CreateOptions.ChunkSize > 0 {
+	if config.CreateOptions.MaxPackageSize > 0 {
 		// Convert Megabytes to Bytes
-		chunkSize := config.CreateOptions.ChunkSize * 1024 * 1024
+		chunkSize := config.CreateOptions.MaxPackageSize * 1024 * 1024
 
 		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
 		if err != nil {

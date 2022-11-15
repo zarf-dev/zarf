@@ -3,6 +3,7 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,6 +43,44 @@ func Deploy() {
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(config.DeployOptions.PackagePath) {
 		spinner.Fatalf(nil, "Unable to find the package on the local system, expected package at %s", config.DeployOptions.PackagePath)
+	}
+
+	// If packagePath has partial in the name, we need to combine the partials into a single package
+	if strings.Contains(config.DeployOptions.PackagePath, "-000.partial-tar") {
+		spinner.Updatef("Combining partial packages into a single package")
+
+		// Replace part 0 with *
+		pattern := strings.Replace(config.DeployOptions.PackagePath, "-000.partial-tar", "-*.partial-tar", 1)
+		fileList, err := filepath.Glob(pattern)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to find partial packages to combine")
+		}
+
+		pkgPath := strings.Replace(config.DeployOptions.PackagePath, "-000.partial-tar", ".tar", 1)
+		pkgFile, err := os.OpenFile(pkgPath, os.O_CREATE, 0644)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to create package file")
+		}
+		defer pkgFile.Close()
+
+		for _, file := range fileList {
+			// Open the file
+			f, err := os.Open(file)
+			if err != nil {
+				spinner.Fatalf(err, "Unable to open partial package %s", file)
+			}
+			defer f.Close()
+
+			// Add the file contents to the package
+			if _, err = io.Copy(pkgFile, f); err != nil {
+				spinner.Fatalf(err, "Unable to copy partial package %s into package file", file)
+			}
+		}
+
+		// Remove the partial packages to reduce disk space before extracting
+		for _, file := range fileList {
+			_ = os.Remove(file)
+		}
 	}
 
 	// Extract the archive

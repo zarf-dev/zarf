@@ -248,11 +248,6 @@ func LoadConfig(path string, filterByOS bool) error {
 	// Update the active package with the filtered components
 	active.Components = filteredComponents
 
-	// Use the package chunk size of not set via the CLI
-	if CreateOptions.ChunkSize == 0 {
-		CreateOptions.ChunkSize = active.Metadata.ChunkSize
-	}
-
 	return nil
 }
 
