@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -71,7 +71,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 		histClient := action.NewHistory(actionConfig)
 		histClient.Max = 1
 
-		if attempt > 2 {
+		if attempt > 4 {
 			// On total failure try to rollback or uninstall
 			if histClient.Version > 1 {
 				spinner.Updatef("Performing chart rollback")
@@ -80,7 +80,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 				spinner.Updatef("Performing chart uninstall")
 				_, _ = uninstallChart(actionConfig, options.ReleaseName)
 			}
-			spinner.Errorf(nil, "Unable to complete helm chart install/upgrade")
+			spinner.Fatalf(nil, "Unable to complete helm chart install/upgrade")
 			break
 		}
 
@@ -191,7 +191,7 @@ func GenerateChart(basePath string, manifest types.ZarfManifest, component types
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
 		manifest := fmt.Sprintf("%s/%s", basePath, file)
-		data, err := ioutil.ReadFile(manifest)
+		data, err := os.ReadFile(manifest)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to read the manifest file contents")
 		}

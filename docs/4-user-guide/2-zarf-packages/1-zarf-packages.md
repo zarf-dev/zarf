@@ -43,9 +43,9 @@ While initializing, Zarf will seed your cluster with an container registry so it
 
 #### Using the init-package
 
-You initialize your cluster by running the command `zarf init`, which will search your current working directory for a file that matches the name `zarf-init-{ARCHITECTURE}.tar.zst` where the `ARCHITECTURE` matches the architecture of the host you are running on. If the machine your are deploying onto has a different machine architecture, you will have to specify the name of the architecture you are deploying onto. For example, if you are on a arm64 machine but are deploying on a amd64 machine, you will run `zarf init zarf-init-amd64.tar.zst`
+You initialize your cluster by running the command `zarf init`, which will search your current working directory for a file that matches the name `zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst` where the `ARCHITECTURE` matches the architecture of the host you are running on. If the machine your are deploying onto has a different machine architecture, you will have to specify the name of the architecture you are deploying onto. For example, if you are on a arm64 machine but are deploying on a amd64 machine, you will run `zarf init zarf-init-amd64-v0.24.0.tar.zst`
 
-At the end of the day, init packages are just like other packages, meaning they can also be run with `zarf package deploy zarf-init-{ARCHITECTURE}.tar.zst`
+At the end of the day, init packages are just like other packages, meaning they can also be run with `zarf package deploy zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`
 
 Init configs are not something you will have to create yourself unless you really want to customize how your cluster is installed / configured (i.e. if you wanted to use the init process to install a specifically configured k3s cluster onto your host machine), and even then it is often easier to create a specific package to do that before your run the init package.
 
@@ -74,7 +74,7 @@ Zarf packages are split into smaller chunks called 'components'. These component
 
 **Dependencies** for Building a Zarf Package
 
-- A local k8s cluster to work with ([k3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[KinD](https://kind.sigs.k8s.io/docs/user/quick-start#installation))
+- A local k8s cluster to work with ([k3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[Kind](https://kind.sigs.k8s.io/docs/user/quick-start#installation))
 - A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
 - A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md))
 

@@ -142,7 +142,8 @@ func postSeedRegistry(tempPath tempPaths) error {
 	}
 
 	// Push the seed images into to Zarf registry
-	err := images.PushToZarfRegistry(tempPath.seedImage, []string{config.GetSeedImage()}, false)
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+	err := images.PushToZarfRegistry(tempPath.seedImage, []string{seedImage}, false)
 
 	return err
 }
