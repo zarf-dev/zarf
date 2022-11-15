@@ -6,6 +6,8 @@ Date: 2022-03-04
 
 Accepted
 
+Amended by [7. Use Rust Binary for Both Injection Stages](0007-use-rust-binary-for-both-injection-stages.md)
+
 ## Context
 
 In order to create any workloads in K8s, an image has to exist on the node or be pulled in from an OCI Distribution server (docker registry). Local K8s distros such as KIND, K3D, K3S, Microk8s have CLI support for injecting or pushing images into the CRIs of cluster nodes. No standard or tool exists to do this generically in K8s as the CRI sits outside the problem of K8s beyond just communicating with it. For Zarf to push images into a K8s cluster that does not have a CLI option to inject the image, we have to establish some mechanism to create a temporary registry, use an existing one, or inject the image in the cluster. Zarf must also support unknown environments with no other dependencies; we cannot assume a registry exists. Typically when K8s pulls images from a remote registry, it sends the request to the CRI that then does the pull outside of the K8s context. The CRI runs at the host level on a per-node basis, so to access a private registry, the TLS trust needs to be modified on any host/node that would attempt to pull the image. The two primary ways to do this are modifying the node's root certificate authorities or the CRIs configuration if it has an option for TLS root CA. Lastly, as this is per node, all nodes in the cluster would need to be modified or some affinity/taint to force the pod to use a single node during bootstrapping.

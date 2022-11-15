@@ -3,6 +3,7 @@ package packager
 import (
 	"crypto/sha256"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,16 +12,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/k8s"
 	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// This needs to be < 672 KBs, but larger sizes tend to face some timeout issues on GKE
-// We may need to make this dynamic in the future
-var payloadChunkSize = 1024 * 512
+// The chunk size for the tarball chunks
+var payloadChunkSize = 1024 * 768
 
 func runInjectionMadness(tempPath tempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
@@ -30,7 +29,6 @@ func runInjectionMadness(tempPath tempPaths) {
 
 	var err error
 	var images k8s.ImageNodeMap
-	var envVars []corev1.EnvVar
 	var payloadConfigmaps []string
 	var sha256sum string
 
@@ -44,11 +42,6 @@ func runInjectionMadness(tempPath tempPaths) {
 	spinner.Updatef("Getting the list of existing cluster images")
 	if images, err = k8s.GetAllImages(); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
-	}
-
-	spinner.Updatef("Generating bootstrap payload SHASUMs")
-	if envVars, err = buildEnvVars(tempPath); err != nil {
-		spinner.Fatalf(err, "Unable to build the injection pod environment variables")
 	}
 
 	spinner.Updatef("Creating the injector configmap")
@@ -84,7 +77,7 @@ func runInjectionMadness(tempPath tempPaths) {
 		_ = k8s.DeletePod(k8s.ZarfNamespace, "injector")
 
 		// Update the podspec image path and use the first node found
-		pod, err := buildInjectionPod(node[0], image, envVars, payloadConfigmaps, sha256sum)
+		pod, err := buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
 			message.Debug(err)
@@ -100,7 +93,7 @@ func runInjectionMadness(tempPath tempPaths) {
 		}
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		if hasSeedImages(spinner) {
+		if injectorIsReady(spinner) {
 			return
 		}
 
@@ -123,9 +116,9 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.base, "payload.tgz")
-	tarFileList := []string{
-		tempPath.injectZarfBinary,
-		tempPath.seedImage,
+	tarFileList, err := filepath.Glob(filepath.Join(tempPath.base, "seed-image", "*"))
+	if err != nil {
+		return configMaps, "", err
 	}
 	labels := map[string]string{
 		"zarf-injector": "payload",
@@ -190,8 +183,9 @@ func createPayloadConfigmaps(tempPath tempPaths, spinner *message.Spinner) ([]st
 	return configMaps, sha256sum, nil
 }
 
-func hasSeedImages(spinner *message.Spinner) bool {
-	message.Debugf("packager.hasSeedImages()")
+// Test for pod readiness and seed image presence
+func injectorIsReady(spinner *message.Spinner) bool {
+	message.Debugf("packager.injectorIsReady()")
 
 	// Establish the zarf connect tunnel
 	tunnel := k8s.NewZarfTunnel()
@@ -199,35 +193,17 @@ func hasSeedImages(spinner *message.Spinner) bool {
 	tunnel.Connect(k8s.ZarfInjector, false)
 	defer tunnel.Close()
 
-	timeout := time.After(20 * time.Second)
+	spinner.Updatef("Testing the injector for seed image availability")
 
-	ref, err := utils.SwapHostWithoutChecksum(config.ZarfSeedImage, tunnel.Endpoint())
-	if err != nil {
-		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
+	seedRegistry := fmt.Sprintf("http://%s/v2/library/%s/manifests/%s", tunnel.Endpoint(), config.ZarfSeedImage, config.ZarfSeedTag)
+	if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
+		// Just debug log the output because failures just result in trying the next image
+		message.Debug(resp, err)
 		return false
 	}
 
-	for {
-		// Delay check for one second
-		time.Sleep(1 * time.Second)
-		select {
-
-		// On timeout abort
-		case <-timeout:
-			message.Debug("seed image check timed out")
-			return false
-
-		// After delay, try running
-		default:
-			// Check for the existence of the image in the injection pod registry, on error continue
-			if _, err := crane.Manifest(ref, config.GetCraneOptions()...); err != nil {
-				message.Debugf("Could not get image ref %s: %#v", ref, err)
-			} else {
-				// If not error, return true, there image is present
-				return true
-			}
-		}
-	}
+	spinner.Updatef("Seed image found, injector is ready")
+	return true
 }
 
 func createInjectorConfigmap(tempPath tempPaths) error {
@@ -243,10 +219,10 @@ func createInjectorConfigmap(tempPath tempPaths) error {
 	}
 
 	// Try to delete configmap silently
-	_ = k8s.DeleteConfigmap(k8s.ZarfNamespace, "injector-binaries")
+	_ = k8s.DeleteConfigmap(k8s.ZarfNamespace, "rust-binary")
 
 	// Attempt to create the configmap in the cluster
-	if _, err = k8s.CreateConfigmap(k8s.ZarfNamespace, "injector-binaries", labels, configData); err != nil {
+	if _, err = k8s.CreateConfigmap(k8s.ZarfNamespace, "rust-binary", labels, configData); err != nil {
 		return err
 	}
 
@@ -270,41 +246,13 @@ func createService() (*corev1.Service, error) {
 	return k8s.CreateService(service)
 }
 
-func buildEnvVars(tempPath tempPaths) ([]corev1.EnvVar, error) {
-	var err error
-	envVars := make(map[string]string)
-
-	// Add the seed images shasum env var
-	if envVars["SHA256_IMAGE"], err = utils.GetSha256Sum(tempPath.seedImage); err != nil {
-		return nil, err
-	}
-
-	// Add the zarf registry binary shasum env var
-	if envVars["SHA256_ZARF"], err = utils.GetSha256Sum(tempPath.injectZarfBinary); err != nil {
-		return nil, err
-	}
-
-	// Add the seed images list env var
-	envVars["SEED_IMAGE"] = config.ZarfSeedImage
-
-	// Setup the env vars
-	encodedEnvVars := []corev1.EnvVar{}
-	for name, value := range envVars {
-		encodedEnvVars = append(encodedEnvVars, corev1.EnvVar{
-			Name:  name,
-			Value: value,
-		})
-	}
-
-	return encodedEnvVars, nil
-}
-
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
-func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
+func buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	pod := k8s.GeneratePod("injector", k8s.ZarfNamespace)
 	executeMode := int32(0777)
 
 	pod.Labels["app"] = "zarf-injector"
+
 	// Ensure zarf agent doesnt break the injector on future runs
 	pod.Labels["zarf.dev/agent"] = "ignore"
 
@@ -314,73 +262,45 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 	// Do not try to restart the pod as it will be deleted/re-created instead
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 
-	// Init container used to combine and decompress the split tarball into the stage2 directory for use in the main container
-	pod.Spec.InitContainers = []corev1.Container{
-		{
-			Name: "init-injector",
-			// An existing image already present on the cluster
-			Image: image,
-			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			// This directory is filled via the configmap injections
-			WorkingDir: "/zarf-stage1",
-			Command:    []string{"/zarf-stage1/zarf-injector", payloadShasum},
-
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "stage1",
-					MountPath: "/zarf-stage1/zarf-injector",
-					SubPath:   "zarf-injector",
-				},
-				{
-					Name:      "stage2",
-					MountPath: "/zarf-stage2",
-				},
-			},
-
-			// Keep resources as light as possible as we aren't actually running the container's other binaries
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse(".5"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("2"),
-					corev1.ResourceMemory: resource.MustParse("256Mi"),
-				},
-			},
-
-			Env: envVars,
-		},
-	}
-
-	// Create container definition for the injector pod
-	newHost, err := utils.SwapHostWithoutChecksum(config.ZarfSeedImage, "127.0.0.1:5001")
-	if err != nil {
-		message.Errorf(err, "Unable to swap the host of the seedImage for the injector pod: %#v", err)
-		return nil, err
-	}
 	pod.Spec.Containers = []corev1.Container{
 		{
 			Name: "injector",
+
 			// An existing image already present on the cluster
 			Image: image,
+
 			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
 			ImagePullPolicy: corev1.PullIfNotPresent,
+
 			// This directory's contents come from the init container output
-			WorkingDir: "/zarf-stage2",
-			Command: []string{
-				"/zarf-stage2/zarf-registry",
-				"/zarf-stage2/seed-image.tar",
-				config.ZarfSeedImage,
-				newHost,
-			},
+			WorkingDir: "/zarf-init",
+
+			// Call the injector with shasum of the tarball
+			Command: []string{"/zarf-init/zarf-injector", payloadShasum},
 
 			// Shared mount between the init and regular containers
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					Name:      "stage2",
-					MountPath: "/zarf-stage2",
+					Name:      "init",
+					MountPath: "/zarf-init/zarf-injector",
+					SubPath:   "zarf-injector",
+				},
+				{
+					Name:      "seed",
+					MountPath: "/zarf-seed",
+				},
+			},
+
+			// Readiness probe to optimize the pod startup time
+			ReadinessProbe: &corev1.Probe{
+				PeriodSeconds:    2,
+				SuccessThreshold: 1,
+				FailureThreshold: 10,
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: "/v2/",               // path to health check
+						Port: intstr.FromInt(5000), // port to health check
+					},
 				},
 			},
 
@@ -395,36 +315,34 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 					corev1.ResourceMemory: resource.MustParse("256Mi"),
 				},
 			},
-
-			Env: envVars,
 		},
 	}
 
 	pod.Spec.Volumes = []corev1.Volume{
-		// Stage1 contains the rust binary and collection of configmaps from the tarball (go binary + seed image)
+		// Contains the rust binary and collection of configmaps from the tarball (seed image).
 		{
-			Name: "stage1",
+			Name: "init",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "injector-binaries",
+						Name: "rust-binary",
 					},
 					DefaultMode: &executeMode,
 				},
 			},
 		},
-		// Stage2 is an emtpy directory shared between the containers
+		// Empty directory to hold the seed image (new dir to avoid permission issues)
 		{
-			Name: "stage2",
+			Name: "seed",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
 	}
 
-	// Iterate over all the payload configmaps and add their mounts
+	// Iterate over all the payload configmaps and add their mounts.
 	for _, filename := range payloadConfigmaps {
-		// Create the configmap volume from the given filename
+		// Create the configmap volume from the given filename.
 		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
 			Name: filename,
 			VolumeSource: corev1.VolumeSource{
@@ -436,10 +354,10 @@ func buildInjectionPod(node, image string, envVars []corev1.EnvVar, payloadConfi
 			},
 		})
 
-		// Create the volume mount to place the new volume in the stage1 directory
-		pod.Spec.InitContainers[0].VolumeMounts = append(pod.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
+		// Create the volume mount to place the new volume in the working directory
+		pod.Spec.Containers[0].VolumeMounts = append(pod.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      filename,
-			MountPath: fmt.Sprintf("/zarf-stage1/%s", filename),
+			MountPath: fmt.Sprintf("/zarf-init/%s", filename),
 			SubPath:   filename,
 		})
 	}
