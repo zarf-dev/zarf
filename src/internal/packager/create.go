@@ -109,10 +109,17 @@ func Create(baseDir string) {
 		message.Fatal(err, "Unable to create the package archive")
 	}
 
-	// If a chunk size was specified, split the package into chunks
-	if config.CreateOptions.MaxPackageSize > 0 {
+	f, err := os.Stat(packageName)
+	if err != nil {
+		message.Fatal(err, "Unable to read the package archive")
+	}
+
+	// Convert Megabytes to bytes
+	chunkSize := config.CreateOptions.MaxPackageSize * 1024 * 1024
+
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks
+	if config.CreateOptions.MaxPackageSize > 0 && f.Size() > int64(chunkSize) {
 		// Convert Megabytes to Bytes
-		chunkSize := config.CreateOptions.MaxPackageSize * 1024 * 1024
 
 		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
 		if err != nil {
