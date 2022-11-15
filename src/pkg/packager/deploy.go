@@ -257,7 +257,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasCharts || hasManifests {
-		charts = p.installChartAndManifests(componentPath, component)
+		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+		}
 	}
 
 	// Run the 'after' scripts after all other attributes of the component has been deployed
@@ -402,7 +404,7 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) []types.InstalledChart {
+func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) ([]types.InstalledChart, error) {
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
@@ -421,7 +423,10 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			Cluster:   p.cluster,
 		}
 
-		addedConnectStrings, installedChartName := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		if err != nil {
+			return installedCharts, err
+		}
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map
@@ -449,7 +454,10 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			Cfg:       p.cfg,
 			Cluster:   p.cluster,
 		}
-		addedConnectStrings, installedChartName := helmCfg.GenerateChart(manifest)
+		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+		if err != nil {
+			return installedCharts, err
+		}
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map
@@ -458,7 +466,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		}
 	}
 
-	return installedCharts
+	return installedCharts, nil
 }
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {

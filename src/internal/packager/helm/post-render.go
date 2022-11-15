@@ -33,11 +33,13 @@ type renderer struct {
 	values         template.Values
 }
 
-func (h *Helm) NewRenderer() *renderer {
+func (h *Helm) NewRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
-	// TODO: @JPERRY Stop being lazy and don't ignore this.. or do.. it's up to you
-	valueTemplate, _ := template.Generate(h.Cfg)
+	valueTemplate, err := template.Generate(h.Cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	return &renderer{
 		connectStrings: make(types.ConnectStrings),
@@ -48,7 +50,7 @@ func (h *Helm) NewRenderer() *renderer {
 		},
 		values:       valueTemplate,
 		actionConfig: h.actionConfig,
-	}
+	}, nil
 }
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
@@ -91,67 +93,62 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
-	if err != nil {
-		// On error only drop a warning
-		message.Errorf(err, "Problem parsing post-render manifest data")
-	} else {
-		// Otherwise, loop over the resources,
-		for _, resource := range resources {
+	// Otherwise, loop over the resources,
+	for _, resource := range resources {
 
-			// parse to unstructured to have access to more data than just the name
-			rawData := &unstructured.Unstructured{}
-			if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal manifest: %#v", err)
-			}
-
-			switch rawData.GetKind() {
-			case "Namespace":
-				var namespace corev1.Namespace
-				// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shennanigans
-				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
-					message.Errorf(err, "could not parse namespace %s", rawData.GetName())
-				} else {
-					message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
-					if namespace.Labels == nil {
-						// Ensure label map exists to avoid nil panic
-						namespace.Labels = make(map[string]string)
-					}
-					// Now track this namespace by zarf
-					namespace.Labels[config.ZarfManagedByLabel] = "zarf"
-					namespace.Labels["zarf-helm-release"] = r.options.ReleaseName
-
-					// Add it to the stack
-					r.namespaces[namespace.Name] = &namespace
-				}
-				// skip so we can strip namespaces from helms brain
-				continue
-
-			case "Service":
-				// Check service resources for the zarf-connect label
-				labels := rawData.GetLabels()
-				annotations := rawData.GetAnnotations()
-
-				if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
-					// If there is a zarf-connect label
-					message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
-
-					// Add the connectstring for processing later in the deployment
-					r.connectStrings[key] = types.ConnectString{
-						Description: annotations[config.ZarfConnectAnnotationDescription],
-						Url:         annotations[config.ZarfConnectAnnotationUrl],
-					}
-				}
-			}
-
-			namespace := rawData.GetNamespace()
-			if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
-				// if this is the first time seeing this ns, we need to track that to create it as well
-				r.namespaces[namespace] = nil
-			}
-
-			// Finally place this back onto the output buffer
-			fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+		// parse to unstructured to have access to more data than just the name
+		rawData := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
+
+		switch rawData.GetKind() {
+		case "Namespace":
+			var namespace corev1.Namespace
+			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shennanigans
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
+				message.Errorf(err, "could not parse namespace %s", rawData.GetName())
+			} else {
+				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				if namespace.Labels == nil {
+					// Ensure label map exists to avoid nil panic
+					namespace.Labels = make(map[string]string)
+				}
+				// Now track this namespace by zarf
+				namespace.Labels[config.ZarfManagedByLabel] = "zarf"
+				namespace.Labels["zarf-helm-release"] = r.options.ReleaseName
+
+				// Add it to the stack
+				r.namespaces[namespace.Name] = &namespace
+			}
+			// skip so we can strip namespaces from helms brain
+			continue
+
+		case "Service":
+			// Check service resources for the zarf-connect label
+			labels := rawData.GetLabels()
+			annotations := rawData.GetAnnotations()
+
+			if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
+				// If there is a zarf-connect label
+				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
+
+				// Add the connectstring for processing later in the deployment
+				r.connectStrings[key] = types.ConnectString{
+					Description: annotations[config.ZarfConnectAnnotationDescription],
+					Url:         annotations[config.ZarfConnectAnnotationUrl],
+				}
+			}
+		}
+
+		namespace := rawData.GetNamespace()
+		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
+			// if this is the first time seeing this ns, we need to track that to create it as well
+			r.namespaces[namespace] = nil
+		}
+
+		// Finally place this back onto the output buffer
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
 
 	c := r.options.Cluster

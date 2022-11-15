@@ -23,7 +23,7 @@ import (
 )
 
 // InstallOrUpgradeChart performs a helm install of the given chart
-func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string) {
+func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	var installedChartName string
 	fromMessage := h.Chart.Url
 	if fromMessage == "" {
@@ -49,12 +49,15 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string) {
 		h.Chart.NoWait = true
 	}
 
-	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
-	postRender := h.NewRenderer()
-
 	// Setup K8s connection
+	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to initialize the K8s client")
+		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
+
+	postRender, err := h.NewRenderer()
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	attempt := 0
@@ -111,7 +114,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string) {
 	}
 
 	// return any collected connect strings for zarf connect
-	return postRender.connectStrings, installedChartName
+	return postRender.connectStrings, installedChartName, nil
 }
 
 // TemplateChart generates a helm template from a given chart
@@ -161,7 +164,7 @@ func (h *Helm) TemplateChart() (string, error) {
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
-func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings, string) {
+func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings, string, error) {
 	message.Debugf("helm.GenerateChart(%#v)", manifest)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
