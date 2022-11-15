@@ -7,6 +7,8 @@
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>"
 package lang
 
+import "errors"
+
 // All language strings should be in the form of a constant
 // The constants should be grouped by the top level package they are used in (or common)
 // The format should be <PathName><Err/Info><ShortDescription>
@@ -14,8 +16,8 @@ package lang
 // Include sprintf formatting directives in the string if needed
 const (
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
-	ErrUnmarshal = "failed to unmarshal file: %w"
-	ErrLoadState = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrUnmarshal           = "failed to unmarshal file: %w"
+	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
 )
 
 // Zarf CLI commands
@@ -96,3 +98,6 @@ const (
 	AgentErrBindHandler            = "Unable to bind the webhook handler"
 	AgentErrBadRequest             = "could not read request body: %s"
 )
+
+// Zarf Init Errors
+var ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")

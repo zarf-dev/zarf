@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -48,8 +50,7 @@ var initCmd = &cobra.Command{
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
-		err := validateInitFlags()
-		if err != nil {
+		if err := validateInitFlags(); err != nil {
 			message.Fatal(err, "Invalid command flags were provided.")
 		}
 
@@ -58,26 +59,9 @@ var initCmd = &cobra.Command{
 		pkgConfig.DeployOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		if utils.InvalidPath(pkgConfig.DeployOpts.PackagePath) {
-			// Get the path to the executable
-			if executablePath, err := utils.GetFinalExecutablePath(); err != nil {
-				message.Errorf(err, "Unable to get the path to the executable")
-			} else {
-				executableDir := path.Dir(executablePath)
-				pkgConfig.DeployOpts.PackagePath = filepath.Join(executableDir, initPackageName)
-			}
-
-			// If the init-package doesn't exist in the executable directory, try the cache directory
-			if err != nil || utils.InvalidPath(pkgConfig.DeployOpts.PackagePath) {
-				pkgConfig.DeployOpts.PackagePath = filepath.Join(config.GetAbsCachePath(), initPackageName)
-
-				// If the init-package doesn't exist in the cache directory, suggest downloading it
-				if utils.InvalidPath(pkgConfig.DeployOpts.PackagePath) {
-					if err := downloadInitPackage(initPackageName); err != nil {
-						message.Fatal(err, "Failed to download the init package")
-					}
-				}
-			}
+		var err error
+		if pkgConfig.DeployOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
+			message.Fatal(err, err.Error())
 		}
 
 		// Run everything
@@ -85,9 +69,36 @@ var initCmd = &cobra.Command{
 	},
 }
 
+func findInitPackage(initPackageName string) (string, error) {
+	// First, look for the init package in the current working directory
+	if !utils.InvalidPath(initPackageName) {
+		return initPackageName, nil
+	}
+
+	// Next, look for the init package in the executable directory
+	executablePath, err := utils.GetFinalExecutablePath()
+	if err != nil {
+		return "", err
+	}
+	executableDir := path.Dir(executablePath)
+	if !utils.InvalidPath(filepath.Join(executableDir, initPackageName)) {
+		return filepath.Join(executableDir, initPackageName), nil
+	}
+
+	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
+	if err := downloadInitPackage(initPackageName); err != nil {
+		if errors.Is(err, lang.ErrInitNotFound) {
+			message.Fatal(err, err.Error())
+		} else {
+			message.Fatalf(err, "Failed to download the init package: %w", err)
+		}
+	}
+	return "", nil
+}
+
 func downloadInitPackage(initPackageName string) error {
 	if config.CommonOptions.Confirm {
-		return fmt.Errorf("this command requires a zarf-init package, but one was not found on the local system")
+		return lang.ErrInitNotFound
 	}
 
 	var confirmDownload bool
