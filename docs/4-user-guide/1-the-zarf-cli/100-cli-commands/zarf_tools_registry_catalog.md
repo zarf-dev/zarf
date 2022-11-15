@@ -10,7 +10,7 @@ zarf tools registry catalog [REGISTRY] [flags]
 
 ```
   # list the repos for reg.example.com
-  $ /var/folders/62/wn7zhxv91mxgmh4t9ssh600h0000gn/T/go-build710421845/b001/exe/main catalog reg.example.com
+  $ /var/folders/62/wn7zhxv91mxgmh4t9ssh600h0000gn/T/go-build3177692062/b001/exe/main catalog reg.example.com
 ```
 
 ### Options

@@ -18,7 +18,7 @@ zarf package create [DIRECTORY] [flags]
       --confirm                   Confirm package creation without prompting
   -h, --help                      help for create
       --insecure                  Allow insecure registry connections when pulling OCI images
-      --max-package-size int      Specify the maximum size of the package in MB, larger packages will be split into multiple files
+      --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple packages. Use 0 to disable splitting. (default 1024)
   -o, --output-directory string   Specify the output directory for the created Zarf package
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package

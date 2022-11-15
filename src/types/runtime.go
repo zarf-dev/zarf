@@ -36,7 +36,6 @@ type ZarfCreateOptions struct {
 	Insecure        bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
 	OutputDirectory string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	SetVariables    map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	CachePath       string            `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 	MaxPackageSize  int               `json:"maxPackageSize" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files"`
 }
 
