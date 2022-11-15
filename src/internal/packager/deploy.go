@@ -57,7 +57,7 @@ func Deploy() {
 		}
 
 		pkgPath := strings.Replace(config.DeployOptions.PackagePath, "-000.partial-tar", ".tar", 1)
-		pkgFile, err := os.OpenFile(pkgPath, os.O_CREATE, 0644)
+		pkgFile, err := os.Create(pkgPath)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to create package file")
 		}
@@ -81,6 +81,9 @@ func Deploy() {
 		for _, file := range fileList {
 			_ = os.Remove(file)
 		}
+
+		// Set the package path to the combined package
+		config.DeployOptions.PackagePath = pkgPath
 	}
 
 	// Extract the archive
