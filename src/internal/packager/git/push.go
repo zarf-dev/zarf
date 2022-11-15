@@ -20,7 +20,7 @@ import (
 func (g *Git) PushRepo(localPath string) error {
 	// If this is a serviceURL, create a port-forward tunnel to that resource
 	if tunnel, err := cluster.NewTunnelFromServiceURL(g.Server.Address); err != nil {
-		message.Debug(err)
+		return err
 	} else {
 		tunnel.Connect("", false)
 		defer tunnel.Close()
