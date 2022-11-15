@@ -32,14 +32,13 @@ type componentPaths struct {
 	dataInjections string
 }
 type tempPaths struct {
-	base             string
-	injectZarfBinary string
-	injectBinary     string
-	seedImage        string
-	images           string
-	components       string
-	sboms            string
-	zarfYaml         string
+	base         string
+	injectBinary string
+	seedImage    string
+	images       string
+	components   string
+	sboms        string
+	zarfYaml     string
 }
 
 func createPaths() tempPaths {
@@ -50,13 +49,12 @@ func createPaths() tempPaths {
 	return tempPaths{
 		base: basePath,
 
-		injectZarfBinary: filepath.Join(basePath, "zarf-registry"),
-		injectBinary:     filepath.Join(basePath, "zarf-injector"),
-		seedImage:        filepath.Join(basePath, "seed-image.tar"),
-		images:           filepath.Join(basePath, "images.tar"),
-		components:       filepath.Join(basePath, "components"),
-		sboms:            filepath.Join(basePath, "sboms"),
-		zarfYaml:         filepath.Join(basePath, "zarf.yaml"),
+		injectBinary: filepath.Join(basePath, "zarf-injector"),
+		seedImage:    filepath.Join(basePath, "seed-image.tar"),
+		images:       filepath.Join(basePath, "images.tar"),
+		components:   filepath.Join(basePath, "components"),
+		sboms:        filepath.Join(basePath, "sboms"),
+		zarfYaml:     filepath.Join(basePath, "zarf.yaml"),
 	}
 }
 

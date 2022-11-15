@@ -55,7 +55,8 @@ const (
 
 	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 
-	ZarfSeedImage = "registry:2.8.1"
+	ZarfSeedImage = "registry"
+	ZarfSeedTag   = "2.8.1"
 )
 
 var (
