@@ -56,7 +56,10 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		packager.NewOrDie(&pkgConfig).Create(baseDir)
+		err := packager.NewOrDie(&pkgConfig).Create(baseDir)
+		if err != nil {
+			message.Fatalf(err, "Failed to create package: %s", err.Error())
+		}
 	},
 }
 
@@ -68,10 +71,6 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-
-		// TODO: @JPERRY this pkgClient constructor does not populate the following (which we will need)
-		//     - cluster -> this will get loaded if we notice we are including images, charts, manifests, or repos
-		//	   - kube
 		pkgClient := packager.NewOrDie(&pkgConfig)
 
 		pkgConfig.DeployOpts.PackagePath = pkgClient.HandleIfURL(packageName, shasum, insecureDeploy)

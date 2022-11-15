@@ -4,7 +4,6 @@
 // Package test provides e2e tests for zarf
 package test
 
-// TODO: @JPERRY Data injection seems to be broken.. whoops
 import (
 	"context"
 	"fmt"

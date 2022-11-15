@@ -33,7 +33,9 @@ func (p *Packager) Create(baseDir string) error {
 	// Change the working directory if this run has an alternate base dir
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
-		_ = os.Chdir(baseDir)
+		if err := os.Chdir(baseDir); err != nil {
+			return fmt.Errorf("unable to access directory '%s': %w", baseDir, err)
+		}
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
