@@ -5,8 +5,9 @@ metadata:
 
 components:
   - name: big-ol-file
-    description: A big ol' file
+    required: true
+    description: Use 'zarf package create --max-archive-size 1' to create a multi-part package
     files:
-      - source: https://github.com/defenseunicorns/zarf/releases/download/v0.21.0/zarf_v0.21.0_Darwin_amd64
-        shasum: d6ebc6a0476bd2af8f25cda739d7eb0d981fe2b0f78b907f9730b0fa0746d0d5
-        target: "###ZARF_TEMP###/zarf-apple"
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/examples/multi-part-demo.dat
+        shasum: 22ebd38c2f5e04821c87c924c910be57d2169c292f85b2936d53cae24ebf8055
+        target: "multi-part-demo.dat"
