@@ -24,6 +24,7 @@
 		.then((res) => {
 			if (Array.isArray(res)) {
 				Packages.read(res[0]).then(pkgStore.set);
+				status = LoadingStatus.Success;
 			}
 		});
 
