@@ -48,7 +48,7 @@ cd <zarf dir>/examples/git-data    # directory with zarf.yaml
 zarf package create                # make the package
 ```
 
-Successful execution will create a package named `zarf-package-git-data-<arch>.tar.zst`.
+Successful execution will create a package named `zarf-package-git-data-<arch>-<vx.x.x>.tar.zst`.
 
 ### Deploying the Zarf Package
 
@@ -57,7 +57,7 @@ To deploy the Zarf package, copy it to a machine that either has a Zarf cluster 
 With the Zarf package in the current working directory, execute the below command to deploy the package, uploading the Git repositories to Gitea and the container images to the Docker registry.
 
 ```sh
-zarf package deploy zarf-package-git-data-<arch>.tar.zst
+zarf package deploy zarf-package-git-data-<arch>-<vx.x.x>.tar.zst
 ```
 
 :::note
