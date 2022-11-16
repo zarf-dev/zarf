@@ -19,19 +19,19 @@ const (
 )
 
 // GetProxyState gets the ZarfState and the NPM token for the proxy to use for a request.
-func GetProxyState() (types.ZarfState, string) {
+func GetProxyState() (types.ZarfState, string, error) {
 	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
-		message.Debugf("Unable to load the ZarfState file so that the Agent can mutate pods: %#v", err)
+		return types.ZarfState{}, "", err
 	}
 
 	npmToken, err := os.ReadFile("/etc/zarf-npm/npm")
 	if err != nil {
-		message.Warnf("Unable to read the npmToken file within the zarf-agent pod.")
+		message.Warnf("Unable to read the npmToken file within the zarf-agent pod, falling back to git password")
 		npmToken = []byte(zarfState.GitServer.PushPassword)
 	}
 
-	return zarfState, string(npmToken)
+	return zarfState, string(npmToken), nil
 }
 
 // NoTransformTarget takes an address that Zarf should not transform, and removes the NoTransform prefix.
@@ -100,7 +100,9 @@ func GenTransformURL(baseURL string, reqURL string, username string) (string, er
 	return transformedURL, nil
 }
 
-func transformRegistryPath(baseURL string, reqURL string, username string, regex *regexp.Regexp, pathGroup string, regType string) (string, error) {
+// transformRegistryPath transforms a given request path using a new base URL, username and regex.
+// - pathGroup specifies the named group for the registry's URL path inside the regex (i.e. pipPath) and registryType specifies the registry type (i.e. pypi).
+func transformRegistryPath(baseURL string, reqURL string, username string, regex *regexp.Regexp, pathGroup string, registryType string) (string, error) {
 	matches := regex.FindStringSubmatch(reqURL)
 	idx := regex.SubexpIndex
 
@@ -111,5 +113,5 @@ func transformRegistryPath(baseURL string, reqURL string, username string, regex
 
 	// TODO: (@WSTARR) %s/api/packages/%s is very Gitea specific but with a config option this could be adapted to GitLab easily
 	// transformedURL := fmt.Sprintf("%s/api/v4/projects/39799997/packages/%s%s", baseURL, regType, matches[idx("pipPath")])
-	return fmt.Sprintf("%s/api/packages/%s/%s%s", baseURL, username, regType, matches[idx(pathGroup)]), nil
+	return fmt.Sprintf("%s/api/packages/%s/%s%s", baseURL, username, registryType, matches[idx(pathGroup)]), nil
 }

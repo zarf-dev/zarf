@@ -33,7 +33,10 @@ func proxyDirector(req *http.Request) {
 	req.Header.Del("Accept-Encoding")
 
 	// TODO: (@WSTARR) we will eventually need to support a separate git host and package registry host (potential to expand the NPM job)
-	zarfState, npmToken := proxy.GetProxyState()
+	zarfState, npmToken, err := proxy.GetProxyState()
+	if err != nil {
+		message.Debugf("%#v", err)
+	}
 
 	// Setup authentication for the given service
 	if isNpmUserAgent(req.UserAgent()) {
@@ -44,7 +47,6 @@ func proxyDirector(req *http.Request) {
 
 	var targetURL *url.URL
 	var transformedURL string
-	var err error
 
 	// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
 	if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
