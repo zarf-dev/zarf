@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -23,6 +24,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -68,8 +72,20 @@ func (p *Packager) Create(baseDir string) error {
 
 	if p.cfg.IsInitConfig {
 		// Load seed images into their own happy little tarball for ease of import on init
-		if err := p.pullImages([]string{config.ZarfSeedImage}, p.tmp.SeedImage); err != nil {
+		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+		pulledImages, err := p.pullImages([]string{seedImage}, p.tmp.SeedImage)
+		if err != nil {
 			return fmt.Errorf("unable to pull the seed image after 3 attempts: %w", err)
+		}
+		ociPath := path.Join(p.tmp.Base, "seed-image")
+		for _, image := range pulledImages {
+			if err := crane.SaveOCI(image, ociPath); err != nil {
+				message.Fatalf(err, "Unable to save image %s as OCI", image)
+			}
+		}
+
+		if err := images.FormatCraneOCILayout(ociPath); err != nil {
+			message.Fatalf(err, "Unable to format crane OCI layout")
 		}
 	}
 
@@ -86,7 +102,7 @@ func (p *Packager) Create(baseDir string) error {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := utils.Unique(combinedImageList)
-		if err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
+		if _, err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}
@@ -111,15 +127,18 @@ func (p *Packager) Create(baseDir string) error {
 	return nil
 }
 
-func (p *Packager) pullImages(imgList []string, path string) error {
-	return utils.Retry(func() error {
+func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Image, error) {
+	var pulledImages map[name.Tag]v1.Image
+	var err error
+
+	return pulledImages, utils.Retry(func() error {
 		imgConfig := images.ImgConfig{
 			TarballPath: path,
 			ImgList:     imgList,
 			Insecure:    p.cfg.CreateOpts.Insecure,
 		}
 
-		pulledImages, err := imgConfig.PullAll()
+		pulledImages, err = imgConfig.PullAll()
 
 		if err != nil {
 			// Ignore SBOM creation if there the flag is set

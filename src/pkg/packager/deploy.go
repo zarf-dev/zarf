@@ -179,11 +179,10 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 
-		// TODO: @JPERRY as of writing this comment, p.cfg.InitOpts.RegistryInfo is an empty struct while p.cfg.State.RegistryInfo is populated..
-		//       This is something that should be more streamlined and consistent..
+		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 		imgConfig := images.ImgConfig{
 			TarballPath: p.tmp.SeedImage,
-			ImgList:     []string{config.ZarfSeedImage},
+			ImgList:     []string{seedImage},
 			NoChecksum:  true,
 			RegInfo:     p.cfg.State.RegistryInfo,
 		}

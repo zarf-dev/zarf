@@ -38,6 +38,8 @@ var logLevel = InfoLevel
 // Write logs to stderr and a buffer for logfile generation
 var logFile *os.File
 
+var useLogFile bool
+
 func init() {
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
@@ -66,7 +68,7 @@ func UseLogFile() {
 	if logFile, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		Error(err, "Error saving a log file")
 	} else {
-		// Otherwise fallback to stderr
+		useLogFile = true
 		logStream := io.MultiWriter(os.Stderr, logFile)
 		pterm.SetDefaultOutput(logStream)
 		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
@@ -192,13 +194,14 @@ func paragraph(format string, a ...any) string {
 
 func debugPrinter(offset int, a ...any) {
 	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
+	now := time.Now().Format(time.RFC3339)
+	// prepend to a
+	a = append([]any{now, " - "}, a...)
+
 	printer.Println(a...)
 
 	// Always write to the log file
-	if logFile != nil && !pterm.PrintDebugMessages {
-		now := time.Now().Format(time.RFC3339)
-		// prepend to a
-		a = append([]any{now, " - "}, a...)
+	if useLogFile && !pterm.PrintDebugMessages {
 		pterm.Debug.
 			WithShowLineNumber(true).
 			WithLineNumberOffset(offset).

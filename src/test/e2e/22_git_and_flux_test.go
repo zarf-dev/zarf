@@ -24,7 +24,7 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
 
 	// Deploy the gitops example
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")

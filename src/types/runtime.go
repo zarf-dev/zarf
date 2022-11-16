@@ -59,12 +59,11 @@ type ComponentPaths struct {
 	DataInjections string
 }
 type TempPaths struct {
-	Base             string
-	InjectZarfBinary string
-	InjectBinary     string
-	SeedImage        string
-	Images           string
-	Components       string
-	Sboms            string
-	ZarfYaml         string
+	Base         string
+	InjectBinary string
+	SeedImage    string
+	Images       string
+	Components   string
+	Sboms        string
+	ZarfYaml     string
 }

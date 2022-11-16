@@ -94,11 +94,18 @@ func (p *Packager) GetPackageName() string {
 		return GetInitPackageName(p.arch)
 	}
 
+	packageName := p.cfg.Pkg.Metadata.Name
+	prefix := "zarf-package"
 	suffix := "tar.zst"
 	if p.cfg.Pkg.Metadata.Uncompressed {
 		suffix = "tar"
 	}
-	return fmt.Sprintf("zarf-package-%s-%s.%s", p.cfg.Pkg.Metadata.Name, p.arch, suffix)
+
+	if p.cfg.Pkg.Metadata.Version == "" {
+		return fmt.Sprintf("%s-%s-%s.%s", prefix, packageName, p.arch, suffix)
+	}
+
+	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
 // HandleIfURL If provided package is a URL download it to a temp directory
@@ -223,13 +230,12 @@ func createPaths() (paths types.TempPaths, err error) {
 	paths = types.TempPaths{
 		Base: basePath,
 
-		InjectZarfBinary: filepath.Join(basePath, "zarf-registry"),
-		InjectBinary:     filepath.Join(basePath, "zarf-injector"),
-		SeedImage:        filepath.Join(basePath, "seed-image.tar"),
-		Images:           filepath.Join(basePath, "images.tar"),
-		Components:       filepath.Join(basePath, "components"),
-		Sboms:            filepath.Join(basePath, "sboms"),
-		ZarfYaml:         filepath.Join(basePath, "zarf.yaml"),
+		InjectBinary: filepath.Join(basePath, "zarf-injector"),
+		SeedImage:    filepath.Join(basePath, "seed-image.tar"),
+		Images:       filepath.Join(basePath, "images.tar"),
+		Components:   filepath.Join(basePath, "components"),
+		Sboms:        filepath.Join(basePath, "sboms"),
+		ZarfYaml:     filepath.Join(basePath, "zarf.yaml"),
 	}
 
 	return paths, err
