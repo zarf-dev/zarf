@@ -1,5 +1,15 @@
 name: Analyze CVEs
-on: pull_request
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "package.json"
+      - "package-lock.json"
+      - "cargo.toml"
+      - "cargo.lock"
 
 jobs:
   validate:
