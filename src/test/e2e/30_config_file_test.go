@@ -89,7 +89,7 @@ func configFileDefaultTests(t *testing.T) {
 		"create.output_directory: 52d061d5",
 		"Skip generating SBOM for this package (default true)",
 		"[thing1=1a2b3c4d]",
-		"Specify the maximum size of the package in MB, larger packages will be split into multiple files (default 42)",
+		"Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple packages. Use 0 to disable splitting. (default 42)",
 	}
 
 	packageDeployFlags := []string{
