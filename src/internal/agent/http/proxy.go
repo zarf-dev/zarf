@@ -46,7 +46,7 @@ func proxyDirector(req *http.Request) {
 	var transformedURL string
 	var err error
 
-	// If we see the NoTranform prefix, just strip it otherwise, transform the URL based on User Agent
+	// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
 	if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
 		if targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, req.URL.Path); err != nil {
 			message.Debugf("%#v", err)

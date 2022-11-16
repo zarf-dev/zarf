@@ -17,7 +17,7 @@ func GetZarfStateFromAgentPod() (types.ZarfState, error) {
 	// Read the state file
 	stateFile, err := os.ReadFile(zarfStatePath)
 	if err != nil {
-		message.Warnf("Unable to read the zarfState file within the zarf-agent pod.")
+		message.Warnf("Unable to read the zarfState file within the zarf-agent pod: %s", zarfStatePath)
 
 		return zarfState, err
 	}

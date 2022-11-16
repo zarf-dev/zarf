@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// NoTransform is the URL prefix added to HTTP 3xx or text URLs that instructs Zarf not to transform on a subsequest request.
+	// NoTransform is the URL prefix added to HTTP 3xx or text URLs that instructs Zarf not to transform on a subsequent request.
 	NoTransform = "/zarf-3xx-no-transform"
 )
 
