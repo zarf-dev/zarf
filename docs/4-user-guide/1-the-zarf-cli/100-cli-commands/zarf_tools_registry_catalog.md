@@ -6,13 +6,6 @@ List the repos in a registry
 zarf tools registry catalog [REGISTRY] [flags]
 ```
 
-### Examples
-
-```
-  # list the repos for reg.example.com
-  $ /var/folders/62/wn7zhxv91mxgmh4t9ssh600h0000gn/T/go-build3177692062/b001/exe/main catalog reg.example.com
-```
-
 ### Options
 
 ```

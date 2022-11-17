@@ -156,11 +156,14 @@ func init() {
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
 
+	craneCatalog := craneCmd.NewCmdCatalog(&cranePlatformOptions)
+	craneCatalog.Example = ""
+
 	registryCmd.AddCommand(craneLogin)
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
-	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCatalog)
 
 	syftCmd, err := cli.New()
 	if err != nil {
