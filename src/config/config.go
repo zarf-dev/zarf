@@ -55,7 +55,8 @@ const (
 
 	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 
-	ZarfSeedImage = "registry:2.8.1"
+	ZarfSeedImage = "registry"
+	ZarfSeedTag   = "2.8.1"
 )
 
 var (
@@ -173,7 +174,12 @@ func GetPackageName() string {
 	if metadata.Uncompressed {
 		suffix = "tar"
 	}
-	return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
+
+	if metadata.Version == "" {
+		return fmt.Sprintf("%s-%s-%s.%s", prefix, metadata.Name, GetArch(), suffix)
+	}
+
+	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, metadata.Name, GetArch(), metadata.Version, suffix)
 }
 
 func GetInitPackageName() string {
