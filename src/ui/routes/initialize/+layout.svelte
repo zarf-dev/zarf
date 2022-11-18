@@ -58,7 +58,7 @@
 			<Typography variant="body2">
 				Make sure the following package is in the current working directory:
 			</Typography>
-			<Typography variant="code">{errMessage.split(":").at(-1)?.trim()}</Typography>
+			<Typography variant="code">{errMessage.split(':').at(-1)?.trim()}</Typography>
 			<Button href="/" color="secondary" style="margin-top: 0.5rem;" variant="flat"
 				>Return Home</Button
 			>

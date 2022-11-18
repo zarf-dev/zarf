@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
@@ -39,16 +40,10 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 		message.ErrorWebf(err, w, "Error getting directory")
 	}
 
-	// TODO: decide as a team how JSON errors should be formatted
-	type JSONError struct {
-		Error string `json:"error"`
-		Message string `json:"message"`
-	}
-
 	// Intentionally ignore errors
 	files, _ := utils.RecursiveFileList(targetDir, pattern)
 	if len(files) == 0 {
-		common.WriteJSONResponse(w, JSONError{
+		common.WriteJSONResponse(w, types.APIError{
 			Error: "PackageNotFound",
 			Message: fmt.Sprintf("Package not found: %s", pattern.String()),
 		}, http.StatusNotFound)
