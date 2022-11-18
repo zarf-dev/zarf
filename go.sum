@@ -305,6 +305,8 @@ github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33 h1:Y+9aMJMTEMH
 github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33/go.mod h1:WOWtswyDxLkBnizq9LihYa9uw88r1FhBvJo7g//Ljcc=
 github.com/anchore/syft v0.60.3 h1:35mk6LgG8iSbSgRHOwsRr/XyPq0KE0FQPK8LO5RiyAI=
 github.com/anchore/syft v0.60.3/go.mod h1:liCRoNZiQeiZeafaptjizcr/V7+ZAEYra/RhwqKldgw=
+github.com/anchore/syft v0.62.0 h1:eKi0lfcQJVEte6rQSk2ZEU4CYwGWXkOaGtzu9apsfZM=
+github.com/anchore/syft v0.62.0/go.mod h1:aDR91I0K5EHp8oiE3DibOnOajF/A0N2tti46RNTiSrc=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
@@ -1870,6 +1872,8 @@ github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasO
 github.com/spdx/gordf v0.0.0-20201111095634-7098f93598fb/go.mod h1:uKWaldnbMnjsSAXRurWqqrdyZen1R7kxl8TkmWk2OyM=
 github.com/spdx/tools-golang v0.2.0 h1:KBNcw7xvVycRWeCWZK/5xQJA+plymW1+rTCs8ekJDro=
 github.com/spdx/tools-golang v0.2.0/go.mod h1:RO4Y3IFROJnz+43JKm1YOrbtgQNljW4gAPpA/sY2eqo=
+github.com/spdx/tools-golang v0.3.1-0.20221108182156-8a01147e6342 h1:6uvaOTv4GeRqQV6O1/znbpziqhctMRLTy3OGeZrNMic=
+github.com/spdx/tools-golang v0.3.1-0.20221108182156-8a01147e6342/go.mod h1:VHzvNsKAfAGqs4ZvwRL+7a0dNsL20s7lGui4K9C0xQM=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/afero v1.3.3/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
