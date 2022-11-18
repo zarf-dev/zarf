@@ -69,6 +69,12 @@ var initCmd = &cobra.Command{
 
 				// If the init-package doesn't exist in the cache directory, suggest downloading it
 				if utils.InvalidPath(config.DeployOptions.PackagePath) {
+					if utils.InvalidPath(config.GetAbsCachePath()) {
+						err = os.MkdirAll(config.GetAbsCachePath(), 0755)
+						if err != nil {
+							message.Fatalf(err, "Unable to create cache directory: %s", config.GetAbsCachePath())
+						}
+					}
 					if err := downloadInitPackage(initPackageName); err != nil {
 						message.Fatal(err, "Failed to download the init package")
 					}
