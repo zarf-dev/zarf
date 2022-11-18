@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
+	import type { APIError } from '$lib/api-types';
 
 	enum LoadingStatus {
 		Loading,
@@ -16,7 +17,7 @@
 	Packages.findInit()
 		.catch(async (err) => {
 			if (err.status == 404) {
-				const body = await err.data.json();
+				const body: APIError = await err.data.json();
 				errMessage = body.message;
 				status = LoadingStatus.Error;
 			}
