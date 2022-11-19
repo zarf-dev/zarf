@@ -13,7 +13,7 @@ func TestMultiPartPackage(t *testing.T) {
 
 	var (
 		createPath = "examples/multi-part/"
-		deployPath = fmt.Sprintf("zarf-package-multi-part-%s-000.partial-tar.zst", e2e.arch)
+		deployPath = fmt.Sprintf("zarf-package-multi-part-%s-tar.zst.part000", e2e.arch)
 		outputFile = "multi-part-demo.dat"
 	)
 

@@ -119,18 +119,16 @@ func Create(baseDir string) {
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks
 	if config.CreateOptions.MaxPackageSize > 0 && f.Size() > int64(chunkSize) {
-		// Convert Megabytes to Bytes
-
 		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
 		if err != nil {
-			message.Fatal(err, "Unable to split the package archive into chunks")
+			message.Fatal(err, "Unable to split the package archive into multiple files")
 		}
 
 		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks), sha256sum)
 		_ = os.RemoveAll(packageName)
 
 		for idx, chunk := range chunks {
-			path := strings.Replace(packageName, ".tar", fmt.Sprintf("-%03d.partial-tar", idx), 1)
+			path := fmt.Sprintf("%s.part%d", packageName, idx)
 			if err := os.WriteFile(path, chunk, 0644); err != nil {
 				message.Fatalf(err, "Unable to write the file %s", path)
 			}

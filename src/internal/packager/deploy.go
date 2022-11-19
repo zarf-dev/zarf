@@ -46,17 +46,17 @@ func Deploy() {
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if strings.Contains(config.DeployOptions.PackagePath, "-000.partial-tar") {
+	if strings.Contains(config.DeployOptions.PackagePath, ".part000") {
 		spinner.Updatef("Combining partial packages into a single package")
 
 		// Replace part 0 with *
-		pattern := strings.Replace(config.DeployOptions.PackagePath, "-000.partial-tar", "-*.partial-tar", 1)
+		pattern := strings.Replace(config.DeployOptions.PackagePath, ".part000", ".part*", 1)
 		fileList, err := filepath.Glob(pattern)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to find partial packages to combine")
 		}
 
-		pkgPath := strings.Replace(config.DeployOptions.PackagePath, "-000.partial-tar", ".tar", 1)
+		pkgPath := strings.Replace(config.DeployOptions.PackagePath, ".part000", "", 1)
 		pkgFile, err := os.Create(pkgPath)
 		if err != nil {
 			spinner.Fatalf(err, "Unable to create package file")

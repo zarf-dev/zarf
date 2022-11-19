@@ -164,8 +164,11 @@ func choosePackage(args []string) string {
 	prompt := &survey.Input{
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar*")
-			partialFiles, _ := filepath.Glob(config.PackagePrefix + toComplete + "*-000.partial-tar*")
+			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar")
+			gzFiles, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar.zst")
+			partialFiles, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.part000")
+
+			files = append(files, gzFiles...)
 			files = append(files, partialFiles...)
 			return files
 		},
@@ -204,7 +207,9 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
-	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 1024)
+
+	// Set the max default size to 4.25 Gigabytes (4,563,402,752 bytes, DVD-5 is 4,700,000,000 bytes)
+	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 1024*4.25)
 
 	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
