@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -17,11 +18,22 @@ var ViewSBOM bool
 
 // Inspect list the contents of a package
 func Inspect(packageName string) {
+	var err error
+
 	tempPath := createPaths()
 	defer tempPath.clean()
 
 	if utils.InvalidPath(packageName) {
 		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
+	}
+
+	// If packagePath has partial in the name, we need to combine the partials into a single package
+	if strings.Contains(packageName, ".part000") {
+		if packageName, err = handlePartialPkg(packageName); err != nil {
+			// On error, be sure to clean up the bad package
+			_ = os.Remove(packageName)
+			message.Fatalf(err, "Unable to process partial package: %s", err)
+		}
 	}
 
 	// Extract the archive
