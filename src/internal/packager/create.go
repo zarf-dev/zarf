@@ -1,6 +1,7 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -126,6 +127,19 @@ func Create(baseDir string) {
 
 		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks), sha256sum)
 		_ = os.RemoveAll(packageName)
+
+		// Marshal the data into a json file
+		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
+			Count:     len(chunks),
+			Bytes:     f.Size(),
+			Sha256Sum: sha256sum,
+		})
+		if err != nil {
+			message.Fatal(err, "Unable to marshal the partial package data")
+		}
+
+		// Prepend the json data to the first chunk
+		chunks = append([][]byte{jsonData}, chunks...)
 
 		for idx, chunk := range chunks {
 			path := fmt.Sprintf("%s.part%03d", packageName, idx)

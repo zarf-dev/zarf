@@ -39,6 +39,13 @@ type ZarfCreateOptions struct {
 	MaxPackageSize  int               `json:"maxPackageSize" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files"`
 }
 
+// ZarfPartialPackageData contains info about a partial package
+type ZarfPartialPackageData struct {
+	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
+	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
+	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
+}
+
 type ConnectString struct {
 	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
 	Url         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
