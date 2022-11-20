@@ -3,7 +3,7 @@
 List the repos in a registry
 
 ```
-zarf tools registry catalog [flags]
+zarf tools registry catalog [REGISTRY] [flags]
 ```
 
 ### Options
