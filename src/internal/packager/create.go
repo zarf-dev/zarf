@@ -128,7 +128,7 @@ func Create(baseDir string) {
 		_ = os.RemoveAll(packageName)
 
 		for idx, chunk := range chunks {
-			path := fmt.Sprintf("%s.part%d", packageName, idx)
+			path := fmt.Sprintf("%s.part%03d", packageName, idx)
 			if err := os.WriteFile(path, chunk, 0644); err != nil {
 				message.Fatalf(err, "Unable to write the file %s", path)
 			}
