@@ -3,7 +3,6 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,6 +33,8 @@ var connectStrings = make(types.ConnectStrings)
 func Deploy() {
 	message.Debug("packager.Deploy()")
 
+	var err error
+
 	tempPath := createPaths()
 	defer tempPath.clean()
 
@@ -47,48 +48,16 @@ func Deploy() {
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
 	if strings.Contains(config.DeployOptions.PackagePath, ".part000") {
-		spinner.Updatef("Combining partial packages into a single package")
-
-		// Replace part 0 with *
-		pattern := strings.Replace(config.DeployOptions.PackagePath, ".part000", ".part*", 1)
-		fileList, err := filepath.Glob(pattern)
-		if err != nil {
-			spinner.Fatalf(err, "Unable to find partial packages to combine")
+		if config.DeployOptions.PackagePath, err = handlePartialPkg(config.DeployOptions.PackagePath); err != nil {
+			// On error, be sure to clean up the bad package
+			_ = os.Remove(config.DeployOptions.PackagePath)
+			spinner.Fatalf(err, "Unable to process partial package: %s", err)
 		}
-
-		pkgPath := strings.Replace(config.DeployOptions.PackagePath, ".part000", "", 1)
-		pkgFile, err := os.Create(pkgPath)
-		if err != nil {
-			spinner.Fatalf(err, "Unable to create package file")
-		}
-		defer pkgFile.Close()
-
-		for _, file := range fileList {
-			// Open the file
-			f, err := os.Open(file)
-			if err != nil {
-				spinner.Fatalf(err, "Unable to open partial package %s", file)
-			}
-			defer f.Close()
-
-			// Add the file contents to the package
-			if _, err = io.Copy(pkgFile, f); err != nil {
-				spinner.Fatalf(err, "Unable to copy partial package %s into package file", file)
-			}
-		}
-
-		// Remove the partial packages to reduce disk space before extracting
-		for _, file := range fileList {
-			_ = os.Remove(file)
-		}
-
-		// Set the package path to the combined package
-		config.DeployOptions.PackagePath = pkgPath
 	}
 
 	// Extract the archive
 	spinner.Updatef("Extracting the package, this may take a few moments")
-	err := archiver.Unarchive(config.DeployOptions.PackagePath, tempPath.base)
+	err = archiver.Unarchive(config.DeployOptions.PackagePath, tempPath.base)
 	if err != nil {
 		spinner.Fatalf(err, "Unable to extract the package contents")
 	}

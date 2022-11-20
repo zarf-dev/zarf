@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -232,4 +233,76 @@ func removeDuplicates(elements []string) []string {
 		result = append(result, key)
 	}
 	return result
+}
+
+func handlePartialPkg(source string) (destination string, err error) {
+	message.Debugf("packager.handlePartialPkg(%s)", source)
+
+	// Replace part 000 with *
+	pattern := strings.Replace(source, ".part000", ".part*", 1)
+	fileList, err := filepath.Glob(pattern)
+	if err != nil {
+		return "", fmt.Errorf("unable to find partial package files: %s", err)
+	}
+
+	// Create the new package
+	destination = strings.Replace(source, ".part000", "", 1)
+	pkgFile, err := os.Create(destination)
+	if err != nil {
+		return "", fmt.Errorf("unable to create new package file: %s", err)
+	}
+	defer pkgFile.Close()
+
+	var pgkData types.ZarfPartialPackageData
+
+	// Loop through the partial packages and append them to the new package
+	for idx, file := range fileList {
+		// The first file contains metadata about the package
+		if idx == 0 {
+			var bytes []byte
+
+			if bytes, err = os.ReadFile(file); err != nil {
+				return destination, fmt.Errorf("unable to read file %s: %w", file, err)
+			}
+
+			if err := json.Unmarshal(bytes, &pgkData); err != nil {
+				return destination, fmt.Errorf("unable to unmarshal file %s: %w", file, err)
+			}
+
+			count := len(fileList) - 1
+			if count != pgkData.Count {
+				return destination, fmt.Errorf("package is missing parts, expected %d, found %d", pgkData.Count, count)
+			}
+
+			continue
+		}
+
+		// Open the file
+		f, err := os.Open(file)
+		if err != nil {
+			return destination, fmt.Errorf("unable to open file %s: %w", file, err)
+		}
+		defer f.Close()
+
+		// Add the file contents to the package
+		if _, err = io.Copy(pkgFile, f); err != nil {
+			return destination, fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+	}
+
+	var shasum string
+	if shasum, err = utils.GetSha256Sum(destination); err != nil {
+		return destination, fmt.Errorf("unable to get sha256sum of package: %w", err)
+	}
+
+	if shasum != pgkData.Sha256Sum {
+		return destination, fmt.Errorf("package sha256sum does not match, expected %s, found %s", pgkData.Sha256Sum, shasum)
+	}
+
+	// Remove the partial packages to reduce disk space before extracting
+	for _, file := range fileList {
+		_ = os.Remove(file)
+	}
+
+	return destination, nil
 }
