@@ -19,7 +19,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.49
+	github.com/pterm/pterm v0.12.50
 	github.com/sigstore/cosign v1.13.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
