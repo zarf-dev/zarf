@@ -7,7 +7,7 @@ components:
     required: true
     charts:
       - name: podinfo
-        releaseName: cool-name
+        releaseName: zarf-cool-name
         url: https://stefanprodan.github.io/podinfo
         version: 6.1.6
         namespace: helm-releasename

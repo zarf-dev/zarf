@@ -17,6 +17,7 @@ components:
           - connect.yaml
     charts:
       - name: loki-stack
+        releaseName: zarf-loki-stack
         url: https://grafana.github.io/helm-charts
         version: 2.8.2
         namespace: zarf
