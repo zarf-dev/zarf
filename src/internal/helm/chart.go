@@ -48,6 +48,7 @@ func InstallOrUpgradeChart(options ChartOptions) (types.ConnectStrings, string) 
 	} else {
 		options.ReleaseName = options.Chart.Name
 	}
+
 	installedChartName = options.ReleaseName
 
 	// Do not wait for the chart to be ready if data injections are present
