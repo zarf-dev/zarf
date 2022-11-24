@@ -1,27 +1,31 @@
 persistence:
-  enabled: true
   storageClass: "###ZARF_STORAGE_CLASS###"
-  size: 20Gi
+  size: "###ZARF_VAR_REGISTRY_PVC_SIZE###"
+
 image:
   repository: "###ZARF_REGISTRY###/library/registry"
-  tag: 2.8.1
+
 imagePullSecrets:
   - name: private-registry
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
     http:
       secret: "###ZARF_REGISTRY_SECRET###"
+
 service:
-  type: NodePort
   nodePort: "###ZARF_NODEPORT###"
+
 resources:
   requests:
-    cpu: "100m"
-    memory: "256Mi"
+    cpu: "###ZARF_VAR_REGISTRY_CPU_REQ###"
+    memory: "###ZARF_VAR_REGISTRY_MEM_REQ###"
   limits:
-    cpu: "3"
-    memory: "2Gi"
+    cpu: "###ZARF_VAR_REGISTRY_CPU_LIMIT###"
+    memory: "###ZARF_VAR_REGISTRY_MEM_LIMIT###"
+
 fullnameOverride: "zarf-docker-registry"
+
 podLabels:
   zarf.dev/agent: "ignore"

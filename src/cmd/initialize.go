@@ -137,6 +137,9 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
+	// Init package variables
+	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
+
 	v.SetDefault(V_INIT_COMPONENTS, "")
 	v.SetDefault(V_INIT_STORAGE_CLASS, "")
 
@@ -153,6 +156,9 @@ func init() {
 	v.SetDefault(V_INIT_REGISTRY_PUSH_PASS, "")
 	v.SetDefault(V_INIT_REGISTRY_PULL_USER, "")
 	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
+
+	// Init package set variable flags
+	initCmd.Flags().StringToStringVar(&config.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm the install without prompting")

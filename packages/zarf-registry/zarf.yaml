@@ -3,18 +3,48 @@ metadata:
   name: "init-package-zarf-registry"
   description: "Used to establish a new Zarf cluster"
 
+variables:
+  - name: REGISTRY_PVC_SIZE
+    description: "The size of the persistent volume claim for the registry"
+    default: "20Gi"
+
+  - name: REGISTRY_CPU_REQ
+    description: "The CPU request for the registry"
+    default: "100m"
+
+  - name: REGISTRY_MEM_REQ
+    description: "The memory request for the registry"
+    default: "256Mi"
+
+  - name: REGISTRY_CPU_LIMIT
+    description: "The CPU limit for the registry"
+    default: "3"
+
+  - name: REGISTRY_MEM_LIMIT
+    description: "The memory limit for the registry"
+    default: "2Gi"  
+
 components:
   - name: zarf-seed-registry
     charts:
       - name: docker-registry
-        url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.1.0-zarf
+        # fixme: this seems to break with composable components
+        localPath: packages/zarf-registry/chart
+        version: 1.0.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
           - registry-values-seed.yaml
 
   - name: zarf-registry
+    charts:
+      - name: docker-registry
+        # fixme: this seems to break with composable components
+        localPath: packages/zarf-registry/chart
+        version: 1.0.0
+        namespace: zarf
+        valuesFiles:
+          - registry-values.yaml
     manifests:
       - name: registry-connect
         namespace: zarf
@@ -23,11 +53,8 @@ components:
       - name: kep-1755-registry-annotation
         namespace: zarf
         files:
-          - configmap.yaml
-    charts:
-      - name: docker-registry
-        url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.1.0-zarf
+          - configmap.yaml          
+      - name: registry-preloader
         namespace: zarf
-        valuesFiles:
-          - registry-values.yaml
+        files:
+          - daemonset.yaml
