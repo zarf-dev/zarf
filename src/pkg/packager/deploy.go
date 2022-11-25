@@ -199,7 +199,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	return charts, nil
 }
 
-// Deploy a Zarf Component
+// deployComponent deploys a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 

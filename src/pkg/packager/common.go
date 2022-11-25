@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
+// Packager defines a PackageConfig and other information for building and deploying a Zarf Package.
 type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
