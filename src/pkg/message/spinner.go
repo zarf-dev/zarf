@@ -12,11 +12,13 @@ import (
 
 var activeSpinner *Spinner
 
+// Spinner wraps the pterm SpinnerPrinter.
 type Spinner struct {
 	spinner   *pterm.SpinnerPrinter
 	startText string
 }
 
+// NewProgressSpinner creates and starts a new ProgressSpinner.
 func NewProgressSpinner(format string, a ...any) *Spinner {
 	if activeSpinner != nil {
 		Debug("Active spinner already exists")
@@ -43,6 +45,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	return activeSpinner
 }
 
+// Write writes a byte array at the debug log level to stdout and returns the number of bytes written.
 func (p *Spinner) Write(text []byte) (int, error) {
 	size := len(text)
 	if NoProgress {
@@ -52,6 +55,7 @@ func (p *Spinner) Write(text []byte) (int, error) {
 	return len(text), nil
 }
 
+// Updatef updates the spinner text.
 func (p *Spinner) Updatef(format string, a ...any) {
 	if NoProgress {
 		return
@@ -61,6 +65,7 @@ func (p *Spinner) Updatef(format string, a ...any) {
 	p.spinner.UpdateText(text)
 }
 
+// Debugf Updates the spinner text with a formatted string input.
 func (p *Spinner) Debugf(format string, a ...any) {
 	if logLevel >= DebugLevel {
 		text := fmt.Sprintf("Debug: "+format, a)
@@ -72,6 +77,7 @@ func (p *Spinner) Debugf(format string, a ...any) {
 	}
 }
 
+// Stop stops the spinner.
 func (p *Spinner) Stop() {
 	if p.spinner != nil && p.spinner.IsActive {
 		_ = p.spinner.Stop()
@@ -79,10 +85,16 @@ func (p *Spinner) Stop() {
 	activeSpinner = nil
 }
 
+/*
+Success prints a success message and stops the spinner.
+
+The success message is the same as the text used when the spinner was created.
+*/
 func (p *Spinner) Success() {
 	p.Successf(p.startText)
 }
 
+// Successf prints a formatted success message and stops the spinner.
 func (p *Spinner) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	if p.spinner != nil {
@@ -93,6 +105,7 @@ func (p *Spinner) Successf(format string, a ...any) {
 	}
 }
 
+// Warnf updates the spinner with a formatted warning message.
 func (p *Spinner) Warnf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	if p.spinner != nil {
@@ -102,15 +115,18 @@ func (p *Spinner) Warnf(format string, a ...any) {
 	}
 }
 
+// Errorf updates the spinner with a formatted error message and logs the error at the debug level.
 func (p *Spinner) Errorf(err error, format string, a ...any) {
 	p.Warnf(format, a...)
 	Debug(err)
 }
 
+// Fatal stops the spinner, prints a fatal error message, and exits the program.
 func (p *Spinner) Fatal(err error) {
 	p.Fatalf(err, p.startText)
 }
 
+// Fatal stops the spinner, prints a formatted fatal error message, and exits the program.
 func (p *Spinner) Fatalf(err error, format string, a ...any) {
 	if p.spinner != nil {
 		p.spinner.RemoveWhenDone = true

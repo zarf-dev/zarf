@@ -16,6 +16,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// LogLevel represents the applications logging intensity.
 type LogLevel int
 
 const (
@@ -30,12 +31,13 @@ const (
 	TraceLevel
 )
 
-// NoProgress tracks whether spinner/progress bars show updates
+// NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
+// logLevel dictates which messages are printed to the user. Default value is InfoLevel.
 var logLevel = InfoLevel
 
-// Write logs to stderr and a buffer for logfile generation
+// Write logs to stderr and a buffer for log file generation.
 var logFile *os.File
 
 var useLogFile bool
@@ -59,13 +61,14 @@ func init() {
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
-// UseLogfile writes output to stderr and a logfile
+// UseLogFile writes output to stderr and a log file.
 func UseLogFile() {
-	// Prepend the log filename with a timestampe
+	// Prepend the log filename with a timestamp
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
 	// Try to create a temp log file
-	if logFile, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+	var err error
+	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		Error(err, "Error saving a log file")
 	} else {
 		useLogFile = true
@@ -76,6 +79,7 @@ func UseLogFile() {
 	}
 }
 
+// SetLogLevel sets the log level for the application.
 func SetLogLevel(lvl LogLevel) {
 	logLevel = lvl
 	if logLevel >= DebugLevel {
@@ -83,24 +87,29 @@ func SetLogLevel(lvl LogLevel) {
 	}
 }
 
+// GetLogLevel returns the current log level.
 func GetLogLevel() LogLevel {
 	return logLevel
 }
 
+// Debug prints a debug message to the user.
 func Debug(payload ...any) {
 	debugPrinter(2, payload...)
 }
 
+// Debugf prints a formatted debug message to the user.
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	debugPrinter(3, message)
 }
 
+// Error prints an error message to the user.
 func Error(err any, message string) {
 	debugPrinter(2, err)
 	Warnf(message)
 }
 
+// ErrorWebf prints a formatted error message to the user and returns a http error.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	debugPrinter(2, err)
 	message := fmt.Sprintf(format, a...)
@@ -108,26 +117,31 @@ func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	http.Error(w, message, http.StatusInternalServerError)
 }
 
+// Errorf prints a formatted error message to the user.
 func Errorf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	Warnf(format, a...)
 }
 
+// Warn prints a warning message to the user.
 func Warn(message string) {
 	Warnf(message)
 }
 
+// Warnf prints a formatted warning message to the user.
 func Warnf(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Warning.Println(message)
 }
 
+// Fatal prints an error message to the user and exits the application.
 func Fatal(err any, message string) {
 	debugPrinter(2, err)
 	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
+// Fatalf prints a formatted warning message to the user and exits the application.
 func Fatalf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	message := paragraph(format, a...)
@@ -135,10 +149,12 @@ func Fatalf(err any, format string, a ...any) {
 	os.Exit(1)
 }
 
+// Info prints an info message to the user.
 func Info(message string) {
 	Infof(message)
 }
 
+// Infof prints a formatted info message to the user.
 func Infof(format string, a ...any) {
 	if logLevel > 0 {
 		message := paragraph(format, a...)
@@ -146,28 +162,33 @@ func Infof(format string, a ...any) {
 	}
 }
 
+// SuccessF prints a success message to the user.
 func SuccessF(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Success.Println(message)
 }
 
+// Question prints a question prompt to the user, designated with magenta text.
 func Question(text string) {
 	pterm.Println()
 	message := paragraph(text)
 	pterm.FgMagenta.Println(message)
 }
 
+// Notef prints a formatted note message to the user, designed with yellow text.
 func Notef(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	Note(message)
 }
 
+// Note prints a note to the user, designated with yellow text.
 func Note(text string) {
 	pterm.Println()
 	message := paragraph(text)
 	pterm.FgYellow.Println(message)
 }
 
+// HeaderInfof prints a pterm header with a formatted info message to the user.
 func HeaderInfof(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	// Ensure the text is consistent for the header width
@@ -180,6 +201,7 @@ func HeaderInfof(format string, a ...any) {
 		Printfln(message + strings.Repeat(" ", padding))
 }
 
+// JsonValue returns a string representation of a json object.
 func JsonValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
