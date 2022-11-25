@@ -37,7 +37,7 @@
 		"@types/prismjs": "1.26.0",
 		"@typescript-eslint/eslint-plugin": "5.43.0",
 		"@typescript-eslint/parser": "5.43.0",
-		"concurrently": "7.5.0",
+		"concurrently": "7.6.0",
 		"eslint": "8.28.0",
 		"eslint-config-prettier": "8.5.0",
 		"eslint-plugin-svelte3": "4.0.0",
