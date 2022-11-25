@@ -162,8 +162,8 @@ func Infof(format string, a ...any) {
 	}
 }
 
-// SuccessF prints a success message to the user.
-func SuccessF(format string, a ...any) {
+// Successf prints a success message to the user.
+func Successf(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Success.Println(message)
 }

@@ -112,7 +112,7 @@ var clearCacheCmd = &cobra.Command{
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			message.Fatalf(err, "Unable to clear the cache driectory %s", config.GetAbsCachePath())
 		}
-		message.SuccessF("Successfully cleared the cache from %s", config.GetAbsCachePath())
+		message.Successf("Successfully cleared the cache from %s", config.GetAbsCachePath())
 	},
 }
 
@@ -132,7 +132,7 @@ var generatePKICmd = &cobra.Command{
 		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
 			message.Fatalf(err, "Failed to write the Key file: %s", err.Error())
 		}
-		message.SuccessF("Successfully created a chain of trust for %s", args[0])
+		message.Successf("Successfully created a chain of trust for %s", args[0])
 	},
 }
 
