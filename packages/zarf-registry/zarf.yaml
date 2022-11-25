@@ -37,14 +37,6 @@ components:
           - registry-values-seed.yaml
 
   - name: zarf-registry
-    charts:
-      - name: docker-registry
-        # fixme: this seems to break with composable components
-        localPath: packages/zarf-registry/chart
-        version: 1.0.0
-        namespace: zarf
-        valuesFiles:
-          - registry-values.yaml
     manifests:
       - name: registry-connect
         namespace: zarf
@@ -58,3 +50,11 @@ components:
         namespace: zarf
         files:
           - daemonset.yaml
+    charts:
+      - name: docker-registry
+        # fixme: this seems to break with composable components
+        localPath: packages/zarf-registry/chart
+        version: 1.0.0
+        namespace: zarf
+        valuesFiles:
+          - registry-values.yaml
