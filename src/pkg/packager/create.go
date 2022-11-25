@@ -210,7 +210,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			message.Debugf("Loading %#v", file)
 			destinationFile := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
-			if utils.IsUrl(file.Source) {
+			if utils.IsURL(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
 				if err := utils.CreatePathAndCopy(file.Source, destinationFile); err != nil {

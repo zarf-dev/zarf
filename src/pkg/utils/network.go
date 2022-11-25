@@ -19,9 +19,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// SGETProtocol is the custom protocol used to denote online resources signed with a cosign key.
 const SGETProtocol = "sget://"
 
-func IsUrl(source string) bool {
+// IsUrl returns a boolean indicating if the provided string is a valid URL.
+func IsURL(source string) bool {
 	parsedUrl, err := url.Parse(source)
 	return err == nil && parsedUrl.Scheme != "" && parsedUrl.Host != ""
 }
@@ -44,6 +46,7 @@ func DoesHostnamesMatch(url1 string, url2 string) (bool, error) {
 	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
 }
 
+// Fetch performs an http GET request at the provided URL and returns its response body.
 func Fetch(url string) io.ReadCloser {
 	// Get the data
 	resp, err := http.Get(url)
@@ -59,6 +62,7 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
+// DownloadToFile downloads a file from a URL to a local file.
 func DownloadToFile(url string, target string, cosignKeyPath string) {
 
 	// Always ensure the target directory exists

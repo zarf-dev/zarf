@@ -22,6 +22,7 @@ const dotCharacter = 46
 
 var TempPathPrefix = "zarf-"
 
+// MakeTempDir creates a temporary directory at the provided path or the system default temp directory if an empty string is provided.
 func MakeTempDir(tmpDir string) (string, error) {
 	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
 	message.Debugf("Using temp path: '%s'", tmp)
@@ -48,6 +49,7 @@ func InvalidPath(path string) bool {
 	return os.IsNotExist(err)
 }
 
+// ListDirectories returns a list of all subdirectories within a given directory path.
 func ListDirectories(directory string) ([]string, error) {
 	var directories []string
 	paths, err := os.ReadDir(directory)
@@ -64,6 +66,7 @@ func ListDirectories(directory string) ([]string, error) {
 	return directories, nil
 }
 
+// WriteFile writes a file to the given path with the given data.
 func WriteFile(path string, data []byte) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -128,11 +131,13 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 	return files, err
 }
 
+// CreateFilePath ensures the given filepath exists.
 func CreateFilePath(destination string) error {
 	parentDest := path.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
+// CreatePathAndCopy creates a file and copies the contents of the source file to the destination file.
 func CreatePathAndCopy(source string, destination string) error {
 	if err := CreateFilePath(destination); err != nil {
 		return err

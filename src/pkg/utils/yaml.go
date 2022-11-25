@@ -32,6 +32,7 @@ func yamlFormat(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
 
+// ColorPrintYAML prints a yaml object with syntax highlighting.
 func ColorPrintYAML(data any) {
 
 	text, _ := yaml.Marshal(data)
@@ -78,6 +79,7 @@ func ColorPrintYAML(data any) {
 	pterm.Print(p.PrintTokens(tokens))
 }
 
+// ReadYaml reads a yaml file and unmarshals it into a given destination.
 func ReadYaml(path string, destConfig any) error {
 	message.Debugf("Loading zarf config %s", path)
 	file, err := os.ReadFile(path)
@@ -89,6 +91,7 @@ func ReadYaml(path string, destConfig any) error {
 	return yaml.Unmarshal(file, destConfig)
 }
 
+// WriteYaml write a yaml source to a file at the given path.
 func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
 	content, err := yaml.Marshal(srcConfig)
