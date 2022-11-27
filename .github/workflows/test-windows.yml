@@ -9,6 +9,7 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
+      - "CODEOWNERS"      
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
