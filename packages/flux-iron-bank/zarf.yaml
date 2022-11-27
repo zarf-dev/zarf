@@ -11,10 +11,10 @@ components:
       - name: flux-installer
         # This will be built on the package create side and deployed as a regular manifest on package deploy
         kustomizations:
-          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.39.0
+          - https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=1.47.0
     images:
       # Flux images
-      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.22.1
-      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.26.1
-      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.24.0
-      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.25.8
+      - registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.26.0
+      - registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.30.0
+      - registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.28.0
+      - registry1.dso.mil/ironbank/fluxcd/source-controller:v0.31.0
