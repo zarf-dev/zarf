@@ -16,8 +16,9 @@ import "errors"
 // Include sprintf formatting directives in the string if needed
 const (
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
-	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrUnmarshal           = "failed to unmarshal file: %w"
+	ErrMarshal             = "failed to marshal file: %w"
 )
 
 // Zarf CLI commands

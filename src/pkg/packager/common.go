@@ -5,14 +5,7 @@
 package packager
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -106,92 +99,6 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
-}
-
-// HandleIfURL If provided package is a URL download it to a temp directory
-func (p *Packager) HandleIfURL(packagePath, shasum string, insecureDeploy bool) string {
-	message.Debugf("packager.HandleIfURL(%s, %s, %t)", packagePath, shasum, insecureDeploy)
-
-	// Check if the user gave us a remote package
-	providedURL, err := url.Parse(packagePath)
-	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
-		return packagePath
-	}
-
-	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(packagePath, "sget://") {
-		return p.handleSgetPackage(packagePath)
-	}
-
-	if !insecureDeploy && shasum == "" {
-		message.Fatal(nil, "When deploying a remote package you must provide either a `--shasum` or the `--insecure` flag. Neither were provided.")
-	}
-
-	// Check the extension on the package is what we expect
-	if !isValidFileExtension(providedURL.Path) {
-		message.Fatalf(nil, "Only %s file extensions are permitted.\n", config.GetValidPackageExtensions())
-	}
-
-	// Download the package
-	resp, err := http.Get(packagePath)
-	if err != nil {
-		message.Fatal(err, "Unable to download the package")
-	}
-	defer resp.Body.Close()
-
-	localPackagePath := p.tmp.Base + providedURL.Path
-	message.Debugf("Creating local package with the path: %s", localPackagePath)
-	packageFile, _ := os.Create(localPackagePath)
-	_, err = io.Copy(packageFile, resp.Body)
-	if err != nil {
-		message.Fatal(err, "Unable to copy the contents of the provided URL into a local file.")
-	}
-
-	// Check the shasum if necessary
-	if !insecureDeploy {
-		hasher := sha256.New()
-		_, err = io.Copy(hasher, packageFile)
-		if err != nil {
-			message.Fatal(err, "Unable to calculate the sha256 of the provided remote package.")
-		}
-
-		value := hex.EncodeToString(hasher.Sum(nil))
-		if value != shasum {
-			_ = os.Remove(localPackagePath)
-			message.Fatalf(nil, "Provided shasum (%s) of the package did not match what was downloaded (%s)\n", shasum, value)
-		}
-	}
-
-	return localPackagePath
-}
-
-func (p *Packager) handleSgetPackage(sgetPackagePath string) string {
-	message.Debugf("packager.handleSgetPackage(%s)", sgetPackagePath)
-
-	// Create the local file for the package
-	localPackagePath := filepath.Join(p.tmp.Base, "remote.tar.zst")
-	destinationFile, err := os.Create(localPackagePath)
-	if err != nil {
-		message.Fatal(err, "Unable to create the destination file")
-	}
-	defer destinationFile.Close()
-
-	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(sgetPackagePath, "sget://defenseunicorns") {
-		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
-		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
-	}
-
-	// Remove the 'sget://' header for the actual sget call
-	sgetPackagePath = strings.TrimPrefix(sgetPackagePath, "sget://")
-
-	// Sget the package
-	err = utils.Sget(sgetPackagePath, p.cfg.DeployOpts.SGetKeyPath, destinationFile, context.TODO())
-	if err != nil {
-		message.Fatal(err, "Unable to get the remote package via sget")
-	}
-
-	return localPackagePath
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {

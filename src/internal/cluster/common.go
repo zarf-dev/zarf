@@ -16,7 +16,10 @@ type Cluster struct {
 	Kube *k8s.K8s
 }
 
-const defaultTimeout = 30 * time.Second
+const (
+	defaultTimeout = 30 * time.Second
+	agentLabel     = "zarf.dev/agent"
+)
 
 var labels = k8s.Labels{
 	config.ZarfManagedByLabel: "zarf",

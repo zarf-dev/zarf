@@ -153,7 +153,7 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 	tunnel.spinner = spinner
 }
 
-func (tunnel *Tunnel) Connect(target string, blocking bool) {
+func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
 
 	switch strings.ToUpper(target) {
@@ -184,10 +184,10 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		}
 
 		if tunnel.resourceName == "" {
-			message.Fatalf(nil, "Ensure a resource name is provided")
+			return fmt.Errorf("missing resource name")
 		}
 		if tunnel.remotePort < 1 {
-			message.Fatal(nil, "A remote port must be specified to connect to.")
+			return fmt.Errorf("missing remote port")
 		}
 	}
 
@@ -198,7 +198,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 		tunnel.attempt++
 		// If we have exceeded the number of attempts, exit with an error
 		if tunnel.attempt > 3 {
-			message.Fatalf(err, "Unable to estbalish tunnel after 3 attempts")
+			return fmt.Errorf("unable to establish tunnel after 3 attempts: %w", err)
 		} else {
 			// Otherwise, retry the connection but delay increasing intervals between attempts
 			delay := tunnel.attempt * 10
@@ -235,6 +235,8 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) {
 			runtime.Gosched()
 		}
 	}
+
+	return nil
 }
 
 // Endpoint returns the tunnel endpoint

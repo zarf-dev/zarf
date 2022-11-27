@@ -16,9 +16,9 @@ import (
 )
 
 // Inspect list the contents of a package
-func (p *Packager) Inspect(packageName string, includeSBOM bool) {
+func (p *Packager) Inspect(packageName string, includeSBOM bool) error {
 	if utils.InvalidPath(packageName) {
-		message.Fatalf(nil, "The package archive %s seems to be missing or unreadable.", packageName)
+		return fmt.Errorf("invalid package name: %s", packageName)
 	}
 
 	// Extract the archive
@@ -28,7 +28,7 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) {
 
 	// Load the config to get the build version
 	if err := p.readYaml(configPath, false); err != nil {
-		message.Fatalf(err, "Unable to read %s", p.tmp.Base)
+		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
 	message.Infof("The package was built with Zarf CLI version %s\n", p.cfg.Pkg.Build.Version)
@@ -37,7 +37,7 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) {
 	if includeSBOM {
 		err := archiver.Extract(packageName, "sboms", p.tmp.Base)
 		if err != nil {
-			message.Fatalf(err, "Unable to extract sbom information from the package.")
+			return fmt.Errorf("unable to extract the SBOMs: %w", err)
 		}
 
 		sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
@@ -57,4 +57,6 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) {
 			message.Note("There were no images with software bill-of-materials (SBOM) included.")
 		}
 	}
+
+	return nil
 }

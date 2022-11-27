@@ -51,7 +51,9 @@ func (p *Packager) Create(baseDir string) error {
 		p.cfg.IsInitConfig = true
 	}
 
-	p.composeComponents()
+	if err := p.composeComponents(); err != nil {
+		return err
+	}
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
@@ -80,12 +82,12 @@ func (p *Packager) Create(baseDir string) error {
 		ociPath := path.Join(p.tmp.Base, "seed-image")
 		for _, image := range pulledImages {
 			if err := crane.SaveOCI(image, ociPath); err != nil {
-				message.Fatalf(err, "Unable to save image %s as OCI", image)
+				return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
 			}
 		}
 
 		if err := images.FormatCraneOCILayout(ociPath); err != nil {
-			message.Fatalf(err, "Unable to format crane OCI layout")
+			return fmt.Errorf("unable to format OCI layout: %w", err)
 		}
 	}
 
@@ -218,7 +220,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 
 			// Abort packaging on invalid shasum (if one is specified)
 			if file.Shasum != "" {
-				utils.ValidateSha256Sum(file.Shasum, destinationFile)
+				if actualShasum, _ := utils.GetSha256Sum(destinationFile); actualShasum != file.Shasum {
+					return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
+				}
 			}
 
 			info, _ := os.Stat(destinationFile)

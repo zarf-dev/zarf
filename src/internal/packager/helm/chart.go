@@ -77,8 +77,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 				spinner.Updatef("Performing chart uninstall")
 				_, _ = h.uninstallChart(h.ReleaseName)
 			}
-			spinner.Fatalf(nil, "Unable to complete helm chart install/upgrade")
-			break
+			return nil, "", fmt.Errorf("unable to install/upgrade chart after 3 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
@@ -98,7 +97,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 
 		default:
 			// 😭 things aren't working
-			spinner.Fatalf(histErr, "Unable to verify the chart installation status")
+			return nil, "", fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
 
 		if err != nil {
@@ -190,7 +189,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 		manifest := fmt.Sprintf("%s/%s", h.BasePath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			spinner.Fatalf(err, "Unable to read the manifest file contents")
+			return nil, "", fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
 	}

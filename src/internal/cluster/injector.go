@@ -262,7 +262,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	pod.Labels["app"] = "zarf-injector"
 
 	// Ensure zarf agent doesnt break the injector on future runs
-	pod.Labels["zarf.dev/agent"] = "ignore"
+	pod.Labels[agentLabel] = "ignore"
 
 	// Bind the pod to the node the image was found on
 	pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": node}

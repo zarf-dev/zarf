@@ -40,7 +40,9 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	p.composeComponents()
+	if err := p.composeComponents(); err != nil {
+		return err
+	}
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {

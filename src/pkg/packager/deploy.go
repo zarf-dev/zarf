@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -38,6 +39,8 @@ func (p *Packager) Deploy() error {
 
 	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
+
+	p.handlePackagePath()
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
@@ -203,7 +206,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	// Toggles for general deploy operations
 	componentPath, err := p.createComponentPaths(component)
 	if err != nil {
-		message.Fatalf(err, "Unable to create the component paths")
+		return charts, fmt.Errorf("unable to create the component paths: %w", err)
 	}
 
 	// All components now require a name
@@ -219,7 +222,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if err = p.runComponentScripts(component.Scripts.Before, component.Scripts); err != nil {
 		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
 	}
-	p.processComponentFiles(component.Files, componentPath.Files)
+
+	if err := p.processComponentFiles(component.Files, componentPath.Files); err != nil {
+		return charts, fmt.Errorf("unable to process the component files: %w", err)
+	}
 
 	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
 
@@ -268,7 +274,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Move files onto the host of the machine performing the deployment
-func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) {
+func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
 	var spinner message.Spinner
 	if len(componentFiles) > 0 {
 		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
@@ -282,7 +288,9 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			utils.ValidateSha256Sum(file.Shasum, sourceFile)
+			if shasum, _ := utils.GetSha256Sum(sourceFile); shasum != file.Shasum {
+				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
+			}
 		}
 
 		// Replace temp target directories
@@ -292,7 +300,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		spinner.Updatef("Saving %s", file.Target)
 		err := copy.Copy(sourceFile, file.Target)
 		if err != nil {
-			spinner.Fatalf(err, "Unable to copy the contents of %s", file.Target)
+			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
 		}
 
 		// Loop over all symlinks and create them
@@ -305,7 +313,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
-				spinner.Fatalf(err, "Unable to create the symbolic link %s -> %s", link, file.Target)
+				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
 			}
 		}
 
@@ -314,6 +322,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 	}
 	spinner.Success()
 
+	return nil
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values
@@ -323,13 +332,10 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState()
-	if err != nil {
-		spinner.Fatalf(err, "Unable to load the Zarf State from the Kubernetes cluster")
-	}
 
-	if state.Distro == "" {
-		// If no distro the zarf secret did not load properly
-		spinner.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
+	// If no distro the zarf secret did not load properly
+	if err != nil || state.Distro == "" {
+		return values, fmt.Errorf(lang.ErrLoadState, err)
 	}
 
 	p.cfg.State = state
@@ -342,9 +348,8 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
-		spinner.Fatalf(nil, "This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-			p.arch,
-			state.Architecture)
+		return values, fmt.Errorf("This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
+			state.Architecture, p.arch)
 	}
 
 	spinner.Success()

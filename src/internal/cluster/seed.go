@@ -50,7 +50,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 			distro, err = c.Kube.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve
-				spinner.Fatalf(err, "Unable to connect to the cluster to verify the distro")
+				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
 			}
 		}
 
@@ -78,7 +78,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 				namespace.Labels = make(map[string]string)
 			}
 			// This label will tell the Zarf Agent to ignore this namespace
-			namespace.Labels["zarf.dev/agent"] = "ignore"
+			namespace.Labels[agentLabel] = "ignore"
 			if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
 				// This is not a hard failure, but we should log it
 				message.Errorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)

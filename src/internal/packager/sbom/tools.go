@@ -34,7 +34,7 @@ func WriteSBOMFiles(sbomViewFiles []string) error {
 		// Our file copy lib explodes on these files for some reason...
 		data, err := os.ReadFile(file)
 		if err != nil {
-			message.Fatalf(err, "Unable to read the sbom-viewer file %s", file)
+			return err
 		}
 		dst := filepath.Join(config.ZarfSBOMDir, filepath.Base(file))
 		err = os.WriteFile(dst, data, 0644)

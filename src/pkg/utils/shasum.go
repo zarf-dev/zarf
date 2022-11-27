@@ -13,13 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-func ValidateSha256Sum(expectedChecksum string, path string) {
-	actualChecksum, _ := GetSha256Sum(path)
-	if expectedChecksum != actualChecksum {
-		message.Fatalf("Invalid or mismatched file checksum for %s.  Expected %s, computed %s", path, expectedChecksum, actualChecksum)
-	}
-}
-
 // GetSha256Sum returns the computed SHA256 Sum of a given file
 func GetSha256Sum(path string) (string, error) {
 	var data io.ReadCloser

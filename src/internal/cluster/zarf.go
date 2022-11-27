@@ -26,7 +26,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
 	labelSelector := "package-deploy-info"
 	secrets, err := c.Kube.GetSecretsWithLabel(namespace, labelSelector)
 	if err != nil {
-		message.Fatalf(err, "unable to get secrets with the label selector")
+		return deployedPackages, err
 	}
 
 	// Process the k8s secret into our internal structs
@@ -59,9 +59,9 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaces.Items {
-			if _, ok := namespace.Labels["zarf.dev/agent"]; ok {
+			if _, ok := namespace.Labels[agentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
-				delete(namespace.Labels, "zarf.dev/agent")
+				delete(namespace.Labels, agentLabel)
 				if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)

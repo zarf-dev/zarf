@@ -172,7 +172,10 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// Create the secret
-		validSecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
+		validSecret, err := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate the registry pull secret for namespace %s", name)
+		}
 
 		// Try to get a valid existing secret
 		currentSecret, _ := c.Kube.GetSecret(name, config.ZarfImagePullSecretName)

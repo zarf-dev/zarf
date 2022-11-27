@@ -24,7 +24,7 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
-func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) *corev1.Secret {
+func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 
 	secretDockerConfig := c.Kube.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
@@ -32,11 +32,11 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) *corev1.Secr
 	// Get the registry credentials from the ZarfState secret
 	zarfState, err := c.LoadZarfState()
 	if err != nil {
-		message.Fatalf(err, "Unable to load the Zarf state to get the registry credentials")
+		return nil, err
 	}
 	credential := zarfState.RegistryInfo.PullPassword
 	if credential == "" {
-		message.Fatalf(nil, "Generate pull cred failed")
+		return nil, nil
 	}
 
 	// Auth field must be username:password and base64 encoded
@@ -56,11 +56,11 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) *corev1.Secr
 	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
 	if err != nil {
-		message.Fatalf(err, "Unable to create the embedded registry secret")
+		return nil, err
 	}
 
 	// Add to the secret data
 	secretDockerConfig.Data[".dockerconfigjson"] = dockerConfigData
 
-	return secretDockerConfig
+	return secretDockerConfig, nil
 }

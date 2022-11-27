@@ -70,10 +70,10 @@ var packageDeployCmd = &cobra.Command{
 	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packageName := choosePackage(args)
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
 		pkgClient := packager.NewOrDie(&pkgConfig)
 
-		pkgConfig.DeployOpts.PackagePath = pkgClient.HandleIfURL(packageName, shasum, insecureDeploy)
 		if err := pkgClient.Deploy(); err != nil {
 			message.Fatalf(err, "Failed to deploy package")
 		}

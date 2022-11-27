@@ -12,26 +12,25 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run performs config validations and runs message.Fatal() on errors
-func Run(pkg types.ZarfPackage) {
+// Run performs config validations
+func Run(pkg types.ZarfPackage) error {
 	if err := validatePackageName(pkg.Metadata.Name); err != nil {
-		message.Fatalf(err, "Invalid package name: %s", err.Error())
+		return fmt.Errorf("invalid package name: %w", err)
 	}
 
 	for _, variable := range pkg.Variables {
 		if err := validatePackageVariable(variable); err != nil {
-			message.Fatalf(err, "Invalid package variable: %s", err.Error())
+			return fmt.Errorf("invalid package variable: %w", err)
 		}
 	}
 
 	for _, constant := range pkg.Constants {
 		if err := validatePackageConstant(constant); err != nil {
-			message.Fatalf(err, "Invalid package constant: %s", err.Error())
+			return fmt.Errorf("invalid package constant: %w", err)
 		}
 	}
 
@@ -40,13 +39,14 @@ func Run(pkg types.ZarfPackage) {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
-			message.Fatalf(nil, "Component names must be unique")
+			return fmt.Errorf("component name '%s' is not unique", component.Name)
 		}
 		uniqueNames[component.Name] = true
 
 		validateComponent(component)
 	}
 
+	return nil
 }
 
 func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
@@ -85,26 +85,28 @@ func oneIfNotEmpty(testString string) int {
 	}
 }
 
-func validateComponent(component types.ZarfComponent) {
+func validateComponent(component types.ZarfComponent) error {
 	if component.Required {
 		if component.Default {
-			message.Fatalf(nil, "Component %s cannot be required and default", component.Name)
+			return fmt.Errorf("component %s cannot be both required and default", component.Name)
 		}
 		if component.Group != "" {
-			message.Fatalf(nil, "Component %s cannot be required and part of a choice group", component.Name)
+			return fmt.Errorf("component %s cannot be both required and grouped", component.Name)
 		}
 	}
 
 	for _, chart := range component.Charts {
 		if err := validateChart(chart); err != nil {
-			message.Fatalf(err, "Invalid chart definition in the %s component: %s (%s)", component.Name, chart.Name, err.Error())
+			return fmt.Errorf("invalid chart definition: %w", err)
 		}
 	}
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
-			message.Fatalf(err, "Invalid manifest definition in the %s component: %s (%s)", component.Name, manifest.Name, err.Error())
+			return fmt.Errorf("invalid manifest definition: %w", err)
 		}
 	}
+
+	return nil
 }
 
 func validatePackageName(subject string) error {
