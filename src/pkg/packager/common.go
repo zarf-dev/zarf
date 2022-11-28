@@ -95,6 +95,10 @@ func (p *Packager) GetPackageName() string {
 		suffix = "tar"
 	}
 
+	if p.cfg.Pkg.Metadata.Version == "" {
+		return fmt.Sprintf("%s-%s-%s.%s", prefix, packageName, p.arch, suffix)
+	}
+
 	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
