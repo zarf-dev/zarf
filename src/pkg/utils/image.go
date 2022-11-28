@@ -11,7 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/reference"
 )
 
-// Image is a struct that ... TODO @JPERRY
+// Image is a representation of a container image and where it can be found for the purpose of creating and deploying Zarf packages.
 type Image struct {
 	Host        string
 	Name        string

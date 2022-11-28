@@ -12,10 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// ImageMap
+// ImageMap is a map of unique images found within a cluster.
 type ImageMap map[string]bool
 
-// ImageNodeMap
+// ImageNodeMap is a map of images and a list of all the nodes they are on.
 type ImageNodeMap map[string][]string
 
 /*

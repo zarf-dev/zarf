@@ -100,15 +100,17 @@ func GetArch(archs ...string) string {
 	return runtime.GOARCH
 }
 
-// TGetStartTime returns a timestamp of when the CLI was started
+// GetStartTime returns a timestamp of when the CLI was started.
 func GetStartTime() int64 {
 	return operationStartTime
 }
 
+// GetDataInjectionMarker returns a string that can be used to identify when a data injection process has been completed.
 func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
 
+// GetCraneOptions returns a list of crane options based on the provided state.
 func GetCraneOptions(insecure bool) []crane.Option {
 	var options []crane.Option
 
@@ -128,6 +130,7 @@ func GetCraneOptions(insecure bool) []crane.Option {
 	return options
 }
 
+// GetCraneAuthOption returns a crane auth option based on the provided credentials.
 func GetCraneAuthOption(username string, secret string) crane.Option {
 	return crane.WithAuth(
 		authn.FromConfig(authn.AuthConfig{
@@ -136,22 +139,27 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 		}))
 }
 
+// GetDeployingComponents returns a list of components that will be deployed.
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
 
+// SetDeployingComponents sets a list of components that will be deployed.
 func SetDeployingComponents(components []types.DeployedComponent) {
 	deployedComponents = components
 }
 
+// ClearDeployingComponents clears a global package variable that tracks the components that will be deployed.
 func ClearDeployingComponents() {
 	deployedComponents = []types.DeployedComponent{}
 }
 
+// GetValidPackageExtensions returns a list of valid package extensions.
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
+// GetRegistry returns a registry URL based on the current RegistryInfo state.
 func GetRegistry(state types.ZarfState) string {
 	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
 	if state.RegistryInfo.NodePort >= 30000 {
