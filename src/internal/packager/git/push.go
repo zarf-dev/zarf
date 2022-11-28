@@ -34,7 +34,7 @@ func (g *Git) PushRepo(localPath string) error {
 	basename := filepath.Base(localPath)
 	spinner.Updatef("Pushing git repo %s", basename)
 
-	repo, err := g.prepRepoForPush(g.Server.Address, g.Server.PushUsername)
+	repo, err := g.prepRepoForPush()
 	if err != nil {
 		message.Warnf("error when prepping the repo for push.. %v", err)
 		return err
@@ -71,7 +71,7 @@ func (g *Git) PushRepo(localPath string) error {
 	return nil
 }
 
-func (g *Git) prepRepoForPush(tunnelUrl, username string) (*git.Repository, error) {
+func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	// Open the given repo
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
@@ -85,7 +85,7 @@ func (g *Git) prepRepoForPush(tunnelUrl, username string) (*git.Repository, erro
 	}
 
 	remoteUrl := remote.Config().URLs[0]
-	targetUrl, err := g.transformURL(tunnelUrl, remoteUrl, username)
+	targetUrl, err := g.transformURL(remoteUrl)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
