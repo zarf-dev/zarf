@@ -67,7 +67,7 @@ func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 }
 
 // BuildImageMap looks for init container, ephemeral and regular container images.
-func (k *K8s) BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
+func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
 	for _, container := range pod.InitContainers {
 		images[container.Image] = true
 	}

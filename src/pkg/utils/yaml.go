@@ -17,13 +17,14 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/fatih/color"
-	"github.com/goccy/go-yaml"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/pterm/pterm"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
+	k8syaml "sigs.k8s.io/yaml"
 )
 
 const yamlEscape = "\x1b"
@@ -34,7 +35,7 @@ func yamlFormat(attr color.Attribute) string {
 
 func ColorPrintYAML(data any) {
 
-	text, _ := yaml.Marshal(data)
+	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
 
 	var p printer.Printer
@@ -86,12 +87,12 @@ func ReadYaml(path string, destConfig any) error {
 		return err
 	}
 
-	return yaml.Unmarshal(file, destConfig)
+	return goyaml.Unmarshal(file, destConfig)
 }
 
 func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
-	content, err := yaml.Marshal(srcConfig)
+	content, err := goyaml.Marshal(srcConfig)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.
 func ReloadYamlTemplate(config any, mappings map[string]string) error {
-	text, err := yaml.Marshal(config)
+	text, err := goyaml.Marshal(config)
 
 	if err != nil {
 		return err
@@ -118,14 +119,14 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 		text = []byte(strings.ReplaceAll(string(text), template, value))
 	}
 
-	return yaml.Unmarshal(text, config)
+	return goyaml.Unmarshal(text, config)
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
 func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*string, error) {
 	mappings := map[string]*string{}
 
-	text, err := yaml.Marshal(config)
+	text, err := goyaml.Marshal(config)
 
 	if err != nil {
 		return mappings, err
@@ -153,7 +154,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	}
 	for _, yml := range ymls {
 		u := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(yml), u); err != nil {
+		if err := k8syaml.Unmarshal([]byte(yml), u); err != nil {
 			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 		objs = append(objs, u)
