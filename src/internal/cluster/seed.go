@@ -138,10 +138,6 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 		return err
 	}
 
-	// Push the seed images into to Zarf registry
-	// seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-	// err := images.PushToZarfRegistry(tempPath.seedImage, []string{seedImage}, false)
-
 	return nil
 }
 
