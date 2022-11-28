@@ -38,7 +38,11 @@ func NewClusterOrDie() *Cluster {
 // NewClusterWithWait creates a new cluster instance and waits for the given timeout for the cluster to be ready
 func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 	c := &Cluster{}
-	c.Kube, _ = k8s.New(message.Debugf, labels)
+	var err error
+	c.Kube, err = k8s.New(message.Debugf, labels)
+	if err != nil {
+		return c, err
+	}
 	return c, c.Kube.WaitForHealthyCluster(timeout)
 }
 

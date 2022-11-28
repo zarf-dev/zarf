@@ -97,7 +97,9 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		packager.NewOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath)
+		if err := packager.NewOrDie(&pkgConfig).FindImages(baseDir, repoHelmChartPath); err != nil {
+			message.Fatalf(err, "Unable to find images for the package definition %s", baseDir)
+		}
 	},
 }
 

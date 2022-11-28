@@ -52,7 +52,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
 
 	// Track if this is an init package
-	// TODO: We need to read the yaml of the package before 'cfg.Pkg.Kind' will be populated for us to read
 	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
 
 	return pkgConfig, nil

@@ -108,8 +108,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				isGitURL := gitUrlRegex.MatchString(chart.Url)
 				helmCfg := helm.Helm{
 					Chart: chart,
+					Cfg:   p.cfg,
 				}
 
+				helmCfg.Cfg.State = types.ZarfState{}
 				if isGitURL {
 					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
 					// track the actual chart path
@@ -177,6 +179,8 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					}
 
 					// Break the manifest into separate resources
+					contentString := string(contents)
+					message.Debugf("%s", contentString)
 					yamls, _ := utils.SplitYAML(contents)
 					resources = append(resources, yamls...)
 				}
