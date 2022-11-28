@@ -85,12 +85,17 @@ func findInitPackage(initPackageName string) (string, error) {
 		return filepath.Join(executableDir, initPackageName), nil
 	}
 
+	// Next, look in the cache directory
+	if !utils.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
+		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
+	}
+
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
 	if err := downloadInitPackage(initPackageName); err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
-			message.Fatalf(err, "Failed to download the init package: %w", err)
+			message.Fatalf(err, "Failed to download the init package: %v", err)
 		}
 	}
 	return "", nil
