@@ -39,7 +39,7 @@ zarf init [flags]
 ### Options
 
 ```
-      --components string               Comma-separated list of components to install.
+      --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
@@ -54,15 +54,15 @@ zarf init [flags]
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
-      --storage-class string            Describe the StorageClass to be used
+      --storage-class string            Specify the storage class to use for the registry.  E.g. --storage-class=standard
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
+  -a, --architecture string   Set the architecture to use for the package. Valid options are: amd64, arm64.
+  -l, --log-level string      Set the log level. Valid options are: warn, info, debug, trace. (default "info")
+      --no-log-file           Disable logging to a file.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")

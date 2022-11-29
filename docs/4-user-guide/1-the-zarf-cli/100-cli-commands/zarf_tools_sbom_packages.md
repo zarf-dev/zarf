@@ -27,10 +27,10 @@ zarf tools sbom packages [SOURCE] [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Set the architecture to use for the package. Valid options are: amd64, arm64.
   -c, --config string         application config file
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
+  -l, --log-level string      Set the log level. Valid options are: warn, info, debug, trace. (default "info")
+      --no-log-file           Disable logging to a file.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
   -q, --quiet                 suppress all logging output
       --tmpdir string         Specify the temporary directory to use for intermediate files
@@ -40,5 +40,5 @@ zarf tools sbom packages [SOURCE] [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md)	 - SBOM tools provided by Anchore Syft
+* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

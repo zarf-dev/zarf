@@ -1,6 +1,6 @@
 ## zarf tools archiver
 
-Compress/Decompress tools for Zarf packages
+Compress/Decompress generic archives, including Zar packages.
 
 ### Options
 
@@ -11,9 +11,9 @@ Compress/Decompress tools for Zarf packages
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
+  -a, --architecture string   Set the architecture to use for the package. Valid options are: amd64, arm64.
+  -l, --log-level string      Set the log level. Valid options are: warn, info, debug, trace. (default "info")
+      --no-log-file           Disable logging to a file.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
@@ -22,6 +22,6 @@ Compress/Decompress tools for Zarf packages
 ### SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf tools archiver compress](zarf_tools_archiver_compress.md)	 - Compress a collection of sources based off of the destination file extension
-* [zarf tools archiver decompress](zarf_tools_archiver_decompress.md)	 - Decompress an archive (package) to a specified location
+* [zarf tools archiver compress](zarf_tools_archiver_compress.md)	 - Compress a collection of sources based off of the destination file extension.
+* [zarf tools archiver decompress](zarf_tools_archiver_decompress.md)	 - Decompress an archive or Zarf package based off of the source file extension.
 

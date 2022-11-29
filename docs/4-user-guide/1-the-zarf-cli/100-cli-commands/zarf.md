@@ -2,6 +2,10 @@
 
 DevSecOps Airgap Toolkit
 
+### Synopsis
+
+Zarf is a toolkit for building and deploying airgapped Kubernetes clusters.
+
 ```
 zarf [COMMAND] [flags]
 ```
@@ -9,10 +13,10 @@ zarf [COMMAND] [flags]
 ### Options
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Set the architecture to use for the package. Valid options are: amd64, arm64.
   -h, --help                  help for zarf
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
+  -l, --log-level string      Set the log level. Valid options are: warn, info, debug, trace. (default "info")
+      --no-log-file           Disable logging to a file.
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
@@ -27,5 +31,5 @@ zarf [COMMAND] [flags]
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf version](zarf_version.md)	 - Displays the version of the Zarf binary
+* [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
 

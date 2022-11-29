@@ -133,7 +133,7 @@ func httpGetFile(url string, destinationFile *os.File) {
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
 	// Remove the custom protocol header from the url
 	_, url, _ = strings.Cut(url, SGETProtocol)
-	err := Sget(url, cosignKeyPath, destinationFile, context.TODO())
+	err := Sget(context.TODO(), url, cosignKeyPath, destinationFile)
 	if err != nil {
 		message.Fatalf(err, "Unable to download file with sget: %s\n", url)
 	}
