@@ -15,7 +15,7 @@ The [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.
 
 ```json
   "yaml.schemas": {
-    "https://github.com/defenseunicorns/zarf/raw/master/zarf.schema.json": "zarf.yaml"
+    "https://github.com/defenseunicorns/zarf/raw/main/zarf.schema.json": "zarf.yaml"
   }
 ```
 
