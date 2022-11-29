@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
 
@@ -47,4 +48,22 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	}
 
 	return confirm
+}
+
+func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
+
+	if variable.Description != "" {
+		message.Question(variable.Description)
+	}
+
+	prompt := &survey.Input{
+		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
+		Default: variable.Default,
+	}
+
+	if err = survey.AskOne(prompt, &value); err != nil {
+		return "", err
+	}
+
+	return value, nil
 }

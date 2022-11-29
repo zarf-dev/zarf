@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -114,22 +112,4 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 	if !presentInActive {
 		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
-}
-
-func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
-
-	if variable.Description != "" {
-		message.Question(variable.Description)
-	}
-
-	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
-		Default: variable.Default,
-	}
-
-	if err = survey.AskOne(prompt, &value); err != nil {
-		return "", err
-	}
-
-	return value, nil
 }
