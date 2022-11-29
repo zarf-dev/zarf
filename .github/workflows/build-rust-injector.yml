@@ -9,7 +9,7 @@ on:
       branchName:
         description: "Branch to build the injector from"
         required: false
-        default: "master"
+        default: "main"
 
 jobs:
   build-injector:

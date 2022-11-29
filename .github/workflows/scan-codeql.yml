@@ -2,7 +2,7 @@ name: Analyze CodeQL
 
 on:
   push:
-    branches: ["master"]
+    branches: ["main"]
   pull_request:
     paths-ignore:
       - "**.md"
