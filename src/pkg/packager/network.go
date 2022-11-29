@@ -106,7 +106,7 @@ func (p *Packager) handleSgetPackage() error {
 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
 	}
 
-	opts.PackagePath = localPath
+	p.cfg.DeployOpts.PackagePath = localPath
 
 	return nil
 }

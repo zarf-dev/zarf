@@ -40,7 +40,9 @@ func (p *Packager) Deploy() error {
 	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
 
-	p.handlePackagePath()
+	if err := p.handlePackagePath(); err != nil {
+		return fmt.Errorf("unable to handle the provided package path: %w", err)
+	}
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
