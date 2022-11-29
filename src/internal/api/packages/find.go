@@ -41,11 +41,13 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 	}
 
 	// Intentionally ignore errors
-	files, _ := utils.RecursiveFileList(targetDir, pattern)
-	if len(files) == 0 {
+	files, err := utils.RecursiveFileList(targetDir, pattern)
+	if err != nil {
+		pkgNotFoundMsg := fmt.Sprintf("Package not found: %s", pattern.String())
+		message.Errorf(err, pkgNotFoundMsg)
 		common.WriteJSONResponse(w, types.APIError{
-			Error: "PackageNotFound",
-			Message: fmt.Sprintf("Package not found: %s", pattern.String()),
+			Error:   "PackageNotFound",
+			Message: pkgNotFoundMsg,
 		}, http.StatusNotFound)
 		return
 	}
