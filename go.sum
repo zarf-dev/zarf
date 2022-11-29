@@ -303,6 +303,8 @@ github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33 h1:Y+9aMJMTEMH
 github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33/go.mod h1:WOWtswyDxLkBnizq9LihYa9uw88r1FhBvJo7g//Ljcc=
 github.com/anchore/syft v0.62.1 h1:3pIZb+Bm5wBJaKbcy48uW6WrSPdXmtCxScnA9ra2HPQ=
 github.com/anchore/syft v0.62.1/go.mod h1:aDR91I0K5EHp8oiE3DibOnOajF/A0N2tti46RNTiSrc=
+github.com/anchore/syft v0.62.2 h1:4LXWeEIcHMDYnV3O1DR/erveeLqkpcDrC51zhpc+WFI=
+github.com/anchore/syft v0.62.2/go.mod h1:aDR91I0K5EHp8oiE3DibOnOajF/A0N2tti46RNTiSrc=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
