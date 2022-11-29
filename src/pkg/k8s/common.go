@@ -43,7 +43,11 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 
 // NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
 func NewWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*K8s, error) {
-	k, _ := New(logger, defaultLabels)
+	k, err := New(logger, defaultLabels)
+	if err != nil {
+		return nil, err
+	}
+
 	return k, k.WaitForHealthyCluster(timeout)
 }
 
