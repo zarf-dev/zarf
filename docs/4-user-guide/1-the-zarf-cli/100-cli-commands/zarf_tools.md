@@ -21,7 +21,7 @@ Collection of additional tools to make airgap easier
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zar packages.
 * [zarf tools clear-cache](zarf_tools_clear-cache.md)	 - Clears the configured git and image cache directory.
 * [zarf tools gen-pki](zarf_tools_gen-pki.md)	 - Generates a Certificate Authority and PKI chain of trust for the given host

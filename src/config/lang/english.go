@@ -27,8 +27,9 @@ const (
 // Zarf CLI commands
 const (
 	// root zarf command
-	RootCmdShort = "DevSecOps Airgap Toolkit"
-	RootCmdLong  = "Zarf is a toolkit for building and deploying airgapped Kubernetes clusters."
+	RootCmdShort = "DevSecOps for Airgap"
+	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
+		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
 	RootCmdFlagArch        = "Architecture for OCI images"

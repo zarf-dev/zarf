@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -51,6 +52,8 @@ var rootCmd = &cobra.Command{
 				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedCreate)
 			}
 		} else {
+			zarfLogo := message.GetLogo()
+			_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 			cmd.Help()
 		}
 	},

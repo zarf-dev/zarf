@@ -29,5 +29,5 @@ zarf version [flags]
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 

@@ -1,10 +1,11 @@
 ## zarf
 
-DevSecOps Airgap Toolkit
+DevSecOps for Airgap
 
 ### Synopsis
 
-Zarf is a toolkit for building and deploying airgapped Kubernetes clusters.
+Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads
+using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 ```
 zarf [COMMAND] [flags]
