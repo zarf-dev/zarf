@@ -13,7 +13,7 @@ import (
 )
 
 // ListDeployedPackages writes a list of packages that have been deployed to the connected cluster.
-func ListDeployedPackages(w http.ResponseWriter, r *http.Request) {
+func ListDeployedPackages(w http.ResponseWriter, _ *http.Request) {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		message.ErrorWebf(err, w, "Could not connect to cluster")

@@ -101,7 +101,7 @@ func (p *Packager) handleSgetPackage() error {
 	remoteBlob := strings.TrimPrefix(opts.PackagePath, "sget://")
 
 	// Sget the package
-	err = utils.Sget(remoteBlob, p.cfg.DeployOpts.SGetKeyPath, destinationFile, context.TODO())
+	err = utils.Sget(context.TODO(), remoteBlob, p.cfg.DeployOpts.SGetKeyPath, destinationFile)
 	if err != nil {
 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
 	}

@@ -51,7 +51,7 @@ func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 	}
 
 	// Read the Zarf yaml
-	configPath := filepath.Join(tmpDir, "zarf.yaml")
+	configPath := filepath.Join(tmpDir, config.ZarfYAML)
 	err = utils.ReadYaml(configPath, &pkg.ZarfPackage)
 
 	return pkg, err

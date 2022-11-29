@@ -37,7 +37,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 
 	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
-	message.Debugf("ZarfState = %s", message.JsonValue(state))
+	message.Debugf("ZarfState = %s", message.JSONValue(state))
 
 	return state, nil
 }
@@ -45,7 +45,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 // SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret
 func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
-	message.Debug(message.JsonValue(state))
+	message.Debug(message.JSONValue(state))
 
 	// Convert the data back to JSON
 	data, err := json.Marshal(state)

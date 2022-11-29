@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// DeleteNamespace deletes the zarf namespace from the connected cluster.
+// DeleteZarfNamespace deletes the zarf namespace from the connected cluster.
 func (c *Cluster) DeleteZarfNamespace() {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()

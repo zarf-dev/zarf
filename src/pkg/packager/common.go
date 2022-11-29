@@ -26,7 +26,7 @@ type Packager struct {
 
 // New creates a new package instance with the provided config.
 func New(cfg *types.PackagerConfig) (*Packager, error) {
-	message.Debugf("packager.New(%s)", message.JsonValue(cfg))
+	message.Debugf("packager.New(%s)", message.JSONValue(cfg))
 
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
@@ -80,7 +80,7 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package
 func (p *Packager) GetPackageName() string {
-	message.Debugf("packager.GetPackageName(%s)", message.JsonValue(p))
+	message.Debugf("packager.GetPackageName(%s)", message.JSONValue(p))
 
 	if p.cfg.IsInitConfig {
 		return GetInitPackageName(p.arch)
@@ -101,7 +101,7 @@ func (p *Packager) GetPackageName() string {
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	message.Debugf("packager.createComponentPaths(%s)", message.JsonValue(component))
+	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
 
 	basePath := filepath.Join(p.tmp.Components, component.Name)
 	err = utils.CreateDirectory(basePath, 0700)
@@ -141,7 +141,7 @@ func createPaths() (paths types.TempPaths, err error) {
 		Images:       filepath.Join(basePath, "images.tar"),
 		Components:   filepath.Join(basePath, "components"),
 		Sboms:        filepath.Join(basePath, "sboms"),
-		ZarfYaml:     filepath.Join(basePath, "zarf.yaml"),
+		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
 	}
 
 	return paths, err

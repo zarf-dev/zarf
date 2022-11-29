@@ -150,7 +150,7 @@ var packageRemoveCmd = &cobra.Command{
 			if err := archiver.Unarchive(pkgName, tempPath); err != nil {
 				message.Fatalf(err, "Unable to extract the package contents")
 			}
-			configPath := filepath.Join(tempPath, "zarf.yaml")
+			configPath := filepath.Join(tempPath, config.ZarfYAML)
 
 			var pkgConfig types.ZarfPackage
 

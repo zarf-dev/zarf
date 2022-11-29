@@ -162,14 +162,14 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitUrl)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), lang.CmdInitFlagGitPullUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegUrl)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegRL)
 	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), lang.CmdInitFlagRegNodePort)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)

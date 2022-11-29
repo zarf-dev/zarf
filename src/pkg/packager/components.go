@@ -162,14 +162,14 @@ func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requeste
 	// If the component is required, then just return true
 	if component.Required {
 		return true
-	} else {
-		// Otherwise,check if this is one of the components that has been requested
-		if len(requestedComponentNames) > 0 || config.CommonOptions.Confirm {
-			for _, requestedComponent := range requestedComponentNames {
-				// If the component name matches one of the requested components, then return true
-				if strings.ToLower(requestedComponent) == component.Name {
-					return true
-				}
+	}
+
+	// Otherwise,check if this is one of the components that has been requested
+	if len(requestedComponentNames) > 0 || config.CommonOptions.Confirm {
+		for _, requestedComponent := range requestedComponentNames {
+			// If the component name matches one of the requested components, then return true
+			if strings.ToLower(requestedComponent) == component.Name {
+				return true
 			}
 		}
 	}

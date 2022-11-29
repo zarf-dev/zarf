@@ -24,7 +24,7 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) error {
 	// Extract the archive
 	_ = archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base)
 
-	configPath := filepath.Join(p.tmp.Base, "zarf.yaml")
+	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
 
 	// Load the config to get the build version
 	if err := p.readYaml(configPath, false); err != nil {

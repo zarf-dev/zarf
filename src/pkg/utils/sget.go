@@ -24,7 +24,7 @@ import (
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
-func Sget(image, key string, out io.Writer, ctx context.Context) error {
+func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
 
 	spinner := message.NewProgressSpinner("Loading signed file %s", image)

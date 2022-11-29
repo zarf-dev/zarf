@@ -15,7 +15,7 @@ import (
 )
 
 // Summary returns a summary of cluster status.
-func Summary(w http.ResponseWriter, r *http.Request) {
+func Summary(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("cluster.Summary()")
 
 	var state types.ZarfState

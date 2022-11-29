@@ -21,7 +21,7 @@ type ZarfE2ETest struct {
 	runClusterTests bool
 }
 
-// getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
+// GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
 func GetCLIName() string {
 	var binaryName string
 	if runtime.GOOS == "linux" {

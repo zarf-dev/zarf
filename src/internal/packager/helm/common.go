@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 )
 
+// Helm is a config object for working with helm charts.
 type Helm struct {
 	BasePath          string
 	Chart             types.ZarfChart

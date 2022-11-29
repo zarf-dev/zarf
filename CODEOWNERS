@@ -32,6 +32,7 @@ main.go @jeff-mccoy @YrrepNoj @Racer159
 /.grype.yaml @jeff-mccoy @YrrepNoj @Racer159
 /Dockerfile @jeff-mccoy @YrrepNoj @Racer159
 /renovate.json @jeff-mccoy @YrrepNoj @Racer159
+/revive.toml @jeff-mccoy @YrrepNoj @Racer159
 /Makefile @jeff-mccoy @YrrepNoj @Racer159
 
 # Additional privileged files

@@ -49,7 +49,7 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
 	// Make sure the component we're trying to import cant be accessed
-	if err := validate.ValidateImportPackage(&parentComponent); err != nil {
+	if err := validate.ImportPackage(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 

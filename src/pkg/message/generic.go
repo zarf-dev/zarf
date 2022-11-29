@@ -6,6 +6,7 @@ package message
 
 import "github.com/pterm/pterm"
 
+// Generic is used to implement the io.Writer interface for generic messages.
 type Generic struct{}
 
 func (g *Generic) Write(p []byte) (n int, err error) {

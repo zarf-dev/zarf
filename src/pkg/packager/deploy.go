@@ -57,7 +57,7 @@ func (p *Packager) Deploy() error {
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(p.tmp.Base, "zarf.yaml")
+	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
 	if err := p.readYaml(configPath, true); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}

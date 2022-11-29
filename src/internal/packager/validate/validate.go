@@ -49,10 +49,10 @@ func Run(pkg types.ZarfPackage) error {
 	return nil
 }
 
-func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
+// ImportPackage validates the package trying to be imported.
+func ImportPackage(composedComponent *types.ZarfComponent) error {
 	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
 	path := composedComponent.Import.Path
-	packageSuffix := "zarf.yaml"
 
 	// ensure path exists
 	if !(len(path) > 0) {
@@ -60,8 +60,8 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 	}
 
 	// remove zarf.yaml from path if path has zarf.yaml suffix
-	if strings.HasSuffix(path, packageSuffix) {
-		path = strings.Split(path, packageSuffix)[0]
+	if strings.HasSuffix(path, config.ZarfYAML) {
+		path = strings.Split(path, config.ZarfYAML)[0]
 	}
 
 	// add a forward slash to end of path if it does not have one
@@ -70,7 +70,7 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 	}
 
 	// ensure there is a zarf.yaml in provided path
-	if utils.InvalidPath(path + packageSuffix) {
+	if utils.InvalidPath(path + config.ZarfYAML) {
 		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
 	}
 
@@ -80,9 +80,9 @@ func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
 func oneIfNotEmpty(testString string) int {
 	if testString == "" {
 		return 0
-	} else {
-		return 1
 	}
+
+	return 1
 }
 
 func validateComponent(component types.ZarfComponent) error {

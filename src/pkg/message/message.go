@@ -30,12 +30,12 @@ const (
 	TraceLevel
 )
 
-// NoProgress tracks whether spinner/progress bars show updates
+// NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
 var logLevel = InfoLevel
 
-// Write logs to stderr and a buffer for logfile generation
+// Write logs to stderr and a buffer for logfile generation.
 var logFile *os.File
 
 var useLogFile bool
@@ -59,12 +59,12 @@ func init() {
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
-// UseLogfile writes output to stderr and a logfile
+// UseLogFile writes output to stderr and a logfile.
 func UseLogFile() {
-	// Prepend the log filename with a timestampe
+	// Prepend the log filename with a timestamp.
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
-	// Try to create a temp log file
+	// Try to create a temp log file.
 	if logFile, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		Error(err, "Error saving a log file")
 	} else {
@@ -76,6 +76,7 @@ func UseLogFile() {
 	}
 }
 
+// SetLogLevel sets the log level.
 func SetLogLevel(lvl LogLevel) {
 	logLevel = lvl
 	if logLevel >= DebugLevel {
@@ -83,24 +84,29 @@ func SetLogLevel(lvl LogLevel) {
 	}
 }
 
+// GetLogLevel returns the current log level.
 func GetLogLevel() LogLevel {
 	return logLevel
 }
 
+// Debug prints a debug message.
 func Debug(payload ...any) {
 	debugPrinter(2, payload...)
 }
 
+// Debugf prints a debug message.
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	debugPrinter(3, message)
 }
 
+// Error prints an error message.
 func Error(err any, message string) {
 	debugPrinter(2, err)
 	Warnf(message)
 }
 
+// ErrorWebf prints an error message and returns a web response.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	debugPrinter(2, err)
 	message := fmt.Sprintf(format, a...)
@@ -108,26 +114,31 @@ func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	http.Error(w, message, http.StatusInternalServerError)
 }
 
+// Errorf prints an error message.
 func Errorf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	Warnf(format, a...)
 }
 
+// Warn prints a warning message.
 func Warn(message string) {
 	Warnf(message)
 }
 
+// Warnf prints a warning message.
 func Warnf(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Warning.Println(message)
 }
 
+// Fatal prints a fatal error message and exits with a 1.
 func Fatal(err any, message string) {
 	debugPrinter(2, err)
 	errorPrinter(2).Println(message)
 	os.Exit(1)
 }
 
+// Fatalf prints a fatal error message and exits with a 1.
 func Fatalf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	message := paragraph(format, a...)
@@ -135,10 +146,12 @@ func Fatalf(err any, format string, a ...any) {
 	os.Exit(1)
 }
 
+// Info prints an info message.
 func Info(message string) {
 	Infof(message)
 }
 
+// Infof prints an info message.
 func Infof(format string, a ...any) {
 	if logLevel > 0 {
 		message := paragraph(format, a...)
@@ -146,28 +159,33 @@ func Infof(format string, a ...any) {
 	}
 }
 
+// SuccessF prints a success message.
 func SuccessF(format string, a ...any) {
 	message := paragraph(format, a...)
 	pterm.Success.Println(message)
 }
 
+// Question prints a formatted message used in conjunction with a user prompt.
 func Question(text string) {
 	pterm.Println()
 	message := paragraph(text)
 	pterm.FgMagenta.Println(message)
 }
 
+// Notef prints a formatted yellow message.
 func Notef(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	Note(message)
 }
 
+// Note prints a formatted yellow message.
 func Note(text string) {
 	pterm.Println()
 	message := paragraph(text)
 	pterm.FgYellow.Println(message)
 }
 
+// HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	// Ensure the text is consistent for the header width
@@ -180,7 +198,8 @@ func HeaderInfof(format string, a ...any) {
 		Printfln(message + strings.Repeat(" ", padding))
 }
 
-func JsonValue(value any) string {
+// JSONValue prints any value as JSON.
+func JSONValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		Debug(err, "ERROR marshalling json")

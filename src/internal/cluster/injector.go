@@ -186,10 +186,6 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 	return configMaps, sha256sum, nil
 }
 
-/*
-// func (c *Cluster) hasSeedImages(spinner *message.Spinner) bool {
-	// message.Debugf("packager.hasSeedImages()")
-*/
 // Test for pod readiness and seed image presence
 func (c *Cluster) injectorIsReady(spinner *message.Spinner) bool {
 	message.Debugf("packager.injectorIsReady()")

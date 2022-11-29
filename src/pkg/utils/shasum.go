@@ -33,12 +33,9 @@ func GetSha256Sum(path string) (string, error) {
 	defer data.Close()
 
 	hash := sha256.New()
-	_, err = io.Copy(hash, data)
-
-	if err != nil {
+	if _, err = io.Copy(hash, data); err != nil {
 		return "", err
-	} else {
-		computedHash := hex.EncodeToString(hash.Sum(nil))
-		return computedHash, nil
 	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

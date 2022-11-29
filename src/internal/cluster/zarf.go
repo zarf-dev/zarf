@@ -83,6 +83,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 	spinner.Success()
 }
 
+// RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
 func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent) {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name

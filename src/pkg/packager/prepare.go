@@ -102,10 +102,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		if len(component.Charts) > 0 {
 			_ = utils.CreateDirectory(componentPath.Charts, 0700)
 			_ = utils.CreateDirectory(componentPath.Values, 0700)
-			gitUrlRegex := regexp.MustCompile(`\.git$`)
+			gitURLRegex := regexp.MustCompile(`\.git$`)
 
 			for _, chart := range component.Charts {
-				isGitURL := gitUrlRegex.MatchString(chart.Url)
+				isGitURL := gitURLRegex.MatchString(chart.Url)
 				helmCfg := helm.Helm{
 					Chart: chart,
 					Cfg:   p.cfg,

@@ -14,15 +14,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// GetSecret returns a Kubernetes secret.
 func (k *K8s) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return k.Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
+// GetSecrtsWithLabel returns a list of Kubernetes secrets with the given label.
 func (k *K8s) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
 	return k.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 }
 
+// GenerateSecret returns a Kubernetes secret object without applying it to the cluster.
 func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -39,6 +42,7 @@ func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretTyp
 	}
 }
 
+// GenerateTLSSecret returns a Kubernetes secret object without applying it to the cluster.
 func (k *K8s) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*corev1.Secret, error) {
 	if _, err := tls.X509KeyPair(conf.Cert, conf.Key); err != nil {
 		return nil, err
@@ -51,6 +55,7 @@ func (k *K8s) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*cor
 	return secretTLS, nil
 }
 
+// ReplaceTLSSecret replaces a Kubernetes secret with a new TLS secret.
 func (k *K8s) ReplaceTLSSecret(namespace, name string, conf GeneratedPKI) error {
 	secret, err := k.GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
@@ -60,6 +65,7 @@ func (k *K8s) ReplaceTLSSecret(namespace, name string, conf GeneratedPKI) error 
 	return k.ReplaceSecret(secret)
 }
 
+// ReplaceSecret replaces a Kubernetes secret with a new secret.
 func (k *K8s) ReplaceSecret(secret *corev1.Secret) error {
 	if _, err := k.CreateNamespace(secret.Namespace, nil); err != nil {
 		return fmt.Errorf("unable to create or read the namespace: %w", err)
@@ -72,6 +78,7 @@ func (k *K8s) ReplaceSecret(secret *corev1.Secret) error {
 	return k.CreateSecret(secret)
 }
 
+// DeleteSecret deletes a Kubernetes secret.
 func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
@@ -83,6 +90,7 @@ func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
 	return nil
 }
 
+// CreateSecret creates a Kubernetes secret.
 func (k *K8s) CreateSecret(secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 

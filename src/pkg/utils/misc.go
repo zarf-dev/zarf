@@ -21,7 +21,7 @@ func Unique[T comparable](s []T) []T {
 	return result
 }
 
-// Retry will retry a function until it succeeds or the timeout is reached
+// Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay
 func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 	for r := 0; r < retries; r++ {
 		err = fn()

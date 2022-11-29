@@ -121,13 +121,13 @@ const (
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
 
-	CmdInitFlagGitUrl      = "External git server url to use for this Zarf cluster"
+	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
 	CmdInitFlagGitPushUser = "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'"
 	CmdInitFlagGitPushPass = "Password for the push-user to access the git server"
 	CmdInitFlagGitPullUser = "Username for pull-only access to the git server"
 	CmdInitFlagGitPullPass = "Password for the pull-only user to access the git server"
 
-	CmdInitFlagRegUrl      = "External registry url address to use for this Zarf cluster"
+	CmdInitFlagRegRL       = "External registry url address to use for this Zarf cluster"
 	CmdInitFlagRegNodePort = "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]"
 	CmdInitFlagRegPushUser = "Username to access to the registry Zarf is configured to use"
 	CmdInitFlagRegPushPass = "Password for the push-user to connect to the registry"
@@ -196,5 +196,5 @@ const (
 	AgentErrBadRequest             = "could not read request body: %s"
 )
 
-// Zarf Init Errors
+// ErrInitNotFound
 var ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")

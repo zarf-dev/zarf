@@ -19,19 +19,19 @@ var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
 var initPattern = regexp.MustCompile(packager.GetInitPackageName(""))
 
 // Find returns all packages anywhere down the directory tree of the working directory.
-func Find(w http.ResponseWriter, r *http.Request) {
+func Find(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("packages.Find()")
 	findPackage(packagePattern, w, os.Getwd)
 }
 
 // FindInHome returns all packages in the user's home directory.
-func FindInHome(w http.ResponseWriter, r *http.Request) {
+func FindInHome(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("packages.FindInHome()")
 	findPackage(packagePattern, w, os.UserHomeDir)
 }
 
 // FindInitPackage returns all init packages anywhere down the directory tree of the working directory.
-func FindInitPackage(w http.ResponseWriter, r *http.Request) {
+func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("packages.FindInitPackage()")
 	findPackage(initPattern, w, os.Getwd)
 }
