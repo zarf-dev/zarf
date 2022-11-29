@@ -30,9 +30,9 @@ const (
 	RootCmdShort = "DevSecOps Airgap Toolkit"
 	RootCmdLong  = "Zarf is a toolkit for building and deploying airgapped Kubernetes clusters."
 
-	RootCmdFlagLogLevel    = "Set the log level. Valid options are: warn, info, debug, trace."
-	RootCmdFlagArch        = "Set the architecture to use for the package. Valid options are: amd64, arm64."
-	RootCmdFlagSkipLogFile = "Disable logging to a file."
+	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
+	RootCmdFlagArch        = "Architecture for OCI images"
+	RootCmdFlagSkipLogFile = "Disable log file creation"
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
