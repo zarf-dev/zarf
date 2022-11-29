@@ -40,7 +40,6 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 		message.ErrorWebf(err, w, "Error getting directory")
 	}
 
-	// Intentionally ignore errors
 	files, err := utils.RecursiveFileList(targetDir, pattern)
 	if err != nil {
 		pkgNotFoundMsg := fmt.Sprintf("Package not found: %s", pattern.String())
