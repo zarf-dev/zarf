@@ -113,7 +113,6 @@ type ZarfContainerTarget struct {
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
 
-	// k8s.PodLookup        // TODO: MZAL Figure out if we can embed this in a way the yaml/json readers will understand
 	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 

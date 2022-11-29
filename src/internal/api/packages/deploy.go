@@ -78,6 +78,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
 		return
 	}
+	defer pkg.ClearTempPaths()
 
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }

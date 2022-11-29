@@ -60,6 +60,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
+	defer os.RemoveAll(tempDir)
 	path := filepath.Join(tempDir, "chart.yaml")
 
 	// Write the context to a file for processing
@@ -197,9 +198,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 	}
-
-	// Cleanup the temp file
-	_ = os.RemoveAll(tempDir)
 
 	// Send the bytes back to helm
 	return finalManifestsOutput, nil

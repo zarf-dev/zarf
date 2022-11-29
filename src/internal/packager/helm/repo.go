@@ -55,6 +55,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
 	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
+	defer os.RemoveAll(tempPath)
 	gitCfg.GitPath = tempPath
 
 	// Switch to the correct tag
@@ -74,7 +75,6 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
 	}
 
-	_ = os.RemoveAll(tempPath)
 	spinner.Success()
 
 	return name

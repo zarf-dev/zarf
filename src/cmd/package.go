@@ -56,8 +56,12 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		err := packager.NewOrDie(&pkgConfig).Create(baseDir)
-		if err != nil {
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Create the package
+		if err := pkgClient.Create(baseDir); err != nil {
 			message.Fatalf(err, "Failed to create package: %s", err.Error())
 		}
 	},
@@ -72,8 +76,11 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
+		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
 
+		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
 			message.Fatalf(err, "Failed to deploy package")
 		}
@@ -90,7 +97,12 @@ var packageInspectCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.NewOrDie(&pkgConfig).Inspect(packageName, includeInsepectSBOM)
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Inspect(packageName, includeInsepectSBOM); err != nil {
+			message.Fatalf(err, "Failed to inspect package")
+		}
 	},
 }
 
@@ -135,6 +147,8 @@ var packageRemoveCmd = &cobra.Command{
 	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
+
+		// If the user input is a path to a package, extract the name from the package
 		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
 		if isTarball(pkgName) {
 			if utils.InvalidPath(pkgName) {
@@ -147,13 +161,12 @@ var packageRemoveCmd = &cobra.Command{
 			}
 			defer os.RemoveAll(tempPath)
 
-			if err := archiver.Unarchive(pkgName, tempPath); err != nil {
+			configPath := filepath.Join(tempPath, config.ZarfYAML)
+			if err := archiver.Extract(pkgName, config.ZarfYAML, configPath); err != nil {
 				message.Fatalf(err, "Unable to extract the package contents")
 			}
-			configPath := filepath.Join(tempPath, config.ZarfYAML)
 
 			var pkgConfig types.ZarfPackage
-
 			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
 				message.Fatalf(err, "Unable to read zarf.yaml")
 			}
@@ -161,7 +174,11 @@ var packageRemoveCmd = &cobra.Command{
 			pkgName = pkgConfig.Metadata.Name
 		}
 
-		if err := packager.NewOrDie(&pkgConfig).Remove(pkgName); err != nil {
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},

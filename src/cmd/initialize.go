@@ -46,8 +46,15 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		// Run everything
-		packager.NewOrDie(&pkgConfig).Deploy()
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Deploy everything
+		err = pkgClient.Deploy()
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	},
 }
 

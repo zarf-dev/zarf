@@ -28,6 +28,7 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 			Components: components,
 		},
 	})
+	defer pkg.ClearTempPaths()
 
 	if err != nil {
 		message.ErrorWebf(err, w, "Unable to remove the zarf package from the cluster")

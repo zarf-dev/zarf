@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,7 +25,11 @@ type Packager struct {
 	arch    string
 }
 
-// New creates a new package instance with the provided config.
+/*
+New creates a new package instance with the provided config.
+
+Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
+*/
 func New(cfg *types.PackagerConfig) (*Packager, error) {
 	message.Debugf("packager.New(%s)", message.JSONValue(cfg))
 
@@ -54,7 +59,11 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	return pkgConfig, nil
 }
 
-// NewOrDie creates a new package instance with the provided config or throws a fatal error.
+/*
+NewOrDie creates a new package instance with the provided config or throws a fatal error.
+
+Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
+*/
 func NewOrDie(config *types.PackagerConfig) *Packager {
 	message.Debug("packager.NewOrDie()")
 
@@ -95,6 +104,10 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+}
+
+func (p *Packager) ClearTempPaths() {
+	os.RemoveAll(p.tmp.Base)
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {

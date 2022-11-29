@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -43,6 +44,7 @@ func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 	if err != nil {
 		return pkg, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
+	defer os.RemoveAll(tmpDir)
 
 	// Extract the archive
 	err = archiver.Extract(pkg.Path, config.ZarfYAML, tmpDir)
