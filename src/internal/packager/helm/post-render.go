@@ -68,8 +68,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	// @todo: fix args
-	// TODO: @JPERRY this value template is bad and it should feel bad
 	template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values)
 
 	// Read back the templated file contents

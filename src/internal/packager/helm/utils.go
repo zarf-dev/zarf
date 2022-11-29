@@ -63,7 +63,7 @@ func (h *Helm) parseChartValues() (map[string]any, error) {
 	return valueOpts.MergeValues(providers)
 }
 
-func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) (*action.Configuration, error) {
+func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
 	// OMG THIS IS SOOOO GROSS PPL... https://github.com/helm/helm/issues/8780
 	_ = os.Setenv("HELM_NAMESPACE", namespace)
 
@@ -74,9 +74,8 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) (*
 	// Setup K8s connection
 	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
-	// TODO: @JPERRY does it make sense for this receiver to return the actionConfig?
-	//       Would it be good enough to just set it into the helm object?
+	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig
 
-	return actionConfig, err
+	return err
 }

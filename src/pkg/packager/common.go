@@ -51,9 +51,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	// Set the arch
 	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
 
-	// Track if this is an init package
-	pkgConfig.cfg.IsInitConfig = strings.ToLower(cfg.Pkg.Kind) == "zarfinitconfig"
-
 	return pkgConfig, nil
 }
 

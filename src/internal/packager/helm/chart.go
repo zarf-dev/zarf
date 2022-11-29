@@ -50,7 +50,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	}
 
 	// Setup K8s connection
-	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
+	err := h.createActionConfig(h.Chart.Namespace, spinner)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -65,7 +65,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		attempt++
 
 		spinner.Updatef("Attempt %d of 3 to install chart", attempt)
-		histClient := action.NewHistory(actionConfig)
+		histClient := action.NewHistory(h.actionConfig)
 		histClient.Max = 1
 
 		if attempt > 4 {
@@ -122,7 +122,7 @@ func (h *Helm) TemplateChart() (string, error) {
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
 
-	actionConfig, err := h.createActionConfig(h.Chart.Namespace, spinner)
+	err := h.createActionConfig(h.Chart.Namespace, spinner)
 
 	// Setup K8s connection
 	if err != nil {
@@ -130,7 +130,7 @@ func (h *Helm) TemplateChart() (string, error) {
 	}
 
 	// Bind the helm action
-	client := action.NewInstall(actionConfig)
+	client := action.NewInstall(h.actionConfig)
 
 	client.DryRun = true
 	client.Replace = true // Skip the name check

@@ -128,7 +128,7 @@ const (
 	CmdInitFlagGitPullUser = "Username for pull-only access to the git server"
 	CmdInitFlagGitPullPass = "Password for the pull-only user to access the git server"
 
-	CmdInitFlagRegRL       = "External registry url address to use for this Zarf cluster"
+	CmdInitFlagRegURL      = "External registry url address to use for this Zarf cluster"
 	CmdInitFlagRegNodePort = "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]"
 	CmdInitFlagRegPushUser = "Username to access to the registry Zarf is configured to use"
 	CmdInitFlagRegPushPass = "Password for the push-user to connect to the registry"
