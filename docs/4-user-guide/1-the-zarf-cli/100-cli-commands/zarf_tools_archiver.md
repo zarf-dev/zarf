@@ -1,6 +1,6 @@
 ## zarf tools archiver
 
-Compress/Decompress generic archives, including Zar packages.
+Compress/Decompress generic archives, including Zarf packages.
 
 ### Options
 

@@ -139,7 +139,7 @@ const (
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
 
-	CmdToolsArchiverShort           = "Compress/Decompress generic archives, including Zar packages."
+	CmdToolsArchiverShort           = "Compress/Decompress generic archives, including Zarf packages."
 	CmdToolsArchiverCompressShort   = "Compress a collection of sources based off of the destination file extension."
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
