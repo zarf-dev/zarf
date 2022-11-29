@@ -32,7 +32,7 @@ var (
 
 			tunnel, err := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
 			if err != nil {
-				message.Fatal(err, "Unable to create a tunnel into the cluster")
+				message.Fatal(err, lang.ErrTunnelFailed)
 			}
 			// If the cliOnly flag is false (default), enable auto-open
 			if !cliOnly {

@@ -16,6 +16,7 @@ import "errors"
 // Include sprintf formatting directives in the string if needed
 const (
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
+	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrMarshal             = "failed to marshal file: %w"
