@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -16,15 +17,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-var skipLogFile bool
-var logLevel string
-var arch string
+var (
+	skipLogFile bool
+	logLevel    string
+	arch        string
 
-// Default global config for the CLI
-var pkgConfig = types.PackagerConfig{}
+	// Default global config for the CLI
+	pkgConfig = types.PackagerConfig{}
 
-// Viper instance used by the cmd package
-var v *viper.Viper
+	// Viper instance used by the cmd package
+	v *viper.Viper
+)
 
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
@@ -35,16 +38,17 @@ var rootCmd = &cobra.Command{
 		}
 		cliSetup()
 	},
-	Short: "DevSecOps Airgap Toolkit",
+	Short: lang.RootCmdShort,
+	Long:  lang.RootCmdLong,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			pterm.Println()
 			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
-				pterm.FgYellow.Printfln("Please use \"zarf package deploy %s\" to deploy this package.", args[0])
+				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedDeploy, args[0])
 			}
 			if args[0] == "zarf.yaml" {
-				pterm.FgYellow.Printfln("Please use \"zarf package create\" to create this package.")
+				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedCreate)
 			}
 		} else {
 			cmd.Help()
@@ -66,12 +70,12 @@ func init() {
 	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_TMP_DIR, "")
 
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), "Log level when running Zarf. Valid options are: warn, info, debug, trace")
-	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), "Architecture for OCI images")
-	rootCmd.PersistentFlags().BoolVar(&skipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), "Disable log file creation")
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), "Disable fancy UI progress bars, spinners, logos, etc")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), "Specify the location of the Zarf cache directory")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), "Specify the temporary directory to use for intermediate files")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().BoolVar(&skipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
 }
 
 func cliSetup() {
@@ -90,7 +94,7 @@ func cliSetup() {
 			message.SetLogLevel(lvl)
 			message.Debug("Log level set to " + logLevel)
 		} else {
-			message.Warn("invalid log level setting")
+			message.Warn(lang.RootCmdErrInvalidLogLevel)
 		}
 	}
 

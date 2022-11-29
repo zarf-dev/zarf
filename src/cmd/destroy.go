@@ -25,7 +25,7 @@ var confirmDestroy bool
 var removeComponents bool
 
 var destroyCmd = &cobra.Command{
-	Use:     lang.CmdDestroy,
+	Use:     "destroy",
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
@@ -88,7 +88,7 @@ func init() {
 	rootCmd.AddCommand(destroyCmd)
 
 	// Still going to require a flag for destroy confirm, no viper oopsies here
-	destroyCmd.Flags().BoolVar(&confirmDestroy, lang.CmdDestroyFlagConfirm, false, lang.CmdDestroyFlagConfirmHelp)
-	destroyCmd.Flags().BoolVar(&removeComponents, lang.CmdDestroyFlagRemoveComponents, false, lang.CmdDestroyFlagRemoveComponentsHelp)
-	_ = destroyCmd.MarkFlagRequired(lang.CmdDestroyFlagConfirm)
+	destroyCmd.Flags().BoolVar(&confirmDestroy, "confirm", false, lang.CmdDestroyFlagConfirm)
+	destroyCmd.Flags().BoolVar(&removeComponents, "remove-components", false, lang.CmdDestroyFlagRemoveComponents)
+	_ = destroyCmd.MarkFlagRequired("confirm")
 }

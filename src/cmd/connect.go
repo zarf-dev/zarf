@@ -20,7 +20,7 @@ var (
 	cliOnly             bool
 
 	connectCmd = &cobra.Command{
-		Use:     lang.CmdConnect,
+		Use:     "connect {REGISTRY|LOGGING|GIT|connect-name}",
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
@@ -43,7 +43,7 @@ var (
 	}
 
 	connectListCmd = &cobra.Command{
-		Use:     lang.CmdConnectList,
+		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -56,10 +56,10 @@ func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.AddCommand(connectListCmd)
 
-	connectCmd.Flags().StringVar(&connectResourceName, lang.CmdConnectFlagName, "", lang.CmdConnectFlagNameHelp)
-	connectCmd.Flags().StringVar(&connectNamespace, lang.CmdConnectFlagNamespace, cluster.ZarfNamespace, lang.CmdConnectFlagNamespaceHelp)
-	connectCmd.Flags().StringVar(&connectResourceType, lang.CmdConnectFlagType, cluster.SvcResource, lang.CmdConnectFlagTypeHelp)
-	connectCmd.Flags().IntVar(&connectLocalPort, lang.CmdConnectFlagLocalPort, 0, lang.CmdConnectFlagLocalPortHelp)
-	connectCmd.Flags().IntVar(&connectRemotePort, lang.CmdConnectFlagRemotePort, 0, lang.CmdConnectFlagRemotePortHelp)
-	connectCmd.Flags().BoolVar(&cliOnly, lang.CmdConnectFlagCliOnly, false, lang.CmdConnectFlagCliOnlyHelp)
+	connectCmd.Flags().StringVar(&connectResourceName, "name", "", lang.CmdConnectFlagName)
+	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespace, lang.CmdConnectFlagNamespace)
+	connectCmd.Flags().StringVar(&connectResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
+	connectCmd.Flags().IntVar(&connectLocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
+	connectCmd.Flags().IntVar(&connectRemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
+	connectCmd.Flags().BoolVar(&cliOnly, "cli-only", false, lang.CmdConnectFlagCliOnly)
 }

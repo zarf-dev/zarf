@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +19,8 @@ var versionCmd = &cobra.Command{
 		skipLogFile = true
 		cliSetup()
 	},
-	Short: "Displays the version of the Zarf binary",
-	Long:  "Displays the version of the Zarf release that the Zarf binary was built from.",
+	Short: lang.CmdVersionShort,
+	Long:  lang.CmdVersionLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.CLIVersion)
 	},
