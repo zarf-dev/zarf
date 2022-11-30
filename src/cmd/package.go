@@ -161,12 +161,12 @@ var packageRemoveCmd = &cobra.Command{
 			}
 			defer os.RemoveAll(tempPath)
 
-			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := archiver.Extract(pkgName, config.ZarfYAML, configPath); err != nil {
+			if err := archiver.Extract(pkgName, config.ZarfYAML, tempPath); err != nil {
 				message.Fatalf(err, "Unable to extract the package contents")
 			}
 
 			var pkgConfig types.ZarfPackage
+			configPath := filepath.Join(tempPath, config.ZarfYAML)
 			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
 				message.Fatalf(err, "Unable to read zarf.yaml")
 			}
