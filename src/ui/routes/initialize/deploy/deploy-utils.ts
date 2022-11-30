@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 import { DeployingComponents } from '$lib/api';
 import type { DeployedComponent, ZarfComponent } from '$lib/api-types';
 import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/stepper.types';

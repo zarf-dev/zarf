@@ -41,6 +41,6 @@ zarf connect {REGISTRY|LOGGING|GIT|connect-name} [flags]
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf connect list](zarf_connect_list.md)	 - List all available connection shortcuts.
 

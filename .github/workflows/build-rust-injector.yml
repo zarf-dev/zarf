@@ -8,8 +8,7 @@ on:
         required: true
       branchName:
         description: "Branch to build the injector from"
-        required: false
-        default: "main"
+        required: true
 
 jobs:
   build-injector:

@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package // Package types contains all the types used by Zarf
+
 package types
 
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf.
@@ -107,7 +112,8 @@ type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+
+	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
 // ZarfDataInjection is a data-injection definition
