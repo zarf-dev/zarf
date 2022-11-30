@@ -32,6 +32,7 @@ const yamlEscape = "\x1b"
 func yamlFormat(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
+
 // ColorPrintYAML pretty prints a yaml file to the console
 func ColorPrintYAML(data any) {
 	text, _ := goyaml.Marshal(data)

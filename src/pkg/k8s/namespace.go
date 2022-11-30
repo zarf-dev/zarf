@@ -25,7 +25,7 @@ func (k *K8s) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, e
 	return k.Clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
 }
 
-// CreateNamespace creates the given namespace in the cluster.
+// CreateNamespace creates the given namespace or returns it if it already exists in the cluster.
 func (k *K8s) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	if namespace == nil {
 		// if only a name was provided create the namespace object

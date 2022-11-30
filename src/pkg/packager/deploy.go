@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -337,7 +336,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 	// If no distro the zarf secret did not load properly
 	if err != nil || state.Distro == "" {
-		return values, fmt.Errorf(lang.ErrLoadState, err)
+		return values, err
 	}
 
 	p.cfg.State = state
@@ -350,7 +349,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
-		return values, fmt.Errorf("This package architecture is %s, but this cluster seems to be initialized with the %s architecture",
+		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
 			state.Architecture, p.arch)
 	}
 

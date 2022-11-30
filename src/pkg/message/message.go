@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -135,6 +136,7 @@ func Warnf(format string, a ...any) {
 func Fatal(err any, message string) {
 	debugPrinter(2, err)
 	errorPrinter(2).Println(message)
+	debugPrinter(2, string(debug.Stack()))
 	os.Exit(1)
 }
 
@@ -143,6 +145,7 @@ func Fatalf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	message := paragraph(format, a...)
 	errorPrinter(2).Println(message)
+	debugPrinter(2, string(debug.Stack()))
 	os.Exit(1)
 }
 

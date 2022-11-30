@@ -7,6 +7,7 @@ package cluster
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -36,7 +37,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Sec
 	}
 	credential := zarfState.RegistryInfo.PullPassword
 	if credential == "" {
-		return nil, nil
+		return nil, fmt.Errorf("generating pull credential failed")
 	}
 
 	// Auth field must be username:password and base64 encoded
