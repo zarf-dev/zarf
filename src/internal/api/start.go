@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package api provides the UI API server
 package api
 
 import (
@@ -14,9 +17,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -34,7 +36,7 @@ func LaunchAPIServer() {
 	// Otherwise, use a random available port
 	if port == "" {
 		// If we can't find an available port, just use the default
-		if portRaw, err := k8s.GetAvailablePort(); err != nil {
+		if portRaw, err := utils.GetAvailablePort(); err != nil {
 			port = "8080"
 		} else {
 			port = fmt.Sprintf("%d", portRaw)

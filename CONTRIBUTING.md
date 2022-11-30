@@ -49,7 +49,6 @@ In this repo we use [pre-commit](https://pre-commit.com/) hooks for automated va
 
 1. Install [pre-commit](https://pre-commit.com/)
 1. Install [go](https://golang.org/)
-1. Install [golangci-lint](https://github.com/golangci/golangci-lint)
 1. Run `pre-commit install` in the repo to install the pre-commit hooks. This will make the hooks run automatically each time you `git commit`. If you want to skip the hooks for any reason you can run `git commit --no-verify` to skip them.
 
 > ℹ️ **HINT:** *Consider [automatically enabling the hooks in every Git repository](https://pre-commit.com/#automatically-enabling-pre-commit-on-repositories)*
