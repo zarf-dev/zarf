@@ -67,8 +67,8 @@ func PipTransformURL(baseURL string, reqURL string, username string) (string, er
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
 func GenTransformURL(baseURL string, reqURL string, username string) (string, error) {
-	// For further explanation: https://regex101.com/r/qcg6Gr/1
-	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<startPath>\/[\w\-\.%]+?\/[\w\-\.%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.%]+?)?(?P<package>\/[\w\-\.\?\=&%#]+?)$`)
+	// For further explanation: https://regex101.com/r/qcg6Gr/2
+	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.%]+?\/[\w\-\.%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.%]+?)?(?P<package>\/[\w\-\.\?\=&%#]+?)$`)
 
 	matches := genURLRegex.FindStringSubmatch(reqURL)
 	idx := genURLRegex.SubexpIndex
@@ -79,7 +79,7 @@ func GenTransformURL(baseURL string, reqURL string, username string) (string, er
 	}
 
 	packageName := matches[idx("startPath")]
-	// NOTE: We remove the protocol and file name so that https://zarf.dev/package/package1.zip and http://zarf.dev/package/package2.zip
+	// NOTE: We remove the protocol, port and file name so that https://zarf.dev:443/package/package1.zip and http://zarf.dev/package/package2.zip
 	// resolve to the same "folder" (as they would in real life)
 	sanitizedURL := fmt.Sprintf("%s%s%s", matches[idx("host")], matches[idx("startPath")], matches[idx("midPath")])
 
