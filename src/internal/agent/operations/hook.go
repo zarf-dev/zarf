@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package operations provides functions for the mutating webhook
 package operations
 
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	admission "k8s.io/api/admission/v1"
 )
 
@@ -40,13 +45,13 @@ func (h *Hook) Execute(r *admission.AdmissionRequest) (*Result, error) {
 		return wrapperExecution(h.Connect, r)
 	}
 
-	return &Result{Msg: fmt.Sprintf("Invalid operation: %s", r.Operation)}, nil
+	return &Result{Msg: fmt.Sprintf(lang.AgentErrInvalidOp, r.Operation)}, nil
 }
 
 // If the mutatingwebhook calls for an operation with no bound function--go tell on them
 func wrapperExecution(fn AdmitFunc, r *admission.AdmissionRequest) (*Result, error) {
 	if fn == nil {
-		return nil, fmt.Errorf("operation %s is not registered", r.Operation)
+		return nil, fmt.Errorf(lang.AgentErrInvalidOp, r.Operation)
 	}
 	return fn(r)
 }

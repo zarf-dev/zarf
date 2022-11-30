@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package types contains all the types used by Zarf
 package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -9,6 +13,8 @@ type ZarfCommonOptions struct {
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment
 type ZarfDeployOptions struct {
+	Insecure     bool              `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
+	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
 	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
 	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
@@ -44,3 +50,22 @@ type ConnectString struct {
 }
 
 type ConnectStrings map[string]ConnectString
+
+type ComponentPaths struct {
+	Base           string
+	Files          string
+	Charts         string
+	Values         string
+	Repos          string
+	Manifests      string
+	DataInjections string
+}
+type TempPaths struct {
+	Base         string
+	InjectBinary string
+	SeedImage    string
+	Images       string
+	Components   string
+	Sboms        string
+	ZarfYaml     string
+}
