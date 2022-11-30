@@ -24,4 +24,3 @@ type APIZarfPackage struct {
 	Path        string      `json:"path"`
 	ZarfPackage ZarfPackage `json:"zarfPackage"`
 }
-
