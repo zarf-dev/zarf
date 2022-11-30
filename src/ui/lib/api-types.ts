@@ -12,7 +12,6 @@ export interface APITypes {
     clusterSummary:    ClusterSummary;
     connectStrings:    { [key: string]: ConnectString };
     deployedPackage:   DeployedPackage;
-    error:             APIError;
     zarfCommonOptions: ZarfCommonOptions;
     zarfCreateOptions: ZarfCreateOptions;
     zarfDeployOptions: ZarfDeployOptions;
@@ -559,11 +558,6 @@ export interface InstalledChart {
     namespace: string;
 }
 
-export interface APIError {
-    error:   string;
-    message: string;
-}
-
 export interface ZarfCommonOptions {
     /**
      * Path to use to cache images and git repos on package create
@@ -793,7 +787,6 @@ const typeMap: any = {
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
-        { json: "error", js: "error", typ: r("APIError") },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
         { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
@@ -970,10 +963,6 @@ const typeMap: any = {
     "InstalledChart": o([
         { json: "chartName", js: "chartName", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
-    ], false),
-    "APIError": o([
-        { json: "error", js: "error", typ: "" },
-        { json: "message", js: "message", typ: "" },
     ], false),
     "ZarfCommonOptions": o([
         { json: "cachePath", js: "cachePath", typ: "" },

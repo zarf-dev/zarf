@@ -11,7 +11,6 @@ type RestAPI struct {
 	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
 	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
 	APIZarfPackage    APIZarfPackage    `json:"apiZarfPackage"`
-	APIError          APIError          `json:"error"`
 }
 
 type ClusterSummary struct {
@@ -26,8 +25,3 @@ type APIZarfPackage struct {
 	ZarfPackage ZarfPackage `json:"zarfPackage"`
 }
 
-// TODO: decide as a team how JSON errors should be formatted
-type APIError struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-}

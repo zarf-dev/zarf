@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/message"
 	"github.com/defenseunicorns/zarf/src/internal/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
@@ -38,16 +37,13 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 	targetDir, err := setDir()
 	if err != nil {
 		message.ErrorWebf(err, w, "Error getting directory")
+		return
 	}
 
 	files, err := utils.RecursiveFileList(targetDir, pattern)
-	if err != nil {
+	if err != nil || len(files) == 0 {
 		pkgNotFoundMsg := fmt.Sprintf("Package not found: %s", pattern.String())
-		message.Errorf(err, pkgNotFoundMsg)
-		common.WriteJSONResponse(w, types.APIError{
-			Error:   "PackageNotFound",
-			Message: pkgNotFoundMsg,
-		}, http.StatusNotFound)
+		message.ErrorWebf(err, w, pkgNotFoundMsg)
 		return
 	}
 	common.WriteJSONResponse(w, files, http.StatusOK)

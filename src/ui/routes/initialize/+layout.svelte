@@ -3,7 +3,6 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import type { APIError } from '$lib/api-types';
 
 	enum LoadingStatus {
 		Loading,
@@ -16,9 +15,8 @@
 
 	Packages.findInit()
 		.catch(async (err) => {
-			if (err.status == 404) {
-				const body: APIError = await err.data.json();
-				errMessage = body.message;
+			if (err.status == 500) {
+				errMessage = await err.data.text();
 				status = LoadingStatus.Error;
 			}
 		})
@@ -59,7 +57,7 @@
 			<Typography variant="body2">
 				Make sure the following package is in the current working directory:
 			</Typography>
-			<Typography variant="code">{errMessage.split(':').at(-1)?.trim()}</Typography>
+			<Typography variant="code">{errMessage}</Typography>
 			<Button href="/" color="secondary" style="margin-top: 0.5rem;" variant="flat"
 				>Return Home</Button
 			>
