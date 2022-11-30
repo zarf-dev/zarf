@@ -11,18 +11,6 @@ const headers = new Headers({
 	'Content-Type': 'application/json'
 });
 
-export class HTTPError extends Error {
-	status: number;
-	statusText: string;
-	data: Response;
-	constructor(response: Response) {
-		super('HTTP request failed: ' + response.statusText);
-		this.status = response.status;
-		this.statusText = response.statusText;
-		this.data = response;
-	}
-}
-
 export class HTTP {
 	constructor() {
 		const token = sessionStorage.getItem('token') || '';
@@ -105,7 +93,9 @@ export class HTTP {
 
 			// If the response is not OK, throw an error.
 			if (!response.ok) {
-				throw new HTTPError(response);
+				// all API errors should be 500s w/ a text body
+				const errMessage = await response.text();
+				throw new Error(errMessage);
 			}
 
 			// Return the response as the expected type

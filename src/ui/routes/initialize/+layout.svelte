@@ -14,11 +14,9 @@
 	let errMessage: string = '';
 
 	Packages.findInit()
-		.catch(async (err) => {
-			if (err.status == 500) {
-				errMessage = await err.data.text();
-				status = LoadingStatus.Error;
-			}
+		.catch(async (err: Error) => {
+			errMessage = err.message;
+			status = LoadingStatus.Error;
 		})
 		.then((res) => {
 			if (Array.isArray(res)) {
