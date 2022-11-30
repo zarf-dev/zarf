@@ -93,7 +93,7 @@ If you want to run other commands after/during the browsing of the postgres tool
 | ------------------------- | ------------------------------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Postgres Operator UI      | `zarf connect postgres-operator-ui` | N/A                  | N/A                                                                                                                                                        |
 | PGAdmin                   | `zarf connect pgadmin`                           | `zarf@example.local` | Run: `zarf tools get-admin-password`                                                                                                                       |
-| Example Postgres Database | `acid-zarf-test.postgres-operator.svc.cluster.local`                                       | `zarf`               | Run: `echo $(kubectl get secret zarf.acid-zarf-test.credentials.postgresql.acid.zalan.do -n postgres-operator --template={{.data.password}} \| base64 -d)` |
+| Example Postgres Database | `acid-zarf-test.postgres-operator.svc.cluster.local`                                       | `zarf`               | Run: `echo $(kubectl get secret zarf.acid-zarf-test.credentials.postgresql.acid.zalan.do -n postgres-operator --template={{.data.password}} | base64 -d)` |
 | Minio Console             | `zarf connect minio`               | `minio`              | `minio123`                                                                                                                                                 |
 
 ## References
