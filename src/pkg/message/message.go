@@ -66,7 +66,8 @@ func UseLogFile() {
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
 	// Try to create a temp log file.
-	if logFile, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+	var err error
+	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 		Error(err, "Error saving a log file")
 	} else {
 		useLogFile = true
@@ -223,7 +224,7 @@ func debugPrinter(offset int, a ...any) {
 	printer.Println(a...)
 
 	// Always write to the log file
-	if useLogFile && !pterm.PrintDebugMessages {
+	if useLogFile {
 		pterm.Debug.
 			WithShowLineNumber(true).
 			WithLineNumberOffset(offset).
