@@ -68,7 +68,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 	message.Debug("packager.NewOrDie()")
 
 	if pkgConfig, err := New(config); err != nil {
-		message.Fatal(err, "Unable to create package the package")
+		message.Fatal(err, "Unable to create the package")
 		return nil
 	} else {
 		return pkgConfig

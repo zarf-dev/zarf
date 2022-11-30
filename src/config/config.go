@@ -140,19 +140,19 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 }
 
 // GetDeployedComponents returns the list of deploying components
-// Todo: this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
 
 // SetDeployingComponents sets the list of deploying components
-// Todo: this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config
 func SetDeployingComponents(components []types.DeployedComponent) {
 	deployedComponents = components
 }
 
 // ClearDeployingComponents clears the list of deploying components
-// Todo: this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config
 func ClearDeployingComponents() {
 	deployedComponents = []types.DeployedComponent{}
 }
