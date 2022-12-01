@@ -15,51 +15,84 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ## Instructions
 
-### Pull down the code and binaries
+### Pull down the code and binaries [local machine]
 
 ```shell
-# clone the binaries
+# Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
-# change to the examples folder
-cd zarf/examples
-
-# Download the latest release of Zarf and the Init Package to the 'examples/sync' folder
-make fetch-release
+# Change dir
+cd zarf
 ```
 
-### Build the deploy package
+### Get Zarf components [local machine]
 
+Follow instructions on [this page](../../docs/5-operator-manual/0-set-up-and-install.md) to get the `zarf` cli and the `zarf-init*.tar.zst` package and place them in the ./build directory
+
+Alternatively, you could build the components from the repo
 ```shell
-# Create the deploy package and move it to the 'examples/sync' folder
-make package-example-big-bang
+# Build zarf components from scratch (NOTE: golang and npm must be installed)
+make init-package
 ```
 
-### Start the Vagrant VM
+### Build the deploy package [local machine]
 
 ```shell
-# Start the VM. You'll be dropped into a shell in the VM as the Root user
-make vm-init
+# Change dir
+cd packages/big-bang-core
+
+# Authenticate to the registry with Big Bang artifacts
+set +o history
+export REGISTRY1_USERNAME=<REPLACE_ME>
+export REGISTRY1_PASSWORD=<REPLACE_ME>
+echo $REGISTRY1_PASSWORD | ../../build/zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
+set -o history
+
+# Run zarf package command
+../../build/zarf package create . --confirm
 ```
 
-### Initialize Zarf
+### Start the Vagrant VM [local machine]
 
 ```shell
+# Change dir back to top of repo
+cd ../../
+
+# Setup ~/.vagrant.d/Vagrantfile to mount packages dir
+file=~/.vagrant.d/Vagrantfile; test -f $file || mkdir -p "$(dirname "${file}")" && cp -pfv "${file}" "${file}.orig" 2>/dev/null; echo -en 'Vagrant.configure(2) do |config|\n config.vm.synced_folder "packages/", "/usr/local/src/zarf-packages", mount_options: ["uid=0", "gid=0"]\nend\n' > $file
+
+# Start the VM
+make vm-init OS=ubuntu
+
+# Shell into the VM
+vagrant ssh ubuntu
+```
+
+### Initialize Zarf [ubuntu vm]
+
+```shell
+# Switch to root user and change dir
+sudo su -
+cd /opt/zarf
+
 # Initialize Zarf
-./zarf init --confirm --components k3s,git-server
+/opt/zarf/zarf init --confirm --components k3s,git-server
 
 # (Optional) Inspect the results
-./zarf tools k9s
+/opt/zarf/zarf tools k9s
 ```
 
-### Deploy Big Bang
+### Deploy Big Bang [ubuntu vm]
 
 ```shell
-# Deploy Big Bang
-./zarf package deploy --confirm zarf-package-big-bang-core-demo-amd64.tar.zst
+# Deploy Big Bang (lightweight version)
+cd /usr/local/src/zarf-packages/big-bang-core
+/opt/zarf/zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-amd64*.tar.zst) --components big-bang-core-limited-resources
+# NOTE: you can deploy the standard full set of components using the flag:
+# '--components big-bang-core-standard'
 
 # (Optional) Inspect the results
-./zarf tools k9s
+/opt/zarf/zarf tools k9s
 ```
 
 ### Clean Up
