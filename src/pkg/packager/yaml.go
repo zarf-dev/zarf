@@ -32,6 +32,9 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	// Update the active package with the filtered components
 	p.cfg.Pkg.Components = filteredComponents
 
+	// Set the arch
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
 	return nil
 }
 
