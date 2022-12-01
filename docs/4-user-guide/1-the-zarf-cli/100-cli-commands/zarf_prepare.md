@@ -21,7 +21,7 @@ Tools to help prepare assets for packaging
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf prepare find-images](zarf_prepare_find-images.md)	 - Evaluates components in a zarf file to identify images specified in their helm charts and manifests
 * [zarf prepare generate-config](zarf_prepare_generate-config.md)	 - Generates a config file for Zarf
 * [zarf prepare patch-git](zarf_prepare_patch-git.md)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: 
