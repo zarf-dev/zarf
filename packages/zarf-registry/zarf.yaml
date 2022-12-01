@@ -22,7 +22,7 @@ variables:
 
   - name: REGISTRY_MEM_LIMIT
     description: "The memory limit for the registry"
-    default: "2Gi"  
+    default: "2Gi"
 
 components:
   - name: zarf-seed-registry
@@ -45,11 +45,7 @@ components:
       - name: kep-1755-registry-annotation
         namespace: zarf
         files:
-          - configmap.yaml          
-      - name: registry-preloader
-        namespace: zarf
-        files:
-          - daemonset.yaml
+          - configmap.yaml
     charts:
       - name: docker-registry
         # fixme: this seems to break with composable components
@@ -58,3 +54,11 @@ components:
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
+
+  - name: zarf-registry-preloader
+    description: "Installs a DaemonSet to keep the registry image cached on each node in case of node failure."
+    manifests:
+      - name: registry-preloader
+        namespace: zarf
+        files:
+          - daemonset.yaml

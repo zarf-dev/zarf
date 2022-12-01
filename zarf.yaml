@@ -25,6 +25,12 @@ components:
     required: true
     import:
       path: packages/zarf-registry
+      
+  # Creates the permanent registry
+  - name: zarf-registry-preloader
+    default: true
+    import:
+      path: packages/zarf-registry
 
   - name: zarf-agent
     required: true

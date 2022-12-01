@@ -26,8 +26,8 @@ spec:
           command: ["sleep", "21600"]
           resources:
             requests:
-              cpu: "1m"
-              memory: "1Mi"
+              cpu: "2m"
+              memory: "2Mi"
             limits:
               cpu: "100m"
               memory: "24Mi"
