@@ -103,9 +103,9 @@ docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Sche
 	.hooks/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the UI
-	go mod download
-	npm ci
-	npm run dev
+# go mod download
+# npm ci
+	npm run dev --build_args='"$(BUILD_ARGS)"'
 
 # Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
 # @todo: find a clean way to dynamically support Kind or k3d:
