@@ -40,3 +40,7 @@ func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
 		Spinner: spinner,
 	}
 }
+
+func (g *Git) setServerAddress(address string) {
+	g.Server.Address = address
+}

@@ -18,6 +18,10 @@ import (
 )
 
 func (g *Git) PushRepo(localPath string) error {
+	// Keeep a copy of the original address in case we need to retry this push
+	originalAddress := g.Server.Address
+	defer g.setServerAddress(originalAddress)
+
 	// If this is a serviceURL, create a port-forward tunnel to that resource
 	if tunnel, err := cluster.NewTunnelFromServiceURL(g.Server.Address); err != nil {
 		return err
@@ -90,6 +94,9 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
 
+	// Remove any preexisting offlineRemotes (happens when a retry is triggered)
+	_ = repo.DeleteRemote(offlineRemoteName)
+
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetUrl},
@@ -135,7 +142,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debugf("Repo already up-to-date, skipping fetch...")
 	} else if err != nil {
-		message.Warnf("unable to fetch remote cleanly prior to push: %w", err)
+		message.Warnf("unable to fetch remote cleanly prior to push: %v", err)
 	}
 
 	// Push all heads and tags to the offline remote
