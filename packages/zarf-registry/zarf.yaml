@@ -28,7 +28,6 @@ components:
   - name: zarf-seed-registry
     charts:
       - name: docker-registry
-        # fixme: this seems to break with composable components
         localPath: packages/zarf-registry/chart
         version: 1.0.0
         namespace: zarf
@@ -48,17 +47,8 @@ components:
           - configmap.yaml
     charts:
       - name: docker-registry
-        # fixme: this seems to break with composable components
         localPath: packages/zarf-registry/chart
         version: 1.0.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
-
-  - name: zarf-registry-preloader
-    description: "Installs a DaemonSet to keep the registry image cached on each node in case of node failure."
-    manifests:
-      - name: registry-preloader
-        namespace: zarf
-        files:
-          - daemonset.yaml
