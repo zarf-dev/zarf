@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -22,7 +23,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/bigbang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -148,7 +148,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		config.SetDeployingComponents(deployedComponents)
 	}
 
-	config.ClearDeployingComponents()
+	// config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
@@ -498,8 +498,60 @@ func (p *Packager) installBigBang(componentPath types.ComponentPaths, component 
 	var err error
 	// need to upload images and repos
 
-	if err := p.pushImagesToRegistry(bigbang.Images["flux"][component.BigBang.Version], false); err != nil {
+	//read the images.txt file in the files
+	imageFile := fmt.Sprintf("%s/images.txt", componentPath.Files)
+	reposFile := fmt.Sprintf("%s/repos.txt", componentPath.Files)
+
+	// file, err := os.Open("imageFile.txt")
+
+	if err != nil {
+		return installedCharts, err
+
+	}
+	file, err := os.Open(imageFile)
+	// The bufio.NewScanner() function is called in which the
+	// object os.File passed as its parameter and this returns a
+	// object bufio.Scanner which is further used on the
+	// bufio.Scanner.Split() method.
+	scanner := bufio.NewScanner(file)
+
+	// The bufio.ScanLines is used as an
+	// input to the method bufio.Scanner.Split()
+	// and then the scanning forwards to each
+	// new line using the bufio.Scanner.Scan()
+	// method.
+	scanner.Split(bufio.ScanLines)
+	var images []string
+
+	for scanner.Scan() {
+		images = append(images, scanner.Text())
+	}
+
+	// The method os.File.Close() is called
+	// on the os.File object to close the file
+	file.Close()
+
+	if err := p.pushImagesToRegistry(images, false); err != nil {
 		return installedCharts, fmt.Errorf("unable to push images to the registry: %w", err)
+	}
+
+	file, err = os.Open(reposFile)
+	//repos
+	scanner = bufio.NewScanner(file)
+
+	scanner.Split(bufio.ScanLines)
+	var repos []string
+
+	for scanner.Scan() {
+		repos = append(repos, scanner.Text())
+	}
+
+	// The method os.File.Close() is called
+	// on the os.File object to close the file
+	file.Close()
+
+	if err = p.pushReposToRepository(componentPath.Repos, repos); err != nil {
+		return installedCharts, fmt.Errorf("unable to push the repos to the repository: %w", err)
 	}
 
 	fmt.Printf("Deploying Big Bang\n")
@@ -509,6 +561,7 @@ func (p *Packager) installBigBang(componentPath types.ComponentPaths, component 
 			Namespace: "flux-system",
 			Name:      "flux-system",
 			Files: []string{
+				// i know what it is b/c I'm smart
 				"kustomization-flux-system-0.yaml",
 			},
 		}
@@ -592,14 +645,19 @@ func (p *Packager) installBigBang(componentPath types.ComponentPaths, component 
 		}
 		bb.SecretGenerator[i] = secret
 	}
-
+	// Think this is all we need for zarf specific things, but could add more
 	creds := `
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
   username: "zarf-pull"
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 git:
-  existingSecret: "private-git-server"
+# -- Chart created secrets with user defined values
+  credentials:
+  # -- HTTP git credentials, both username and password must be provided
+    username: "###ZARF_GIT_PUSH###"
+    password: "###ZARF_GIT_AUTH_PUSH###"
+
 `
 	ioutil.WriteFile(fmt.Sprintf("%s/bigbang/zarf-credentials.yaml", componentPath.Manifests), []byte(creds), 0700)
 	//Zarf Render
@@ -630,7 +688,8 @@ git:
 				},
 			},
 
-			// Hard code for now
+			// Hard code for now.  This allows for only 1 values file to be used until
+			// we dynamically generate this patch
 			Patch: `
 - op: add
   path: /spec/valuesFrom/-
@@ -651,16 +710,14 @@ git:
 	d1 := fmt.Sprintf("%s/bigbang/kustomization.yaml", componentPath.Manifests)
 	ioutil.WriteFile(d1, b, 0700)
 
-	//Zarf Render
+	//Zarf Render the variables out of things
 	valueTemplate.Apply(component, d1)
 
 	// render the kustomization to a bunch of objects
 	fmt.Printf("MANFIEST PATH: %v\n", componentPath.Manifests)
 	destination := fmt.Sprintf("%s/%s", componentPath.Manifests, "kustomization-bigbang.yaml")
-	if err := utils.CreatePathAndCopy(d1, destination); err != nil {
-		return installedCharts, fmt.Errorf("unable to copy manifest %s: %w", d1, err)
-	}
 
+	// This wont work on the airgap since this kustomization rendering happens in the deploy phase
 	if err := kustomize.BuildKustomization(fmt.Sprintf("%s/bigbang/", componentPath.Manifests), destination, true); err != nil {
 		return installedCharts, fmt.Errorf("unable to build kustomization %s: %w", "bigbang", err)
 	}
@@ -700,12 +757,13 @@ git:
 		        name: values-2
 	*/
 
-	objects, _ := ioutil.ReadFile(destination)
+	//XXX debugging, delete later
+	objects, _ := ioutil.ReadFile("kustomization-bigbang.yaml")
 	fmt.Printf("BIG BANG!!!\n%s\n", string(objects))
 	k := types.ZarfManifest{
 		Name:      "bigbang",
 		Namespace: "bigbang",
-		Kustomizations: []string{
+		Files: []string{
 			// destination,
 			"kustomization-bigbang.yaml",
 		},

@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -313,9 +314,12 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 		_ = utils.CreateDirectory(componentPath.Charts, 0700)
 		_ = utils.CreateDirectory(componentPath.Values, 0700)
 		_ = utils.CreateDirectory(componentPath.Manifests, 0700)
+		_ = utils.CreateDirectory(componentPath.Files, 0700)
+		_ = utils.CreateDirectory(componentPath.Repos, 0700)
 
-		fmt.Printf("Found a Big Big COmponent: Version %v \n", component.BigBang.Version)
+		fmt.Printf("Found a Big Big Component: Version %v \n", component.BigBang.Version)
 		repos := make([]string, 0)
+		// use the default repo unless overridden
 		if component.BigBang.Repo == "" {
 			repos = append(repos, "https://repo1.dso.mil/platform-one/big-bang/bigbang.git")
 		} else {
@@ -372,8 +376,18 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 		}
 
 		subPackageURLS := findURLs(template)
-
+		repos[0] = fmt.Sprintf("%s@%s", repos[0], component.BigBang.Version)
 		repos = append(repos, subPackageURLS...)
+		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
+		defer spinner.Success()
+		for _, url := range repos {
+			// Pull all the references if there is no `@` in the string
+			fmt.Printf("Downloading Repo: %s\n", url)
+			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
+			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
+			}
+		}
 
 		for _, repo := range repos {
 			parts := strings.Split(repo, "@")
@@ -397,16 +411,53 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			name := helmCfg.DownloadChartFromGit(componentPath.Charts)
 			downloadedCharts = append(downloadedCharts, name)
 		}
-
+		// Get all the images
 		images, _ := bigbang.GetImages(repos)
+		// add the flux ones
 		if component.BigBang.DeployFlux {
 			images = append(images, bigbang.Images["flux"][component.BigBang.Version]...)
 		}
+		// deduple
 		uniqueList := utils.Unique(images)
 		if _, err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
-		spinner := message.NewProgressSpinner("Loading BigBang version %v: %d Repos and %d images", component.BigBang.Version, len(repos), len(images))
+		spinner = message.NewProgressSpinner("Loading BigBang version %v: %d Repos and %d images", component.BigBang.Version, len(repos), len(images))
+
+		// save off some files that contain the list of images and repos we should upload.
+		imageFile, err := os.OpenFile(fmt.Sprintf("%v/images.txt", componentPath.Files), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+		if err != nil {
+			return fmt.Errorf("failed creating file: %s", err)
+		}
+
+		datawriter := bufio.NewWriter(imageFile)
+
+		for _, data := range uniqueList {
+			_, _ = datawriter.WriteString(data + "\n")
+		}
+
+		datawriter.Flush()
+		imageFile.Close()
+
+		defer spinner.Success()
+
+		// save off some files
+		repoFile, err := os.OpenFile(fmt.Sprintf("%v/repos.txt", componentPath.Files), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+		if err != nil {
+			return fmt.Errorf("failed creating file: %s", err)
+		}
+
+		datawriter2 := bufio.NewWriter(repoFile)
+
+		for _, data := range repos {
+			_, _ = datawriter2.WriteString(data + "\n")
+		}
+
+		datawriter2.Flush()
+		repoFile.Close()
+
 		defer spinner.Success()
 
 	}
