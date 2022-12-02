@@ -26,12 +26,12 @@ func (g *Git) DownloadRepoToTemp(gitURL string) string {
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	g.pull(gitURL, path, "")
+	g.cloneOrPull(gitURL, path, "")
 	return path
 }
 
-// Pull clones or updates a git repository into the target folder.
-func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
+// CloneOrPull clones or updates a git repository into the target folder.
+func (g *Git) CloneOrPull(gitURL, targetFolder string) (path string, err error) {
 	repoName, err := g.TransformURLtoRepoName(gitURL)
 	if err != nil {
 		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
@@ -40,11 +40,11 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 
 	path = targetFolder + "/" + repoName
 	g.GitPath = path
-	g.pull(gitURL, path, repoName)
+	g.cloneOrPull(gitURL, path, repoName)
 	return path, nil
 }
 
-func (g *Git) pull(gitURL, targetFolder string, repoName string) {
+func (g *Git) cloneOrPull(gitURL, targetFolder string, repoName string) {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
@@ -66,15 +66,14 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
+		// Make sure the cache has the latest upstream changes (do a pull)
 		g.Spinner.Debugf("Repo already cloned, fetching upstream changes...")
-
 		g.GitPath = gitCachePath
-		err = g.fetch()
-
+		err = g.pull()
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			g.Spinner.Debugf("Repo already up to date")
 		} else if err != nil {
-			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
+			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch upstream updates")
 		}
 	} else if err != nil {
 		g.Spinner.Fatalf(err, "Not a valid git repo or unable to clone")
@@ -118,4 +117,46 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 			g.checkoutTagAsBranch(ref, trunkBranchName)
 		}
 	}
+}
+
+func (g *Git) pull() error {
+	pullOptions := &git.PullOptions{
+		RemoteName:   onlineRemoteName,
+		Force:        true,
+		SingleBranch: false,
+	}
+
+	repo, err := git.PlainOpen(g.GitPath)
+	if err != nil {
+		return fmt.Errorf("unable to open git repo at %s: %w", g.GitPath, err)
+	}
+
+	// There should never be no remotes, but it's easier to account for than
+	// let be a bug later
+	remotes, err := repo.Remotes()
+	if err != nil || len(remotes) == 0 {
+		return fmt.Errorf("unable to find remote repo: %w", err)
+	}
+
+	// Set auth if provided
+	gitURL := remotes[0].Config().URLs[0]
+	gitCred := g.FindAuthForHost(gitURL)
+	if gitCred.Auth.Username != "" {
+		pullOptions.Auth = &gitCred.Auth
+
+	}
+
+	// Pull the latest changes
+	headref, err := repo.Head()
+	if err != nil {
+		return fmt.Errorf("unable to get HEAD ref: %w", err)
+	}
+	workTree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("unable to create worktree for repo: %w", err)
+	}
+	pullOptions.ReferenceName = headref.Name()
+	err = workTree.Pull(pullOptions)
+
+	return err
 }
