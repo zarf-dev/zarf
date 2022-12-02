@@ -73,6 +73,10 @@ export interface ZarfComponent {
      */
     cosignKeyPath?: string;
     /**
+     * Configurations for installing BigBang and Flux in the cluster
+     */
+    dataInjection?: ZarfBigBang;
+    /**
      * Datasets to inject into a pod in the target cluster
      */
     dataInjections?: ZarfDataInjection[];
@@ -159,6 +163,32 @@ export interface ZarfChart {
     valuesFiles?: string[];
     /**
      * The version of the chart to deploy
+     */
+    version: string;
+}
+
+/**
+ * Configurations for installing BigBang and Flux in the cluster
+ */
+export interface ZarfBigBang {
+    /**
+     * Should Flux be deployed?  Default true
+     */
+    deployFlux: boolean;
+    /**
+     * Override of repo to pull big bang from
+     */
+    repo: string;
+    /**
+     * hard coded values to pass to big bang
+     */
+    values: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    /**
+     * list of values file passed to BigBang.  Order matters
+     */
+    valuesFrom: string[];
+    /**
+     * git tag of Big Bang
      */
     version: string;
 }
@@ -824,6 +854,7 @@ const typeMap: any = {
     "ZarfComponent": o([
         { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
+        { json: "dataInjection", js: "dataInjection", typ: u(undefined, r("ZarfBigBang")) },
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
@@ -847,6 +878,13 @@ const typeMap: any = {
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ZarfBigBang": o([
+        { json: "deployFlux", js: "deployFlux", typ: true },
+        { json: "repo", js: "repo", typ: "" },
+        { json: "values", js: "values", typ: m(u(a("any"), true, 3.14, 0, m("any"), null, "")) },
+        { json: "valuesFrom", js: "valuesFrom", typ: a("") },
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfDataInjection": o([

@@ -1,0 +1,65 @@
+domain: bigbang.dev
+
+# Policy
+gatekeeper:
+  enabled: false
+clusterAuditor:
+  enabled: false
+kyverno:
+  enabled: true
+kyvernopolicies:
+  enabled: true
+  values:
+    policies:
+      disallow-shared-subpath-volume-writes:
+        validationFailureAction: audit
+      restrict-host-ports: 
+        validationFailureAction: audit
+      restrict-capabilities:
+        validationFailureAction: audit
+      restrict-image-registries:
+        validationFailureAction: audit
+      disallow-host-namespaces:
+        validationFailureAction: audit
+      disallow-privileged-containers:
+        validationFailureAction: audit
+      require-non-root-user:
+        validationFailureAction: audit
+      disallow-host-namespaces:
+        validationFailureAction: audit
+
+
+# logging
+logging:
+  enabled: false
+  engine: plg
+
+loki:
+  enabled: true
+
+promtail:
+  enabled: true
+  values:
+    serviceMonitor:
+      enabled: true
+      
+clusterAuditor:
+  enabled: false
+
+eckoperator:
+  enabled: false
+  
+fluentbit:
+  enabled: false
+
+
+# Tracing
+jaeger:
+  enabled: false
+
+tempo:
+  enabled: true
+
+
+twistlock:
+  enabled: false

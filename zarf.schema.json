@@ -2,6 +2,47 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$ref": "#/definitions/ZarfPackage",
   "definitions": {
+    "ZarfBigBang": {
+      "required": [
+        "version",
+        "repo",
+        "values",
+        "valuesFrom",
+        "deployFlux"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "git tag of Big Bang"
+        },
+        "repo": {
+          "type": "string",
+          "description": "Override of repo to pull big bang from"
+        },
+        "values": {
+          "patternProperties": {
+            ".*": {
+              "additionalProperties": true
+            }
+          },
+          "type": "object",
+          "description": "hard coded values to pass to big bang"
+        },
+        "valuesFrom": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "list of values file passed to BigBang.  Order matters"
+        },
+        "deployFlux": {
+          "type": "boolean",
+          "description": "Should Flux be deployed?  Default true"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -183,6 +224,11 @@
           },
           "type": "array",
           "description": "Datasets to inject into a pod in the target cluster"
+        },
+        "dataInjection": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfBigBang",
+          "description": "Configurations for installing BigBang and Flux in the cluster"
         }
       },
       "additionalProperties": false,

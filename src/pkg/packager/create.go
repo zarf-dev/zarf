@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -21,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/bigbang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -157,6 +159,9 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 func (p *Packager) addComponent(component types.ZarfComponent) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	b, _ := json.MarshalIndent(component, "", "\t")
+	fmt.Printf("Component:\n%s\n", string(b))
 
 	// Create the component directory.
 	componentPath, err := p.createComponentPaths(component)
@@ -300,5 +305,130 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 		}
 	}
 
+	if component.BigBang.Version != "" {
+		componentPath, err := p.createComponentPaths(component)
+		if err != nil {
+			return fmt.Errorf("unable to create component paths: %w", err)
+		}
+		_ = utils.CreateDirectory(componentPath.Charts, 0700)
+		_ = utils.CreateDirectory(componentPath.Values, 0700)
+		_ = utils.CreateDirectory(componentPath.Manifests, 0700)
+
+		fmt.Printf("Found a Big Big COmponent: Version %v \n", component.BigBang.Version)
+		repos := make([]string, 0)
+		if component.BigBang.Repo == "" {
+			repos = append(repos, "https://repo1.dso.mil/platform-one/big-bang/bigbang.git")
+		} else {
+			repos = append(repos, fmt.Sprintf("%s@%s", component.BigBang.Repo, component.BigBang.Version))
+		}
+
+		// download bigbang
+		chart := types.ZarfChart{
+			Name:        "bigbang",
+			Url:         repos[0],
+			Version:     component.BigBang.Version,
+			ValuesFiles: component.BigBang.ValuesFrom,
+			GitPath:     "./chart",
+		}
+		helmCfg := helm.Helm{
+			Chart:    chart,
+			Cfg:      p.cfg,
+			BasePath: componentPath.Base,
+		}
+
+		helmCfg.Cfg.State = types.ZarfState{}
+		b, _ = json.MarshalIndent(helmCfg, "", "\t")
+		fmt.Printf("Attempting to download chart:\n%s\n", string(b))
+		bb := helmCfg.DownloadChartFromGit("bigbang")
+
+		helmCfg.ChartLoadOverride = bb
+		downloadedCharts := make([]string, 0)
+		downloadedCharts = append(downloadedCharts, bb)
+		fmt.Printf("BB Downloaded to %v\n", bb)
+		for idx, path := range chart.ValuesFiles {
+			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+			if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
+				return fmt.Errorf("unable to copy values file %s: %w", path, err)
+			}
+		}
+
+		//XXX Do the flux stuff
+		if component.BigBang.DeployFlux {
+			// build the flux kusotmization
+			manifest := bigbang.GetFluxManifest(component.BigBang.Version)
+
+			for idx, k := range manifest.Kustomizations {
+				// Generate manifests from kustomizations and place in the package
+				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
+				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return fmt.Errorf("unable to build kustomization %s: %w", k, err)
+				}
+			}
+		}
+
+		template, err := helmCfg.TemplateChart()
+		if err != nil {
+			return fmt.Errorf("unable to template BigBang Chart: %w", err)
+		}
+
+		subPackageURLS := findURLs(template)
+
+		repos = append(repos, subPackageURLS...)
+
+		for _, repo := range repos {
+			parts := strings.Split(repo, "@")
+			if len(parts) != 2 {
+				fmt.Printf("%v didnt parse currently as a repo\n", repo)
+				continue
+			}
+			// download bigbang
+			chart := types.ZarfChart{
+				// Name:        "bigbang",
+				Url:     parts[0],
+				Version: parts[1],
+				// ValuesFiles: component.BigBang.ValuesFrom,
+				GitPath: "./chart",
+			}
+			helmCfg := helm.Helm{
+				Chart:    chart,
+				Cfg:      p.cfg,
+				BasePath: componentPath.Base,
+			}
+			name := helmCfg.DownloadChartFromGit(componentPath.Charts)
+			downloadedCharts = append(downloadedCharts, name)
+		}
+
+		images, _ := bigbang.GetImages(repos)
+		if component.BigBang.DeployFlux {
+			images = append(images, bigbang.Images["flux"][component.BigBang.Version]...)
+		}
+		uniqueList := utils.Unique(images)
+		if _, err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
+			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		}
+		spinner := message.NewProgressSpinner("Loading BigBang version %v: %d Repos and %d images", component.BigBang.Version, len(repos), len(images))
+		defer spinner.Success()
+
+	}
+
 	return nil
+}
+
+func findURLs(t string) []string {
+
+	// Break the template into separate resources
+	urls := make([]string, 0)
+	yamls, _ := utils.SplitYAML([]byte(t))
+
+	for _, y := range yamls {
+		// see if its a GitRepository
+		if y.GetKind() == "GitRepository" {
+			url := y.Object["spec"].(map[string]interface{})["url"].(string)
+			tag := y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
+			fmt.Printf("Found a GitRepository: %v@%v\n", url, tag)
+			urls = append(urls, fmt.Sprintf("%v@%v", url, tag))
+		}
+	}
+
+	return urls
 }

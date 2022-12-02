@@ -52,6 +52,9 @@ type ZarfComponent struct {
 
 	// Data pacakges to push into a running cluster
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
+
+	// Big Bang Configurations
+	BigBang ZarfBigBang `json:"bigbang,omitempty" jsonschema:"description=Configurations for installing BigBang and Flux in the cluster"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
@@ -72,6 +75,15 @@ type ZarfFile struct {
 	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+}
+
+// ZarfBigBang defines a file to deploy.
+type ZarfBigBang struct {
+	Version    string                 `json:"version" jsonschema:"description=git tag of Big Bang"`
+	Repo       string                 `json:"repo" jsonschema:"description=Override of repo to pull big bang from"`
+	Values     map[string]interface{} `json:"values" jsonschema:"description=hard coded values to pass to big bang"`
+	ValuesFrom []string               `json:"valuesFrom" jsonschema:"description=list of values file passed to BigBang.  Order matters"`
+	DeployFlux bool                   `json:"flux" jsonschema:"description=Should Flux be deployed?  Default true"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
