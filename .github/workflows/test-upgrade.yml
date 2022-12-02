@@ -37,15 +37,19 @@ jobs:
           download-init-package: true
 
       - name: Initialize the cluster with the release version
-        run: sudo env CI=true zarf init --components k3s,git-server,logging --confirm
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
+        #       in a previous step. This test run will the current release to create a K3s cluster.
+        # chown the logs since they were orignally created as root
+        run: |
+          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
+          sudo chown $USER /tmp/zarf-*.log
 
       - name: Build PR binary and zarf packages
         uses: ./.github/actions/packages
 
       - name: "Run the PR's tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
-        #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
-        #       used for each test
+        #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         # chown the logs since they were orignally created as root
         run: |
           sudo mkdir -p /root/.cache
