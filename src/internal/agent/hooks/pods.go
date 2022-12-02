@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package hooks provides http handlers for the mutating webhook
 package hooks
 
 import (
@@ -5,10 +9,11 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	v1 "k8s.io/api/admission/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -56,18 +61,16 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
-		message.Debugf("Unable to load the ZarfState file so that the Agent can mutate pods: %#v", err)
-		return nil, err
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
-	config.InitState(zarfState)
-	containerRegistryURL := config.GetRegistry()
+	containerRegistryURL := config.GetRegistry(zarfState)
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -78,7 +81,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
@@ -89,7 +92,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
 		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
 		if err != nil {
-			message.Warnf("Unable to swap the host for (%s)", container.Image)
+			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))

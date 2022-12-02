@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/proxy"
-	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
@@ -56,7 +56,8 @@ func proxyDirector(req *http.Request) {
 	} else {
 		switch {
 		case isGitUserAgent(req.UserAgent()):
-			transformedURL, err = git.TransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
+			g := git.New(zarfState.GitServer)
+			transformedURL, err = g.TransformURL(getTLSScheme(req.TLS) + req.Host + req.URL.String())
 		case isPipUserAgent(req.UserAgent()):
 			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
 		case isNpmUserAgent(req.UserAgent()):

@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import Modal from '$lib/components/modal.svelte';
 	import zarfLogo from '@images/zarf-bubbles-right.png';

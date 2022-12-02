@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package http provides a http server for the agent
 package http
 
 import (
@@ -6,8 +10,9 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	v1 "k8s.io/api/admission/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,35 +39,35 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
-			http.Error(w, "invalid method only POST requests are allowed", http.StatusMethodNotAllowed)
+			http.Error(w, lang.AgentErrInvalidMethod, http.StatusMethodNotAllowed)
 			return
 		}
 
 		if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
-			http.Error(w, "only content type 'application/json' is supported", http.StatusBadRequest)
+			http.Error(w, lang.AgentErrInvalidType, http.StatusBadRequest)
 			return
 		}
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("could not read request body: %#v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf(lang.AgentErrBadRequest, err), http.StatusBadRequest)
 			return
 		}
 
 		var review v1.AdmissionReview
 		if _, _, err := h.decoder.Decode(body, nil, &review); err != nil {
-			http.Error(w, fmt.Sprintf("could not deserialize request: %#v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf(lang.AgentErrCouldNotDeserializeReq, err), http.StatusBadRequest)
 			return
 		}
 
 		if review.Request == nil {
-			http.Error(w, "malformed admission review: request is nil", http.StatusBadRequest)
+			http.Error(w, lang.AgentErrNilReq, http.StatusBadRequest)
 			return
 		}
 
 		result, err := hook.Execute(review.Request)
 		if err != nil {
-			message.Error(err, "Unable to bind the webhook handler")
+			message.Error(err, lang.AgentErrBindHandler)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -84,8 +89,8 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 			jsonPatchType := v1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
-				message.Error(err, "unable to marshall the json patch")
-				http.Error(w, fmt.Sprintf("could not marshal JSON patch: %#v", err), http.StatusInternalServerError)
+				message.Error(err, lang.AgentErrMarshallJSONPatch)
+				http.Error(w, lang.AgentErrMarshallJSONPatch, http.StatusInternalServerError)
 			}
 			admissionResponse.Response.Patch = patchBytes
 			admissionResponse.Response.PatchType = &jsonPatchType
@@ -93,15 +98,15 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		jsonResponse, err := json.Marshal(admissionResponse)
 		if err != nil {
-			message.Error(err, "unable to marshal the admission response")
-			http.Error(w, fmt.Sprintf("could not marshal response: %#v", err), http.StatusInternalServerError)
+			message.Error(err, lang.AgentErrMarshalResponse)
+			http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 			return
 		}
 
 		message.Debug("PATCH: ", string(admissionResponse.Response.Patch))
 		message.Debug("RESPONSE: ", string(jsonResponse))
 
-		message.Infof("Webhook [%s - %s] - Allowed: %t", r.URL.Path, review.Request.Operation, result.Allowed)
+		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
 	}

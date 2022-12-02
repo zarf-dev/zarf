@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -6,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize
@@ -17,7 +21,7 @@ type ZarfE2ETest struct {
 	runClusterTests bool
 }
 
-// getCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
+// GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
 func GetCLIName() string {
 	var binaryName string
 	if runtime.GOOS == "linux" {

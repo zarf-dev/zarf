@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
@@ -6,12 +10,11 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
-	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -103,15 +106,13 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
-		state, err := k8s.LoadZarfState()
+		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil {
 			message.Error(err, "Unable to load the Zarf state")
 		}
-		config.InitState(state)
 
 		// Create the non-admin user
-		err = git.CreateReadOnlyUser()
-		if err != nil {
+		if err = git.New(state.GitServer).CreateReadOnlyUser(); err != nil {
 			message.Error(err, "Unable to create a read-only user in the Gitea service.")
 		}
 	},
