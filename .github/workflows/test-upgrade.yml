@@ -52,8 +52,6 @@ jobs:
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         # chown the logs since they were orignally created as root
         run: |
-          sudo mkdir -p /root/.cache
-          sudo cp -R /home/$USER/.cache/go-build /root/.cache/go-build 
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
