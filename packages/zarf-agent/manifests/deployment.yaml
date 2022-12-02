@@ -23,6 +23,10 @@ spec:
         - name: server
           image: "###ZARF_REGISTRY###/defenseunicorns/zarf/###ZARF_CONST_AGENT_IMAGE###"
           imagePullPolicy: IfNotPresent
+          priorityClassName: system-node-critical
+          securityContext:
+            fsGroup: 1000
+            runAsUser: 1000
           livenessProbe:
             httpGet:
               path: /healthz
