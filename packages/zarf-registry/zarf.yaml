@@ -4,6 +4,10 @@ metadata:
   description: "Used to establish a new Zarf cluster"
 
 variables:
+  - name: REGISTRY_EXISTING_PVC
+    description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
+    default: ""
+
   - name: REGISTRY_PVC_SIZE
     description: "The size of the persistent volume claim for the registry"
     default: "20Gi"

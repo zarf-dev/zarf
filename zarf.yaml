@@ -25,7 +25,7 @@ components:
     required: true
     import:
       path: packages/zarf-registry
-      
+
   - name: zarf-agent
     required: true
     import:
