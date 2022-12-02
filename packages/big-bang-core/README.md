@@ -58,11 +58,11 @@ set -o history
 # Change dir back to top of repo
 cd ../../
 
-# Setup ~/.vagrant.d/Vagrantfile to mount packages dir
-file=~/.vagrant.d/Vagrantfile; test -f $file || mkdir -p "$(dirname "${file}")" && cp -pfv "${file}" "${file}.orig" 2>/dev/null; echo -en 'Vagrant.configure(2) do |config|\n config.vm.synced_folder "packages/", "/usr/local/src/zarf-packages", mount_options: ["uid=0", "gid=0"]\nend\n' > $file
+# Setup build Vagrantfile by tweaking some configs from the standard Vagrantfile
+cat Vagrantfile | sed -e 's/^\(.*vb.memory = \)\(.*\)$/\124576/g' -e 's/^\(.*vb.cpus = \)\(.*\)$/\112/g' -e '/^.*config.vm.synced_folder.*build.*/a \ \ config.vm.synced_folder "packages/", "/usr/local/src/zarf-packages", mount_options: ["uid=0", "gid=0"]' -e '/^.*config.vm.disk.*primary.*/a \ \ config.disksize.size = "60GB"' > build/Vagrantfile
 
 # Start the VM
-make vm-init OS=ubuntu
+VAGRANT_VAGRANTFILE=build/Vagrantfile make vm-init OS=ubuntu
 
 # Shell into the VM
 vagrant ssh ubuntu
@@ -71,8 +71,14 @@ vagrant ssh ubuntu
 ### Initialize Zarf [ubuntu vm]
 
 ```shell
-# Switch to root user and change dir
+# Switch to root user and change
 sudo su -
+
+# Grow root partition
+growpart /dev/sda 1
+resize2fs -p -F /dev/sda1
+
+# Change dir
 cd /opt/zarf
 
 # Initialize Zarf
@@ -87,7 +93,7 @@ cd /opt/zarf
 ```shell
 # Deploy Big Bang (lightweight version)
 cd /usr/local/src/zarf-packages/big-bang-core
-/opt/zarf/zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-amd64*.tar.zst) --components big-bang-core-limited-resources
+/opt/zarf/zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-*.tar.zst) --components big-bang-core-limited-resources
 # NOTE: you can deploy the standard full set of components using the flag:
 # '--components big-bang-core-standard'
 
@@ -98,10 +104,11 @@ cd /usr/local/src/zarf-packages/big-bang-core
 ### Clean Up
 
 ```shell
-# Inside the VM
+# Exit from root user and then exit shell [ubuntu vm]
+exit
 exit
 
-# On the host
+# Destroy the VM [local machine]
 make vm-destroy
 ```
 
