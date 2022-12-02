@@ -18,7 +18,7 @@ import (
 )
 
 func (g *Git) PushRepo(localPath string) error {
-	// Keeep a copy of the original address in case we need to retry this push
+	// Keep a copy of the original address in case we need to retry this push
 	originalAddress := g.Server.Address
 	defer g.setServerAddress(originalAddress)
 
