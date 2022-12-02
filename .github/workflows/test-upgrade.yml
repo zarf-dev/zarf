@@ -15,7 +15,7 @@ on:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: e2e-k3s-${{ github.ref }}
+  group: e2e-upgrade-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
