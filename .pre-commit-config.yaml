@@ -28,7 +28,6 @@ repos:
     rev: v0.4.0
     hooks:
       - id: go-fmt
-      - id: golangci-lint
   - repo: local
     hooks:
       - id: generate-zarf-schema

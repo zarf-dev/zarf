@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package auth provides an endpoint for authenticating against the Zarf UI server
 package auth
 
 import (

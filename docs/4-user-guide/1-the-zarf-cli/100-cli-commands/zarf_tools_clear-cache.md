@@ -1,6 +1,6 @@
 ## zarf tools clear-cache
 
-Clears the configured git and image cache directory
+Clears the configured git and image cache directory.
 
 ```
 zarf tools clear-cache [flags]

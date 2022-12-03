@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package http provides a http server for the webhook
 package http
 
 import (
@@ -5,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // NewServer creates and return a http.Server

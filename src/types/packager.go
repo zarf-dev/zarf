@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package types contains all the types used by Zarf
+package types
+
+type PackagerConfig struct {
+	// CreeateOpts tracks the user-defined options used to create the package
+	CreateOpts ZarfCreateOptions
+
+	// DeployOpts tracks user-defined values for the active deployment
+	DeployOpts ZarfDeployOptions
+
+	// InitOpts tracks user-defined values for the active Zarf initialization.
+	InitOpts ZarfInitOptions
+
+	// Track if CLI prompts should be generated
+	IsInteractive bool
+
+	// Track if the package is an init package
+	IsInitConfig bool
+
+	// The package data
+	Pkg ZarfPackage
+
+	// The active zarf state
+	State ZarfState
+
+	// Variables set by the user
+	SetVariableMap map[string]string
+}
