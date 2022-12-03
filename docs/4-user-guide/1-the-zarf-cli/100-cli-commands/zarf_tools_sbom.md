@@ -1,6 +1,6 @@
 ## zarf tools sbom
 
-SBOM tools provided by Anchore Syft
+Generates a Software Bill of Materials (SBOM) for the given package
 
 ### Synopsis
 
@@ -8,33 +8,6 @@ Generate a packaged-based Software Bill Of Materials (SBOM) from container image
 
 ```
 zarf tools sbom [flags]
-```
-
-### Examples
-
-```
-  zarf tools sbom packages alpine:latest                                a summary of discovered packages
-  zarf tools sbom packages alpine:latest -o json                        show all possible cataloging details
-  zarf tools sbom packages alpine:latest -o cyclonedx                   show a CycloneDX formatted SBOM
-  zarf tools sbom packages alpine:latest -o cyclonedx-json              show a CycloneDX JSON formatted SBOM
-  zarf tools sbom packages alpine:latest -o spdx                        show a SPDX 2.2 Tag-Value formatted SBOM
-  zarf tools sbom packages alpine:latest -o spdx-json                   show a SPDX 2.2 JSON formatted SBOM
-  zarf tools sbom packages alpine:latest -vv                            show verbose debug information
-  zarf tools sbom packages alpine:latest -o template -t my_format.tmpl  show a SBOM formatted according to given template file
-
-  Supports the following image sources:
-    zarf tools sbom packages yourrepo/yourimage:tag     defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry.
-    zarf tools sbom packages path/to/a/file/or/dir      a Docker tar, OCI tar, OCI directory, or generic filesystem directory
-
-  You can also explicitly specify the scheme to use:
-    zarf tools sbom packages docker:yourrepo/yourimage:tag          explicitly use the Docker daemon
-    zarf tools sbom packages podman:yourrepo/yourimage:tag          explicitly use the Podman daemon
-    zarf tools sbom packages registry:yourrepo/yourimage:tag        pull image directly from a registry (no container runtime required)
-    zarf tools sbom packages docker-archive:path/to/yourimage.tar   use a tarball from disk for archives created from "docker save"
-    zarf tools sbom packages oci-archive:path/to/yourimage.tar      use a tarball from disk for OCI archives (from Skopeo or otherwise)
-    zarf tools sbom packages oci-dir:path/to/yourimage              read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
-    zarf tools sbom packages dir:path/to/yourproject                read directly from a path on disk (any directory)
-    zarf tools sbom packages file:path/to/yourproject/file          read directly from a path on disk (any single file)
 ```
 
 ### Options
@@ -45,6 +18,7 @@ zarf tools sbom [flags]
       --exclude stringArray      exclude paths from being scanned using a glob expression
       --file string              file to write the default report output to (default is STDOUT)
   -h, --help                     help for sbom
+      --name string              set the name of the target being analyzed
   -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github github-json spdx-tag-value spdx-json table text template] (default [table])
       --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
   -q, --quiet                    suppress all logging output

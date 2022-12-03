@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
@@ -6,21 +10,22 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
 
 var insecureDeploy bool
 var shasum string
+var includeInsepectSBOM bool
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -51,7 +56,14 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		packager.Create(baseDir)
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Create the package
+		if err := pkgClient.Create(baseDir); err != nil {
+			message.Fatalf(err, "Failed to create package: %s", err.Error())
+		}
 	},
 }
 
@@ -62,11 +74,16 @@ var packageDeployCmd = &cobra.Command{
 	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var done func()
-		packageName := choosePackage(args)
-		config.DeployOptions.PackagePath, done = packager.HandleIfURL(packageName, shasum, insecureDeploy)
-		defer done()
-		packager.Deploy()
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Deploy the package
+		if err := pkgClient.Deploy(); err != nil {
+			message.Fatalf(err, "Failed to deploy package")
+		}
 	},
 }
 
@@ -80,7 +97,12 @@ var packageInspectCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		packageName := choosePackage(args)
-		packager.Inspect(packageName)
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Inspect(packageName, includeInsepectSBOM); err != nil {
+			message.Fatalf(err, "Failed to inspect package")
+		}
 	},
 }
 
@@ -90,7 +112,7 @@ var packageListCmd = &cobra.Command{
 	Short:   "List out all of the packages that have been deployed to the cluster",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
-		deployedZarfPackages, err := k8s.GetDeployedZarfPackages()
+		deployedZarfPackages, err := cluster.NewClusterOrDie().GetDeployedZarfPackages()
 		if err != nil {
 			message.Fatalf(err, "Unable to get the packages deployed to the cluster")
 		}
@@ -125,6 +147,8 @@ var packageRemoveCmd = &cobra.Command{
 	Short:   "Use to remove a Zarf package that has been deployed already",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
+
+		// If the user input is a path to a package, extract the name from the package
 		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
 		if isTarball(pkgName) {
 			if utils.InvalidPath(pkgName) {
@@ -137,20 +161,24 @@ var packageRemoveCmd = &cobra.Command{
 			}
 			defer os.RemoveAll(tempPath)
 
-			if err := archiver.Unarchive(pkgName, tempPath); err != nil {
+			if err := archiver.Extract(pkgName, config.ZarfYAML, tempPath); err != nil {
 				message.Fatalf(err, "Unable to extract the package contents")
 			}
-			configPath := filepath.Join(tempPath, "zarf.yaml")
 
 			var pkgConfig types.ZarfPackage
-
+			configPath := filepath.Join(tempPath, config.ZarfYAML)
 			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
 				message.Fatalf(err, "Unable to read zarf.yaml")
 			}
 
 			pkgName = pkgConfig.Metadata.Name
 		}
-		if err := packager.Remove(pkgName); err != nil {
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
 		}
 	},
@@ -164,7 +192,7 @@ func choosePackage(args []string) string {
 	prompt := &survey.Input{
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob(config.PackagePrefix + toComplete + "*.tar*")
+			files, _ := filepath.Glob(fmt.Sprintf("zarf-package-%s*.tar*", toComplete))
 			return files
 		},
 	}
@@ -203,10 +231,10 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 
-	createFlags.StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
-	createFlags.StringVarP(&config.CreateOptions.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
-	createFlags.BoolVar(&config.CreateOptions.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
-	createFlags.BoolVar(&config.CreateOptions.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
+	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
+	createFlags.BoolVar(&pkgConfig.CreateOpts.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
 }
 
 func bindDeployFlags() {
@@ -221,21 +249,21 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&config.DeployOptions.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
-	deployFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
+	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
-	deployFlags.StringVar(&config.DeployOptions.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
+	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
-	inspectFlags.BoolVarP(&packager.ViewSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
+	inspectFlags.BoolVarP(&includeInsepectSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
 }
 
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-	removeFlags.StringVar(&config.DeployOptions.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
+	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }

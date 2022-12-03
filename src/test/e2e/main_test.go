@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -44,7 +48,6 @@ func doAllTheThings(m *testing.M) (int, error) {
 
 	// Set up constants in the global variable that all the tests are able to access
 	e2e.arch = config.GetArch()
-
 	e2e.zarfBinPath = path.Join("build", GetCLIName())
 	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.runClusterTests = os.Getenv(skipK8sEnvVar) != "true"
