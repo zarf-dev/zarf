@@ -1,6 +1,11 @@
 ## zarf
 
-DevSecOps Airgap Toolkit
+DevSecOps for Airgap
+
+### Synopsis
+
+Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads
+using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 ```
 zarf [COMMAND] [flags]
@@ -27,5 +32,5 @@ zarf [COMMAND] [flags]
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf version](zarf_version.md)	 - Displays the version of the Zarf binary
+* [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 const BASE_URL = '/api';
 
 interface APIRequest<T> {
@@ -93,7 +96,9 @@ export class HTTP {
 
 			// If the response is not OK, throw an error.
 			if (!response.ok) {
-				throw new Error('HTTP request failed: ' + response.statusText);
+				// all API errors should be 500s w/ a text body
+				const errMessage = await response.text();
+				throw new Error(errMessage);
 			}
 
 			// Return the response as the expected type

@@ -1,6 +1,6 @@
 ## zarf version
 
-Displays the version of the Zarf binary
+SBOM tools provided by Anchore Syft
 
 ### Synopsis
 
@@ -29,5 +29,5 @@ zarf version [flags]
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 

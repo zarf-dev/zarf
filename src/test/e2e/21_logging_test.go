@@ -1,10 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
 	"net/http"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,8 +18,9 @@ func TestLogging(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfLogging, false)
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
+	tunnel.Connect(cluster.ZarfLogging, false)
 	defer tunnel.Close()
 
 	// Make sure Grafana comes up cleanly

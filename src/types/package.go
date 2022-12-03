@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package types contains all the types used by Zarf
 package types
 
 // ZarfPackage the top-level structure of a Zarf config file.
@@ -15,7 +19,7 @@ type ZarfMetadata struct {
 	Name         string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]+$"`
 	Description  string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
 	Version      string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
-	Url          string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
+	URL          string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
 	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package for future Zarf UI listing"`
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
 	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package"`

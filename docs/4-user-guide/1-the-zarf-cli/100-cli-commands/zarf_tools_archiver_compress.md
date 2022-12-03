@@ -1,6 +1,6 @@
 ## zarf tools archiver compress
 
-Compress a collection of sources based off of the destination file extension
+Compress a collection of sources based off of the destination file extension.
 
 ```
 zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
@@ -25,5 +25,5 @@ zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
 
 ### SEE ALSO
 
-* [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress tools for Zarf packages
+* [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zarf packages.
 

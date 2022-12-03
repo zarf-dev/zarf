@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package validate provides zarf package validation functions
 package validate
 
 import (
@@ -8,73 +12,101 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run performs config validations and runs message.Fatal() on errors
-func Run() {
-	components := config.GetComponents()
-
-	if err := validatePackageName(config.GetMetaData().Name); err != nil {
-		message.Fatalf(err, "Invalid package name: %s", err.Error())
+// Run performs config validations
+func Run(pkg types.ZarfPackage) error {
+	if err := validatePackageName(pkg.Metadata.Name); err != nil {
+		return fmt.Errorf("invalid package name: %w", err)
 	}
 
-	for _, variable := range config.GetActiveConfig().Variables {
+	for _, variable := range pkg.Variables {
 		if err := validatePackageVariable(variable); err != nil {
-			message.Fatalf(err, "Invalid package variable: %s", err.Error())
+			return fmt.Errorf("invalid package variable: %w", err)
 		}
 	}
 
-	for _, constant := range config.GetActiveConfig().Constants {
+	for _, constant := range pkg.Constants {
 		if err := validatePackageConstant(constant); err != nil {
-			message.Fatalf(err, "Invalid package constant: %s", err.Error())
+			return fmt.Errorf("invalid package constant: %w", err)
 		}
 	}
 
 	uniqueNames := make(map[string]bool)
 
-	for _, component := range components {
+	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
-			message.Fatalf(nil, "Component names must be unique")
+			return fmt.Errorf("component name '%s' is not unique", component.Name)
 		}
 		uniqueNames[component.Name] = true
 
 		validateComponent(component)
 	}
 
+	return nil
+}
+
+// ImportPackage validates the package trying to be imported.
+func ImportPackage(composedComponent *types.ZarfComponent) error {
+	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
+	path := composedComponent.Import.Path
+
+	// ensure path exists
+	if !(len(path) > 0) {
+		return fmt.Errorf("%s must include a path", intro)
+	}
+
+	// remove zarf.yaml from path if path has zarf.yaml suffix
+	if strings.HasSuffix(path, config.ZarfYAML) {
+		path = strings.Split(path, config.ZarfYAML)[0]
+	}
+
+	// add a forward slash to end of path if it does not have one
+	if !strings.HasSuffix(path, "/") {
+		path = filepath.Clean(path) + string(os.PathSeparator)
+	}
+
+	// ensure there is a zarf.yaml in provided path
+	if utils.InvalidPath(path + config.ZarfYAML) {
+		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
+	}
+
+	return nil
 }
 
 func oneIfNotEmpty(testString string) int {
 	if testString == "" {
 		return 0
-	} else {
-		return 1
 	}
+
+	return 1
 }
 
-func validateComponent(component types.ZarfComponent) {
+func validateComponent(component types.ZarfComponent) error {
 	if component.Required {
 		if component.Default {
-			message.Fatalf(nil, "Component %s cannot be required and default", component.Name)
+			return fmt.Errorf("component %s cannot be both required and default", component.Name)
 		}
 		if component.Group != "" {
-			message.Fatalf(nil, "Component %s cannot be required and part of a choice group", component.Name)
+			return fmt.Errorf("component %s cannot be both required and grouped", component.Name)
 		}
 	}
 
 	for _, chart := range component.Charts {
 		if err := validateChart(chart); err != nil {
-			message.Fatalf(err, "Invalid chart definition in the %s component: %s (%s)", component.Name, chart.Name, err.Error())
+			return fmt.Errorf("invalid chart definition: %w", err)
 		}
 	}
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
-			message.Fatalf(err, "Invalid manifest definition in the %s component: %s (%s)", component.Name, manifest.Name, err.Error())
+			return fmt.Errorf("invalid manifest definition: %w", err)
 		}
 	}
+
+	return nil
 }
 
 func validatePackageName(subject string) error {
@@ -162,34 +194,6 @@ func validateManifest(manifest types.ZarfManifest) error {
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
 		return fmt.Errorf("%s must have at least one file or kustomization", intro)
-	}
-
-	return nil
-}
-
-func ValidateImportPackage(composedComponent *types.ZarfComponent) error {
-	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
-	path := composedComponent.Import.Path
-	packageSuffix := "zarf.yaml"
-
-	// ensure path exists
-	if !(len(path) > 0) {
-		return fmt.Errorf("%s must include a path", intro)
-	}
-
-	// remove zarf.yaml from path if path has zarf.yaml suffix
-	if strings.HasSuffix(path, packageSuffix) {
-		path = strings.Split(path, packageSuffix)[0]
-	}
-
-	// add a forward slash to end of path if it does not have one
-	if !strings.HasSuffix(path, "/") {
-		path = filepath.Clean(path) + string(os.PathSeparator)
-	}
-
-	// ensure there is a zarf.yaml in provided path
-	if utils.InvalidPath(path + packageSuffix) {
-		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
 	}
 
 	return nil
