@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
 # The image tag used for the zarf agent, defaults to a dev image tag
@@ -173,3 +176,6 @@ test-cves: ensure-ui-build-dir
 
 cve-report: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
+
+lint-go:
+	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

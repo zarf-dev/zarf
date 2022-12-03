@@ -25,4 +25,3 @@ Fixes # (issue)
 - [ ] Tests have been added/updated as necessary (add the `needs-tests` label)
 - [ ] Documentation has been updated as necessary (add the `needs-docs` label)
 - [ ] An ADR has been written as necessary (add the `needs-adr` label) [ [1](https://github.com/joelparkerhenderson/architecture-decision-record) [2](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) [3](https://adr.github.io/) ]
-- [ ] (Optional) Changes have been linted locally with [golangci-lint](https://github.com/golangci/golangci-lint). (NOTE: We haven't turned on lint checks in the pipeline yet so linting may be hard if it shows a lot of lint errors in places that weren't touched by changes. Thus, linting is optional right now.)

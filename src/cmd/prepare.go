@@ -1,24 +1,27 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
-
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
-	Use:   "prepare",
+	Use:     "prepare",
 	Aliases: []string{"prep"},
-	Short: "Tools to help prepare assets for packaging",
+	Short:   "Tools to help prepare assets for packaging",
 }
 
 var prepareTransformGitLinks = &cobra.Command{
@@ -36,9 +39,12 @@ var prepareTransformGitLinks = &cobra.Command{
 			message.Fatalf(err, "Unable to read the file %s", fileName)
 		}
 
+		pkgConfig.InitOpts.GitServer.Address = host
+
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := git.MutateGitUrlsInText(host, text, config.InitOptions.GitServer.PushUsername)
+		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
+		processedText := gitCfg.MutateGitUrlsInText(text)
 
 		// Ask the user before this destructive action
 		confirm := false
@@ -91,7 +97,14 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
-		packager.FindImages(baseDir, repoHelmChartPath)
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Find all the images the package might need
+		if err := pkgClient.FindImages(baseDir, repoHelmChartPath); err != nil {
+			message.Fatalf(err, "Unable to find images for the package definition %s", baseDir)
+		}
 	},
 }
 
@@ -131,7 +144,7 @@ func init() {
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&config.CreateOptions.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
 
-	prepareTransformGitLinks.Flags().StringVar(&config.InitOptions.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
+	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
 }

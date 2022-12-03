@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
 )
 
@@ -84,9 +89,9 @@ func initViper() {
 	if err != nil {
 		// Config file not found; ignore
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, "Failed to read config file")
+			message.Error(err, lang.CmdViperErrLoadingConfigFile)
 		}
 	} else {
-		message.Notef("Using config file %s", v.ConfigFileUsed())
+		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 	}
 }

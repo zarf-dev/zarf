@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -5,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +25,8 @@ func TestDosGames(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	tunnel := k8s.NewZarfTunnel()
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
 	tunnel.Connect("doom", false)
 	defer tunnel.Close()
 
