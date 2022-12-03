@@ -1,10 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package common provides common functions for the api
 package common
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // WriteEmpty returns a 204 response with no body.
