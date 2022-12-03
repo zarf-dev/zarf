@@ -28,6 +28,8 @@ kyvernopolicies:
       disallow-host-namespaces:
         validationFailureAction: audit
 
+kiali:
+  enabled: false
 
 # logging
 logging:
@@ -56,9 +58,6 @@ fluentbit:
 # Tracing
 jaeger:
   enabled: false
-
-tempo:
-  enabled: true
 
 
 twistlock:

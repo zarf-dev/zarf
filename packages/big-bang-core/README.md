@@ -8,10 +8,11 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ## Known Issues
 
-- Currently this package does the equivalent of `kustomize build | kubectl apply -f -`, which means Flux will be used to deploy everything, but it won't be watching a Git repository for changes. Upcoming work is planned to update the package so that you will be able to open up a Git repo in the private Gitea server inside the cluster, commit and push a change, and see that change get reflected in the deployment.
-
-> NOTE:
-> Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
+Lots of new things
+* dynamic finding of images
+* Hard coding patches
+* can only use one values.yaml file
+* update docs here to use a binary instead of the go function.
 
 ## Instructions
 
@@ -22,31 +23,30 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 git clone https://github.com/defenseunicorns/zarf.git
 
 # change to the examples folder
-cd zarf/examples
+cd zarf/examples/big-bang-core
 
-# Download the latest release of Zarf and the Init Package to the 'examples/sync' folder
-make fetch-release
 ```
 
 ### Build the deploy package
 
 ```shell
 # Create the deploy package and move it to the 'examples/sync' folder
-make package-example-big-bang
+go run ../../main.go package create
 ```
 
-### Start the Vagrant VM
+### Deploy an EKS cluster
 
 ```shell
-# Start the VM. You'll be dropped into a shell in the VM as the Root user
-make vm-init
+eksctl create cluster -f eksctl/demo.yaml
 ```
+
+Now wait 20 min :face_palm:
 
 ### Initialize Zarf
 
 ```shell
 # Initialize Zarf
-./zarf init --confirm --components k3s,git-server
+go run ../../main.go init -a amd64 --confirm --components git-server
 
 # (Optional) Inspect the results
 ./zarf tools k9s
@@ -56,20 +56,26 @@ make vm-init
 
 ```shell
 # Deploy Big Bang
-./zarf package deploy --confirm zarf-package-big-bang-core-demo-amd64.tar.zst
+./zarf package deploy zarf-package-big-bang-core-demo-arm64-1.47.0.tar.zst --confirm
 
 # (Optional) Inspect the results
 ./zarf tools k9s
 ```
 
+### See the results
+
+```shell
+kubectl get pods -n flux-system
+kubectl get hr -n bigbang
+kubectl get pods -A
+```
+
+
 ### Clean Up
 
 ```shell
 # Inside the VM
-exit
-
-# On the host
-make vm-destroy
+eksctl delete cluster -f eksctl/demo.yaml --disable-nodegroup-eviction --wait
 ```
 
 ## Services

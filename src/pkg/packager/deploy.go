@@ -652,12 +652,7 @@ registryCredentials:
   username: "zarf-pull"
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 git:
-# -- Chart created secrets with user defined values
-  credentials:
-  # -- HTTP git credentials, both username and password must be provided
-    username: "###ZARF_GIT_PUSH###"
-    password: "###ZARF_GIT_AUTH_PUSH###"
-
+  existingSecret: "private-git-server"
 `
 	ioutil.WriteFile(fmt.Sprintf("%s/bigbang/zarf-credentials.yaml", componentPath.Manifests), []byte(creds), 0700)
 	//Zarf Render
@@ -673,6 +668,10 @@ git:
 				},
 			},
 		},
+	}
+	// bb.Transformers = []string{}
+	bb.GeneratorOptions = &kustypes.GeneratorOptions{
+		DisableNameSuffixHash: true,
 	}
 	bb.PatchesJson6902 = []kustypes.Patch{
 		{

@@ -105,22 +105,21 @@ func init() {
 	Images = make(map[string]map[string][]string)
 
 	// ServiceMesh
-	Images["istio"] = make(map[string][]string)
-	Images["istio"]["1.15.3-bb.0"] = []string{
+	Images["istio-controlplane"] = make(map[string][]string)
+	Images["istio-controlplane"]["1.15.3-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/opensource/istio/pilot:1.15.3",
 		"registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.15.3",
-		"registry1.dso.mil/ironbank/opensource/istio/install-cni:1.15.3",
-		"registry1.dso.mil/ironbank/tetrate/istio/istioctl:1.15.1-tetratefips-v1",
-		"registry1.dso.mil/ironbank/tetrate/istio/proxyv2:1.15.1-tetratefips-v1",
-		"registry1.dso.mil/ironbank/tetrate/istio/pilot:1.15.1-tetratefips-v1",
-		"registry1.dso.mil/ironbank/tetrate/istio/install-cni:1.15.1-tetratefips-v1",
-		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		// "registry1.dso.mil/ironbank/opensource/istio/install-cni:1.15.3",
+		// "registry1.dso.mil/ironbank/tetrate/istio/istioctl:1.15.1-tetratefips-v1",
+		// "registry1.dso.mil/ironbank/tetrate/istio/proxyv2:1.15.1-tetratefips-v1",
+		// "registry1.dso.mil/ironbank/tetrate/istio/pilot:1.15.1-tetratefips-v1",
+		// "registry1.dso.mil/ironbank/tetrate/istio/install-cni:1.15.1-tetratefips-v1",
 	}
-	Images["istiooperator"] = make(map[string][]string)
-	Images["istiooperator"]["1.15.3-bb.0"] = []string{
+	Images["istio-operator"] = make(map[string][]string)
+	Images["istio-operator"]["1.15.3-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/opensource/istio/operator:1.15.3",
-		"registry1.dso.mil/ironbank/tetrate/istio/operator:1.15.1-tetratefips-v1",
+		// "registry1.dso.mil/ironbank/tetrate/istio/operator:1.15.1-tetratefips-v1",
 	}
 
 	// Tracing
@@ -138,6 +137,10 @@ func init() {
 		"registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.58.0",
 		"registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.58.0",
 	}
+	Images["kiali"]["1.59.1-bb.1"] = []string{
+		"registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.59.1",
+		"registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.59.1",
+	}
 
 	// security
 
@@ -152,15 +155,41 @@ func init() {
 		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.2",
 		"registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.9.0",
 	}
+	Images["gatekeeper"]["3.10.0-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+		"registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.10.0",
+	}
 
 	Images["kyverno"] = make(map[string][]string)
 	Images["kyverno"]["2.6.0-bb.2"] = []string{
 		"registry1.dso.mil/ironbank/nirmata/kyverno:v1.8.0",
 		"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.8.0",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+	}
+	Images["kyverno"]["2.6.1-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/nirmata/kyverno:v1.8.1",
+		"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.8.1",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+	}
+	Images["kyverno-policies"] = make(map[string][]string)
+	Images["kyverno-policies"]["1.0.1-bb.7"] = []string{
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+	}
+	Images["metrics-server"] = make(map[string][]string)
+	Images["metrics-server"]["3.8.0-bb.5"] = []string{
+		"registry1.dso.mil/ironbank/opensource/kubernetes-1.21/kubectl:v1.21.14",
+		"registry1.dso.mil/ironbank/opensource/kubernetes-sigs/metrics-server:0.6.1",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.6.0",
 	}
 
 	Images["twistlock"] = make(map[string][]string)
 	Images["twistlock"]["0.11.3-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/twistlock/console/console:22.06.197",
+		"registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.197",
+	}
+	Images["twistlock"]["0.11.4-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/twistlock/console/console:22.06.197",
 		"registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.197",
@@ -185,6 +214,20 @@ func init() {
 	Images["loki"]["3.2.1-bb.3"] = []string{
 		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
 	}
+	Images["loki"]["3.3.4-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
+	Images["promtail"] = make(map[string][]string)
+	Images["promtail"]["6.2.2-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.6.1",
+	}
+
+	Images["tempo"] = make(map[string][]string)
+	Images["tempo"]["0.16.1-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/tempo-query:1.5.0",
+		"registry1.dso.mil/ironbank/opensource/grafana/tempo:1.5.0",
+	}
+
 	Images["monitoring"] = make(map[string][]string)
 	Images["monitoring"]["41.7.3-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
@@ -200,6 +243,12 @@ func init() {
 	}
 	Images["flux"] = make(map[string][]string)
 	Images["flux"]["1.47.0"] = []string{
+		"registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.26.0",
+		"registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.30.0",
+		"registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.28.0",
+		"registry1.dso.mil/ironbank/fluxcd/source-controller:v0.31.0",
+	}
+	Images["flux"]["1.48.0"] = []string{
 		"registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.26.0",
 		"registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.30.0",
 		"registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.28.0",

@@ -389,28 +389,28 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			}
 		}
 
-		for _, repo := range repos {
-			parts := strings.Split(repo, "@")
-			if len(parts) != 2 {
-				fmt.Printf("%v didnt parse currently as a repo\n", repo)
-				continue
-			}
-			// download bigbang
-			chart := types.ZarfChart{
-				// Name:        "bigbang",
-				Url:     parts[0],
-				Version: parts[1],
-				// ValuesFiles: component.BigBang.ValuesFrom,
-				GitPath: "./chart",
-			}
-			helmCfg := helm.Helm{
-				Chart:    chart,
-				Cfg:      p.cfg,
-				BasePath: componentPath.Base,
-			}
-			name := helmCfg.DownloadChartFromGit(componentPath.Charts)
-			downloadedCharts = append(downloadedCharts, name)
-		}
+		// for _, repo := range repos {
+		// 	parts := strings.Split(repo, "@")
+		// 	if len(parts) != 2 {
+		// 		fmt.Printf("%v didnt parse currently as a repo\n", repo)
+		// 		continue
+		// 	}
+		// 	// download bigbang
+		// 	chart := types.ZarfChart{
+		// 		// Name:        "bigbang",
+		// 		Url:     parts[0],
+		// 		Version: parts[1],
+		// 		// ValuesFiles: component.BigBang.ValuesFrom,
+		// 		GitPath: "./chart",
+		// 	}
+		// 	helmCfg := helm.Helm{
+		// 		Chart:    chart,
+		// 		Cfg:      p.cfg,
+		// 		BasePath: componentPath.Base,
+		// 	}
+		// 	name := helmCfg.DownloadChartFromGit(componentPath.Charts)
+		// 	downloadedCharts = append(downloadedCharts, name)
+		// }
 		// Get all the images
 		images, _ := bigbang.GetImages(repos)
 		// add the flux ones

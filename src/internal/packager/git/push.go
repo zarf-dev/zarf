@@ -41,7 +41,7 @@ func (g *Git) PushRepo(localPath string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("Unable to push the git repo %s", basename)
+		spinner.Warnf("Unable to push the git repo %s: %v", basename, err)
 		return err
 	}
 
@@ -149,6 +149,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
+		Force: true,
 	})
 
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
