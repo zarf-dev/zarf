@@ -39,6 +39,9 @@ func TestConfigFile(t *testing.T) {
 
 	configFileDefaultTests(t)
 
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
 	e2e.cleanFiles(path, config)
 }
 
