@@ -44,8 +44,6 @@ var httpProxyCmd = &cobra.Command{
 	Long: "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
 		"This command starts up a http proxy that can be used by running pods to transform queries " +
 		"that conform to Gitea server URLs in the airgap",
-	// this command should not be advertised on the cli as it has no value outside the k8s env
-	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		agent.StartHTTPProxy()
 	},
