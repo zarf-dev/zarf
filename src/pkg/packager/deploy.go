@@ -377,23 +377,6 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 // Push all of the components git repos to the configured git server
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
-	// // Try repo push up to 3 times
-	// for _, repoURL := range repos {
-	// 	gitClient := git.New(p.cfg.State.GitServer)
-	// 	repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-	// 	if err != nil {
-	// 		return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-	// 	}
-
-	// 	err = utils.Retry(func() error {
-	// 		return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
-	// 	}, 3, 5*time.Second)
-	// 	if err != nil {
-	// 		return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoPath, err)
-	// 	}
-	// }
-
-	// Try repo push up to 3 times
 	for _, repoURL := range repos {
 
 		// Create an anonymous function to push the repo to the Zarf git server
@@ -417,6 +400,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			}
 		}
 
+		// Try repo push up to 3 times
 		if err := utils.Retry(tryPush, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
