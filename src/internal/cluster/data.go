@@ -66,7 +66,7 @@ iterator:
 			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", mkdirExec)
 			if err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
-				break iterator
+				continue iterator
 			}
 
 			cpPodExec := fmt.Sprintf("%s -C %s . | %s -- %s",
@@ -80,7 +80,7 @@ iterator:
 			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 			if err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
-				break iterator
+				continue iterator
 			} else {
 				// Leave a marker in the target container for pods to track the sync action
 				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
@@ -93,6 +93,7 @@ iterator:
 				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 				if err != nil {
 					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+					continue iterator
 				}
 			}
 		}
