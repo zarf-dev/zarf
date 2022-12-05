@@ -1,7 +1,8 @@
 name: Nightly Release
 on:
+  workflow_dispatch:
   schedule:
-    - cron: "0 1 * * *"
+    - cron: "0 8 * * *"
 
 jobs:
   push-resources:
@@ -9,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -18,6 +21,9 @@ jobs:
 
       - name: Install tools
         uses: ./.github/actions/install-tools
+
+      - name: Nightly tag
+        run: git tag $(git describe --tags)-nightly
 
       - name: Build CLI
         run: |
@@ -35,10 +41,10 @@ jobs:
         run: |
           cp build/zarf build/zarf-linux-amd64
           cp build/zarf-arm build/zarf-linux-arm64
-          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/defenseunicorns/zarf/agent-nightly:$GITHUB_REF_NAME .
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/defenseunicorns/zarf/agent-nightly:$(git describe --tags) .
 
       - name: "Zarf Agent: Sign the Image"
-        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME ghcr.io/defenseunicorns/zarf/agent-nightly:$GITHUB_REF_NAME
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$(git describe --tags) ghcr.io/defenseunicorns/zarf/agent-nightly:$(git describe --tags)
         env:
           COSIGN_EXPERIMENTAL: 1
           AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
@@ -48,8 +54,16 @@ jobs:
       # Builds init packages since GoReleaser won't handle this for us
       - name: Build init-packages For Release
         run: |
-          make init-package ARCH=amd64 AGENT_IMAGE=agent-nightly:$GITHUB_REF_NAME
-          make init-package ARCH=arm64 AGENT_IMAGE=agent-nightly:$GITHUB_REF_NAME
+          make init-package ARCH=amd64 AGENT_IMAGE=agent-nightly:$(git describe --tags)
+          make init-package ARCH=arm64 AGENT_IMAGE=agent-nightly:$(git describe --tags)
+
+      # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
+      - name: Set AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
+          aws-region: us-gov-west-1
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
@@ -57,7 +71,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist --snapshot
+          args: release --rm-dist --skip-sbom
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
