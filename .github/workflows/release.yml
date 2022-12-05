@@ -78,7 +78,7 @@ jobs:
       - name: Skip brew latest for pre-release tags
         run: |
           if [[ $GITHUB_REF_NAME == *"rc"* ]]; then
-            echo "BREW_NAME=''" >> $GITHUB_ENV
+            echo "BREW_NAME=zarf@latest-rc" >> $GITHUB_ENV
           else
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
