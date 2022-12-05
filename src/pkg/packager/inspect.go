@@ -41,7 +41,8 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) error {
 		}
 
 		sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-		if len(sbomViewFiles) > 1 {
+
+		if len(sbomViewFiles) > 0 {
 			link := sbomViewFiles[0]
 			msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n\n", len(sbomViewFiles), link)
 			message.Note(msg)

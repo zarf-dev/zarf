@@ -142,7 +142,7 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 		pulledImages, err = imgConfig.PullAll()
 
-		if err != nil {
+		if err == nil {
 			// Ignore SBOM creation if there the flag is set
 			if p.cfg.CreateOpts.SkipSBOM {
 				message.Debug("Skipping SBOM processing per --skip-sbom flag")
