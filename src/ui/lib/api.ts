@@ -10,6 +10,7 @@ import type {
 	ZarfInitOptions,
 	ZarfState
 } from './api-types';
+import Header from './components/header.svelte';
 import { HTTP } from './http';
 
 const http = new HTTP();
@@ -48,4 +49,12 @@ const DeployingComponents = {
 	list: () => http.get<DeployedComponent[]>('/components/deployed')
 };
 
-export { Auth, Cluster, Packages, DeployingComponents };
+const authheader = new Headers({
+	Authorization: 'insecure'
+});
+
+const Stdout = {
+	read: () => fetch('/api/stdout', { headers: authheader }).then((res) => res.text())
+};
+
+export { Auth, Cluster, Packages, DeployingComponents, Stdout };

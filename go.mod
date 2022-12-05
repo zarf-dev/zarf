@@ -5,8 +5,8 @@ go 1.19
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33
-	github.com/anchore/syft v0.62.2
+	github.com/anchore/stereoscope v0.0.0-20221130153459-3b80d983223f
+	github.com/anchore/syft v0.62.3
 	github.com/derailed/k9s v0.26.7
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/fatih/color v1.13.0
@@ -16,6 +16,7 @@ require (
 	github.com/goccy/go-yaml v1.9.6
 	github.com/google/go-containerregistry v0.12.1
 	github.com/mholt/archiver/v3 v3.5.1
+	github.com/olahol/melody v1.1.1
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.50
@@ -195,7 +196,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect

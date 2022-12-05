@@ -19,10 +19,40 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/olahol/melody"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
+
+var stream chan []byte
+
+func reader() {
+	message.Debug("reading stderr")
+	for {
+		buf := make([]byte, 16)
+
+		if _, err := os.Stderr.Read(buf); err != nil {
+			message.Error(err, "Failed to read from stderr")
+		}
+
+		stream <- buf
+	}
+}
+
+func server(m *melody.Melody) {
+	message.Debug("serving stderr over websocket")
+	for {
+		select {
+		case msg := <-stream:
+			message.Error(nil, "sending message over websocket")
+			err := m.Broadcast(msg)
+			if err != nil {
+				message.Error(err, "Failed to broadcast message")
+			}
+		}
+	}
+}
 
 // LaunchAPIServer launches UI API server
 func LaunchAPIServer() {
@@ -52,6 +82,14 @@ func LaunchAPIServer() {
 
 	// Init the Chi router
 	router := chi.NewRouter()
+
+	// init the websocket stream
+	m := melody.New()
+
+	stream = make(chan []byte)
+
+	go reader()
+	go server(m)
 
 	// Push logs into the message buffer for log persistence
 	genericMsg := message.Generic{}
@@ -97,6 +135,18 @@ func LaunchAPIServer() {
 			r.Get("/deployed", components.ListDeployingComponents)
 		})
 
+	})
+
+	router.Route("/ws", func(r chi.Router) {
+		r.Route("/stdout", func(r chi.Router) {
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				m.HandleRequest(w, r)
+			})
+		})
+	})
+
+	m.HandleConnect(func(s *melody.Session) {
+		m.Broadcast([]byte("CONNECTED"))
 	})
 
 	// If no dev port specified, use the server port for the URL and try to open it
