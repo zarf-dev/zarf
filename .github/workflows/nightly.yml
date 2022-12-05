@@ -21,6 +21,9 @@ jobs:
 
       - name: Install tools
         uses: ./.github/actions/install-tools
+        
+      - name: Nightly tag
+        run: git tag $(git describe --tags)-nightly
 
       - name: Build CLI
         run: |
@@ -60,7 +63,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist --snapshot
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
