@@ -1,0 +1,59 @@
+name: Test Zarf Upgrade
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "package.json"
+      - "package-lock.json"
+      - "CODEOWNERS"      
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-upgrade-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Install release version of Zarf
+        uses: defenseunicorns/setup-zarf@main
+        with:
+          download-init-package: true
+
+      - name: Initialize the cluster with the release version
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
+        #       in a previous step. This test run will the current release to create a K3s cluster.
+        # chown the logs since they were orignally created as root
+        run: |
+          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
+          sudo chown $USER /tmp/zarf-*.log
+
+      - name: Build PR binary and zarf packages
+        uses: ./.github/actions/packages
+
+      - name: "Run the PR's tests"
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
+        #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
+        # chown the logs since they were orignally created as root
+        run: |
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo chown $USER /tmp/zarf-*.log
+
+      - name: Save logs
+        uses: ./.github/actions/save-logs
