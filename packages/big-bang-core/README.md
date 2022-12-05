@@ -15,7 +15,7 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ## Instructions
 
-### Pull down the code and binaries [local machine]
+### Pull down the code and binaries
 
 ```shell
 # Clone the binaries
@@ -25,17 +25,24 @@ git clone https://github.com/defenseunicorns/zarf.git
 cd zarf
 ```
 
-### Get Zarf components [local machine]
+### Get K3d components
+
+Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli
+
+### Get Zarf components
 
 Follow instructions on [this page](../../docs/5-operator-manual/0-set-up-and-install.md) to get the `zarf` cli and the `zarf-init*.tar.zst` package and place them in the ./build directory
 
-Alternatively, you could build the components from the repo
+Alternatively, build the components from the repo
 ```shell
 # Build zarf components from scratch (NOTE: golang and npm must be installed)
 make init-package
+
+# Add zarf cli from build dir to path
+export PATH=$(pwd)/build:$PATH
 ```
 
-### Build the deploy package [local machine]
+### Build the deploy package
 
 ```shell
 # Change dir
@@ -45,71 +52,47 @@ cd packages/big-bang-core
 set +o history
 export REGISTRY1_USERNAME=<REPLACE_ME>
 export REGISTRY1_PASSWORD=<REPLACE_ME>
-echo $REGISTRY1_PASSWORD | ../../build/zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
+echo $REGISTRY1_PASSWORD | zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
 set -o history
 
 # Run zarf package command
-../../build/zarf package create . --confirm
+zarf package create . --confirm
 ```
 
-### Start the Vagrant VM [local machine]
+### Initialize Zarf
 
 ```shell
-# Change dir back to top of repo
-cd ../../
-
-# Setup build Vagrantfile by tweaking some configs from the standard Vagrantfile
-cat Vagrantfile | sed -e 's/^\(.*vb.memory = \)\(.*\)$/\124576/g' -e 's/^\(.*vb.cpus = \)\(.*\)$/\112/g' -e '/^.*config.vm.synced_folder.*build.*/a \ \ config.vm.synced_folder "packages/", "/usr/local/src/zarf-packages", mount_options: ["uid=0", "gid=0"]' -e '/^.*config.vm.disk.*primary.*/a \ \ config.disksize.size = "60GB"' > build/Vagrantfile
-
-# Start the VM
-VAGRANT_VAGRANTFILE=build/Vagrantfile make vm-init OS=ubuntu
-
-# Shell into the VM
-vagrant ssh ubuntu
-```
-
-### Initialize Zarf [ubuntu vm]
-
-```shell
-# Switch to root user and change
-sudo su -
-
-# Grow root partition
-growpart /dev/sda 1
-resize2fs -p -F /dev/sda1
+# Start k3d cluster
+k3d cluster create
 
 # Change dir
-cd /opt/zarf
+cd ../../build
 
 # Initialize Zarf
-/opt/zarf/zarf init --confirm --components k3s,git-server
+zarf init --confirm --components git-server
 
 # (Optional) Inspect the results
-/opt/zarf/zarf tools k9s
+zarf tools k9s
 ```
 
-### Deploy Big Bang [ubuntu vm]
+### Deploy Big Bang
 
 ```shell
 # Deploy Big Bang (lightweight version)
-cd /usr/local/src/zarf-packages/big-bang-core
-/opt/zarf/zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-*.tar.zst) --components big-bang-core-limited-resources
-# NOTE: you can deploy the standard full set of components using the flag:
+cd ../packages/big-bang-core
+zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-*.tar.zst) --components big-bang-core-limited-resources
+# NOTE: to deploy the standard full set of components use the flag:
 # '--components big-bang-core-standard'
 
 # (Optional) Inspect the results
-/opt/zarf/zarf tools k9s
+zarf tools k9s
 ```
 
 ### Clean Up
 
 ```shell
-# Exit from root user and then exit shell [ubuntu vm]
-exit
-exit
-
-# Destroy the VM [local machine]
-make vm-destroy
+# Destroy the k3d cluster
+k3d cluster delete
 ```
 
 ## Services
