@@ -55,13 +55,13 @@ jobs:
           make init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
           make init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
 
-      # - name: Run Tests
-      #   run: |
-      #     sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-      #     sudo chown $USER /tmp/zarf-*.log
+      - name: Run Tests
+        run: |
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo chown $USER /tmp/zarf-*.log
 
-      # - name: Save logs
-      #   uses: ./.github/actions/save-logs
+      - name: Save logs
+        uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: Create release time CVE report
@@ -74,6 +74,14 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
+
+      - name: Skip brew latest for pre-release tags
+        run: |
+          if [[ $GITHUB_REF_NAME == *"rc"* ]]; then
+            echo "BREW_NAME=''" >> $GITHUB_ENV
+          else
+            echo "BREW_NAME=zarf" >> $GITHUB_ENV
+          fi
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
