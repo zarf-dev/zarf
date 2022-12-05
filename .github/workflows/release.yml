@@ -55,13 +55,13 @@ jobs:
           make init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
           make init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
 
-      - name: Run Tests
-        run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
+      # - name: Run Tests
+      #   run: |
+      #     sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+      #     sudo chown $USER /tmp/zarf-*.log
 
-      - name: Save logs
-        uses: ./.github/actions/save-logs
+      # - name: Save logs
+      #   uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: Create release time CVE report
@@ -81,7 +81,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist
+          args: release --rm-dist --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
