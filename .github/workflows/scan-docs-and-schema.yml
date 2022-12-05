@@ -22,4 +22,5 @@ jobs:
         run: "make test-docs-and-schema"
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs
