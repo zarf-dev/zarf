@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Wait for the target pod(s) to come up and inject the data into them
@@ -35,6 +37,25 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 		tarCompressFlag = "z"
 	}
 
+	// Pod filter to ensure we only use the current deployment's pods
+	markerFilter := func(pod corev1.Pod) bool {
+		// Loop over all init containers
+		for _, container := range pod.Spec.InitContainers {
+			// If the container name matches the injection target
+			if container.Name == data.Target.Container {
+				// Loop over all the containers command arguments
+				for _, cmd := range container.Command {
+					// If the command argument contains the injection marker, return true
+					if strings.Contains(cmd, config.GetDataInjectionMarker()) {
+						return true
+					}
+				}
+			}
+		}
+
+		return false
+	}
+
 iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
@@ -48,7 +69,7 @@ iterator:
 		}
 
 		// Wait until the pod we are injecting data into becomes available
-		pods := c.Kube.WaitForPodsAndContainers(target, true)
+		pods := c.Kube.WaitForPodsAndContainers(target, markerFilter)
 		if len(pods) < 1 {
 			continue
 		}
@@ -102,7 +123,7 @@ iterator:
 		}
 
 		// Block one final time to make sure at least one pod has come up and injected the data
-		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, false)
+		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, nil)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)

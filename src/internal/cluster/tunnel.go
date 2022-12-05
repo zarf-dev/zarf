@@ -432,7 +432,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	servicePods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
 		Namespace: tunnel.namespace,
 		Selector:  selectorLabelsOfPods,
-	}, false)
+	}, nil)
 
 	return servicePods[0], nil
 }
