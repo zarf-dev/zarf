@@ -63,6 +63,17 @@
 	color: var(--mdc-theme-text-primary-on-light);
 }
 
+.mdc-typography--headline6 {
+	font-size: 20px;
+	line-height: 160%;
+	letter-spacing: 0.15px;
+}
+
+.mdc-typography--body2 {
+	line-height: 143%;
+	letter-spacing: 0.17px;
+}
+
 *,
 ::before,
 ::after {
