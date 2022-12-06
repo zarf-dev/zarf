@@ -8,10 +8,7 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ## Known Issues
 
-- Currently this package does the equivalent of `kustomize build | kubectl apply -f -`, which means Flux will be used to deploy everything, but it won't be watching a Git repository for changes. Upcoming work is planned to update the package so that you will be able to open up a Git repo in the private Gitea server inside the cluster, commit and push a change, and see that change get reflected in the deployment.
-
-> NOTE:
-> Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
+- Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
 
 ## Instructions
 
@@ -31,7 +28,7 @@ Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-thro
 
 ### Get Zarf components
 
-Follow instructions on [this page](../../docs/5-operator-manual/0-set-up-and-install.md) to get the `zarf` cli and the `zarf-init*.tar.zst` package and place them in the ./build directory
+Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli and the `zarf-init*.tar.zst` package and place them in the ./build directory
 
 Alternatively, build the components from the repo
 ```shell
@@ -65,10 +62,18 @@ zarf package create . --confirm
 # Start k3d cluster
 k3d cluster create
 
-# Change dir
-cd ../../build
+# Initialize Zarf (interactively)
+zarf init
+# Make these choices at the prompt
+# ? Do you want to download this init package? Yes
+# ? Deploy this Zarf package? Yes
+# ? Deploy the k3s component? No
+# ? Deploy the logging component? No
+# ? Deploy the git-server component? Yes
 
-# Initialize Zarf
+# (Optional) An alternative approach is to get the zarf init package from the zarf repo releases page or via build
+# Change directory to location of the zarf-init*.tar.zst and run the zarf init with the flags below
+cd ../../build
 zarf init --confirm --components git-server
 
 # (Optional) Inspect the results
