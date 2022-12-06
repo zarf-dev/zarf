@@ -17,7 +17,7 @@ zarf prepare find-images [PACKAGE] [flags]
 ```
   -h, --help                     help for find-images
   -p, --repo-chart-path string   If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
-      --set stringToString       Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [agent_image=dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25,injector_version=pr-948-e699899])
+      --set stringToString       Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
 ```
 
 ### Options inherited from parent commands
