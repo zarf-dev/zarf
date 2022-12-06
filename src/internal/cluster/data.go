@@ -37,6 +37,12 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 		tarCompressFlag = "z"
 	}
 
+	// Pod filter to ensure we only use the current deployment's pods
+	podFilterByInitContainer := func(pod corev1.Pod) bool {
+		// Look everywhere in the pod for a matching data injection marker
+		return strings.Contains(message.JSONValue(pod), config.GetDataInjectionMarker())
+	}
+
 iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
@@ -50,7 +56,7 @@ iterator:
 		}
 
 		// Wait until the pod we are injecting data into becomes available
-		pods := c.Kube.WaitForPodsAndContainers(target, podFilterByInitContainer(data))
+		pods := c.Kube.WaitForPodsAndContainers(target, podFilterByInitContainer)
 		if len(pods) < 1 {
 			continue
 		}
@@ -107,33 +113,12 @@ iterator:
 		// Block one final time to make sure at least one pod has come up and injected the data
 		// Using only the pod as the final seclector because we don't know what the container name will be
 		// Still using the init container filter to make sure we have the right running pod
-		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer(data))
+		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)
 
 		// Return to stop the loop
 		return
-	}
-}
-
-// Pod filter to ensure we only use the current deployment's pods
-func podFilterByInitContainer(data types.ZarfDataInjection) k8s.PodFilter {
-	return func(pod corev1.Pod) bool {
-		// Loop over all init containers
-		for _, container := range pod.Spec.InitContainers {
-			// If the container name matches the injection target
-			if container.Name == data.Target.Container {
-				// Loop over all the containers command arguments
-				for _, cmd := range container.Command {
-					// If the command argument contains the injection marker, return true
-					if strings.Contains(cmd, config.GetDataInjectionMarker()) {
-						return true
-					}
-				}
-			}
-		}
-
-		return false
 	}
 }
