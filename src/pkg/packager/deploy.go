@@ -384,12 +384,14 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			gitClient := git.New(p.cfg.State.GitServer)
 
 			// If this is a serviceURL, create a port-forward tunnel to that resource
-			if tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address); err != nil {
-				return err
-			} else {
-				tunnel.Connect("", false)
-				defer tunnel.Close()
-				gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
+			if cluster.IsServiceURL(gitClient.Server.Address) {
+				if tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address); err != nil {
+					return err
+				} else {
+					tunnel.Connect("", false)
+					defer tunnel.Close()
+					gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
+				}
 			}
 
 			// Convert the repo URL to a Zarf-formatted repo name
