@@ -19,7 +19,7 @@ zarf package create [DIRECTORY] [flags]
   -h, --help                      help for create
       --insecure                  Allow insecure registry connections when pulling OCI images
   -o, --output-directory string   Specify the output directory for the created Zarf package
-      --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
+      --set stringToString        Specify package variables to set on the command line (KEY=value) (default [agent_image=dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25,injector_version=pr-948-e699899])
       --skip-sbom                 Skip generating SBOM for this package
 ```
 
