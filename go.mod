@@ -5,8 +5,8 @@ go 1.19
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20221006201143-d24c9d626b33
-	github.com/anchore/syft v0.62.2
+	github.com/anchore/stereoscope v0.0.0-20221130153459-3b80d983223f
+	github.com/anchore/syft v0.62.3
 	github.com/derailed/k9s v0.26.7
 	github.com/distribution/distribution/v3 v3.0.0-20220612151901-b5e2f3f33dbc
 	github.com/fatih/color v1.13.0
