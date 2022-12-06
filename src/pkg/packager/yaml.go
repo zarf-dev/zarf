@@ -22,6 +22,9 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 		return err
 	}
 
+	// Set the arch from the package config before filtering
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
 	// Filter each component to only compatible platforms
 	filteredComponents := []types.ZarfComponent{}
 	for _, component := range p.cfg.Pkg.Components {
@@ -31,9 +34,6 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	}
 	// Update the active package with the filtered components
 	p.cfg.Pkg.Components = filteredComponents
-
-	// Set the arch
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	return nil
 }
