@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -25,6 +26,8 @@ type PodLookup struct {
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
 }
+
+type PodFilter func(pod corev1.Pod) bool
 
 type GeneratedPKI struct {
 	CA   []byte `json:"ca"`
