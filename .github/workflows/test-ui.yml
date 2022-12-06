@@ -46,6 +46,7 @@ jobs:
         run: npm test
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs
 
       - name: Save playright logs

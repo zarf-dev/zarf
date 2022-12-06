@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
@@ -18,15 +17,6 @@ import (
 )
 
 func (g *Git) PushRepo(localPath string) error {
-	// If this is a serviceURL, create a port-forward tunnel to that resource
-	if tunnel, err := cluster.NewTunnelFromServiceURL(g.Server.Address); err != nil {
-		return err
-	} else {
-		tunnel.Connect("", false)
-		defer tunnel.Close()
-		g.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
-	}
-
 	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
 	defer spinner.Stop()
 
@@ -90,6 +80,9 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
 
+	// Remove any preexisting offlineRemotes (happens when a retry is triggered)
+	_ = repo.DeleteRemote(offlineRemoteName)
+
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
 		URLs: []string{targetURL},
@@ -135,7 +128,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debugf("Repo already up-to-date, skipping fetch...")
 	} else if err != nil {
-		message.Warnf("unable to fetch remote cleanly prior to push: %w", err)
+		return fmt.Errorf("unable to fetch the git repo prior to push: %w", err)
 	}
 
 	// Push all heads and tags to the offline remote

@@ -28,11 +28,9 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		defer tunnel.Close()
 
 		registryURL = tunnel.Endpoint()
-	} else {
-		registryURL = i.RegInfo.Address
-
+	} else if cluster.IsServiceURL(i.RegInfo.Address) {
 		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err := cluster.NewTunnelFromServiceURL(registryURL); err != nil {
+		if tunnel, err := cluster.NewTunnelFromServiceURL(i.RegInfo.Address); err != nil {
 			return err
 		} else {
 			tunnel.Connect("", false)

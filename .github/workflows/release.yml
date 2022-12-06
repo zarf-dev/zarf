@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0                
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -59,6 +61,7 @@ jobs:
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
@@ -73,13 +76,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
 
+      - name: Skip brew latest for pre-release tags
+        run: |
+          if [[ $GITHUB_REF_NAME == *"rc"* ]]; then
+            echo "BREW_NAME=zarf@latest-rc" >> $GITHUB_ENV
+          else
+            echo "BREW_NAME=zarf" >> $GITHUB_ENV
+          fi
+
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist
+          args: release --rm-dist --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
