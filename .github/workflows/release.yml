@@ -61,6 +61,7 @@ jobs:
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
