@@ -584,6 +584,14 @@ export interface ZarfCreateOptions {
      */
     outputDirectory: string;
     /**
+     * Whether to pause to allow for viewing the SBOM post-creation
+     */
+    sbom: boolean;
+    /**
+     * Location to output an SBOM into after package creation
+     */
+    sbomOutput: string;
+    /**
      * Key-Value map of variable names and their corresponding values that will be used to
      * template against the Zarf package being used
      */
@@ -980,6 +988,8 @@ const typeMap: any = {
     "ZarfCreateOptions": o([
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "sbom", js: "sbom", typ: true },
+        { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
