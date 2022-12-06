@@ -126,6 +126,18 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
 
+	// Output the SBOM files into a directory if specified
+	if p.cfg.CreateOpts.SBOMOutput != "" {
+		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutput); err != nil {
+			return err
+		}
+	}
+
+	// Open a browser to view the SBOM if specified
+	if p.cfg.CreateOpts.SBOM {
+		sbom.ViewSBOMFiles(p.tmp)
+	}
+
 	return nil
 }
 
