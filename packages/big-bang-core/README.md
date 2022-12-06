@@ -28,9 +28,9 @@ Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-thro
 
 ### Get Zarf components
 
-Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli and the `zarf-init*.tar.zst` package and place them in the ./build directory
+Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
 
-Alternatively, build the components from the repo
+(Optional) Alternatively, build the zarf components from the repo
 ```shell
 # Build zarf components from scratch (NOTE: golang and npm must be installed)
 make init-package
@@ -72,7 +72,7 @@ zarf init
 # ? Deploy the git-server component? Yes
 
 # (Optional) An alternative approach is to get the zarf init package from the zarf repo releases page or via build
-# Change directory to location of the zarf-init*.tar.zst and run the zarf init with the flags below
+# Change dir to location of the zarf-init*.tar.zst (such as the build dir) & run the zarf init command with these flags
 cd ../../build
 zarf init --confirm --components git-server
 
