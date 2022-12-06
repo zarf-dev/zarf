@@ -74,6 +74,13 @@ func findInitPackage(initPackageName string) (string, error) {
 		return filepath.Join(executableDir, initPackageName), nil
 	}
 
+	// Create the cache directory if it doesn't exist
+	if utils.InvalidPath(config.GetAbsCachePath()) {
+		if err := os.MkdirAll(config.GetAbsCachePath(), 0755); err != nil {
+			message.Fatalf(err, "Unable to create cache directory: %s", config.GetAbsCachePath())
+		}
+	}
+
 	// Next, look in the cache directory
 	if !utils.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
 		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
