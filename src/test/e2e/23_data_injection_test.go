@@ -22,7 +22,7 @@ func TestDataInjection(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.arch)
 
-	// Repeat the inejction action 3 times to ensure the data injection is idempotent and doesn't fail to perform an upgrade
+	// Repeat the injection action 3 times to ensure the data injection is idempotent and doesn't fail to perform an upgrade
 	for i := 0; i < 3; i++ {
 		runDataInjection(t, path)
 	}
