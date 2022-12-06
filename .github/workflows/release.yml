@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0                
+          fetch-depth: 0
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -61,7 +61,7 @@ jobs:
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
-        if: always()      
+        if: always()
         uses: ./.github/actions/save-logs
 
       # Builds init packages since GoReleaser won't handle this for us
