@@ -41,4 +41,5 @@ jobs:
         run: make test-e2e ARCH=amd64
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs

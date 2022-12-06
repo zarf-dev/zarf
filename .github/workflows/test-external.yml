@@ -39,4 +39,5 @@ jobs:
         run: make test-external
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs
