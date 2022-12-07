@@ -6,9 +6,7 @@ package packager
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -24,16 +22,8 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool) error {
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
-		path, err := handlePartialPkg(p.cfg.DeployOpts.PackagePath)
-
-		// On error, be sure to clean up the bad package
-		if err != nil {
-			_ = os.Remove(p.cfg.DeployOpts.PackagePath)
-			return fmt.Errorf("unable to process partial package: %w", err)
-		}
-
-		p.cfg.DeployOpts.PackagePath = path
+	if err := p.handlePartialPkg(); err != nil {
+		return fmt.Errorf("unable to process partial package: %w", err)
 	}
 
 	// Extract the archive
