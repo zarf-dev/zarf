@@ -128,7 +128,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Output the SBOM files into a directory if specified
 	if p.cfg.CreateOpts.SBOMOutputDir != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir); err != nil {
+		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
 			return err
 		}
 	}

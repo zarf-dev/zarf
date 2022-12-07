@@ -76,12 +76,14 @@ func ViewSBOMFiles(tmp types.TempPaths) {
 }
 
 // OutputSBOMFiles outputs the sbom files into a specified directory
-func OutputSBOMFiles(tmp types.TempPaths, outputDir string) error {
-	if err := os.RemoveAll(outputDir); err != nil {
+func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) error {
+	packagePath := filepath.Join(outputDir, packageName)
+
+	if err := os.RemoveAll(packagePath); err != nil {
 		return err
 	}
 
-	if err := utils.CreatePathAndCopy(tmp.Sboms, outputDir); err != nil {
+	if err := utils.CreatePathAndCopy(tmp.Sboms, packagePath); err != nil {
 		return err
 	}
 

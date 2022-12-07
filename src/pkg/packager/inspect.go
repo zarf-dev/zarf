@@ -48,7 +48,7 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool, outputSBOM stri
 
 	// Output the SBOM files into a directory if specified
 	if outputSBOM != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM); err != nil {
+		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
 			return err
 		}
 	}

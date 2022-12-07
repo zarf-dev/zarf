@@ -72,7 +72,7 @@ func TestUseCLI(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images")
-	_, err = os.ReadFile(filepath.Join(sbomPath, "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -80,7 +80,7 @@ func TestUseCLI(t *testing.T) {
 	e2e.cleanFiles(sbomPath)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, "--sbom-out", sbomPath)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	require.NoError(t, err, stdOut, stdErr)
 
