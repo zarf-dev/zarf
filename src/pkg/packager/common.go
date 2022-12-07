@@ -101,10 +101,10 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
+		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
 	}
 
-	return fmt.Sprintf("%s-%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
 func (p *Packager) ClearTempPaths() {
