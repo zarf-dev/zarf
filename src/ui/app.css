@@ -12,7 +12,7 @@
 	--mdc-theme-surface: white;
 	--mdc-theme-text-secondary-on-light: rgba(0, 0, 0, 0.6);
 	--mdc-theme-text-primary-on-light: rgba(0, 0, 0, 0.87);
-	--mdc-theme-dark-background: #0d133d;
+	--mdc-theme-paper-dark: #32375b;
 
 	/* Typography | vars */
 	--mdc-typography-font-family: Roboto, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',

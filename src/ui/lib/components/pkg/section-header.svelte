@@ -27,7 +27,7 @@
 	.pkg-section-header {
 		display: flex;
 		justify-content: space-between;
-		background-color: var(--mdc-theme-dark-background);
+		background-color: var(--mdc-theme-paper-dark);
 		color: var(--mdc-theme-on-secondary);
 		padding: 0.75rem 2rem;
 	}
