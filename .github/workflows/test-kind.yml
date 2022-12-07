@@ -11,6 +11,7 @@ on:
       - "docs/**"
       - "package.json"
       - "package-lock.json"
+      - "CODEOWNERS"      
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
@@ -42,4 +43,5 @@ jobs:
         run: make test-e2e ARCH=amd64
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs

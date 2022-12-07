@@ -1,0 +1,6 @@
+paths-ignore:
+  - src/pkg/packager/network.go
+
+query-filters:
+  - exclude:
+      id: go/path-injection

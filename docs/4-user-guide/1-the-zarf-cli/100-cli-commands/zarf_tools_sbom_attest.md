@@ -23,6 +23,7 @@ zarf tools sbom attest --output [FORMAT] --key [KEY] [SOURCE] [flags]
       --identity-token string      identity token to use for certificate from fulcio
       --insecure-skip-verify       skip verifying fulcio certificat and the SCT (Signed Certificate Timestamp) (this should only be used for testing).
       --key string                 path to the private key file to use for attestation (default "cosign.key")
+      --name string                set the name of the target being analyzed
       --no-upload                  do not upload the generated attestation
       --oidc-client-id string      OIDC client ID for application (default "sigstore")
       --oidc-issuer string         OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
@@ -51,5 +52,5 @@ zarf tools sbom attest --output [FORMAT] --key [KEY] [SOURCE] [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md)	 - SBOM tools provided by Anchore Syft
+* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

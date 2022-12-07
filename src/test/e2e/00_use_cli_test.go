@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -66,9 +70,11 @@ func TestUseCLI(t *testing.T) {
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath)
+	require.Contains(t, stdErr, "Creating SBOMs for 1 images")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, "-s")
+	require.Contains(t, stdErr, "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html")
 	require.NoError(t, err, stdOut, stdErr)
 
 	_ = os.Mkdir(otherTmpPath, 0750)

@@ -1,5 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 [profile.release]
-opt-level = "z"  # Optimize for size.
+opt-level = "z"   # Optimize for size.
 lto = true
 codegen-units = 1
 panic = "abort"
@@ -14,9 +17,9 @@ edition = "2021"
 
 [dependencies]
 glob = "0.3.0"
-flate2 = "1.0.24"
+flate2 = "1.0.25"
 tar = "0.4.38"
 sha2 = "0.10.6"
 hex = "0.4.3"
 rouille = "3.6.1"
-serde_json = "1.0.87"
+serde_json = "1.0.89"

@@ -604,6 +604,10 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
+     * Allow insecure connections for remote packages
+     */
+    insecure: boolean;
+    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -616,6 +620,10 @@ export interface ZarfDeployOptions {
      * Location where the public key component of a cosign key-pair can be found
      */
     sGetKeyPath: string;
+    /**
+     * The SHA256 checksum of the package to deploy
+     */
+    shasum: string;
 }
 
 export interface ZarfInitOptions {
@@ -982,9 +990,11 @@ const typeMap: any = {
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
+        { json: "insecure", js: "insecure", typ: true },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "shasum", js: "shasum", typ: "" },
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
