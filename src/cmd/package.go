@@ -236,8 +236,8 @@ func bindCreateFlags() {
 
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
-	createFlags.BoolVarP(&pkgConfig.CreateOpts.SBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), "View SBOM contents after creating the package")
-	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutput, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
+	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), "View SBOM contents after creating the package")
+	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
 	createFlags.BoolVar(&pkgConfig.CreateOpts.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
 }

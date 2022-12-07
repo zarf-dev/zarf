@@ -127,14 +127,14 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified
-	if p.cfg.CreateOpts.SBOMOutput != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutput); err != nil {
+	if p.cfg.CreateOpts.SBOMOutputDir != "" {
+		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir); err != nil {
 			return err
 		}
 	}
 
 	// Open a browser to view the SBOM if specified
-	if p.cfg.CreateOpts.SBOM {
+	if p.cfg.CreateOpts.ViewSBOM {
 		sbom.ViewSBOMFiles(p.tmp)
 	}
 
