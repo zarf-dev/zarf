@@ -54,6 +54,7 @@ zarf init [flags]
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
+      --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --storage-class string            Specify the storage class to use for the registry.  E.g. --storage-class=standard
 ```
 
