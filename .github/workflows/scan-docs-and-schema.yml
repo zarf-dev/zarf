@@ -1,4 +1,4 @@
-name:  Validate Docs and Schema
+name: Validate Docs and Schema
 on:
   pull_request:
     paths:
