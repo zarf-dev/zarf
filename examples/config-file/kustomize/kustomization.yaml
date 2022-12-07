@@ -1,0 +1,5 @@
+secretGenerator:
+- name: sample
+  behavior: create
+  files:
+  - values.yaml=values.yaml

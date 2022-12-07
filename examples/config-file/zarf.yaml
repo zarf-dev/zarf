@@ -8,6 +8,12 @@ variables:
   - name: CAMEL_SPIDER
 
 components:
+  - name: secret-test
+    required: true
+    manifests:
+    - name: secret
+      kustomizations:
+      - kustomize/
   - name: lion
     description: "By default, only this component will be deployed when using the config file"
     required: true
