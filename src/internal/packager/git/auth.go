@@ -116,13 +116,13 @@ func (g *Git) netrcParser() []Credential {
 		message.Debugf("tokens: '%#v'", tokens)
 
 		for _, token := range tokens {
-			if token == "#" {
-				// If we have entered into a comment, don't process it
-				break
-			} else if activeCommand != "" {
+			if activeCommand != "" {
 				// If we are in an active command, process the next token as a value
 				activeMachine[activeCommand] = token
 				activeCommand = ""
+			} else if token == "#" {
+				// If we have entered into a comment, don't process it
+				break
 			} else if token == "machine" {
 				// If the token is the start of a machine, append the last machine (if exists) and make a new one
 				if activeMachine != nil {
