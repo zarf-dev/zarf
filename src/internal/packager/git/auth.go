@@ -120,7 +120,7 @@ func (g *Git) netrcParser() []Credential {
 				// If we are in an active command, process the next token as a value
 				activeMachine[activeCommand] = token
 				activeCommand = ""
-			} else if token == "#" {
+			} else if strings.HasPrefix(token, "#") {
 				// If we have entered into a comment, don't process it
 				break
 			} else if token == "machine" {
