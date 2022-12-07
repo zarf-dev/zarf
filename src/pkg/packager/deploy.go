@@ -33,7 +33,7 @@ var valueTemplate template.Values
 var connectStrings = make(types.ConnectStrings)
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy() (err error) {
+func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
 	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
@@ -50,11 +50,15 @@ func (p *Packager) Deploy() (err error) {
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
 	if strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
-		if p.cfg.DeployOpts.PackagePath, err = handlePartialPkg(p.cfg.DeployOpts.PackagePath); err != nil {
-			// On error, be sure to clean up the bad package
+		path, err := handlePartialPkg(p.cfg.DeployOpts.PackagePath)
+
+		// On error, be sure to clean up the bad package
+		if err != nil {
 			_ = os.Remove(p.cfg.DeployOpts.PackagePath)
 			return fmt.Errorf("unable to process partial package: %w", err)
 		}
+
+		p.cfg.DeployOpts.PackagePath = path
 	}
 
 	// Extract the archive
