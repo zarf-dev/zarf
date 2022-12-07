@@ -15,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
+// FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc
 func (g *Git) FindAuthForHost(baseUrl string) Credential {
 	// Read the ~/.git-credentials file
 	gitCreds := g.credentialParser()
@@ -38,6 +39,7 @@ func (g *Git) FindAuthForHost(baseUrl string) Credential {
 	return matchedCred
 }
 
+// credentialParser parses a user's .git-credentials file to find git creds for hosts
 func (g *Git) credentialParser() []Credential {
 	var credentials []Credential
 
@@ -72,6 +74,7 @@ func (g *Git) credentialParser() []Credential {
 	return credentials
 }
 
+// netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/
 func (g *Git) netrcParser() []Credential {
 	var credentials []Credential
 
