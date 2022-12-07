@@ -10,6 +10,8 @@
 	import PackageComponent from '$lib/components/package-component-accordion.svelte';
 	import { pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
+	import PackageCard from '$lib/components/package-card.svelte';
+	import SectionHeader from '$lib/components/pkg/section-header.svelte';
 </script>
 
 <svelte:head>
@@ -17,6 +19,17 @@
 </svelte:head>
 <section class="page-header">
 	<Typography variant="h4">Configure Package Deployment</Typography>
+</section>
+
+<section class="page-section">
+	<SectionHeader>
+		<Typography variant="h2" slot="title">Package Details</Typography>
+		<span slot="tooltip"
+			>At-a-glance simple metadata about the package</span
+		>
+		<Button on:click={() => console.log("hello!")} variant="text" color="primary" slot="actions">click me</Button>
+	</SectionHeader>
+	<PackageCard pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="page-section">
@@ -32,11 +45,8 @@
 		<Icon variant="component" />
 		Package Components
 		<Typography variant="caption" element="p">
-			<span aria-hidden="true">
-				<Icon variant="component" className="invisible" />
-			</span>
-			The following components will be deployed into the cluster. Optional components that are not selected
-			will not be deployed.
+			The following components will be deployed into the cluster. Optional components that are not
+			selected will not be deployed.
 		</Typography>
 	</Typography>
 
