@@ -142,7 +142,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
 
-		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks), sha256sum)
+		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks) + 1, sha256sum)
 		_ = os.RemoveAll(packageName)
 
 		// Marshal the data into a json file

@@ -28,7 +28,8 @@ func TestMultiPartPackage(t *testing.T) {
 
 	list, err := filepath.Glob("zarf-package-multi-part-*")
 	require.NoError(t, err)
-	require.Len(t, list, 6)
+	// Lenght is 7 because there are 6 parts and 1 manifest
+	require.Len(t, list, 7)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
