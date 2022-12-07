@@ -34,3 +34,4 @@ zarf
 zarf-pki
 zarf-sbom/
 /zarf-config.*
+*.part*
