@@ -3,12 +3,18 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	type IconVariant = 'component' | 'package' | 'sun' | 'cancelCloud' | 'shieldPlus';
+	type IconVariant =
+		| 'component'
+		| 'package'
+		| 'package-light'
+		| 'sun'
+		| 'cancelCloud'
+		| 'shieldPlus'
+		| 'info-light';
 	export let variant: IconVariant;
-	export let className: string = '';
 </script>
 
-<span class="icon-wrapper {className}">
+<span class="icon-wrapper">
 	{#if variant === 'component'}
 		<svg width="36" height="33" viewBox="0 0 36 33" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
@@ -22,6 +28,14 @@
 			<path
 				d="M17.4236 5.62058L13.6364 1.83337L4.16834 3.96368L7.95554 8.46099M17.4236 5.62058L21.6842 1.83337L31.3889 4.67378L27.1283 8.46099M17.4236 5.62058L7.95554 8.46099M17.4236 5.62058L27.1283 8.46099M27.1283 8.46099L32.0833 12.25L22.6042 16.4167L17.2581 12.25M27.1283 8.46099L17.2581 12.25M17.2581 12.25L12.3958 16.4167L2.91667 11.5556L7.95554 8.46099M17.2581 12.25L7.95554 8.46099M8.42894 14.618V22.663L17.6603 26.2135L27.1283 22.4263V14.618"
 				stroke="#0D133D"
+				stroke-width="2"
+			/>
+		</svg>
+	{:else if variant == 'package-light'}
+		<svg width="35" height="27" viewBox="0 0 35 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M17.4235 5.12058L13.6363 1.33337L4.16829 3.46368L7.9555 7.96099M17.4235 5.12058L21.6841 1.33337L31.3888 4.17378L27.1282 7.96099M17.4235 5.12058L7.9555 7.96099M17.4235 5.12058L27.1282 7.96099M27.1282 7.96099L32.0833 11.75L22.6041 15.9167L17.2581 11.75M27.1282 7.96099L17.2581 11.75M17.2581 11.75L12.3958 15.9167L2.91663 11.0556L7.9555 7.96099M17.2581 11.75L7.9555 7.96099M8.4289 14.118V22.163L17.6602 25.7135L27.1282 21.9263V14.118"
+				stroke="white"
 				stroke-width="2"
 			/>
 		</svg>
@@ -81,6 +95,14 @@
 					/>
 				</g>
 			</g>
+		</svg>
+	{:else if variant == 'info-light'}
+		<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M8.16675 4.83329H9.83342V6.49996H8.16675V4.83329ZM8.16675 8.16663H9.83342V13.1666H8.16675V8.16663ZM9.00008 0.666626C4.40008 0.666626 0.666748 4.39996 0.666748 8.99996C0.666748 13.6 4.40008 17.3333 9.00008 17.3333C13.6001 17.3333 17.3334 13.6 17.3334 8.99996C17.3334 4.39996 13.6001 0.666626 9.00008 0.666626ZM9.00008 15.6666C5.32508 15.6666 2.33341 12.675 2.33341 8.99996C2.33341 5.32496 5.32508 2.33329 9.00008 2.33329C12.6751 2.33329 15.6667 5.32496 15.6667 8.99996C15.6667 12.675 12.6751 15.6666 9.00008 15.6666Z"
+				fill="white"
+				fill-opacity="0.56"
+			/>
 		</svg>
 	{/if}
 </span>
