@@ -67,3 +67,40 @@ func (g *Git) credentialParser() []Credential {
 
 	return credentials
 }
+
+func (g *Git) netrcParser() []Credential {
+	var credentials []Credential
+
+	homePath, _ := os.UserHomeDir()
+	credentialsPath := filepath.Join(homePath, ".netrc")
+	credentialsFile, _ := os.Open(credentialsPath)
+
+	defer func(credentialsFile *os.File) {
+		err := credentialsFile.Close()
+		if err != nil {
+			message.Debugf("Unable to load an existing netrc file: %w", err)
+		}
+	}(credentialsFile)
+
+	scanner := bufio.NewScanner(credentialsFile)
+
+	credential := Credential{
+		Path: gitUrl.Host,
+		Auth: http.BasicAuth{
+			Username: gitUrl.User.Username(),
+			Password: password,
+		},
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if strings.HasPrefix("machine", line) {
+
+		}
+
+		credentials = append(credentials, credential)
+	}
+
+	return credentials
+}
