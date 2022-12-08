@@ -164,6 +164,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary><strong> <a name="metadata_yolo"></a>yolo</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Yaml OnLy Online
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

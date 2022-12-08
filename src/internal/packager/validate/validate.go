@@ -18,6 +18,10 @@ import (
 
 // Run performs config validations
 func Run(pkg types.ZarfPackage) error {
+	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
+		return fmt.Errorf("sorry, you can't YOLO an init package")
+	}
+
 	if err := validatePackageName(pkg.Metadata.Name); err != nil {
 		return fmt.Errorf("invalid package name: %w", err)
 	}
@@ -43,7 +47,9 @@ func Run(pkg types.ZarfPackage) error {
 		}
 		uniqueNames[component.Name] = true
 
-		validateComponent(component)
+		if err := validateComponent(pkg, component); err != nil {
+			return fmt.Errorf("invalid component: %w", err)
+		}
 	}
 
 	return nil
@@ -85,7 +91,7 @@ func oneIfNotEmpty(testString string) int {
 	return 1
 }
 
-func validateComponent(component types.ZarfComponent) error {
+func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) error {
 	if component.Required {
 		if component.Default {
 			return fmt.Errorf("component %s cannot be both required and default", component.Name)
@@ -100,10 +106,37 @@ func validateComponent(component types.ZarfComponent) error {
 			return fmt.Errorf("invalid chart definition: %w", err)
 		}
 	}
+
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
 			return fmt.Errorf("invalid manifest definition: %w", err)
 		}
+	}
+
+	if pkg.Metadata.YOLO {
+		if err := validateYOLO(component); err != nil {
+			return fmt.Errorf("component %s incompatible with the online-only package flag (metadata.yolo): %w", component.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func validateYOLO(component types.ZarfComponent) error {
+	if len(component.Images) > 0 {
+		return fmt.Errorf("OCI images not allowed")
+	}
+
+	if len(component.Repos) > 0 {
+		return fmt.Errorf("git repos not allowed")
+	}
+
+	if component.Only.Cluster.Architecture != "" {
+		return fmt.Errorf("cluster architecture not allowed")
+	}
+
+	if len(component.Only.Cluster.Distros) > 0 {
+		return fmt.Errorf("cluster distros not allowed")
 	}
 
 	return nil

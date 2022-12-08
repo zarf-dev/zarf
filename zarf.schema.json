@@ -440,6 +440,10 @@
         "architecture": {
           "type": "string",
           "description": "The target cluster architecture of this package"
+        },
+        "yolo": {
+          "type": "boolean",
+          "description": "Yaml OnLy Online"
         }
       },
       "additionalProperties": false,

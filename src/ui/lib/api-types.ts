@@ -390,6 +390,10 @@ export interface ZarfMetadata {
      * Generic string to track the package version by a package author
      */
     version?: string;
+    /**
+     * Yaml OnLy Online
+     */
+    yolo?: boolean;
 }
 
 export interface ZarfPackageVariable {
@@ -916,6 +920,7 @@ const typeMap: any = {
         { json: "uncompressed", js: "uncompressed", typ: u(undefined, true) },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "version", js: "version", typ: u(undefined, "") },
+        { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },

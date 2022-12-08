@@ -170,6 +170,11 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 		}
 
+		// If the package is marked as YOLO and the state is empty, skip the secret creation
+		if r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO" {
+			break
+		}
+
 		// Create the secret
 		validSecret, err := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
 		if err != nil {

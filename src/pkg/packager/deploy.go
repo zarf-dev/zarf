@@ -337,7 +337,13 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 	state, err := p.cluster.LoadZarfState()
 
-	// If no distro the zarf secret did not load properly
+	// YOLO mode but no state found so just fake it this run
+	if p.cfg.Pkg.Metadata.YOLO && state.Distro == "" {
+		state.Distro = "YOLO"
+		err = nil
+	}
+
+	// If there is no state, or the state is invalid, return early
 	if err != nil || state.Distro == "" {
 		return values, err
 	}
@@ -350,6 +356,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		return values, err
 	}
 
+	// Only check the architecture if the package has images
 	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
