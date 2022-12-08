@@ -127,7 +127,6 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
 
-
 	f, err := os.Stat(packageName)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
@@ -143,7 +142,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
 
-		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks) + 1, sha256sum)
+		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
 		_ = os.RemoveAll(packageName)
 
 		// Marshal the data into a json file
@@ -166,8 +165,8 @@ func (p *Packager) Create(baseDir string) error {
 			}
 		}
 	}
-  
-  // Output the SBOM files into a directory if specified
+
+	// Output the SBOM files into a directory if specified
 	if p.cfg.CreateOpts.SBOMOutputDir != "" {
 		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
 			return err
