@@ -167,10 +167,15 @@ func (p *Packager) handlePartialPkg() error {
 	// Track success to avoid multiple os.remove calls or having to clean up outside this function
 	success := false
 
+	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
+
 	// If packagePath has partial in the name, we need to combine the partials into a single package
 	if !strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
+		message.Debug("No partial package detected")
 		return nil
 	}
+
+	message.Debug("Partial package detected")
 
 	// Replace part 000 with *
 	pattern := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", ".part*", 1)
