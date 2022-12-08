@@ -18,11 +18,11 @@ func TestCredentialParser(t *testing.T) {
 
 	credentialsFile := &test.MockReadCloser{
 		MockData: []byte(
-			"https://wayne:password@github.com/\n" +
-				"bad line\n" +
-				"<really bad=\"line\"/>`\n" +
-				"https://wayne:p%40ss%20word%2520@zarf.dev\n" +
-				"http://google.com",
+			`https://wayne:password@github.com/
+bad line
+<really bad=\"line\"/>
+https://wayne:p%40ss%20word%2520@zarf.dev
+http://google.com`,
 		),
 	}
 
@@ -59,22 +59,22 @@ func TestNetRCParser(t *testing.T) {
 
 	netrcFile := &test.MockReadCloser{
 		MockData: []byte(
-			"# top of file comment\n" +
-				"machine github.com\n" +
-				"\tlogin wayne\n" +
-				"    password password\n" +
-				"\n" +
-				" machine zarf.dev login wayne password p@s#sword%20 \n" +
-				"\n" +
-				"macdef macro\n" +
-				"touch file\n" +
-				" echo \"I am a script and can do anything password fun or login info yay!\"\n" +
-				"\n" +
-				"machine google.com #comment password fun and login info!\n" +
-				"\n" +
-				"default\n" +
-				"  login anonymous\n" +
-				"\tpassword password",
+			`# top of file comment
+machine github.com
+	login wayne
+    password password
+
+ machine zarf.dev login wayne password p@s#sword%20 
+
+macdef macro-name
+touch file
+ echo "I am a script and can do anything password fun or login info yay!"
+
+machine google.com #comment password fun and login info!
+
+default
+  login anonymous
+	password password`,
 		),
 	}
 
