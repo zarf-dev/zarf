@@ -159,6 +159,11 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
+## Run unit tests within the src directory
+.PHONY: test-unit
+test-unit:
+	go test -failfast -v -timeout 30m $(shell go list ./src/... | grep -v /test/)
+
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
