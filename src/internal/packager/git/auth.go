@@ -6,6 +6,7 @@ package git
 
 import (
 	"bufio"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,10 +18,19 @@ import (
 
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc
 func (g *Git) FindAuthForHost(baseUrl string) Credential {
-	// Read the ~/.git-credentials file
-	gitCreds := g.credentialParser()
-	netrcCreds := g.netrcParser()
+	homePath, _ := os.UserHomeDir()
 
+	// Read the ~/.git-credentials file
+	credentialsPath := filepath.Join(homePath, ".git-credentials")
+	credentialsFile, _ := os.Open(credentialsPath)
+	gitCreds := g.credentialParser(credentialsFile)
+
+	// Read the ~/.netrc file
+	netrcPath := filepath.Join(homePath, ".netrc")
+	netrcFile, _ := os.Open(netrcPath)
+	netrcCreds := g.netrcParser(netrcFile)
+
+	// Combine the creds together (.netrc second because it could have a default)
 	creds := append(gitCreds, netrcCreds...)
 
 	// Will be nil unless a match is found
@@ -40,21 +50,17 @@ func (g *Git) FindAuthForHost(baseUrl string) Credential {
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts
-func (g *Git) credentialParser() []Credential {
+func (g *Git) credentialParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 
-	homePath, _ := os.UserHomeDir()
-	credentialsPath := filepath.Join(homePath, ".git-credentials")
-	credentialsFile, _ := os.Open(credentialsPath)
-
-	defer func(credentialsFile *os.File) {
-		err := credentialsFile.Close()
+	defer func(file io.ReadCloser) {
+		err := file.Close()
 		if err != nil {
 			message.Debugf("Unable to load an existing git credentials file: %s", err.Error())
 		}
-	}(credentialsFile)
+	}(file)
 
-	scanner := bufio.NewScanner(credentialsFile)
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		gitUrl, err := url.Parse(scanner.Text())
 		if err != nil {
@@ -75,21 +81,17 @@ func (g *Git) credentialParser() []Credential {
 }
 
 // netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/
-func (g *Git) netrcParser() []Credential {
+func (g *Git) netrcParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 
-	homePath, _ := os.UserHomeDir()
-	credentialsPath := filepath.Join(homePath, ".netrc")
-	credentialsFile, _ := os.Open(credentialsPath)
-
-	defer func(credentialsFile *os.File) {
-		err := credentialsFile.Close()
+	defer func(file io.ReadCloser) {
+		err := file.Close()
 		if err != nil {
 			message.Debugf("Unable to load an existing netrc file: %s", err.Error())
 		}
-	}(credentialsFile)
+	}(file)
 
-	scanner := bufio.NewScanner(credentialsFile)
+	scanner := bufio.NewScanner(file)
 
 	activeMacro := false
 	activeCommand := ""
