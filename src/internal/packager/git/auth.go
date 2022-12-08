@@ -63,7 +63,7 @@ func (g *Git) credentialParser(file io.ReadCloser) []Credential {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		gitUrl, err := url.Parse(scanner.Text())
-		if err != nil {
+		if err != nil || gitUrl.Host == "" {
 			continue
 		}
 		password, _ := gitUrl.User.Password()
@@ -114,9 +114,6 @@ func (g *Git) netrcParser(file io.ReadCloser) []Credential {
 
 		tokens := strings.Split(line, " ")
 
-		// TODO: (@WSTARR) Remove this when finished
-		message.Debugf("tokens: '%#v'", tokens)
-
 		for _, token := range tokens {
 			if activeCommand != "" {
 				// If we are in an active command, process the next token as a value
@@ -124,6 +121,8 @@ func (g *Git) netrcParser(file io.ReadCloser) []Credential {
 				activeCommand = ""
 			} else if strings.HasPrefix(token, "#") {
 				// If we have entered into a comment, don't process it
+				// NOTE: We could use a similar technique to this for spaces in the future
+				// by detecting leading " and trailing \.  See top of function for more info
 				break
 			} else if token == "machine" {
 				// If the token is the start of a machine, append the last machine (if exists) and make a new one
@@ -165,9 +164,6 @@ func appendNetrcMachine(machine map[string]string, credentials []Credential) []C
 			Password: machine["password"],
 		},
 	}
-
-	// TODO: (@WSTARR) Remove this when finished
-	message.Debugf("credential: '%#v'", credential)
 
 	return append(credentials, credential)
 }
