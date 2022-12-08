@@ -164,9 +164,6 @@ func getRequestedComponentList(requestedComponents string) []string {
 }
 
 func (p *Packager) handlePartialPkg() error {
-	// Track success to avoid multiple os.remove calls or having to clean up outside this function
-	success := false
-
 	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
@@ -194,7 +191,8 @@ func (p *Packager) handlePartialPkg() error {
 
 	// Remove the new package if there is an error
 	defer func() {
-		if !success {
+		// If there is an error, remove the new package
+		if p.cfg.DeployOpts.PackagePath != destination {
 			os.Remove(destination)
 		}
 	}()
@@ -250,7 +248,7 @@ func (p *Packager) handlePartialPkg() error {
 		_ = os.Remove(file)
 	}
 
-	// Mark the package as successfully created
-	success = true
+	// Success, update the package path
+	p.cfg.DeployOpts.PackagePath = destination
 	return nil
 }
