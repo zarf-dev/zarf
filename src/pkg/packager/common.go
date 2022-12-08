@@ -55,9 +55,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	// Set the arch
-	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
-
 	return pkgConfig, nil
 }
 

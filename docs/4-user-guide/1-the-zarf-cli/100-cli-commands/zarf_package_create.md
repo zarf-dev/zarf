@@ -20,6 +20,8 @@ zarf package create [DIRECTORY] [flags]
       --insecure                  Allow insecure registry connections when pulling OCI images
   -m, --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple packages. Use 0 to disable splitting. (default 4352)
   -o, --output-directory string   Specify the output directory for the created Zarf package
+  -s, --sbom                      View SBOM contents after creating the package
+      --sbom-out string           Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package
 ```

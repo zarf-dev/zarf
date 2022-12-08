@@ -19,6 +19,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: private-registry
+      priorityClassName: system-node-critical
       containers:
         - name: server
           image: "###ZARF_REGISTRY###/defenseunicorns/zarf/###ZARF_CONST_AGENT_IMAGE###"

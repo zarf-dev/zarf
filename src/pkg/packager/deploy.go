@@ -281,11 +281,13 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment
 func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
-	var spinner message.Spinner
-	if len(componentFiles) > 0 {
-		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
-		defer spinner.Stop()
+	// If there are no files to process, return early.
+	if len(componentFiles) < 1 {
+		return nil
 	}
+
+	spinner := *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+	defer spinner.Stop()
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
@@ -326,6 +328,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(sourceFile)
 	}
+
 	spinner.Success()
 
 	return nil

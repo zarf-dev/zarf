@@ -11,7 +11,7 @@ on:
       - "docs/**"
       - "package.json"
       - "package-lock.json"
-      - "CODEOWNERS"      
+      - "CODEOWNERS"
 
 # Abort prior jobs in the same workflow / PR
 concurrency:

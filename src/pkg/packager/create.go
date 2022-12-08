@@ -127,6 +127,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
 
+
 	f, err := os.Stat(packageName)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
@@ -164,6 +165,18 @@ func (p *Packager) Create(baseDir string) error {
 				return fmt.Errorf("unable to write the file %s: %w", path, err)
 			}
 		}
+	}
+  
+  // Output the SBOM files into a directory if specified
+	if p.cfg.CreateOpts.SBOMOutputDir != "" {
+		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+			return err
+		}
+	}
+
+	// Open a browser to view the SBOM if specified
+	if p.cfg.CreateOpts.ViewSBOM {
+		sbom.ViewSBOMFiles(p.tmp)
 	}
 
 	return nil

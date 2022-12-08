@@ -44,6 +44,8 @@ const (
 	// Package create config keys
 	V_PKG_CREATE_SET              = "package.create.set"
 	V_PKG_CREATE_OUTPUT_DIR       = "package.create.output_directory"
+	V_PKG_CREATE_SBOM             = "package.create.sbom"
+	V_PKG_CREATE_SBOM_OUTPUT      = "package.create.sbom_output"
 	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
 	V_PKG_CREATE_INSECURE         = "package.create.insecure"
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
