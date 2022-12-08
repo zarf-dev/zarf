@@ -42,10 +42,12 @@ const (
 	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
 
 	// Package create config keys
-	V_PKG_CREATE_SET        = "package.create.set"
-	V_PKG_CREATE_OUTPUT_DIR = "package.create.output_directory"
-	V_PKG_CREATE_SKIP_SBOM  = "package.create.skip_sbom"
-	V_PKG_CREATE_INSECURE   = "package.create.insecure"
+	V_PKG_CREATE_SET         = "package.create.set"
+	V_PKG_CREATE_OUTPUT_DIR  = "package.create.output_directory"
+	V_PKG_CREATE_SBOM        = "package.create.sbom"
+	V_PKG_CREATE_SBOM_OUTPUT = "package.create.sbom_output"
+	V_PKG_CREATE_SKIP_SBOM   = "package.create.skip_sbom"
+	V_PKG_CREATE_INSECURE    = "package.create.insecure"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
