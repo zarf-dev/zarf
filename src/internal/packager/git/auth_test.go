@@ -20,7 +20,7 @@ func TestCredentialParser(t *testing.T) {
 		MockData: []byte(
 			`https://wayne:password@github.com/
 bad line
-<really bad=\"line\"/>
+<really bad="line"/>
 https://wayne:p%40ss%20word%2520@zarf.dev
 http://google.com`,
 		),
