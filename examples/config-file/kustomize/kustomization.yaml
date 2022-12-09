@@ -1,5 +1,8 @@
 secretGenerator:
-- name: sample
-  behavior: create
-  files:
-  - values.yaml=values.yaml
+  - name: kustomize-secret
+    namespace: zarf
+    behavior: create
+    files:
+      - values.yaml=values.yaml
+generatorOptions:
+  disableNameSuffixHash: true

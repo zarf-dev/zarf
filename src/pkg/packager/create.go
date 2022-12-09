@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -269,18 +268,18 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			for _, f := range manifest.Files {
 				// Copy manifests without any processing
 				spinner.Updatef("Copying manifest %s", f)
-				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
+				destination := filepath.Join(componentPath.Manifests, f)
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
 					return fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
 			}
 
-			for idx, k := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
-				spinner.Updatef("Building kustomization for %s", k)
-				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return fmt.Errorf("unable to build kustomization %s: %w", k, err)
+			for _, k := range manifest.Kustomizations {
+				// Copy kustomizations without any processing
+				spinner.Updatef("Copying kustomizations %s", k)
+				destination := filepath.Join(componentPath.Manifests, k)
+				if err := utils.CreatePathAndCopy(k, destination); err != nil {
+					return fmt.Errorf("unable to copy kustomization %s: %w", k, err)
 				}
 			}
 		}

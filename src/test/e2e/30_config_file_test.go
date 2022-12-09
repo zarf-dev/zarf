@@ -55,9 +55,13 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
+	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}'").Output()
 	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
 	require.Contains(t, string(kubectlOut), "camel_spider=matte")
+
+	// Verify the kustomize secret was properly templated
+	kubectlOut, _ = exec.Command("kubectl", "-n", "zarf", "get", "secret", "kustomize-secret", "-o", "jsonpath='{.data.values\\.yaml}'").Output()
+	require.Contains(t, string(kubectlOut), "c2NvcnBpb246ICJpcmlkZXNjZW50IgpjYW1lbF9zcGlkZXI6ICJtYXR0ZSIK")
 }
 
 func configFileDefaultTests(t *testing.T) {

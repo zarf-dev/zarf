@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
+	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -441,10 +442,27 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	}
 
 	for _, manifest := range component.Manifests {
-		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
+		for idx, k := range manifest.Kustomizations {
+			// Generate manifests from kustomizations and place in the package
+			builtFile := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+			destination := filepath.Join(componentPath.Manifests, builtFile)
+
+			// TODO: (@WSTARR) wrapping this in an if statement could make this non/less-breaking
+			kPath := filepath.Join(componentPath.Manifests, k)
+
+			// Run the template engine against the kustomizations (if they exist) before they are built
+			valueTemplate, err := template.Generate(p.cfg)
+			if err != nil {
+				return installedCharts, err
+			}
+			template.ProcessYamlFilesInPath(kPath, component, valueTemplate)
+
+			if err := kustomize.BuildKustomization(kPath, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+				return installedCharts, fmt.Errorf("unable to build kustomization %s: %w", kPath, err)
+			}
+
+			// Move kustomizations to files after being built
+			manifest.Files = append(manifest.Files, builtFile)
 		}
 
 		if manifest.Namespace == "" {

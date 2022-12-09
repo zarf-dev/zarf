@@ -1,2 +1,2 @@
-zebra: "###ZARF_PKG_VAR_ZEBRA###"
-leopard: "###ZARF_PKG_VAR_LEOPARD###"
+scorpion: "###ZARF_VAR_SCORPION###"
+camel_spider: "###ZARF_VAR_CAMEL_SPIDER###"

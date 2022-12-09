@@ -8,12 +8,6 @@ variables:
   - name: CAMEL_SPIDER
 
 components:
-  - name: secret-test
-    required: true
-    manifests:
-    - name: secret
-      kustomizations:
-      - kustomize/
   - name: lion
     description: "By default, only this component will be deployed when using the config file"
     required: true
@@ -21,6 +15,9 @@ components:
       - name: config-example-configmap
         files:
           - simple-configmap.yaml
+      - name: config-example-secret
+        kustomizations:
+        - kustomize/
 
   - name: zebra
     description: "This is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
