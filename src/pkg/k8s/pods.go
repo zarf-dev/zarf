@@ -72,7 +72,7 @@ func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 }
 
 // WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
-func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []string {
+func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []string {
 	for count := 0; count < waitLimit; count++ {
 
 		pods, err := k.Clientset.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
@@ -94,6 +94,11 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []
 			for _, pod := range pods.Items {
 				k.Log("Testing pod %s", pod.Name)
 				k.Log("%#v", pod)
+
+				// If an include function is provided, only keep pods that return true
+				if include != nil && !include(pod) {
+					continue
+				}
 
 				// Handle container targetting
 				if target.Container != "" {
@@ -136,10 +141,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, waitForAllPods bool) []
 			}
 
 			k.Log("Ready pods", readyPods)
-			somePodsReady := len(readyPods) > 0
-			allPodsReady := len(pods.Items) == len(readyPods)
-
-			if allPodsReady || somePodsReady && !waitForAllPods {
+			if len(readyPods) > 0 {
 				return readyPods
 			}
 		}

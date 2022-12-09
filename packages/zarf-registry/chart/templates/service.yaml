@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "docker-registry.fullname" . }}
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ template "docker-registry.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      protocol: TCP
+      name: {{ if .Values.tlsSecretName }}https{{ else }}http{{ end }}-{{ .Values.service.port }}
+      targetPort: 5000
+      nodePort: {{ .Values.service.nodePort }}
+  selector:
+    app: {{ template "docker-registry.name" . }}
+    release: {{ .Release.Name }}

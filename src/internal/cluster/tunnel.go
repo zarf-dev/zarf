@@ -7,7 +7,6 @@ package cluster
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -43,6 +43,9 @@ const (
 	ZarfLogging  = "LOGGING"
 	ZarfGit      = "GIT"
 	ZarfInjector = "INJECTOR"
+
+	// See https://regex101.com/r/OWVfAO/1
+	serviceURLPattern = `^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`
 )
 
 // Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
@@ -86,6 +89,21 @@ func (c *Cluster) PrintConnectTable() error {
 	return nil
 }
 
+// IsServiceURL will check if the provided string is a valid serviceURL based on if it properly matches a validating regexp
+func IsServiceURL(serviceURL string) bool {
+	parsedURL, err := url.Parse(serviceURL)
+	if err != nil {
+		return false
+	}
+
+	// Match hostname against local cluster service format
+	pattern := regexp.MustCompile(serviceURLPattern)
+	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
+
+	// If incomplete match, return an error
+	return len(matches) == 3
+}
+
 // NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
 // Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}
 func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
@@ -101,13 +119,12 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 	}
 
 	// Match hostname against local cluster service format
-	// See https://regex101.com/r/OWVfAO/1
-	pattern := regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+	pattern := regexp.MustCompile(serviceURLPattern)
 	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
 
 	// If incomplete match, return an error
 	if len(matches) != 3 {
-		return nil, errors.New("url does not match service url format http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
+		return nil, lang.ErrNotAServiceURL
 	}
 
 	// Use the matched values to create a new tunnel
@@ -432,7 +449,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	servicePods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
 		Namespace: tunnel.namespace,
 		Selector:  selectorLabelsOfPods,
-	}, false)
+	}, nil)
 
 	return servicePods[0], nil
 }

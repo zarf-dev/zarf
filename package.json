@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "API_DEV_PORT=5173 API_PORT=3333 API_TOKEN=insecure concurrently --names \"ui,api\" -c \"gray.bold,yellow\" \"vite dev\" \"nodemon -e go -x 'go run main.go dev ui -l=trace || exit 1'\"",
+		"dev": ".hooks/ui-dev.sh",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -43,21 +43,21 @@
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
 		"playwright": "1.28.1",
-		"prettier": "2.8.0",
+		"prettier": "2.8.1",
 		"prettier-plugin-svelte": "2.8.1",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
 		"sass": "1.56.1",
 		"svelte": "3.53.1",
-		"svelte-check": "2.10.0",
+		"svelte-check": "2.10.1",
 		"svelte-preprocess": "4.10.7",
 		"tslib": "2.4.1",
 		"typescript": "4.9.3"
 	},
 	"dependencies": {
-		"material-symbols": "0.4.0",
+		"material-symbols": "0.4.1",
 		"typescript": "4.9.3",
-		"vite": "3.2.4",
+		"vite": "3.2.5",
 		"yaml": "2.1.3"
 	}
 }

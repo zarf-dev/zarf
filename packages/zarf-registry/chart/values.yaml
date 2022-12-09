@@ -1,0 +1,61 @@
+replicaCount: 1
+
+podLabels: {}
+
+image:
+  repository: registry
+  tag: 2.8.1
+
+service:
+  name: registry
+  type: NodePort
+  port: 5000
+
+resources: {}
+
+persistence:
+  accessMode: "ReadWriteOnce"
+  enabled: true
+  size: 20Gi
+
+storage: filesystem
+
+secrets:
+  htpasswd: ""
+  configData:
+    version: 0.1
+    log:
+      fields:
+        service: registry
+    storage:
+      cache:
+        blobdescriptor: inmemory
+    http:
+      secret: ""
+      addr: :5000
+      headers:
+        X-Content-Type-Options: [nosniff]
+      debug:
+        addr: :5001
+        prometheus:
+          enabled: false
+          path: /metrics
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+
+securityContext:
+  enabled: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+podDisruptionBudget:
+  minAvailable: 1
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80

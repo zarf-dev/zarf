@@ -4,8 +4,12 @@ description: "Save debug logs"
 runs:
   using: composite
   steps:
+    - name: Fix log permissions
+      run: |
+        sudo chown $USER /tmp/zarf-*.log
+      shell: bash
+
     - uses: actions/upload-artifact@v3
-      if: always()
       with:
         name: debug-log
         path: /tmp/zarf-*.log

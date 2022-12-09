@@ -277,11 +277,13 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment
 func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
-	var spinner message.Spinner
-	if len(componentFiles) > 0 {
-		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
-		defer spinner.Stop()
+	// If there are no files to process, return early.
+	if len(componentFiles) < 1 {
+		return nil
 	}
+
+	spinner := *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+	defer spinner.Stop()
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
@@ -322,6 +324,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(sourceFile)
 	}
+
 	spinner.Success()
 
 	return nil
@@ -378,19 +381,34 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 // Push all of the components git repos to the configured git server
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
-	// Try repo push up to 3 times
 	for _, repoURL := range repos {
-		gitClient := git.New(p.cfg.State.GitServer)
-		repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-		if err != nil {
-			return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
+
+		// Create an anonymous function to push the repo to the Zarf git server
+		tryPush := func() error {
+			gitClient := git.New(p.cfg.State.GitServer)
+
+			// If this is a serviceURL, create a port-forward tunnel to that resource
+			if cluster.IsServiceURL(gitClient.Server.Address) {
+				if tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address); err != nil {
+					return err
+				} else {
+					tunnel.Connect("", false)
+					defer tunnel.Close()
+					gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
+				}
+			}
+
+			// Convert the repo URL to a Zarf-formatted repo name
+			if repoPath, err := gitClient.TransformURLtoRepoName(repoURL); err != nil {
+				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
+			} else {
+				return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+			}
 		}
 
-		err = utils.Retry(func() error {
-			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
-		}, 3, 5*time.Second)
-		if err != nil {
-			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoPath, err)
+		// Try repo push up to 3 times
+		if err := utils.Retry(tryPush, 3, 5*time.Second); err != nil {
+			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
 
