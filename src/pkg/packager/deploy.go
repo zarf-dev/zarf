@@ -465,18 +465,20 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			builtFile := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 			destination := filepath.Join(componentPath.Manifests, builtFile)
 
-			// TODO: (@WSTARR) wrapping this in an if statement could make this non/less-breaking
-			kPath := filepath.Join(componentPath.Manifests, k)
+			// Check if the destination exists, if it does, this means that this package is v0.22.2 or older and already has built kustomizations
+			if utils.InvalidPath(destination) {
+				kPath := filepath.Join(componentPath.Manifests, k)
 
-			// Run the template engine against the kustomizations (if they exist) before they are built
-			valueTemplate, err := template.Generate(p.cfg)
-			if err != nil {
-				return installedCharts, err
-			}
-			template.ProcessYamlFilesInPath(kPath, component, valueTemplate)
+				// Run the template engine against the kustomizations (if they exist) before they are built
+				valueTemplate, err := template.Generate(p.cfg)
+				if err != nil {
+					return installedCharts, err
+				}
+				template.ProcessYamlFilesInPath(kPath, component, valueTemplate)
 
-			if err := kustomize.BuildKustomization(kPath, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-				return installedCharts, fmt.Errorf("unable to build kustomization %s: %w", kPath, err)
+				if err := kustomize.BuildKustomization(kPath, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return installedCharts, fmt.Errorf("unable to build kustomization %s: %w", kPath, err)
+				}
 			}
 
 			// Move kustomizations to files after being built

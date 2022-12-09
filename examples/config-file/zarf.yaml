@@ -17,7 +17,7 @@ components:
           - simple-configmap.yaml
       - name: config-example-secret
         kustomizations:
-        - kustomize/
+          - kustomize/
 
   - name: zebra
     description: "This is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
