@@ -14,6 +14,7 @@
 	let toggleShowRaw = () => (showRaw = !showRaw);
 	import CodeBlock from '$lib/components/code-block.svelte';
 	import { stringify } from 'yaml';
+  	import Drawer from '$lib/components/drawer.svelte';
 </script>
 
 <svelte:head>
@@ -30,10 +31,9 @@
 		<Button on:click={toggleShowRaw} variant="text" color="primary" slot="actions">view yaml</Button
 		>
 	</SectionHeader>
-	<!-- TODO: @Noxsios replace dialog w/ right side drawer -->
-	<Dialog bind:toggleDialog={toggleShowRaw}>
-		<CodeBlock slot="content" language="yaml">{stringify($pkgStore.zarfPackage)}</CodeBlock>
-	</Dialog>
+	<Drawer placement="right" size="fit-content" open={showRaw} on:clickAway={() => showRaw = false}>
+		<CodeBlock language="yaml">{stringify($pkgStore.zarfPackage)}</CodeBlock>
+	</Drawer>
 	<div class="pkg-details">
 		<div class="pkg-details-chips">
 			<Typography variant="h2">
