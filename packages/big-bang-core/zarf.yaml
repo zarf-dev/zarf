@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
   description: "Deploy Big Bang Core"
-  version: 1.47.0
+  version: 1.48.0
   url: https://p1.dso.mil/products/big-bang
   image: https://p1.dso.mil/img/Big_Bang_Color_Logo_White_text.de14c793.webp
   # Big Bang / Iron Bank are only amd64
@@ -24,14 +24,14 @@ components:
     description: "Git repositories and OCI images used by Big Bang Core"
     required: true
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.47.0
+      - https://repo1.dso.mil/platform-one/big-bang/bigbang.git@1.48.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-controlplane.git@1.15.3-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/istio-operator.git@1.15.3-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.9.0-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/core/policy.git@3.10.0-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/cluster-auditor.git@1.5.0-bb.1
       - https://repo1.dso.mil/platform-one/big-bang/apps/core/monitoring.git@41.7.3-bb.0
-      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.11.3-bb.2
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/metrics-server.git@3.8.0-bb.5
+      - https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git@0.11.4-bb.0
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/metrics-server.git@3.8.0-bb.6
 
     images:
       # istio:
@@ -47,8 +47,9 @@ components:
       - "registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.7"
 
       # policy (OPA Gatekeeper)
-      - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.2
-      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.9.0
+      - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
+      - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3
+      - registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.10.0
 
       # monitoring:
       - "registry1.dso.mil/ironbank/big-bang/base:2.0.0"
@@ -74,7 +75,7 @@ components:
     description: "Git repositories and OCI images used by PLG"
     required: true
     repos:
-      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.2.1-bb.3
+      - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/loki.git@3.3.4-bb.0
       - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/promtail.git@6.2.2-bb.2
       - https://repo1.dso.mil/platform-one/big-bang/apps/sandbox/tempo.git@0.16.1-bb.2
     images:
