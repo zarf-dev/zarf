@@ -356,7 +356,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		defer spinner.Stop()
 	}
 
-	kube, err := k8s.NewWithWait(spinner.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}
@@ -366,7 +366,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
-	spinner.Debugf("Selected pod %s to open port forward to", podName)
+	message.Debugf("Selected pod %s to open port forward to", podName)
 
 	// Build url to the port forward endpoint
 	// example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward
@@ -379,7 +379,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		SubResource("portforward").
 		URL()
 
-	spinner.Debugf("Using URL %s to create portforward", portForwardCreateURL)
+	message.Debugf("Using URL %s to create portforward", portForwardCreateURL)
 
 	// Construct the spdy client required by the client-go portforward library
 	transport, upgrader, err := spdy.RoundTripperFor(kube.RestConfig)
