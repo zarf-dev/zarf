@@ -112,11 +112,11 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			spinner.Debugf("Certificate subject: ", sigs.CertSubject(cert))
+			message.Debugf("Certificate subject: %s", sigs.CertSubject(cert))
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {
-				spinner.Debugf("Certificate issuer URL: ", issuerURL)
+				message.Debugf("Certificate issuer URL: %s", issuerURL)
 			}
 		}
 
@@ -125,7 +125,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 			spinner.Errorf(err, "Error getting payload")
 			return err
 		}
-		spinner.Debugf(string(p))
+		message.Debug(string(p))
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
