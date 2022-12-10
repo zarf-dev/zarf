@@ -21,7 +21,7 @@ const (
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrLoadingConfig       = "failed to load config: %w"
-	ErrWritingFile         = "failed to write the file %s: %w"
+	ErrWritingFile         = "failed to write the file %s: %s"
 )
 
 // Zarf CLI commands
@@ -108,7 +108,7 @@ const (
 		"# Initializing w/ an external git server:\nzarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}\n\n"
 
 	CmdInitErrFlags            = "Invalid command flags were provided."
-	CmdInitErrDownload         = "failed to download the init package: %w"
+	CmdInitErrDownload         = "failed to download the init package: %s"
 	CmdInitErrValidateGit      = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
 	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided "
 
