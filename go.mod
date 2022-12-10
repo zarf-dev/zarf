@@ -11,7 +11,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0-20221208165359-362910506bc2
 	github.com/fatih/color v1.13.0
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-git/go-git/v5 v5.5.0
+	github.com/go-git/go-git/v5 v5.4.2 // reverting due to https://github.com/go-git/go-git/issues/624
 	github.com/go-logr/logr v1.2.3
 	github.com/goccy/go-yaml v1.9.7
 	github.com/google/go-containerregistry v0.12.1
@@ -25,13 +25,13 @@ require (
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.4.0
 	helm.sh/helm/v3 v3.10.2
-	k8s.io/api v0.25.5
+	k8s.io/api v0.25.5 // not updating due to breaking api change in .26
 	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	sigs.k8s.io/kustomize/api v0.12.1
-	sigs.k8s.io/kustomize/kyaml v0.13.9
+	sigs.k8s.io/kustomize/kyaml v0.13.9 // not updating due to bug in kyaml
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -268,7 +268,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
-	github.com/pjbgf/sha1cd v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.13.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -294,7 +293,6 @@ require (
 	github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2 // indirect
 	github.com/sigstore/sigstore v1.4.4 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/skeema/knownhosts v1.1.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/spdx/tools-golang v0.3.1-0.20221108182156-8a01147e6342 // indirect
