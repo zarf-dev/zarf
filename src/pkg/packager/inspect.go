@@ -22,7 +22,7 @@ func (p *Packager) Inspect(packageName string, includeSBOM bool, outputSBOM stri
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if err := p.handlePartialPkg(); err != nil {
+	if err := p.handleIfPartialPkg(); err != nil {
 		return fmt.Errorf("unable to process partial package: %w", err)
 	}
 

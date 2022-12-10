@@ -163,7 +163,7 @@ func getRequestedComponentList(requestedComponents string) []string {
 	return []string{}
 }
 
-func (p *Packager) handlePartialPkg() error {
+func (p *Packager) handleIfPartialPkg() error {
 	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package

@@ -38,13 +38,13 @@ type ZarfInitOptions struct {
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
-	SkipSBOM        bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	Insecure        bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
-	OutputDirectory string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
-	ViewSBOM        bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
-	SBOMOutputDir   string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
-	SetVariables    map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	MaxPackageSize  int               `json:"maxPackageSize" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files"`
+	SkipSBOM         bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
+	Insecure         bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
+	OutputDirectory  string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	ViewSBOM         bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
+	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
+	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 }
 
 // ZarfPartialPackageData contains info about a partial package
