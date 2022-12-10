@@ -145,7 +145,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	})
 
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
-		spinner.Debugf("Repo already up-to-date")
+		message.Debug("Repo already up-to-date")
 	} else if err != nil {
 		return fmt.Errorf("unable to push repo to the gitops service: %w", err)
 	}
