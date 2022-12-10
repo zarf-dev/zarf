@@ -32,7 +32,7 @@ jobs:
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
-      - name: Run external service test
+      - name: Run unit tests
         run: make test-unit
 
       - name: Save logs
