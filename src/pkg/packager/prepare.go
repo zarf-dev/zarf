@@ -116,8 +116,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
-				} else {
+				} else if chart.Url != "" {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
+				} else {
+					helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {
