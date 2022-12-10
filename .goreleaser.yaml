@@ -69,7 +69,10 @@ brews:
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
-  - name: "zarf@{{ .Tag }}"
+
+  # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
+  #       install versioned releases that has a `v` character before the version number.
+  - name: "zarf@{{ .Version }}"
     tap:
       owner: defenseunicorns
       name: homebrew-tap
