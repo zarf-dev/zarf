@@ -67,7 +67,9 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Perform early package validation
-	validate.Run(p.cfg.Pkg)
+	if err := validate.Run(p.cfg.Pkg); err != nil {
+		return fmt.Errorf("unable to validate package: %w", err)
+	}
 
 	if !p.confirmAction("Create", nil) {
 		return fmt.Errorf("package creation canceled")
