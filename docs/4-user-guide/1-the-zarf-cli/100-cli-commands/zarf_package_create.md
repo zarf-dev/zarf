@@ -5,7 +5,7 @@ Use to create a Zarf package from a given directory or the current directory
 ### Synopsis
 
 Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.
-Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' and '~/.git-credentials'.
+Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', '~/.git-credentials' and '~/.netrc'.
 
 
 ```
