@@ -37,6 +37,7 @@
 </script>
 
 <aside class="drawer" class:open {style}>
+	<!-- @Noxsios TODO: handle drawer on smaller screens (show a close button in upper right) -->
 	<div class="overlay" on:click={handleClickAway} on:keydown={handleEscape} />
 
 	<div class="panel {placement}" class:size on:keydown={handleEscape}>
