@@ -55,6 +55,16 @@ func TestUseCLI(t *testing.T) {
 	assert.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
 	assert.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
+	// Test `zarf prepare find-images` for a remote asset
+	stdOut, stdErr, err = e2e.execZarfCommand("prepare", "find-images", "examples/helm-alt-release-name")
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
+
+	// Test `zarf prepare find-images` for a local asset
+	stdOut, stdErr, err = e2e.execZarfCommand("prepare", "find-images", "examples/helm-local-chart")
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
+
 	// Test for expected failure when given a bad component input
 	_, _, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
