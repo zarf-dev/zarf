@@ -68,8 +68,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	if err == git.ErrRepositoryAlreadyExists {
 		message.Debug("Repo already cloned, fetching upstream changes...")
 
-		g.GitPath = gitCachePath
-		err = g.fetch()
+		err = g.fetch(gitCachePath)
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
