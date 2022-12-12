@@ -15,7 +15,7 @@ import (
 // Inspect list the contents of a package
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 
-	if err := p.loadZarfPkg(true); err != nil {
+	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 

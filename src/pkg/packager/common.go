@@ -108,7 +108,8 @@ func (p *Packager) GetPackageName() string {
 }
 
 func (p *Packager) ClearTempPaths() {
-	os.RemoveAll(p.tmp.Base)
+	// Remove the temp directory, but don't throw an error if it fails
+	_ = os.RemoveAll(p.tmp.Base)
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
@@ -166,7 +167,7 @@ func getRequestedComponentList(requestedComponents string) []string {
 	return []string{}
 }
 
-func (p *Packager) loadZarfPkg(preview bool) error {
+func (p *Packager) loadZarfPkg() error {
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
 
@@ -186,19 +187,8 @@ func (p *Packager) loadZarfPkg(preview bool) error {
 
 	// Extract the archive
 	spinner.Updatef("Extracting the package, this may take a few moments")
-	if preview {
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package config: %w", err)
-		}
-		// Dont' abort on sbom extraction errors
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, "sboms", p.tmp.Base); err != nil {
-			spinner.Errorf(err, "Unable to extract the package SBOM")
-		}
-	} else {
-		_ = os.RemoveAll(p.tmp.Base)
-		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
-		}
+	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		return fmt.Errorf("unable to extract the package: %w", err)
 	}
 
 	// Load the config from the extracted archive zarf.yaml

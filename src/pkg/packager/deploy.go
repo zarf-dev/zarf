@@ -34,7 +34,7 @@ var connectStrings = make(types.ConnectStrings)
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	if err := p.loadZarfPkg(true); err != nil {
+	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
@@ -51,10 +51,6 @@ func (p *Packager) Deploy() error {
 	// Confirm the overall package deployment
 	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
-	}
-
-	if err := p.loadZarfPkg(false); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
 	// Set variables and prompt if --confirm is not set
