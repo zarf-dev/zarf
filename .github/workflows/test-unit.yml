@@ -28,7 +28,3 @@ jobs:
 
       - name: Run unit tests
         run: make test-unit
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs

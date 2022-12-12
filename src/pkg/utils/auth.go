@@ -27,11 +27,13 @@ func FindAuthForHost(baseUrl string) Credential {
 
 	// Read the ~/.git-credentials file
 	credentialsPath := filepath.Join(homePath, ".git-credentials")
+	// Dogsled the error since we are ok if this file doesn't exist (error message debugged on close)
 	credentialsFile, _ := os.Open(credentialsPath)
 	gitCreds := credentialParser(credentialsFile)
 
 	// Read the ~/.netrc file
 	netrcPath := filepath.Join(homePath, ".netrc")
+	// Dogsled the error since we are ok if this file doesn't exist (error message debugged on close)
 	netrcFile, _ := os.Open(netrcPath)
 	netrcCreds := netrcParser(netrcFile)
 
@@ -129,26 +131,29 @@ func netrcParser(file io.ReadCloser) []Credential {
 				// NOTE: We could use a similar technique to this for spaces in the future
 				// by detecting leading " and trailing \.  See top of function for more info
 				break
-			} else if token == "machine" {
-				// If the token is the start of a machine, append the last machine (if exists) and make a new one
-				if activeMachine != nil {
-					credentials = appendNetrcMachine(activeMachine, credentials)
+			} else {
+				switch token {
+				case "machine":
+					// If the token is the start of a machine, append the last machine (if exists) and make a new one
+					if activeMachine != nil {
+						credentials = appendNetrcMachine(activeMachine, credentials)
+					}
+					activeMachine = map[string]string{}
+					activeCommand = token
+				case "macdef":
+					// If the token is the start of a macro, enter macro mode
+					activeMacro = true
+					activeCommand = token
+				case "login", "password", "account":
+					// If the token is a regular command, set the now active command
+					activeCommand = token
+				case "default":
+					// If the token is the default machine, append the last machine (if exists) and make a default one
+					if activeMachine != nil {
+						credentials = appendNetrcMachine(activeMachine, credentials)
+					}
+					activeMachine = map[string]string{"machine": ""}
 				}
-				activeMachine = map[string]string{}
-				activeCommand = token
-			} else if token == "macdef" {
-				// If the token is the start of a macro, enter macro mode
-				activeMacro = true
-				activeCommand = token
-			} else if token == "login" || token == "password" || token == "account" {
-				// If the token is a regular command, set the now active command
-				activeCommand = token
-			} else if token == "default" {
-				// If the token is the default machine, append the last machine (if exists) and make a default one
-				if activeMachine != nil {
-					credentials = appendNetrcMachine(activeMachine, credentials)
-				}
-				activeMachine = map[string]string{"machine": ""}
 			}
 		}
 	}

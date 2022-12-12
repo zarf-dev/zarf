@@ -2,7 +2,7 @@
 
 Currently, we primarily test Zarf through a series of end-to-end tests which can be found in the [e2e directory](https://github.com/defenseunicorns/zarf/tree/main/src/test/e2e) of the project. This directory holds all of our e2e tests that we use to verify Zarf functionality in an environment that replicates a live setting. The tests in this directory are automatically run against several K8s distros whenever a PR is opened or updated.
 
-For certain functions, we also test Zarf with a set of unit tests where there are edge cases that are difficult to fully flesh out with an end-to-end test alone.  These tests are located in `*_test.go` files within the package they are meant to test and look at specific functions that interact with well defined interfaces.
+For certain functions, we also test Zarf with a set of unit tests where there are edge cases that are difficult to fully flesh out with an end-to-end test alone.  These tests are located as `*_test.go` files within the [src/pkg directory](https://github.com/defenseunicorns/zarf/tree/main/src/pkg).
 
 ## Running E2E Tests Locally
 
