@@ -50,17 +50,20 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 
 	// On create in interactive mode, prompt for max package size
 	if userMessage == "Create" {
-		value, _ := p.promptVariable(types.ZarfPackageVariable{
+		value, err := p.promptVariable(types.ZarfPackageVariable{
 			Name:        "Maximum Package Size",
 			Description: "Specify a maximum file size for this package in Megabytes (MB). Above this size, the package will be split into multiple files. 0 will disable this feature.",
 			Default:     "0",
 		})
+		if err != nil {
+			return false
+		}
 
 		// Try to parse the value, on error warn and move on
 		maxPackageSize, err := strconv.Atoi(value)
 		if err != nil {
 			message.Warnf("Unable to parse \"%s\" as a number. Defaulting to 0.", value)
-			return confirm
+			maxPackageSize = 0
 		}
 
 		p.cfg.CreateOpts.MaxPackageSizeMB = maxPackageSize

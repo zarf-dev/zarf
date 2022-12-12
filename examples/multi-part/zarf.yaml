@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: multi-part
-  description: Example to demonstrate how to create multi-part zarf packages. By default, packages will not be split into multiple parts unless the package size is larger than 1 Gigabyte (1,024 Megabytes). This package contains a single 5 Megabyte file. To produce a multi-part package, use the command "zarf package create --max-package-size=1"
+  description: Example to demonstrate how to create multi-part zarf packages. By default, packages will not be split into multiple parts. To produce a multi-part package, use the command "zarf package create --max-package-size=1"
 
 components:
   - name: big-ol-file
