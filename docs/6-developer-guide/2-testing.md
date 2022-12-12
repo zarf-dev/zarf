@@ -105,8 +105,9 @@ go test $(go list ./src/... | grep -v /test/) -v -run TestFooBarBaz
 There are a few requirements to be considered when thinking about adding new unit tests.
 
 1. Is what I want to test a true unit (i.e. a single function or file)?
-2. Does what I want to test have a clearly defined interface outside of Zarf's context (i.e. a public specification)?
+2. Does what I want to test have a clearly defined interface (i.e. a public specification)?
+3. Is this code inside of the `src/pkg` folder or should it be?
 
-If the answer to these is yes, then this would be a great place for a unit test, if not, you should likely consider writing an end-to-end test instead.
+If the answer to these is yes, then this would be a great place for a unit test, if not, you should likely consider writing an end-to-end test instead, or modifying your approach so that you can answer yes.
 
 To create a unit test, look for or add a file ending in `_test.go` to the package for the file you are looking to test (e.g. `auth.go` -> `auth_test.go`).  Import the testing library and then create your test functions as needed.  If you need to mock something out consider the best way to do this, and if it is something that can be used in many tests, consider placing the mock in `./src/test/mocks/`.

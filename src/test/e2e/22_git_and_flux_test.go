@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
