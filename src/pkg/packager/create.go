@@ -143,6 +143,9 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
+		if len(chunks) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
 
 		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
 		_ = os.RemoveAll(packageName)
