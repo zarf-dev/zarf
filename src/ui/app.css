@@ -20,7 +20,9 @@
 
 	/* body2 */
 	--mdc-typography-body2-font-style: normal;
-	--mdc-typography-body2-font-size: 1em;
+	--mdc-typography-body2-font-size: 16px;
+	--mdc-typography-body2-line-height: 143%;
+	--mdc-typography-body2-letter-spacing: 0.17px;
 
 	/* body3 */
 	--mdc-typography-body3-font-style: normal;
@@ -42,9 +44,29 @@
 	font-family: var(--mdc-typography-font-family);
 }
 
-.mdc-typography--body2,
+.mdc-typography--body2 {
+	color: var(--mdc-theme-text-primary-on-light);
+	font-style: var(--mdc-typography-body2-font-style);
+	font-size: var(--mdc-typography-body2-font-size);
+	line-height: var(--mdc-typography-body2-line-height);
+	letter-spacing: var(--mdc-typography-body2-letter-spacing);
+}
+
 .mdc-typography--caption {
 	color: var(--mdc-theme-text-secondary-on-light);
+	font-weight: 400;
+	font-size: 12px;
+	line-height: 166%;
+	letter-spacing: 0.4px;
+}
+
+.mdc-typography--subtitle1 {
+	color: var(--mdc-theme-text-primary-on-light);
+	font-style: normal;
+	font-weight: 500;
+	font-size: 18px;
+	line-height: 175%;
+	letter-spacing: 0.15px;
 }
 
 .mdc-typography--body3 {
@@ -68,11 +90,6 @@
 	font-size: 20px;
 	line-height: 160%;
 	letter-spacing: 0.15px;
-}
-
-.mdc-typography--body2 {
-	line-height: 143%;
-	letter-spacing: 0.17px;
 }
 
 *,
@@ -116,10 +133,11 @@ body {
 	margin-top: 2rem;
 }
 .page .page-section {
-	gap: 20px;
+	gap: 4px;
 	display: flex;
 	flex-direction: column;
 }
-.page .page-header {
-	margin-top: 2rem;
+
+.todo {
+	border: 1px dotted #cc0000;
 }
