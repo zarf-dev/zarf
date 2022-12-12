@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -180,6 +181,9 @@ func (p *Packager) handleIfPartialPkg() error {
 	if err != nil {
 		return fmt.Errorf("unable to find partial package files: %s", err)
 	}
+
+	// Ensure the files are in order so they are appended in the correct order
+	sort.Strings(fileList)
 
 	// Create the new package
 	destination := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", "", 1)
