@@ -198,7 +198,8 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	h.Chart = types.ZarfChart{
 		Name:        tmpChart.Metadata.Name,
-		ReleaseName: sha1ReleaseName,
+		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior
+		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
 		Version:     tmpChart.Metadata.Version,
 		Namespace:   manifest.Namespace,
 		NoWait:      manifest.NoWait,
