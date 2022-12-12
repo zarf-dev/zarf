@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -22,13 +26,14 @@ func TestUseCLI(t *testing.T) {
 
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
+	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
 	imageCachePath := filepath.Join(cachePath, "images")
 	gitCachePath := filepath.Join(cachePath, "repos")
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
 
-	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, sbomPath)
 
 	err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
 	assert.NoError(t, err)
@@ -50,6 +55,16 @@ func TestUseCLI(t *testing.T) {
 	assert.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
 	assert.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
+	// Test `zarf prepare find-images` for a remote asset
+	stdOut, stdErr, err = e2e.execZarfCommand("prepare", "find-images", "examples/helm-alt-release-name")
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
+
+	// Test `zarf prepare find-images` for a local asset
+	stdOut, stdErr, err = e2e.execZarfCommand("prepare", "find-images", "examples/helm-local-chart")
+	assert.NoError(t, err, stdOut, stdErr)
+	assert.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
+
 	// Test for expected failure when given a bad component input
 	_, _, err = e2e.execZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
@@ -65,10 +80,18 @@ func TestUseCLI(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
+	require.Contains(t, stdErr, "Creating SBOMs for 1 images")
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	require.NoError(t, err)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName)
+	// Clean the SBOM path so it is force to be recreated
+	e2e.cleanFiles(sbomPath)
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, "--sbom-out", sbomPath)
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	require.NoError(t, err)
 	require.NoError(t, err, stdOut, stdErr)
 
 	_ = os.Mkdir(otherTmpPath, 0750)
@@ -131,5 +154,5 @@ func TestUseCLI(t *testing.T) {
 	_, err = os.ReadFile(tlsKey)
 	require.NoError(t, err)
 
-	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName, tlsCA, tlsCert, tlsKey)
+	e2e.cleanFiles(shasumTestFilePath, cachePath, otherTmpPath, sbomPath, pkgName, tlsCA, tlsCert, tlsKey)
 }

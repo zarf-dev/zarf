@@ -59,16 +59,27 @@ release:
   extra_files:
     - glob: ./build/zarf-init-*
 
-# Create a brew tap recipe that uses the new binary artifacts and push it to our tap
+# Update the 'generic' brew formula and create a versioned brew formula for artifacts from this release
 brews:
-  - name: zarf
+  - name: "{{ .Env.BREW_NAME }}"
     tap:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: "https://zarf.dev/"
-    description: "An airgap delivery tool!"
+    description: "DevSecOps for Air Gap"
+
+  # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
+  #       install versioned releases that has a `v` character before the version number.
+  - name: "zarf@{{ .Version }}"
+    tap:
+      owner: defenseunicorns
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} versioned release {{ .Tag }}"
+    homepage: "https://zarf.dev/"
+    description: "DevSecOps for Air Gap"
 
 # Upload artifact backups to s3
 blobs:

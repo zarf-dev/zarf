@@ -39,7 +39,7 @@ zarf init [flags]
 ### Options
 
 ```
-      --components string               Comma-separated list of components to install.
+      --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
@@ -54,7 +54,8 @@ zarf init [flags]
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
-      --storage-class string            Describe the StorageClass to be used
+      --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
+      --storage-class string            Specify the storage class to use for the registry.  E.g. --storage-class=standard
 ```
 
 ### Options inherited from parent commands
@@ -70,5 +71,5 @@ zarf init [flags]
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 

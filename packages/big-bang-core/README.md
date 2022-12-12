@@ -8,68 +8,96 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ## Known Issues
 
-- Currently this package does the equivalent of `kustomize build | kubectl apply -f -`, which means Flux will be used to deploy everything, but it won't be watching a Git repository for changes. Upcoming work is planned to update the package so that you will be able to open up a Git repo in the private Gitea server inside the cluster, commit and push a change, and see that change get reflected in the deployment.
-
-> NOTE:
-> Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
+- Big Bang requires an AMD64 system to deploy as Iron Bank does not yet support ARM.  You will need to deploy to a cluster that is running AMD64.  Specifically, M1 Apple computers are not supported locally and you will need to provision a remote cluster to work with Big Bang currently.
 
 ## Instructions
 
 ### Pull down the code and binaries
 
 ```shell
-# clone the binaries
+# Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
-# change to the examples folder
-cd zarf/examples
+# Change dir
+cd zarf
+```
 
-# Download the latest release of Zarf and the Init Package to the 'examples/sync' folder
-make fetch-release
+### Get K3d components
+
+Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli
+
+### Get Zarf components
+
+Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
+
+(Optional) Alternatively, build the zarf components from the repo
+```shell
+# Build zarf components from scratch (NOTE: golang and npm must be installed)
+make init-package
+
+# Add zarf cli from build dir to path
+export PATH=$(pwd)/build:$PATH
 ```
 
 ### Build the deploy package
 
 ```shell
-# Create the deploy package and move it to the 'examples/sync' folder
-make package-example-big-bang
-```
+# Change dir
+cd packages/big-bang-core
 
-### Start the Vagrant VM
+# Authenticate to the registry with Big Bang artifacts
+set +o history
+export REGISTRY1_USERNAME=<REPLACE_ME>
+export REGISTRY1_PASSWORD=<REPLACE_ME>
+echo $REGISTRY1_PASSWORD | zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
+set -o history
 
-```shell
-# Start the VM. You'll be dropped into a shell in the VM as the Root user
-make vm-init
+# Run zarf package command
+zarf package create . --confirm
 ```
 
 ### Initialize Zarf
 
 ```shell
-# Initialize Zarf
-./zarf init --confirm --components k3s,git-server
+# Start k3d cluster
+k3d cluster create
+
+# Initialize Zarf (interactively)
+zarf init
+# Make these choices at the prompt
+# ? Do you want to download this init package? Yes
+# ? Deploy this Zarf package? Yes
+# ? Deploy the k3s component? No
+# ? Deploy the logging component? No
+# ? Deploy the git-server component? Yes
+
+# (Optional) An alternative approach is to get the zarf init package from the zarf repo releases page or via build
+# Change dir to location of the zarf-init*.tar.zst (such as the build dir) & run the zarf init command with these flags
+cd ../../build
+zarf init --confirm --components git-server
 
 # (Optional) Inspect the results
-./zarf tools k9s
+zarf tools k9s
 ```
 
 ### Deploy Big Bang
 
 ```shell
-# Deploy Big Bang
-./zarf package deploy --confirm zarf-package-big-bang-core-demo-amd64.tar.zst
+# Deploy Big Bang (lightweight version)
+cd ../packages/big-bang-core
+zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-*.tar.zst) --components big-bang-core-limited-resources
+# NOTE: to deploy the standard full set of components use the flag:
+# '--components big-bang-core-standard'
 
 # (Optional) Inspect the results
-./zarf tools k9s
+zarf tools k9s
 ```
 
 ### Clean Up
 
 ```shell
-# Inside the VM
-exit
-
-# On the host
-make vm-destroy
+# Destroy the k3d cluster
+k3d cluster delete
 ```
 
 ## Services

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package packages provides api functions for managing zarf packages
 package packages
 
 import (
@@ -6,17 +10,19 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	globalConfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/packager"
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // DeployPackage deploys a package to the Zarf cluster.
 func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	isInitPkg := r.URL.Query().Get("isInitPkg") == "true"
+
+	config := types.PackagerConfig{}
 
 	if isInitPkg {
 		var body = types.ZarfInitOptions{}
@@ -25,26 +31,27 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			message.ErrorWebf(err, w, "Unable to decode the request to deploy the cluster")
 			return
 		}
-		config.InitOptions = body
-		initPackageName := config.GetInitPackageName()
-		config.DeployOptions.PackagePath = initPackageName
+		config.IsInitConfig = true
+		config.InitOpts = body
+		initPackageName := packager.GetInitPackageName("")
+		config.DeployOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		if utils.InvalidPath(config.DeployOptions.PackagePath) {
+		if utils.InvalidPath(config.DeployOpts.PackagePath) {
 			// Get the path to the executable
 			if executablePath, err := utils.GetFinalExecutablePath(); err != nil {
 				message.Errorf(err, "Unable to get the path to the executable")
 			} else {
 				executableDir := path.Dir(executablePath)
-				config.DeployOptions.PackagePath = filepath.Join(executableDir, initPackageName)
+				config.DeployOpts.PackagePath = filepath.Join(executableDir, initPackageName)
 			}
 
 			// If the init-package doesn't exist in the executable directory, try the cache directory
-			if err != nil || utils.InvalidPath(config.DeployOptions.PackagePath) {
-				config.DeployOptions.PackagePath = filepath.Join(config.GetAbsCachePath(), initPackageName)
+			if err != nil || utils.InvalidPath(config.DeployOpts.PackagePath) {
+				config.DeployOpts.PackagePath = filepath.Join(globalConfig.GetAbsCachePath(), initPackageName)
 
 				// If the init-package doesn't exist in the cache directory, return an error
-				if utils.InvalidPath(config.DeployOptions.PackagePath) {
+				if utils.InvalidPath(config.DeployOpts.PackagePath) {
 					common.WriteJSONResponse(w, false, http.StatusBadRequest)
 					return
 				}
@@ -57,11 +64,21 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 			message.ErrorWebf(err, w, "Unable to decode the request to deploy the cluster")
 			return
 		}
-		config.DeployOptions = body
+		config.DeployOpts = body
 	}
 
-	config.CommonOptions.Confirm = true
-	packager.Deploy()
+	globalConfig.CommonOptions.Confirm = true
+
+	pkg, err := packager.New(&config)
+	if err != nil {
+		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+	}
+
+	if err := pkg.Deploy(); err != nil {
+		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+		return
+	}
+	defer pkg.ClearTempPaths()
 
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }

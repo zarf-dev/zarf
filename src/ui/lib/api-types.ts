@@ -584,6 +584,14 @@ export interface ZarfCreateOptions {
      */
     outputDirectory: string;
     /**
+     * Whether to pause to allow for viewing the SBOM post-creation
+     */
+    sbom: boolean;
+    /**
+     * Location to output an SBOM into after package creation
+     */
+    sbomOutput: string;
+    /**
      * Key-Value map of variable names and their corresponding values that will be used to
      * template against the Zarf package being used
      */
@@ -600,6 +608,10 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
+     * Allow insecure connections for remote packages
+     */
+    insecure: boolean;
+    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -612,6 +624,10 @@ export interface ZarfDeployOptions {
      * Location where the public key component of a cosign key-pair can be found
      */
     sGetKeyPath: string;
+    /**
+     * The SHA256 checksum of the package to deploy
+     */
+    shasum: string;
 }
 
 export interface ZarfInitOptions {
@@ -972,14 +988,18 @@ const typeMap: any = {
     "ZarfCreateOptions": o([
         { json: "insecure", js: "insecure", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "sbom", js: "sbom", typ: true },
+        { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
+        { json: "insecure", js: "insecure", typ: true },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "shasum", js: "shasum", typ: "" },
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },

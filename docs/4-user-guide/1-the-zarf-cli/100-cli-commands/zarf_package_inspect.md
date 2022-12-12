@@ -14,8 +14,9 @@ zarf package inspect [PACKAGE] [flags]
 ### Options
 
 ```
-  -h, --help   help for inspect
-  -s, --sbom   View SBOM contents while inspecting the package
+  -h, --help              help for inspect
+  -s, --sbom              View SBOM contents while inspecting the package
+      --sbom-out string   Specify an output directory for the SBOMs from the inspected Zarf package
 ```
 
 ### Options inherited from parent commands

@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
 )
 
@@ -37,10 +42,12 @@ const (
 	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
 
 	// Package create config keys
-	V_PKG_CREATE_SET        = "package.create.set"
-	V_PKG_CREATE_OUTPUT_DIR = "package.create.output_directory"
-	V_PKG_CREATE_SKIP_SBOM  = "package.create.skip_sbom"
-	V_PKG_CREATE_INSECURE   = "package.create.insecure"
+	V_PKG_CREATE_SET         = "package.create.set"
+	V_PKG_CREATE_OUTPUT_DIR  = "package.create.output_directory"
+	V_PKG_CREATE_SBOM        = "package.create.sbom"
+	V_PKG_CREATE_SBOM_OUTPUT = "package.create.sbom_output"
+	V_PKG_CREATE_SKIP_SBOM   = "package.create.skip_sbom"
+	V_PKG_CREATE_INSECURE    = "package.create.insecure"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
@@ -84,9 +91,9 @@ func initViper() {
 	if err != nil {
 		// Config file not found; ignore
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, "Failed to read config file")
+			message.Error(err, lang.CmdViperErrLoadingConfigFile)
 		}
 	} else {
-		message.Notef("Using config file %s", v.ConfigFileUsed())
+		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 	}
 }

@@ -1,6 +1,6 @@
 ## zarf tools monitor
 
-Launch K9s tool for managing K8s clusters
+Launch a terminal UI to monitor the connected cluster using K9s.
 
 ```
 zarf tools monitor [flags]
