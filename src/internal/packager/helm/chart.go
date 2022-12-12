@@ -105,7 +105,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			// Simply wait for dust to settle and try again
 			time.Sleep(10 * time.Second)
 		} else {
-			spinner.Debugf(output.Info.Description)
+			message.Debug(output.Info.Description)
 			spinner.Success()
 			break
 		}
