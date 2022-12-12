@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script lang="ts">
-	type IconVariant =
+<script context="module" lang="ts">
+	export type IconVariant =
 		| 'component'
 		| 'package'
 		| 'package-light'
@@ -11,6 +11,9 @@
 		| 'cancelCloud'
 		| 'shieldPlus'
 		| 'info-light';
+</script>
+
+<script lang="ts">
 	export let variant: IconVariant;
 </script>
 

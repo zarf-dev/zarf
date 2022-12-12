@@ -1,11 +1,13 @@
 <script lang="ts">
 	import Icon from '../icon.svelte';
 	import Tooltip from '../tooltip.svelte';
+	import type { IconVariant } from '../icon.svelte';
+	export let icon: IconVariant = 'package-light';
 </script>
 
 <div class="pkg-section-header">
 	<div class="pkg-section-header-title">
-		<Icon variant="package-light" />
+		<Icon variant={icon} />
 		<slot name="title" />
 		{#if $$slots.tooltip}
 			<Tooltip><slot name="tooltip" /></Tooltip>

@@ -32,22 +32,24 @@
 		visibility: visible;
 	}
 
-	/* right */
+	/* top */
 	.tooltip .tooltiptext {
-		top: -5px;
-		left: 105%;
+		width: 120px;
+		bottom: 100%;
+		left: 50%;
+		margin-left: -60px; /* Use half of the width (120/2 = 60), to center the tooltip */
 	}
 
-	/* right arrow */
+	/* bottom arrow */
 	.tooltip .tooltiptext::after {
 		content: ' ';
 		position: absolute;
-		top: 50%;
-		left: 100%; /* To the right of the tooltip */
-		margin-top: -5px;
+		top: 100%; /* At the bottom of the tooltip */
+		left: 50%;
+		margin-left: -5px;
 		border-width: 5px;
 		border-style: solid;
-		border-color: transparent transparent transparent black;
+		border-color: black transparent transparent transparent;
 	}
 
 	/* transition */

@@ -33,7 +33,6 @@
 	onMount(() => {
 		mounted = true;
 		scrollLock(open);
-        // document.body.onkeydown = handleEscape;
 	});
 </script>
 

@@ -17,7 +17,7 @@
 </script>
 
 <!--Tag formatting matters for pre tags. New line in tags will change the spacing/alignment of the pre-content -->
-<pre><code class={`language-${language}`}><slot /></code></pre>
+<pre><code class="language-{language}"><slot /></code></pre>
 
 <style lang="scss">
 	pre {
