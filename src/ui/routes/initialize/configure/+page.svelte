@@ -5,16 +5,14 @@
 <script lang="ts">
 	import AccordionGroup from '$lib/components/accordion-group.svelte';
 
-	import Icon from '$lib/components/icon.svelte';
 	import PackageComponent from '$lib/components/package-component-accordion.svelte';
 	import { pkgStore } from '$lib/store';
 	import { Button, Chip, Typography } from '@ui';
 	import SectionHeader from '$lib/components/pkg/section-header.svelte';
 	let showRaw: boolean = false;
 	let toggleShowRaw = () => (showRaw = !showRaw);
-	import CodeBlock from '$lib/components/code-block.svelte';
-	import { stringify } from 'yaml';
 	import Drawer from '$lib/components/drawer.svelte';
+	import YamlCode from '$lib/components/yaml-code.svelte';
 </script>
 
 <svelte:head>
@@ -37,7 +35,7 @@
 		open={showRaw}
 		on:clickAway={() => (showRaw = false)}
 	>
-		<CodeBlock language="yaml">{stringify($pkgStore.zarfPackage)}</CodeBlock>
+		<YamlCode code={$pkgStore.zarfPackage} />
 	</Drawer>
 	<div class="pkg-details">
 		<div class="pkg-details-chips">
@@ -95,21 +93,22 @@
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="component" />
-		Package Components
-		<Typography variant="caption" element="p">
-			The following components will be deployed into the cluster. Optional components that are not
-			selected will not be deployed.
+	<SectionHeader icon="component-light">
+		<Typography variant="h2" slot="title">Components</Typography>
+	</SectionHeader>
+	<div style="margin-left: 2rem; margin-top: 0.75rem; margin-bottom: 0.75rem;">
+		<Typography variant="caption">
+			All required and selected components will be deployed to the cluster.
 		</Typography>
-	</Typography>
-
+	</div>
 	<AccordionGroup>
 		{#each $pkgStore.zarfPackage.components as component, idx}
 			<PackageComponent {idx} {component} readOnly={false} />
 		{/each}
 	</AccordionGroup>
 </section>
+
+<!-- @Noxsios TODO: deployment variables section -->
 
 <section class="actionButtonsContainer" aria-label="action buttons">
 	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>
@@ -127,6 +126,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		margin-top: 1.32rem;
 	}
 
 	.align-center {
