@@ -114,7 +114,7 @@ body {
 	padding: 2rem 10rem;
 	display: flex;
 	flex-direction: column;
-	gap: 2rem;
+	gap: 1.32rem;
 }
 @media (max-width: 900px) {
 	.page {
