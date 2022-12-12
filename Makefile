@@ -162,7 +162,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 ## Run unit tests within the src directory
 .PHONY: test-unit
 test-unit: ensure-ui-build-dir
-	go test -failfast -v -timeout 30m $(shell go list ./src/... | grep -v /test/)
+	cd src/pkg && go test ./... -failfast -v -timeout 30m
 
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui

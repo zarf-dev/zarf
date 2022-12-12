@@ -26,12 +26,6 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
-      - name: Build binary and zarf packages
-        uses: ./.github/actions/packages
-
       - name: Run unit tests
         run: make test-unit
 

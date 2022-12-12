@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package git contains functions for interacting with git repositories
-package git
+package utils
 
 import (
 	"bufio"
@@ -16,19 +16,24 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
+type Credential struct {
+	Path string
+	Auth http.BasicAuth
+}
+
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc
-func (g *Git) FindAuthForHost(baseUrl string) Credential {
+func FindAuthForHost(baseUrl string) Credential {
 	homePath, _ := os.UserHomeDir()
 
 	// Read the ~/.git-credentials file
 	credentialsPath := filepath.Join(homePath, ".git-credentials")
 	credentialsFile, _ := os.Open(credentialsPath)
-	gitCreds := g.credentialParser(credentialsFile)
+	gitCreds := credentialParser(credentialsFile)
 
 	// Read the ~/.netrc file
 	netrcPath := filepath.Join(homePath, ".netrc")
 	netrcFile, _ := os.Open(netrcPath)
-	netrcCreds := g.netrcParser(netrcFile)
+	netrcCreds := netrcParser(netrcFile)
 
 	// Combine the creds together (.netrc second because it could have a default)
 	creds := append(gitCreds, netrcCreds...)
@@ -50,7 +55,7 @@ func (g *Git) FindAuthForHost(baseUrl string) Credential {
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts
-func (g *Git) credentialParser(file io.ReadCloser) []Credential {
+func credentialParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 
 	defer func(file io.ReadCloser) {
@@ -81,7 +86,7 @@ func (g *Git) credentialParser(file io.ReadCloser) []Credential {
 }
 
 // netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/
-func (g *Git) netrcParser(file io.ReadCloser) []Credential {
+func netrcParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 
 	defer func(file io.ReadCloser) {

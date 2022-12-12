@@ -94,10 +94,10 @@ Here are a few different ways to run the tests, based on your specific situation
 make test-unit
 
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
-go test $(go list ./src/... | grep -v /test/) -v
+go test ./src/pkg/... -v
 
 # Let's say you only want to run one test. You would run:
-go test $(go list ./src/... | grep -v /test/) -v -run TestFooBarBaz
+go test ./src/pkg/... -v -run TestFooBarBaz
 ```
 
 ## Adding More Unit Tests

@@ -25,7 +25,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 		cloneOptions.Tags = git.NoTags
 	}
 
-	gitCred := g.FindAuthForHost(gitURL)
+	gitCred := utils.FindAuthForHost(gitURL)
 
 	// Gracefully handle no git creds on the system (like our CI/CD)
 	if gitCred.Auth.Username != "" {

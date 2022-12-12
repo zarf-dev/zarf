@@ -2,20 +2,17 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package git contains functions for interacting with git repositories
-package git
+package utils
 
 import (
 	"testing"
 
 	test "github.com/defenseunicorns/zarf/src/test/mocks"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCredentialParser(t *testing.T) {
-	g := New(types.GitServerInfo{})
-
 	credentialsFile := &test.MockReadCloser{
 		MockData: []byte(
 			`https://wayne:password@github.com/
@@ -50,12 +47,11 @@ http://google.com`,
 		},
 	}
 
-	gitCredentials := g.credentialParser(credentialsFile)
+	gitCredentials := credentialParser(credentialsFile)
 	assert.Equal(t, expectedCreds, gitCredentials)
 }
 
 func TestNetRCParser(t *testing.T) {
-	g := New(types.GitServerInfo{})
 
 	netrcFile := &test.MockReadCloser{
 		MockData: []byte(
@@ -109,6 +105,6 @@ default
 		},
 	}
 
-	netrcCredentials := g.netrcParser(netrcFile)
+	netrcCredentials := netrcParser(netrcFile)
 	assert.Equal(t, expectedCreds, netrcCredentials)
 }
