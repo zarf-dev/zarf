@@ -14,7 +14,9 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -162,6 +164,59 @@ func getRequestedComponentList(requestedComponents string) []string {
 	}
 
 	return []string{}
+}
+
+func (p *Packager) loadZarfPkg(preview bool) error {
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	defer spinner.Stop()
+
+	if err := p.handlePackagePath(); err != nil {
+		return fmt.Errorf("unable to handle the provided package path: %w", err)
+	}
+
+	// Make sure the user gave us a package we can work with
+	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
+	}
+
+	// If packagePath has partial in the name, we need to combine the partials into a single package
+	if err := p.handleIfPartialPkg(); err != nil {
+		return fmt.Errorf("unable to process partial package: %w", err)
+	}
+
+	// Extract the archive
+	spinner.Updatef("Extracting the package, this may take a few moments")
+	if preview {
+		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package config: %w", err)
+		}
+		// Dont' abort on sbom extraction errors
+		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, "sboms", p.tmp.Base); err != nil {
+			spinner.Errorf(err, "Unable to extract the package SBOM")
+		}
+	} else {
+		_ = os.RemoveAll(p.tmp.Base)
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
+		}
+	}
+
+	// Load the config from the extracted archive zarf.yaml
+	spinner.Updatef("Loading the zarf package config")
+	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
+	if err := p.readYaml(configPath, true); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	}
+
+	// If SBOM files exist, temporary place them in the deploy directory
+	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
+	if err := sbom.WriteSBOMFiles(p.cfg.SBOMViewFiles); err != nil {
+		// Don't stop the deployment, let the user decide if they want to continue the deployment
+		spinner.Errorf(err, "Unable to process the SBOM files for this package")
+	}
+
+	spinner.Success()
+	return nil
 }
 
 func (p *Packager) handleIfPartialPkg() error {

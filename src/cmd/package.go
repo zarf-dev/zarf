@@ -97,11 +97,14 @@ var packageInspectCmd = &cobra.Command{
 		"contents of the archive.",
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packageName := choosePackage(args)
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Inspect(packageName, includeInspectSBOM, outputInspectSBOM); err != nil {
+		// Inspect the package
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
 			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
