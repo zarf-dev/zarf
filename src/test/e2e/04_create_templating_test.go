@@ -14,7 +14,7 @@ import (
 )
 
 func TestCreateTemplating(t *testing.T) {
-	t.Log("E2E: Temporary directory deploy")
+	t.Log("E2E: Create Templating")
 
 	e2e.setup(t)
 	defer e2e.teardown(t)
