@@ -91,7 +91,7 @@ func findInitPackage(initPackageName string) (string, error) {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
-			message.Fatalf(err, lang.CmdInitErrDownload, err)
+			message.Fatalf(err, lang.CmdInitErrDownload, err.Error())
 		}
 	}
 	return "", nil
