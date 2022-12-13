@@ -59,7 +59,7 @@ func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 	gitURL := remotes[0].Config().URLs[0]
 	message.Debugf("Attempting to find ref: %#v for %s", refspecs, gitURL)
 
-	gitCred := g.FindAuthForHost(gitURL)
+	gitCred := utils.FindAuthForHost(gitURL)
 
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
