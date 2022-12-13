@@ -6,7 +6,7 @@ components:
   - name: git-server
     description: "Add Gitea for serving gitops-based clusters in an airgap"
     images:
-      - gitea/gitea:1.17.3
+      - gitea/gitea:1.18-dev
     manifests:
       - name: git-connect
         namespace: zarf

@@ -35,3 +35,6 @@ memcached:
 
 postgresql:
   enabled: false
+
+image:
+  tag: 1.18-dev
