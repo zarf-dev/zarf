@@ -121,13 +121,13 @@ var generatePKICmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
 		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err)
+			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
 		}
 		if err := os.WriteFile("tls.crt", pki.Cert, 0644); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err)
+			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
 		}
 		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err)
+			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
 		}
 		message.SuccessF(lang.CmdToolsGenPkiSuccess, args[0])
 	},
