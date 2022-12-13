@@ -6,16 +6,17 @@ package sbom
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func (builder *Builder) createSBOMViewerAsset(tag name.Tag, jsonData []byte) error {
+func (builder *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
 
 	// Create the sbom viewer file for the image
-	sbomViewerFile, err := builder.createSBOMFile("sbom-viewer-%s.html", tag)
+	sbomViewerFile, err := builder.createSBOMFile("sbom-viewer-%s.html", identifier)
 	if err != nil {
 		return err
 	}
@@ -26,14 +27,14 @@ func (builder *Builder) createSBOMViewerAsset(tag name.Tag, jsonData []byte) err
 	tplData := struct {
 		ThemeCSS  template.CSS
 		ViewerCSS template.CSS
-		ImageList template.JS
+		List      template.JS
 		Data      template.JS
 		LibraryJS template.JS
 		ViewerJS  template.JS
 	}{
 		ThemeCSS:  builder.loadFileCSS("theme.css"),
 		ViewerCSS: builder.loadFileCSS("styles.css"),
-		ImageList: template.JS(builder.jsonImageList),
+		List:      template.JS(builder.jsonList),
 		Data:      template.JS(jsonData),
 		LibraryJS: builder.loadFileJS("library.js"),
 		ViewerJS:  builder.loadFileJS("viewer.js"),
@@ -59,14 +60,19 @@ func (builder *Builder) loadFileJS(name string) template.JS {
 	return template.JS(data)
 }
 
-// This could be optimized, but loop over all the images to create an image tag list
-func (builder *Builder) generateImageListJSON(tagToImage map[name.Tag]v1.Image) ([]byte, error) {
-	var imageList []string
+// This could be optimized, but loop over all the images and components to create a list of json files
+func (builder *Builder) generateJSONList(componentToFiles map[string][]string, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
+	var jsonList []string
 
 	for tag := range tagToImage {
-		normalized := builder.getNormalizedTag(tag)
-		imageList = append(imageList, normalized)
+		normalized := builder.getNormalizedFileName(tag.String())
+		jsonList = append(jsonList, normalized)
 	}
 
-	return json.Marshal(imageList)
+	for component := range componentToFiles {
+		normalized := builder.getNormalizedFileName(fmt.Sprintf("zarf-component-%s", component))
+		jsonList = append(jsonList, normalized)
+	}
+
+	return json.Marshal(jsonList)
 }
