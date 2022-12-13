@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -31,7 +32,7 @@ type Builder struct {
 	spinner    *message.Spinner
 	cachePath  string
 	imagesPath string
-	dir        string
+	sbomPath   string
 	jsonList   []byte
 }
 
@@ -39,22 +40,24 @@ type Builder struct {
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-func Catalog(componentToFiles map[string][]string, tagToImage map[name.Tag]v1.Image, imagesPath, sbomDir string) {
+var componentPrefix = "component-"
+
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image, imagesPath, sbomPath string) {
 	imageCount := len(tagToImage)
-	componentCount := len(componentToFiles)
+	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
 		imagesPath: imagesPath,
-		dir:        sbomDir,
+		sbomPath:   sbomPath,
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(builder.dir, 0700)
+	_ = utils.CreateDirectory(builder.sbomPath, 0700)
 
 	// Generate a list of images and files for the sbom viewer
-	if json, err := builder.generateJSONList(componentToFiles, tagToImage); err != nil {
+	if json, err := builder.generateJSONList(componentSBOMs, tagToImage); err != nil {
 		builder.spinner.Fatalf(err, "Unable to generate the SBOM image list")
 	} else {
 		builder.jsonList = json
@@ -81,10 +84,15 @@ func Catalog(componentToFiles map[string][]string, tagToImage map[name.Tag]v1.Im
 	currComponent := 1
 
 	// Generate SBOM for each image
-	for component := range componentToFiles {
+	for component := range componentSBOMs {
 		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)
 
-		jsonData, err := builder.createFileSBOM(componentToFiles[component], component)
+		if componentSBOMs[component] == nil {
+			message.Debugf("Component %s has invalid SBOM, skipping", component)
+			continue
+		}
+
+		jsonData, err := builder.createFileSBOM(*componentSBOMs[component], component)
 		if err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM for component %s", component)
 		}
@@ -158,19 +166,21 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 }
 
 // createPathSBOM uses syft to generate SBOM for a filepath
-func (builder *Builder) createFileSBOM(files []string, component string) ([]byte, error) {
-
+func (builder *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component string) ([]byte, error) {
 	catalog := pkg.NewCatalog()
 	relationships := []artifact.Relationship{}
-	var distro *linux.Release
-	var metadata source.Metadata
+	parentSource, err := source.NewFromDirectory(componentSBOM.ComponentPath.Base)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, file := range files {
+	for _, file := range componentSBOM.Files {
 		// Create the sbom source
-		syftSource, clean := source.NewFromFile(file)
+		fileSource, clean := source.NewFromFile(file)
 		defer clean()
 
-		cat, rel, dist, err := syft.CatalogPackages(&syftSource, cataloger.DefaultConfig())
+		// Dogsled distro since this is not a linux image we are scanning
+		cat, rel, _, err := syft.CatalogPackages(&fileSource, cataloger.DefaultConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -178,21 +188,25 @@ func (builder *Builder) createFileSBOM(files []string, component string) ([]byte
 		for pkg := range cat.Enumerate() {
 			catalog.Add(pkg)
 		}
-		relationships = append(relationships, rel...)
 
-		distro = dist
-
-		metadata = syftSource.Metadata
+		for _, r := range rel {
+			relationships = append(relationships, artifact.Relationship{
+				From: &parentSource,
+				To:   r.To,
+				Type: r.Type,
+				Data: r.Data,
+			})
+		}
 	}
 
 	artifact := sbom.SBOM{
 		Descriptor: sbom.Descriptor{
 			Name: "zarf",
 		},
-		Source: metadata,
+		Source: parentSource.Metadata,
 		Artifacts: sbom.Artifacts{
 			PackageCatalog:    catalog,
-			LinuxDistribution: distro,
+			LinuxDistribution: &linux.Release{},
 		},
 		Relationships: relationships,
 	}
@@ -203,7 +217,7 @@ func (builder *Builder) createFileSBOM(files []string, component string) ([]byte
 	}
 
 	// Write the sbom to disk using the given name as the filename
-	sbomFile, err := builder.createSBOMFile("%s.json", fmt.Sprintf("component-%s", component))
+	sbomFile, err := builder.createSBOMFile("%s.json", fmt.Sprintf("%s%s", componentPrefix, component))
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +237,6 @@ func (builder *Builder) getNormalizedFileName(identifier string) string {
 
 func (builder *Builder) createSBOMFile(name string, identifier string) (*os.File, error) {
 	file := fmt.Sprintf(name, builder.getNormalizedFileName(identifier))
-	path := filepath.Join(builder.dir, file)
+	path := filepath.Join(builder.sbomPath, file)
 	return os.Create(path)
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
@@ -61,7 +62,7 @@ func (builder *Builder) loadFileJS(name string) template.JS {
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files
-func (builder *Builder) generateJSONList(componentToFiles map[string][]string, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
+func (builder *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
 	var jsonList []string
 
 	for tag := range tagToImage {
@@ -70,7 +71,7 @@ func (builder *Builder) generateJSONList(componentToFiles map[string][]string, t
 	}
 
 	for component := range componentToFiles {
-		normalized := builder.getNormalizedFileName(fmt.Sprintf("zarf-component-%s", component))
+		normalized := builder.getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, component))
 		jsonList = append(jsonList, normalized)
 	}
 
