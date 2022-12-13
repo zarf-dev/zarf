@@ -35,7 +35,6 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
 		message.SuccessF("%s Zarf package confirmed", userMessage)
-
 		return config.CommonOptions.Confirm
 	}
 
@@ -44,32 +43,34 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	}
 
 	// Prompt the user for confirmation, on abort return false
-	if err := survey.AskOne(prompt, &confirm); err != nil {
-		confirm = true
+	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+		// User aborted or declined, cancel the action
+		return false
 	}
-
+	
 	// On create in interactive mode, prompt for max package size
-	if userMessage == "Create" {
+	if userMessage == "Create" && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
 		value, err := p.promptVariable(types.ZarfPackageVariable{
 			Name:        "Maximum Package Size",
-			Description: "Specify a maximum file size for this package in Megabytes (MB). Above this size, the package will be split into multiple files. 0 will disable this feature.",
+			Description: "Specify a maximum file size for this package in Megabytes. Above this size, the package will be split into multiple files. 0 will disable this feature.",
 			Default:     "0",
 		})
 		if err != nil {
+			// User aborted, cancel the action
 			return false
 		}
 
 		// Try to parse the value, on error warn and move on
 		maxPackageSize, err := strconv.Atoi(value)
 		if err != nil {
-			message.Warnf("Unable to parse \"%s\" as a number. Defaulting to 0.", value)
-			maxPackageSize = 0
+			message.Warnf("Unable to parse \"%s\" as a number for the maximum file size. This package will not be split into multiple files.", value)
+			return true
 		}
 
 		p.cfg.CreateOpts.MaxPackageSizeMB = maxPackageSize
 	}
 
-	return confirm
+	return true
 }
 
 func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
