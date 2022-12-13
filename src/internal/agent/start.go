@@ -47,7 +47,7 @@ func startServer(server *http.Server) {
 		}
 	}()
 
-	message.Infof(lang.AgentErrStart, httpPort)
+	message.Info(lang.AgentErrStart)
 
 	// listen shutdown signal
 	signalChan := make(chan os.Signal, 1)
