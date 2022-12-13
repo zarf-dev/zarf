@@ -27,7 +27,7 @@ resources:
     cpu: "200m"
     memory: "512Mi"
   limits:
-    cpu: "1"
+    cpu: "10"
     memory: "2Gi"
 
 memcached:
