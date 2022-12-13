@@ -32,6 +32,7 @@ components:
   - name: zarf-seed-registry
     charts:
       - name: docker-registry
+        releaseName: zarf-docker-registry
         localPath: packages/zarf-registry/chart
         version: 1.0.0
         namespace: zarf
@@ -51,6 +52,7 @@ components:
           - configmap.yaml
     charts:
       - name: docker-registry
+        releaseName: zarf-docker-registry
         localPath: packages/zarf-registry/chart
         version: 1.0.0
         namespace: zarf

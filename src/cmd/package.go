@@ -40,8 +40,8 @@ var packageCreateCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   "Use to create a Zarf package from a given directory or the current directory",
 	Long: "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
-		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' " +
-		"and '~/.git-credentials'.\n",
+		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
+		"'~/.git-credentials' and '~/.netrc'.\n",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		var baseDir string
