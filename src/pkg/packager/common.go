@@ -110,6 +110,7 @@ func (p *Packager) GetPackageName() string {
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.tmp.Base)
+	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
