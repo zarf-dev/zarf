@@ -40,7 +40,7 @@ type Builder struct {
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-var componentPrefix = "component-"
+var componentPrefix = "zarf-component-"
 
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image, imagesPath, sbomPath string) {
 	imageCount := len(tagToImage)
@@ -97,7 +97,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 			builder.spinner.Fatalf(err, "Unable to create SBOM for component %s", component)
 		}
 
-		if err = builder.createSBOMViewerAsset(fmt.Sprintf("zarf-component-%s", component), jsonData); err != nil {
+		if err = builder.createSBOMViewerAsset(fmt.Sprintf("%s%s", componentPrefix, component), jsonData); err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM viewer for component %s", component)
 		}
 
