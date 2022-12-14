@@ -5,7 +5,7 @@ Use to create a Zarf package from a given directory or the current directory
 ### Synopsis
 
 Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.
-Private registries and repositories are accessed via credentials in your local '~/.docker/config.json' and '~/.git-credentials'.
+Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', '~/.git-credentials' and '~/.netrc'.
 
 
 ```
@@ -19,6 +19,8 @@ zarf package create [DIRECTORY] [flags]
   -h, --help                      help for create
       --insecure                  Allow insecure registry connections when pulling OCI images
   -o, --output-directory string   Specify the output directory for the created Zarf package
+  -s, --sbom                      View SBOM contents after creating the package
+      --sbom-out string           Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
       --skip-sbom                 Skip generating SBOM for this package
 ```

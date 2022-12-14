@@ -1,7 +1,11 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import Divider from './divider.svelte';
 	import type { ZarfPackage } from '$lib/api-types';
-	import { Typography } from '@defense-unicorns/unicorn-ui';
+	import { Typography } from '@ui';
 	export let pkg: ZarfPackage;
 </script>
 

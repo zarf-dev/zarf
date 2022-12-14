@@ -21,7 +21,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps Airgap Toolkit
+* [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf package create](zarf_package_create.md)	 - Use to create a Zarf package from a given directory or the current directory
 * [zarf package deploy](zarf_package_deploy.md)	 - Use to deploy a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](zarf_package_inspect.md)	 - Lists the payload of a Zarf package (runs offline)

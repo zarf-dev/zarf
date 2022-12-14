@@ -1,6 +1,6 @@
 ## zarf tools registry
 
-Collection of registry commands provided by Crane
+Tools for working with container registries using go-containertools.
 
 ### Options
 

@@ -49,14 +49,17 @@ In this repo we use [pre-commit](https://pre-commit.com/) hooks for automated va
 
 1. Install [pre-commit](https://pre-commit.com/)
 1. Install [go](https://golang.org/)
-1. Install [golangci-lint](https://github.com/golangci/golangci-lint)
 1. Run `pre-commit install` in the repo to install the pre-commit hooks. This will make the hooks run automatically each time you `git commit`. If you want to skip the hooks for any reason you can run `git commit --no-verify` to skip them.
 
 > ℹ️ **HINT:** *Consider [automatically enabling the hooks in every Git repository](https://pre-commit.com/#automatically-enabling-pre-commit-on-repositories)*
 
-### End2End Testing
+### Code Testing
 
-Our E2E tests can be found in the `/test` folder and follow the journey of someone as they would use the Zarf CLI.  In CI these tests run against our currently supported cluster distros.  You can learn more about testing of Zarf [here](https://docs.zarf.dev/docs/developer-guide/testing).
+Our E2E tests can be found in the `/test` folder and follow the journey of someone as they would use the Zarf CLI.  In CI these tests run against our currently supported cluster distros, and are the primary way that Zarf code is tested.
+
+Our Unit tests can be found as `*_test.go` files inside the package that they are designed to test.  These are also run in CI and are designed to test small functions with clear interfaces that would be difficult to test otherwise.
+
+You can learn more about testing of Zarf [here](https://docs.zarf.dev/docs/developer-guide/testing).
 
 > ⚠️ **NOTE:** *If you are an external third-party contributor you will need a core-member of the zarf project to run the CI tests/checks for you.  It is strongly recommended to run the tests locally first as documented in the link above.*
 

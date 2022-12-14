@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -22,7 +26,7 @@ func TestHelm(t *testing.T) {
 
 	// Verify multiple helm installs of different release names were deployed
 	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-releasename", "--no-headers").Output()
-	assert.Contains(t, string(kubectlOut), "zarf-cool-name-podinfo")
+	assert.Contains(t, string(kubectlOut), "cool-name-podinfo")
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

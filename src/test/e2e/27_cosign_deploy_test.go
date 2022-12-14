@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -5,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/stretchr/testify/require"
 )
 

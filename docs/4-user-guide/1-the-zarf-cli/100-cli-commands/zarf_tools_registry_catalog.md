@@ -3,7 +3,7 @@
 List the repos in a registry
 
 ```
-zarf tools registry catalog [flags]
+zarf tools registry catalog [REGISTRY] [flags]
 ```
 
 ### Options
@@ -25,5 +25,5 @@ zarf tools registry catalog [flags]
 
 ### SEE ALSO
 
-* [zarf tools registry](zarf_tools_registry.md)	 - Collection of registry commands provided by Crane
+* [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
 

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -9,8 +13,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/git"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,14 +24,15 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
 
 	// Deploy the gitops example
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	tunnel := k8s.NewZarfTunnel()
-	tunnel.Connect(k8s.ZarfGit, false)
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
+	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
 	testGitServerConnect(t, tunnel.HttpEndpoint())
@@ -51,14 +56,15 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 
 func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := k8s.LoadZarfState()
+	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err)
-	config.InitState(state)
+
+	gitCfg := git.New(state.GitServer)
 
 	// Get the repo as the readonly user
 	repoName := "zarf-1211668992"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, config.GetGitServerInfo().PushUsername, repoName), nil)
-	getRepoResponseBody, err := git.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
+	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, state.GitServer.PushUsername, repoName), nil)
+	getRepoResponseBody, err := gitCfg.DoHttpThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the only permissions are pull (read)
@@ -72,15 +78,16 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 
 func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := k8s.LoadZarfState()
+	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
-	config.InitState(state)
 	repoName := "zarf-1211668992"
+
+	gitCfg := git.New(state.GitServer)
 
 	// Get the Zarf repo tag
 	repoTag := "v0.15.0"
 	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
-	getRepoTagsResponseBody, err := git.DoHttpThings(getRepoTagsRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
+	getRepoTagsResponseBody, err := gitCfg.DoHttpThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the pushed tag exists
@@ -91,7 +98,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Get the Zarf repo commit
 	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
 	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/commits", gitURL, config.ZarfGitPushUser, repoName), nil)
-	getRepoCommitsResponseBody, err := git.DoHttpThings(getRepoCommitsRequest, config.ZarfGitReadUser, config.GetGitServerInfo().PullPassword)
+	getRepoCommitsResponseBody, err := gitCfg.DoHttpThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	assert.NoError(t, err)
 
 	// Make sure the pushed commit exists

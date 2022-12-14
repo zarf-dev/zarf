@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package types contains all the types used by Zarf
 package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -9,6 +13,8 @@ type ZarfCommonOptions struct {
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment
 type ZarfDeployOptions struct {
+	Insecure     bool              `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
+	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
 	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
 	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
@@ -35,6 +41,8 @@ type ZarfCreateOptions struct {
 	SkipSBOM        bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
 	Insecure        bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
 	OutputDirectory string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	ViewSBOM        bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
+	SBOMOutputDir   string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables    map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
@@ -44,3 +52,22 @@ type ConnectString struct {
 }
 
 type ConnectStrings map[string]ConnectString
+
+type ComponentPaths struct {
+	Base           string
+	Files          string
+	Charts         string
+	Values         string
+	Repos          string
+	Manifests      string
+	DataInjections string
+}
+type TempPaths struct {
+	Base         string
+	InjectBinary string
+	SeedImage    string
+	Images       string
+	Components   string
+	Sboms        string
+	ZarfYaml     string
+}

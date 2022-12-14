@@ -45,6 +45,8 @@ To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install)
 
 From the docs you can learn more about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
 
+Using Zarf in Github workflows? Checkout the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and it's `init` package with zero added dependencies.
+
 ## Developing
 
 To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/developer-guide/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/developer-guide/nerd-notes).

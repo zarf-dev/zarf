@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -10,7 +14,7 @@ import (
 )
 
 func TestCreateTemplating(t *testing.T) {
-	t.Log("E2E: Temporary directory deploy")
+	t.Log("E2E: Create Templating")
 
 	e2e.setup(t)
 	defer e2e.teardown(t)

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package external_test provides a test for the external init flow
 package external_test
 
 import (
@@ -8,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	test "github.com/defenseunicorns/zarf/src/test/e2e"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

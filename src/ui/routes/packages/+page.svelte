@@ -1,9 +1,13 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script>
 	import { Packages } from '$lib/api';
 	import Hero from '$lib/components/hero.svelte';
 	import PackageDetails from '$lib/components/package-details-card.svelte';
 	import Spinner from '$lib/components/spinner.svelte';
-	import { Button, ButtonIcon, Typography } from '@ui';
+	import { Button, Typography } from '@ui';
 	import Icon from '$lib/components/icon.svelte';
 </script>
 

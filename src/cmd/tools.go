@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for zarf
 package cmd
 
 import (
@@ -6,9 +10,10 @@ import (
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/k8s"
-	"github.com/defenseunicorns/zarf/src/internal/message"
-	"github.com/defenseunicorns/zarf/src/internal/pki"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/mholt/archiver/v3"
@@ -24,26 +29,26 @@ var toolsCmd = &cobra.Command{
 		skipLogFile = true
 		cliSetup()
 	},
-	Short: "Collection of additional tools to make airgap easier",
+	Short: lang.CmdToolsShort,
 }
 
 // destroyCmd represents the init command
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
-	Short:   "Compress/Decompress tools for Zarf packages",
+	Short:   lang.CmdToolsArchiverShort,
 }
 
 var archiverCompressCmd = &cobra.Command{
 	Use:     "compress {SOURCES} {ARCHIVE}",
 	Aliases: []string{"c"},
-	Short:   "Compress a collection of sources based off of the destination file extension",
+	Short:   lang.CmdToolsArchiverCompressShort,
 	Args:    cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
-			message.Fatal(err, "Unable to perform compression")
+			message.Fatal(err, lang.CmdToolsArchiverCompressErr)
 		}
 	},
 }
@@ -51,13 +56,13 @@ var archiverCompressCmd = &cobra.Command{
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress {ARCHIVE} {DESTINATION}",
 	Aliases: []string{"d"},
-	Short:   "Decompress an archive (package) to a specified location",
+	Short:   lang.CmdToolsArchiverDecompressShort,
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
-			message.Fatal(err, "Unable to perform decompression")
+			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
 		}
 	},
 }
@@ -65,28 +70,21 @@ var archiverDecompressCmd = &cobra.Command{
 var registryCmd = &cobra.Command{
 	Use:     "registry",
 	Aliases: []string{"r", "crane"},
-	Short:   "Collection of registry commands provided by Crane",
+	Short:   lang.CmdToolsRegistryShort,
 }
 
 var readCredsCmd = &cobra.Command{
 	Use:   "get-git-password",
-	Short: "Returns the push user's password for the Git server",
-	Long:  "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace",
+	Short: lang.CmdToolsGetGitPasswdShort,
+	Long:  lang.CmdToolsGetGitPasswdLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		state, err := k8s.LoadZarfState()
-		if err != nil {
-			message.Fatal(err, "Unable to load Zarf state")
-		}
-
-		if state.Distro == "" {
+		state, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
-			message.Fatalf(nil, "Unable to load the zarf/zarf-state secret, did you remember to run zarf init first?")
+			message.Fatalf(nil, lang.ErrLoadState)
 		}
 
-		// Continue loading state data if it is valid
-		config.InitState(state)
-
-		message.Note("Git Server Push Password: ")
+		message.Note(lang.CmdToolsGetGitPasswdInfo)
 		fmt.Println(state.GitServer.PushPassword)
 	},
 }
@@ -94,7 +92,7 @@ var readCredsCmd = &cobra.Command{
 var k9sCmd = &cobra.Command{
 	Use:     "monitor",
 	Aliases: []string{"m", "k9s"},
-	Short:   "Launch K9s tool for managing K8s clusters",
+	Short:   lang.CmdToolsMonitorShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
 		os.Args = []string{os.Args[0], "-n", "zarf"}
@@ -105,33 +103,33 @@ var k9sCmd = &cobra.Command{
 var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
-	Short:   "Clears the configured git and image cache directory",
+	Short:   lang.CmdToolsClearCacheShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		message.Debugf("Cache directory set to: %s", config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
-			message.Fatalf("Unable to clear the cache driectory %s: %s", config.GetAbsCachePath(), err.Error())
+			message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
 		}
-		message.SuccessF("Successfully cleared the cache from %s", config.GetAbsCachePath())
+		message.SuccessF(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
 	},
 }
 
 var generatePKICmd = &cobra.Command{
 	Use:     "gen-pki {HOST}",
 	Aliases: []string{"pki"},
-	Short:   "Generates a Certificate Authority and PKI chain of trust for the given host",
+	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
 		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
-			message.Fatalf(err, "Failed to write the CA file: %s", err.Error())
+			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
 		}
 		if err := os.WriteFile("tls.crt", pki.Cert, 0644); err != nil {
-			message.Fatalf(err, "Failed to write the Certificate file: %s", err.Error())
+			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
 		}
 		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
-			message.Fatalf(err, "Failed to write the Key file: %s", err.Error())
+			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
 		}
-		message.SuccessF("Successfully created a chain of trust for %s", args[0])
+		message.SuccessF(lang.CmdToolsGenPkiSuccess, args[0])
 	},
 }
 
@@ -143,54 +141,36 @@ func init() {
 	toolsCmd.AddCommand(registryCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
-	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, "Specify the location of the Zarf  artifact cache (images and git repositories)")
+	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
 
 	toolsCmd.AddCommand(generatePKICmd)
-	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, "Specify Subject Alternative Names for the certificate")
+	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
 
-	cranePlatformOptions := config.GetCraneOptions()
+	cranePlatformOptions := config.GetCraneOptions(false)
 
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
+
+	craneCatalog := craneCmd.NewCmdCatalog(&cranePlatformOptions)
+	craneCatalog.Example = ""
 
 	registryCmd.AddCommand(craneLogin)
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
-	registryCmd.AddCommand(craneCmd.NewCmdCatalog(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCatalog)
 
 	syftCmd, err := cli.New()
 	if err != nil {
-		message.Fatal(err, "Unable to create sbom (syft) CLI")
+		message.Fatal(err, lang.CmdToolsSbomErr)
 	}
 	syftCmd.Use = "sbom"
-	syftCmd.Short = "SBOM tools provided by Anchore Syft"
+	syftCmd.Short = lang.CmdToolsSbomShort
 	syftCmd.Aliases = []string{"s", "syft"}
-	syftCmd.Example = `  zarf tools sbom packages alpine:latest                                a summary of discovered packages
-  zarf tools sbom packages alpine:latest -o json                        show all possible cataloging details
-  zarf tools sbom packages alpine:latest -o cyclonedx                   show a CycloneDX formatted SBOM
-  zarf tools sbom packages alpine:latest -o cyclonedx-json              show a CycloneDX JSON formatted SBOM
-  zarf tools sbom packages alpine:latest -o spdx                        show a SPDX 2.2 Tag-Value formatted SBOM
-  zarf tools sbom packages alpine:latest -o spdx-json                   show a SPDX 2.2 JSON formatted SBOM
-  zarf tools sbom packages alpine:latest -vv                            show verbose debug information
-  zarf tools sbom packages alpine:latest -o template -t my_format.tmpl  show a SBOM formatted according to given template file
-
-  Supports the following image sources:
-    zarf tools sbom packages yourrepo/yourimage:tag     defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry.
-    zarf tools sbom packages path/to/a/file/or/dir      a Docker tar, OCI tar, OCI directory, or generic filesystem directory
-
-  You can also explicitly specify the scheme to use:
-    zarf tools sbom packages docker:yourrepo/yourimage:tag          explicitly use the Docker daemon
-    zarf tools sbom packages podman:yourrepo/yourimage:tag          explicitly use the Podman daemon
-    zarf tools sbom packages registry:yourrepo/yourimage:tag        pull image directly from a registry (no container runtime required)
-    zarf tools sbom packages docker-archive:path/to/yourimage.tar   use a tarball from disk for archives created from "docker save"
-    zarf tools sbom packages oci-archive:path/to/yourimage.tar      use a tarball from disk for OCI archives (from Skopeo or otherwise)
-    zarf tools sbom packages oci-dir:path/to/yourimage              read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
-    zarf tools sbom packages dir:path/to/yourproject                read directly from a path on disk (any directory)
-    zarf tools sbom packages file:path/to/yourproject/file          read directly from a path on disk (any single file)`
+	syftCmd.Example = ""
 
 	for _, subCmd := range syftCmd.Commands() {
 		subCmd.Example = ""

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for zarf
 package test
 
 import (
@@ -7,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,29 +25,28 @@ func TestConfigFile(t *testing.T) {
 		config = "zarf-config.toml"
 	)
 
-	e2e.cleanFiles(path, config)
+	e2e.cleanFiles(path)
 
 	// Test the config file environment variable
 	os.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
 	configFileTests(t, dir, path)
 	os.Unsetenv("ZARF_CONFIG")
 
-	// Test the config file auto-discovery
-	utils.CreatePathAndCopy(filepath.Join(dir, config), config)
-	configFileTests(t, dir, path)
-
 	configFileDefaultTests(t)
 
-	e2e.cleanFiles(path, config)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	e2e.cleanFiles(path)
 }
 
 func configFileTests(t *testing.T, dir, path string) {
-	stdOut, _, err := e2e.execZarfCommand("package", "create", dir, "--confirm")
+	_, stdErr, err := e2e.execZarfCommand("package", "create", dir, "--confirm")
 	require.NoError(t, err)
-	require.Contains(t, string(stdOut), "This is a zebra and they have stripes")
-	require.Contains(t, string(stdOut), "This is a leopard and they have spots")
+	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
+	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	_, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEAPORD COMPONENT")

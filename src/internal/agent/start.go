@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package agent holds the mutating webhook server
 package agent
 
 import (
@@ -7,8 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
-	"github.com/defenseunicorns/zarf/src/internal/message"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and
@@ -28,19 +33,19 @@ func StartWebhook() {
 	server := agentHttp.NewServer(httpPort)
 	go func() {
 		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
-			message.Fatal(err, "Failed to start the web server")
+			message.Fatal(err, lang.AgentErrStart)
 		}
 	}()
 
-	message.Infof("Server running in port: %s", httpPort)
+	message.Info(lang.AgentErrStart)
 
 	// listen shutdown signal
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 
-	message.Infof("Shutdown gracefully...")
+	message.Infof(lang.AgentInfoShutdown)
 	if err := server.Shutdown(context.Background()); err != nil {
-		message.Fatal(err, "unable to properly shutdown the web server")
+		message.Fatal(err, lang.AgentErrShutdown)
 	}
 }

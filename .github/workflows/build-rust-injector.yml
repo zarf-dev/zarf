@@ -8,13 +8,17 @@ on:
         required: true
       branchName:
         description: "Branch to build the injector from"
-        required: false
-        default: "master"
+        required: true
 
 jobs:
   build-injector:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout Repo"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branchName }}
+
       - name: Install tools
         uses: ./.github/actions/install-tools
 
@@ -24,20 +28,15 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           sudo apt install build-essential -y
 
-      - name: "Checkout Repo"
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branchName }}
-
       - name: "Build Rust Binary for x86_64"
-        working-directory: src/injector/stage1
+        working-directory: src/injector
         run: |
           rustup target add x86_64-unknown-linux-musl
           cargo build --target x86_64-unknown-linux-musl --release
           strip target/x86_64-unknown-linux-musl/release/zarf-injector
 
       - name: "Build Rust Binary for aarch64"
-        working-directory: src/injector/stage1
+        working-directory: src/injector
         run: |
           rustup target add aarch64-unknown-linux-musl
           curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
@@ -52,7 +51,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: "Upload Binaries To DockerHub"
-        working-directory: src/injector/stage1/target
+        working-directory: src/injector/target
         run: |
           cosign upload blob -f x86_64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:amd64-${{ github.event.inputs.versionTag }}
           cosign upload blob -f aarch64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:arm64-${{ github.event.inputs.versionTag }}

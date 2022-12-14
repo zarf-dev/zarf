@@ -15,7 +15,7 @@ The [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.
 
 ```json
   "yaml.schemas": {
-    "https://github.com/defenseunicorns/zarf/raw/master/zarf.schema.json": "zarf.yaml"
+    "https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json": "zarf.yaml"
   }
 ```
 
@@ -26,7 +26,7 @@ In some cases, it may be beneficial to lock a `zarf.yaml`'s validation to a spec
 This can be accomplished by adding the below to the **first** line of any given `zarf.yaml`.
 
 ```yaml
-# yaml-language-server: $schema=https://github.com/defenseunicorns/zarf/raw/<VERSION>/zarf.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/<VERSION>/zarf.schema.json
 ```
 
 Where `<VERSION>` is one of [Zarf's releases](https://github.com/defenseunicorns/zarf/releases).
