@@ -71,7 +71,9 @@ func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
 }
 
-// WaitForPodsAndContainers holds execution up to 30 seconds waiting for health pods and containers (if specified)
+// WaitForPodsAndContainers attempts to find pods matching the given selector and optional inclusion filter
+// It will wait up to 90 seconds for the pods to be found and will return a list of matching pod names
+// If the timeout is reached, an empty list will be returned
 func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []string {
 	for count := 0; count < waitLimit; count++ {
 
