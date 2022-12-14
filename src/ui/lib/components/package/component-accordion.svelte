@@ -7,7 +7,7 @@
 
 	import type { ZarfComponent } from '$lib/api-types';
 	import { pkgComponentDeployStore } from '$lib/store';
-	import { Accordion, IconButton, Typography } from '@ui';
+	import { Accordion, Chip, IconButton, Typography } from '@ui';
 
 	export let idx: number;
 	export let readOnly: boolean = true;
@@ -24,19 +24,17 @@
 		console.log(JSON.stringify(list, null, 2));
 		pkgComponentDeployStore.set(list);
 	};
-	$: requiredText = `(${component.required ? 'Required' : 'Optional'})`;
+	$: requiredText = component.required ? 'Required' : 'Optional';
 	$: componentTitle = `${component.name} ${requiredText}`;
 </script>
 
 <Accordion id={`component-accordion-${idx}`} class="package-component-accordion">
 	<div slot="headerContent" class="component-accordion-header">
 		<div style="flex: 1">
-			<Typography variant="subtitle2" element="div" class="component-title" title={componentTitle}>
+			<Typography variant="subtitle2" element="div" title={componentTitle}>
 				{component.name}
-				<Typography element="span" variant="body2" class={component.required ? '' : 'optional'}>
-					{requiredText}
-				</Typography>
 			</Typography>
+			<Chip variant="outlined">{requiredText}</Chip>
 		</div>
 		<div style="flex: 3">
 			<Typography
@@ -93,9 +91,6 @@
 		overflow: hidden;
 		justify-content: space-between;
 	}
-	:global(.component-title .optional) {
-		color: var(--mdc-theme-primary-dark);
-	}
 	.component-accordion-header div {
 		display: flex;
 		align-items: center;
@@ -109,5 +104,8 @@
 		flex-wrap: nowrap;
 		white-space: nowrap;
 		text-overflow: ellipsis;
+	}
+	.component-accordion-header div :global(.chip-wrapper) {
+		margin-left: 1rem;
 	}
 </style>
