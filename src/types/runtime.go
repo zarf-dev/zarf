@@ -61,6 +61,11 @@ type ConnectString struct {
 
 type ConnectStrings map[string]ConnectString
 
+type ComponentSBOM struct {
+	Files         []string
+	ComponentPath ComponentPaths
+}
+
 type ComponentPaths struct {
 	Base           string
 	Files          string
@@ -70,6 +75,7 @@ type ComponentPaths struct {
 	Manifests      string
 	DataInjections string
 }
+
 type TempPaths struct {
 	Base         string
 	InjectBinary string

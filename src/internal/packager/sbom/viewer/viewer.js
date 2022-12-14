@@ -13,9 +13,9 @@ function initSelector() {
 
     const url = /sbom-viewer-(.*).html*$/gmi.exec(window.location.href)[1];
 
-    ZARF_SBOM_IMAGE_LIST.sort().forEach(image => {
-        let selected = (url === image) ? 'selected' : '';
-        sbomSelector.add(new Option(image, image, selected, selected));
+    ZARF_SBOM_LIST.sort().forEach(item => {
+        let selected = (url === item) ? 'selected' : '';
+        sbomSelector.add(new Option(item, item, selected, selected));
     });
 }
 
