@@ -5,7 +5,7 @@
 <script>
 	import { Packages } from '$lib/api';
 	import Hero from '$lib/components/hero.svelte';
-	import PackageDetails from '$lib/components/package-details-card.svelte';
+	import { DetailsCard } from '$lib/components/package';
 	import Spinner from '$lib/components/spinner.svelte';
 	import { Button, Typography } from '@ui';
 	import Icon from '$lib/components/icon.svelte';
@@ -35,7 +35,7 @@
 					<Icon variant="package" />
 					Deployed Packages
 				</Typography>
-				<PackageDetails pkg={pkg.data} />
+				<DetailsCard pkg={pkg.data} />
 			</section>
 		{/each}
 	{/if}

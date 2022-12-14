@@ -5,10 +5,9 @@
 <script lang="ts">
 	import AccordionGroup from '$lib/components/accordion-group.svelte';
 
-	import PackageComponent from '$lib/components/package-component-accordion.svelte';
+	import { SectionHeader, ComponentAccordion as PackageComponent } from '$lib/components/package';
 	import { pkgStore } from '$lib/store';
 	import { Button, Chip, Typography } from '@ui';
-	import SectionHeader from '$lib/components/section-header.svelte';
 	let showRaw: boolean = false;
 	let toggleShowRaw = () => (showRaw = !showRaw);
 	import Drawer from '$lib/components/drawer.svelte';

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import Divider from './divider.svelte';
+	import Divider from '../divider.svelte';
 	import type { ZarfPackage } from '$lib/api-types';
 	import { Typography } from '@ui';
 	export let pkg: ZarfPackage;
