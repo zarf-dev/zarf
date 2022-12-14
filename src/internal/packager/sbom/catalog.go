@@ -109,15 +109,15 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go
-func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
+func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	// Get the image
-	tarballImg, err := tarball.ImageFromPath(builder.imagesPath, &tag)
+	tarballImg, err := tarball.ImageFromPath(b.imagesPath, &tag)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create the sbom
-	imageCachePath := filepath.Join(builder.cachePath, config.ZarfImageCacheDir)
+	imageCachePath := filepath.Join(b.cachePath, config.ZarfImageCacheDir)
 	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image tag as the filename
-	sbomFile, err := builder.createSBOMFile("%s.json", tag.String())
+	sbomFile, err := b.createSBOMFile("%s.json", tag.String())
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (builder *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 }
 
 // createPathSBOM uses syft to generate SBOM for a filepath
-func (builder *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component string) ([]byte, error) {
+func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component string) ([]byte, error) {
 	catalog := pkg.NewCatalog()
 	relationships := []artifact.Relationship{}
 	parentSource, err := source.NewFromDirectory(componentSBOM.ComponentPath.Base)
@@ -217,7 +217,7 @@ func (builder *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, compon
 	}
 
 	// Write the sbom to disk using the given name as the filename
-	sbomFile, err := builder.createSBOMFile("%s.json", fmt.Sprintf("%s%s", componentPrefix, component))
+	sbomFile, err := b.createSBOMFile("%s.json", fmt.Sprintf("%s%s", componentPrefix, component))
 	if err != nil {
 		return nil, err
 	}
@@ -231,12 +231,12 @@ func (builder *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, compon
 	return jsonData, nil
 }
 
-func (builder *Builder) getNormalizedFileName(identifier string) string {
+func (b *Builder) getNormalizedFileName(identifier string) string {
 	return transformRegex.ReplaceAllString(identifier, "_")
 }
 
-func (builder *Builder) createSBOMFile(name string, identifier string) (*os.File, error) {
-	file := fmt.Sprintf(name, builder.getNormalizedFileName(identifier))
-	path := filepath.Join(builder.sbomPath, file)
+func (b *Builder) createSBOMFile(name string, identifier string) (*os.File, error) {
+	file := fmt.Sprintf(name, b.getNormalizedFileName(identifier))
+	path := filepath.Join(b.sbomPath, file)
 	return os.Create(path)
 }

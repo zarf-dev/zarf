@@ -14,10 +14,10 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func (builder *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
+func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
 
 	// Create the sbom viewer file for the image
-	sbomViewerFile, err := builder.createSBOMFile("sbom-viewer-%s.html", identifier)
+	sbomViewerFile, err := b.createSBOMFile("sbom-viewer-%s.html", identifier)
 	if err != nil {
 		return err
 	}
@@ -33,12 +33,12 @@ func (builder *Builder) createSBOMViewerAsset(identifier string, jsonData []byte
 		LibraryJS template.JS
 		ViewerJS  template.JS
 	}{
-		ThemeCSS:  builder.loadFileCSS("theme.css"),
-		ViewerCSS: builder.loadFileCSS("styles.css"),
-		List:      template.JS(builder.jsonList),
+		ThemeCSS:  b.loadFileCSS("theme.css"),
+		ViewerCSS: b.loadFileCSS("styles.css"),
+		List:      template.JS(b.jsonList),
 		Data:      template.JS(jsonData),
-		LibraryJS: builder.loadFileJS("library.js"),
-		ViewerJS:  builder.loadFileJS("viewer.js"),
+		LibraryJS: b.loadFileJS("library.js"),
+		ViewerJS:  b.loadFileJS("viewer.js"),
 	}
 
 	// Render the sbomviewer template
@@ -51,27 +51,27 @@ func (builder *Builder) createSBOMViewerAsset(identifier string, jsonData []byte
 	return tpl.Execute(sbomViewerFile, tplData)
 }
 
-func (builder *Builder) loadFileCSS(name string) template.CSS {
+func (b *Builder) loadFileCSS(name string) template.CSS {
 	data, _ := viewerAssets.ReadFile("viewer/" + name)
 	return template.CSS(data)
 }
 
-func (builder *Builder) loadFileJS(name string) template.JS {
+func (b *Builder) loadFileJS(name string) template.JS {
 	data, _ := viewerAssets.ReadFile("viewer/" + name)
 	return template.JS(data)
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files
-func (builder *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
+func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
 	var jsonList []string
 
 	for tag := range tagToImage {
-		normalized := builder.getNormalizedFileName(tag.String())
+		normalized := b.getNormalizedFileName(tag.String())
 		jsonList = append(jsonList, normalized)
 	}
 
 	for component := range componentToFiles {
-		normalized := builder.getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, component))
+		normalized := b.getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, component))
 		jsonList = append(jsonList, normalized)
 	}
 
