@@ -26,8 +26,9 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	if len(sbomViewFiles) > 0 {
 		cwd, _ := os.Getwd()
 		link := filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))
-		msg := fmt.Sprintf("This package has %d artifacts with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
+		msg := fmt.Sprintf("This package has %d artifacts with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s", len(sbomViewFiles), link)
 		message.Note(msg)
+		message.Note(" * This directory will be removed after package deployment.")
 	}
 
 	pterm.Println()
@@ -47,7 +48,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		// User aborted or declined, cancel the action
 		return false
 	}
-	
+
 	// On create in interactive mode, prompt for max package size if it is still the default value of 0
 	// Note: it will not be 0 if the user has provided a value via the --max-package-size flag or Viper config
 	if userMessage == "Create" && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
