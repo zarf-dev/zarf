@@ -49,14 +49,14 @@
 		"sanitize.css": "13.0.0",
 		"sass": "1.56.2",
 		"svelte": "3.53.1",
-		"svelte-check": "2.10.1",
+		"svelte-check": "2.10.2",
 		"svelte-preprocess": "4.10.7",
 		"tslib": "2.4.1",
-		"typescript": "4.9.3"
+		"typescript": "4.9.4"
 	},
 	"dependencies": {
 		"material-symbols": "0.4.2",
-		"typescript": "4.9.3",
+		"typescript": "4.9.4",
 		"vite": "3.2.5",
 		"yaml": "2.1.3"
 	}
