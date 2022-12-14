@@ -76,20 +76,20 @@ type ZarfFile struct {
 
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
-	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy, this should be the name of the chart as it is installed in the helm repo"`
-	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create, defaults to the name of the chart"`
+	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
+	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create; defaults to the name of the chart"`
 	Url         string   `json:"url,omitempty" jsonschema:"oneof_required=url,description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
-	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy, for git-based charts this is also the tag of the git repo"`
+	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
-	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package, these will be merged together"`
-	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=If using a git repo, the path to the chart in the repo"`
+	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package; these will be merged together"`
+	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo"`
 	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=localPath,description=The path to the chart folder"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart
 type ZarfManifest struct {
-	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests, this will become the name of the dynamically-created helm chart"`
+	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
 	Namespace                  string   `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the manifests to"`
 	Files                      []string `json:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`

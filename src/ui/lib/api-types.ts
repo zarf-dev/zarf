@@ -125,7 +125,7 @@ export interface ZarfComponent {
 
 export interface ZarfChart {
     /**
-     * If using a git repo
+     * The path to the chart in the repo if using a git repo instead of a helm repo
      */
     gitPath?: string;
     /**
@@ -133,7 +133,8 @@ export interface ZarfChart {
      */
     localPath?: string;
     /**
-     * The name of the chart to deploy
+     * The name of the chart to deploy; this should be the name of the chart as it is installed
+     * in the helm repo
      */
     name: string;
     /**
@@ -145,7 +146,7 @@ export interface ZarfChart {
      */
     noWait?: boolean;
     /**
-     * The name of the release to create
+     * The name of the release to create; defaults to the name of the chart
      */
     releaseName?: string;
     /**
@@ -154,11 +155,12 @@ export interface ZarfChart {
      */
     url?: string;
     /**
-     * List of values files to include in the package
+     * List of values files to include in the package; these will be merged together
      */
     valuesFiles?: string[];
     /**
-     * The version of the chart to deploy
+     * The version of the chart to deploy; for git-based charts this is also the tag of the git
+     * repo
      */
     version: string;
 }
@@ -246,7 +248,8 @@ export interface ZarfManifest {
      */
     kustomizeAllowAnyDirectory?: boolean;
     /**
-     * A name to give this collection of manifests
+     * A name to give this collection of manifests; this will become the name of the
+     * dynamically-created helm chart
      */
     name: string;
     /**
@@ -391,7 +394,9 @@ export interface ZarfMetadata {
      */
     version?: string;
     /**
-     * Yaml OnLy Online
+     * Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf
+     * init against the cluster. This is ideal for connected environments where you want to use
+     * existing VCS and container registries.
      */
     yolo?: boolean;
 }
