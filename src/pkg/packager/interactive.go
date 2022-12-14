@@ -48,7 +48,8 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		return false
 	}
 	
-	// On create in interactive mode, prompt for max package size
+	// On create in interactive mode, prompt for max package size if it is still the default value of 0
+	// Note: it will not be 0 if the user has provided a value via the --max-package-size flag or Viper config
 	if userMessage == "Create" && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
 		value, err := p.promptVariable(types.ZarfPackageVariable{
 			Name:        "Maximum Package Size",
