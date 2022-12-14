@@ -43,7 +43,9 @@ func Run(pkg types.ZarfPackage) error {
 		}
 		uniqueNames[component.Name] = true
 
-		validateComponent(component)
+		if err := validateComponent(component); err != nil {
+			return fmt.Errorf("invalid component: %w", err)
+		}
 	}
 
 	return nil

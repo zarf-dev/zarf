@@ -5,7 +5,6 @@
 package cluster
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -112,13 +112,7 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 
 func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
 	message.Debugf("packager.tryInjectorPayloadDeploy(%#v)", tempPath)
-	var (
-		err        error
-		tarFile    []byte
-		chunks     [][]byte
-		configMaps []string
-		sha256sum  string
-	)
+	var configMaps []string
 
 	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.Base, "payload.tgz")
@@ -129,33 +123,16 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 
 	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
-	if err = archiver.Archive(tarFileList, tarPath); err != nil {
+	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return configMaps, "", err
 	}
 
-	// Open the created archive for io.Copy
-	if tarFile, err = os.ReadFile(tarPath); err != nil {
+	chunks, sha256sum, err := utils.SplitFile(tarPath, payloadChunkSize)
+	if err != nil {
 		return configMaps, "", err
 	}
-
-	//Calculate the sha256sum of the tarFile before we split it up
-	sha256sum = fmt.Sprintf("%x", sha256.Sum256(tarFile))
 
 	spinner.Updatef("Splitting the archive into binary configmaps")
-	// Loop over the tarball breaking it into chunks based on the payloadChunkSize
-	for {
-		if len(tarFile) == 0 {
-			break
-		}
-
-		// don't bust slice length
-		if len(tarFile) < payloadChunkSize {
-			payloadChunkSize = len(tarFile)
-		}
-
-		chunks = append(chunks, tarFile[0:payloadChunkSize])
-		tarFile = tarFile[payloadChunkSize:]
-	}
 
 	chunkCount := len(chunks)
 
