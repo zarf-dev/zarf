@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Icon from '../icon.svelte';
-	import Tooltip from '../tooltip.svelte';
-	import type { IconVariant } from '../icon.svelte';
+	import Icon from './icon.svelte';
+	import Tooltip from './tooltip.svelte';
+	import type { IconVariant } from './icon.svelte';
 	export let icon: IconVariant = 'package-light';
 </script>
 
