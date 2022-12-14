@@ -80,14 +80,15 @@
 			</div>
 		</div>
 
+		<!-- @Noxsios: TODO: SBOM section, requires a change in how we handle SBOM generation + interaction with the frontend
 		<Typography variant="subtitle1">Software Bill of Materials (SBOM)</Typography>
 		<Typography variant="caption" element="div">
-			This package has 7 images with software bill-of-materials (SBOM) included. This button opens
+			This package has {x} images with software bill-of-materials (SBOM) included. This button opens
 			the SBOM viewer in your browser.
 		</Typography>
 		<Typography variant="caption">
 			* This directory will removed after package deployment.
-		</Typography>
+		</Typography> -->
 	</div>
 </section>
 
