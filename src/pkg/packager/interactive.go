@@ -25,7 +25,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	if len(sbomViewFiles) > 0 {
 		cwd, _ := os.Getwd()
 		link := filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))
-		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
+		msg := fmt.Sprintf("This package has %d artifacts with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s\n * This directory will be removed after package deployment.", len(sbomViewFiles), link)
 		message.Note(msg)
 	}
 
