@@ -9,7 +9,7 @@ To view the example source code, select the `Edit this page` link below the arti
 
 
 ## Prerequisites
-- A running K8s cluster. Note that the cluster does not need to have the Zarf init package installed or any other Zarf-related bootstrapping.
+- A running K8s cluster. _Note that the cluster does not need to have the Zarf init package installed or any other Zarf-related bootstrapping._
 
 ## Instructions
 Create the package:
@@ -18,17 +18,26 @@ zarf package create
 ```
 
 ### Deploy the package
-Run the following command to deploy the created package to the cluster
 
 ```sh
-zarf package deploy zarf-package-yolo-arm64.tar.zst --confirm
-```
+# Run the following command to deploy the created package to the cluster
+zarf package deploy
 
-Wait a few seconds for the cluster to deploy the package, you should see the following output when the package has been successfully deployed.
+# Choose the yolo package from the list
+? Choose or type the package file [tab for suggestions] 
+> zarf-package-yolo-<ARCH>.tar.zst
 
+# Confirm the deployment
+? Deploy this Zarf package? (y/N) 
+
+# Wait a few seconds for the cluster to deploy the package; you should
+# see the following output when the package has been finished deploying:
+  Connect Command    | Description
+  zarf connect doom  | Play doom!!!
+  zarf connect games | Play some old dos games 🦄
+
+# Run the specified `zarf connect <game>` command to connect to the deployed 
+# workload (ie. kill some demons). Note that the typical Zarf registry, 
+# Gitea server and Zarf agent pods are not present in the cluster. This means 
+# that the game's container image was pulled directly from the public registry and the URL was not mutated by Zarf.
 ```
- Connect Command    | Description
- zarf connect doom  | Play doom!!!
- zarf connect games | Play some old dos games 🦄
-```
-Run the specified `zarf connect <game>` command to connect to the deployed workload (ie. kill some demons). Note that the typical Zarf registry, Gitea server and Zarf agent pods are not present in the cluster. This means that the game's container image was pulled directly from the public registry and the URL was not mutated by Zarf.
