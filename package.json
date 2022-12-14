@@ -47,7 +47,7 @@
 		"prettier-plugin-svelte": "2.8.1",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
-		"sass": "1.56.1",
+		"sass": "1.56.2",
 		"svelte": "3.53.1",
 		"svelte-check": "2.10.1",
 		"svelte-preprocess": "4.10.7",
