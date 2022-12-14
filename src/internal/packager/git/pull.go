@@ -66,13 +66,12 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		g.Spinner.Debugf("Repo already cloned, fetching upstream changes...")
+		message.Debug("Repo already cloned, fetching upstream changes...")
 
-		g.GitPath = gitCachePath
-		err = g.fetch()
+		err = g.fetch(gitCachePath)
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			g.Spinner.Debugf("Repo already up to date")
+			message.Debug("Repo already up to date")
 		} else if err != nil {
 			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
 		}

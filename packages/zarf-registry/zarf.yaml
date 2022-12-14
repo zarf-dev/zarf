@@ -3,12 +3,38 @@ metadata:
   name: "init-package-zarf-registry"
   description: "Used to establish a new Zarf cluster"
 
+variables:
+  - name: REGISTRY_EXISTING_PVC
+    description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
+    default: ""
+
+  - name: REGISTRY_PVC_SIZE
+    description: "The size of the persistent volume claim for the registry"
+    default: "20Gi"
+
+  - name: REGISTRY_CPU_REQ
+    description: "The CPU request for the registry"
+    default: "100m"
+
+  - name: REGISTRY_MEM_REQ
+    description: "The memory request for the registry"
+    default: "256Mi"
+
+  - name: REGISTRY_CPU_LIMIT
+    description: "The CPU limit for the registry"
+    default: "3"
+
+  - name: REGISTRY_MEM_LIMIT
+    description: "The memory limit for the registry"
+    default: "2Gi"
+
 components:
   - name: zarf-seed-registry
     charts:
       - name: docker-registry
-        url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.1.0-zarf
+        releaseName: zarf-docker-registry
+        localPath: packages/zarf-registry/chart
+        version: 1.0.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -26,8 +52,9 @@ components:
           - configmap.yaml
     charts:
       - name: docker-registry
-        url: https://github.com/defenseunicorns/docker-registry.helm.git
-        version: 2.1.0-zarf
+        releaseName: zarf-docker-registry
+        localPath: packages/zarf-registry/chart
+        version: 1.0.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml

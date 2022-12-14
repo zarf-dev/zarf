@@ -65,18 +65,6 @@ func (p *Spinner) Updatef(format string, a ...any) {
 	p.spinner.UpdateText(text)
 }
 
-// Debugf prints a debug message.
-func (p *Spinner) Debugf(format string, a ...any) {
-	if logLevel >= DebugLevel {
-		text := fmt.Sprintf("Debug: "+format, a)
-		if NoProgress {
-			Debug(text)
-		} else {
-			p.spinner.UpdateText(text)
-		}
-	}
-}
-
 // Stop the spinner.
 func (p *Spinner) Stop() {
 	if p.spinner != nil && p.spinner.IsActive {

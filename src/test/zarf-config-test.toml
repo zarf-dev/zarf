@@ -30,6 +30,7 @@ url = 'registry.url: c0ac2e47'
 insecure = true
 output_directory = 'create.output_directory: 52d061d5'
 skip_sbom = true
+max_package_size = 42
 
 [package.create.set]
 thing1 = '1a2b3c4d'
