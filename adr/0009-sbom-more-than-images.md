@@ -1,4 +1,4 @@
-# 8. Begin using unit tests
+# 9. SBOM more than images
 
 Date: 2022-12-13
 
