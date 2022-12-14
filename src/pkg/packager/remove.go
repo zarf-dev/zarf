@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -32,7 +33,7 @@ func (p *Packager) Remove(packageName string) error {
 	}
 
 	// Get the secret for the deployed package
-	secretName := fmt.Sprintf("zarf-package-%s", packageName)
+	secretName := config.ZarfPackagePrefix + packageName
 	packageSecret, err := p.cluster.Kube.GetSecret("zarf", secretName)
 	if err != nil {
 		spinner.Errorf(err, "Unable to get the secret for the package we are attempting to remove")
