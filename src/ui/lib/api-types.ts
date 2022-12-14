@@ -580,6 +580,10 @@ export interface ZarfCreateOptions {
      */
     insecure: boolean;
     /**
+     * Size of chunks to use when splitting a zarf package into multiple files in megabytes
+     */
+    maxPackageSizeMB: number;
+    /**
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
@@ -987,6 +991,7 @@ const typeMap: any = {
     ], false),
     "ZarfCreateOptions": o([
         { json: "insecure", js: "insecure", typ: true },
+        { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },

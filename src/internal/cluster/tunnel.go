@@ -451,6 +451,10 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 		Selector:  selectorLabelsOfPods,
 	}, nil)
 
+	if len(servicePods) < 1 {
+		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
+	}
+
 	return servicePods[0], nil
 }
 
