@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarf Image SBOM Viewer</title>
+    <title>Zarf SBOM Viewer</title>
     <style>
         {{.ThemeCSS}}
         {{.ViewerCSS}}
     </style>
     <script type="text/javascript">
-        ZARF_SBOM_IMAGE_LIST = {{.ImageList}};
+        ZARF_SBOM_LIST = {{.List}};
 		ZARF_SBOM_DATA = {{.Data}};
         {{.LibraryJS}};
     </script>
@@ -239,7 +239,7 @@
                     </linearGradient>
                 </defs>
             </svg>
-            <span class="title">Zarf Image SBOM Viewer</span>
+            <span class="title">Zarf SBOM Viewer</span>
         </div>
         <div class="element sbom-wrapper">
             <select id="sbom-selector" onchange="choose(this.value)">
