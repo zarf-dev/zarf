@@ -26,6 +26,7 @@ func (p *Packager) handlePackagePath() error {
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(opts.PackagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
+		message.Debug("Provided package path is not a URL, skipping download")
 		return nil
 	}
 
