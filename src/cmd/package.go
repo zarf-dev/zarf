@@ -97,11 +97,14 @@ var packageInspectCmd = &cobra.Command{
 		"contents of the archive.",
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		packageName := choosePackage(args)
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Inspect(packageName, includeInspectSBOM, outputInspectSBOM); err != nil {
+		// Inspect the package
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
 			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
@@ -193,7 +196,12 @@ func choosePackage(args []string) string {
 	prompt := &survey.Input{
 		Message: "Choose or type the package file",
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob(fmt.Sprintf("zarf-package-%s*.tar*", toComplete))
+			files, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar")
+			gzFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
+			partialFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.part000")
+
+			files = append(files, gzFiles...)
+			files = append(files, partialFiles...)
 			return files
 		},
 	}
@@ -233,6 +241,7 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_INSECURE, false)
+	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
@@ -240,6 +249,7 @@ func bindCreateFlags() {
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
 	createFlags.BoolVar(&pkgConfig.CreateOpts.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
+	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.")
 }
 
 func bindDeployFlags() {
