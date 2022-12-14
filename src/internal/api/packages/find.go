@@ -5,6 +5,7 @@
 package packages
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"regexp"
@@ -40,9 +41,14 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 	targetDir, err := setDir()
 	if err != nil {
 		message.ErrorWebf(err, w, "Error getting directory")
+		return
 	}
 
-	// Intentionally ignore errors
-	files, _ := utils.RecursiveFileList(targetDir, pattern)
+	files, err := utils.RecursiveFileList(targetDir, pattern)
+	if err != nil || len(files) == 0 {
+		pkgNotFoundMsg := fmt.Sprintf("Package not found: %s", pattern.String())
+		message.ErrorWebf(err, w, pkgNotFoundMsg)
+		return
+	}
 	common.WriteJSONResponse(w, files, http.StatusOK)
 }

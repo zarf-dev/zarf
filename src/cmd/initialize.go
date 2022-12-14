@@ -74,6 +74,13 @@ func findInitPackage(initPackageName string) (string, error) {
 		return filepath.Join(executableDir, initPackageName), nil
 	}
 
+	// Create the cache directory if it doesn't exist
+	if utils.InvalidPath(config.GetAbsCachePath()) {
+		if err := os.MkdirAll(config.GetAbsCachePath(), 0755); err != nil {
+			message.Fatalf(err, "Unable to create cache directory: %s", config.GetAbsCachePath())
+		}
+	}
+
 	// Next, look in the cache directory
 	if !utils.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
 		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
@@ -84,7 +91,7 @@ func findInitPackage(initPackageName string) (string, error) {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
-			message.Fatalf(err, lang.CmdInitErrDownload, err)
+			message.Fatalf(err, lang.CmdInitErrDownload, err.Error())
 		}
 	}
 	return "", nil
@@ -146,6 +153,9 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
+	// Init package variables
+	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
+
 	v.SetDefault(V_INIT_COMPONENTS, "")
 	v.SetDefault(V_INIT_STORAGE_CLASS, "")
 
@@ -162,6 +172,9 @@ func init() {
 	v.SetDefault(V_INIT_REGISTRY_PUSH_PASS, "")
 	v.SetDefault(V_INIT_REGISTRY_PULL_USER, "")
 	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
+
+	// Init package set variable flags
+	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)

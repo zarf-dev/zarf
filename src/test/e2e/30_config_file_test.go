@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,20 +25,19 @@ func TestConfigFile(t *testing.T) {
 		config = "zarf-config.toml"
 	)
 
-	e2e.cleanFiles(path, config)
+	e2e.cleanFiles(path)
 
 	// Test the config file environment variable
 	os.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
 	configFileTests(t, dir, path)
 	os.Unsetenv("ZARF_CONFIG")
 
-	// Test the config file auto-discovery
-	utils.CreatePathAndCopy(filepath.Join(dir, config), config)
-	configFileTests(t, dir, path)
-
 	configFileDefaultTests(t)
 
-	e2e.cleanFiles(path, config)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	e2e.cleanFiles(path)
 }
 
 func configFileTests(t *testing.T, dir, path string) {
@@ -93,6 +91,7 @@ func configFileDefaultTests(t *testing.T) {
 		"create.output_directory: 52d061d5",
 		"Skip generating SBOM for this package (default true)",
 		"[thing1=1a2b3c4d]",
+		"Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting. (default 42)",
 	}
 
 	packageDeployFlags := []string{

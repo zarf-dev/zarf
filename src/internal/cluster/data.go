@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Wait for the target pod(s) to come up and inject the data into them
@@ -35,6 +37,12 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 		tarCompressFlag = "z"
 	}
 
+	// Pod filter to ensure we only use the current deployment's pods
+	podFilterByInitContainer := func(pod corev1.Pod) bool {
+		// Look everywhere in the pod for a matching data injection marker
+		return strings.Contains(message.JSONValue(pod), config.GetDataInjectionMarker())
+	}
+
 iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
@@ -48,7 +56,7 @@ iterator:
 		}
 
 		// Wait until the pod we are injecting data into becomes available
-		pods := c.Kube.WaitForPodsAndContainers(target, true)
+		pods := c.Kube.WaitForPodsAndContainers(target, podFilterByInitContainer)
 		if len(pods) < 1 {
 			continue
 		}
@@ -64,7 +72,7 @@ iterator:
 			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", mkdirExec)
 			if err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
-				break iterator
+				continue iterator
 			}
 
 			cpPodExec := fmt.Sprintf("%s -C %s . | %s -- %s",
@@ -78,7 +86,7 @@ iterator:
 			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 			if err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
-				break iterator
+				continue iterator
 			} else {
 				// Leave a marker in the target container for pods to track the sync action
 				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
@@ -91,6 +99,7 @@ iterator:
 				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
 				if err != nil {
 					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+					continue iterator
 				}
 			}
 		}
@@ -102,7 +111,9 @@ iterator:
 		}
 
 		// Block one final time to make sure at least one pod has come up and injected the data
-		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, false)
+		// Using only the pod as the final seclector because we don't know what the container name will be
+		// Still using the init container filter to make sure we have the right running pod
+		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)

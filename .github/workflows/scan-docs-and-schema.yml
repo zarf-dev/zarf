@@ -1,12 +1,6 @@
-name:  Validate Docs and Schema
+name: Validate Docs and Schema
 on:
   pull_request:
-    paths:
-      - "src/types/**"
-      - "zarf.schema.json"
-      - "docs/4-user-guide/1-the-zarf-cli/3-zarf-schema.md"
-      - "src/cmd/**"
-      - "docs/4-user-guide/1-the-zarf-cli/100-cli-commands/**"
 
 jobs:
   validate:
@@ -22,4 +16,5 @@ jobs:
         run: "make test-docs-and-schema"
 
       - name: Save logs
+        if: always()
         uses: ./.github/actions/save-logs

@@ -24,7 +24,6 @@ import (
 
 // InstallOrUpgradeChart performs a helm install of the given chart
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
-	var installedChartName string
 	fromMessage := h.Chart.Url
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -37,11 +36,12 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 
 	var output *release.Release
 
-	h.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.Name)
-	if h.Chart.ReleaseName != "" {
-		h.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.ReleaseName)
+	h.ReleaseName = h.Chart.ReleaseName
+
+	// If no release name is specified, use the chart name
+	if h.ReleaseName == "" {
+		h.ReleaseName = h.Chart.Name
 	}
-	installedChartName = h.ReleaseName
 
 	// Do not wait for the chart to be ready if data injections are present
 	if len(h.Component.DataInjections) > 0 {
@@ -105,7 +105,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			// Simply wait for dust to settle and try again
 			time.Sleep(10 * time.Second)
 		} else {
-			spinner.Debugf(output.Info.Description)
+			message.Debug(output.Info.Description)
 			spinner.Success()
 			break
 		}
@@ -113,7 +113,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	}
 
 	// return any collected connect strings for zarf connect
-	return postRender.connectStrings, installedChartName, nil
+	return postRender.connectStrings, h.ReleaseName, nil
 }
 
 // TemplateChart generates a helm template from a given chart
@@ -137,10 +137,11 @@ func (h *Helm) TemplateChart() (string, error) {
 	client.ClientOnly = true
 	client.IncludeCRDs = true
 
-	if h.Chart.ReleaseName != "" {
-		client.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.ReleaseName)
-	} else {
-		client.ReleaseName = fmt.Sprintf("zarf-%s", h.Chart.Name)
+	client.ReleaseName = h.Chart.ReleaseName
+
+	// If no release name is specified, use the chart name
+	if client.ReleaseName == "" {
+		client.ReleaseName = h.Chart.Name
 	}
 
 	// Namespace must be specified
@@ -197,7 +198,8 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	h.Chart = types.ZarfChart{
 		Name:        tmpChart.Metadata.Name,
-		ReleaseName: sha1ReleaseName,
+		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior
+		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
 		Version:     tmpChart.Metadata.Version,
 		Namespace:   manifest.Namespace,
 		NoWait:      manifest.NoWait,

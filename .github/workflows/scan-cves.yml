@@ -1,7 +1,7 @@
 name: Analyze CVEs
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 10 * * *"
   pull_request:
     paths:
       - "go.mod"

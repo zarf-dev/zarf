@@ -14,6 +14,7 @@ components:
           - connect.yaml
     charts:
       - name: gitea
+        releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
         version: 6.0.3
         namespace: zarf

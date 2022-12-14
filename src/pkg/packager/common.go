@@ -5,13 +5,18 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -53,9 +58,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	// Set the arch
-	pkgConfig.arch = config.GetArch(cfg.Pkg.Metadata.Architecture, cfg.Pkg.Build.Architecture)
-
 	return pkgConfig, nil
 }
 
@@ -93,21 +95,22 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	packageName := p.cfg.Pkg.Metadata.Name
-	prefix := "zarf-package"
 	suffix := "tar.zst"
 	if p.cfg.Pkg.Metadata.Uncompressed {
 		suffix = "tar"
 	}
 
 	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s-%s-%s.%s", prefix, packageName, p.arch, suffix)
+		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
 	}
 
-	return fmt.Sprintf("%s-%s-%s-%s.%s", prefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
 func (p *Packager) ClearTempPaths() {
-	os.RemoveAll(p.tmp.Base)
+	// Remove the temp directory, but don't throw an error if it fails
+	_ = os.RemoveAll(p.tmp.Base)
+	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
 func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
@@ -163,4 +166,139 @@ func getRequestedComponentList(requestedComponents string) []string {
 	}
 
 	return []string{}
+}
+
+func (p *Packager) loadZarfPkg() error {
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	defer spinner.Stop()
+
+	if err := p.handlePackagePath(); err != nil {
+		return fmt.Errorf("unable to handle the provided package path: %w", err)
+	}
+
+	// Make sure the user gave us a package we can work with
+	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
+	}
+
+	// If packagePath has partial in the name, we need to combine the partials into a single package
+	if err := p.handleIfPartialPkg(); err != nil {
+		return fmt.Errorf("unable to process partial package: %w", err)
+	}
+
+	// Extract the archive
+	spinner.Updatef("Extracting the package, this may take a few moments")
+	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		return fmt.Errorf("unable to extract the package: %w", err)
+	}
+
+	// Load the config from the extracted archive zarf.yaml
+	spinner.Updatef("Loading the zarf package config")
+	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
+	if err := p.readYaml(configPath, true); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	}
+
+	// If SBOM files exist, temporary place them in the deploy directory
+	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
+	if err := sbom.WriteSBOMFiles(p.cfg.SBOMViewFiles); err != nil {
+		// Don't stop the deployment, let the user decide if they want to continue the deployment
+		spinner.Errorf(err, "Unable to process the SBOM files for this package")
+	}
+
+	spinner.Success()
+	return nil
+}
+
+func (p *Packager) handleIfPartialPkg() error {
+	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
+
+	// If packagePath has partial in the name, we need to combine the partials into a single package
+	if !strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
+		message.Debug("No partial package detected")
+		return nil
+	}
+
+	message.Debug("Partial package detected")
+
+	// Replace part 000 with *
+	pattern := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", ".part*", 1)
+	fileList, err := filepath.Glob(pattern)
+	if err != nil {
+		return fmt.Errorf("unable to find partial package files: %s", err)
+	}
+
+	// Ensure the files are in order so they are appended in the correct order
+	sort.Strings(fileList)
+
+	// Create the new package
+	destination := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", "", 1)
+	pkgFile, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("unable to create new package file: %s", err)
+	}
+	defer pkgFile.Close()
+
+	// Remove the new package if there is an error
+	defer func() {
+		// If there is an error, remove the new package
+		if p.cfg.DeployOpts.PackagePath != destination {
+			os.Remove(destination)
+		}
+	}()
+
+	var pgkData types.ZarfPartialPackageData
+
+	// Loop through the partial packages and append them to the new package
+	for idx, file := range fileList {
+		// The first file contains metadata about the package
+		if idx == 0 {
+			var bytes []byte
+
+			if bytes, err = os.ReadFile(file); err != nil {
+				return fmt.Errorf("unable to read file %s: %w", file, err)
+			}
+
+			if err := json.Unmarshal(bytes, &pgkData); err != nil {
+				return fmt.Errorf("unable to unmarshal file %s: %w", file, err)
+			}
+
+			count := len(fileList) - 1
+			if count != pgkData.Count {
+				return fmt.Errorf("package is missing parts, expected %d, found %d", pgkData.Count, count)
+			}
+
+			continue
+		}
+
+		// Open the file
+		f, err := os.Open(file)
+		if err != nil {
+			return fmt.Errorf("unable to open file %s: %w", file, err)
+		}
+		defer f.Close()
+
+		// Add the file contents to the package
+		if _, err = io.Copy(pkgFile, f); err != nil {
+			return fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+	}
+
+	var shasum string
+	if shasum, err = utils.GetSha256Sum(destination); err != nil {
+		return fmt.Errorf("unable to get sha256sum of package: %w", err)
+	}
+
+	if shasum != pgkData.Sha256Sum {
+		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pgkData.Sha256Sum, shasum)
+	}
+
+	// Remove the partial packages to reduce disk space before extracting
+	for _, file := range fileList {
+		_ = os.Remove(file)
+	}
+
+	// Success, update the package path
+	p.cfg.DeployOpts.PackagePath = destination
+	return nil
 }

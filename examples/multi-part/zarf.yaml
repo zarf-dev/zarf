@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: multi-part
+  description: Example to demonstrate how to create multi-part zarf packages. By default, packages will not be split into multiple parts. To produce a multi-part package, use the command "zarf package create --max-package-size=1"
+
+components:
+  - name: big-ol-file
+    required: true
+    description: Single 5 MB file needed to demonstrate a multi-part package
+    files:
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/examples/multi-part-demo.dat
+        shasum: 22ebd38c2f5e04821c87c924c910be57d2169c292f85b2936d53cae24ebf8055
+        target: "multi-part-demo.dat"

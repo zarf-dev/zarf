@@ -19,7 +19,7 @@ Lots of new things
 ### Pull down the code and binaries
 
 ```shell
-# clone the binaries
+# Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
 # change to the examples folder
@@ -27,8 +27,15 @@ cd zarf/examples/big-bang-core
 
 ```
 
-### Build the deploy package
+### Get K3d components
 
+Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli
+
+### Get Zarf components
+
+Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
+
+(Optional) Alternatively, build the zarf components from the repo
 ```shell
 # Create the deploy package and move it to the 'examples/sync' folder
 go run ../../main.go package create
@@ -49,7 +56,7 @@ Now wait 20 min :face_palm:
 go run ../../main.go init -a amd64 --confirm --components git-server
 
 # (Optional) Inspect the results
-./zarf tools k9s
+zarf tools k9s
 ```
 
 ### Deploy Big Bang
@@ -59,7 +66,7 @@ go run ../../main.go init -a amd64 --confirm --components git-server
 ./zarf package deploy zarf-package-big-bang-core-demo-arm64-1.47.0.tar.zst --confirm
 
 # (Optional) Inspect the results
-./zarf tools k9s
+zarf tools k9s
 ```
 
 ### See the results

@@ -26,7 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
@@ -43,29 +42,8 @@ var connectStrings = make(types.ConnectStrings)
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	spinner := message.NewProgressSpinner("Preparing to deploy Zarf Package %s", p.cfg.DeployOpts.PackagePath)
-	defer spinner.Stop()
-
-	if err := p.handlePackagePath(); err != nil {
-		return fmt.Errorf("unable to handle the provided package path: %w", err)
-	}
-
-	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
-	}
-
-	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-		return fmt.Errorf("unable to extract the package: %w", err)
-	}
-
-	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
-	if err := p.readYaml(configPath, true); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	if err := p.loadZarfPkg(); err != nil {
+		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
 	// Now that we have read the zarf.yaml, check the package kind
@@ -78,17 +56,8 @@ func (p *Packager) Deploy() error {
 		utils.RunPreflightChecks()
 	}
 
-	spinner.Success()
-
-	// If SBOM files exist, temporary place them in the deploy directory
-	sbomViewFiles, _ := filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-	if err := sbom.WriteSBOMFiles(sbomViewFiles); err != nil {
-		// Don't stop the deployment, let the user decide if they want to continue the deployment
-		message.Errorf(err, "Unable to process the SBOM files for this package")
-	}
-
 	// Confirm the overall package deployment
-	if !p.confirmAction("Deploy", sbomViewFiles) {
+	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -295,11 +264,13 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment
 func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
-	var spinner message.Spinner
-	if len(componentFiles) > 0 {
-		spinner = *message.NewProgressSpinner("Copying %d files", len(componentFiles))
-		defer spinner.Stop()
+	// If there are no files to process, return early.
+	if len(componentFiles) < 1 {
+		return nil
 	}
+
+	spinner := *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+	defer spinner.Stop()
 
 	for index, file := range componentFiles {
 		spinner.Updatef("Loading %s", file.Target)
@@ -340,6 +311,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(sourceFile)
 	}
+
 	spinner.Success()
 
 	return nil
@@ -396,19 +368,34 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 // Push all of the components git repos to the configured git server
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
-	// Try repo push up to 3 times
 	for _, repoURL := range repos {
-		gitClient := git.New(p.cfg.State.GitServer)
-		repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-		if err != nil {
-			return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
+
+		// Create an anonymous function to push the repo to the Zarf git server
+		tryPush := func() error {
+			gitClient := git.New(p.cfg.State.GitServer)
+
+			// If this is a serviceURL, create a port-forward tunnel to that resource
+			if cluster.IsServiceURL(gitClient.Server.Address) {
+				if tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address); err != nil {
+					return err
+				} else {
+					tunnel.Connect("", false)
+					defer tunnel.Close()
+					gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
+				}
+			}
+
+			// Convert the repo URL to a Zarf-formatted repo name
+			if repoPath, err := gitClient.TransformURLtoRepoName(repoURL); err != nil {
+				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
+			} else {
+				return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+			}
 		}
 
-		err = utils.Retry(func() error {
-			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
-		}, 3, 5*time.Second)
-		if err != nil {
-			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoPath, err)
+		// Try repo push up to 3 times
+		if err := utils.Retry(tryPush, 3, 5*time.Second); err != nil {
+			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
 

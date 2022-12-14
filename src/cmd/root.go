@@ -45,7 +45,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			pterm.Println()
-			if strings.Contains(args[0], "zarf-package-") || strings.Contains(args[0], "zarf-init") {
+			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
 				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedDeploy, args[0])
 			}
 			if args[0] == config.ZarfYAML {

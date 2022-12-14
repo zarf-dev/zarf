@@ -10,3 +10,5 @@ runs:
 
     - run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
       shell: bash
+
+    - uses: docker/setup-buildx-action@v2

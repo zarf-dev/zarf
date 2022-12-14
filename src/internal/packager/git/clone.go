@@ -25,7 +25,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 		cloneOptions.Tags = git.NoTags
 	}
 
-	gitCred := g.FindAuthForHost(gitURL)
+	gitCred := utils.FindAuthForHost(gitURL)
 
 	// Gracefully handle no git creds on the system (like our CI/CD)
 	if gitCred.Auth.Username != "" {
@@ -44,7 +44,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 		return repo, git.ErrRepositoryAlreadyExists
 	} else if err != nil {
-		g.Spinner.Debugf("Failed to clone repo: %s", err)
+		message.Debugf("Failed to clone repo: %s", err.Error())
 		message.Infof("Falling back to host git for %s", gitURL)
 
 		// If we can't clone with go-git, fallback to the host clone
@@ -57,7 +57,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", cmdArgs...)
 		g.Spinner.Updatef(stdOut)
-		g.Spinner.Debugf(stdErr)
+		message.Debug(stdErr)
 
 		if err != nil {
 			return nil, err

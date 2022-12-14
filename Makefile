@@ -3,11 +3,6 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-# The image tag used for the zarf agent, defaults to a dev image tag
-AGENT_IMAGE ?= dev-agent:e32f41ab50f994302614adf62ab6f13a7ecfbb25
-# The zarf injector registry binary to use
-INJECTOR_VERSION := pr-948-e699899
-
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -99,8 +94,8 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
-	go run main.go internal generate-cli-docs
-	.hooks/create-zarf-schema.sh
+	ZARF_CONFIG=.hooks/empty-config.toml go run main.go internal generate-cli-docs
+	ZARF_CONFIG=.hooks/empty-config.toml .hooks/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the UI
 	go mod download
@@ -121,7 +116,7 @@ dev-agent-image: ## Create a new agent image and inject it into a currently init
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --set INJECTOR_TAG=$(ARCH)-$(INJECTOR_VERSION) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 ci-release: init-package
 
@@ -163,6 +158,11 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
+
+## Run unit tests within the src directory
+.PHONY: test-unit
+test-unit: ensure-ui-build-dir
+	cd src/pkg && go test ./... -failfast -v -timeout 30m
 
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
