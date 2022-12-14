@@ -171,7 +171,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Yaml OnLy Online
+**Description:** Set to `true` to deploy a Zarf package without the image registry, Git server or mutating webhook (Zarf Agent). Does not require a Zarf cluster to use. This is ideal for connected environments where you want to use existing VCS and container registries.
 
 |          |           |
 | -------- | --------- |
