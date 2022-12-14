@@ -17,13 +17,14 @@
 <svelte:head>
 	<title>Configure</title>
 </svelte:head>
+
 <section class="page-header">
-	<Typography variant="h2">Configure Deployment</Typography>
+	<Typography variant="h5">Configure Deployment</Typography>
 </section>
 
 <section class="page-section">
 	<SectionHeader>
-		<Typography variant="h2" slot="title">Package Details</Typography>
+		<Typography variant="h5" slot="title">Package Details</Typography>
 		<span slot="tooltip">At-a-glance simple metadata about the package</span>
 		<Button on:click={toggleShowRaw} variant="text" color="primary" slot="actions">view yaml</Button
 		>
@@ -38,7 +39,7 @@
 	</Drawer>
 	<div class="pkg-details">
 		<div class="pkg-details-chips">
-			<Typography variant="h2">
+			<Typography variant="h5">
 				{$pkgStore.zarfPackage.metadata?.name}
 			</Typography>
 			<Chip variant="filled">{$pkgStore.zarfPackage.metadata?.version}</Chip>
@@ -53,7 +54,7 @@
 
 <section class="page-section">
 	<SectionHeader>
-		<Typography variant="h2" slot="title">Supply Chain</Typography>
+		<Typography variant="h5" slot="title">Supply Chain</Typography>
 	</SectionHeader>
 	<div style="margin-left: 2rem;">
 		<Typography variant="subtitle1">Build Providence</Typography>
@@ -94,7 +95,7 @@
 
 <section class="page-section">
 	<SectionHeader icon="component-light">
-		<Typography variant="h2" slot="title">Components</Typography>
+		<Typography variant="h5" slot="title">Components</Typography>
 	</SectionHeader>
 	<div style="margin-left: 2rem; margin-top: 0.75rem; margin-bottom: 0.75rem;">
 		<Typography variant="caption">

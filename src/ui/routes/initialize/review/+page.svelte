@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
-	import Package from '$lib/components/package';
+	import { DetailsCard, ComponentAccordion as PackageComponent } from '$lib/components/package';
 	import AccordionGroup from '$lib/components/accordion-group.svelte';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
@@ -16,7 +16,7 @@
 </svelte:head>
 
 <section class="page-header">
-	<Typography variant="h4">Review Deployment</Typography>
+	<Typography variant="h5">Review Deployment</Typography>
 </section>
 
 <section class="page-section">
@@ -24,7 +24,7 @@
 		<Icon variant="package" />
 		Package Details
 	</Typography>
-	<Package.DetailsCard pkg={$pkgStore.zarfPackage} />
+	<DetailsCard pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="page-section">
@@ -34,7 +34,7 @@
 	</Typography>
 	<AccordionGroup>
 		{#each $pkgComponentDeployStore as idx}
-			<Package.ComponentAccordion {idx} component={$pkgStore.zarfPackage.components[idx]} />
+			<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
 		{/each}
 	</AccordionGroup>
 </section>
