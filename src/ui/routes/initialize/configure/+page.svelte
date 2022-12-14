@@ -76,7 +76,7 @@
 			</div>
 			<div class="align-center"><Typography variant="caption">Signed by:</Typography></div>
 			<div class="align-center">
-				<Typography variant="body2" class="todo">{$pkgStore.zarfPackage.build?.user}</Typography>
+				<Typography variant="body2" />
 			</div>
 		</div>
 

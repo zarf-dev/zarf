@@ -137,7 +137,3 @@ body {
 	display: flex;
 	flex-direction: column;
 }
-
-.todo {
-	border: 1px dotted #cc0000;
-}
