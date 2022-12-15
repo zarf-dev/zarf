@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Zarf has rooted in the idea of declarative K8s deployments for disconnected environments. Many of the design decisions made in Zarf are based on this idea. However in certain connected environments, Zarf can still be leveraged as a way to define declarative deployments and upgrades without the constraints of disconnected environments. To that end, providing a declarative way to deploy Zarf packages without the need for a Zarf init package would be useful in such environments.
+Zarf was rooted in the idea of declarative K8s deployments for disconnected environments. Many of the design decisions made in Zarf are based on this idea. However, in certain connected environments, Zarf can still be leveraged as a way to define declarative deployments and upgrades without the constraints of disconnected environments. To that end, providing a declarative way to deploy Zarf packages without the need for a Zarf init package would be useful in such environments.
 
 ## Decision
 
