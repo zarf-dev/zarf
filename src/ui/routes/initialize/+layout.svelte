@@ -3,10 +3,11 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Button, Stepper, Typography } from '@ui';
+	import { Stepper } from '@ui';
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
+  	import { ErrNotFound } from '$lib/components/package';
 
 	enum LoadingStatus {
 		Loading,
@@ -53,17 +54,7 @@
 		<!-- placeholder loading content -->
 		<div>loading...</div>
 	{:else if status == LoadingStatus.Error}
-		<!-- replace w/ error dialog -->
-		<div class="center">
-			<Typography variant="h1">Package Not Found</Typography>
-			<Typography variant="body2">
-				Make sure the following package is in the current working directory:
-			</Typography>
-			<Typography variant="code">{errMessage}</Typography>
-			<Button href="/" color="secondary" style="margin-top: 0.5rem;" variant="flat"
-				>Return Home</Button
-			>
-		</div>
+		<ErrNotFound pkgName={errMessage.split(':')[1]} />
 	{:else}
 		<Stepper
 			orientation="horizontal"
@@ -92,13 +83,3 @@
 		{/if}
 	{/if}
 </section>
-
-<style>
-	.center {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 1rem;
-	}
-</style>

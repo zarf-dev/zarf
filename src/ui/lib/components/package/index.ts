@@ -5,5 +5,6 @@ import Card from './card.svelte';
 import ComponentAccordion from './component-accordion.svelte';
 import DetailsCard from './details-card.svelte';
 import SectionHeader from './section-header.svelte';
+import ErrNotFound from './err-not-found.svelte';
 
-export { Card, ComponentAccordion, DetailsCard, SectionHeader };
+export { Card, ComponentAccordion, DetailsCard, SectionHeader, ErrNotFound };
