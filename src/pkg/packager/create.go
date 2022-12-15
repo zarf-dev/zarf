@@ -95,21 +95,37 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	var combinedImageList []string
+	componentSBOMs := map[string]*types.ComponentSBOM{}
 	for _, component := range p.cfg.Pkg.Components {
-		if err := p.addComponent(component); err != nil {
+		componentSBOM, err := p.addComponent(component)
+		if err != nil {
 			return fmt.Errorf("unable to add component: %w", err)
+		}
+
+		if componentSBOM != nil && len(componentSBOM.Files) > 0 {
+			componentSBOMs[component.Name] = componentSBOM
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse
 		combinedImageList = append(combinedImageList, component.Images...)
 	}
 
+	pulledImages := map[name.Tag]v1.Image{}
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := utils.Unique(combinedImageList)
-		if _, err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
+
+		var err error
+		if pulledImages, err = p.pullImages(uniqueList, p.tmp.Images); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
+	}
+
+	// Ignore SBOM creation if there the flag is set
+	if p.cfg.CreateOpts.SkipSBOM {
+		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+	} else {
+		sbom.Catalog(componentSBOMs, pulledImages, p.tmp.Images, p.tmp.Sboms)
 	}
 
 	// In case the directory was changed, reset to prevent breaking relative target paths
@@ -199,26 +215,23 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 		pulledImages, err = imgConfig.PullAll()
 
-		if err == nil {
-			// Ignore SBOM creation if there the flag is set
-			if p.cfg.CreateOpts.SkipSBOM {
-				message.Debug("Skipping SBOM processing per --skip-sbom flag")
-			} else {
-				sbom.CatalogImages(pulledImages, p.tmp.Sboms, path)
-			}
-		}
-
 		return err
 	}, 3, 5*time.Second)
 }
 
-func (p *Packager) addComponent(component types.ZarfComponent) error {
+func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	// Create the component directory.
 	componentPath, err := p.createComponentPaths(component)
 	if err != nil {
-		return fmt.Errorf("unable to create component paths: %w", err)
+		return nil, fmt.Errorf("unable to create component paths: %w", err)
+	}
+
+	// Create an struct to hold the SBOM information for this component
+	componentSBOM := types.ComponentSBOM{
+		Files:         []string{},
+		ComponentPath: componentPath,
 	}
 
 	// Loop through each component prepare script and execute it.
@@ -247,14 +260,14 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
 				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 				if !strings.HasSuffix(path, zarfFilename) {
-					return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
 				}
 			}
 
 			for idx, path := range chart.ValuesFiles {
 				chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
-					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+					return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
 			}
 		}
@@ -271,14 +284,14 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
 				if err := utils.CreatePathAndCopy(file.Source, destinationFile); err != nil {
-					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 				}
 			}
 
 			// Abort packaging on invalid shasum (if one is specified)
 			if file.Shasum != "" {
 				if actualShasum, _ := utils.GetSha256Sum(destinationFile); actualShasum != file.Shasum {
-					return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
+					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 				}
 			}
 
@@ -289,6 +302,8 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			} else {
 				_ = os.Chmod(destinationFile, 0600)
 			}
+
+			componentSBOM.Files = append(componentSBOM.Files, destinationFile)
 		}
 	}
 
@@ -298,10 +313,15 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			destinationFile := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
-			if err := utils.CreatePathAndCopy(data.Source, destinationFile); err != nil {
-				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
+			destination := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+			if err := utils.CreatePathAndCopy(data.Source, destination); err != nil {
+				return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
+
+			// Unwrap the dataInjection dir into individual files
+			pattern := regexp.MustCompile(`(?mi).+$`)
+			files, _ := utils.RecursiveFileList(destination, pattern)
+			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
 	}
 
@@ -318,7 +338,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 		defer spinner.Success()
 
 		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
+			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
 		}
 
 		// Iterate over all manifests
@@ -328,7 +348,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 				spinner.Updatef("Copying manifest %s", f)
 				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
-					return fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
 			}
 
@@ -337,7 +357,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 				spinner.Updatef("Building kustomization for %s", k)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return fmt.Errorf("unable to build kustomization %s: %w", k, err)
+					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
 			}
 		}
@@ -352,10 +372,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) error {
 			// Pull all the references if there is no `@` in the string
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
 			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
-				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
+				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
 	}
 
-	return nil
+	return &componentSBOM, nil
 }
