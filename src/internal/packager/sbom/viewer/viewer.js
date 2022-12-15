@@ -13,9 +13,9 @@ function initSelector() {
 
     const url = /sbom-viewer-(.*).html*$/gmi.exec(window.location.href)[1];
 
-    ZARF_SBOM_IMAGE_LIST.sort().forEach(image => {
-        let selected = (url === image) ? 'selected' : '';
-        sbomSelector.add(new Option(image, image, selected, selected));
+    ZARF_SBOM_LIST.sort().forEach(item => {
+        let selected = (url === item) ? 'selected' : '';
+        sbomSelector.add(new Option(item, item, selected, selected));
     });
 }
 
@@ -28,9 +28,9 @@ function initData() {
             artifact.name,
             artifact.version,
             fileList(artifact.metadata),
-            artifact.metadata.description || '-',
-            (artifact.metadata.maintainer || '-').replace(/\u003c(.*)\u003e/, '&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>'),
-            artifact.metadata.installedSize || '-',
+            (artifact.metadata && artifact.metadata.description) || '-',
+            ((artifact.metadata && artifact.metadata.maintainer) || '-').replace(/\u003c(.*)\u003e/, '&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>'),
+            (artifact.metadata && artifact.metadata.installedSize) || '-',
         ];
     });
 
@@ -61,15 +61,17 @@ function initData() {
 }
 
 function fileList(metadata) {
-    const list = (metadata.files || [])
-        .map(file => {
-            return file.path || ''
-        })
-        .filter(test => test)
+    if (metadata) {
+        const list = (metadata.files || [])
+            .map(file => {
+                return file.path || ''
+            })
+            .filter(test => test)
 
-    if (list.length > 0) {
-        flatList = list.sort().join('<br>');
-        return `<a href="#" onClick="showModal('${metadata.package}','${flatList}')">${list.length} files</a>`
+        if (list.length > 0) {
+            flatList = list.sort().join('<br>');
+            return `<a href="#" onClick="showModal('${metadata.package}','${flatList}')">${list.length} files</a>`
+        }
     }
 
     return '-';
