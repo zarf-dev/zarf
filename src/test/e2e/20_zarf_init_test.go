@@ -31,6 +31,22 @@ func TestZarfInit(t *testing.T) {
 	_, _, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm")
 	require.NoError(t, err)
 
+	// Check that gitea is actually running and healthy
+	stdOut, _, err := utils.ExecCommandWithContext(ctx, true, "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "Running")
+
+	// Check that the logging stack is actually running and healthy
+	stdOut, _, err = utils.ExecCommandWithContext(ctx, true, "kubectl", "get", "pods", "-l", "app in (loki)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "Running")
+	stdOut, _, err = utils.ExecCommandWithContext(ctx, true, "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (grafana)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "Running")
+	stdOut, _, err = utils.ExecCommandWithContext(ctx, true, "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (promtail)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "Running")
+
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = utils.ExecCommandWithContext(ctx, true, "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
