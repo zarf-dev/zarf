@@ -6,7 +6,7 @@ components:
   - name: logging
     description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
     images:
-      - docker.io/grafana/promtail:2.6.1
+      - docker.io/grafana/promtail:2.7.0
       - grafana/grafana:8.3.5
       - grafana/loki:2.6.1
       - quay.io/kiwigrid/k8s-sidecar:1.19.2
