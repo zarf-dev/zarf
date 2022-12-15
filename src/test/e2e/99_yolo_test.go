@@ -41,6 +41,6 @@ func TestYOLOMode(t *testing.T) {
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
