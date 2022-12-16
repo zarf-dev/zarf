@@ -20,7 +20,6 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 868Kb bin
   - The container then starts and runs the rust binary to host the registry image in an static docker registry
   - After this, the main docker registry chart is deployed, pulls the image from the ephemeral pod, and finally destroys the created configmaps, pod, and service
 
-<!-- TODO: @JPERRY I think this svg is out of date now that the 'Zarf agent' PR got merged.. -->
 ## Zarf Architecture
 
 ![Architecture Diagram](../.images/architecture.drawio.svg)
