@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -482,103 +481,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 func (p *Packager) installBigBang(componentPath types.ComponentPaths, component types.ZarfComponent) ([]types.InstalledChart, error) {
 	installedCharts := []types.InstalledChart{}
 	var err error
-	// need to upload images and repos
 
-	//read the images.txt file in the files
-	imageFile := fmt.Sprintf("%s/images.txt", componentPath.Files)
-	reposFile := fmt.Sprintf("%s/repos.txt", componentPath.Files)
-
-	// file, err := os.Open("imageFile.txt")
-
-	if err != nil {
-		return installedCharts, err
-
-	}
-	file, err := os.Open(imageFile)
-	// The bufio.NewScanner() function is called in which the
-	// object os.File passed as its parameter and this returns a
-	// object bufio.Scanner which is further used on the
-	// bufio.Scanner.Split() method.
-	scanner := bufio.NewScanner(file)
-
-	// The bufio.ScanLines is used as an
-	// input to the method bufio.Scanner.Split()
-	// and then the scanning forwards to each
-	// new line using the bufio.Scanner.Scan()
-	// method.
-	scanner.Split(bufio.ScanLines)
-	var images []string
-
-	for scanner.Scan() {
-		images = append(images, scanner.Text())
-	}
-
-	// The method os.File.Close() is called
-	// on the os.File object to close the file
-	file.Close()
-
-	if err := p.pushImagesToRegistry(images, false); err != nil {
-		return installedCharts, fmt.Errorf("unable to push images to the registry: %w", err)
-	}
-
-	file, err = os.Open(reposFile)
-	//repos
-	scanner = bufio.NewScanner(file)
-
-	scanner.Split(bufio.ScanLines)
-	var repos []string
-
-	for scanner.Scan() {
-		repos = append(repos, scanner.Text())
-	}
-
-	// The method os.File.Close() is called
-	// on the os.File object to close the file
-	file.Close()
-
-	if err = p.pushReposToRepository(componentPath.Repos, repos); err != nil {
-		return installedCharts, fmt.Errorf("unable to push the repos to the repository: %w", err)
-	}
-
-	fmt.Printf("Deploying Big Bang\n")
-	if component.BigBang.DeployFlux {
-		fmt.Printf("Deploying Flux\n")
-		manifest := types.ZarfManifest{
-			Namespace: "flux-system",
-			Name:      "flux-system",
-			Files: []string{
-				// i know what it is b/c I'm smart
-				"kustomization-flux-system-0.yaml",
-			},
-		}
-
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
-		if err != nil {
-			return installedCharts, err
-		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
-		}
-	}
-
-	// now how does this look:
-	// we have a list of valuesFiles
-
-	// 1. Create a new Kustomization that
-	// creates a secret per file
-
-	//"sigs.k8s.io/kustomize/api/krusty"
-	// kustypes "sigs.k8s.io/kustomize/api/types"
 	chart := types.ZarfChart{
 		Name:        "bigbang",
 		Url:         "https://repo1.dso.mil/platform-one/big-bang/bigbang.git",

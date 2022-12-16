@@ -2,15 +2,132 @@ package bigbang
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // would love for this to move to OCI soon so we can pull it from there
 const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/platform-one/big-bang/bigbang.git"
 
-// hard coded for now, but should be dynamic
+// Creates a component for BigBang that leverages existing ZarfComponents for
+// Packaging and deploying of BigBang
+func CreateComponent(component types.ZarfComponent) (types.ZarfComponent, error) {
+	if component.BigBang.Version == "" {
+		return component, nil
+	}
+
+	//XXX circular dependency here if we want to use these locations to save things
+
+	// componentPath, err := p.createComponentPaths(component)
+	// if err != nil {
+	// 	return component, fmt.Errorf("unable to create component paths: %w", err)
+	// }
+	// _ = utils.CreateDirectory(componentPath.Charts, 0700)
+	// _ = utils.CreateDirectory(componentPath.Values, 0700)
+	// _ = utils.CreateDirectory(componentPath.Manifests, 0700)
+	// _ = utils.CreateDirectory(componentPath.Files, 0700)
+	// _ = utils.CreateDirectory(componentPath.Repos, 0700)
+
+	tmpDir, err := utils.MakeTempDir(os.TempDir())
+	if err != nil {
+		return component, fmt.Errorf("unable to create tmpdir:  %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	fmt.Printf("Found a Big Big Component: Version %v \n", component.BigBang.Version)
+	repos := make([]string, 0)
+	images := make([]string, 0)
+
+	// use the default repo unless overridden
+	if component.BigBang.Repo == "" {
+		repos = append(repos, "https://repo1.dso.mil/platform-one/big-bang/bigbang.git")
+		component.BigBang.Repo = repos[0]
+	} else {
+		repos = append(repos, fmt.Sprintf("%s@%s", component.BigBang.Repo, component.BigBang.Version))
+	}
+
+	// download bigbang so we can peek inside
+	chart := types.ZarfChart{
+		Name:        "bigbang",
+		Namespace:   "bigbang",
+		Url:         repos[0],
+		Version:     component.BigBang.Version,
+		ValuesFiles: component.BigBang.ValuesFrom,
+		GitPath:     "./chart",
+	}
+	component.Charts = make([]types.ZarfChart, 1)
+	component.Charts[0] = chart
+	helmCfg := helm.Helm{
+		Chart: chart,
+		Cfg: &types.PackagerConfig{
+			State: types.ZarfState{},
+		},
+		BasePath: tmpDir,
+	}
+
+	// I think I need this state thing
+	bb := helmCfg.DownloadChartFromGit("bigbang")
+
+	helmCfg.ChartLoadOverride = bb
+	downloadedCharts := make([]string, 0)
+	downloadedCharts = append(downloadedCharts, bb)
+	fmt.Printf("BB Downloaded to %v\n", bb)
+
+	//XXX Do the flux stuff
+	if component.BigBang.DeployFlux {
+		// build the flux kusotmization
+		manifest := GetFluxManifest(component.BigBang.Version)
+		component.Manifests = []types.ZarfManifest{manifest}
+	}
+
+	template, err := helmCfg.TemplateChart()
+	if err != nil {
+		return component, fmt.Errorf("unable to template BigBang Chart: %w", err)
+	}
+
+	subPackageURLS := findURLs(template)
+	repos[0] = fmt.Sprintf("%s@%s", repos[0], component.BigBang.Version)
+	repos = append(repos, subPackageURLS...)
+
+	component.Repos = repos
+
+	// Get all the images.  This might be omitted here once we have this logic more globally
+	// so that images are pulled from the chart annotations
+	images, err = GetImages(repos)
+	// add the flux ones
+	if component.BigBang.DeployFlux {
+		images = append(images, Images["flux"][component.BigBang.Version]...)
+	}
+	// deduple
+	uniqueList := utils.Unique(images)
+
+	component.Images = uniqueList
+
+	return component, nil
+}
+
+func findURLs(t string) []string {
+
+	// Break the template into separate resources
+	urls := make([]string, 0)
+	yamls, _ := utils.SplitYAML([]byte(t))
+
+	for _, y := range yamls {
+		// see if its a GitRepository
+		if y.GetKind() == "GitRepository" {
+			url := y.Object["spec"].(map[string]interface{})["url"].(string)
+			tag := y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
+			fmt.Printf("Found a GitRepository: %v@%v\n", url, tag)
+			urls = append(urls, fmt.Sprintf("%v@%v", url, tag))
+		}
+	}
+
+	return urls
+}
 
 // need to pass in values so we can filter down...
 func GetImages(repos []string) ([]string, error) {

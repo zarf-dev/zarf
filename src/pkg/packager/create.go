@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -56,6 +55,15 @@ func (p *Packager) Create(baseDir string) error {
 
 	if err := p.composeComponents(); err != nil {
 		return err
+	}
+
+	// do bigbang image/repo discovery
+	for i, c := range p.cfg.Pkg.Components {
+		c2, err := bigbang.CreateComponent(c)
+		if err != nil {
+			return err
+		}
+		p.cfg.Pkg.Components[i] = c2
 	}
 
 	// After components are composed, template the active package
@@ -382,180 +390,5 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 	}
 
-	if component.BigBang.Version != "" {
-		componentPath, err := p.createComponentPaths(component)
-		if err != nil {
-			return &componentSBOM, fmt.Errorf("unable to create component paths: %w", err)
-		}
-		_ = utils.CreateDirectory(componentPath.Charts, 0700)
-		_ = utils.CreateDirectory(componentPath.Values, 0700)
-		_ = utils.CreateDirectory(componentPath.Manifests, 0700)
-		_ = utils.CreateDirectory(componentPath.Files, 0700)
-		_ = utils.CreateDirectory(componentPath.Repos, 0700)
-
-		fmt.Printf("Found a Big Big Component: Version %v \n", component.BigBang.Version)
-		repos := make([]string, 0)
-		// use the default repo unless overridden
-		if component.BigBang.Repo == "" {
-			repos = append(repos, "https://repo1.dso.mil/platform-one/big-bang/bigbang.git")
-		} else {
-			repos = append(repos, fmt.Sprintf("%s@%s", component.BigBang.Repo, component.BigBang.Version))
-		}
-
-		// download bigbang
-		chart := types.ZarfChart{
-			Name:        "bigbang",
-			Url:         repos[0],
-			Version:     component.BigBang.Version,
-			ValuesFiles: component.BigBang.ValuesFrom,
-			GitPath:     "./chart",
-		}
-		helmCfg := helm.Helm{
-			Chart:    chart,
-			Cfg:      p.cfg,
-			BasePath: componentPath.Base,
-		}
-
-		helmCfg.Cfg.State = types.ZarfState{}
-		b, _ = json.MarshalIndent(helmCfg, "", "\t")
-		fmt.Printf("Attempting to download chart:\n%s\n", string(b))
-		bb := helmCfg.DownloadChartFromGit("bigbang")
-
-		helmCfg.ChartLoadOverride = bb
-		downloadedCharts := make([]string, 0)
-		downloadedCharts = append(downloadedCharts, bb)
-		fmt.Printf("BB Downloaded to %v\n", bb)
-		for idx, path := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-			if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
-				return &componentSBOM, fmt.Errorf("unable to copy values file %s: %w", path, err)
-			}
-		}
-
-		//XXX Do the flux stuff
-		if component.BigBang.DeployFlux {
-			// build the flux kusotmization
-			manifest := bigbang.GetFluxManifest(component.BigBang.Version)
-
-			for idx, k := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
-				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return &componentSBOM, fmt.Errorf("unable to build kustomization %s: %w", k, err)
-				}
-			}
-		}
-
-		template, err := helmCfg.TemplateChart()
-		if err != nil {
-			return &componentSBOM, fmt.Errorf("unable to template BigBang Chart: %w", err)
-		}
-
-		subPackageURLS := findURLs(template)
-		repos[0] = fmt.Sprintf("%s@%s", repos[0], component.BigBang.Version)
-		repos = append(repos, subPackageURLS...)
-		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Success()
-		for _, url := range repos {
-			// Pull all the references if there is no `@` in the string
-			fmt.Printf("Downloading Repo: %s\n", url)
-			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
-				return &componentSBOM, fmt.Errorf("unable to pull git repo %s: %w", url, err)
-			}
-		}
-
-		// for _, repo := range repos {
-		// 	parts := strings.Split(repo, "@")
-		// 	if len(parts) != 2 {
-		// 		fmt.Printf("%v didnt parse currently as a repo\n", repo)
-		// 		continue
-		// 	}
-		// 	// download bigbang
-		// 	chart := types.ZarfChart{
-		// 		// Name:        "bigbang",
-		// 		Url:     parts[0],
-		// 		Version: parts[1],
-		// 		// ValuesFiles: component.BigBang.ValuesFrom,
-		// 		GitPath: "./chart",
-		// 	}
-		// 	helmCfg := helm.Helm{
-		// 		Chart:    chart,
-		// 		Cfg:      p.cfg,
-		// 		BasePath: componentPath.Base,
-		// 	}
-		// 	name := helmCfg.DownloadChartFromGit(componentPath.Charts)
-		// 	downloadedCharts = append(downloadedCharts, name)
-		// }
-		// Get all the images
-		images, _ := bigbang.GetImages(repos)
-		// add the flux ones
-		if component.BigBang.DeployFlux {
-			images = append(images, bigbang.Images["flux"][component.BigBang.Version]...)
-		}
-		// deduple
-		uniqueList := utils.Unique(images)
-		if _, err := p.pullImages(uniqueList, p.tmp.Images); err != nil {
-			return &componentSBOM, fmt.Errorf("unable to pull images after 3 attempts: %w", err)
-		}
-		spinner = message.NewProgressSpinner("Loading BigBang version %v: %d Repos and %d images", component.BigBang.Version, len(repos), len(images))
-
-		// save off some files that contain the list of images and repos we should upload.
-		imageFile, err := os.OpenFile(fmt.Sprintf("%v/images.txt", componentPath.Files), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-		if err != nil {
-			return &componentSBOM, fmt.Errorf("failed creating file: %s", err)
-		}
-
-		datawriter := bufio.NewWriter(imageFile)
-
-		for _, data := range uniqueList {
-			_, _ = datawriter.WriteString(data + "\n")
-		}
-
-		datawriter.Flush()
-		imageFile.Close()
-
-		defer spinner.Success()
-
-		// save off some files
-		repoFile, err := os.OpenFile(fmt.Sprintf("%v/repos.txt", componentPath.Files), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-		if err != nil {
-			return &componentSBOM, fmt.Errorf("failed creating file: %s", err)
-		}
-
-		datawriter2 := bufio.NewWriter(repoFile)
-
-		for _, data := range repos {
-			_, _ = datawriter2.WriteString(data + "\n")
-		}
-
-		datawriter2.Flush()
-		repoFile.Close()
-
-		defer spinner.Success()
-
-	}
-
 	return &componentSBOM, nil
-}
-
-func findURLs(t string) []string {
-
-	// Break the template into separate resources
-	urls := make([]string, 0)
-	yamls, _ := utils.SplitYAML([]byte(t))
-
-	for _, y := range yamls {
-		// see if its a GitRepository
-		if y.GetKind() == "GitRepository" {
-			url := y.Object["spec"].(map[string]interface{})["url"].(string)
-			tag := y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
-			fmt.Printf("Found a GitRepository: %v@%v\n", url, tag)
-			urls = append(urls, fmt.Sprintf("%v@%v", url, tag))
-		}
-	}
-
-	return urls
 }
