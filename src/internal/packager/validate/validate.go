@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -19,22 +20,22 @@ import (
 // Run performs config validations
 func Run(pkg types.ZarfPackage) error {
 	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
-		return fmt.Errorf("sorry, you can't YOLO an init package")
+		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 
 	if err := validatePackageName(pkg.Metadata.Name); err != nil {
-		return fmt.Errorf("invalid package name: %w", err)
+		return fmt.Errorf(lang.PkgValidateErrName, err)
 	}
 
 	for _, variable := range pkg.Variables {
 		if err := validatePackageVariable(variable); err != nil {
-			return fmt.Errorf("invalid package variable: %w", err)
+			return fmt.Errorf(lang.PkgValidateErrVariable, err)
 		}
 	}
 
 	for _, constant := range pkg.Constants {
 		if err := validatePackageConstant(constant); err != nil {
-			return fmt.Errorf("invalid package constant: %w", err)
+			return fmt.Errorf(lang.PkgValidateErrConstant, err)
 		}
 	}
 
@@ -43,12 +44,12 @@ func Run(pkg types.ZarfPackage) error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
-			return fmt.Errorf("component name '%s' is not unique", component.Name)
+			return fmt.Errorf(lang.PkgValidateErrCompenantNameNotUnique, component.Name)
 		}
 		uniqueNames[component.Name] = true
 
 		if err := validateComponent(pkg, component); err != nil {
-			return fmt.Errorf("invalid component: %w", err)
+			return fmt.Errorf(lang.PkgValidateErrComponent, err)
 		}
 	}
 
@@ -57,12 +58,11 @@ func Run(pkg types.ZarfPackage) error {
 
 // ImportPackage validates the package trying to be imported.
 func ImportPackage(composedComponent *types.ZarfComponent) error {
-	intro := fmt.Sprintf("imported package %s", composedComponent.Name)
 	path := composedComponent.Import.Path
 
 	// ensure path exists
 	if !(len(path) > 0) {
-		return fmt.Errorf("%s must include a path", intro)
+		return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
 	}
 
 	// remove zarf.yaml from path if path has zarf.yaml suffix
@@ -77,7 +77,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 
 	// ensure there is a zarf.yaml in provided path
 	if utils.InvalidPath(path + config.ZarfYAML) {
-		return fmt.Errorf("invalid file path \"%s\" provided directory must contain a valid zarf.yaml file", composedComponent.Import.Path)
+		return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 	}
 
 	return nil
@@ -94,28 +94,28 @@ func oneIfNotEmpty(testString string) int {
 func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) error {
 	if component.Required {
 		if component.Default {
-			return fmt.Errorf("component %s cannot be both required and default", component.Name)
+			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}
 		if component.Group != "" {
-			return fmt.Errorf("component %s cannot be both required and grouped", component.Name)
+			return fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name)
 		}
 	}
 
 	for _, chart := range component.Charts {
 		if err := validateChart(chart); err != nil {
-			return fmt.Errorf("invalid chart definition: %w", err)
+			return fmt.Errorf(lang.PkgValidateErrChart, err)
 		}
 	}
 
 	for _, manifest := range component.Manifests {
 		if err := validateManifest(manifest); err != nil {
-			return fmt.Errorf("invalid manifest definition: %w", err)
+			return fmt.Errorf(lang.PkgValidateErrManifest, err)
 		}
 	}
 
 	if pkg.Metadata.YOLO {
 		if err := validateYOLO(component); err != nil {
-			return fmt.Errorf("component %s incompatible with the online-only package flag (metadata.yolo): %w", component.Name, err)
+			return fmt.Errorf(lang.PkgValidateErrComponentYOLO, component.Name, err)
 		}
 	}
 
@@ -124,19 +124,19 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 
 func validateYOLO(component types.ZarfComponent) error {
 	if len(component.Images) > 0 {
-		return fmt.Errorf("OCI images not allowed")
+		return fmt.Errorf(lang.PkgValidateErrYOLONoOCI)
 	}
 
 	if len(component.Repos) > 0 {
-		return fmt.Errorf("git repos not allowed")
+		return fmt.Errorf(lang.PkgValidateErrYOLONoGit)
 	}
 
 	if component.Only.Cluster.Architecture != "" {
-		return fmt.Errorf("cluster architecture not allowed")
+		return fmt.Errorf(lang.PkgValidateErrYOLONoArch)
 	}
 
 	if len(component.Only.Cluster.Distros) > 0 {
-		return fmt.Errorf("cluster distros not allowed")
+		return fmt.Errorf(lang.PkgValidateErrYOLONoDistro)
 	}
 
 	return nil
@@ -147,7 +147,7 @@ func validatePackageName(subject string) error {
 	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
 
 	if !isValid(subject) {
-		return fmt.Errorf("package name '%s' must be all lowercase and contain no special characters except -", subject)
+		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 
 	return nil
@@ -158,7 +158,7 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 
 	// ensure the variable name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {
-		return fmt.Errorf("variable name '%s' must be all uppercase and contain no special characters except _", subject.Name)
+		return fmt.Errorf(lang.PkgValidateErrPkgVariableName, subject.Name)
 	}
 
 	return nil
@@ -169,64 +169,56 @@ func validatePackageConstant(subject types.ZarfPackageConstant) error {
 
 	// ensure the constant name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {
-		return fmt.Errorf("constant name '%s' must be all uppercase and contain no special characters except _", subject.Name)
+		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)
 	}
 
 	return nil
 }
 
 func validateChart(chart types.ZarfChart) error {
-	intro := fmt.Sprintf("chart %s", chart.Name)
-
 	// Don't allow empty names
 	if chart.Name == "" {
-		return fmt.Errorf("%s must include a name", intro)
+		return fmt.Errorf(lang.PkgValidateErrChartNameMissing, chart.Name)
 	}
 
 	// Helm max release name
 	if len(chart.Name) > config.ZarfMaxChartNameLength {
-		return fmt.Errorf("%s exceed the maximum length of %d characters",
-			intro,
-			config.ZarfMaxChartNameLength)
+		return fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, config.ZarfMaxChartNameLength)
 	}
 
 	// Must have a namespace
 	if chart.Namespace == "" {
-		return fmt.Errorf("%s must include a namespace", intro)
+		return fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name)
 	}
 
 	// Must only have a url or localPath
 	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
-		return fmt.Errorf("%s must only have a url or localPath", intro)
+		return fmt.Errorf(lang.PkgValidateErrChartUrlOrPath, chart.Name)
 	}
 
 	// Must have a version
 	if chart.Version == "" {
-		return fmt.Errorf("%s must include a chart version", intro)
+		return fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name)
 	}
 
 	return nil
 }
 
 func validateManifest(manifest types.ZarfManifest) error {
-	intro := fmt.Sprintf("chart %s", manifest.Name)
-
 	// Don't allow empty names
 	if manifest.Name == "" {
-		return fmt.Errorf("%s must include a name", intro)
+		return fmt.Errorf(lang.PkgValidateErrManifestNameMissing, manifest.Name)
 	}
 
 	// Helm max release name
 	if len(manifest.Name) > config.ZarfMaxChartNameLength {
-		return fmt.Errorf("%s exceed the maximum length of %d characters",
-			intro,
-			config.ZarfMaxChartNameLength)
+		return fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, config.ZarfMaxChartNameLength)
 	}
 
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
-		return fmt.Errorf("%s must have at least one file or kustomization", intro)
+		return fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name)
 	}
 
 	return nil
