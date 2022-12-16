@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script>
+<script lang="ts">
 	import { clusterStore } from '$lib/store';
 	import logo from '@images/zarf-logo.png';
 	import Icon from './icon.svelte';

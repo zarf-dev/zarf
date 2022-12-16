@@ -9,7 +9,7 @@
 	export let open = false;
 	export let duration = 0.2;
 	export let placement = 'left';
-	export let size: null | string = null;
+	export let size = "fit-content";
 
 	let mounted = false;
 	const dispatch = createEventDispatcher();

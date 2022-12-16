@@ -8,7 +8,7 @@
 	import { SectionHeader, ComponentAccordion as PackageComponent } from '$lib/components/package';
 	import { pkgStore } from '$lib/store';
 	import { Button, Chip, Typography } from '@ui';
-	let showRaw: boolean = false;
+	let showRaw= false;
 	let toggleShowRaw = () => (showRaw = !showRaw);
 	import Drawer from '$lib/components/drawer.svelte';
 	import YamlCode from '$lib/components/yaml-code.svelte';

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script>
+<script lang="ts">
 	import { fade } from 'svelte/transition';
 	import Hero from './hero.svelte';
 	import { onMount } from 'svelte';
