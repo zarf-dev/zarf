@@ -15,8 +15,8 @@
 		Error
 	}
 
-	let status: LoadingStatus = LoadingStatus.Loading;
-	let errMessage: string = '';
+	let status = LoadingStatus.Loading;
+	let errMessage = '';
 
 	Packages.findInit()
 		.catch(async (err: Error) => {
