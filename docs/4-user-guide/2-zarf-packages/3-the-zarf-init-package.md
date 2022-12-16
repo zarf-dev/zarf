@@ -25,7 +25,7 @@ In addition to those that are always installed, Zarf's optional components provi
 
 These optional components for the init package are listed below along with the "magic strings" you pass to `zarf init --components` to pull them in:
 
-| --components | Description                                                                                                                                                       |
+| components   | Description                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | k3s          | REQUIRES ROOT. Installs a lightweight Kubernetes Cluster on the local host&mdash;[k3s](https://k3s.io/)&mdash;and configures it to start up on boot.                             |
 | logging      | Adds a log monitoring stack&mdash;[promtail / loki / graphana (a.k.a. PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                              |
@@ -39,6 +39,6 @@ There are two ways to deploy optional components, you can either pass a comma se
 
 # What Makes the Init Package Special
 
-Deploying onto air-gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), especially when the k8s environment you're deploying to doesn't have a container registry running for you to put your images into. This leads to a classic 'chicken or the egg' problem since the container registry image needs to make its way into the cluster but there is on container registry running on the cluster to push to yet because the image isn't in the cluster yet. In order to remain distro agnostic, we had to come up with a unique solution to seed the container registry into the cluster.
+Deploying onto air-gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), especially when the k8s environment you're deploying to doesn't have a container registry running for you to put your images into. This leads to a classic 'chicken or the egg' problem since the container registry image needs to make its way into the cluster but there is no container registry running on the cluster to push to yet because the image isn't in the cluster yet. In order to remain distro agnostic, we had to come up with a unique solution to seed the container registry into the cluster.
 
 The `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/master/packages/zarf-injector/zarf.yaml) within the init-package solves this problem by injecting a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod based on an existing image in the cluster.
