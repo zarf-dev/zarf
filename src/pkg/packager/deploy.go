@@ -320,6 +320,12 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		state.Distro = "YOLO"
 	}
 
+	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
+		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
+			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
+			"the pod or namespace label `zarf.dev/agent: ignore'.")
+	}
+
 	p.cfg.State = state
 
 	// Continue loading state data if it is valid
