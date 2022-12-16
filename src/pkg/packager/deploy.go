@@ -304,10 +304,26 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState()
+	// Return on error if we are not in YOLO mode
+	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
+		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+	}
 
-	// If no distro the zarf secret did not load properly
-	if err != nil || state.Distro == "" {
-		return values, err
+	// Check if the state is empty
+	if state.Distro == "" {
+		// If we are in YOLO mode, return an error
+		if !p.cfg.Pkg.Metadata.YOLO {
+			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		}
+
+		// YOLO mode, so no state needed
+		state.Distro = "YOLO"
+	}
+
+	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
+		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
+			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
+			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
 	p.cfg.State = state
@@ -318,6 +334,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		return values, err
 	}
 
+	// Only check the architecture if the package has images
 	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
 		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",

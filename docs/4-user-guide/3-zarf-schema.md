@@ -164,6 +164,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary><strong> <a name="metadata_yolo"></a>yolo</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -923,7 +939,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The name of the chart to deploy
+**Description:** The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo
 
 |          |          |
 | -------- | -------- |
@@ -939,7 +955,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The name of the release to create
+**Description:** The name of the release to create; defaults to the name of the chart
 
 |          |          |
 | -------- | -------- |
@@ -973,7 +989,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The version of the chart to deploy
+**Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
 
 |          |          |
 | -------- | -------- |
@@ -1007,7 +1023,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of values files to include in the package
+**Description:** List of values files to include in the package; these will be merged together
 
 |          |                   |
 | -------- | ----------------- |
@@ -1037,7 +1053,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** If using a git repo
+**Description:** The path to the chart in the repo if using a git repo instead of a helm repo
 
 |          |          |
 | -------- | -------- |
@@ -1117,7 +1133,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** A name to give this collection of manifests
+**Description:** A name to give this collection of manifests; this will become the name of the dynamically-created helm chart
 
 |          |          |
 | -------- | -------- |
