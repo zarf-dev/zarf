@@ -47,8 +47,9 @@ const (
 	ZarfImageCacheDir = "images"
 	ZarfGitCacheDir   = "repos"
 
-	ZarfYAML    = "zarf.yaml"
-	ZarfSBOMDir = "zarf-sbom"
+	ZarfYAML          = "zarf.yaml"
+	ZarfSBOMDir       = "zarf-sbom"
+	ZarfPackagePrefix = "zarf-package-"
 
 	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
 	ZarfInClusterContainerRegistryNodePort = 31999

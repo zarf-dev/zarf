@@ -27,14 +27,15 @@ func ByteFormat(inputNum float64, precision int) string {
 	var unit string
 	var returnVal float64
 
+	// https://www.techtarget.com/searchstorage/definition/mebibyte-MiB
 	if inputNum >= 1000000000 {
-		returnVal = RoundUp(inputNum/1073741824, precision)
+		returnVal = RoundUp(inputNum/1000000000, precision)
 		unit = " GB" // gigabyte
 	} else if inputNum >= 1000000 {
-		returnVal = RoundUp(inputNum/1048576, precision)
+		returnVal = RoundUp(inputNum/1000000, precision)
 		unit = " MB" // megabyte
 	} else if inputNum >= 1000 {
-		returnVal = RoundUp(inputNum/1024, precision)
+		returnVal = RoundUp(inputNum/1000, precision)
 		unit = " KB" // kilobyte
 	} else {
 		returnVal = inputNum
