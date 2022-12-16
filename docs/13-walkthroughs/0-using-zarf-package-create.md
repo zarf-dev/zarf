@@ -9,8 +9,7 @@ When creating a Zarf package, you will need to have Internet connection so that 
 
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 2. Zarf binary installed on your $PATH: ([install instructions](../3-getting-started.md#installing-zarf))
-3. A copy of the injector's `zarf-registry` binary in the `build/` directory: ([build instructions](../3-getting-started.md#building-the-cli-from-scratch))
-4. The Zarf agent image name and tag you would like to use (the default can be found in the project's [`Makefile`](https://github.com/defenseunicorns/zarf/blob/master/Makefile) under `AGENT_IMAGE ?= `)
+
 
 ## Building the init-package
 

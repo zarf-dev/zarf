@@ -23,6 +23,7 @@ type ZarfMetadata struct {
 	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package for future Zarf UI listing"`
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
 	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package"`
+	YOLO         bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
