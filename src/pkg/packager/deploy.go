@@ -304,16 +304,20 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState()
-
-	// YOLO mode but no state found so just fake it this run
-	if p.cfg.Pkg.Metadata.YOLO && state.Distro == "" {
-		state.Distro = "YOLO"
-		err = nil
+	// Return on error if we are not in YOLO mode
+	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
+		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
-	// If there is no state, or the state is invalid, return early
-	if err != nil || state.Distro == "" {
-		return values, err
+	// Check if the state is empty
+	if state.Distro == "" {
+		// If we are in YOLO mode, return an error
+		if !p.cfg.Pkg.Metadata.YOLO {
+			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		}
+
+		// YOLO mode, so no state needed
+		state.Distro = "YOLO"
 	}
 
 	p.cfg.State = state
