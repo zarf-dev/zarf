@@ -46,7 +46,7 @@ components:
      name: flux-v1.0.0
 ```
 
-> Note: When importing a component, Zarf will copy all of the values from the original component except for the `required` key. In addition, while Zarf will copy the values, you have the ability to override the value for the `description` key.
+> Note: When importing a component, Zarf will copy all of the values from the original component expect for the `required` key. In addition, while Zarf will copy the values, you have the ability to override the value for the `description` key.
 
  Checkout the [composable-packages](https://github.com/defenseunicorns/zarf/blob/master/examples/composable-packages/zarf.yaml) example to see this in action.
 
