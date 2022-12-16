@@ -2,6 +2,31 @@ kind: ZarfPackageConfig
 metadata:
   name: "init-package-git-server"
 
+variables:
+  - name: GIT_SERVER_EXISTING_PVC
+    description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
+    default: ""
+
+  - name: GIT_SERVER_PVC_SIZE
+    description: "The size of the persistent volume claim for git server"
+    default: "10Gi"
+
+  - name: GIT_SERVER_CPU_REQ
+    description: "The CPU request for git server"
+    default: "200m"
+
+  - name: GIT_SERVER_MEM_REQ
+    description: "The memory request for git server"
+    default: "512Mi"
+
+  - name: GIT_SERVER_CPU_LIMIT
+    description: "The CPU limit for git server"
+    default: "3"
+
+  - name: GIT_SERVER_MEM_LIMIT
+    description: "The memory limit for git server"
+    default: "2Gi"
+
 components:
   - name: git-server
     description: "Add Gitea for serving gitops-based clusters in an airgap"
