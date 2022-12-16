@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Button, Typography } from '@ui';
 	import { clusterStore } from '$lib/store';

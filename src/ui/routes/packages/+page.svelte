@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script>
+<script lang="ts">
 	import { Packages } from '$lib/api';
 	import Hero from '$lib/components/hero.svelte';
 	import { DetailsCard } from '$lib/components/package';
