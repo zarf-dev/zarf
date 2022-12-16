@@ -72,7 +72,8 @@ Due to resource constraints in public github runners, K8s tests are only perform
 - 20 is reserved for `zarf init`
 - 21 is reserved for logging tests so they can be removed first (they take the most resources in the cluster)
 - 22 is reserved for tests required the git-server, which is removed at the end of the test
-- 23-99 are for the remaining tests that only require a basic zarf cluster without logging for the git-server
+- 23-98 are for the remaining tests that only require a basic zarf cluster without logging for the git-server
+- 99 is reserved for the `zarf destroy` and [YOLO Mode](../../examples/yolo/README.md) test
 
 ## Running Unit Tests Locally
 
