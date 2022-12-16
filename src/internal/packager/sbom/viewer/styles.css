@@ -178,4 +178,23 @@ body {
     text-decoration: none;
     float: right;
   }
+
+  #actions {
+    margin-bottom: 50px;
+  }
+
+  .file-selector {
+    display: inline-block;
+  }
   
+  .added {
+    background-color: #22541a;
+  }
+
+  .removed {
+    background-color: #541a22;
+  }
+
+  .changed {
+    background-color: #544c1a;
+  }
