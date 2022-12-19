@@ -1,5 +1,8 @@
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
+  existingClaim: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
+  size: "###ZARF_VAR_GIT_SERVER_PVC_SIZE###"
+
 gitea:
   admin:
     username: "###ZARF_GIT_PUSH###"
@@ -24,11 +27,11 @@ gitea:
       FORCE_PRIVATE: true
 resources:
   requests:
-    cpu: "200m"
-    memory: "512Mi"
+    cpu: "###ZARF_VAR_GIT_SERVER_CPU_REQ###"
+    memory: "###ZARF_VAR_GIT_SERVER_MEM_REQ###"
   limits:
-    cpu: "1"
-    memory: "2Gi"
+    cpu: "###ZARF_VAR_GIT_SERVER_CPU_LIMIT###"
+    memory: "###ZARF_VAR_GIT_SERVER_MEM_LIMIT###"
 
 memcached:
   enabled: false
