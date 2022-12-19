@@ -482,6 +482,36 @@ func (p *Packager) installBigBang(componentPath types.ComponentPaths, component 
 	installedCharts := []types.InstalledChart{}
 	var err error
 
+	if component.BigBang.DeployFlux {
+		fmt.Printf("Deploying Flux\n")
+		manifest := types.ZarfManifest{
+			Namespace: "flux-system",
+			Name:      "flux-system",
+			Files: []string{
+				// i know what it is b/c I'm smart
+				"kustomization-flux-system-0.yaml",
+			},
+		}
+
+		// Iterate over any connectStrings and add to the main map
+		helmCfg := helm.Helm{
+			BasePath:  componentPath.Manifests,
+			Component: component,
+			Cfg:       p.cfg,
+			Cluster:   p.cluster,
+		}
+		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+		if err != nil {
+			return installedCharts, err
+		}
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
+
+		// Iterate over any connectStrings and add to the main map
+		for name, description := range addedConnectStrings {
+			connectStrings[name] = description
+		}
+	}
+
 	chart := types.ZarfChart{
 		Name:        "bigbang",
 		Url:         "https://repo1.dso.mil/platform-one/big-bang/bigbang.git",
