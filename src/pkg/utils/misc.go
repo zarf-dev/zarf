@@ -34,3 +34,13 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 
 	return err
 }
+
+// Insert returns a new slice with the element inserted at the given index
+func Insert[T any](slice []T, index int, element T) []T {
+	if len(slice) == index { // nil or empty slice or after last element
+			return append(slice, element)
+	}
+	slice = append(slice[:index+1], slice[index:]...) // index < len(a)
+	slice[index] = element
+	return slice
+}

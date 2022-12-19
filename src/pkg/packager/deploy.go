@@ -6,7 +6,6 @@ package packager
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -27,10 +25,6 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
-
-	kustypes "sigs.k8s.io/kustomize/api/types"
-	"sigs.k8s.io/kustomize/kyaml/resid"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 var valueTemplate template.Values
@@ -240,17 +234,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasCharts || hasManifests {
 		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
 			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
-		}
-	}
-
-	if hasBigBang {
-		if _, err := p.installBigBang(componentPath, component); err != nil {
-			return []types.InstalledChart{
-				{
-					Namespace: "bigbang",
-					ChartName: "bigbang",
-				},
-			}, fmt.Errorf("unable to install big Bang: %w", err)
 		}
 	}
 
@@ -478,232 +461,6 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	return installedCharts, nil
 }
 
-func (p *Packager) installBigBang(componentPath types.ComponentPaths, component types.ZarfComponent) ([]types.InstalledChart, error) {
-	installedCharts := []types.InstalledChart{}
-	var err error
-
-	if component.BigBang.DeployFlux {
-		fmt.Printf("Deploying Flux\n")
-		manifest := types.ZarfManifest{
-			Namespace: "flux-system",
-			Name:      "flux-system",
-			Files: []string{
-				// i know what it is b/c I'm smart
-				"kustomization-flux-system-0.yaml",
-			},
-		}
-
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
-		if err != nil {
-			return installedCharts, err
-		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
-		}
-	}
-
-	chart := types.ZarfChart{
-		Name:        "bigbang",
-		Url:         "https://repo1.dso.mil/platform-one/big-bang/bigbang.git",
-		Version:     component.BigBang.Version,
-		ValuesFiles: component.BigBang.ValuesFrom,
-		GitPath:     "./chart",
-	}
-	if component.BigBang.Repo != "" {
-		chart.Url = component.BigBang.Repo
-	}
-	// Iterate over any connectStrings and add to the main map
-	helmCfg := helm.Helm{
-		BasePath:  componentPath.Manifests,
-		Component: component,
-		Cfg:       p.cfg,
-		Cluster:   p.cluster,
-	}
-
-	bb := kustypes.Kustomization{
-		Resources: []string{
-			fmt.Sprintf("%s/base?ref=%v", "git::https://repo1.dsop.io/platform-one/big-bang/bigbang.git", component.BigBang.Version),
-		},
-		SecretGenerator: make([]kustypes.SecretArgs, len(component.BigBang.ValuesFrom)+1),
-		PatchesJson6902: make([]kustypes.Patch, 1),
-	}
-
-	// write the kustomization file on disk
-	os.Mkdir(fmt.Sprintf("%s/bigbang", componentPath.Manifests), 0700)
-
-	// zarf magic for the value file
-	for i := range component.BigBang.ValuesFrom {
-		destination := fmt.Sprintf("%s/bigbang/%s", componentPath.Manifests, component.BigBang.ValuesFrom[i])
-		if err := utils.CreatePathAndCopy(component.BigBang.ValuesFrom[i], destination); err != nil {
-			return installedCharts, fmt.Errorf("unable to copy manifest %s: %w", component.BigBang.ValuesFrom[i], err)
-		}
-		chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(i)
-		valueTemplate.Apply(component, chartValueName)
-		if err := utils.CreatePathAndCopy(component.BigBang.ValuesFrom[i], destination); err != nil {
-			return installedCharts, fmt.Errorf("unable to copy manifest %s: %w", component.BigBang.ValuesFrom[i], err)
-		}
-		// copy the file from the
-		secret := kustypes.SecretArgs{
-			GeneratorArgs: kustypes.GeneratorArgs{
-				Name:     fmt.Sprintf("values-%d", i),
-				Behavior: kustypes.BehaviorCreate.String(),
-				KvPairSources: kustypes.KvPairSources{
-					FileSources: []string{fmt.Sprintf("values.yaml=%s", destination)},
-				},
-			},
-		}
-		bb.SecretGenerator[i] = secret
-	}
-	// Think this is all we need for zarf specific things, but could add more
-	creds := `
-registryCredentials:
-  registry: "###ZARF_REGISTRY###"
-  username: "zarf-pull"
-  password: "###ZARF_REGISTRY_AUTH_PULL###"
-git:
-  existingSecret: "private-git-server"
-`
-	ioutil.WriteFile(fmt.Sprintf("%s/bigbang/zarf-credentials.yaml", componentPath.Manifests), []byte(creds), 0700)
-	//Zarf Render
-	valueTemplate.Apply(component, fmt.Sprintf("%s/bigbang/zarf-credentials.yaml", componentPath.Manifests))
-
-	bb.SecretGenerator[len(component.BigBang.ValuesFrom)] = kustypes.SecretArgs{
-		GeneratorArgs: kustypes.GeneratorArgs{
-			Name:     fmt.Sprintf("values-zarf-registry"),
-			Behavior: kustypes.BehaviorCreate.String(),
-			KvPairSources: kustypes.KvPairSources{
-				FileSources: []string{
-					"values.yaml=zarf-credentials.yaml",
-				},
-			},
-		},
-	}
-	// bb.Transformers = []string{}
-	bb.GeneratorOptions = &kustypes.GeneratorOptions{
-		DisableNameSuffixHash: true,
-	}
-	bb.PatchesJson6902 = []kustypes.Patch{
-		{
-			Target: &kustypes.Selector{
-				ResId: resid.ResId{
-					Name:      "bigbang",
-					Namespace: "bigbang",
-					Gvk: resid.Gvk{
-						Group:   "helm.toolkit.fluxcd.io",
-						Kind:    "HelmRelease",
-						Version: "v2beta1",
-					},
-				},
-			},
-
-			// Hard code for now.  This allows for only 1 values file to be used until
-			// we dynamically generate this patch
-			Patch: `
-- op: add
-  path: /spec/valuesFrom/-
-  value:
-    kind: Secret
-    name: values-0
-- op: add
-  path: /spec/valuesFrom/-
-  value:
-    kind: Secret
-    name: values-zarf-registry
-`,
-		},
-	}
-	b, _ := yaml.Marshal(bb)
-	// write the kustomization file on disk
-	os.Mkdir(fmt.Sprintf("%s/bigbang", componentPath.Manifests), 0700)
-	d1 := fmt.Sprintf("%s/bigbang/kustomization.yaml", componentPath.Manifests)
-	ioutil.WriteFile(d1, b, 0700)
-
-	//Zarf Render the variables out of things
-	valueTemplate.Apply(component, d1)
-
-	// render the kustomization to a bunch of objects
-	fmt.Printf("MANFIEST PATH: %v\n", componentPath.Manifests)
-	destination := fmt.Sprintf("%s/%s", componentPath.Manifests, "kustomization-bigbang.yaml")
-
-	// This wont work on the airgap since this kustomization rendering happens in the deploy phase
-	if err := kustomize.BuildKustomization(fmt.Sprintf("%s/bigbang/", componentPath.Manifests), destination, true); err != nil {
-		return installedCharts, fmt.Errorf("unable to build kustomization %s: %w", "bigbang", err)
-	}
-
-	// deploy the objects
-
-	// patches the HelmRelease to add each secret as a spec.valuesFrom
-	// Should look like this Kustomization:
-	/*
-		resources:
-		  - git::https://repo1.dsop.io/platform-one/big-bang/bigbang.git/base?ref=1.47.0
-		secretGenerator:
-		  - name: values-1
-		    behavior: create
-		    files:
-		      - values.yaml=values.yaml
-		  - name: values-2
-		    behavior: create
-		    files:
-		      - values.yaml=values2.yaml
-		patchesJson6902:
-		- target:
-		    group: helm.toolkit.fluxcd.io
-		    version: v2beta1
-		    kind: HelmRelease
-		    name: bigbang
-		  patch: |-
-		    - op: add
-		      path: /spec/valuesFrom/-
-		      value:
-		        kind: Secret
-		        name: values-1
-		    - op: add
-		      path: /spec/valuesFrom/-
-		      value:
-		        kind: Secret
-		        name: values-2
-	*/
-
-	//XXX debugging, delete later
-	objects, _ := ioutil.ReadFile("kustomization-bigbang.yaml")
-	fmt.Printf("BIG BANG!!!\n%s\n", string(objects))
-	k := types.ZarfManifest{
-		Name:      "bigbang",
-		Namespace: "bigbang",
-		Files: []string{
-			// destination,
-			"kustomization-bigbang.yaml",
-		},
-	}
-	fmt.Printf("Deploying Flux\n")
-
-	// Iterate over any connectStrings and add to the main map
-
-	addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(k)
-	if err != nil {
-		return installedCharts, err
-	}
-	installedCharts = append(installedCharts, types.InstalledChart{Namespace: k.Namespace, ChartName: installedChartName})
-
-	// Iterate over any connectStrings and add to the main map
-	for name, description := range addedConnectStrings {
-		connectStrings[name] = description
-	}
-
-	return installedCharts, err
-
-}
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 	pterm.Println()

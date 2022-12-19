@@ -57,13 +57,29 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
+	indexesToInsertFluxComponent := []int{}
+
 	// do bigbang image/repo discovery
 	for i, c := range p.cfg.Pkg.Components {
-		c2, err := bigbang.CreateComponent(c)
-		if err != nil {
-			return err
+		if c.BigBang.Version != "" {
+			if c.BigBang.DeployFlux {
+				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
+			}
+			c2, err := bigbang.MutateBigbangComponent(c)
+			if err != nil {
+				return err
+			}
+			p.cfg.Pkg.Components[i] = c2
 		}
-		p.cfg.Pkg.Components[i] = c2
+	}
+
+	for i, componentIndex := range indexesToInsertFluxComponent {
+		// Get index of where to insert keeping in mind how many times we've inserted into the slice
+		message.Infof("Index: %d", i)
+		computedIndex := i + componentIndex
+		bbComponent := p.cfg.Pkg.Components[computedIndex]
+		fluxComponent := bigbang.CreateFluxComponent(bbComponent, i + 1)
+		p.cfg.Pkg.Components = utils.Insert(p.cfg.Pkg.Components, computedIndex, fluxComponent)
 	}
 
 	// After components are composed, template the active package
