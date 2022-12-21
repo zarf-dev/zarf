@@ -1,0 +1,13 @@
+gatekeeper:
+  values:
+    violations:
+      allowedDockerRegistries:
+        enabled: false
+      allowedHostFilesystem:
+        enabled: false
+      bannedImageTags:
+        enabled: false
+      noPrivilegedContainers:
+        enabled: false
+      podsHaveIstio:
+        enabled: false
