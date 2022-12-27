@@ -66,7 +66,7 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 // execZarfCommand executes a Zarf command
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
-	return exec.CmdWithContext(context.TODO(), exec.WithPrint(), e2e.zarfBinPath, commandString...)
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.zarfBinPath, commandString...)
 }
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {

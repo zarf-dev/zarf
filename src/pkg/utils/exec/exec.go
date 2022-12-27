@@ -28,7 +28,7 @@ type Config struct {
 	Env   []string
 }
 
-func WithPrint() Config {
+func PrintCfg() Config {
 	return Config{Print: true}
 }
 
@@ -37,7 +37,7 @@ func Cmd(command string, args ...string) (string, string, error) {
 }
 
 func CmdWithPrint(command string, args ...string) error {
-	_, _, err := CmdWithContext(context.TODO(), WithPrint(), command, args...)
+	_, _, err := CmdWithContext(context.TODO(), PrintCfg(), command, args...)
 	return err
 }
 
