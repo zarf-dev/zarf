@@ -59,9 +59,9 @@ ensure-ui-build-dir:
 
 check-ui: ## Build the Zarf UI if needed
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-	    if test "$(shell ./.hooks/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
 		    $(MAKE) build-ui;\
-		    ./.hooks/print-ui-diff.sh > build/ui/git-info.txt;\
+		    ./hack/print-ui-diff.sh > build/ui/git-info.txt;\
 	    fi;\
 	else\
         $(MAKE) build-ui;\
@@ -94,8 +94,8 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
-	ZARF_CONFIG=.hooks/empty-config.toml go run main.go internal generate-cli-docs
-	ZARF_CONFIG=.hooks/empty-config.toml .hooks/create-zarf-schema.sh
+	ZARF_CONFIG=hack/empty-config.toml go run main.go internal generate-cli-docs
+	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the UI
 	go mod download
@@ -171,13 +171,13 @@ test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
 
 test-docs-and-schema:
 	$(MAKE) docs-and-schema
-	.hooks/check-zarf-docs-and-schema.sh
+	hack/check-zarf-docs-and-schema.sh
 
 test-cves: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype --fail-on low
 
 cve-report: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype -o template -t .hooks/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom packages . -o json | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go:
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
