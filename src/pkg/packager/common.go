@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -206,6 +207,11 @@ func (p *Packager) loadZarfPkg() error {
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
 
+	// Handle scripts deprecation
+	for idx, component := range p.cfg.Pkg.Components {
+		p.cfg.Pkg.Components[idx] = migrateScriptsToActions(component)
+	}
+
 	spinner.Success()
 	return nil
 }
@@ -285,7 +291,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	}
 
 	var shasum string
-	if shasum, err = utils.GetSha256Sum(destination); err != nil {
+	if shasum, err = utils.GetCryptoHash(destination, crypto.SHA256); err != nil {
 		return fmt.Errorf("unable to get sha256sum of package: %w", err)
 	}
 

@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -100,7 +101,14 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		if err != nil {
+			if err := p.runComponentActions(component.Actions.Deploy.Failure); err != nil {
+				message.Debugf("unable to run component failure action: %s", err.Error())
+			}
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+		}
+
+		if err := p.runComponentActions(component.Actions.Deploy.Success); err != nil {
+			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		// Deploy the component
@@ -187,9 +195,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
-	// Run the 'before' scripts and move files before we do anything else
-	if err = p.runComponentScripts(component.Scripts.Before, component.Scripts); err != nil {
-		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
+	if err = p.runComponentActions(component.Actions.Deploy.First); err != nil {
+		return charts, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
 	if err := p.processComponentFiles(component.Files, componentPath.Files); err != nil {
@@ -236,8 +243,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	// Run the 'after' scripts after all other attributes of the component has been deployed
-	p.runComponentScripts(component.Scripts.After, component.Scripts)
+	if err = p.runComponentActions(component.Actions.Deploy.Last); err != nil {
+		return charts, fmt.Errorf("unable to run component last action: %w", err)
+	}
 
 	return charts, nil
 }
@@ -259,7 +267,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetSha256Sum(sourceFile); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHash(sourceFile, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}

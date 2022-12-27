@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -99,7 +100,14 @@ func (p *Packager) Create(baseDir string) error {
 	for _, component := range p.cfg.Pkg.Components {
 		componentSBOM, err := p.addComponent(component)
 		if err != nil {
+			if err := p.runComponentActions(component.Actions.Create.Failure); err != nil {
+				message.Debugf("unable to run component failure action: %s", err.Error())
+			}
 			return fmt.Errorf("unable to add component: %w", err)
+		}
+
+		if err := p.runComponentActions(component.Actions.Create.Success); err != nil {
+			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		if componentSBOM != nil && len(componentSBOM.Files) > 0 {
@@ -234,9 +242,8 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		ComponentPath: componentPath,
 	}
 
-	// Loop through each component prepare script and execute it.
-	for _, script := range component.Scripts.Prepare {
-		p.loopScriptUntilSuccess(script, component.Scripts)
+	if err := p.runComponentActions(component.Actions.Create.First); err != nil {
+		return nil, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
 	// If any helm charts are defined, process them.
@@ -290,7 +297,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 			// Abort packaging on invalid shasum (if one is specified)
 			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetSha256Sum(destinationFile); actualShasum != file.Shasum {
+				if actualShasum, _ := utils.GetCryptoHash(destinationFile, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 				}
 			}
@@ -375,6 +382,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
+	}
+
+	if err := p.runComponentActions(component.Actions.Create.Last); err != nil {
+		return nil, fmt.Errorf("unable to run component last action: %w", err)
 	}
 
 	return &componentSBOM, nil

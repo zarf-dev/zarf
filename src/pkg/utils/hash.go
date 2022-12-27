@@ -5,7 +5,7 @@
 package utils
 
 import (
-	"crypto/sha256"
+	"crypto"
 	"encoding/hex"
 	"io"
 	"os"
@@ -13,8 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// GetSha256Sum returns the computed SHA256 Sum of a given file
-func GetSha256Sum(path string) (string, error) {
+// GetCryptoHash returns the computed SHA256 Sum of a given file
+func GetCryptoHash(path string, hashName crypto.Hash) (string, error) {
 	var data io.ReadCloser
 	var err error
 
@@ -32,7 +32,7 @@ func GetSha256Sum(path string) (string, error) {
 
 	defer data.Close()
 
-	hash := sha256.New()
+	hash := hashName.New()
 	if _, err = io.Copy(hash, data); err != nil {
 		return "", err
 	}

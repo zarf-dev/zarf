@@ -19,9 +19,9 @@ import (
 )
 
 // Run scripts that a component has provided
-func (p *Packager) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) error {
-	for _, script := range scripts {
-		if err := p.loopScriptUntilSuccess(script, componentScript); err != nil {
+func (p *Packager) runComponentActions(actions []types.ZarfComponentAction) error {
+	for _, a := range actions {
+		if err := p.loopActionUntilSuccess(a); err != nil {
 			return err
 		}
 	}
@@ -29,34 +29,34 @@ func (p *Packager) runComponentScripts(scripts []string, componentScript types.Z
 	return nil
 }
 
-func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfComponentScripts) error {
-	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", script)
+func (p *Packager) loopActionUntilSuccess(a types.ZarfComponentAction) error {
+	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", a.Cmd)
 	defer spinner.Success()
 
 	var ctx context.Context
 	var cancel context.CancelFunc
 
 	// Default timeout is 5 minutes
-	if scripts.TimeoutSeconds < 1 {
-		scripts.TimeoutSeconds = 300
+	if a.MaxSeconds < 1 {
+		a.MaxSeconds = 300
 	}
 
-	duration := time.Duration(scripts.TimeoutSeconds) * time.Second
+	duration := time.Duration(a.MaxSeconds) * time.Second
 	timeout := time.After(duration)
 
-	script, err := p.scriptMutation(script)
+	cmd, err := p.actionCmdMutation(a.Cmd)
 	if err != nil {
-		spinner.Errorf(err, "Error mutating script: %s", script)
+		spinner.Errorf(err, "Error mutating script: %s", cmd)
 	}
 
-	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", script, scripts.TimeoutSeconds)
+	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, a.MaxSeconds)
 
 	for {
 		select {
 		// On timeout abort
 		case <-timeout:
 			cancel()
-			return fmt.Errorf("script \"%s\" timed out", script)
+			return fmt.Errorf("script \"%s\" timed out", cmd)
 
 		// Otherwise try running the script
 		default:
@@ -74,20 +74,20 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 				shellArgs = "-c"
 			}
 
-			output, errOut, err := utils.ExecCommandWithContext(ctx, scripts.ShowOutput, shell, shellArgs, script)
+			output, errOut, err := utils.ExecCommandWithContext(ctx, !a.Mute, shell, shellArgs, cmd)
 
 			if err != nil {
 				message.Debug(err, output, errOut)
 				// If retry, let the script run again
-				if scripts.Retry {
+				if a.Retry {
 					continue
 				}
 				// Otherwise, fail
-				return fmt.Errorf("script \"%s\" failed: %w", script, err)
+				return fmt.Errorf("script \"%s\" failed: %w", cmd, err)
 			}
 
 			// Dump the script output in debug if output not already streamed
-			if !scripts.ShowOutput {
+			if a.Mute {
 				message.Debug(output, errOut)
 			}
 
@@ -98,22 +98,22 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 }
 
 // Perform some basic string mutations to make scripts more useful
-func (p *Packager) scriptMutation(script string) (string, error) {
+func (p *Packager) actionCmdMutation(cmd string) (string, error) {
 
 	binaryPath, err := os.Executable()
 	if err != nil {
-		return script, err
+		return cmd, err
 	}
 
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf"
-	script = strings.ReplaceAll(script, "./zarf ", binaryPath+" ")
+	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
 	// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliases by M$
 	// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 	// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details
 	if runtime.GOOS == "windows" {
-		script = regexp.MustCompile(`^touch `).ReplaceAllString(script, `New-Item `)
+		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
 	}
 
-	return script, nil
+	return cmd, nil
 }

@@ -22,6 +22,9 @@ type ZarfComponent struct {
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 
+	// Mapping of target envs to produce components for
+	OnlyMatrix ZarfComponentOnlyMatrix `json:"matrix,omitempty" jsonschema:"description=Matrix of components to deploy. This will copy the component and create a new component with the given ComponentOnlyTarget"`
+
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
 	Group string `json:"group,omitempty" jsonschema:"description=Create a user selector field based on all components in the same group"`
@@ -32,8 +35,14 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// Scripts are custom commands that run before or after package deployment
-	Scripts ZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
+	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=(Deprecated--use actions instead) Custom commands to run before or after package deployment,deprecated=true"`
+
+	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
+	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+
+	// Local or remote hash file to use as a list of files to download/copy, verify and include in the package
+	FileHashList []ZarfFileHashList `json:"fileHashList,omitempty" jsonschema:"description=List of files to hash and include in the package"`
 
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files to place on disk during package deployment"`
@@ -54,10 +63,17 @@ type ZarfComponent struct {
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 
+type ZarfComponentOnlyMatrix struct {
+	LocalOS     []string `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
+	LocalArch   []string `json:"localArch,omitempty" jsonschema:"description=Only deploy component to specified architecture,enum=amd64,enum=arm64"`
+	ClusterArch []string `json:"clusterArch,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
+}
+
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
-	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
-	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
+	LocalOS   string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
+	LocalArch string                   `json:"localArch,omitempty" jsonschema:"description=Only deploy component to specified architecture,enum=amd64,enum=arm64"`
+	Cluster   ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
 type ZarfComponentOnlyCluster struct {
@@ -71,7 +87,14 @@ type ZarfFile struct {
 	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
 	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
+	Extract    string   `json:"extract,omitempty" jsonschema:"description=If the source is an archive extract the specified file from the archive"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+}
+
+type ZarfFileHashList struct {
+	Source    string `json:"source" jsonschema:"description=Local file path or remote URL of the hash file"`
+	Algorithm string `json:"algorithm" jsonschema:"description=The algorithm used to generate the hash file,enum=MD5,SHA1,SHA224,SHA256,SHA384,SHA512"`
+	Target    string `json:"target" jsonschema:"description=The absolute or relative path where the collected files should be copied to during package deploy"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -97,8 +120,8 @@ type ZarfManifest struct {
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`
 }
 
-// ZarfComponentScripts are scripts that run before or after a component is deployed
-type ZarfComponentScripts struct {
+// DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed
+type DeprecatedZarfComponentScripts struct {
 	ShowOutput     bool     `json:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
 	TimeoutSeconds int      `json:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
 	Retry          bool     `json:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
@@ -107,13 +130,33 @@ type ZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
+type ZarfComponentActions struct {
+	Create ZarfComponentActionSet `json:"create,omitempty" jsonschema:"description=Actions to run during package creation"`
+	Deploy ZarfComponentActionSet `json:"deploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
+	Remove ZarfComponentActionSet `json:"remove,omitempty" jsonschema:"description=Actions to run during package removal"`
+}
+
+type ZarfComponentActionSet struct {
+	First   []ZarfComponentAction `json:"first,omitempty" jsonschema:"description=Actions to run at the start of an operation"`
+	Last    []ZarfComponentAction `json:"last,omitempty" jsonschema:"description=Actions to run at the end of an operation"`
+	Success []ZarfComponentAction `json:"success,omitempty" jsonschema:"description=Actions to run if all operations succeed"`
+	Failure []ZarfComponentAction `json:"failure,omitempty" jsonschema:"description=Actions to run if all operations fail"`
+}
+
+type ZarfComponentAction struct {
+	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the script during package deployment"`
+	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
+	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
+	Env        []string `json:"env,omitempty" jsonschema:"description=Environment variables to set for the script"`
+	Cmd        string   `json:"cmd,omitempty" jsonschema:"description=The script to run"`
+}
+
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-
-	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
 // ZarfDataInjection is a data-injection definition

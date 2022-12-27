@@ -65,6 +65,10 @@ export interface ZarfBuildData {
 
 export interface ZarfComponent {
     /**
+     * Custom commands to run at various stages of a package lifecycle
+     */
+    actions?: ZarfComponentActions;
+    /**
      * Helm charts to install during package deploy
      */
     charts?: ZarfChart[];
@@ -85,6 +89,10 @@ export interface ZarfComponent {
      */
     description?: string;
     /**
+     * List of files to hash and include in the package
+     */
+    fileHashList?: ZarfFileHashList[];
+    /**
      * Files to place on disk during package deployment
      */
     files?: ZarfFile[];
@@ -102,6 +110,11 @@ export interface ZarfComponent {
     import?:    ZarfComponentImport;
     manifests?: ZarfManifest[];
     /**
+     * Matrix of components to deploy. This will copy the component and create a new component
+     * with the given ComponentOnlyTarget
+     */
+    matrix?: ZarfComponentOnlyMatrix;
+    /**
      * The name of the component
      */
     name: string;
@@ -118,9 +131,77 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * Custom commands to run before or after package deployment
+     * (Deprecated--use actions instead) Custom commands to run before or after package
+     * deployment
      */
-    scripts?: ZarfComponentScripts;
+    scripts?: DeprecatedZarfComponentScripts;
+}
+
+/**
+ * Custom commands to run at various stages of a package lifecycle
+ */
+export interface ZarfComponentActions {
+    /**
+     * Actions to run during package creation
+     */
+    create?: ZarfComponentActionSet;
+    /**
+     * Actions to run during package deployment
+     */
+    deploy?: ZarfComponentActionSet;
+    /**
+     * Actions to run during package removal
+     */
+    remove?: ZarfComponentActionSet;
+}
+
+/**
+ * Actions to run during package creation
+ *
+ * Actions to run during package deployment
+ *
+ * Actions to run during package removal
+ */
+export interface ZarfComponentActionSet {
+    /**
+     * Actions to run if all operations fail
+     */
+    failure?: ZarfComponentAction[];
+    /**
+     * Actions to run at the start of an operation
+     */
+    first?: ZarfComponentAction[];
+    /**
+     * Actions to run at the end of an operation
+     */
+    last?: ZarfComponentAction[];
+    /**
+     * Actions to run if all operations succeed
+     */
+    success?: ZarfComponentAction[];
+}
+
+export interface ZarfComponentAction {
+    /**
+     * The script to run
+     */
+    cmd?: string;
+    /**
+     * Environment variables to set for the script
+     */
+    env?: string[];
+    /**
+     * Timeout in seconds for the script
+     */
+    maxSeconds?: number;
+    /**
+     * Hide the output of the script during package deployment
+     */
+    mute?: boolean;
+    /**
+     * Retry the script if it fails
+     */
+    retry?: boolean;
 }
 
 export interface ZarfChart {
@@ -203,11 +284,38 @@ export interface ZarfContainerTarget {
     selector: string;
 }
 
+export interface ZarfFileHashList {
+    /**
+     * The algorithm used to generate the hash file
+     */
+    algorithm: Algorithm;
+    /**
+     * Local file path or remote URL of the hash file
+     */
+    source: string;
+    /**
+     * The absolute or relative path where the collected files should be copied to during
+     * package deploy
+     */
+    target: string;
+}
+
+/**
+ * The algorithm used to generate the hash file
+ */
+export enum Algorithm {
+    Md5 = "MD5",
+}
+
 export interface ZarfFile {
     /**
      * Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
+    /**
+     * If the source is an archive extract the specified file from the archive
+     */
+    extract?: string;
     /**
      * SHA256 checksum of the file if the source is a URL
      */
@@ -263,6 +371,44 @@ export interface ZarfManifest {
 }
 
 /**
+ * Matrix of components to deploy. This will copy the component and create a new component
+ * with the given ComponentOnlyTarget
+ */
+export interface ZarfComponentOnlyMatrix {
+    /**
+     * Only create and deploy to clusters of the given architecture
+     */
+    clusterArch?: Architecture[];
+    /**
+     * Only deploy component to specified architecture
+     */
+    localArch?: Architecture[];
+    /**
+     * Only deploy component to specified OS
+     */
+    localOS?: LocalOS[];
+}
+
+/**
+ * Only create and deploy to clusters of the given architecture
+ *
+ * Only deploy component to specified architecture
+ */
+export enum Architecture {
+    Amd64 = "amd64",
+    Arm64 = "arm64",
+}
+
+/**
+ * Only deploy component to specified OS
+ */
+export enum LocalOS {
+    Darwin = "darwin",
+    Linux = "linux",
+    Windows = "windows",
+}
+
+/**
  * Filter when this component is included in package creation or deployment
  */
 export interface ZarfComponentOnlyTarget {
@@ -270,6 +416,10 @@ export interface ZarfComponentOnlyTarget {
      * Only deploy component to specified clusters
      */
     cluster?: ZarfComponentOnlyCluster;
+    /**
+     * Only deploy component to specified architecture
+     */
+    localArch?: Architecture;
     /**
      * Only deploy component to specified OS
      */
@@ -291,26 +441,10 @@ export interface ZarfComponentOnlyCluster {
 }
 
 /**
- * Only create and deploy to clusters of the given architecture
+ * (Deprecated--use actions instead) Custom commands to run before or after package
+ * deployment
  */
-export enum Architecture {
-    Amd64 = "amd64",
-    Arm64 = "arm64",
-}
-
-/**
- * Only deploy component to specified OS
- */
-export enum LocalOS {
-    Darwin = "darwin",
-    Linux = "linux",
-    Windows = "windows",
-}
-
-/**
- * Custom commands to run before or after package deployment
- */
-export interface ZarfComponentScripts {
+export interface DeprecatedZarfComponentScripts {
     /**
      * Scripts to run after the component successfully deploys
      */
@@ -843,21 +977,42 @@ const typeMap: any = {
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfComponent": o([
+        { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
         { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "fileHashList", js: "fileHashList", typ: u(undefined, a(r("ZarfFileHashList"))) },
         { json: "files", js: "files", typ: u(undefined, a(r("ZarfFile"))) },
         { json: "group", js: "group", typ: u(undefined, "") },
         { json: "images", js: "images", typ: u(undefined, a("")) },
         { json: "import", js: "import", typ: u(undefined, r("ZarfComponentImport")) },
         { json: "manifests", js: "manifests", typ: u(undefined, a(r("ZarfManifest"))) },
+        { json: "matrix", js: "matrix", typ: u(undefined, r("ZarfComponentOnlyMatrix")) },
         { json: "name", js: "name", typ: "" },
         { json: "only", js: "only", typ: u(undefined, r("ZarfComponentOnlyTarget")) },
         { json: "repos", js: "repos", typ: u(undefined, a("")) },
         { json: "required", js: "required", typ: u(undefined, true) },
-        { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
+        { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },
+    ], false),
+    "ZarfComponentActions": o([
+        { json: "create", js: "create", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "deploy", js: "deploy", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "remove", js: "remove", typ: u(undefined, r("ZarfComponentActionSet")) },
+    ], false),
+    "ZarfComponentActionSet": o([
+        { json: "failure", js: "failure", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "first", js: "first", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "last", js: "last", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "success", js: "success", typ: u(undefined, a(r("ZarfComponentAction"))) },
+    ], false),
+    "ZarfComponentAction": o([
+        { json: "cmd", js: "cmd", typ: u(undefined, "") },
+        { json: "env", js: "env", typ: u(undefined, a("")) },
+        { json: "maxSeconds", js: "maxSeconds", typ: u(undefined, 0) },
+        { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "retry", js: "retry", typ: u(undefined, true) },
     ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
@@ -881,8 +1036,14 @@ const typeMap: any = {
         { json: "path", js: "path", typ: "" },
         { json: "selector", js: "selector", typ: "" },
     ], false),
+    "ZarfFileHashList": o([
+        { json: "algorithm", js: "algorithm", typ: r("Algorithm") },
+        { json: "source", js: "source", typ: "" },
+        { json: "target", js: "target", typ: "" },
+    ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "extract", js: "extract", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
@@ -900,15 +1061,21 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
     ], false),
+    "ZarfComponentOnlyMatrix": o([
+        { json: "clusterArch", js: "clusterArch", typ: u(undefined, a(r("Architecture"))) },
+        { json: "localArch", js: "localArch", typ: u(undefined, a(r("Architecture"))) },
+        { json: "localOS", js: "localOS", typ: u(undefined, a(r("LocalOS"))) },
+    ], false),
     "ZarfComponentOnlyTarget": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentOnlyCluster")) },
+        { json: "localArch", js: "localArch", typ: u(undefined, r("Architecture")) },
         { json: "localOS", js: "localOS", typ: u(undefined, r("LocalOS")) },
     ], false),
     "ZarfComponentOnlyCluster": o([
         { json: "architecture", js: "architecture", typ: u(undefined, r("Architecture")) },
         { json: "distros", js: "distros", typ: u(undefined, a("")) },
     ], false),
-    "ZarfComponentScripts": o([
+    "DeprecatedZarfComponentScripts": o([
         { json: "after", js: "after", typ: u(undefined, a("")) },
         { json: "before", js: "before", typ: u(undefined, a("")) },
         { json: "prepare", js: "prepare", typ: u(undefined, a("")) },
@@ -1023,6 +1190,9 @@ const typeMap: any = {
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
+    "Algorithm": [
+        "MD5",
+    ],
     "Architecture": [
         "amd64",
         "arm64",
