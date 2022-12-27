@@ -9,16 +9,48 @@ import (
 )
 
 // Unique returns a new slice with only unique elements
-func Unique[T comparable](s []T) []T {
+func Unique[T comparable](s []T) (r []T) {
 	exists := make(map[T]bool)
-	var result []T
 	for _, str := range s {
 		if _, ok := exists[str]; !ok {
 			exists[str] = true
-			result = append(result, str)
+			r = append(r, str)
 		}
 	}
-	return result
+	return r
+}
+
+// Reverse returns a new slice with the elements in reverse order
+func Reverse[T any](s []T) (r []T) {
+	for i := len(s) - 1; i >= 0; i-- {
+		r = append(r, s[i])
+	}
+	return r
+}
+
+// Filter returns a new slice with only the elements that pass the test
+func Filter[T any](ss []T, test func(T) bool) (r []T) {
+	for _, s := range ss {
+		if test(s) {
+			r = append(r, s)
+		}
+	}
+	return r
+}
+
+// Find returns the first element that passes the test
+func Find[T any](ss []T, test func(T) bool) (r T) {
+	for _, s := range ss {
+		if test(s) {
+			return s
+		}
+	}
+	return r
+}
+
+// Removes slice element at given index 
+func Remove[T any](ss []T, s int) []T {
+    return append(ss[:s], ss[s+1:]...)
 }
 
 // Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay
