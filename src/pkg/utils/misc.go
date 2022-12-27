@@ -48,9 +48,14 @@ func Find[T any](ss []T, test func(T) bool) (r T) {
 	return r
 }
 
-// Removes slice element at given index 
-func Remove[T any](ss []T, s int) []T {
-    return append(ss[:s], ss[s+1:]...)
+// Removes the given element from the slice that matches the test
+func RemoveMatches[T any](ss []T, test func(T) bool) (r []T) {
+	for _, s := range ss {
+		if !test(s) {
+			r = append(r, s)
+		}
+	}
+	return r
 }
 
 // Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay

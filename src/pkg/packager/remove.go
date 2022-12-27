@@ -50,7 +50,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	requestedComponents := strings.Split(p.cfg.DeployOpts.Components, ",")
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
-	for i, c := range utils.Reverse(packages.DeployedComponents) {
+	for _, c := range utils.Reverse(packages.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
 		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
 			continue
@@ -61,7 +61,9 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		// Remove the component we just removed from the array
-		packages.DeployedComponents = utils.Remove(packages.DeployedComponents, i)
+		packages.DeployedComponents = utils.RemoveMatches(packages.DeployedComponents, func(t types.DeployedComponent) bool {
+			return t.Name == c.Name
+		})
 
 		if len(packages.DeployedComponents) < 1 {
 			// All the installed components were deleted, there for this package is no longer actually deployed
