@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"os"
 	"regexp"
@@ -17,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -57,7 +57,7 @@ var destroyCmd = &cobra.Command{
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
-				_, _, err := utils.ExecCommandWithContext(context.TODO(), true, script)
+				err := exec.CmdWithPrint(script)
 				if errors.Is(err, os.ErrPermission) {
 					message.Warnf(lang.CmdDestroyErrScriptPermissionDenied, script)
 

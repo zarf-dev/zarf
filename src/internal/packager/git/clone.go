@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/go-git/go-git/v5"
 )
 
@@ -55,7 +56,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 			cmdArgs = append(cmdArgs, "--no-tags")
 		}
 
-		stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), false, "git", cmdArgs...)
+		stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "git", cmdArgs...)
 		g.Spinner.Updatef(stdOut)
 		message.Debug(stdErr)
 

@@ -14,92 +14,89 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Run scripts that a component has provided
 func (p *Packager) runComponentActions(actions []types.ZarfComponentAction) error {
 	for _, a := range actions {
-		if err := p.loopActionUntilSuccess(a); err != nil {
-			return err
+		spinner := message.NewProgressSpinner("Waiting for command \"%s\"", a.Cmd)
+		defer spinner.Success()
+
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		// Default timeout is 5 minutes
+		if a.MaxSeconds < 1 {
+			a.MaxSeconds = 300
+		}
+
+		duration := time.Duration(a.MaxSeconds) * time.Second
+		timeout := time.After(duration)
+
+		cmd, err := p.actionCmdMutation(a.Cmd)
+		if err != nil {
+			spinner.Errorf(err, "Error mutating script: %s", cmd)
+		}
+
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, a.MaxSeconds)
+
+		for {
+			select {
+			// On timeout abort
+			case <-timeout:
+				cancel()
+				return fmt.Errorf("script \"%s\" timed out", cmd)
+
+			// Otherwise try running the script
+			default:
+				ctx, cancel = context.WithTimeout(context.Background(), duration)
+				defer cancel()
+
+				var shell string
+				var shellArgs string
+
+				if runtime.GOOS == "windows" {
+					shell = "powershell"
+					shellArgs = "-Command"
+				} else {
+					shell = "sh"
+					shellArgs = "-c"
+				}
+
+				execCfg := exec.Config{
+					Print: !a.Mute,
+					Env:   a.Env,
+				}
+				output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
+
+				if err != nil {
+					message.Debug(err, output, errOut)
+					// If retry, let the script run again
+					if a.Retry {
+						continue
+					}
+					// Otherwise, fail
+					return fmt.Errorf("script \"%s\" failed: %w", cmd, err)
+				}
+
+				// Dump the script output in debug if output not already streamed
+				if a.Mute {
+					message.Debug(output, errOut)
+				}
+
+				// Close the function now that we are done
+				return nil
+			}
 		}
 	}
 
 	return nil
 }
 
-func (p *Packager) loopActionUntilSuccess(a types.ZarfComponentAction) error {
-	spinner := message.NewProgressSpinner("Waiting for command \"%s\"", a.Cmd)
-	defer spinner.Success()
-
-	var ctx context.Context
-	var cancel context.CancelFunc
-
-	// Default timeout is 5 minutes
-	if a.MaxSeconds < 1 {
-		a.MaxSeconds = 300
-	}
-
-	duration := time.Duration(a.MaxSeconds) * time.Second
-	timeout := time.After(duration)
-
-	cmd, err := p.actionCmdMutation(a.Cmd)
-	if err != nil {
-		spinner.Errorf(err, "Error mutating script: %s", cmd)
-	}
-
-	spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, a.MaxSeconds)
-
-	for {
-		select {
-		// On timeout abort
-		case <-timeout:
-			cancel()
-			return fmt.Errorf("script \"%s\" timed out", cmd)
-
-		// Otherwise try running the script
-		default:
-			ctx, cancel = context.WithTimeout(context.Background(), duration)
-			defer cancel()
-
-			var shell string
-			var shellArgs string
-
-			if runtime.GOOS == "windows" {
-				shell = "powershell"
-				shellArgs = "-Command"
-			} else {
-				shell = "sh"
-				shellArgs = "-c"
-			}
-
-			output, errOut, err := utils.ExecCommandWithContext(ctx, !a.Mute, shell, shellArgs, cmd)
-
-			if err != nil {
-				message.Debug(err, output, errOut)
-				// If retry, let the script run again
-				if a.Retry {
-					continue
-				}
-				// Otherwise, fail
-				return fmt.Errorf("script \"%s\" failed: %w", cmd, err)
-			}
-
-			// Dump the script output in debug if output not already streamed
-			if a.Mute {
-				message.Debug(output, errOut)
-			}
-
-			// Close the function now that we are done
-			return nil
-		}
-	}
-}
-
 // Perform some basic string mutations to make scripts more useful
 func (p *Packager) actionCmdMutation(cmd string) (string, error) {
-
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return cmd, err

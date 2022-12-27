@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +28,7 @@ func TestDataInjection(t *testing.T) {
 	}
 
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := utils.ExecCommandWithContext(context.TODO(), true, "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
+	stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.WithPrint(), "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
 	require.NoError(t, err, stdOut, stdErr)
 	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
 	assert.Contains(t, stdOut, ".zarf-injection-")
@@ -43,6 +43,6 @@ func runDataInjection(t *testing.T, path string) {
 	defer cancel()
 
 	// Deploy the data injection example
-	stdOut, stdErr, err := utils.ExecCommandWithContext(ctx, true, e2e.zarfBinPath, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := exec.CmdWithContext(ctx, exec.WithPrint(), e2e.zarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

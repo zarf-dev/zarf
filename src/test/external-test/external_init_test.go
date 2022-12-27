@@ -6,13 +6,12 @@ package external_test
 
 import (
 	"context"
-	"os/exec"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	test "github.com/defenseunicorns/zarf/src/test/e2e"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,17 +23,16 @@ func TestExternalDeploy(t *testing.T) {
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
 	giteaChartURL := "https://dl.gitea.io/charts/gitea-5.0.8.tgz"
 	helmInstallArgs := []string{"install", "gitea", giteaChartURL, "-f", "gitea-values.yaml", "-n", "git-server", "--create-namespace"}
-	_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "helm", helmInstallArgs...)
-
+	err := exec.CmdWithPrint("helm", helmInstallArgs...)
 	require.NoError(t, err, "unable to install gitea chart")
 
 	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
 	helmAddArgs := []string{"repo", "add", "twuni", "https://helm.twun.io"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmAddArgs...)
+	err = exec.CmdWithPrint("helm", helmAddArgs...)
 	require.NoError(t, err, "unable to add the docker-registry chart repo")
-	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "helm", helmInstallArgs...)
 
+	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
+	err = exec.CmdWithPrint("helm", helmInstallArgs...)
 	require.NoError(t, err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
@@ -57,13 +55,14 @@ func TestExternalDeploy(t *testing.T) {
 		"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
 		"--nodeport=31999",
 		"--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, initArgs...)
+
+	err = exec.CmdWithPrint(zarfBinPath, initArgs...)
 
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
 	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, deployArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 
 	require.NoError(t, err, "unable to deploy flux example package")
 
@@ -89,7 +88,7 @@ func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCm
 			// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
-			kubectlOut, err := exec.Command("kubectl", waitCmd...).Output()
+			kubectlOut, _, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "kubectl", waitCmd...)
 			// Log error
 			if err != nil {
 				t.Log(string(kubectlOut), err)

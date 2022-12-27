@@ -5,7 +5,6 @@
 package cluster
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -69,8 +69,7 @@ iterator:
 
 			// Must create the target directory before trying to change to it for untar
 			mkdirExec := fmt.Sprintf("%s -- mkdir -p %s", kubectlExec, data.Target.Path)
-			_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", mkdirExec)
-			if err != nil {
+			if err := exec.CmdWithPrint("sh", "-c", mkdirExec); err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
 				continue iterator
 			}
@@ -83,8 +82,7 @@ iterator:
 			)
 
 			// Do the actual data injection
-			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
-			if err != nil {
+			if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				continue iterator
 			} else {
@@ -96,8 +94,7 @@ iterator:
 					kubectlExec,
 					untarExec,
 				)
-				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
-				if err != nil {
+				if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
 					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 					continue iterator
 				}

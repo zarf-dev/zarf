@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
-package utils
+// Package exec provides a wrapper around the os/exec package
+package exec
 
 import (
 	"bytes"
@@ -22,17 +22,35 @@ const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
-// ExecCommandWithContext executes a given command with args in the current working directory.
-func ExecCommandWithContext(ctx context.Context, showLogs bool, commandName string, args ...string) (string, string, error) {
-	return ExecCommandWithContextAndDir(ctx, "", showLogs, commandName, args...)
+type Config struct {
+	Print bool
+	Dir   string
+	Env   []string
 }
 
-// ExecCommandWithContextAndDir executes a given command with args in the specified directory.
-func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool, commandName string, args ...string) (string, string, error) {
-	if showLogs {
+func WithPrint() Config {
+	return Config{Print: true}
+}
+
+func Cmd(command string, args ...string) (string, string, error) {
+	return CmdWithContext(context.TODO(), Config{}, command, args...)
+}
+
+func CmdWithPrint(command string, args ...string) error {
+	_, _, err := CmdWithContext(context.TODO(), WithPrint(), command, args...)
+	return err
+}
+
+// CmdWithContext executes a given command with given config
+func CmdWithContext(ctx context.Context, config Config, command string, args ...string) (string, string, error) {
+	if command == "" {
+		return "", "", errors.New("command is required")
+	}
+
+	if config.Print {
 		fmt.Println()
 		fmt.Printf("  %s", colorGreen)
-		fmt.Print(commandName + " ")
+		fmt.Print(command + " ")
 		fmt.Printf("%s", colorCyan)
 		fmt.Printf("%v", args)
 		fmt.Printf("%s", colorWhite)
@@ -40,11 +58,14 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 		fmt.Println("")
 	}
 
-	cmd := exec.CommandContext(ctx, commandName, args...)
+	cmd := exec.CommandContext(ctx, command, args...)
+	cmd.Dir = config.Dir
 
-	env := os.Environ()
-	cmd.Env = env
-	cmd.Dir = dir
+	if len(config.Env) > 0 {
+		cmd.Env = config.Env
+	} else {
+		cmd.Env = os.Environ()
+	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	stdoutIn, _ := cmd.StdoutPipe()
@@ -58,7 +79,7 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 		return "", "", err
 	}
 
-	if showLogs {
+	if config.Print {
 		var wg sync.WaitGroup
 		wg.Add(1)
 
@@ -75,7 +96,7 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 		return "", "", err
 	}
 
-	if showLogs {
+	if config.Print {
 		if errStdout != nil || errStderr != nil {
 			return "", "", errors.New("unable to capture stdOut or stdErr")
 		}
@@ -84,7 +105,7 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 	return stdoutBuf.String(), stderrBuf.String(), nil
 }
 
-func ExecLaunchURL(url string) error {
+func LaunchURL(url string) error {
 	switch runtime.GOOS {
 	case "linux":
 		return exec.Command("xdg-open", url).Start()

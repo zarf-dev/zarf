@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -59,7 +60,7 @@ func ViewSBOMFiles(tmp types.TempPaths) {
 		msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. If your browser did not open automatically you can copy and paste this file location into your browser address bar to view them: %s\n\n", len(sbomViewFiles), link)
 		message.Note(msg)
 
-		if err := utils.ExecLaunchURL(link); err != nil {
+		if err := exec.LaunchURL(link); err != nil {
 			message.Debug(err)
 		}
 
