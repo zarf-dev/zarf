@@ -60,12 +60,7 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = config.Dir
-
-	if len(config.Env) > 0 {
-		cmd.Env = config.Env
-	} else {
-		cmd.Env = os.Environ()
-	}
+	cmd.Env = append(os.Environ(), config.Env...)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	stdoutIn, _ := cmd.StdoutPipe()
