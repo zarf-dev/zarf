@@ -32,7 +32,7 @@ repos:
     hooks:
       - id: generate-zarf-schema
         name: Check for outdated Zarf schema
-        entry: ./.hooks/verify-zarf-schema.sh
+        entry: ./hack/verify-zarf-schema.sh
         files: "src/types/types.go"
         types: [go]
         language: script
