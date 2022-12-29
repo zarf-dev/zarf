@@ -4,22 +4,31 @@ metadata:
   description: "Run terraform/terragrunt code"
 
 components:
-  - name: load-terraform
-    import:
-      path: ../package/terraform
-
-  - name: execute-terraform
-    actions:
-      create:
-        first:
-          - cmd: "terraform init -plugin-dir=tf-plugins"
-      deploy:
-        first:
-          - cmd: "terraform apply -auto-approve"
-      remove:
-        first:
-          - cmd: "terraform destroy -auto-approve"
+  - name: download-terraform
+    required: true
+    scripts:
+      after:
+        - "rm -f terraform"
+        - "./zarf tools archiver decompress tmp/terraform_1.3.1_darwin_arm64.zip ."
+        - "./zarf tools archiver decompress tmp/terraform-provider-aws_4.33.0_darwin_arm64.zip ./tf-plugins/registry.terraform.io/hashicorp/aws/4.33.0/darwin_arm64"
+        - "rm -rf tmp"
     files:
       # terraform code
       - source: main.tf
         target: main.tf
+      # mac m1 terraform aws provider binary
+      - source: https://releases.hashicorp.com/terraform-provider-aws/4.33.0/terraform-provider-aws_4.33.0_darwin_arm64.zip
+        target: tmp/terraform-provider-aws_4.33.0_darwin_arm64.zip
+      # mac m1 terraform binary
+      - source: https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_darwin_arm64.zip
+        target: tmp/terraform_1.3.1_darwin_arm64.zip
+
+  - name: execute-terraform
+    actions:
+      deploy:
+        first:
+          - cmd: "terraform init -plugin-dir=tf-plugins"
+          - cmd: "terraform apply -auto-approve"  
+      remove:
+        first:
+          - cmd: "terraform destroy -auto-approve"          

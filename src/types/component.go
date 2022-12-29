@@ -22,9 +22,6 @@ type ZarfComponent struct {
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 
-	// Mapping of target envs to produce components for
-	OnlyMatrix ZarfComponentOnlyMatrix `json:"matrix,omitempty" jsonschema:"description=Matrix of components to deploy. This will copy the component and create a new component with the given ComponentOnlyTarget"`
-
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
 	Group string `json:"group,omitempty" jsonschema:"description=Create a user selector field based on all components in the same group"`
@@ -40,9 +37,6 @@ type ZarfComponent struct {
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
-
-	// Local or remote hash file to use as a list of files to download/copy, verify and include in the package
-	FileHashList []ZarfFileHashList `json:"fileHashList,omitempty" jsonschema:"description=List of files to hash and include in the package"`
 
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files to place on disk during package deployment"`
@@ -63,16 +57,9 @@ type ZarfComponent struct {
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 
-type ZarfComponentOnlyMatrix struct {
-	LocalOS     []string `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
-	LocalArch   []string `json:"localArch,omitempty" jsonschema:"description=Only deploy component to specified architecture,enum=amd64,enum=arm64"`
-	ClusterArch []string `json:"clusterArch,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
-}
-
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
 	LocalOS   string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
-	LocalArch string                   `json:"localArch,omitempty" jsonschema:"description=Only deploy component to specified architecture,enum=amd64,enum=arm64"`
 	Cluster   ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
@@ -89,12 +76,6 @@ type ZarfFile struct {
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Extract    string   `json:"extract,omitempty" jsonschema:"description=If the source is an archive extract the specified file from the archive"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
-}
-
-type ZarfFileHashList struct {
-	Source    string `json:"source" jsonschema:"description=Local file path or remote URL of the hash file"`
-	Algorithm string `json:"algorithm" jsonschema:"description=The algorithm used to generate the hash file,enum=MD5,SHA1,SHA224,SHA256,SHA384,SHA512"`
-	Target    string `json:"target" jsonschema:"description=The absolute or relative path where the collected files should be copied to during package deploy"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
