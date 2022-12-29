@@ -59,8 +59,8 @@ type ZarfComponent struct {
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
 type ZarfComponentOnlyTarget struct {
-	LocalOS   string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
-	Cluster   ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
+	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
+	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
 type ZarfComponentOnlyCluster struct {
@@ -74,7 +74,6 @@ type ZarfFile struct {
 	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
 	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
-	Extract    string   `json:"extract,omitempty" jsonschema:"description=If the source is an archive extract the specified file from the archive"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 

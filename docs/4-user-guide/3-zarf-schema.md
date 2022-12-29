@@ -1123,22 +1123,6 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_files_items_extract"></a>extract</strong>
-
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** If the source is an archive extract the specified file from the archive
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
 <summary><strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 
 </summary>

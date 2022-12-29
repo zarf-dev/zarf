@@ -445,10 +445,6 @@
           "type": "boolean",
           "description": "Determines if the file should be made executable during package deploy"
         },
-        "extract": {
-          "type": "string",
-          "description": "If the source is an archive extract the specified file from the archive"
-        },
         "symlinks": {
           "items": {
             "type": "string"
