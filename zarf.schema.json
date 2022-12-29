@@ -160,11 +160,6 @@
           "$ref": "#/definitions/ZarfComponentOnlyTarget",
           "description": "Filter when this component is included in package creation or deployment"
         },
-        "matrix": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentOnlyMatrix",
-          "description": "Matrix of components to deploy. This will copy the component and create a new component with the given ComponentOnlyTarget"
-        },
         "group": {
           "type": "string",
           "description": "Create a user selector field based on all components in the same group"
@@ -187,14 +182,6 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentActions",
           "description": "Custom commands to run at various stages of a package lifecycle"
-        },
-        "fileHashList": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfFileHashList"
-          },
-          "type": "array",
-          "description": "List of files to hash and include in the package"
         },
         "files": {
           "items": {
@@ -365,46 +352,6 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "ZarfComponentOnlyMatrix": {
-      "properties": {
-        "localOS": {
-          "items": {
-            "enum": [
-              "linux",
-              "darwin",
-              "windows"
-            ],
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Only deploy component to specified OS"
-        },
-        "localArch": {
-          "items": {
-            "enum": [
-              "amd64",
-              "arm64"
-            ],
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Only deploy component to specified architecture"
-        },
-        "clusterArch": {
-          "items": {
-            "enum": [
-              "amd64",
-              "arm64"
-            ],
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Only create and deploy to clusters of the given architecture"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
     "ZarfComponentOnlyTarget": {
       "properties": {
         "localOS": {
@@ -415,14 +362,6 @@
           ],
           "type": "string",
           "description": "Only deploy component to specified OS"
-        },
-        "localArch": {
-          "enum": [
-            "amd64",
-            "arm64"
-          ],
-          "type": "string",
-          "description": "Only deploy component to specified architecture"
         },
         "cluster": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -516,32 +455,6 @@
           },
           "type": "array",
           "description": "List of symlinks to create during package deploy"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "ZarfFileHashList": {
-      "required": [
-        "source",
-        "algorithm",
-        "target"
-      ],
-      "properties": {
-        "source": {
-          "type": "string",
-          "description": "Local file path or remote URL of the hash file"
-        },
-        "algorithm": {
-          "enum": [
-            "MD5"
-          ],
-          "type": "string",
-          "description": "The algorithm used to generate the hash file"
-        },
-        "target": {
-          "type": "string",
-          "description": "The absolute or relative path where the collected files should be copied to during package deploy"
         }
       },
       "additionalProperties": false,
