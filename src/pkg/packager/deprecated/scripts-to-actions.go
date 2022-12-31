@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
-package packager
+// Package deprecated handles package deprecations and migrations
+package deprecated
 
 import "github.com/defenseunicorns/zarf/src/types"
 

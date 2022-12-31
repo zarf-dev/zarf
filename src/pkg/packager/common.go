@@ -21,6 +21,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -209,7 +210,7 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Handle scripts deprecation
 	for idx, component := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[idx] = migrateScriptsToActions(component)
+		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(component)
 	}
 
 	spinner.Success()

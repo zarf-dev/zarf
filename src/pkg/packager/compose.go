@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -24,7 +25,7 @@ func (p *Packager) composeComponents() error {
 	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" {
 			// Migrate any scripts to actions now
-			component = migrateScriptsToActions(component)
+			component = deprecated.MigrateComponent(component)
 			components = append(components, component)
 		} else {
 			composedComponent, err := p.getComposedComponent(component)
@@ -131,7 +132,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	child = p.fixComposedFilepaths(parent, child)
 
 	// Migrate any scripts to actions
-	child = migrateScriptsToActions(child)
+	child = deprecated.MigrateComponent(child)
 
 	return
 }
