@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// Cluster is a wrapper for the k8s package that provides zarf-specific cluster management functions
 type Cluster struct {
 	Kube *k8s.K8s
 }

@@ -35,6 +35,7 @@ type DeployedComponent struct {
 	InstalledCharts []InstalledChart `json:"installedCharts"`
 }
 
+// InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`

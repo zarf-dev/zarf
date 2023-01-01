@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/reference"
 )
 
+// Image represents a config for an OCI image
 type Image struct {
 	Host        string
 	Name        string

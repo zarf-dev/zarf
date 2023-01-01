@@ -9,6 +9,7 @@ import (
 	"regexp"
 )
 
+// List of supported distros via distro detection
 const (
 	DistroIsUnknown       = "unknown"
 	DistroIsK3s           = "k3s"

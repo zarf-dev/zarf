@@ -78,7 +78,7 @@ type ZarfFile struct {
 type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
 	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create; defaults to the name of the chart"`
-	Url         string   `json:"url,omitempty" jsonschema:"oneof_required=url,description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
+	URL         string   `json:"url,omitempty" jsonschema:"oneof_required=url,description=The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"`
 	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package; these will be merged together"`
@@ -123,7 +123,7 @@ type ZarfDataInjection struct {
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
-// ZarfImport structure for including imported zarf components
+// ZarfComponentImport structure for including imported zarf components
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1

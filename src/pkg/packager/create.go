@@ -246,7 +246,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		re := regexp.MustCompile(`\.git$`)
 
 		for _, chart := range component.Charts {
-			isGitURL := re.MatchString(chart.Url)
+			isGitURL := re.MatchString(chart.URL)
 			helmCfg := helm.Helm{
 				Chart: chart,
 				Cfg:   p.cfg,
@@ -254,7 +254,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 			if isGitURL {
 				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
-			} else if len(chart.Url) > 0 {
+			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
 				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)

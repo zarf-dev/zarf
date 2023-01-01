@@ -11,8 +11,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 )
 
-// ListDeployedPackages writes a list of packages that have been deployed to the connected cluster.
-func ListDeployingComponents(w http.ResponseWriter, r *http.Request) {
+// ListDeployingComponents writes a list of packages that have been deployed to the connected cluster.
+func ListDeployingComponents(w http.ResponseWriter, _ *http.Request) {
 	deployingPackages := config.GetDeployingComponents()
 	common.WriteJSONResponse(w, deployingPackages, http.StatusOK)
 }

@@ -19,12 +19,14 @@ import (
 	"github.com/otiai10/copy"
 )
 
-const dotCharacter = 46
+const (
+	dotCharacter   = 46
+	tmpPathPrefix = "zarf-"
+)
 
-var TempPathPrefix = "zarf-"
-
+// MakeTempDir creates a temp directory with the given prefix
 func MakeTempDir(tmpDir string) (string, error) {
-	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
+	tmp, err := os.MkdirTemp(tmpDir, tmpPathPrefix)
 	message.Debugf("Using temp path: '%s'", tmp)
 	return tmp, err
 }
@@ -49,6 +51,7 @@ func InvalidPath(path string) bool {
 	return os.IsNotExist(err)
 }
 
+// ListDirectories returns a list of directories in the given directory
 func ListDirectories(directory string) ([]string, error) {
 	var directories []string
 	paths, err := os.ReadDir(directory)
@@ -65,6 +68,7 @@ func ListDirectories(directory string) ([]string, error) {
 	return directories, nil
 }
 
+// WriteFile writes the given data to the given path
 func WriteFile(path string, data []byte) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -129,21 +133,19 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 	return files, err
 }
 
+// CreateFilePath creates the parent directory for the given file path
 func CreateFilePath(destination string) error {
 	parentDest := path.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
+// CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination
 func CreatePathAndCopy(source string, destination string) error {
 	if err := CreateFilePath(destination); err != nil {
 		return err
 	}
 
-	if err := copy.Copy(source, destination); err != nil {
-		return err
-	}
-
-	return nil
+	return copy.Copy(source, destination)
 }
 
 // GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way

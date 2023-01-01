@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
+// Packager is the main struct for managing packages
 type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
@@ -67,14 +68,16 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
 func NewOrDie(config *types.PackagerConfig) *Packager {
-	message.Debug("packager.NewOrDie()")
+	var (
+		err       error
+		pkgConfig *Packager
+	)
 
-	if pkgConfig, err := New(config); err != nil {
+	if pkgConfig, err = New(config); err != nil {
 		message.Fatal(err, "Unable to create the package")
-		return nil
-	} else {
-		return pkgConfig
 	}
+
+	return pkgConfig
 }
 
 // GetInitPackageName returns the formatted name of the init package
@@ -107,6 +110,7 @@ func (p *Packager) GetPackageName() string {
 	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
+// ClearTempPaths removes the temp directory and any files within it
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.tmp.Base)

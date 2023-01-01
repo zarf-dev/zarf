@@ -17,6 +17,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// LogLevel is the level of logging to display.
 type LogLevel int
 
 const (

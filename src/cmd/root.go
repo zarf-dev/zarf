@@ -59,6 +59,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// Execute is the entrypoint for the CLI
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }

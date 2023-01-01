@@ -83,9 +83,5 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 		return err
 	}
 
-	if err := utils.CreatePathAndCopy(tmp.Sboms, packagePath); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
 }

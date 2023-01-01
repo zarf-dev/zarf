@@ -24,7 +24,7 @@ import (
 
 // InstallOrUpgradeChart performs a helm install of the given chart
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
-	fromMessage := h.Chart.Url
+	fromMessage := h.Chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
 	}
@@ -55,7 +55,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.NewRenderer()
+	postRender, err := h.newRenderer()
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -197,7 +197,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	h.Chart = types.ZarfChart{
-		Name:        tmpChart.Metadata.Name,
+		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior
 		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
 		Version:     tmpChart.Metadata.Version,

@@ -23,6 +23,6 @@ func RequireSecret(validToken string) func(http.Handler) http.Handler {
 }
 
 // Connect is a head-only request to test the connection
-func Connect(w http.ResponseWriter, r *http.Request) {
+func Connect(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }

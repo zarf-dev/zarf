@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Wait for the target pod(s) to come up and inject the data into them
+// HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now
 func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
@@ -102,6 +102,7 @@ iterator:
 					continue iterator
 				}
 			}
+
 		}
 
 		// Do not look for a specific container after injection in case they are running an init container

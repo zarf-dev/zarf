@@ -15,7 +15,7 @@ import (
 // For further explanation: https://regex101.com/r/zq64q4/1
 var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
 
-// MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
+// MutateGitUrlsInText changes the giturl hostname to use the repository Zarf is configured to use.
 func (g *Git) MutateGitUrlsInText(text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
@@ -29,6 +29,7 @@ func (g *Git) MutateGitUrlsInText(text string) string {
 	return output
 }
 
+// TransformURLtoRepoName takes a git url and returns a zarf-compatible repo name
 func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
 	idx := gitURLRegex.SubexpIndex

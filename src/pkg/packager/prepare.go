@@ -82,7 +82,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				// If a repo helmchartpath is specified,
 				component.Charts = append(component.Charts, types.ZarfChart{
 					Name:    repo,
-					Url:     matches[0],
+					URL:     matches[0],
 					Version: matches[1],
 					GitPath: repoHelmChartPath,
 				})
@@ -105,7 +105,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			gitURLRegex := regexp.MustCompile(`\.git$`)
 
 			for _, chart := range component.Charts {
-				isGitURL := gitURLRegex.MatchString(chart.Url)
+				isGitURL := gitURLRegex.MatchString(chart.URL)
 				helmCfg := helm.Helm{
 					Chart: chart,
 					Cfg:   p.cfg,
@@ -116,7 +116,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
-				} else if chart.Url != "" {
+				} else if chart.URL != "" {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				} else {
 					helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
@@ -145,7 +145,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				template, err := helmCfg.TemplateChart()
 
 				if err != nil {
-					message.Errorf(err, "Problem rendering the helm template for %s", chart.Url)
+					message.Errorf(err, "Problem rendering the helm template for %s", chart.URL)
 					continue
 				}
 

@@ -54,7 +54,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
+	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	defer os.RemoveAll(tempPath)
 	gitCfg.GitPath = tempPath
 
@@ -82,7 +82,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 
 // DownloadPublishedChart loads a specific chart version from a remote repo
 func (h *Helm) DownloadPublishedChart(destination string) {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.Url)
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()
 
 	// Set up the helm pull config
@@ -99,7 +99,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	// @todo: process OCI-based charts
 
 	// Perform simple chart download
-	chartURL, err := repo.FindChartInRepoURL(h.Chart.Url, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+	chartURL, err := repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to pull the helm chart")
 	}

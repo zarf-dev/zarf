@@ -14,8 +14,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Read the zarf state secret from the cluster, if it exists.
-func ReadState(w http.ResponseWriter, r *http.Request) {
+// ReadState reads the zarf state secret from the cluster, if it exists.
+func ReadState(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("state.Read()")
 
 	data, err := cluster.NewClusterOrDie().LoadZarfState()
@@ -30,8 +30,8 @@ func ReadState(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Update the zarf state secret in the cluster.
-func UpdateState(w http.ResponseWriter, r *http.Request) {
+// UpdateState updates the zarf state secret in the cluster.
+func UpdateState(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("state.Update()")
 
 	var data types.ZarfState

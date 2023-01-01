@@ -33,7 +33,7 @@ type renderer struct {
 	values         template.Values
 }
 
-func (h *Helm) NewRenderer() (*renderer, error) {
+func (h *Helm) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
 	valueTemplate, err := template.Generate(h.Cfg)

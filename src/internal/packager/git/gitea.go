@@ -29,12 +29,12 @@ func (g *Git) CreateReadOnlyUser() error {
 	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
-	tunnelUrl := tunnel.Endpoint()
+	tunnelURL := tunnel.Endpoint()
 
 	// Determine if the read only user already exists
-	getUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
+	getUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelURL)
 	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
-	out, err := g.DoHttpThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -60,49 +60,49 @@ func (g *Git) CreateReadOnlyUser() error {
 			"password":   g.Server.PullPassword,
 		}
 		updateUserData, _ := json.Marshal(updateUserBody)
-		updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, g.Server.PullUsername)
+		updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 		updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-		out, err = g.DoHttpThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
-		message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
-		return err
-	} else {
-		// Create json representation of the create-user request body
-		createUserBody := map[string]interface{}{
-			"username":             g.Server.PullUsername,
-			"password":             g.Server.PullPassword,
-			"email":                "zarf-reader@localhost.local",
-			"must_change_password": false,
-		}
-		createUserData, err := json.Marshal(createUserBody)
-		if err != nil {
-			return err
-		}
-
-		// Send API request to create the user
-		createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelUrl)
-		createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-		out, err = g.DoHttpThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
-		message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
-		if err != nil {
-			return err
-		}
-
-		// Make sure the user can't create their own repos or orgs
-		updateUserBody := map[string]interface{}{
-			"login_name":                g.Server.PullUsername,
-			"max_repo_creation":         0,
-			"allow_create_organization": false,
-		}
-		updateUserData, _ := json.Marshal(updateUserBody)
-		updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelUrl, g.Server.PullUsername)
-		updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-		out, err = g.DoHttpThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 		message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 		return err
 	}
+
+	// Create json representation of the create-user request body
+	createUserBody := map[string]interface{}{
+		"username":             g.Server.PullUsername,
+		"password":             g.Server.PullPassword,
+		"email":                "zarf-reader@localhost.local",
+		"must_change_password": false,
+	}
+	createUserData, err := json.Marshal(createUserBody)
+	if err != nil {
+		return err
+	}
+
+	// Send API request to create the user
+	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelURL)
+	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
+	out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
+	if err != nil {
+		return err
+	}
+
+	// Make sure the user can't create their own repos or orgs
+	updateUserBody := map[string]interface{}{
+		"login_name":                g.Server.PullUsername,
+		"max_repo_creation":         0,
+		"allow_create_organization": false,
+	}
+	updateUserData, _ := json.Marshal(updateUserBody)
+	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
+	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
+	out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
+	return err
 }
 
-func (g *Git) addReadOnlyUserToRepo(tunnelUrl, repo string) error {
+func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	message.Debugf("git.addReadOnlyUserToRepo()")
 
 	// Add the readonly user to the repo
@@ -115,15 +115,15 @@ func (g *Git) addReadOnlyUserToRepo(tunnelUrl, repo string) error {
 	}
 
 	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelUrl, g.Server.PushUsername, repo, g.Server.PullUsername)
+	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, err := g.DoHttpThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
 	return err
 }
 
-// Add http request boilerplate and perform the request, checking for a successful response
-func (g *Git) DoHttpThings(request *netHttp.Request, username, secret string) ([]byte, error) {
+// DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response
+func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, error) {
 	message.Debugf("git.DoHttpThings()")
 
 	// Prep the request with boilerplate
