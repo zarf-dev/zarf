@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": ".hooks/ui-dev.sh",
+		"dev": "hack/ui-dev.sh",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
