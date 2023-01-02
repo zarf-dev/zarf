@@ -139,10 +139,13 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent.Import.Path)
 	}
 
-	// Prefix non-url composed component chart values files.
+	// Prefix non-url composed component chart values files and localPath.
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(valuesFile, parent.Import.Path)
+		}
+		if child.Charts[chartIdx].LocalPath != "" {
+			child.Charts[chartIdx].LocalPath = p.getComposedFilePath(child.Charts[chartIdx].LocalPath, parent.Import.Path)
 		}
 	}
 
