@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestComponentScripts(t *testing.T) {
-	t.Log("E2E: Testing component scripts")
+func TestComponentActions(t *testing.T) {
+	t.Log("E2E: Testing component actions")
 	e2e.setup(t)
 	defer e2e.teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
-	prepareArtifact := "examples/component-scripts/test-prepare.txt"
+	prepareArtifact := "examples/component-actions/test-prepare.txt"
 	deployArtifacts := []string{
 		"test-deploy-before.txt",
 		"test-deploy-after.txt",
@@ -26,8 +26,8 @@ func TestComponentScripts(t *testing.T) {
 	e2e.cleanFiles(allArtifacts...)
 	defer e2e.cleanFiles(allArtifacts...)
 
-	// Try creating the package to test the create scripts
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-scripts", "--confirm")
+	// Try creating the package to test the onCreate actions
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test for package create prepare artirfact
@@ -38,10 +38,10 @@ func TestComponentScripts(t *testing.T) {
 		require.NoFileExists(t, artifact)
 	}
 
-	path := fmt.Sprintf("build/zarf-package-component-scripts-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.arch)
 
 	// Deploy the simple script that should pass
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=deploy")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the deploy artifacts were created
@@ -49,7 +49,7 @@ func TestComponentScripts(t *testing.T) {
 		require.FileExists(t, artifact)
 	}
 
-	// Deploy the simple script that should fail the timeout
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=timeout")
+	// Deploy the simple action that should fail the timeout
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-timeout")
 	require.Error(t, err, stdOut, stdErr)
 }

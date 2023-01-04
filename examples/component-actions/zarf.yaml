@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: component-scripts
+  name: component-actions
   description: "Component actions examples"
 
 components:
