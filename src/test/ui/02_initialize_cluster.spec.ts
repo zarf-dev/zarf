@@ -1,7 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-const checkbox = 'input[type=checkbox]';
-
 test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
 });
