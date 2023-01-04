@@ -20,7 +20,7 @@
 			"go"
 		]
 	},
-	"devDependencies": {
+	"dependencies": {
 		"@defense-unicorns/unicorn-ui": "0.0.27",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
@@ -28,6 +28,13 @@
 		"@material/layout-grid": "14.0.0",
 		"@material/linear-progress": "14.0.0",
 		"@material/theme": "14.0.0",
+		"material-symbols": "0.4.2",
+		"prismjs": "1.29.0",
+		"sanitize.css": "13.0.0",
+		"sass": "1.57.1",
+		"yaml": "2.2.0"
+	},
+	"devDependencies": {
 		"@playwright/test": "1.29.1",
 		"@sveltejs/adapter-static": "1.0.0",
 		"@sveltejs/kit": "1.0.1",
@@ -45,19 +52,11 @@
 		"playwright": "1.29.1",
 		"prettier": "2.8.1",
 		"prettier-plugin-svelte": "2.9.0",
-		"prismjs": "1.29.0",
-		"sanitize.css": "13.0.0",
-		"sass": "1.57.1",
 		"svelte": "3.55.0",
 		"svelte-check": "3.0.1",
 		"svelte-preprocess": "5.0.0",
 		"tslib": "2.4.1",
-		"typescript": "4.9.4"
-	},
-	"dependencies": {
-		"material-symbols": "0.4.2",
 		"typescript": "4.9.4",
-		"vite": "4.0.3",
-		"yaml": "2.2.0"
+		"vite": "4.0.3"
 	}
 }
