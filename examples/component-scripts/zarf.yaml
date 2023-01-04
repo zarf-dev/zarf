@@ -1,26 +1,29 @@
 kind: ZarfPackageConfig
 metadata:
   name: component-scripts
-  description: "Test component to demonstrate script timeout feature"
+  description: "Component actions examples"
 
 components:
-  - name: prepare
-    scripts:
-      # Note this file will be created in this directory, regardless of where the package create command is called from
-      prepare:
-        # on Windows, touch is replaced with New-Item
-        - "touch test-prepare.txt"
+  - name: on-create
+    actions:
+      onCreate:
+        before:
+          # on Windows, touch is replaced with New-Item
+          - cmd: touch test-prepare.txt
 
-  - name: deploy
-    scripts:
-      before:
-        - "touch test-deploy-before.txt"
-      after:
-        - "touch test-deploy-after.txt"
+  - name: on-deploy
+    actions:
+      onDeploy:
+        before:
+          - cmd: touch test-deploy-before.txt
+        after:
+          - cmd: touch test-deploy-after.txt
 
-  # This script will fail after 1 seconds
-  - name: timeout
-    scripts:
-      timeoutSeconds: 1
-      before:
-        - "sleep 30"
+  - name: on-deploy-with-timeout
+    description: This component will fail after 1 second
+    actions:
+      onDeploy:
+        defaults:
+          maxSeconds: 1
+        before:
+          - cmd: sleep 30

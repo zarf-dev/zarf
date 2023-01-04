@@ -90,12 +90,12 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 	})
 
 	onFailure := func() {
-		if err := p.runComponentActions(c.Actions.Remove.Failure); err != nil {
+		if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.OnFailure); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := p.runComponentActions(c.Actions.Remove.First); err != nil {
+	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.Before); err != nil {
 		onFailure()
 		return fmt.Errorf("unable to run the first action for component (%s): %w", c.Name, err)
 	}
@@ -111,12 +111,12 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 		}
 	}
 
-	if err := p.runComponentActions(c.Actions.Remove.Last); err != nil {
+	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.After); err != nil {
 		onFailure()
 		return fmt.Errorf("unable to run the last action: %w", err)
 	}
 
-	if err := p.runComponentActions(c.Actions.Remove.Success); err != nil {
+	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.OnSuccess); err != nil {
 		onFailure()
 		return fmt.Errorf("unable to run the success action: %w", err)
 	}

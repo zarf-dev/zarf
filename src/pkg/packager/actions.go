@@ -18,38 +18,41 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run scripts that a component has provided
-func (p *Packager) runComponentActions(actions []types.ZarfComponentAction) error {
+// Run commands that a component has provided
+func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction) error {
 	for _, a := range actions {
-		spinner := message.NewProgressSpinner("Waiting for command \"%s\"", a.Cmd)
+		spinner := message.NewProgressSpinner("Running command \"%s\"", a.Cmd)
 		defer spinner.Success()
 
-		var ctx context.Context
-		var cancel context.CancelFunc
+		var (
+			ctx    context.Context
+			cancel context.CancelFunc
+			cmd    string
+			err    error
+		)
 
-		// Default timeout is 5 minutes
-		if a.MaxSeconds < 1 {
-			a.MaxSeconds = 300
-		}
-
-		duration := time.Duration(a.MaxSeconds) * time.Second
+		cfg := actionGetCfg(actionSet, a)
+		duration := time.Duration(cfg.MaxSeconds) * time.Second
 		timeout := time.After(duration)
 
-		cmd, err := p.actionCmdMutation(a.Cmd)
-		if err != nil {
-			spinner.Errorf(err, "Error mutating script: %s", cmd)
+		if cmd, err = actionCmdMutation(a.Cmd); err != nil {
+			spinner.Errorf(err, "Error mutating command: %s", cmd)
 		}
 
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, a.MaxSeconds)
+		if cfg.MaxSeconds > 0 {
+			spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxSeconds)
+		} else {
+			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+		}
 
 		for {
 			select {
 			// On timeout abort
 			case <-timeout:
 				cancel()
-				return fmt.Errorf("script \"%s\" timed out", cmd)
+				return fmt.Errorf("command \"%s\" timed out", cmd)
 
-			// Otherwise try running the script
+			// Otherwise try running the command
 			default:
 				ctx, cancel = context.WithTimeout(context.Background(), duration)
 				defer cancel()
@@ -66,23 +69,24 @@ func (p *Packager) runComponentActions(actions []types.ZarfComponentAction) erro
 				}
 
 				execCfg := exec.Config{
-					Print: !a.Mute,
-					Env:   a.Env,
+					Print: !cfg.Mute,
+					Env:   cfg.Env,
+					Dir:   cfg.Dir,
 				}
 				output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
 
 				if err != nil {
 					message.Debug(err, output, errOut)
-					// If retry, let the script run again
-					if a.Retry {
+					// If retry, let the command run again
+					if cfg.Retry {
 						continue
 					}
 					// Otherwise, fail
-					return fmt.Errorf("script \"%s\" failed: %w", cmd, err)
+					return fmt.Errorf("command \"%s\" failed: %w", cmd, err)
 				}
 
-				// Dump the script output in debug if output not already streamed
-				if a.Mute {
+				// Dump the command output in debug if output not already streamed
+				if cfg.Mute {
 					message.Debug(output, errOut)
 				}
 
@@ -95,8 +99,8 @@ func (p *Packager) runComponentActions(actions []types.ZarfComponentAction) erro
 	return nil
 }
 
-// Perform some basic string mutations to make scripts more useful
-func (p *Packager) actionCmdMutation(cmd string) (string, error) {
+// Perform some basic string mutations to make commands more useful
+func actionCmdMutation(cmd string) (string, error) {
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return cmd, err
@@ -113,4 +117,32 @@ func (p *Packager) actionCmdMutation(cmd string) (string, error) {
 	}
 
 	return cmd, nil
+}
+
+// Merge the actionset defaults with the action config
+func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentAction) types.ZarfComponentActionDefaults {
+	cfg := actionSet.Defaults
+
+	if !a.Mute {
+		cfg.Mute = a.Mute
+	}
+
+	// Default is no timeout, but add a timeout if one is provided
+	if a.MaxSeconds > 0 {
+		cfg.MaxSeconds = a.MaxSeconds
+	}
+
+	if a.Retry {
+		cfg.Retry = a.Retry
+	}
+
+	if a.Dir != "" {
+		cfg.Dir = a.Dir
+	}
+
+	if len(a.Env) > 0 {
+		cfg.Env = append(cfg.Env, a.Env...)
+	}
+
+	return cfg
 }

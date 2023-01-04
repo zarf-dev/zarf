@@ -6,12 +6,13 @@ metadata:
 components:
   - name: download-terraform
     required: true
-    scripts:
-      after:
-        - "rm -f terraform"
-        - "./zarf tools archiver decompress tmp/terraform_1.3.1_darwin_arm64.zip ."
-        - "./zarf tools archiver decompress tmp/terraform-provider-aws_4.33.0_darwin_arm64.zip ./tf-plugins/registry.terraform.io/hashicorp/aws/4.33.0/darwin_arm64"
-        - "rm -rf tmp"
+    actions:
+      onDeploy:
+        after:
+          - cmd: rm -f terraform
+          - cmd: ./zarf tools archiver decompress tmp/terraform_1.3.1_darwin_arm64.zip .
+          - cmd: ./zarf tools archiver decompress tmp/terraform-provider-aws_4.33.0_darwin_arm64.zip ./tf-plugins/registry.terraform.io/hashicorp/aws/4.33.0/darwin_arm64
+          - cmd: rm -rf tmp
     files:
       # terraform code
       - source: main.tf
@@ -25,10 +26,10 @@ components:
 
   - name: execute-terraform
     actions:
-      deploy:
-        first:
+      onDeploy:
+        before:
           - cmd: "terraform init -plugin-dir=tf-plugins"
-          - cmd: "terraform apply -auto-approve"  
-      remove:
-        first:
-          - cmd: "terraform destroy -auto-approve"          
+          - cmd: "terraform apply -auto-approve"
+      onRemove:
+        before:
+          - cmd: "terraform destroy -auto-approve"

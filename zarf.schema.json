@@ -236,26 +236,59 @@
       "properties": {
         "mute": {
           "type": "boolean",
-          "description": "Hide the output of the script during package deployment"
+          "description": "Hide the output of the command during package deployment (default false)"
         },
         "maxSeconds": {
           "type": "integer",
-          "description": "Timeout in seconds for the script"
+          "description": "Timeout in seconds for the command (default 300)"
         },
         "retry": {
           "type": "boolean",
-          "description": "Retry the script if it fails"
+          "description": "Retry the command if it fails (default false)"
+        },
+        "dir": {
+          "type": "string",
+          "description": "The working directory to run the command in (default is CWD)"
         },
         "env": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Environment variables to set for the script"
+          "description": "Additional environment variables to set for the command"
         },
         "cmd": {
           "type": "string",
-          "description": "The script to run"
+          "description": "The command to run"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionDefaults": {
+      "properties": {
+        "mute": {
+          "type": "boolean",
+          "description": "Hide the output of commands during execution (default false)"
+        },
+        "maxSeconds": {
+          "type": "integer",
+          "description": "Default timeout in seconds for commands (default 300)"
+        },
+        "retry": {
+          "type": "boolean",
+          "description": "Retry commands if they fail (default false)"
+        },
+        "dir": {
+          "type": "string",
+          "description": "Working directory for commands (default CWD)"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Additional environment variables for commands"
         }
       },
       "additionalProperties": false,
@@ -263,7 +296,12 @@
     },
     "ZarfComponentActionSet": {
       "properties": {
-        "first": {
+        "defaults": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionDefaults",
+          "description": "Default configuration for all actions in this set"
+        },
+        "before": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfComponentAction"
@@ -271,21 +309,21 @@
           "type": "array",
           "description": "Actions to run at the start of an operation"
         },
-        "last": {
+        "after": {
           "items": {
             "$ref": "#/definitions/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run at the end of an operation"
         },
-        "success": {
+        "onSuccess": {
           "items": {
             "$ref": "#/definitions/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run if all operations succeed"
         },
-        "failure": {
+        "onFailure": {
           "items": {
             "$ref": "#/definitions/ZarfComponentAction"
           },
@@ -298,16 +336,16 @@
     },
     "ZarfComponentActions": {
       "properties": {
-        "create": {
+        "onCreate": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentActionSet",
           "description": "Actions to run during package creation"
         },
-        "deploy": {
+        "onDeploy": {
           "$ref": "#/definitions/ZarfComponentActionSet",
           "description": "Actions to run during package deployment"
         },
-        "remove": {
+        "onRemove": {
           "$ref": "#/definitions/ZarfComponentActionSet",
           "description": "Actions to run during package removal"
         }

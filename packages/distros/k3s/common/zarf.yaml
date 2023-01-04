@@ -11,18 +11,21 @@ components:
       Install K3s, certified Kubernetes distribution built for IoT & Edge computing.
       K3s provides the cluster need for Zarf running in Appliance Mode as well as can
       host a low-resource Gitops Service if not using an existing Kubernetes platform.
-    scripts:
-      retry: true
-      before:
-        # If running RHEL variant, disable firewalld
-        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
-        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
-        - "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
-      after:
-        # Configure K3s systemd service
-        - "systemctl daemon-reload"
-        - "systemctl enable k3s"
-        - "systemctl start k3s"
+    actions:
+      onDeploy:
+        defaults:
+          mute: true
+          retry: true
+        before:
+          # If running RHEL variant, disable firewalld
+          # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+          # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+          - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+        after:
+          # Configure K3s systemd service
+          - cmd: systemctl daemon-reload
+          - cmd: systemctl enable k3s
+          - cmd: systemctl start k3s
     files:
       # K3s removal script
       - source: zarf-clean-k3s.sh

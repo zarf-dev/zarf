@@ -197,22 +197,22 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	target.Repos = append(target.Repos, override.Repos...)
 
 	// Merge create actions
-	target.Actions.Create.First = append(target.Actions.Create.First, override.Actions.Create.First...)
-	target.Actions.Create.Last = append(target.Actions.Create.Last, override.Actions.Create.Last...)
-	target.Actions.Create.Failure = append(target.Actions.Create.Failure, override.Actions.Create.Failure...)
-	target.Actions.Create.Success = append(target.Actions.Create.Success, override.Actions.Create.Success...)
+	target.Actions.OnCreate.Before = append(target.Actions.OnCreate.Before, override.Actions.OnCreate.Before...)
+	target.Actions.OnCreate.After = append(target.Actions.OnCreate.After, override.Actions.OnCreate.After...)
+	target.Actions.OnCreate.OnFailure = append(target.Actions.OnCreate.OnFailure, override.Actions.OnCreate.OnFailure...)
+	target.Actions.OnCreate.OnSuccess = append(target.Actions.OnCreate.OnSuccess, override.Actions.OnCreate.OnSuccess...)
 
 	// Merge deploy actions
-	target.Actions.Deploy.First = append(target.Actions.Deploy.First, override.Actions.Deploy.First...)
-	target.Actions.Deploy.Last = append(target.Actions.Deploy.Last, override.Actions.Deploy.Last...)
-	target.Actions.Deploy.Failure = append(target.Actions.Deploy.Failure, override.Actions.Deploy.Failure...)
-	target.Actions.Deploy.Success = append(target.Actions.Deploy.Success, override.Actions.Deploy.Success...)
+	target.Actions.OnDeploy.Before = append(target.Actions.OnDeploy.Before, override.Actions.OnDeploy.Before...)
+	target.Actions.OnDeploy.After = append(target.Actions.OnDeploy.After, override.Actions.OnDeploy.After...)
+	target.Actions.OnDeploy.OnFailure = append(target.Actions.OnDeploy.OnFailure, override.Actions.OnDeploy.OnFailure...)
+	target.Actions.OnDeploy.OnSuccess = append(target.Actions.OnDeploy.OnSuccess, override.Actions.OnDeploy.OnSuccess...)
 
 	// Merge remove actions
-	target.Actions.Remove.First = append(target.Actions.Remove.First, override.Actions.Remove.First...)
-	target.Actions.Remove.Last = append(target.Actions.Remove.Last, override.Actions.Remove.Last...)
-	target.Actions.Remove.Failure = append(target.Actions.Remove.Failure, override.Actions.Remove.Failure...)
-	target.Actions.Remove.Success = append(target.Actions.Remove.Success, override.Actions.Remove.Success...)
+	target.Actions.OnRemove.Before = append(target.Actions.OnRemove.Before, override.Actions.OnRemove.Before...)
+	target.Actions.OnRemove.After = append(target.Actions.OnRemove.After, override.Actions.OnRemove.After...)
+	target.Actions.OnRemove.OnFailure = append(target.Actions.OnRemove.OnFailure, override.Actions.OnRemove.OnFailure...)
+	target.Actions.OnRemove.OnSuccess = append(target.Actions.OnRemove.OnSuccess, override.Actions.OnRemove.OnSuccess...)
 
 	// Merge Only filters
 	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)

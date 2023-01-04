@@ -135,15 +135,15 @@ export interface ZarfComponentActions {
     /**
      * Actions to run during package creation
      */
-    create?: ZarfComponentActionSet;
+    onCreate?: ZarfComponentActionSet;
     /**
      * Actions to run during package deployment
      */
-    deploy?: ZarfComponentActionSet;
+    onDeploy?: ZarfComponentActionSet;
     /**
      * Actions to run during package removal
      */
-    remove?: ZarfComponentActionSet;
+    onRemove?: ZarfComponentActionSet;
 }
 
 /**
@@ -155,42 +155,76 @@ export interface ZarfComponentActions {
  */
 export interface ZarfComponentActionSet {
     /**
-     * Actions to run if all operations fail
+     * Actions to run at the end of an operation
      */
-    failure?: ZarfComponentAction[];
+    after?: ZarfComponentAction[];
     /**
      * Actions to run at the start of an operation
      */
-    first?: ZarfComponentAction[];
+    before?: ZarfComponentAction[];
     /**
-     * Actions to run at the end of an operation
+     * Default configuration for all actions in this set
      */
-    last?: ZarfComponentAction[];
+    defaults?: ZarfComponentActionDefaults;
+    /**
+     * Actions to run if all operations fail
+     */
+    onFailure?: ZarfComponentAction[];
     /**
      * Actions to run if all operations succeed
      */
-    success?: ZarfComponentAction[];
+    onSuccess?: ZarfComponentAction[];
 }
 
 export interface ZarfComponentAction {
     /**
-     * The script to run
+     * The command to run
      */
     cmd?: string;
     /**
-     * Environment variables to set for the script
+     * The working directory to run the command in (default is CWD)
+     */
+    dir?: string;
+    /**
+     * Additional environment variables to set for the command
      */
     env?: string[];
     /**
-     * Timeout in seconds for the script
+     * Timeout in seconds for the command (default 300)
      */
     maxSeconds?: number;
     /**
-     * Hide the output of the script during package deployment
+     * Hide the output of the command during package deployment (default false)
      */
     mute?: boolean;
     /**
-     * Retry the script if it fails
+     * Retry the command if it fails (default false)
+     */
+    retry?: boolean;
+}
+
+/**
+ * Default configuration for all actions in this set
+ */
+export interface ZarfComponentActionDefaults {
+    /**
+     * Working directory for commands (default CWD)
+     */
+    dir?: string;
+    /**
+     * Additional environment variables for commands
+     */
+    env?: string[];
+    /**
+     * Default timeout in seconds for commands (default 300)
+     */
+    maxSeconds?: number;
+    /**
+     * Hide the output of commands during execution (default false)
+     */
+    mute?: boolean;
+    /**
+     * Retry commands if they fail (default false)
      */
     retry?: boolean;
 }
@@ -934,18 +968,27 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },
     ], false),
     "ZarfComponentActions": o([
-        { json: "create", js: "create", typ: u(undefined, r("ZarfComponentActionSet")) },
-        { json: "deploy", js: "deploy", typ: u(undefined, r("ZarfComponentActionSet")) },
-        { json: "remove", js: "remove", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "onCreate", js: "onCreate", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "onDeploy", js: "onDeploy", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "onRemove", js: "onRemove", typ: u(undefined, r("ZarfComponentActionSet")) },
     ], false),
     "ZarfComponentActionSet": o([
-        { json: "failure", js: "failure", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "first", js: "first", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "last", js: "last", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "success", js: "success", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "after", js: "after", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "before", js: "before", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "defaults", js: "defaults", typ: u(undefined, r("ZarfComponentActionDefaults")) },
+        { json: "onFailure", js: "onFailure", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "onSuccess", js: "onSuccess", typ: u(undefined, a(r("ZarfComponentAction"))) },
     ], false),
     "ZarfComponentAction": o([
         { json: "cmd", js: "cmd", typ: u(undefined, "") },
+        { json: "dir", js: "dir", typ: u(undefined, "") },
+        { json: "env", js: "env", typ: u(undefined, a("")) },
+        { json: "maxSeconds", js: "maxSeconds", typ: u(undefined, 0) },
+        { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "retry", js: "retry", typ: u(undefined, true) },
+    ], false),
+    "ZarfComponentActionDefaults": o([
+        { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
         { json: "maxSeconds", js: "maxSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },

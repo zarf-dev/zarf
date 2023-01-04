@@ -110,25 +110,39 @@ type DeprecatedZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
+// ZarfComponentActions are actionsets that map to different zarf package operations
 type ZarfComponentActions struct {
-	Create ZarfComponentActionSet `json:"create,omitempty" jsonschema:"description=Actions to run during package creation"`
-	Deploy ZarfComponentActionSet `json:"deploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
-	Remove ZarfComponentActionSet `json:"remove,omitempty" jsonschema:"description=Actions to run during package removal"`
+	OnCreate ZarfComponentActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
+	OnDeploy ZarfComponentActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
+	OnRemove ZarfComponentActionSet `json:"onRemove,omitempty" jsonschema:"description=Actions to run during package removal"`
 }
 
+// ZarfComponentActionSet is a set of actions to run during a zarf package operation
 type ZarfComponentActionSet struct {
-	First   []ZarfComponentAction `json:"first,omitempty" jsonschema:"description=Actions to run at the start of an operation"`
-	Last    []ZarfComponentAction `json:"last,omitempty" jsonschema:"description=Actions to run at the end of an operation"`
-	Success []ZarfComponentAction `json:"success,omitempty" jsonschema:"description=Actions to run if all operations succeed"`
-	Failure []ZarfComponentAction `json:"failure,omitempty" jsonschema:"description=Actions to run if all operations fail"`
+	Defaults  ZarfComponentActionDefaults `json:"defaults,omitempty" jsonschema:"description=Default configuration for all actions in this set"`
+	Before    []ZarfComponentAction       `json:"before,omitempty" jsonschema:"description=Actions to run at the start of an operation"`
+	After     []ZarfComponentAction       `json:"after,omitempty" jsonschema:"description=Actions to run at the end of an operation"`
+	OnSuccess []ZarfComponentAction       `json:"onSuccess,omitempty" jsonschema:"description=Actions to run if all operations succeed"`
+	OnFailure []ZarfComponentAction       `json:"onFailure,omitempty" jsonschema:"description=Actions to run if all operations fail"`
 }
 
+// ZarfComponentActionDefaults sets the default configs for child actions
+type ZarfComponentActionDefaults struct {
+	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
+	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
+	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry commands if they fail (default false)"`
+	Dir        string   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
+	Env        []string `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+}
+
+// ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
-	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the script during package deployment"`
-	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
-	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
-	Env        []string `json:"env,omitempty" jsonschema:"description=Environment variables to set for the script"`
-	Cmd        string   `json:"cmd,omitempty" jsonschema:"description=The script to run"`
+	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
+	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry the command if it fails (default false)"`
+	Dir        string   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Env        []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
+	Cmd        string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

@@ -101,13 +101,13 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		if err != nil {
-			if err := p.runComponentActions(component.Actions.Deploy.Failure); err != nil {
+			if err := p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.OnFailure); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runComponentActions(component.Actions.Deploy.Success); err != nil {
+		if err := p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.OnSuccess); err != nil {
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 
@@ -195,7 +195,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
-	if err = p.runComponentActions(component.Actions.Deploy.First); err != nil {
+	if err = p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.Before); err != nil {
 		return charts, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
@@ -243,7 +243,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runComponentActions(component.Actions.Deploy.Last); err != nil {
+	if err = p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.After); err != nil {
 		return charts, fmt.Errorf("unable to run component last action: %w", err)
 	}
 
