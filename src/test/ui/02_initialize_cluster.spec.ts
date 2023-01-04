@@ -11,9 +11,13 @@ test.describe('initialize a zarf cluster', () => {
 		await page.goto('/auth?token=insecure&next=/initialize/configure');
 
 		// Stepper
-		await expect(page.locator('.stepper :text("1 Configure") .step-icon')).toHaveClass(/primary/);
-		await expect(page.locator('.stepper :text("2 Review") .step-icon')).toHaveClass(/disabled/);
-		await expect(page.locator('.stepper :text("3 Deploy") .step-icon')).toHaveClass(/disabled/);
+		const stepperItems = await page.locator('.stepper .stepper-item .step');
+		await expect(stepperItems.nth(0).locator('.step-icon')).toHaveClass(/primary/);
+		await expect(stepperItems.nth(0)).toContainText('Configure');
+		await expect(stepperItems.nth(1).locator('.step-icon')).toHaveClass(/primary/);
+		await expect(stepperItems.nth(1)).toContainText('2 Review');
+		await expect(stepperItems.nth(2).locator('.step-icon')).toHaveClass(/disabled/);
+		await expect(stepperItems.nth(2)).toContainText('3 Deploy');
 
 		// Package details
 		await expect(page.locator('text=Package Type ZarfInitConfig')).toBeVisible();
