@@ -32,18 +32,22 @@ func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, a
 		)
 
 		cfg := actionGetCfg(actionSet, a)
-		duration := time.Duration(cfg.MaxSeconds) * time.Second
-		timeout := time.After(duration)
 
 		if cmd, err = actionCmdMutation(a.Cmd); err != nil {
 			spinner.Errorf(err, "Error mutating command: %s", cmd)
 		}
 
-		if cfg.MaxSeconds > 0 {
-			spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxSeconds)
-		} else {
+		// If no timeout is set, run the command and return
+		if cfg.MaxSeconds < 1 {
 			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+			return actionRun(context.TODO(), cfg, cmd)
 		}
+
+		// Otherwise, run the command with a timeout handler
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxSeconds)
+
+		duration := time.Duration(cfg.MaxSeconds) * time.Second
+		timeout := time.After(duration)
 
 		for {
 			select {
@@ -56,42 +60,16 @@ func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, a
 			default:
 				ctx, cancel = context.WithTimeout(context.Background(), duration)
 				defer cancel()
-
-				var shell string
-				var shellArgs string
-
-				if runtime.GOOS == "windows" {
-					shell = "powershell"
-					shellArgs = "-Command"
-				} else {
-					shell = "sh"
-					shellArgs = "-c"
-				}
-
-				execCfg := exec.Config{
-					Print: !cfg.Mute,
-					Env:   cfg.Env,
-					Dir:   cfg.Dir,
-				}
-				output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
-
-				if err != nil {
-					message.Debug(err, output, errOut)
-					// If retry, let the command run again
+				if err := actionRun(ctx, cfg, cmd); err != nil {
+					// If retry is enabled, try again
 					if cfg.Retry {
+						spinner.Errorf(err, "Retrying command: %s", cmd)
 						continue
 					}
-					// Otherwise, fail
+
+					// Otherwise, return the error
 					return fmt.Errorf("command \"%s\" failed: %w", cmd, err)
 				}
-
-				// Dump the command output in debug if output not already streamed
-				if cfg.Mute {
-					message.Debug(output, errOut)
-				}
-
-				// Close the function now that we are done
-				return nil
 			}
 		}
 	}
@@ -145,4 +123,38 @@ func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentA
 	}
 
 	return cfg
+}
+
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) error {
+	var shell string
+	var shellArgs string
+
+	if runtime.GOOS == "windows" {
+		shell = "powershell"
+		shellArgs = "-Command"
+	} else {
+		shell = "sh"
+		shellArgs = "-c"
+	}
+
+	execCfg := exec.Config{
+		Print: !cfg.Mute,
+		Env:   cfg.Env,
+		Dir:   cfg.Dir,
+	}
+	output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
+
+	if err != nil {
+		message.Debug(err, output, errOut)
+		if cfg.Retry {
+			return err
+		}
+	}
+
+	// Dump the command output in debug if output not already streamed
+	if cfg.Mute {
+		message.Debug(output, errOut)
+	}
+
+	return nil
 }

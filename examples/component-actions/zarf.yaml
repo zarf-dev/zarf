@@ -9,7 +9,7 @@ components:
       onCreate:
         before:
           # on Windows, touch is replaced with New-Item
-          - cmd: touch test-prepare.txt
+          - cmd: touch test-create.txt
 
   - name: on-deploy
     actions:

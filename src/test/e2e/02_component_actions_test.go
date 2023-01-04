@@ -17,12 +17,12 @@ func TestComponentActions(t *testing.T) {
 	defer e2e.teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
-	prepareArtifact := "examples/component-actions/test-prepare.txt"
+	createArtifact := "examples/component-actions/test-create.txt"
 	deployArtifacts := []string{
 		"test-deploy-before.txt",
 		"test-deploy-after.txt",
 	}
-	allArtifacts := append(deployArtifacts, prepareArtifact)
+	allArtifacts := append(deployArtifacts, createArtifact)
 	e2e.cleanFiles(allArtifacts...)
 	defer e2e.cleanFiles(allArtifacts...)
 
@@ -31,7 +31,7 @@ func TestComponentActions(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test for package create prepare artirfact
-	require.FileExists(t, prepareArtifact)
+	require.FileExists(t, createArtifact)
 
 	// Test to ensure the deploy scripts are not executed
 	for _, artifact := range deployArtifacts {
