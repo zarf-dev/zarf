@@ -33,8 +33,7 @@ When deploying a package, Zarf will output the yaml definition of the package, i
 ![SBOM Prompt](../.images/dashboard/SBOM_prompt_example.png)
 
 
-You can navigate to the SBOM viewer dashboard by copying the `.html` file into your browser. Through the simple dashboard you can see all of the contents for each container image within your package. You can toggle through the different images in the dropdown at the top right of the dashboard.
+You can navigate to the SBOM viewer dashboard by copying the `.html` file into your browser. Through the simple dashboard you can see all of the contents for each container image or component within your package. You can toggle through the different images or components in the dropdown at the top right of the dashboard, as well as compare SBOM JSON files or export the table contents to a CSV.
 
-<!-- TODO: I would like to annotate this png with colored boxes/text to describe different parts of the dashboard -->
 **Example SBOM Dashboard**
 ![SBOM Dashboard](../.images/dashboard/SBOM_dashboard.png)
