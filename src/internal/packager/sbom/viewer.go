@@ -15,9 +15,17 @@ import (
 )
 
 func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
+	filename := fmt.Sprintf("sbom-viewer-%s.html", b.getNormalizedFileName(identifier))
+	return b.createSBOMHTML(filename, "viewer/template.gohtml", jsonData)
+}
 
+func (b *Builder) createSBOMCompareAsset() error {
+	return b.createSBOMHTML("compare.html", "viewer/compare.gohtml", []byte{})
+}
+
+func (b *Builder) createSBOMHTML(filename string, goTemplate string, jsonData []byte) error {
 	// Create the sbom viewer file for the image
-	sbomViewerFile, err := b.createSBOMFile("sbom-viewer-%s.html", identifier)
+	sbomViewerFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return err
 	}
@@ -32,6 +40,7 @@ func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) erro
 		Data      template.JS
 		LibraryJS template.JS
 		ViewerJS  template.JS
+		CompareJS template.JS
 	}{
 		ThemeCSS:  b.loadFileCSS("theme.css"),
 		ViewerCSS: b.loadFileCSS("styles.css"),
@@ -39,10 +48,11 @@ func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) erro
 		Data:      template.JS(jsonData),
 		LibraryJS: b.loadFileJS("library.js"),
 		ViewerJS:  b.loadFileJS("viewer.js"),
+		CompareJS: b.loadFileJS("compare.js"),
 	}
 
 	// Render the sbomviewer template
-	tpl, err := template.ParseFS(viewerAssets, "viewer/template.gohtml")
+	tpl, err := template.ParseFS(viewerAssets, goTemplate)
 	if err != nil {
 		return err
 	}

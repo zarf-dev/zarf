@@ -241,9 +241,17 @@
             </svg>
             <span class="title">Zarf SBOM Viewer</span>
         </div>
-        <div class="element sbom-wrapper">
-            <select id="sbom-selector" onchange="choose(this.value)">
-            </select>
+        <div class="element sbom-tools">
+            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+                Export CSV
+            </button>
+            <button id="sbom-compare" onclick="compare()" class="sbom-button">
+                Compare Tool
+            </button>
+            <div class="sbom-selector-wrapper">
+                <select id="sbom-selector" onchange="choose(this.value)">
+                </select>
+            </div>
         </div>
     </div>
     <h2 id="distro-info"></h2>

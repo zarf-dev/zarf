@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zarf SBOM Comparison</title>
-    <link rel="stylesheet" type="text/css" href="styles.css" />
-    <link rel="stylesheet" type="text/css" href="theme.css" />
-    <!-- <script type="text/javascript">
-        ZARF_SBOM_LIST = {{.List}}; <-- We could integrate this in the selector list
-    </script> -->
-    <script type="text/javascript" src="library.js"></script>
+    <style>
+        {{.ThemeCSS}}
+        {{.ViewerCSS}}
+    </style>
+    <script type="text/javascript">
+        ZARF_SBOM_LIST = {{.List}};
+        {{.LibraryJS}};
+    </script>
 </head>
 
 <body>
@@ -238,10 +240,18 @@
             </svg>
             <span class="title">Zarf SBOM Comparison</span>
         </div>
-        <!-- <div class="element sbom-wrapper">
-            <select id="sbom-selector" onchange="choose(this.value)">
-            </select> <-- we could bring this back later...
-        </div> -->
+        <div class="element sbom-tools">
+            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+                Export CSV
+            </button>
+            <button id="sbom-compare" disabled="true" class="sbom-button">
+                Compare Tool
+            </button>
+            <div class="sbom-selector-wrapper">
+                <select id="sbom-selector" onchange="choose(this.value)">
+                </select>
+            </div>
+        </div>
     </div>
     <h2 id="distro-info"></h2>
 
@@ -254,22 +264,21 @@
     <div id="modal-fader"></div>
     <div id="actions">
         <div class="file-selector">
-            <h4>Previous File</h4>
-            <input type="file" id="leftJson" name="filename">
+            <h4>Old File</h4>
+            <input type="file" id="leftJson" name="leftJson" accept="application/json" class="sbom-file">
         </div>
         <div class="file-selector">
-            <h4>Incoming File</h4>
-            <input type="file" id="rightJson" name="filename">
+            <h4>New File</h4>
+            <input type="file" id="rightJson" name="rightJson" accept="application/json" class="sbom-file">
         </div>
-        <button id="compare" onclick="compare()">
-            Compare Files
-        </button>
-        <button id="export" onclick="exportCSV()">
-            Export CSV
+        <button id="compare" onclick="compare()" class="sbom-button">
+            Run Comparison
         </button>
     </div>
 </body>
 
-<script type="text/javascript" src="compare.js"></script>
+<script type="text/javascript">
+    {{.CompareJS}}
+</script>
 
 </html>
