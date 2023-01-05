@@ -385,11 +385,12 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			}
 
 			// Convert the repo URL to a Zarf-formatted repo name
-			if repoPath, err := gitClient.TransformURLtoRepoName(repoURL); err != nil {
+			repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
+			if err != nil {
 				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-			} else {
-				return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
 			}
+
+			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
 		}
 
 		// Try repo push up to 3 times

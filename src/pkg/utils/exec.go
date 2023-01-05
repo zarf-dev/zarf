@@ -84,6 +84,7 @@ func ExecCommandWithContextAndDir(ctx context.Context, dir string, showLogs bool
 	return stdoutBuf.String(), stderrBuf.String(), nil
 }
 
+// ExecLaunchURL opens the default web browser to the given URL.
 func ExecLaunchURL(url string) error {
 	switch runtime.GOOS {
 	case "linux":

@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
+// Builder is the main struct used to build SBOM artifacts
 type Builder struct {
 	spinner    *message.Spinner
 	cachePath  string
@@ -42,6 +43,7 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 var componentPrefix = "zarf-component-"
 
+// Catalog catalogs the given components and images to create an SBOM.
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image, imagesPath, sbomPath string) {
 	imageCount := len(tagToImage)
 	componentCount := len(componentSBOMs)

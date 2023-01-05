@@ -20,6 +20,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// Zarf Global Configuration Constants.
 const (
 	GithubProject = "defenseunicorns/zarf"
 	IPV4Localhost = "127.0.0.1"
@@ -39,7 +40,7 @@ const (
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
-	ZarfConnectAnnotationUrl         = "zarf.dev/connect-url"
+	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
 
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
@@ -60,6 +61,7 @@ const (
 	ZarfSeedTag   = "2.8.1"
 )
 
+// Zarf Global Configuration Variables.
 var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
@@ -86,7 +88,7 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
 
-// GetArch returns the arch based on a priority list with options for overriding
+// GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {
 	// List of architecture overrides.
 	priority := append([]string{CliArch}, archs...)
@@ -101,17 +103,17 @@ func GetArch(archs ...string) string {
 	return runtime.GOARCH
 }
 
-// GetStartTime Timestamp of when the CLI was started
+// GetStartTime Timestamp of when the CLI was started.
 func GetStartTime() int64 {
 	return operationStartTime
 }
 
-// GetDataInjectionMarker returns the data injection marker based on the current CLI start time
+// GetDataInjectionMarker returns the data injection marker based on the current CLI start time.
 func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
 
-// GetCraneOptions returns a cran option object with the correct options & platform
+// GetCraneOptions returns a crane option object with the correct options & platform.
 func GetCraneOptions(insecure bool) []crane.Option {
 	var options []crane.Option
 
@@ -131,7 +133,7 @@ func GetCraneOptions(insecure bool) []crane.Option {
 	return options
 }
 
-// GetCraneAuthOption returns a crane auth option with the provided credentials
+// GetCraneAuthOption returns a crane auth option with the provided credentials.
 func GetCraneAuthOption(username string, secret string) crane.Option {
 	return crane.WithAuth(
 		authn.FromConfig(authn.AuthConfig{
@@ -140,25 +142,25 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 		}))
 }
 
-// GetDeployedComponents returns the list of deploying components
+// GetDeployingComponents returns the list of deploying components.
 // TODO: (@jeff-mccoy) this should be moved out of config
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
 
-// SetDeployingComponents sets the list of deploying components
+// SetDeployingComponents sets the list of deploying components.
 // TODO: (@jeff-mccoy) this should be moved out of config
 func SetDeployingComponents(components []types.DeployedComponent) {
 	deployedComponents = components
 }
 
-// ClearDeployingComponents clears the list of deploying components
+// ClearDeployingComponents clears the list of deploying components.
 // TODO: (@jeff-mccoy) this should be moved out of config
 func ClearDeployingComponents() {
 	deployedComponents = []types.DeployedComponent{}
 }
 
-// GetValidPackageExtension returns the valid package extensions
+// GetValidPackageExtensions returns the valid package extensions.
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }

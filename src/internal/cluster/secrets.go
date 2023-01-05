@@ -15,12 +15,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// DockerConfig contains the authentication information from the machine's docker config.
 type DockerConfig struct {
 	Auths DockerConfigEntry `json:"auths"`
 }
 
+// DockerConfigEntry contains a map of DockerConfigEntryWithAuth for a registry.
 type DockerConfigEntry map[string]DockerConfigEntryWithAuth
 
+// DockerConfigEntryWithAuth contains a dockker config authentication string.
 type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }

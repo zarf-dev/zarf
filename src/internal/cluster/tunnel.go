@@ -36,6 +36,7 @@ import (
 // Global lock to synchronize port selections
 var globalMutex sync.Mutex
 
+// Zarf Tunnel Configuration Constants
 const (
 	PodResource  = "pod"
 	SvcResource  = "svc"
@@ -65,7 +66,7 @@ type Tunnel struct {
 	spinner      *message.Spinner
 }
 
-// GenerateConnectionTable will print a table of all zarf connect matches found in the cluster
+// PrintConnectTable will print a table of all zarf connect matches found in the cluster
 func (c *Cluster) PrintConnectTable() error {
 	list, err := c.Kube.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
 	if err != nil {
@@ -80,7 +81,7 @@ func (c *Cluster) PrintConnectTable() error {
 		// Add the connectstring for processing later in the deployment
 		connections[name] = types.ConnectString{
 			Description: svc.Annotations[config.ZarfConnectAnnotationDescription],
-			Url:         svc.Annotations[config.ZarfConnectAnnotationUrl],
+			Url:         svc.Annotations[config.ZarfConnectAnnotationURL],
 		}
 	}
 
@@ -305,7 +306,7 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 
 		// Add the url suffix too
-		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationUrl]
+		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
 
 		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, tunnel.remotePort)
 	}
