@@ -217,14 +217,13 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 		// If we have exceeded the number of attempts, exit with an error
 		if tunnel.attempt > 3 {
 			return fmt.Errorf("unable to establish tunnel after 3 attempts: %w", err)
-		} else {
-			// Otherwise, retry the connection but delay increasing intervals between attempts
-			delay := tunnel.attempt * 10
-			message.Debug(err)
-			message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
-			time.Sleep(time.Duration(delay) * time.Second)
-			tunnel.Connect(target, blocking)
 		}
+		// Otherwise, retry the connection but delay increasing intervals between attempts
+		delay := tunnel.attempt * 10
+		message.Debug(err)
+		message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
+		time.Sleep(time.Duration(delay) * time.Second)
+		tunnel.Connect(target, blocking)
 	}
 
 	if blocking {

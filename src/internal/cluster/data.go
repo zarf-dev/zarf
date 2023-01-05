@@ -87,22 +87,20 @@ iterator:
 			if err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				continue iterator
-			} else {
-				// Leave a marker in the target container for pods to track the sync action
-				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
-					tarExec,
-					componentPath.DataInjections,
-					config.GetDataInjectionMarker(),
-					kubectlExec,
-					untarExec,
-				)
-				_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
-				if err != nil {
-					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
-					continue iterator
-				}
 			}
-
+			// Leave a marker in the target container for pods to track the sync action
+			cpPodExec = fmt.Sprintf("%s -C %s %s | %s -- %s",
+				tarExec,
+				componentPath.DataInjections,
+				config.GetDataInjectionMarker(),
+				kubectlExec,
+				untarExec,
+			)
+			_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", cpPodExec)
+			if err != nil {
+				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+				continue iterator
+			}
 		}
 
 		// Do not look for a specific container after injection in case they are running an init container
