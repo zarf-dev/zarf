@@ -617,6 +617,20 @@ func images45() {
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.11",
 	}
+	BigBangImages["kyverno"]["2.5.4-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/nirmata/kyverno:v1.7.4",
+		"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.7.4",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.2",
+	}
+	BigBangImages["kyverno-policies"]["1.0.1-bb.5"] = []string{
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.24.4",
+	}
+	BigBangImages["loki"]["1.8.10-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
+	BigBangImages["promtail"]["6.2.2-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.6.1",
+	}
 }
 
 func images46() {
@@ -657,6 +671,7 @@ func images46() {
 		"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.4.3",
 		"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.4.3",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
 	}
 	BigBangImages["eck-operator"]["2.4.0-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.4.0",
@@ -762,6 +777,20 @@ func images46() {
 		"registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:18.0.2-1.2.0-1",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.11",
+	}
+	BigBangImages["kyverno"]["2.6.0-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/nirmata/kyverno:v1.8.0",
+		"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.8.0",
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.2",
+	}
+	BigBangImages["kyverno-policies"]["1.0.1-bb.6"] = []string{
+		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+	}
+	BigBangImages["loki"]["3.2.1-bb.1"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
+	BigBangImages["promtail"]["6.2.2-bb.2"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.6.1",
 	}
 }
 
@@ -803,6 +832,7 @@ func images461() {
 		"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.4.3",
 		"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.4.3",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
 	}
 	BigBangImages["eck-operator"]["2.4.0-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.4.0",
@@ -909,6 +939,9 @@ func images461() {
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.11",
 	}
+	BigBangImages["loki"]["3.2.1-bb.3"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
 }
 
 func images47() {
@@ -949,6 +982,7 @@ func images47() {
 		"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.4.3",
 		"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.4.3",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
 	}
 	BigBangImages["eck-operator"]["2.4.0-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.4.0",
@@ -1061,6 +1095,9 @@ func images47() {
 		"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.8.0",
 		"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
 	}
+	BigBangImages["loki"]["3.2.1-bb.3"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
 }
 
 func images48() {
@@ -1101,6 +1138,7 @@ func images48() {
 		"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.5.0",
 		"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.5.0",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
 	}
 	BigBangImages["eck-operator"]["2.5.0-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.5.0",
@@ -1208,6 +1246,9 @@ func images48() {
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
 		"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.11",
 	}
+	BigBangImages["loki"]["3.3.4-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/opensource/grafana/loki:2.6.1",
+	}
 }
 
 func images49() {
@@ -1258,6 +1299,7 @@ func images49() {
 		"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.5.0",
 		"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.5.0",
 		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
 	}
 	BigBangImages["eck-operator"]["2.5.0-bb.0"] = []string{
 		"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.5.0",

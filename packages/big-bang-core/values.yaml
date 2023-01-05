@@ -45,9 +45,6 @@ promtail:
   values:
     serviceMonitor:
       enabled: true
-      
-clusterAuditor:
-  enabled: false
 
 eckoperator:
   enabled: false
