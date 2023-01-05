@@ -28,6 +28,7 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
+// GenerateRegistryPullCreds generates a secret containing the registry credentials
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 

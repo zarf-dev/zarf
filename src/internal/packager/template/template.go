@@ -16,12 +16,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
+// Values contains the values to be used in the template.
 type Values struct {
 	config   *types.PackagerConfig
 	registry string
 	htpasswd string
 }
 
+// Generate returns a Values struct with the values to be used in the template.
 func Generate(cfg *types.PackagerConfig) (Values, error) {
 	message.Debug("template.Generate()")
 	var generated Values
@@ -51,14 +53,17 @@ func Generate(cfg *types.PackagerConfig) (Values, error) {
 	return generated, nil
 }
 
+// Ready returns true if the Values struct is ready to be used in the template.
 func (values Values) Ready() bool {
 	return values.config.State.Distro != ""
 }
 
+// GetRegistry returns the registry address.
 func (values Values) GetRegistry() string {
 	return values.registry
 }
 
+// Apply renders the template and writes the result to the given path.
 func (values Values) Apply(component types.ZarfComponent, path string) {
 	message.Debugf("template.Apply(%#v, %s)", component, path)
 

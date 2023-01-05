@@ -4,6 +4,7 @@
 // Package types contains all the types used by Zarf
 package types
 
+// RestAPI is the struct that is used to marshal/unmarshal the top-level API objects.
 type RestAPI struct {
 	ZarfPackage       ZarfPackage       `json:"zarfPackage"`
 	ZarfState         ZarfState         `json:"zarfState"`
@@ -17,6 +18,7 @@ type RestAPI struct {
 	APIZarfPackage    APIZarfPackage    `json:"apiZarfPackage"`
 }
 
+// ClusterSummary contains the summary of a cluster for the API.
 type ClusterSummary struct {
 	Reachable bool      `json:"reachable"`
 	HasZarf   bool      `json:"hasZarf"`
@@ -24,6 +26,7 @@ type ClusterSummary struct {
 	ZarfState ZarfState `json:"zarfState"`
 }
 
+// APIZarfPackage represents a ZarfPackage and its path for the API.
 type APIZarfPackage struct {
 	Path        string      `json:"path"`
 	ZarfPackage ZarfPackage `json:"zarfPackage"`
