@@ -241,9 +241,6 @@
             <span class="title">Zarf SBOM Comparison</span>
         </div>
         <div class="element sbom-tools">
-            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
-                Export CSV
-            </button>
             <button id="sbom-compare" disabled="true" class="sbom-button">
                 Compare Tool
             </button>
@@ -271,9 +268,19 @@
             <h4>New File</h4>
             <input type="file" id="rightJson" name="rightJson" accept="application/json" class="sbom-file">
         </div>
-        <button id="compare" onclick="compare()" class="sbom-button">
-            Run Comparison
-        </button>
+        <div>
+            <h4>&nbsp;</h4>
+            <button id="compare" onclick="compare()" class="sbom-button">
+                Run Comparison
+            </button>
+        </div>
+        <div class="sbom-spacer"></div>
+        <div>
+            <h4>&nbsp;</h4>
+            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+                Export CSV
+            </button>
+        </div>
     </div>
 </body>
 

@@ -242,9 +242,6 @@
             <span class="title">Zarf SBOM Viewer</span>
         </div>
         <div class="element sbom-tools">
-            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
-                Export CSV
-            </button>
             <button id="sbom-compare" onclick="compare()" class="sbom-button">
                 Compare Tool
             </button>
@@ -254,7 +251,6 @@
             </div>
         </div>
     </div>
-    <h2 id="distro-info"></h2>
 
 
     <div id="modal">
@@ -263,6 +259,14 @@
         <button class="modal-btn modal-hide" onclick="hideModal()">Close</button>
     </div>
     <div id="modal-fader"></div>
+
+    <div id="actions">
+        <h2 id="distro-info"></h2>
+        <div class="sbom-spacer"></div>
+        <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+            Export CSV
+        </button>
+    </div>
 </body>
 
 <script type="text/javascript">

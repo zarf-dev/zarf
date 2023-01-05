@@ -157,9 +157,13 @@ body {
     margin-right: 15px;
   }
 
+  .sbom-spacer {
+    flex-grow: 1
+  }
+
   #actions {
     display: flex;
-    align-items: end;
+    align-items: center;
     gap: 15px;
   }
 
