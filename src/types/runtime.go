@@ -54,18 +54,22 @@ type ZarfPartialPackageData struct {
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
 }
 
+// ConnectString contains information about a connection made with zarf connect.
 type ConnectString struct {
 	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
 	URL         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
 }
 
+// ConnectStrings is a map of connect names to connection information.
 type ConnectStrings map[string]ConnectString
 
+// ComponentSBOM contains information related to the files SBOM'ed from a component.
 type ComponentSBOM struct {
 	Files         []string
 	ComponentPath ComponentPaths
 }
 
+// ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
 type ComponentPaths struct {
 	Base           string
 	Files          string
@@ -76,6 +80,7 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
+// TempPaths is a struct that represents all of the subdirectories for a Zarf package.
 type TempPaths struct {
 	Base         string
 	InjectBinary string

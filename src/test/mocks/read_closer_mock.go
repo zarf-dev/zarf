@@ -1,5 +1,10 @@
-package test
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package mocks contains all the mocks used in Zarf tests
+package mocks
+
+// MockReadCloser is a mock for the go ReadCloser object
 type (
 	MockReadCloser struct {
 		MockData     []byte

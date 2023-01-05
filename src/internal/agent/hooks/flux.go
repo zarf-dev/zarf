@@ -20,10 +20,12 @@ import (
 
 const zarfStatePath = "/etc/zarf-state/state"
 
+// SecretRef contains the name used to reference a git repository secret.
 type SecretRef struct {
 	Name string `json:"name"`
 }
 
+// GenericGitRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
 type GenericGitRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
@@ -31,7 +33,7 @@ type GenericGitRepo struct {
 	}
 }
 
-// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook
+// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
