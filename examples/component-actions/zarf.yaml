@@ -24,6 +24,7 @@ components:
     actions:
       onDeploy:
         defaults:
-          maxSeconds: 1
+          maxTotalSeconds: 1
+          maxRetries: 3
         before:
           - cmd: sleep 30

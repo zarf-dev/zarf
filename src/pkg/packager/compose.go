@@ -51,22 +51,22 @@ func (p *Packager) composeComponents() error {
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
-	// Make sure the component we're trying to import cant be accessed
+	// Make sure the component we're trying to import cant be accessed.
 	if err := validate.ImportPackage(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 
-	// Keep track of the composed components import path to build nestedily composed components
+	// Keep track of the composed components import path to build nestedily composed components.
 	pathAncestry := ""
 
-	// Get the component that we are trying to import
-	// NOTE: This function is recursive and will continue getting the children until there are no more 'imported' components left
+	// Get the component that we are trying to import.
+	// NOTE: This function is recursive and will continue getting the children until there are no more 'imported' components left.
 	child, err = p.getChildComponent(parentComponent, pathAncestry)
 	if err != nil {
 		return child, fmt.Errorf("unable to get child component: %w", err)
 	}
 
-	// Merge the overrides from the child that we just received with the parent we were provided
+	// Merge the overrides from the child that we just received with the parent we were provided.
 	p.mergeComponentOverrides(&child, parentComponent)
 
 	return
@@ -80,19 +80,19 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		return child, fmt.Errorf("unable to get sub package: %w", err)
 	}
 
-	// Figure out which component we are actually importing
-	// NOTE: Default to the component name if a custom one was not provided
+	// Figure out which component we are actually importing.
+	// NOTE: Default to the component name if a custom one was not provided.
 	childComponentName := parent.Import.ComponentName
 	if childComponentName == "" {
 		childComponentName = parent.Name
 	}
 
-	// Find the child component from the imported package that matches our arch
+	// Find the child component from the imported package that matches our arch.
 	for _, component := range subPkg.Components {
 		if component.Name == childComponentName {
 			filterArch := component.Only.Cluster.Architecture
 
-			// Override the filter if it is set by the parent component
+			// Override the filter if it is set by the parent component.
 			if parent.Only.Cluster.Architecture != "" {
 				filterArch = parent.Only.Cluster.Architecture
 			}
@@ -105,33 +105,33 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		}
 	}
 
-	// If we didn't find a child component, bail
+	// If we didn't find a child component, bail.
 	if child.Name == "" {
 		return child, fmt.Errorf("unable to find the component %s in the imported package", childComponentName)
 	}
 
-	// Check if we need to get more of children
+	// Check if we need to get more of children.
 	if child.Import.Path != "" {
-		// Set a temporary composePath so we can get future children/grandchildren from our current location
+		// Set a temporary composePath so we can get future children/grandchildren from our current location.
 		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
 
-		// Recursively call this function to get the next layer of children
+		// Recursively call this function to get the next layer of children.
 		grandchildComponent, err := p.getChildComponent(child, tmpPathAncestry)
 		if err != nil {
 			return child, err
 		}
 
-		// Merge the grandchild values into the child
+		// Merge the grandchild values into the child.
 		p.mergeComponentOverrides(&grandchildComponent, child)
 
-		// Set the grandchild as the child component now that we're done with recursively importing
+		// Set the grandchild as the child component now that we're done with recursively importing.
 		child = grandchildComponent
 	}
 
-	// Fix the filePaths of imported components to be accessible from our current location
+	// Fix the filePaths of imported components to be accessible from our current location.
 	child = p.fixComposedFilepaths(parent, child)
 
-	// Migrate any scripts to actions
+	// Migrate any scripts to actions.
 	child = deprecated.MigrateComponent(child)
 
 	return
@@ -169,7 +169,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 	return child
 }
 
-// Sets Name, Default, Required and Description to the original components values
+// Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
 
@@ -196,25 +196,39 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
 
-	// Merge create actions
+	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
+	target.DeprecatedScripts.Before = append(target.DeprecatedScripts.Before, override.DeprecatedScripts.Before...)
+	target.DeprecatedScripts.After = append(target.DeprecatedScripts.After, override.DeprecatedScripts.After...)
+
+	if override.DeprecatedScripts.Retry {
+		target.DeprecatedScripts.Retry = true
+	}
+	if override.DeprecatedScripts.ShowOutput {
+		target.DeprecatedScripts.ShowOutput = true
+	}
+	if override.DeprecatedScripts.TimeoutSeconds > 0 {
+		target.DeprecatedScripts.TimeoutSeconds = override.DeprecatedScripts.TimeoutSeconds
+	}
+
+	// Merge create actions.
 	target.Actions.OnCreate.Before = append(target.Actions.OnCreate.Before, override.Actions.OnCreate.Before...)
 	target.Actions.OnCreate.After = append(target.Actions.OnCreate.After, override.Actions.OnCreate.After...)
 	target.Actions.OnCreate.OnFailure = append(target.Actions.OnCreate.OnFailure, override.Actions.OnCreate.OnFailure...)
 	target.Actions.OnCreate.OnSuccess = append(target.Actions.OnCreate.OnSuccess, override.Actions.OnCreate.OnSuccess...)
 
-	// Merge deploy actions
+	// Merge deploy actions.
 	target.Actions.OnDeploy.Before = append(target.Actions.OnDeploy.Before, override.Actions.OnDeploy.Before...)
 	target.Actions.OnDeploy.After = append(target.Actions.OnDeploy.After, override.Actions.OnDeploy.After...)
 	target.Actions.OnDeploy.OnFailure = append(target.Actions.OnDeploy.OnFailure, override.Actions.OnDeploy.OnFailure...)
 	target.Actions.OnDeploy.OnSuccess = append(target.Actions.OnDeploy.OnSuccess, override.Actions.OnDeploy.OnSuccess...)
 
-	// Merge remove actions
+	// Merge remove actions.
 	target.Actions.OnRemove.Before = append(target.Actions.OnRemove.Before, override.Actions.OnRemove.Before...)
 	target.Actions.OnRemove.After = append(target.Actions.OnRemove.After, override.Actions.OnRemove.After...)
 	target.Actions.OnRemove.OnFailure = append(target.Actions.OnRemove.OnFailure, override.Actions.OnRemove.OnFailure...)
 	target.Actions.OnRemove.OnSuccess = append(target.Actions.OnRemove.OnSuccess, override.Actions.OnRemove.OnSuccess...)
 
-	// Merge Only filters
+	// Merge Only filters.
 	target.Only.Cluster.Distros = append(target.Only.Cluster.Distros, override.Only.Cluster.Distros...)
 	if override.Only.Cluster.Architecture != "" {
 		target.Only.Cluster.Architecture = override.Only.Cluster.Architecture
@@ -224,7 +238,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 }
 
-// Reads the locally imported zarf.yaml
+// Reads the locally imported zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
@@ -233,12 +247,12 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 		return importedPackage, err
 	}
 
-	// Merge in child package variables (only if the variable does not exist in parent)
+	// Merge in child package variables (only if the variable does not exist in parent).
 	for _, importedVariable := range importedPackage.Variables {
 		p.injectImportedVariable(importedVariable)
 	}
 
-	// Merge in child package constants (only if the constant does not exist in parent)
+	// Merge in child package constants (only if the constant does not exist in parent).
 	for _, importedConstant := range importedPackage.Constants {
 		p.injectImportedConstant(importedConstant)
 	}

@@ -128,21 +128,21 @@ type ZarfComponentActionSet struct {
 
 // ZarfComponentActionDefaults sets the default configs for child actions
 type ZarfComponentActionDefaults struct {
-	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
-	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
-	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry commands if they fail (default false)"`
-	Dir        string   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
-	Env        []string `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+	Mute            bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
+	MaxTotalSeconds int      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
+	MaxRetries      int      `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
+	Dir             string   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
+	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
 }
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
-	Mute       bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxSeconds int      `json:"maxSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
-	Retry      bool     `json:"retry,omitempty" jsonschema:"description=Retry the command if it fails (default false)"`
-	Dir        string   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
-	Env        []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
-	Cmd        string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
+	Mute            bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxTotalSeconds int      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
+	MaxRetries      int      `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
+	Dir             string   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
+	Cmd             string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

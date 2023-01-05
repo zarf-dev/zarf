@@ -238,13 +238,13 @@
           "type": "boolean",
           "description": "Hide the output of the command during package deployment (default false)"
         },
-        "maxSeconds": {
+        "maxTotalSeconds": {
           "type": "integer",
-          "description": "Timeout in seconds for the command (default 300)"
+          "description": "Timeout in seconds for the command (default to 0"
         },
-        "retry": {
-          "type": "boolean",
-          "description": "Retry the command if it fails (default false)"
+        "maxRetries": {
+          "type": "integer",
+          "description": "Retry the command if it fails up to given number of times (default 0)"
         },
         "dir": {
           "type": "string",
@@ -271,13 +271,13 @@
           "type": "boolean",
           "description": "Hide the output of commands during execution (default false)"
         },
-        "maxSeconds": {
+        "maxTotalSeconds": {
           "type": "integer",
-          "description": "Default timeout in seconds for commands (default 300)"
+          "description": "Default timeout in seconds for commands (default to 0"
         },
-        "retry": {
-          "type": "boolean",
-          "description": "Retry commands if they fail (default false)"
+        "maxRetries": {
+          "type": "integer",
+          "description": "Retry commands given number of times if they fail (default 0)"
         },
         "dir": {
           "type": "string",

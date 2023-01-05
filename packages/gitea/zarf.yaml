@@ -49,5 +49,5 @@ components:
       onDeploy:
         after:
           - cmd: "./zarf internal create-read-only-gitea-user"
-            retry: true
-            maxSeconds: 60
+            maxRetries: 3
+            maxTotalSeconds: 60

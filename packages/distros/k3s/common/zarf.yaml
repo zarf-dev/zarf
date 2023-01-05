@@ -15,7 +15,7 @@ components:
       onDeploy:
         defaults:
           mute: true
-          retry: true
+          maxRetries: 5
         before:
           # If running RHEL variant, disable firewalld
           # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux

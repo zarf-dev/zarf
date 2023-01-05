@@ -190,17 +190,17 @@ export interface ZarfComponentAction {
      */
     env?: string[];
     /**
-     * Timeout in seconds for the command (default 300)
+     * Retry the command if it fails up to given number of times (default 0)
      */
-    maxSeconds?: number;
+    maxRetries?: number;
+    /**
+     * Timeout in seconds for the command (default to 0
+     */
+    maxTotalSeconds?: number;
     /**
      * Hide the output of the command during package deployment (default false)
      */
     mute?: boolean;
-    /**
-     * Retry the command if it fails (default false)
-     */
-    retry?: boolean;
 }
 
 /**
@@ -216,17 +216,17 @@ export interface ZarfComponentActionDefaults {
      */
     env?: string[];
     /**
-     * Default timeout in seconds for commands (default 300)
+     * Retry commands given number of times if they fail (default 0)
      */
-    maxSeconds?: number;
+    maxRetries?: number;
+    /**
+     * Default timeout in seconds for commands (default to 0
+     */
+    maxTotalSeconds?: number;
     /**
      * Hide the output of commands during execution (default false)
      */
     mute?: boolean;
-    /**
-     * Retry commands if they fail (default false)
-     */
-    retry?: boolean;
 }
 
 export interface ZarfChart {
@@ -983,16 +983,16 @@ const typeMap: any = {
         { json: "cmd", js: "cmd", typ: u(undefined, "") },
         { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
-        { json: "maxSeconds", js: "maxSeconds", typ: u(undefined, 0) },
+        { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
+        { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
-        { json: "retry", js: "retry", typ: u(undefined, true) },
     ], false),
     "ZarfComponentActionDefaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
-        { json: "maxSeconds", js: "maxSeconds", typ: u(undefined, 0) },
+        { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
+        { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
-        { json: "retry", js: "retry", typ: u(undefined, true) },
     ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },

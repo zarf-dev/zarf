@@ -793,13 +793,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_maxSeconds"></a>maxSeconds</strong>
+<summary><strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Default timeout in seconds for commands (default 300)
+**Description:** Default timeout in seconds for commands (default to 0
 
 |          |           |
 | -------- | --------- |
@@ -809,17 +809,17 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_retry"></a>retry</strong>
+<summary><strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Retry commands if they fail (default false)
+**Description:** Retry commands given number of times if they fail (default 0)
 
 |          |           |
 | -------- | --------- |
-| **Type** | `boolean` |
+| **Type** | `integer` |
 
 </blockquote>
 </details>
@@ -919,13 +919,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_maxSeconds"></a>maxSeconds</strong>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Timeout in seconds for the command (default 300)
+**Description:** Timeout in seconds for the command (default to 0
 
 |          |           |
 | -------- | --------- |
@@ -935,17 +935,17 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_retry"></a>retry</strong>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Retry the command if it fails (default false)
+**Description:** Retry the command if it fails up to given number of times (default 0)
 
 |          |           |
 | -------- | --------- |
-| **Type** | `boolean` |
+| **Type** | `integer` |
 
 </blockquote>
 </details>

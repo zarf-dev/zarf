@@ -32,9 +32,6 @@ components:
   - name: deploy-eks-cluster
     actions:
       onDeploy:
-        defaults:
-          # Set timeout to 1 hr
-          maxSeconds: 3600
         before:
           - cmd: ./eksctl create cluster --dry-run -f eks.yaml
           - cmd: sleep 15
