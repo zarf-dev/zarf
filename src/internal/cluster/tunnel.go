@@ -262,9 +262,9 @@ func (tunnel *Tunnel) Endpoint() string {
 	return fmt.Sprintf("127.0.0.1:%d", tunnel.localPort)
 }
 
-// HttpEndpoint returns the tunnel endpoint as a HTTP URL string
-func (tunnel *Tunnel) HttpEndpoint() string {
-	message.Debug("tunnel.HttpEndpoint()")
+// HTTPEndpoint returns the tunnel endpoint as a HTTP URL string
+func (tunnel *Tunnel) HTTPEndpoint() string {
+	message.Debug("tunnel.HTTPEndpoint()")
 	return fmt.Sprintf("http://%s", tunnel.Endpoint())
 }
 

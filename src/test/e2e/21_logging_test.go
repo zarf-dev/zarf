@@ -24,7 +24,7 @@ func TestLogging(t *testing.T) {
 	defer tunnel.Close()
 
 	// Make sure Grafana comes up cleanly
-	resp, err := http.Get(tunnel.HttpEndpoint())
+	resp, err := http.Get(tunnel.HTTPEndpoint())
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 

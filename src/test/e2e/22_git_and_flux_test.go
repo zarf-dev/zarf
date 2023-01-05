@@ -35,9 +35,9 @@ func TestGitAndFlux(t *testing.T) {
 	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
-	testGitServerConnect(t, tunnel.HttpEndpoint())
-	testGitServerReadOnly(t, tunnel.HttpEndpoint())
-	testGitServerTagAndHash(t, tunnel.HttpEndpoint())
+	testGitServerConnect(t, tunnel.HTTPEndpoint())
+	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
+	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
