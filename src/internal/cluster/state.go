@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Zarf Cluster Constants
 const (
 	ZarfNamespace       = "zarf"
 	ZarfStateSecretName = "zarf-state"

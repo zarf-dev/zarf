@@ -10,11 +10,13 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// ProgressBar is a struct used to drive a pterm ProgressbarPrinter.
 type ProgressBar struct {
 	progress  *pterm.ProgressbarPrinter
 	startText string
 }
 
+// NewProgressBar creates a new ProgressBar instance from a total value and a format
 func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
 	text := fmt.Sprintf("     "+format, a...)
@@ -35,6 +37,7 @@ func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 	}
 }
 
+// Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {
 		return
@@ -44,6 +47,7 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	p.progress.Add(chunk)
 }
 
+// Write updates the ProgressBar with the number of bytes in a buffer as the completed progress.
 func (p *ProgressBar) Write(data []byte) (int, error) {
 	n := len(data)
 	if p.progress != nil {
@@ -52,17 +56,20 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
+// Success marks the ProgressBar as successful in the CLI
 func (p *ProgressBar) Success(text string, a ...any) {
 	p.Stop()
 	pterm.Success.Printfln(text, a...)
 }
 
+// Stop stops the ProgressBar from continuing
 func (p *ProgressBar) Stop() {
 	if p.progress != nil {
 		_, _ = p.progress.Stop()
 	}
 }
 
+// Fatalf marks the ProgressBar as failed in the CLI
 func (p *ProgressBar) Fatalf(err error, format string, a ...any) {
 	p.Stop()
 	Fatalf(err, format, a...)

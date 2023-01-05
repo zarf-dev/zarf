@@ -194,7 +194,7 @@ func validateChart(chart types.ZarfChart) error {
 	// Must only have a url or localPath
 	count := oneIfNotEmpty(chart.URL) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
-		return fmt.Errorf(lang.PkgValidateErrChartUrlOrPath, chart.Name)
+		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)
 	}
 
 	// Must have a version

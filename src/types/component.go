@@ -54,12 +54,13 @@ type ZarfComponent struct {
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 
-// ZarfComponentOnlyTarget filters a component to only show it for a given OS/Arch
+// ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
+// ZarfComponentOnlyCluster represents the architecture and K8s cluster distibution to filter on
 type ZarfComponentOnlyCluster struct {
 	Architecture string   `json:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
 	Distros      []string `json:"distros,omitempty" jsonschema:"description=Future use"`

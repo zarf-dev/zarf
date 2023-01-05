@@ -6,6 +6,7 @@ package images
 
 import "github.com/defenseunicorns/zarf/src/types"
 
+// ImgConfig is the main struct for managing container images
 type ImgConfig struct {
 	TarballPath string
 
@@ -18,6 +19,7 @@ type ImgConfig struct {
 	Insecure bool
 }
 
+// New creates a new container image config with the provided image config.
 func New(config *ImgConfig) *ImgConfig {
 	return config
 }

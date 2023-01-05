@@ -203,7 +203,7 @@ const (
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
-	PkgValidateErrChartUrlOrPath          = "chart %s must only have a url or localPath"
+	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
 	PkgValidateErrCompenantNameNotUnique  = "component name '%s' is not unique"
 	PkgValidateErrComponent               = "invalid component: %w"

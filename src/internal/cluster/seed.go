@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// InitZarfState initializes the Zarf state with the given temporary directory and init configs
 func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.ZarfInitOptions) error {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
@@ -119,6 +120,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 	return nil
 }
 
+// PostSeedRegistry handles cleanup once the seed registry is up
 func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	message.Debugf("cluster.PostSeedRegistry(%#v)", tempPath)
 
@@ -134,11 +136,9 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	}
 
 	// Remove the injector service
-	if err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector"); err != nil {
-		return err
-	}
+	err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 
-	return nil
+	return err
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {

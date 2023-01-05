@@ -44,7 +44,7 @@ var prepareTransformGitLinks = &cobra.Command{
 		// Perform git url transformation via regex
 		text := string(content)
 		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
-		processedText := gitCfg.MutateGitUrlsInText(text)
+		processedText := gitCfg.MutateGitURLsInText(text)
 
 		// Ask the user before this destructive action
 		confirm := false

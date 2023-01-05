@@ -241,7 +241,7 @@ func (p *Packager) getComposedFilePath(originalPath string, pathPrefix string) s
 	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, pathPrefix)
 
 	// Return original if it is a remote file.
-	if utils.IsUrl(originalPath) {
+	if utils.IsURL(originalPath) {
 		return originalPath
 	}
 
