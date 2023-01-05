@@ -81,7 +81,7 @@ func (c *Cluster) PrintConnectTable() error {
 		// Add the connectstring for processing later in the deployment
 		connections[name] = types.ConnectString{
 			Description: svc.Annotations[config.ZarfConnectAnnotationDescription],
-			Url:         svc.Annotations[config.ZarfConnectAnnotationURL],
+			URL:         svc.Annotations[config.ZarfConnectAnnotationURL],
 		}
 	}
 

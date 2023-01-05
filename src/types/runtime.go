@@ -56,7 +56,7 @@ type ZarfPartialPackageData struct {
 
 type ConnectString struct {
 	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
-	Url         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
+	URL         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
 }
 
 type ConnectStrings map[string]ConnectString

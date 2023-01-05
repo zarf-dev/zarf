@@ -135,7 +135,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				// Add the connectstring for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{
 					Description: annotations[config.ZarfConnectAnnotationDescription],
-					Url:         annotations[config.ZarfConnectAnnotationURL],
+					URL:         annotations[config.ZarfConnectAnnotationURL],
 				}
 			}
 		}
