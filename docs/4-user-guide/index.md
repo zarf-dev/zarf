@@ -25,7 +25,7 @@ Zarf doesn't build software; it helps you distribute software that already exist
 
 Zarf can pull from sources like [Docker Hub](https://hub.docker.com/), [Iron Bank](https://p1.dso.mil/products/iron-bank), [GitHub](https://github.com/), local filesystems, etc. but you have to make sure that Zarf has a clear path & appropriate access credentials. Be sure you know what you want to pack & how to access it before you Zarf.
 
-Find out more about the types of software Zarf can move in the "[What can be packaged?](../0-zarf-overview.md#what-can-be-packaged#what-can-be-packaged)" section.
+Find out more about the types of software Zarf can move in the "[What can be packaged?](../0-zarf-overview.md#what-can-be-packaged)" section.
 
 #### (1) - Preparation
 
