@@ -52,10 +52,23 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
-		img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+		var img v1.Image
+		var err error
+
+		// Check if the image provided is a path to a local tarball
+		if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+			img, err = crane.Load(src, config.GetCraneOptions(i.Insecure)...)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load container image at path %s: %w", src, err)
+			}
+		} else {
+			// Pull the image from the internet
+			img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
+			if err != nil {
+				return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+			}
 		}
+
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
