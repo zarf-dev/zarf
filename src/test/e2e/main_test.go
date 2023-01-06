@@ -60,7 +60,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call
-	retcode := m.Run()
+	returnCode := m.Run()
 
-	return retcode, nil
+	return returnCode, nil
 }

@@ -75,7 +75,7 @@ var configSchemaCmd = &cobra.Command{
 
 var apiSchemaCmd = &cobra.Command{
 	Use:   "api-schema",
-	Short: "Generates a JSON schema from the API stypes",
+	Short: "Generates a JSON schema from the API types",
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.RestAPI{})
 		output, err := json.MarshalIndent(schema, "", "  ")

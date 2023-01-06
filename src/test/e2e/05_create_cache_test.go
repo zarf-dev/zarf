@@ -23,7 +23,7 @@ func TestCreateCache(t *testing.T) {
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
 
 	e2e.cleanFiles(cachePath)
-	// defer the cleanFiles action because of how the zarf command is lauched as a separate process
+	// defer the cleanFiles action because of how the zarf command is launched as a separate process
 	// and may return earlier clearing the cache and not properly checking for a failure
 	defer e2e.cleanFiles(cachePath)
 

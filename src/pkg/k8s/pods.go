@@ -31,7 +31,7 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 	}
 }
 
-// DeletePod removees a pod from the cluster by namespace & name.
+// DeletePod removes a pod from the cluster by namespace & name.
 func (k *K8s) DeletePod(namespace string, name string) error {
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
@@ -60,7 +60,7 @@ func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	return k.Clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
 }
 
-// GetAllPods returns a list of pods from the cluster for all namesapces.
+// GetAllPods returns a list of pods from the cluster for all namespaces.
 func (k *K8s) GetAllPods() (*corev1.PodList, error) {
 	return k.GetPods(corev1.NamespaceAll)
 }
@@ -102,7 +102,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 					continue
 				}
 
-				// Handle container targetting
+				// Handle container targeting
 				if target.Container != "" {
 					k.Log("Testing for container")
 					var matchesInitContainer bool

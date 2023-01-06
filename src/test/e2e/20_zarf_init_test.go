@@ -19,7 +19,7 @@ func TestZarfInit(t *testing.T) {
 	defer e2e.teardown(t)
 
 	initComponents := "logging,git-server"
-	// Add k3s compoenent in appliance mode
+	// Add k3s component in appliance mode
 	if e2e.applianceMode {
 		initComponents = "k3s,logging,git-server"
 	}

@@ -37,7 +37,7 @@ var NoProgress bool
 
 var logLevel = InfoLevel
 
-// Write logs to stderr and a buffer for logfile generation.
+// Write logs to stderr and a buffer for logFile generation.
 var logFile *os.File
 
 var useLogFile bool
@@ -61,7 +61,7 @@ func init() {
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
-// UseLogFile writes output to stderr and a logfile.
+// UseLogFile writes output to stderr and a logFile.
 func UseLogFile() {
 	// Prepend the log filename with a timestamp.
 	ts := time.Now().Format("2006-01-02-15-04-05")

@@ -23,7 +23,7 @@ type DockerConfig struct {
 // DockerConfigEntry contains a map of DockerConfigEntryWithAuth for a registry.
 type DockerConfigEntry map[string]DockerConfigEntryWithAuth
 
-// DockerConfigEntryWithAuth contains a dockker config authentication string.
+// DockerConfigEntryWithAuth contains a docker config authentication string.
 type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }

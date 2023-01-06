@@ -91,6 +91,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	}
 
 	// Include the data injection marker template if the component has data injections
+	// TODO: (@jeff-mccoy) DATA_INJECTON_MARKER is misspelled however it is in use by other packages and would be a breaking change!
 	if len(component.DataInjections) > 0 {
 		builtinMap["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
 	}

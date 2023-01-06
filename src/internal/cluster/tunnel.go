@@ -49,7 +49,7 @@ const (
 	serviceURLPattern = `^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`
 )
 
-// Tunnel is the main struct that configures and manages port forwading tunnels to Kubernetes resources.
+// Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
 	kube         *k8s.K8s
 	out          io.Writer
@@ -78,7 +78,7 @@ func (c *Cluster) PrintConnectTable() error {
 	for _, svc := range list.Items {
 		name := svc.Labels[config.ZarfConnectLabelName]
 
-		// Add the connectstring for processing later in the deployment.
+		// Add the connectString for processing later in the deployment.
 		connections[name] = types.ConnectString{
 			Description: svc.Annotations[config.ZarfConnectAnnotationDescription],
 			URL:         svc.Annotations[config.ZarfConnectAnnotationURL],
@@ -215,7 +215,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 
 	url, err := tunnel.establish()
 
-	// Try to etablish the tunnel up to 3 times.
+	// Try to establish the tunnel up to 3 times.
 	if err != nil {
 		tunnel.attempt++
 		// If we have exceeded the number of attempts, exit with an error.
@@ -430,7 +430,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 // getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
 // the name.
 func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
-	message.Debug("tunnel.GettAttachablePodForResource()")
+	message.Debug("tunnel.getAttachablePodForResource()")
 	switch tunnel.resourceType {
 	case PodResource:
 		return tunnel.resourceName, nil

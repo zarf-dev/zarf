@@ -59,7 +59,7 @@ const (
 )
 
 func initViper() {
-	// Already initializedby some other command
+	// Already initialized by some other command
 	if v != nil {
 		return
 	}

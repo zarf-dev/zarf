@@ -43,7 +43,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	return state, nil
 }
 
-// SaveZarfState takes a given state and makepersists it to the Zarf/zarf-state secret.
+// SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
 func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
 	message.Debug(message.JSONValue(state))

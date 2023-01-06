@@ -205,7 +205,7 @@ const (
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
-	PkgValidateErrCompenantNameNotUnique  = "component name '%s' is not unique"
+	PkgValidateErrComponentNameNotUnique  = "component name '%s' is not unique"
 	PkgValidateErrComponent               = "invalid component: %w"
 	PkgValidateErrComponentReqDefault     = "component %s cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %s cannot be both required and grouped"

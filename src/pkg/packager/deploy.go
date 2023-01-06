@@ -402,7 +402,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// Async'ly move data into a container running in a pod on the k8s cluster.
+// Async move data into a container running in a pod on the k8s cluster.
 func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")

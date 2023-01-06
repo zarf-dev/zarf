@@ -114,7 +114,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 	message.Debugf("packager.tryInjectorPayloadDeploy(%#v)", tempPath)
 	var configMaps []string
 
-	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
+	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.Base, "payload.tgz")
 	tarFileList, err := filepath.Glob(filepath.Join(tempPath.Base, "seed-image", "*"))
 	if err != nil {
@@ -234,7 +234,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 
 	pod.Labels["app"] = "zarf-injector"
 
-	// Ensure zarf agent doesnt break the injector on future runs
+	// Ensure zarf agent doesn't break the injector on future runs
 	pod.Labels[agentLabel] = "ignore"
 
 	// Bind the pod to the node the image was found on

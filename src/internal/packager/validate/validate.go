@@ -44,7 +44,7 @@ func Run(pkg types.ZarfPackage) error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
-			return fmt.Errorf(lang.PkgValidateErrCompenantNameNotUnique, component.Name)
+			return fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name)
 		}
 		uniqueNames[component.Name] = true
 

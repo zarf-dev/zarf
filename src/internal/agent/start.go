@@ -22,8 +22,8 @@ import (
 // We can hard-code these because we control the entire thing anyway.
 const (
 	httpPort = "8443"
-	tlscert  = "/etc/certs/tls.crt"
-	tlskey   = "/etc/certs/tls.key"
+	tlsCert  = "/etc/certs/tls.crt"
+	tlsKey   = "/etc/certs/tls.key"
 )
 
 // StartWebhook launches the Zarf agent mutating webhook in the cluster.
@@ -32,7 +32,7 @@ func StartWebhook() {
 
 	server := agentHttp.NewServer(httpPort)
 	go func() {
-		if err := server.ListenAndServeTLS(tlscert, tlskey); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServeTLS(tlsCert, tlsKey); err != nil && err != http.ErrServerClosed {
 			message.Fatal(err, lang.AgentErrStart)
 		}
 	}()

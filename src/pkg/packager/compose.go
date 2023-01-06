@@ -53,7 +53,7 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 
-	// Keep track of the composed components import path to build nestedily composed components
+	// Keep track of the composed components import path to build nested composed components
 	pathAncestry := ""
 
 	// Get the component that we are trying to import
@@ -151,8 +151,8 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 		for fileIdx, file := range manifest.Files {
 			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(file, parent.Import.Path)
 		}
-		for kustomIdx, kustomization := range manifest.Kustomizations {
-			child.Manifests[manifestIdx].Kustomizations[kustomIdx] = p.getComposedFilePath(kustomization, parent.Import.Path)
+		for kustomizeIdx, kustomization := range manifest.Kustomizations {
+			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(kustomization, parent.Import.Path)
 		}
 	}
 

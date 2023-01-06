@@ -22,7 +22,7 @@ func (k *K8s) ReplaceConfigmap(namespace, name string, data map[string][]byte) (
 	return k.CreateConfigmap(namespace, name, data)
 }
 
-// CreateConfigmap applys a configmap to the cluster.
+// CreateConfigmap applies a configmap to the cluster.
 func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -37,7 +37,7 @@ func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*
 	return k.Clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, createOptions)
 }
 
-// DeleteConfigmap delets a confimap by name.
+// DeleteConfigmap deletes a configmap by name.
 func (k *K8s) DeleteConfigmap(namespace, name string) error {
 	namespaceConfigmap := k.Clientset.CoreV1().ConfigMaps(namespace)
 

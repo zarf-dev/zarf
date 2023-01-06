@@ -148,7 +148,7 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 					return fmt.Errorf("component %s is part of a group of components and only one may be chosen", componentName)
 				}
 			}
-			// Otherwise, return an error a gneral error
+			// Otherwise, return an error a general error
 			return fmt.Errorf("unable to find component %s", componentName)
 		}
 	}

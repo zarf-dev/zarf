@@ -22,7 +22,7 @@ func (k *K8s) GetServiceAccounts(namespace string) (*corev1.ServiceAccountList, 
 	return k.Clientset.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metaOptions)
 }
 
-// GetServiceAccount reutrns a single service account by namespace and name.
+// GetServiceAccount returns a single service account by namespace and name.
 func (k *K8s) GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
 	metaOptions := metav1.GetOptions{}
 	return k.Clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metaOptions)

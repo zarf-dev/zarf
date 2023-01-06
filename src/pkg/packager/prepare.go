@@ -79,7 +79,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				// Trim the first char to match how the packager expects it, this is messy,need to clean up better
 				repoHelmChartPath = strings.TrimPrefix(repoHelmChartPath, "/")
 
-				// If a repo helmchartpath is specified,
+				// If a repo helm chart path is specified,
 				component.Charts = append(component.Charts, types.ZarfChart{
 					Name:    repo,
 					URL:     matches[0],

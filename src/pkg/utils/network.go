@@ -28,8 +28,8 @@ func IsURL(source string) bool {
 	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
 }
 
-// DoesHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
-func DoesHostnamesMatch(url1 string, url2 string) (bool, error) {
+// DoHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
+func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	parsedURL1, err := url.Parse(url1)
 	if err != nil {
 		message.Debugf("unable to parse the url (%s)", url1)
