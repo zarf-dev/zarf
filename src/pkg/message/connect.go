@@ -17,7 +17,7 @@ func PrintConnectStringTable(connectStrings types.ConnectStrings) {
 
 	if len(connectStrings) > 0 {
 		list := pterm.TableData{{"     Connect Command", "Description"}}
-		// Loop over each connecStrings and convert to pterm.TableData
+		// Loop over each connectStrings and convert to pterm.TableData
 		for name, connect := range connectStrings {
 			name = fmt.Sprintf("     zarf connect %s", name)
 			list = append(list, []string{name, connect.Description})

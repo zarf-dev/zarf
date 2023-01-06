@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// handlePackagePath If provided package is a URL download it to a temp directory
+// handlePackagePath If provided package is a URL download it to a temp directory.
 func (p *Packager) handlePackagePath() error {
 	message.Debug("packager.handlePackagePath()")
 

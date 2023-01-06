@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package images provides functions for building and pushing images
+// Package images provides functions for building and pushing images.
 package images
 
 import (
@@ -13,30 +13,34 @@ import (
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
-// This function will optionally shorten the image name while appending a checksum of the original image name
+// This function will optionally shorten the image name while appending a checksum of the original image name.
 func (i *ImgConfig) PushToZarfRegistry() error {
 	message.Debugf("images.PushToZarfRegistry(%#v)", i)
 
-	registryURL := ""
+	var (
+		err         error
+		tunnel      *cluster.Tunnel
+		registryURL string
+		target      string
+	)
+
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
-		tunnel, err := cluster.NewZarfTunnel()
-		if err != nil {
+		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
 			return err
 		}
-		tunnel.Connect(cluster.ZarfRegistry, false)
-		defer tunnel.Close()
-
-		registryURL = tunnel.Endpoint()
+		target = cluster.ZarfRegistry
 	} else if cluster.IsServiceURL(i.RegInfo.Address) {
 		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err := cluster.NewTunnelFromServiceURL(i.RegInfo.Address); err != nil {
+		if tunnel, err = cluster.NewTunnelFromServiceURL(i.RegInfo.Address); err != nil {
 			return err
-		} else {
-			tunnel.Connect("", false)
-			defer tunnel.Close()
-			registryURL = tunnel.Endpoint()
 		}
+	}
+
+	if tunnel != nil {
+		tunnel.Connect(target, false)
+		defer tunnel.Close()
+		registryURL = tunnel.Endpoint()
 	}
 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")

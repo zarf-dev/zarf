@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validate provides zarf package validation functions
+// Package validate provides Zarf package validation functions.
 package validate
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run performs config validations
+// Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
 	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
@@ -44,7 +44,7 @@ func Run(pkg types.ZarfPackage) error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueNames[component.Name]; ok {
-			return fmt.Errorf(lang.PkgValidateErrCompenantNameNotUnique, component.Name)
+			return fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name)
 		}
 		uniqueNames[component.Name] = true
 
@@ -192,9 +192,9 @@ func validateChart(chart types.ZarfChart) error {
 	}
 
 	// Must only have a url or localPath
-	count := oneIfNotEmpty(chart.Url) + oneIfNotEmpty(chart.LocalPath)
+	count := oneIfNotEmpty(chart.URL) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
-		return fmt.Errorf(lang.PkgValidateErrChartUrlOrPath, chart.Name)
+		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)
 	}
 
 	// Must have a version

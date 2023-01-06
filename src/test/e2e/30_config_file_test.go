@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -49,7 +49,7 @@ func configFileTests(t *testing.T, dir, path string) {
 	_, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
-	require.NotContains(t, string(stdErr), "📦 LEAPORD COMPONENT")
+	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
 
 	// Verify the configmap was properly templated
@@ -78,7 +78,7 @@ func configFileDefaultTests(t *testing.T) {
 		"git.push_username: eb76dca8",
 		"git.url: 7c63c1b9",
 		"Between [30000-32767] (default 186282)",
-		"regisry.pull_password: b8152e38",
+		"registry.pull_password: b8152e38",
 		"registry.pull_username: d0961a97",
 		"registry.push_password: 8f58ca41",
 		"registry.push_username: 7aab3f6f",

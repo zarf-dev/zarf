@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfPackage the top-level structure of a Zarf config file.

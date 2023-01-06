@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package images provides functions for building and pushing images
+// Package images provides functions for building and pushing images.
 package images
 
 import (
@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
+// PullAll pulls all of the images in the provided tag map.
 func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	var (
 		longer   string
@@ -117,6 +118,7 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	return tagToImage, nil
 }
 
+// FormatCraneOCILayout ensures that all images are in the OCI format.
 func FormatCraneOCILayout(ociPath string) error {
 	type IndexJSON struct {
 		SchemaVersion int `json:"schemaVersion"`
@@ -127,13 +129,13 @@ func FormatCraneOCILayout(ociPath string) error {
 		} `json:"manifests"`
 	}
 
-	indexJson, err := os.Open(path.Join(ociPath, "index.json"))
+	indexJSON, err := os.Open(path.Join(ociPath, "index.json"))
 	if err != nil {
 		message.Errorf(err, "Unable to open %s/index.json", ociPath)
 		return err
 	}
 	var index IndexJSON
-	byteValue, _ := io.ReadAll(indexJson)
+	byteValue, _ := io.ReadAll(indexJSON)
 	json.Unmarshal(byteValue, &index)
 
 	digest := strings.TrimPrefix(index.Manifests[0].Digest, "sha256:")
@@ -170,24 +172,24 @@ func FormatCraneOCILayout(ociPath string) error {
 	index.Manifests[0].Digest = fmt.Sprintf("sha256:%x", bs)
 	index.Manifests[0].Size = len(manifest)
 	index.Manifests[0].MediaType = "application/vnd.oci.image.manifest.v1+json"
-	indexJson.Close()
+	indexJSON.Close()
 	_ = os.Remove(path.Join(ociPath, "index.json"))
-	indexJson, err = os.Create(path.Join(ociPath, "index.json"))
+	indexJSON, err = os.Create(path.Join(ociPath, "index.json"))
 	if err != nil {
 		message.Errorf(err, "Unable to create %s/index.json", ociPath)
 		return err
 	}
-	indexJsonBytes, err := json.Marshal(index)
+	indexJSONBytes, err := json.Marshal(index)
 	if err != nil {
 		message.Errorf(err, "Unable to marshal %s/index.json", ociPath)
 		return err
 	}
-	_, err = indexJson.Write(indexJsonBytes)
+	_, err = indexJSON.Write(indexJSONBytes)
 	if err != nil {
 		message.Errorf(err, "Unable to write to %s/index.json", ociPath)
 		return err
 	}
-	indexJson.Close()
+	indexJSON.Close()
 
 	return nil
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -19,15 +19,17 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// SGETProtocol is the protocol URI scheme for SGET.
 const SGETProtocol = "sget://"
 
-func IsUrl(source string) bool {
-	parsedUrl, err := url.Parse(source)
-	return err == nil && parsedUrl.Scheme != "" && parsedUrl.Host != ""
+// IsURL is a helper function to check if a URL is valid.
+func IsURL(source string) bool {
+	parsedURL, err := url.Parse(source)
+	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
 }
 
-// DoesHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
-func DoesHostnamesMatch(url1 string, url2 string) (bool, error) {
+// DoHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
+func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	parsedURL1, err := url.Parse(url1)
 	if err != nil {
 		message.Debugf("unable to parse the url (%s)", url1)
@@ -44,6 +46,7 @@ func DoesHostnamesMatch(url1 string, url2 string) (bool, error) {
 	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
 }
 
+// Fetch fetches the response body from a given URL.
 func Fetch(url string) io.ReadCloser {
 	// Get the data
 	resp, err := http.Get(url)
@@ -59,6 +62,7 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
+// DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(url string, target string, cosignKeyPath string) {
 
 	// Always ensure the target directory exists

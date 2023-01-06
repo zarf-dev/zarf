@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package lang contains the language strings for english used by Zarf
-// Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>"
+// Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
 package lang
 
 import "errors"
@@ -13,7 +13,7 @@ import "errors"
 // The constants should be grouped by the top level package they are used in (or common)
 // The format should be <PathName><Err/Info><ShortDescription>
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
-// Include sprintf formatting directives in the string if needed
+// Include sprintf formatting directives in the string if needed.
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
@@ -24,7 +24,7 @@ const (
 	ErrWritingFile         = "failed to write the file %s: %s"
 )
 
-// Zarf CLI commands
+// Zarf CLI commands.
 const (
 	// root zarf command
 	RootCmdShort = "DevSecOps for Airgap"
@@ -175,7 +175,7 @@ const (
 )
 
 // Zarf Agent messages
-// These are only seen in the Kubernetes logs
+// These are only seen in the Kubernetes logs.
 const (
 	AgentInfoWebhookAllowed = "Webhook [%s - %s] - Allowed: %t"
 	AgentInfoShutdown       = "Shutdown gracefully..."
@@ -197,15 +197,15 @@ const (
 	AgentErrStart                  = "Failed to start the web server"
 )
 
-// src/internal/packager/validate
+// src/internal/packager/validate.
 const (
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
-	PkgValidateErrChartUrlOrPath          = "chart %s must only have a url or localPath"
+	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
-	PkgValidateErrCompenantNameNotUnique  = "component name '%s' is not unique"
+	PkgValidateErrComponentNameNotUnique  = "component name '%s' is not unique"
 	PkgValidateErrComponent               = "invalid component: %w"
 	PkgValidateErrComponentReqDefault     = "component %s cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %s cannot be both required and grouped"
@@ -229,6 +229,8 @@ const (
 	PkgValidateErrYOLONoOCI               = "OCI images not allowed"
 )
 
-// ErrInitNotFound
-var ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-var ErrNotAServiceURL = errors.New("the provided URL does not match service url format of http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
+// Collection of reusable error messages.
+var (
+	ErrInitNotFound   = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrNotAServiceURL = errors.New("the provided URL does not match service url format of http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
+)

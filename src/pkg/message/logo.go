@@ -4,7 +4,7 @@
 // Package message provides a rich set of functions for displaying messages to the user.
 package message
 
-// GetLogo returns the awesome menu ascii logo
+// GetLogo returns the awesome menu ascii logo.
 func GetLogo() string {
 	if NoProgress {
 		return ""

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the agent
+// Package http provides a http server for the agent.
 package http
 
 import (
@@ -19,19 +19,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// admissionHandler represents the HTTP handler for an admission webhook
+// admissionHandler represents the HTTP handler for an admission webhook.
 type admissionHandler struct {
 	decoder runtime.Decoder
 }
 
-// newAdmissionHandler returns an instance of AdmissionHandler
+// newAdmissionHandler returns an instance of AdmissionHandler.
 func newAdmissionHandler() *admissionHandler {
 	return &admissionHandler{
 		decoder: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 	}
 }
 
-// Serve returns a http.HandlerFunc for an admission webhook
+// Serve returns a http.HandlerFunc for an admission webhook.
 func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
