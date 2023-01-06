@@ -23,7 +23,7 @@ const (
 	ZarfStateDataKey    = "state"
 )
 
-// LoadZarfState returns the current Zarf/zarf-state secret data or an empty ZarfState.
+// LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	message.Debug("k8s.LoadZarfState()")
 

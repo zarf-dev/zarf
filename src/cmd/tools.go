@@ -32,7 +32,6 @@ var toolsCmd = &cobra.Command{
 	Short: lang.CmdToolsShort,
 }
 
-// destroyCmd represents the init command.
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
