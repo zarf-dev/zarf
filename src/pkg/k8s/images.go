@@ -12,7 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// ImageMap is a map of image/boolean pairs.
 type ImageMap map[string]bool
+
+// ImageNodeMap is a map of image/node pairs.
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
@@ -20,21 +23,21 @@ func (k *K8s) GetAllImages() (ImageNodeMap, error) {
 	timeout := time.After(5 * time.Minute)
 
 	for {
-		// delay check 2 seconds
+		// Delay check 2 seconds.
 		time.Sleep(2 * time.Second)
 		select {
 
-		// on timeout abort
+		// On timeout abort.
 		case <-timeout:
 			return nil, fmt.Errorf("get image list timed-out")
 
-		// after delay, try running
+		// After delay, try running.
 		default:
-			// If no images or an error, log and loop
+			// If no images or an error, log and loop.
 			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll); len(images) < 1 || err != nil {
 				k.Log("no images found: %w", err)
 			} else {
-				// Otherwise, return the image list
+				// Otherwise, return the image list.
 				return images, nil
 			}
 		}
@@ -85,7 +88,7 @@ func SortImages(images, compareWith ImageMap) []string {
 	sortedImages := sort.StringSlice{}
 	for image := range images {
 		if !compareWith[image] || compareWith == nil {
-			// Check compareWith, if it exists only add if not in that list
+			// Check compareWith, if it exists only add if not in that list.
 			sortedImages = append(sortedImages, image)
 		}
 	}

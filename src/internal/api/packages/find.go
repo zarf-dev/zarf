@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packages provides api functions for managing zarf packages
+// Package packages provides api functions for managing Zarf packages.
 package packages
 
 import (

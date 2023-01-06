@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -23,10 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// The chunk size for the tarball chunks
+// The chunk size for the tarball chunks.
 var payloadChunkSize = 1024 * 768
 
-// RunInjectionMadness initializes a zarf injection into the cluster
+// RunInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
@@ -114,7 +114,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 	message.Debugf("packager.tryInjectorPayloadDeploy(%#v)", tempPath)
 	var configMaps []string
 
-	// Chunk size has to accomdate base64 encoding & etcd 1MB limit
+	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.Base, "payload.tgz")
 	tarFileList, err := filepath.Glob(filepath.Join(tempPath.Base, "seed-image", "*"))
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 	return configMaps, sha256sum, nil
 }
 
-// Test for pod readiness and seed image presence
+// Test for pod readiness and seed image presence.
 func (c *Cluster) injectorIsReady(spinner *message.Spinner) bool {
 	message.Debugf("packager.injectorIsReady()")
 
@@ -227,14 +227,14 @@ func (c *Cluster) createService() (*corev1.Service, error) {
 	return c.Kube.CreateService(service)
 }
 
-// buildInjectionPod return a pod for injection with the appropriate containers to perform the injection
+// buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	pod := c.Kube.GeneratePod("injector", ZarfNamespace)
 	executeMode := int32(0777)
 
 	pod.Labels["app"] = "zarf-injector"
 
-	// Ensure zarf agent doesnt break the injector on future runs
+	// Ensure zarf agent doesn't break the injector on future runs
 	pod.Labels[agentLabel] = "ignore"
 
 	// Bind the pod to the node the image was found on

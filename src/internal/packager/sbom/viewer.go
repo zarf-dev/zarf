@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package sbom contains tools for generating SBOMs
+// Package sbom contains tools for generating SBOMs.
 package sbom
 
 import (
@@ -71,7 +71,7 @@ func (b *Builder) loadFileJS(name string) template.JS {
 	return template.JS(data)
 }
 
-// This could be optimized, but loop over all the images and components to create a list of json files
+// This could be optimized, but loop over all the images and components to create a list of json files.
 func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
 	var jsonList []string
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-// CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD
+// CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
 func (g *Git) CheckoutTag(tag string) {
 	message.Debugf("git.CheckoutTag(%s)", tag)
 
@@ -23,7 +23,7 @@ func (g *Git) CheckoutTag(tag string) {
 
 // checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
 // than checking out to a detached head, checks out to the provided branch ref
-// It will delete the branch provided if it exists
+// It will delete the branch provided if it exists.
 func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) {
 	message.Debugf("git.checkoutTagAsBranch(%s,%s)", tag, branch.String())
 
@@ -41,7 +41,7 @@ func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) {
 
 // checkoutHashAsBranch performs a `git checkout` of the commit hash associated
 // with the provided hash
-// It will delete the branch provided if it exists
+// It will delete the branch provided if it exists.
 func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.ReferenceName) {
 	message.Debugf("git.checkoutHasAsBranch(%s,%s)", hash.String(), branch.String())
 
@@ -78,7 +78,7 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 }
 
 // checkout performs a `git checkout` on the path provided using the options provided
-// It assumes the caller knows what to do and does not perform any safety checks
+// It assumes the caller knows what to do and does not perform any safety checks.
 func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) {
 	message.Debugf("git.checkout(%#v)", checkoutOptions)
 

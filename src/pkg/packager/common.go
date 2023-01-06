@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
+// Packager is the main struct for managing packages.
 type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
@@ -67,17 +68,19 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
 func NewOrDie(config *types.PackagerConfig) *Packager {
-	message.Debug("packager.NewOrDie()")
+	var (
+		err       error
+		pkgConfig *Packager
+	)
 
-	if pkgConfig, err := New(config); err != nil {
+	if pkgConfig, err = New(config); err != nil {
 		message.Fatal(err, "Unable to create the package")
-		return nil
-	} else {
-		return pkgConfig
 	}
+
+	return pkgConfig
 }
 
-// GetInitPackageName returns the formatted name of the init package
+// GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
@@ -86,7 +89,7 @@ func GetInitPackageName(arch string) string {
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
-// GetPackageName returns the formatted name of the package
+// GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
 	message.Debugf("packager.GetPackageName(%s)", message.JSONValue(p))
 
@@ -107,6 +110,7 @@ func (p *Packager) GetPackageName() string {
 	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
+// ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.tmp.Base)

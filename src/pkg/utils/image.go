@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/reference"
 )
 
+// Image represents a config for an OCI image.
 type Image struct {
 	Host        string
 	Name        string
@@ -21,7 +22,7 @@ type Image struct {
 	TagOrDigest string
 }
 
-// SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src
+// SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src.
 func SwapHost(src string, targetHost string) (string, error) {
 	image, err := parseImageURL(src)
 	if err != nil {

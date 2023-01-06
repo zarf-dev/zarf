@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// Inspect list the contents of a package
+// Inspect list the contents of a package.
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 
 	if err := p.loadZarfPkg(); err != nil {
