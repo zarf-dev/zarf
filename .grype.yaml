@@ -1,10 +1,18 @@
 # Ignore file for false positives from protobuf, see the following for more information:
 #   https://github.com/anchore/grype/issues/558
 ignore:
+  # False positives from CPE confusion of Go vs C (https://github.com/anchore/grype/issues/558)
   - vulnerability: CVE-2021-22570
   - vulnerability: CVE-2015-5237
 
-  # Bless your heart NPM, you're a mess
+  # False positive from CPE confusion of NPM vs Rust Crates (https://github.com/anchore/grype/issues/931)
   - vulnerability: CVE-2017-18589
+
+  # False positive from CPE confusion of an NPM package vs a website (https://github.com/anchore/grype/issues/446)
   - vulnerability: CVE-2002-1647
+
+  # False positive from CPE confusion of svelte and svelte's extension
   - vulnerability: CVE-2021-29261
+
+  # From yargs - only used through quicktype as a dev dependency
+  - vulnerability: GHSA-p9pc-299p-vxgp
