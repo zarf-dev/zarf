@@ -15,7 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input
+// ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
 func ViewSBOMFiles(tmp types.TempPaths) {
 	sbomViewFiles, _ := filepath.Glob(filepath.Join(tmp.Sboms, "sbom-viewer-*"))
 
