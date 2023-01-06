@@ -96,7 +96,7 @@ func MutateBigbangComponent(component types.ZarfComponent) (types.ZarfComponent,
 	// deduple
 	uniqueList := utils.Unique(images)
 
-	component.Images = uniqueList
+	component.Images = append(component.Images, uniqueList...)
 
 	return component, nil
 }
@@ -271,6 +271,7 @@ func init() {
 	images47()
 	images48()
 	images49()
+	images50()
 
 	// Flux
 	FluxImages = make(map[string][]string)
@@ -311,6 +312,12 @@ func init() {
 		"registry1.dso.mil/ironbank/fluxcd/source-controller:v0.31.0",
 	}
 	FluxImages["1.49.0"] = []string{
+		"registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.27.0",
+		"registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.31.0",
+		"registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.29.0",
+		"registry1.dso.mil/ironbank/fluxcd/source-controller:v0.32.1",
+	}
+	FluxImages["1.50.0"] = []string{
 		"registry1.dso.mil/ironbank/fluxcd/helm-controller:v0.27.0",
 		"registry1.dso.mil/ironbank/fluxcd/kustomize-controller:v0.31.0",
 		"registry1.dso.mil/ironbank/fluxcd/notification-controller:v0.29.0",
@@ -1430,5 +1437,186 @@ func images49() {
 	}
 	BigBangImages["metrics-server"]["3.8.0-bb.6"] = []string{
 		"registry1.dso.mil/ironbank/opensource/kubernetes-sigs/metrics-server:0.6.1",
+	}
+}
+
+func images50() {
+	BigBangImages["istio-controlplane"]["1.16.1-bb.0"] = []string{
+		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+		"registry1.dso.mil/ironbank/opensource/istio/pilot:1.16.1",
+		"registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.16.1",
+		"registry1.dso.mil/ironbank/opensource/istio/install-cni:1.16.1",
+		"registry1.dso.mil/ironbank/tetrate/istio/istioctl:1.15.1-tetratefips-v1",
+		"registry1.dso.mil/ironbank/tetrate/istio/proxyv2:1.15.1-tetratefips-v1",
+		"registry1.dso.mil/ironbank/tetrate/istio/pilot:1.15.1-tetratefips-v1",
+		"registry1.dso.mil/ironbank/tetrate/istio/install-cni:1.15.1-tetratefips-v1",
+		"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+	}
+	BigBangImages["istio-operator"]["1.16.1-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/istio/operator:1.16.1",
+			"registry1.dso.mil/ironbank/tetrate/istio/operator:1.15.1-tetratefips-v1",
+	}
+	BigBangImages["jaeger"]["2.37.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.3.0",
+			"registry1.dso.mil/ironbank/opensource/jaegertracing/all-in-one:1.39.0",
+			"registry1.dso.mil/ironbank/opensource/jaegertracing/jaeger-operator:1.39.0",
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+	}
+	BigBangImages["kiali"]["1.60.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.60.0",
+			"registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.60.0",
+	}
+	BigBangImages["cluster-auditor"]["1.5.0-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/bigbang/cluster-auditor/opa-exporter:v0.0.7",
+	}
+	BigBangImages["policy"]["3.10.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.3",
+			"registry1.dso.mil/ironbank/opensource/openpolicyagent/gatekeeper:v3.10.0",
+	}
+	BigBangImages["kyverno"]["2.6.1-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/nirmata/kyverno:v1.8.1",
+			"registry1.dso.mil/ironbank/nirmata/kyvernopre:v1.8.1",
+	}
+	BigBangImages["kyverno-policies"]["1.0.1-bb.9"] = []string{
+			"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.5",
+	}
+	BigBangImages["kyvernoreporter"]["2.13.4-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/nirmata/policy-reporter/policy-reporter:2.10.3",
+	}
+	BigBangImages["elasticsearch-kibana"]["0.14.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/elastic/elasticsearch/elasticsearch:8.5.2",
+			"registry1.dso.mil/ironbank/elastic/kibana/kibana:8.5.2",
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/opensource/bitnami/elasticsearch-exporter:1.5.0-debian-11-r17",
+	}
+	BigBangImages["eck-operator"]["2.5.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/elastic/eck-operator/eck-operator:2.5.0",
+	}
+	BigBangImages["fluentbit"]["0.21.4-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/fluent/fluent-bit:2.0.6",
+	}
+	BigBangImages["promtail"]["6.7.2-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.7.0",
+	}
+	BigBangImages["loki"]["3.7.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/grafana/loki:2.7.0",
+	}
+	BigBangImages["neuvector"]["2.2.2-bb.2"] = []string{
+			"registry1.dso.mil/ironbank/neuvector/neuvector/controller:5.0.2",
+			"registry1.dso.mil/ironbank/neuvector/neuvector/enforcer:5.0.2",
+			"registry1.dso.mil/ironbank/neuvector/neuvector/manager:5.0.2",
+			"registry1.dso.mil/ironbank/neuvector/neuvector/scanner:latest",
+	}
+	BigBangImages["tempo"]["0.16.1-bb.2"] = []string{
+			"registry1.dso.mil/ironbank/opensource/grafana/tempo-query:1.5.0",
+			"registry1.dso.mil/ironbank/opensource/grafana/tempo:1.5.0",
+	}
+	BigBangImages["monitoring"]["43.1.2-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/big-bang/grafana/grafana-plugins:9.3.2",
+			"registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.21.0",
+			"registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.3.0",
+			"registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.7.0",
+			"registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.61.1",
+			"registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.61.1",
+			"registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.24.0",
+			"registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.5.0",
+			"registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.40.5",
+	}
+	BigBangImages["twistlock"]["0.11.4-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/twistlock/console/console:22.06.197",
+			"registry1.dso.mil/ironbank/twistlock/defender/defender:22.06.197",
+	}
+	BigBangImages["argocd"]["5.5.7-bb.6"] = []string{
+			"registry1.dso.mil/ironbank/big-bang/argocd:v2.4.12",
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/bitnami/redis:7.0.0-debian-10-r3",
+			"registry1.dso.mil/ironbank/opensource/dexidp/dex:v2.30.3",
+	}
+	BigBangImages["authservice"]["0.5.3-bb.2"] = []string{
+			"registry1.dso.mil/ironbank/bitnami/redis:7.0.0-debian-10-r3",
+			"registry1.dso.mil/ironbank/istio-ecosystem/authservice:0.5.3",
+	}
+	BigBangImages["minioOperator"]["4.5.4-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/minio/operator:v4.5.4",
+			"registry1.dso.mil/ironbank/opensource/minio/console:v0.21.3",
+	}
+	BigBangImages["minio"]["4.5.4-bb.2"] = []string{
+			"registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2022-11-26T22-43-32Z",
+	}
+	BigBangImages["gitlab"]["6.6.1-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/bitnami/analytics/redis-exporter:v1.45.0",
+			"registry1.dso.mil/ironbank/bitnami/redis:7.0.0-debian-10-r3",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/alpine-certificates:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/cfssl-self-sign:1.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitaly:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-container-registry:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-shell:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-sidekiq:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-toolbox:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-webservice:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-workhorse:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/kubectl:15.6.1",
+			"registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2022-11-17T21-20-39Z",
+			"registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2022-11-26T22-43-32Z",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.13",
+			"registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.7",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-exporter:15.6.1",
+			"registry1.dso.mil/ironbank/gitlab/gitlab/kubectl:15.6.1",
+	}
+	BigBangImages["gitlabRunner"]["0.47.0-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/gitlab/gitlab-runner/gitlab-runner:v15.6.0",
+			"registry1.dso.mil/ironbank/gitlab/gitlab-runner/gitlab-runner-helper:v15.6.0",
+			"registry1.dso.mil/ironbank/redhat/ubi/ubi8:8.7",
+	}
+	BigBangImages["nexus"]["42.0.0-bb.4"] = []string{
+			"registry1.dso.mil/ironbank/redhat/ubi/ubi8-minimal:8.7",
+			"registry1.dso.mil/ironbank/sonatype/nexus/nexus:3.42.0-01",
+	}
+	BigBangImages["sonarqube"]["1.0.31-bb.3"] = []string{
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/big-bang/sonarqube:8.9.10-community",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.13",
+	}
+	BigBangImages["haproxy"]["1.12.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/haproxy/haproxy22:v2.2.21",
+	}
+	BigBangImages["anchore"]["1.20.0-bb.2"] = []string{
+			"registry1.dso.mil/ironbank/anchore/engine/engine:1.1.0",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.12",
+			"registry1.dso.mil/ironbank/anchore/enterprise/enterprise:4.2.0",
+			"registry1.dso.mil/ironbank/anchore/enterpriseui/enterpriseui:4.2.0",
+	}
+	BigBangImages["mattermostoperator"]["1.19.0-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/mattermost/mattermost-operator:v1.19.0",
+	}
+	BigBangImages["mattermost"]["7.5.1-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/mattermost/mattermost:7.5.1",
+			"registry1.dso.mil/ironbank/opensource/minio/mc:RELEASE.2022-08-23T05-45-20Z",
+			"registry1.dso.mil/ironbank/opensource/minio/minio:RELEASE.2022-11-17T23-20-09Z",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql11:11.18-1",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.13",
+	}
+	BigBangImages["velero"]["2.32.2-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.25.4",
+			"registry1.dso.mil/ironbank/opensource/velero/velero-plugin-for-aws:v1.5.2",
+			"registry1.dso.mil/ironbank/opensource/velero/velero:v1.9.3",
+			"registry1.dso.mil/ironbank/opensource/velero/velero-plugin-for-csi:v0.3.2",
+			"registry1.dso.mil/ironbank/opensource/velero/velero-plugin-for-aws:v1.5.2",
+			"registry1.dso.mil/ironbank/opensource/velero/velero-plugin-for-microsoft-azure:v1.5.2",
+	}
+	BigBangImages["keycloak"]["18.2.1-bb.5"] = []string{
+			"registry.dso.mil/platform-one/big-bang/apps/security-tools/keycloak/keycloak-ib:18.0.2-1.2.0-1",
+			"registry1.dso.mil/ironbank/big-bang/base:2.0.0",
+			"registry1.dso.mil/ironbank/opensource/postgres/postgresql12:12.11",
+	}
+	BigBangImages["vault"]["0.22.1-bb.1"] = []string{
+			"registry1.dso.mil/ironbank/hashicorp/vault/vault-k8s:1.0.0",
+			"registry1.dso.mil/ironbank/hashicorp/vault/vault:1.11.3",
+	}
+	BigBangImages["metrics-server"]["3.8.3-bb.0"] = []string{
+			"registry1.dso.mil/ironbank/opensource/kubernetes-sigs/metrics-server:v0.6.2",
 	}
 }
