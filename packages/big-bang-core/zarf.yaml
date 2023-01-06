@@ -21,4 +21,6 @@ components:
       version: 1.50.0
       flux: true
       valuesFrom:
-      - values.yaml
+      - values.minimal.yaml
+      # - values.gatekeeper.yaml
+      # - values.kyverno.yaml

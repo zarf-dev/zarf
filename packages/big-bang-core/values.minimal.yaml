@@ -1,0 +1,46 @@
+domain: bigbang.dev
+
+istio:
+  enabled: false
+
+istiooperator:
+  enabled: false
+
+gatekeeper:
+  enabled: false
+
+clusterAuditor:
+  enabled: false
+
+kyverno:
+  enabled: false
+
+kyvernopolicies:
+  enabled: false
+
+kiali:
+  enabled: false
+
+logging:
+  enabled: false
+
+loki:
+  enabled: false
+
+promtail:
+  enabled: false
+
+eckoperator:
+  enabled: false
+  
+fluentbit:
+  enabled: false
+
+jaeger:
+  enabled: false
+
+twistlock:
+  enabled: false
+
+monitoring:
+  enabled: false
