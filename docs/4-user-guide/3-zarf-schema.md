@@ -1495,7 +1495,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** git tag of Big Bang
+**Description:** The version of Big Bang you'd like to use
 
 |          |          |
 | -------- | -------- |
@@ -1521,51 +1521,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang_values"></a>values</strong>
-
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** hard coded values to pass to big bang
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-<details>
-<summary><strong> <a name="components_items_bigbang_values_pattern1"></a>Pattern Property .*</strong>
-
-</summary>
-&nbsp;
-<blockquote>
-
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-</blockquote>
-</details>
-
-</blockquote>
-</details>
-
-<details>
 <summary><strong> <a name="components_items_bigbang_valuesFrom"></a>valuesFrom</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** list of values file passed to BigBang.  Order matters
+**Description:** list of values files to pass to BigBang; these will be merged together
 
 |          |                   |
 | -------- | ----------------- |
@@ -1589,13 +1551,13 @@ must respect the following conditions
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang_flux"></a>flux</strong>
+<summary><strong> <a name="components_items_bigbang_skipFlux"></a>skipFlux</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Should Flux be deployed?  Default true
+**Description:** Should we skip deploying flux? Defaults to false
 
 |          |           |
 | -------- | --------- |

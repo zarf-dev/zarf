@@ -132,23 +132,19 @@ export interface ZarfComponent {
  */
 export interface ZarfBigBang {
     /**
-     * Should Flux be deployed?  Default true
-     */
-    flux?: boolean;
-    /**
      * Override of repo to pull big bang from
      */
     repo?: string;
     /**
-     * hard coded values to pass to big bang
+     * Should we skip deploying flux? Defaults to false
      */
-    values?: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    skipFlux?: boolean;
     /**
-     * list of values file passed to BigBang.  Order matters
+     * list of values files to pass to BigBang; these will be merged together
      */
     valuesFrom?: string[];
     /**
-     * git tag of Big Bang
+     * The version of Big Bang you'd like to use
      */
     version: string;
 }
@@ -911,9 +907,8 @@ const typeMap: any = {
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
     "ZarfBigBang": o([
-        { json: "flux", js: "flux", typ: u(undefined, true) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
-        { json: "values", js: "values", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFrom", js: "valuesFrom", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
     ], false),

@@ -9,31 +9,22 @@
       "properties": {
         "version": {
           "type": "string",
-          "description": "git tag of Big Bang"
+          "description": "The version of Big Bang you'd like to use"
         },
         "repo": {
           "type": "string",
           "description": "Override of repo to pull big bang from"
-        },
-        "values": {
-          "patternProperties": {
-            ".*": {
-              "additionalProperties": true
-            }
-          },
-          "type": "object",
-          "description": "hard coded values to pass to big bang"
         },
         "valuesFrom": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "list of values file passed to BigBang.  Order matters"
+          "description": "list of values files to pass to BigBang; these will be merged together"
         },
-        "flux": {
+        "skipFlux": {
           "type": "boolean",
-          "description": "Should Flux be deployed?  Default true"
+          "description": "Should we skip deploying flux? Defaults to false"
         }
       },
       "additionalProperties": false,

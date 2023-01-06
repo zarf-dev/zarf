@@ -62,7 +62,7 @@ func (p *Packager) Create(baseDir string) error {
 	// do bigbang image/repo discovery
 	for i, c := range p.cfg.Pkg.Components {
 		if c.BigBang.Version != "" {
-			if c.BigBang.DeployFlux {
+			if !c.BigBang.SkipFlux {
 				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
 			}
 			c2, err := bigbang.MutateBigbangComponent(c)

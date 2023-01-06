@@ -79,11 +79,10 @@ type ZarfFile struct {
 
 // ZarfBigBang defines a file to deploy.
 type ZarfBigBang struct {
-	Version    string                 `json:"version" jsonschema:"description=git tag of Big Bang"`
-	Repo       string                 `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
-	Values     map[string]interface{} `json:"values,omitempty" jsonschema:"description=hard coded values to pass to big bang"`
-	ValuesFrom []string               `json:"valuesFrom,omitempty" jsonschema:"description=list of values file passed to BigBang.  Order matters"`
-	DeployFlux bool                   `json:"flux,omitempty" jsonschema:"description=Should Flux be deployed?  Default true"`
+	Version    string    `json:"version" jsonschema:"description=The version of Big Bang you'd like to use"`
+	Repo       string    `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
+	ValuesFrom []string  `json:"valuesFrom,omitempty" jsonschema:"description=list of values files to pass to BigBang; these will be merged together"`
+	SkipFlux   bool      `json:"skipFlux,omitempty" jsonschema:"description=Should we skip deploying flux? Defaults to false"`
 }
 
 // ZarfChart defines a helm chart to be deployed.

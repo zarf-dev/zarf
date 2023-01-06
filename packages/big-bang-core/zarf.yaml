@@ -19,7 +19,7 @@ components:
     required: true
     bigbang:
       version: 1.50.0
-      flux: true
+      skipFlux: false
       valuesFrom:
       - values.minimal.yaml
       # - values.gatekeeper.yaml
