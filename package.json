@@ -37,7 +37,7 @@
 		"@playwright/test": "1.29.1",
 		"@sveltejs/adapter-static": "1.0.1",
 		"@sveltejs/kit": "1.0.7",
-		"@sveltejs/package": "1.0.1",
+		"@sveltejs/package": "1.0.2",
 		"@testing-library/svelte": "3.2.2",
 		"@tsconfig/svelte": "3.0.0",
 		"@types/prismjs": "1.26.0",
