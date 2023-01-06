@@ -4,11 +4,7 @@
   "definitions": {
     "ZarfBigBang": {
       "required": [
-        "version",
-        "repo",
-        "values",
-        "valuesFrom",
-        "deployFlux"
+        "version"
       ],
       "properties": {
         "version": {
@@ -35,7 +31,7 @@
           "type": "array",
           "description": "list of values file passed to BigBang.  Order matters"
         },
-        "deployFlux": {
+        "flux": {
           "type": "boolean",
           "description": "Should Flux be deployed?  Default true"
         }
@@ -225,7 +221,7 @@
           "type": "array",
           "description": "Datasets to inject into a pod in the target cluster"
         },
-        "dataInjection": {
+        "bigbang": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfBigBang",
           "description": "Configurations for installing BigBang and Flux in the cluster"

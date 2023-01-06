@@ -1472,7 +1472,7 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjection"></a>dataInjection</strong>
+<summary><strong> <a name="components_items_bigbang"></a>bigbang</strong>
 
 </summary>
 &nbsp;
@@ -1487,7 +1487,7 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfBigBang                                                                                |
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_version"></a>version *</strong>
+<summary><strong> <a name="components_items_bigbang_version"></a>version *</strong>
 
 </summary>
 &nbsp;
@@ -1505,13 +1505,11 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_repo"></a>repo *</strong>
+<summary><strong> <a name="components_items_bigbang_repo"></a>repo</strong>
 
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Override of repo to pull big bang from
 
@@ -1523,13 +1521,11 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_values"></a>values *</strong>
+<summary><strong> <a name="components_items_bigbang_values"></a>values</strong>
 
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** hard coded values to pass to big bang
 
@@ -1539,7 +1535,7 @@ Must be one of:
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_values_pattern1"></a>Pattern Property .*</strong>
+<summary><strong> <a name="components_items_bigbang_values_pattern1"></a>Pattern Property .*</strong>
 
 </summary>
 &nbsp;
@@ -1563,13 +1559,11 @@ must respect the following conditions
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_valuesFrom"></a>valuesFrom *</strong>
+<summary><strong> <a name="components_items_bigbang_valuesFrom"></a>valuesFrom</strong>
 
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** list of values file passed to BigBang.  Order matters
 
@@ -1595,13 +1589,11 @@ must respect the following conditions
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjection_deployFlux"></a>deployFlux *</strong>
+<summary><strong> <a name="components_items_bigbang_flux"></a>flux</strong>
 
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Should Flux be deployed?  Default true
 

@@ -80,10 +80,10 @@ type ZarfFile struct {
 // ZarfBigBang defines a file to deploy.
 type ZarfBigBang struct {
 	Version    string                 `json:"version" jsonschema:"description=git tag of Big Bang"`
-	Repo       string                 `json:"repo" jsonschema:"description=Override of repo to pull big bang from"`
-	Values     map[string]interface{} `json:"values" jsonschema:"description=hard coded values to pass to big bang"`
-	ValuesFrom []string               `json:"valuesFrom" jsonschema:"description=list of values file passed to BigBang.  Order matters"`
-	DeployFlux bool                   `json:"flux" jsonschema:"description=Should Flux be deployed?  Default true"`
+	Repo       string                 `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
+	Values     map[string]interface{} `json:"values,omitempty" jsonschema:"description=hard coded values to pass to big bang"`
+	ValuesFrom []string               `json:"valuesFrom,omitempty" jsonschema:"description=list of values file passed to BigBang.  Order matters"`
+	DeployFlux bool                   `json:"flux,omitempty" jsonschema:"description=Should Flux be deployed?  Default true"`
 }
 
 // ZarfChart defines a helm chart to be deployed.

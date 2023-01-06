@@ -65,6 +65,10 @@ export interface ZarfBuildData {
 
 export interface ZarfComponent {
     /**
+     * Configurations for installing BigBang and Flux in the cluster
+     */
+    bigbang?: ZarfBigBang;
+    /**
      * Helm charts to install during package deploy
      */
     charts?: ZarfChart[];
@@ -72,10 +76,6 @@ export interface ZarfComponent {
      * Specify a path to a public key to validate signed online resources
      */
     cosignKeyPath?: string;
-    /**
-     * Configurations for installing BigBang and Flux in the cluster
-     */
-    dataInjection?: ZarfBigBang;
     /**
      * Datasets to inject into a pod in the target cluster
      */
@@ -127,6 +127,32 @@ export interface ZarfComponent {
     scripts?: ZarfComponentScripts;
 }
 
+/**
+ * Configurations for installing BigBang and Flux in the cluster
+ */
+export interface ZarfBigBang {
+    /**
+     * Should Flux be deployed?  Default true
+     */
+    flux?: boolean;
+    /**
+     * Override of repo to pull big bang from
+     */
+    repo?: string;
+    /**
+     * hard coded values to pass to big bang
+     */
+    values?: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    /**
+     * list of values file passed to BigBang.  Order matters
+     */
+    valuesFrom?: string[];
+    /**
+     * git tag of Big Bang
+     */
+    version: string;
+}
+
 export interface ZarfChart {
     /**
      * The path to the chart in the repo if using a git repo instead of a helm repo
@@ -165,32 +191,6 @@ export interface ZarfChart {
     /**
      * The version of the chart to deploy; for git-based charts this is also the tag of the git
      * repo
-     */
-    version: string;
-}
-
-/**
- * Configurations for installing BigBang and Flux in the cluster
- */
-export interface ZarfBigBang {
-    /**
-     * Should Flux be deployed?  Default true
-     */
-    deployFlux: boolean;
-    /**
-     * Override of repo to pull big bang from
-     */
-    repo: string;
-    /**
-     * hard coded values to pass to big bang
-     */
-    values: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
-    /**
-     * list of values file passed to BigBang.  Order matters
-     */
-    valuesFrom: string[];
-    /**
-     * git tag of Big Bang
      */
     version: string;
 }
@@ -893,9 +893,9 @@ const typeMap: any = {
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfComponent": o([
+        { json: "bigbang", js: "bigbang", typ: u(undefined, r("ZarfBigBang")) },
         { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
-        { json: "dataInjection", js: "dataInjection", typ: u(undefined, r("ZarfBigBang")) },
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
@@ -910,6 +910,13 @@ const typeMap: any = {
         { json: "required", js: "required", typ: u(undefined, true) },
         { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
     ], false),
+    "ZarfBigBang": o([
+        { json: "flux", js: "flux", typ: u(undefined, true) },
+        { json: "repo", js: "repo", typ: u(undefined, "") },
+        { json: "values", js: "values", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "valuesFrom", js: "valuesFrom", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
+    ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
         { json: "localPath", js: "localPath", typ: u(undefined, "") },
@@ -919,13 +926,6 @@ const typeMap: any = {
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
-        { json: "version", js: "version", typ: "" },
-    ], false),
-    "ZarfBigBang": o([
-        { json: "deployFlux", js: "deployFlux", typ: true },
-        { json: "repo", js: "repo", typ: "" },
-        { json: "values", js: "values", typ: m(u(a("any"), true, 3.14, 0, m("any"), null, "")) },
-        { json: "valuesFrom", js: "valuesFrom", typ: a("") },
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfDataInjection": o([
