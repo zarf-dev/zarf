@@ -29,7 +29,7 @@ func (g *Git) MutateGitURLsInText(text string) string {
 	return output
 }
 
-// TransformURLtoRepoName takes a git url and returns a zarf-compatible repo name.
+// TransformURLtoRepoName takes a git url and returns a Zarf-compatible repo name.
 func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
 	idx := gitURLRegex.SubexpIndex

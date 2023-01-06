@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions.
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
@@ -66,7 +66,7 @@ type Tunnel struct {
 	spinner      *message.Spinner
 }
 
-// PrintConnectTable will print a table of all zarf connect matches found in the cluster.
+// PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
 func (c *Cluster) PrintConnectTable() error {
 	list, err := c.Kube.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
 	if err != nil {

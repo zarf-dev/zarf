@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions.
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -23,7 +23,7 @@ const (
 	ZarfStateDataKey    = "state"
 )
 
-// LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
+// LoadZarfState returns the current Zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	message.Debug("k8s.LoadZarfState()")
 
@@ -43,7 +43,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	return state, nil
 }
 
-// SaveZarfState takes a given state and makepersists it to the zarf/zarf-state secret.
+// SaveZarfState takes a given state and makepersists it to the Zarf/zarf-state secret.
 func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
 	message.Debug(message.JSONValue(state))

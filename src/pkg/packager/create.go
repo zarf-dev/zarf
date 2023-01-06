@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages.
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -31,7 +31,7 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// Create generates a zarf package tarball for a given PackageConfg and optional base directory.
+// Create generates a Zarf package tarball for a given PackageConfg and optional base directory.
 func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 

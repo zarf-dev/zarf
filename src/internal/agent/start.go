@@ -26,7 +26,7 @@ const (
 	tlskey   = "/etc/certs/tls.key"
 )
 
-// StartWebhook launches the zarf agent mutating webhook in the cluster.
+// StartWebhook launches the Zarf agent mutating webhook in the cluster.
 func StartWebhook() {
 	message.Debug("agent.StartWebhook()")
 

@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user.
+// CreateReadOnlyUser uses the Gitea API to create a non-admin Zarf user.
 func (g *Git) CreateReadOnlyUser() error {
 	message.Debugf("git.CreateReadOnlyUser()")
 

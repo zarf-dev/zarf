@@ -4,7 +4,7 @@
 // Package // Package types contains all the types used by Zarf.
 package types
 
-// ZarfComponent is the primary functional grouping of assets to deploy by zarf.
+// ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
 	Name string `json:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9\\-]+$"`
@@ -123,7 +123,7 @@ type ZarfDataInjection struct {
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
-// ZarfComponentImport structure for including imported zarf components.
+// ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1

@@ -54,7 +54,7 @@ type ZarfPartialPackageData struct {
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
 }
 
-// ConnectString contains information about a connection made with zarf connect.
+// ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
 	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
 	URL         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`

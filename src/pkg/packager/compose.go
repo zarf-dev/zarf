@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages.
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -40,7 +40,7 @@ func (p *Packager) composeComponents() error {
 	return nil
 }
 
-// getComposedComponent recursively retrieves a composed zarf component
+// getComposedComponent recursively retrieves a composed Zarf component
 // --------------------------------------------------------------------
 // For composed components, we build the tree of components starting at the root and adding children as we go;
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
@@ -214,7 +214,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 }
 
-// Reads the locally imported zarf.yaml.
+// Reads the locally imported Zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 

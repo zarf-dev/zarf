@@ -20,7 +20,7 @@ type ZarfState struct {
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
-// This object is saved as the data of a k8s secret within the 'zarf' namespace (not as part of the ZarfState secret).
+// This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name       string      `json:"name"`
 	Data       ZarfPackage `json:"data"`

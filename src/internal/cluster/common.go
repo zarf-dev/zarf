@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions.
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// Cluster is a wrapper for the k8s package that provides zarf-specific cluster management functions.
+// Cluster is a wrapper for the k8s package that provides Zarf-specific cluster management functions.
 type Cluster struct {
 	Kube *k8s.K8s
 }

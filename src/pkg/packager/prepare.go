@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages.
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// FindImages iterates over a zarf.yaml and attempts to parse any images.
+// FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 	var originalDir string

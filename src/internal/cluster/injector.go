@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions.
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -26,7 +26,7 @@ import (
 // The chunk size for the tarball chunks.
 var payloadChunkSize = 1024 * 768
 
-// RunInjectionMadness initializes a zarf injection into the cluster.
+// RunInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 

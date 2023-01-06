@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package hooks contains the mutation hooks for the zarf agent.
+// Package hooks contains the mutation hooks for the Zarf agent.
 package hooks
 
 import (
@@ -42,7 +42,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the zarfState.
+// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (

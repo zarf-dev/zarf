@@ -148,7 +148,7 @@ func CreatePathAndCopy(source string, destination string) error {
 	return copy.Copy(source, destination)
 }
 
-// GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way.
+// GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.
 func GetFinalExecutablePath() (string, error) {
 	message.Debug("utils.GetExecutablePath()")
 
