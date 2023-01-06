@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -16,13 +16,14 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
+// Credential represents authentication for a given host.
 type Credential struct {
 	Path string
 	Auth http.BasicAuth
 }
 
-// FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc
-func FindAuthForHost(baseUrl string) Credential {
+// FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc.
+func FindAuthForHost(baseURL string) Credential {
 	homePath, _ := os.UserHomeDir()
 
 	// Read the ~/.git-credentials file
@@ -46,7 +47,7 @@ func FindAuthForHost(baseUrl string) Credential {
 	// Look for a match for the given host path in the creds file
 	for _, cred := range creds {
 		// An empty credPath means that we have reached the default from the .netrc
-		hasPath := strings.Contains(baseUrl, cred.Path) || cred.Path == ""
+		hasPath := strings.Contains(baseURL, cred.Path) || cred.Path == ""
 		if hasPath {
 			matchedCred = cred
 			break
@@ -56,7 +57,7 @@ func FindAuthForHost(baseUrl string) Credential {
 	return matchedCred
 }
 
-// credentialParser parses a user's .git-credentials file to find git creds for hosts
+// credentialParser parses a user's .git-credentials file to find git creds for hosts.
 func credentialParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 
@@ -69,15 +70,15 @@ func credentialParser(file io.ReadCloser) []Credential {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		gitUrl, err := url.Parse(scanner.Text())
-		if err != nil || gitUrl.Host == "" {
+		gitURL, err := url.Parse(scanner.Text())
+		if err != nil || gitURL.Host == "" {
 			continue
 		}
-		password, _ := gitUrl.User.Password()
+		password, _ := gitURL.User.Password()
 		credential := Credential{
-			Path: gitUrl.Host,
+			Path: gitURL.Host,
 			Auth: http.BasicAuth{
-				Username: gitUrl.User.Username(),
+				Username: gitURL.User.Username(),
 				Password: password,
 			},
 		}
@@ -87,7 +88,7 @@ func credentialParser(file io.ReadCloser) []Credential {
 	return credentials
 }
 
-// netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/
+// netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/.
 func netrcParser(file io.ReadCloser) []Credential {
 	var credentials []Credential
 

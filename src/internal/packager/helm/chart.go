@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contains operations for working with helm charts.
 package helm
 
 import (
@@ -22,9 +22,9 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// InstallOrUpgradeChart performs a helm install of the given chart
+// InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
-	fromMessage := h.Chart.Url
+	fromMessage := h.Chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
 	}
@@ -55,7 +55,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.NewRenderer()
+	postRender, err := h.newRenderer()
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -116,7 +116,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	return postRender.connectStrings, h.ReleaseName, nil
 }
 
-// TemplateChart generates a helm template from a given chart
+// TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart() (string, error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
@@ -197,7 +197,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 
 	// Generate the struct to pass to InstallOrUpgradeChart()
 	h.Chart = types.ZarfChart{
-		Name:        tmpChart.Metadata.Name,
+		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior
 		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
 		Version:     tmpChart.Metadata.Version,

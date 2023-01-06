@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ReplaceService deletes and re-creates a service
+// ReplaceService deletes and re-creates a service.
 func (k *K8s) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 	if err := k.DeleteService(service.Namespace, service.Name); err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func (k *K8s) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 	return k.CreateService(service)
 }
 
-// GenerateService returns a K8s service struct without writing to the cluster
+// GenerateService returns a K8s service struct without writing to the cluster.
 func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -52,7 +52,7 @@ func (k *K8s) GetService(namespace, serviceName string) (*corev1.Service, error)
 	return k.Clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 }
 
-// GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg
+// GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
 	// Creat the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
@@ -65,7 +65,7 @@ func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.Servic
 	return k.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
 }
 
-// GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg
+// GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
 	// Creat the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{

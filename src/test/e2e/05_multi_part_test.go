@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -28,7 +32,7 @@ func TestMultiPartPackage(t *testing.T) {
 
 	list, err := filepath.Glob("zarf-package-multi-part-*")
 	require.NoError(t, err)
-	// Lenght is 7 because there are 6 parts and 1 manifest
+	// Length is 7 because there are 6 parts and 1 manifest
 	require.Len(t, list, 7)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", deployPath, "--confirm")

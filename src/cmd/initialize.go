@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// initCmd represents the init command
+// initCmd represents the init command.
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Aliases: []string{"i"},

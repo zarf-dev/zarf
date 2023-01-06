@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 
-// ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data
+// ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
 	ZarfAppliance bool             `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 	Distro        string           `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
@@ -20,7 +20,7 @@ type ZarfState struct {
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
-// This object is saved as the data of a k8s secret within the 'zarf' namespace (not as part of the ZarfState secret).
+// This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name       string      `json:"name"`
 	Data       ZarfPackage `json:"data"`
@@ -35,6 +35,7 @@ type DeployedComponent struct {
 	InstalledCharts []InstalledChart `json:"installedCharts"`
 }
 
+// InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace string `json:"namespace"`
 	ChartName string `json:"chartName"`

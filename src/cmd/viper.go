@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -59,7 +59,7 @@ const (
 )
 
 func initViper() {
-	// Already initializedby some other command
+	// Already initialized by some other command
 	if v != nil {
 		return
 	}

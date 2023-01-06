@@ -19,7 +19,7 @@ func (k *K8s) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	return k.Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-// GetSecrtsWithLabel returns a list of Kubernetes secrets with the given label.
+// GetSecretsWithLabel returns a list of Kubernetes secrets with the given label.
 func (k *K8s) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
 	return k.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
