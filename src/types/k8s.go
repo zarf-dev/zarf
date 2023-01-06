@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 
-// ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data
+// ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
 	ZarfAppliance bool             `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 	Distro        string           `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`

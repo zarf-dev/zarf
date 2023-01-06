@@ -16,7 +16,7 @@ import (
 
 const waitLimit = 30
 
-// GeneratePod creates a new pod without adding it to the k8s cluster
+// GeneratePod creates a new pod without adding it to the k8s cluster.
 func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -31,7 +31,7 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 	}
 }
 
-// DeletePod removees a pod from the cluster by namespace & name
+// DeletePod removees a pod from the cluster by namespace & name.
 func (k *K8s) DeletePod(namespace string, name string) error {
 	deleteGracePeriod := int64(0)
 	deletePolicy := metav1.DeletePropagationForeground
@@ -54,18 +54,18 @@ func (k *K8s) DeletePod(namespace string, name string) error {
 	}
 }
 
-// CreatePod inserts the given pod into the cluster
+// CreatePod inserts the given pod into the cluster.
 func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, createOptions)
 }
 
-// GetAllPods returns a list of pods from the cluster for all namesapces
+// GetAllPods returns a list of pods from the cluster for all namesapces.
 func (k *K8s) GetAllPods() (*corev1.PodList, error) {
 	return k.GetPods(corev1.NamespaceAll)
 }
 
-// GetPods returns a list of pods from the cluster by namespace
+// GetPods returns a list of pods from the cluster by namespace.
 func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 	metaOptions := metav1.ListOptions{}
 	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metaOptions)
@@ -73,7 +73,7 @@ func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 
 // WaitForPodsAndContainers attempts to find pods matching the given selector and optional inclusion filter
 // It will wait up to 90 seconds for the pods to be found and will return a list of matching pod names
-// If the timeout is reached, an empty list will be returned
+// If the timeout is reached, an empty list will be returned.
 func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []string {
 	for count := 0; count < waitLimit; count++ {
 

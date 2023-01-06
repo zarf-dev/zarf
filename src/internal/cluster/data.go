@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -21,7 +21,7 @@ import (
 )
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
-// todo:  this currently requires kubectl but we should have enough k8s work to make this native now
+// todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
 func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()

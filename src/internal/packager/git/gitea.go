@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user
+// CreateReadOnlyUser uses the Gitea API to create a non-admin zarf user.
 func (g *Git) CreateReadOnlyUser() error {
 	message.Debugf("git.CreateReadOnlyUser()")
 
@@ -122,7 +122,7 @@ func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	return err
 }
 
-// DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response
+// DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
 func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, error) {
 	message.Debugf("git.DoHttpThings()")
 

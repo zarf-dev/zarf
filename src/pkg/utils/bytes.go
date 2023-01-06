@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 // forked from https://www.socketloop.com/tutorials/golang-byte-format-example
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-// RoundUp rounds a float64 to the given number of decimal places
+// RoundUp rounds a float64 to the given number of decimal places.
 func RoundUp(input float64, places int) (newVal float64) {
 	var round float64
 	pow := math.Pow(10, float64(places))
@@ -20,7 +20,7 @@ func RoundUp(input float64, places int) (newVal float64) {
 	return
 }
 
-// ByteFormat formats a number of bytes into a human readable string
+// ByteFormat formats a number of bytes into a human readable string.
 func ByteFormat(inputNum float64, precision int) string {
 	if precision <= 0 {
 		precision = 1

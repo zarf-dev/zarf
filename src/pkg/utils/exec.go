@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-// Change terminal colors
+// Change terminal colors.
 const colorReset = "\x1b[0m"
 const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"

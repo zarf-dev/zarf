@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contins operations for working with helm charts.
 package helm
 
 import (
@@ -28,7 +28,7 @@ type Helm struct {
 	actionConfig *action.Configuration
 }
 
-// StandardName generates a predictable full path for a helm chart for Zarf
+// StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }

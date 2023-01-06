@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for zarf.
 package cmd
 
 import (
@@ -59,7 +59,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Execute is the entrypoint for the CLI
+// Execute is the entrypoint for the CLI.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }

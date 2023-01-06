@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packages provides api functions for managing zarf packages
+// Package packages provides api functions for managing zarf packages.
 package packages
 
 import (
@@ -33,7 +33,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// internal function to read a package from the local filesystem
+// internal function to read a package from the local filesystem.
 func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 	pkg.Path, err = url.QueryUnescape(path)
 	if err != nil {

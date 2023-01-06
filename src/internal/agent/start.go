@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package agent holds the mutating webhook server
+// Package agent holds the mutating webhook server.
 package agent
 
 import (
@@ -19,14 +19,14 @@ import (
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and
 // https://github.com/slackhq/simple-kubernetes-webhook
 
-// We can hard-code these because we control the entire thing anyway
+// We can hard-code these because we control the entire thing anyway.
 const (
 	httpPort = "8443"
 	tlscert  = "/etc/certs/tls.crt"
 	tlskey   = "/etc/certs/tls.key"
 )
 
-// StartWebhook launches the zarf agent mutating webhook in the cluster
+// StartWebhook launches the zarf agent mutating webhook in the cluster.
 func StartWebhook() {
 	message.Debug("agent.StartWebhook()")
 

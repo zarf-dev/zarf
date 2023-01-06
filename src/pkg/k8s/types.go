@@ -13,7 +13,7 @@ import (
 // Log is a function that logs a message.
 type Log func(string, ...any)
 
-// Labels is a map of K8s labels
+// Labels is a map of K8s labels.
 type Labels map[string]string
 
 // K8s is a client for interacting with a Kubernetes cluster.

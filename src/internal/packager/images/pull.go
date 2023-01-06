@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package images provides functions for building and pushing images
+// Package images provides functions for building and pushing images.
 package images
 
 import (

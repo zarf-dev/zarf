@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contins operations for working with helm charts.
 package helm
 
 import (
@@ -19,7 +19,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
-// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os
+// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
 func (h *Helm) CreateChartFromLocalFiles(destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
@@ -44,7 +44,7 @@ func (h *Helm) CreateChartFromLocalFiles(destination string) string {
 	return path
 }
 
-// DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
+// DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model.
 func (h *Helm) DownloadChartFromGit(destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
@@ -80,7 +80,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	return name
 }
 
-// DownloadPublishedChart loads a specific chart version from a remote repo
+// DownloadPublishedChart loads a specific chart version from a remote repo.
 func (h *Helm) DownloadPublishedChart(destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()

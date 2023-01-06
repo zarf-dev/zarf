@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for zarf.
 package test
 
 import (
@@ -22,7 +22,7 @@ const (
 	skipK8sEnvVar       = "SKIP_K8S"
 )
 
-// TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc
+// TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc.
 func TestMain(m *testing.M) {
 	// Work from the root directory of the project
 	os.Chdir("../../../")

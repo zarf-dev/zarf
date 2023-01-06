@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validate provides zarf package validation functions
+// Package validate provides zarf package validation functions.
 package validate
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run performs config validations
+// Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
 	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)

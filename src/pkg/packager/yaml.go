@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying zarf packages.
 package packager
 
 import (
@@ -38,7 +38,7 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	return nil
 }
 
-// writeYaml adds build information and writes the config to the given path
+// writeYaml adds build information and writes the config to the given path.
 func (p *Packager) writeYaml() error {
 	message.Debug("config.BuildConfig()")
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -62,7 +62,7 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
-// DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary)
+// DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(url string, target string, cosignKeyPath string) {
 
 	// Always ensure the target directory exists

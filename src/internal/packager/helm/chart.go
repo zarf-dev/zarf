@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contins operations for working with helm charts.
 package helm
 
 import (
@@ -22,7 +22,7 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// InstallOrUpgradeChart performs a helm install of the given chart
+// InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	fromMessage := h.Chart.URL
 	if fromMessage == "" {
@@ -116,7 +116,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	return postRender.connectStrings, h.ReleaseName, nil
 }
 
-// TemplateChart generates a helm template from a given chart
+// TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart() (string, error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)

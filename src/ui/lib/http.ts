@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
-
+.
 const BASE_URL = '/api';
 
 interface APIRequest<T> {
@@ -9,7 +9,7 @@ interface APIRequest<T> {
 	body?: T;
 }
 
-// Store this outside of the class vs private since private isn't real in JS
+// Store this outside of the class vs private since private isn't real in JS.
 const headers = new Headers({
 	'Content-Type': 'application/json'
 });

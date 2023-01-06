@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying zarf packages.
 package packager
 
 import (
@@ -125,7 +125,7 @@ func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterBy
 	return validArch && validOS
 }
 
-// Match on the first requested component that is not in the list of valid components and return the component name
+// Match on the first requested component that is not in the list of valid components and return the component name.
 func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	message.Debugf("packager.validateRequests(%#v, %#v, %#v)", validComponentsList, requestedComponentNames, choiceComponents)
 
@@ -178,7 +178,7 @@ func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requeste
 	return false
 }
 
-// Confirm optional component
+// Confirm optional component.
 func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	message.Debugf("packager.confirmOptionalComponent(%#v)", component)
 

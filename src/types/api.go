@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 // RestAPI is the struct that is used to marshal/unmarshal the top-level API objects.

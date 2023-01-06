@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -11,7 +11,7 @@ type ZarfCommonOptions struct {
 	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
 }
 
-// ZarfDeployOptions tracks the user-defined preferences during a package deployment
+// ZarfDeployOptions tracks the user-defined preferences during a package deployment.
 type ZarfDeployOptions struct {
 	Insecure     bool              `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
@@ -47,7 +47,7 @@ type ZarfCreateOptions struct {
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 }
 
-// ZarfPartialPackageData contains info about a partial package
+// ZarfPartialPackageData contains info about a partial package.
 type ZarfPartialPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`

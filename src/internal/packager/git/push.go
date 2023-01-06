@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-// PushRepo pushes a git repository from the local path to the configured git server
+// PushRepo pushes a git repository from the local path to the configured git server.
 func (g *Git) PushRepo(localPath string) error {
 	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
 	defer spinner.Stop()

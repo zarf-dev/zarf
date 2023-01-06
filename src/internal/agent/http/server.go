@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the webhook
+// Package http provides a http server for the webhook.
 package http
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// NewServer creates and return a http.Server
+// NewServer creates and return a http.Server.
 func NewServer(port string) *http.Server {
 	message.Debugf("http.NewServer(%s)", port)
 

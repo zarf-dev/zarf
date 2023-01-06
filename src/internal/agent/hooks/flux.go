@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package hooks contains the mutation hooks for the zarf agent
+// Package hooks contains the mutation hooks for the zarf agent.
 package hooks
 
 import (

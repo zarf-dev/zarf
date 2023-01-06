@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying zarf packages.
 package packager
 
 import (
@@ -163,7 +163,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 	return child
 }
 
-// Sets Name, Default, Required and Description to the original components values
+// Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
 
@@ -214,7 +214,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 }
 
-// Reads the locally imported zarf.yaml
+// Reads the locally imported zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 

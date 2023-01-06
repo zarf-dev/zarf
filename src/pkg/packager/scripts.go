@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying zarf packages.
 package packager
 
 import (
@@ -18,7 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run scripts that a component has provided
+// Run scripts that a component has provided.
 func (p *Packager) runComponentScripts(scripts []string, componentScript types.ZarfComponentScripts) error {
 	for _, script := range scripts {
 		if err := p.loopScriptUntilSuccess(script, componentScript); err != nil {
@@ -97,7 +97,7 @@ func (p *Packager) loopScriptUntilSuccess(script string, scripts types.ZarfCompo
 	}
 }
 
-// Perform some basic string mutations to make scripts more useful
+// Perform some basic string mutations to make scripts more useful.
 func (p *Packager) scriptMutation(script string) (string, error) {
 
 	binaryPath, err := os.Executable()

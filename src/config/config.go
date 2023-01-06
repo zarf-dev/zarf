@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package config stores the global configuration and constants
+// Package config stores the global configuration and constants.
 package config
 
 import (
@@ -143,19 +143,19 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 }
 
 // GetDeployingComponents returns the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config.
 func GetDeployingComponents() []types.DeployedComponent {
 	return deployedComponents
 }
 
 // SetDeployingComponents sets the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config.
 func SetDeployingComponents(components []types.DeployedComponent) {
 	deployedComponents = components
 }
 
 // ClearDeployingComponents clears the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config
+// TODO: (@jeff-mccoy) this should be moved out of config.
 func ClearDeployingComponents() {
 	deployedComponents = []types.DeployedComponent{}
 }
@@ -165,7 +165,7 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
 }
 
-// GetRegistry returns the registry URL based on the Zarf state
+// GetRegistry returns the registry URL based on the Zarf state.
 func GetRegistry(state types.ZarfState) string {
 	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
 	if state.RegistryInfo.NodePort >= 30000 {

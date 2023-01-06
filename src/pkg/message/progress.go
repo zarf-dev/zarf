@@ -16,7 +16,7 @@ type ProgressBar struct {
 	startText string
 }
 
-// NewProgressBar creates a new ProgressBar instance from a total value and a format
+// NewProgressBar creates a new ProgressBar instance from a total value and a format.
 func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
 	text := fmt.Sprintf("     "+format, a...)
@@ -56,20 +56,20 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-// Success marks the ProgressBar as successful in the CLI
+// Success marks the ProgressBar as successful in the CLI.
 func (p *ProgressBar) Success(text string, a ...any) {
 	p.Stop()
 	pterm.Success.Printfln(text, a...)
 }
 
-// Stop stops the ProgressBar from continuing
+// Stop stops the ProgressBar from continuing.
 func (p *ProgressBar) Stop() {
 	if p.progress != nil {
 		_, _ = p.progress.Stop()
 	}
 }
 
-// Fatalf marks the ProgressBar as failed in the CLI
+// Fatalf marks the ProgressBar as failed in the CLI.
 func (p *ProgressBar) Fatalf(err error, format string, a ...any) {
 	p.Stop()
 	Fatalf(err, format, a...)

@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ReplaceConfigmap deletes and recreates a configmap
+// ReplaceConfigmap deletes and recreates a configmap.
 func (k *K8s) ReplaceConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	if err := k.DeleteConfigmap(namespace, name); err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func (k *K8s) ReplaceConfigmap(namespace, name string, data map[string][]byte) (
 	return k.CreateConfigmap(namespace, name, data)
 }
 
-// CreateConfigmap applys a configmap to the cluster
+// CreateConfigmap applys a configmap to the cluster.
 func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -37,7 +37,7 @@ func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*
 	return k.Clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, createOptions)
 }
 
-// DeleteConfigmap delets a confimap by name
+// DeleteConfigmap delets a confimap by name.
 func (k *K8s) DeleteConfigmap(namespace, name string) error {
 	namespaceConfigmap := k.Clientset.CoreV1().ConfigMaps(namespace)
 
@@ -49,7 +49,7 @@ func (k *K8s) DeleteConfigmap(namespace, name string) error {
 	return nil
 }
 
-// DeleteConfigMapsByLabel deletes a configmap by label(s)
+// DeleteConfigMapsByLabel deletes a configmap by label(s).
 func (k *K8s) DeleteConfigMapsByLabel(namespace string, labels Labels) error {
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: labels,

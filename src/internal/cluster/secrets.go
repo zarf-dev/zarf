@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -28,7 +28,7 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
-// GenerateRegistryPullCreds generates a secret containing the registry credentials
+// GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 

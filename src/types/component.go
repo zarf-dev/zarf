@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package // Package types contains all the types used by Zarf
-
+// Package // Package types contains all the types used by Zarf.
 package types
 
 // ZarfComponent is the primary functional grouping of assets to deploy by zarf.
@@ -54,13 +53,13 @@ type ZarfComponent struct {
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 }
 
-// ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster
+// ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
 }
 
-// ZarfComponentOnlyCluster represents the architecture and K8s cluster distibution to filter on
+// ZarfComponentOnlyCluster represents the architecture and K8s cluster distibution to filter on.
 type ZarfComponentOnlyCluster struct {
 	Architecture string   `json:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
 	Distros      []string `json:"distros,omitempty" jsonschema:"description=Future use"`
@@ -88,7 +87,7 @@ type ZarfChart struct {
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
 }
 
-// ZarfManifest defines raw manifests Zarf will deploy as a helm chart
+// ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
 type ZarfManifest struct {
 	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
 	Namespace                  string   `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the manifests to"`
@@ -98,7 +97,7 @@ type ZarfManifest struct {
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`
 }
 
-// ZarfComponentScripts are scripts that run before or after a component is deployed
+// ZarfComponentScripts are scripts that run before or after a component is deployed.
 type ZarfComponentScripts struct {
 	ShowOutput     bool     `json:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
 	TimeoutSeconds int      `json:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
@@ -108,7 +107,7 @@ type ZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
-// ZarfContainerTarget defines the destination info for a ZarfData target
+// ZarfContainerTarget defines the destination info for a ZarfData target.
 type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
@@ -117,14 +116,14 @@ type ZarfContainerTarget struct {
 	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
-// ZarfDataInjection is a data-injection definition
+// ZarfDataInjection is a data-injection definition.
 type ZarfDataInjection struct {
 	Source   string              `json:"source" jsonschema:"description=A path to a local folder or file to inject into the given target pod + container"`
 	Target   ZarfContainerTarget `json:"target" jsonschema:"description=The target pod + container to inject the data into"`
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
-// ZarfComponentImport structure for including imported zarf components
+// ZarfComponentImport structure for including imported zarf components.
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
