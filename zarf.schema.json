@@ -80,11 +80,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the chart to deploy"
+          "description": "The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"
         },
         "releaseName": {
           "type": "string",
-          "description": "The name of the release to create"
+          "description": "The name of the release to create; defaults to the name of the chart"
         },
         "url": {
           "type": "string",
@@ -92,7 +92,7 @@
         },
         "version": {
           "type": "string",
-          "description": "The version of the chart to deploy"
+          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo"
         },
         "namespace": {
           "type": "string",
@@ -103,11 +103,11 @@
             "type": "string"
           },
           "type": "array",
-          "description": "List of values files to include in the package"
+          "description": "List of values files to include in the package; these will be merged together"
         },
         "gitPath": {
           "type": "string",
-          "description": "If using a git repo"
+          "description": "The path to the chart in the repo if using a git repo instead of a helm repo"
         },
         "localPath": {
           "type": "string",
@@ -421,7 +421,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "A name to give this collection of manifests"
+          "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"
         },
         "namespace": {
           "type": "string",
@@ -486,6 +486,10 @@
         "architecture": {
           "type": "string",
           "description": "The target cluster architecture of this package"
+        },
+        "yolo": {
+          "type": "boolean",
+          "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."
         }
       },
       "additionalProperties": false,

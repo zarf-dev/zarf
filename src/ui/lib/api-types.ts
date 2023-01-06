@@ -129,7 +129,7 @@ export interface ZarfComponent {
 
 export interface ZarfChart {
     /**
-     * If using a git repo
+     * The path to the chart in the repo if using a git repo instead of a helm repo
      */
     gitPath?: string;
     /**
@@ -137,7 +137,8 @@ export interface ZarfChart {
      */
     localPath?: string;
     /**
-     * The name of the chart to deploy
+     * The name of the chart to deploy; this should be the name of the chart as it is installed
+     * in the helm repo
      */
     name: string;
     /**
@@ -149,7 +150,7 @@ export interface ZarfChart {
      */
     noWait?: boolean;
     /**
-     * The name of the release to create
+     * The name of the release to create; defaults to the name of the chart
      */
     releaseName?: string;
     /**
@@ -158,11 +159,12 @@ export interface ZarfChart {
      */
     url?: string;
     /**
-     * List of values files to include in the package
+     * List of values files to include in the package; these will be merged together
      */
     valuesFiles?: string[];
     /**
-     * The version of the chart to deploy
+     * The version of the chart to deploy; for git-based charts this is also the tag of the git
+     * repo
      */
     version: string;
 }
@@ -276,7 +278,8 @@ export interface ZarfManifest {
      */
     kustomizeAllowAnyDirectory?: boolean;
     /**
-     * A name to give this collection of manifests
+     * A name to give this collection of manifests; this will become the name of the
+     * dynamically-created helm chart
      */
     name: string;
     /**
@@ -420,6 +423,12 @@ export interface ZarfMetadata {
      * Generic string to track the package version by a package author
      */
     version?: string;
+    /**
+     * Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf
+     * init against the cluster. This is ideal for connected environments where you want to use
+     * existing VCS and container registries.
+     */
+    yolo?: boolean;
 }
 
 export interface ZarfPackageVariable {
@@ -699,11 +708,25 @@ export class Convert {
     }
 }
 
-function invalidValue(typ: any, val: any, key: any = ''): never {
-    if (key) {
-        throw Error(`Invalid value for key "${key}". Expected type ${JSON.stringify(typ)} but got ${JSON.stringify(val)}`);
+function invalidValue(typ: any, val: any, key: any, parent: any = ''): never {
+    const prettyTyp = prettyTypeName(typ);
+    const parentText = parent ? ` on ${parent}` : '';
+    const keyText = key ? ` for key "${key}"` : '';
+    throw Error(`Invalid value${keyText}${parentText}. Expected ${prettyTyp} but got ${JSON.stringify(val)}`);
+}
+
+function prettyTypeName(typ: any): string {
+    if (Array.isArray(typ)) {
+        if (typ.length === 2 && typ[0] === undefined) {
+            return `an optional ${prettyTypeName(typ[1])}`;
+        } else {
+            return `one of [${typ.map(a => { return prettyTypeName(a); }).join(", ")}]`;
+        }
+    } else if (typeof typ === "object" && typ.literal !== undefined) {
+        return typ.literal;
+    } else {
+        return typeof typ;
     }
-    throw Error(`Invalid value ${JSON.stringify(val)} for type ${JSON.stringify(typ)}`, );
 }
 
 function jsonToJSProps(typ: any): any {
@@ -724,10 +747,10 @@ function jsToJSONProps(typ: any): any {
     return typ.jsToJSON;
 }
 
-function transform(val: any, typ: any, getProps: any, key: any = ''): any {
+function transform(val: any, typ: any, getProps: any, key: any = '', parent: any = ''): any {
     function transformPrimitive(typ: string, val: any): any {
         if (typeof typ === typeof val) return val;
-        return invalidValue(typ, val, key);
+        return invalidValue(typ, val, key, parent);
     }
 
     function transformUnion(typs: any[], val: any): any {
@@ -739,17 +762,17 @@ function transform(val: any, typ: any, getProps: any, key: any = ''): any {
                 return transform(val, typ, getProps);
             } catch (_) {}
         }
-        return invalidValue(typs, val);
+        return invalidValue(typs, val, key, parent);
     }
 
     function transformEnum(cases: string[], val: any): any {
         if (cases.indexOf(val) !== -1) return val;
-        return invalidValue(cases, val);
+        return invalidValue(cases.map(a => { return l(a); }), val, key, parent);
     }
 
     function transformArray(typ: any, val: any): any {
         // val must be an array with no invalid elements
-        if (!Array.isArray(val)) return invalidValue("array", val);
+        if (!Array.isArray(val)) return invalidValue(l("array"), val, key, parent);
         return val.map(el => transform(el, typ, getProps));
     }
 
@@ -759,24 +782,24 @@ function transform(val: any, typ: any, getProps: any, key: any = ''): any {
         }
         const d = new Date(val);
         if (isNaN(d.valueOf())) {
-            return invalidValue("Date", val);
+            return invalidValue(l("Date"), val, key, parent);
         }
         return d;
     }
 
     function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
         if (val === null || typeof val !== "object" || Array.isArray(val)) {
-            return invalidValue("object", val);
+            return invalidValue(l(ref || "object"), val, key, parent);
         }
         const result: any = {};
         Object.getOwnPropertyNames(props).forEach(key => {
             const prop = props[key];
             const v = Object.prototype.hasOwnProperty.call(val, key) ? val[key] : undefined;
-            result[prop.key] = transform(v, prop.typ, getProps, prop.key);
+            result[prop.key] = transform(v, prop.typ, getProps, key, ref);
         });
         Object.getOwnPropertyNames(val).forEach(key => {
             if (!Object.prototype.hasOwnProperty.call(props, key)) {
-                result[key] = transform(val[key], additional, getProps, key);
+                result[key] = transform(val[key], additional, getProps, key, ref);
             }
         });
         return result;
@@ -785,10 +808,12 @@ function transform(val: any, typ: any, getProps: any, key: any = ''): any {
     if (typ === "any") return val;
     if (typ === null) {
         if (val === null) return val;
-        return invalidValue(typ, val);
+        return invalidValue(typ, val, key, parent);
     }
-    if (typ === false) return invalidValue(typ, val);
+    if (typ === false) return invalidValue(typ, val, key, parent);
+    let ref = undefined;
     while (typeof typ === "object" && typ.ref !== undefined) {
+        ref = typ.ref;
         typ = typeMap[typ.ref];
     }
     if (Array.isArray(typ)) return transformEnum(typ, val);
@@ -796,7 +821,7 @@ function transform(val: any, typ: any, getProps: any, key: any = ''): any {
         return typ.hasOwnProperty("unionMembers") ? transformUnion(typ.unionMembers, val)
             : typ.hasOwnProperty("arrayItems")    ? transformArray(typ.arrayItems, val)
             : typ.hasOwnProperty("props")         ? transformObject(getProps(typ), typ.additional, val)
-            : invalidValue(typ, val);
+            : invalidValue(typ, val, key, parent);
     }
     // Numbers can be parsed by Date but shouldn't be.
     if (typ === Date && typeof val !== "number") return transformDate(val);
@@ -809,6 +834,10 @@ function cast<T>(val: any, typ: any): T {
 
 function uncast<T>(val: T, typ: any): any {
     return transform(val, typ, jsToJSONProps);
+}
+
+function l(typ: any) {
+    return { literal: typ };
 }
 
 function a(typ: any) {
@@ -958,6 +987,7 @@ const typeMap: any = {
         { json: "uncompressed", js: "uncompressed", typ: u(undefined, true) },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "version", js: "version", typ: u(undefined, "") },
+        { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },
