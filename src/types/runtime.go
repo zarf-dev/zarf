@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -11,7 +11,7 @@ type ZarfCommonOptions struct {
 	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
 }
 
-// ZarfDeployOptions tracks the user-defined preferences during a package deployment
+// ZarfDeployOptions tracks the user-defined preferences during a package deployment.
 type ZarfDeployOptions struct {
 	Insecure     bool              `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
@@ -47,25 +47,29 @@ type ZarfCreateOptions struct {
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 }
 
-// ZarfPartialPackageData contains info about a partial package
+// ZarfPartialPackageData contains info about a partial package.
 type ZarfPartialPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
 }
 
+// ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
 	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
-	Url         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
+	URL         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
 }
 
+// ConnectStrings is a map of connect names to connection information.
 type ConnectStrings map[string]ConnectString
 
+// ComponentSBOM contains information related to the files SBOM'ed from a component.
 type ComponentSBOM struct {
 	Files         []string
 	ComponentPath ComponentPaths
 }
 
+// ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
 type ComponentPaths struct {
 	Base           string
 	Files          string
@@ -76,6 +80,7 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
+// TempPaths is a struct that represents all of the subdirectories for a Zarf package.
 type TempPaths struct {
 	Base         string
 	InjectBinary string

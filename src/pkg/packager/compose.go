@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -40,7 +40,7 @@ func (p *Packager) composeComponents() error {
 	return nil
 }
 
-// getComposedComponent recursively retrieves a composed zarf component
+// getComposedComponent recursively retrieves a composed Zarf component
 // --------------------------------------------------------------------
 // For composed components, we build the tree of components starting at the root and adding children as we go;
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
@@ -53,7 +53,7 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 
-	// Keep track of the composed components import path to build nestedily composed components
+	// Keep track of the composed components import path to build nested composed components
 	pathAncestry := ""
 
 	// Get the component that we are trying to import
@@ -154,8 +154,8 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 		for fileIdx, file := range manifest.Files {
 			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(file, parent.Import.Path)
 		}
-		for kustomIdx, kustomization := range manifest.Kustomizations {
-			child.Manifests[manifestIdx].Kustomizations[kustomIdx] = p.getComposedFilePath(kustomization, parent.Import.Path)
+		for kustomizeIdx, kustomization := range manifest.Kustomizations {
+			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(kustomization, parent.Import.Path)
 		}
 	}
 
@@ -166,7 +166,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 	return child
 }
 
-// Sets Name, Default, Required and Description to the original components values
+// Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
 
@@ -217,7 +217,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 }
 
-// Reads the locally imported zarf.yaml
+// Reads the locally imported Zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
@@ -244,7 +244,7 @@ func (p *Packager) getComposedFilePath(originalPath string, pathPrefix string) s
 	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, pathPrefix)
 
 	// Return original if it is a remote file.
-	if utils.IsUrl(originalPath) {
+	if utils.IsURL(originalPath) {
 		return originalPath
 	}
 

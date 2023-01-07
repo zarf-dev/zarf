@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 // fork from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
@@ -33,7 +33,7 @@ func yamlFormat(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
 
-// ColorPrintYAML pretty prints a yaml file to the console
+// ColorPrintYAML pretty prints a yaml file to the console.
 func ColorPrintYAML(data any) {
 	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
@@ -79,7 +79,7 @@ func ColorPrintYAML(data any) {
 	pterm.Print(p.PrintTokens(tokens))
 }
 
-// ReadYaml reads a yaml file and unmarshals it into a given config
+// ReadYaml reads a yaml file and unmarshals it into a given config.
 func ReadYaml(path string, destConfig any) error {
 	message.Debugf("Loading zarf config %s", path)
 	file, err := os.ReadFile(path)
@@ -91,7 +91,7 @@ func ReadYaml(path string, destConfig any) error {
 	return goyaml.Unmarshal(file, destConfig)
 }
 
-// WriteYaml writes a given config to a yaml file on disk
+// WriteYaml writes a given config to a yaml file on disk.
 func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
 	content, err := goyaml.Marshal(srcConfig)
@@ -147,7 +147,7 @@ func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*st
 
 // SplitYAML splits a YAML file into unstructured objects. Returns list of all unstructured objects
 // found in the yaml. If an error occurs, returns objects that have been parsed so far too.
-// Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L286
+// Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L286.
 func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	var objs []*unstructured.Unstructured
 	ymls, err := splitYAMLToString(yamlData)
@@ -166,7 +166,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 
 // splitYAMLToString splits a YAML file into strings. Returns list of yamls
 // found in the yaml. If an error occurs, returns objects that have been parsed so far too.
-// Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L304
+// Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L304.
 func splitYAMLToString(yamlData []byte) ([]string, error) {
 	// Similar way to what kubectl does
 	// https://github.com/kubernetes/cli-runtime/blob/master/pkg/resource/visitor.go#L573-L600

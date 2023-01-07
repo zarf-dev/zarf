@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -30,7 +30,7 @@ func TestComponentScripts(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-scripts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Test for package create prepare artirfact
+	// Test for package create prepare artifact
 	require.FileExists(t, prepareArtifact)
 
 	// Test to ensure the deploy scripts are not executed

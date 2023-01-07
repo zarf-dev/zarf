@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -19,7 +19,7 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-// Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts
+// Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func (p *Packager) Remove(packageName string) error {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()

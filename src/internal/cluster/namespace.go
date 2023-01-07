@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// DeleteZarfNamespace deletes the zarf namespace from the connected cluster.
+// DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
 func (c *Cluster) DeleteZarfNamespace() {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()

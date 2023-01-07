@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 // removeLocalBranchRefs removes all refs that are local branches
-// It returns a slice of references deleted
+// It returns a slice of references deleted.
 func (g *Git) removeLocalBranchRefs() ([]*plumbing.Reference, error) {
 	return g.removeReferences(
 		func(ref *plumbing.Reference) bool {
@@ -24,7 +24,7 @@ func (g *Git) removeLocalBranchRefs() ([]*plumbing.Reference, error) {
 }
 
 // removeOnlineRemoteRefs removes all refs pointing to the online-upstream
-// It returns a slice of references deleted
+// It returns a slice of references deleted.
 func (g *Git) removeOnlineRemoteRefs() ([]*plumbing.Reference, error) {
 	return g.removeReferences(
 		func(ref *plumbing.Reference) bool {
@@ -34,7 +34,7 @@ func (g *Git) removeOnlineRemoteRefs() ([]*plumbing.Reference, error) {
 }
 
 // removeHeadCopies removes any refs that aren't HEAD but have the same hash
-// It returns a slice of references deleted
+// It returns a slice of references deleted.
 func (g *Git) removeHeadCopies() ([]*plumbing.Reference, error) {
 	message.Debugf("git.removeHeadCopies()")
 
@@ -59,7 +59,7 @@ func (g *Git) removeHeadCopies() ([]*plumbing.Reference, error) {
 
 // removeReferences removes references based on a provided callback
 // removeReferences does not allow you to delete HEAD
-// It returns a slice of references deleted
+// It returns a slice of references deleted.
 func (g *Git) removeReferences(shouldRemove func(*plumbing.Reference) bool) ([]*plumbing.Reference, error) {
 	message.Debugf("git.removeReferences()")
 	repo, err := git.PlainOpen(g.GitPath)
@@ -100,7 +100,7 @@ func (g *Git) removeReferences(shouldRemove func(*plumbing.Reference) bool) ([]*
 }
 
 // addRefs adds a provided arbitrary list of references to a repo
-// It is intended to be used with references returned by a Remove function
+// It is intended to be used with references returned by a Remove function.
 func (g *Git) addRefs(refs []*plumbing.Reference) error {
 	message.Debugf("git.addRefs()")
 	repo, err := git.PlainOpen(g.GitPath)
@@ -118,7 +118,7 @@ func (g *Git) addRefs(refs []*plumbing.Reference) error {
 	return nil
 }
 
-// deleteBranchIfExists ensures the provided branch name does not exist
+// deleteBranchIfExists ensures the provided branch name does not exist.
 func (g *Git) deleteBranchIfExists(branchName plumbing.ReferenceName) error {
 	message.Debugf("g.deleteBranchIfExists(%s)", branchName.String())
 

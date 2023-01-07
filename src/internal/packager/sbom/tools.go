@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package sbom contains tools for generating SBOMs
+// Package sbom contains tools for generating SBOMs.
 package sbom
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// WriteSBOMFiles writes the SBOM viewer files to the config.ZarfSBOMDir
+// WriteSBOMFiles writes the SBOM viewer files to the config.ZarfSBOMDir.
 func WriteSBOMFiles(sbomViewFiles []string) error {
 	// Check if we even have any SBOM files to process
 	if len(sbomViewFiles) == 0 {
@@ -50,7 +50,7 @@ func WriteSBOMFiles(sbomViewFiles []string) error {
 	return nil
 }
 
-// ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input
+// ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
 func ViewSBOMFiles(tmp types.TempPaths) {
 	sbomViewFiles, _ := filepath.Glob(filepath.Join(tmp.Sboms, "sbom-viewer-*"))
 
@@ -75,7 +75,7 @@ func ViewSBOMFiles(tmp types.TempPaths) {
 	}
 }
 
-// OutputSBOMFiles outputs the sbom files into a specified directory
+// OutputSBOMFiles outputs the sbom files into a specified directory.
 func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) error {
 	packagePath := filepath.Join(outputDir, packageName)
 
@@ -83,9 +83,5 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 		return err
 	}
 
-	if err := utils.CreatePathAndCopy(tmp.Sboms, packagePath); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
 }

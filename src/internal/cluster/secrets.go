@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -15,16 +15,20 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// DockerConfig contains the authentication information from the machine's docker config.
 type DockerConfig struct {
 	Auths DockerConfigEntry `json:"auths"`
 }
 
+// DockerConfigEntry contains a map of DockerConfigEntryWithAuth for a registry.
 type DockerConfigEntry map[string]DockerConfigEntryWithAuth
 
+// DockerConfigEntryWithAuth contains a docker config authentication string.
 type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
+// GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 
