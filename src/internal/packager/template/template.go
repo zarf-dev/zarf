@@ -64,12 +64,12 @@ func (values Values) GetRegistry() string {
 }
 
 // Apply renders the template and writes the result to the given path.
-func (values Values) Apply(component types.ZarfComponent, path string) {
+func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
 	message.Debugf("template.Apply(%#v, %s)", component, path)
 
-	if !values.Ready() {
-		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage
-		message.Fatalf(nil, "template.Apply() called before template.Generate()")
+	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
+	if !values.Ready() && !ignoreReady {
+		return fmt.Errorf("template.Apply() called before template.Generate()")
 	}
 
 	regInfo := values.config.State.RegistryInfo
@@ -133,4 +133,6 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 
 	message.Debugf("templateMap = %#v", templateMap)
 	utils.ReplaceTextTemplate(path, templateMap)
+
+	return nil
 }
