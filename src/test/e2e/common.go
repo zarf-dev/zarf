@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// ZarfE2ETest Struct holding common fields most of the tests will utilize
+// ZarfE2ETest Struct holding common fields most of the tests will utilize.
 type ZarfE2ETest struct {
 	zarfBinPath     string
 	arch            string
@@ -21,7 +21,7 @@ type ZarfE2ETest struct {
 	runClusterTests bool
 }
 
-// GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run
+// GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
 	var binaryName string
 	if runtime.GOOS == "linux" {
@@ -40,7 +40,7 @@ func GetCLIName() string {
 	return binaryName
 }
 
-// setup actions for each test
+// setup actions for each test.
 func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
@@ -51,7 +51,7 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	}
 }
 
-// setup actions for each test that requires a K8s cluster
+// setup actions for each test that requires a K8s cluster.
 func (e2e *ZarfE2ETest) setupWithCluster(t *testing.T) {
 	if !e2e.runClusterTests {
 		t.Skip("")
@@ -59,12 +59,12 @@ func (e2e *ZarfE2ETest) setupWithCluster(t *testing.T) {
 	e2e.setup(t)
 }
 
-// teardown actions for each test
+// teardown actions for each test.
 func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 	t.Log("Test teardown")
 }
 
-// execZarfCommand executes a Zarf command
+// execZarfCommand executes a Zarf command.
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
 	return utils.ExecCommandWithContext(context.TODO(), true, e2e.zarfBinPath, commandString...)
 }

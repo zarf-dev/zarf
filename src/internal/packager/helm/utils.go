@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contains operations for working with helm charts.
 package helm
 
 import (
@@ -20,7 +20,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
 
-// loadChartFromTarball returns a helm chart from a tarball
+// loadChartFromTarball returns a helm chart from a tarball.
 func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
 	sourceFile := StandardName(filepath.Join(h.BasePath, "charts"), h.Chart) + ".tgz"
@@ -41,7 +41,7 @@ func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 	return loadedChart, nil
 }
 
-// parseChartValues reads the context of the chart values into an interface if it exists
+// parseChartValues reads the context of the chart values into an interface if it exists.
 func (h *Helm) parseChartValues() (map[string]any, error) {
 	valueOpts := &values.Options{}
 

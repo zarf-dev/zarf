@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package utils provides generic helper functions.
 package utils
 
 import (
 	"testing"
 
-	test "github.com/defenseunicorns/zarf/src/test/mocks"
+	mocks "github.com/defenseunicorns/zarf/src/test/mocks"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCredentialParser(t *testing.T) {
-	credentialsFile := &test.MockReadCloser{
+	credentialsFile := &mocks.MockReadCloser{
 		MockData: []byte(
 			`https://wayne:password@github.com/
 bad line
@@ -53,14 +53,14 @@ http://google.com`,
 
 func TestNetRCParser(t *testing.T) {
 
-	netrcFile := &test.MockReadCloser{
+	netrcFile := &mocks.MockReadCloser{
 		MockData: []byte(
 			`# top of file comment
 machine github.com
 	login wayne
     password password
 
- machine zarf.dev login wayne password p@s#sword%20 
+ machine zarf.dev login wayne password p@s#sword%20
 
 macdef macro-name
 touch file
