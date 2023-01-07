@@ -363,6 +363,10 @@
           },
           "type": "array",
           "description": "List of symlinks to create during package deploy"
+        },
+        "canTemplate": {
+          "type": "boolean",
+          "description": "If true the file will be templated during package deploy to support variables"
         }
       },
       "additionalProperties": false,

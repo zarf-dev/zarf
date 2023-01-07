@@ -205,6 +205,10 @@ export interface ZarfContainerTarget {
 
 export interface ZarfFile {
     /**
+     * If true the file will be templated during package deploy to support variables
+     */
+    canTemplate?: boolean;
+    /**
      * Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
@@ -902,6 +906,7 @@ const typeMap: any = {
         { json: "selector", js: "selector", typ: "" },
     ], false),
     "ZarfFile": o([
+        { json: "canTemplate", js: "canTemplate", typ: u(undefined, true) },
         { json: "executable", js: "executable", typ: u(undefined, true) },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },

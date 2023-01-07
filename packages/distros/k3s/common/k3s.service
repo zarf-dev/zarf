@@ -25,4 +25,4 @@ RestartSec=5s
 ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service'
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
-ExecStart=/usr/sbin/k3s server --write-kubeconfig-mode=700 --write-kubeconfig /root/.kube/config --disable traefik
+ExecStart=/usr/sbin/k3s server --write-kubeconfig-mode=700 --write-kubeconfig /root/.kube/config --disable ###ZARF_VAR_K3S_DISABLE### ###ZARF_VAR_K3S_EXTRA_ARGS###

@@ -2,6 +2,14 @@ kind: ZarfInitConfig
 metadata:
   name: "distro-k3s"
 
+variables:
+  - name: K3S_DISABLE
+    description: "List of components to disable in K3s"
+    default: "traefik"
+
+  - name: K3S_EXTRA_ARGS
+    description: "Extra arguments to pass to K3s"
+
 components:
   - name: k3s
     only:
@@ -31,5 +39,6 @@ components:
       # The K3s systemd service definition
       - source: k3s.service
         target: /etc/systemd/system/k3s.service
+        canTemplate: true
         symlinks:
           - /etc/systemd/system/multi-user.target.wants/k3s.service

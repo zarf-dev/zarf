@@ -267,6 +267,14 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
+		// If the file is allowed to be templated, do so
+		if file.CanTemplate {
+			spinner.Updatef("Templating %s", file.Target)
+			if err := valueTemplate.Apply(component, file.Target, true); err != nil {
+				return fmt.Errorf("unable to template file %s: %w", file.Target, err)
+			}
+		}
+
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
 		err := copy.Copy(sourceFile, file.Target)
