@@ -39,6 +39,7 @@ func (b *Builder) createSBOMHTML(filename string, goTemplate string, jsonData []
 		List      template.JS
 		Data      template.JS
 		LibraryJS template.JS
+		CommonJS  template.JS
 		ViewerJS  template.JS
 		CompareJS template.JS
 	}{
@@ -47,6 +48,7 @@ func (b *Builder) createSBOMHTML(filename string, goTemplate string, jsonData []
 		List:      template.JS(b.jsonList),
 		Data:      template.JS(jsonData),
 		LibraryJS: b.loadFileJS("library.js"),
+		CommonJS:  b.loadFileJS("common.js"),
 		ViewerJS:  b.loadFileJS("viewer.js"),
 		CompareJS: b.loadFileJS("compare.js"),
 	}

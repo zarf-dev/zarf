@@ -1,112 +1,49 @@
-const sbomSelector = document.getElementById("sbom-selector")
-const distroInfo = document.getElementById("distro-info")
-const modal = document.getElementById("modal")
-const modalFader = document.getElementById("modal-fader")
-const modalTitle = document.getElementById("modal-title")
-const modalContent = document.getElementById("modal-content")
-const artifactsTable = document.createElement("table")
-
-document.body.appendChild(artifactsTable);
-
 function initSelector() {
-    window.location.href
+	const url = /sbom-viewer-(.*).html*$/gim.exec(window.location.href)[1];
 
-    const url = /sbom-viewer-(.*).html*$/gmi.exec(window.location.href)[1];
-
-    ZARF_SBOM_LIST.sort().forEach(item => {
-        let selected = (url === item) ? "selected" : "";
-        sbomSelector.add(new Option(item, item, selected, selected));
-    });
+	ZARF_SBOM_LIST.sort().forEach((item) => {
+		let selected = url === item ? 'selected' : '';
+		sbomSelector.add(new Option(item, item, selected, selected));
+	});
 }
 
 function initData() {
-    const payload = ZARF_SBOM_DATA;
+	const payload = ZARF_SBOM_DATA;
 
-    const transformedData = payload.artifacts.map(artifact => {
-        return [
-            artifact.type,
-            artifact.name,
-            artifact.version,
-            fileList(artifact.metadata),
-            (artifact.metadata && artifact.metadata.description) || "-",
-            ((artifact.metadata && artifact.metadata.maintainer) || "-").replace(/\u003c(.*)\u003e/, `&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>`),
-            (artifact.metadata && artifact.metadata.installedSize) || "-",
-        ];
-    });
+	const transformedData = payload.artifacts.map((artifact) => {
+		return [
+			artifact.type,
+			artifact.name,
+			artifact.version,
+			fileList(artifact.metadata),
+			(artifact.metadata && artifact.metadata.description) || '-',
+			((artifact.metadata && artifact.metadata.maintainer) || '-').replace(
+				/\u003c(.*)\u003e/,
+				mailtoMaintainerReplace
+			),
+			(artifact.metadata && artifact.metadata.installedSize) || '-'
+		];
+	});
 
-    const data = {
-        "headings": [
-            "Type",
-            "Name",
-            "Version",
-            "Files",
-            "Notes",
-            "Maintainer",
-            "Size",
-        ],
-        "data": transformedData,
-    };
+	const data = {
+		headings: ['Type', 'Name', 'Version', 'Files', 'Notes', 'Maintainer', 'Size'],
+		data: transformedData
+	};
 
-    if (window.dt) {
-        window.dt.destroy();
-    }
+	if (window.dt) {
+		window.dt.destroy();
+	}
 
-    distroInfo.innerHTML = payload.distro.prettyName || "No Base Image Detected";
+	distroInfo.innerHTML = payload.distro.prettyName || 'No Base Image Detected';
 
-    window.dt = new simpleDatatables.DataTable(artifactsTable, {
-        data,
-        perPage: 20,
-    });
-}
-
-function fileList(metadata) {
-    if (metadata) {
-        const list = (metadata.files || [])
-            .map(file => {
-                return file.path || "";
-            })
-            .filter(test => test);
-
-        if (list.length > 0) {
-            flatList = list.sort().join("<br>");
-            return `<a href="#" onClick="showModal('${metadata.package || metadata.name}','${flatList}')">${list.length} files</a>`;
-        }
-    }
-
-    return "-";
-}
-
-function choose(path) {
-    window.location.href = encodeURIComponent(`sbom-viewer-${path}.html`);
+	window.dt = new simpleDatatables.DataTable(artifactsTable, {
+		data,
+		perPage: 20
+	});
 }
 
 function compare() {
-    window.location.href = "compare.html";
-}
-
-function exportCSV() {
-    if (window.dt) {
-        window.dt.export({
-            type: "csv",
-            filename: `${sbomSelector.selectedOptions[0].value}`
-        });
-    } else {
-        showModal("Unable to Export", "No data in current table");
-    }
-}
-
-function showModal(title, list) {
-    modalTitle.innerText = `Files for ${title}`;
-    modalContent.innerHTML = list;
-    modalFader.className = "active";
-    modal.className = "active";
-}
-
-function hideModal() {
-    modalFader.className = "";
-    modal.className = "";
-    modalTitle.innerText = "";
-    modalContent.innerHTML = "";
+	window.location.href = 'compare.html';
 }
 
 initSelector();

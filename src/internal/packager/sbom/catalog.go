@@ -106,7 +106,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 		currImage++
 	}
 
-	if len(componentSBOMs) != 0 && len(tagToImage) != 0 {
+	if len(componentSBOMs) > 0 && len(tagToImage) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM compare tool")
 		}
@@ -159,7 +159,8 @@ func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image tag as the filename
-	sbomFile, err := b.createSBOMFile(fmt.Sprintf("%s.json", tag.String()))
+	filename := fmt.Sprintf("%s.json", tag.String())
+	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -224,8 +225,9 @@ func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component st
 		return nil, err
 	}
 
-	// Write the sbom to disk using the given name as the filename
-	sbomFile, err := b.createSBOMFile(fmt.Sprintf("%s%s.json", componentPrefix, component))
+	// Write the sbom to disk using the component prefix and name as the filename
+	filename := fmt.Sprintf("%s%s.json", componentPrefix, component)
+	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err
 	}

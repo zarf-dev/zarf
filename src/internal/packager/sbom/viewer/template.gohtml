@@ -12,7 +12,7 @@
     <script type="text/javascript">
         ZARF_SBOM_LIST = {{.List}};
 		ZARF_SBOM_DATA = {{.Data}};
-        {{.LibraryJS}};
+        {{.LibraryJS}}
     </script>
 </head>
 
@@ -263,13 +263,14 @@
     <div id="actions">
         <h2 id="distro-info"></h2>
         <div class="sbom-spacer"></div>
-        <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+        <button id="sbom-export" onclick="exportCSV(sbomSelector.selectedOptions[0].value)" class="sbom-button">
             Export CSV
         </button>
     </div>
 </body>
 
 <script type="text/javascript">
+    {{.CommonJS}}
     {{.ViewerJS}}
 </script>
 

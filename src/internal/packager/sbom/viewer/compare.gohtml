@@ -11,7 +11,7 @@
     </style>
     <script type="text/javascript">
         ZARF_SBOM_LIST = {{.List}};
-        {{.LibraryJS}};
+        {{.LibraryJS}}
     </script>
 </head>
 
@@ -277,7 +277,7 @@
         <div class="sbom-spacer"></div>
         <div>
             <h4>&nbsp;</h4>
-            <button id="sbom-export" onclick="exportCSV()" class="sbom-button">
+            <button id="sbom-export" onclick="exportCSV(getCompareName())" class="sbom-button">
                 Export CSV
             </button>
         </div>
@@ -285,6 +285,7 @@
 </body>
 
 <script type="text/javascript">
+    {{.CommonJS}}
     {{.CompareJS}}
 </script>
 
