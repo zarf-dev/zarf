@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contains operations for working with helm charts.
 package helm
 
 import (
@@ -11,6 +11,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 )
 
+// Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
 func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
@@ -59,6 +60,7 @@ func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
 	spinner.Success()
 }
 
+// RemoveChart removes a chart from the cluster.
 func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace
 	_ = h.createActionConfig(namespace, spinner)

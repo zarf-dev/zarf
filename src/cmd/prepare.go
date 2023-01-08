@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -45,7 +45,7 @@ var prepareTransformGitLinks = &cobra.Command{
 		// Perform git url transformation via regex
 		text := string(content)
 		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
-		processedText := gitCfg.MutateGitUrlsInText(text)
+		processedText := gitCfg.MutateGitURLsInText(text)
 
 		// Ask the user before this destructive action
 		confirm := false

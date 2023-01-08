@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -20,8 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Wait for the target pod(s) to come up and inject the data into them
-// todo:  this currently requires kubectl but we should have enough k8s work to make this native now
+// HandleDataInjection waits for the target pod(s) to come up and inject the data into them
+// todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
 func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
@@ -85,19 +85,20 @@ iterator:
 			if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				continue iterator
-			} else {
-				// Leave a marker in the target container for pods to track the sync action
-				cpPodExec := fmt.Sprintf("%s -C %s %s | %s -- %s",
-					tarExec,
-					componentPath.DataInjections,
-					config.GetDataInjectionMarker(),
-					kubectlExec,
-					untarExec,
-				)
-				if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
-					message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
-					continue iterator
-				}
+			}
+
+			// Leave a marker in the target container for pods to track the sync action
+			cpPodExec = fmt.Sprintf("%s -C %s %s | %s -- %s",
+				tarExec,
+				componentPath.DataInjections,
+				config.GetDataInjectionMarker(),
+				kubectlExec,
+				untarExec,
+			)
+
+			if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
+				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+				continue iterator
 			}
 		}
 
@@ -108,7 +109,7 @@ iterator:
 		}
 
 		// Block one final time to make sure at least one pod has come up and injected the data
-		// Using only the pod as the final seclector because we don't know what the container name will be
+		// Using only the pod as the final selector because we don't know what the container name will be
 		// Still using the init container filter to make sure we have the right running pod
 		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
 

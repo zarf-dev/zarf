@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package components provides api functions for managing zarf components
+// Package components provides api functions for managing Zarf components.
 package components
 
 import (
@@ -11,8 +11,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 )
 
-// ListDeployedPackages writes a list of packages that have been deployed to the connected cluster.
-func ListDeployingComponents(w http.ResponseWriter, r *http.Request) {
+// ListDeployingComponents writes a list of packages that have been deployed to the connected cluster.
+func ListDeployingComponents(w http.ResponseWriter, _ *http.Request) {
 	deployingPackages := config.GetDeployingComponents()
 	common.WriteJSONResponse(w, deployingPackages, http.StatusOK)
 }

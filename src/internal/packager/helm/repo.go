@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contains operations for working with helm charts.
 package helm
 
 import (
@@ -19,7 +19,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
-// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os
+// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
 func (h *Helm) CreateChartFromLocalFiles(destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
@@ -44,7 +44,7 @@ func (h *Helm) CreateChartFromLocalFiles(destination string) string {
 	return path
 }
 
-// DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model
+// DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model.
 func (h *Helm) DownloadChartFromGit(destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
@@ -54,7 +54,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.Url)
+	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	defer os.RemoveAll(tempPath)
 	gitCfg.GitPath = tempPath
 
@@ -80,9 +80,9 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	return name
 }
 
-// DownloadPublishedChart loads a specific chart version from a remote repo
+// DownloadPublishedChart loads a specific chart version from a remote repo.
 func (h *Helm) DownloadPublishedChart(destination string) {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.Url)
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()
 
 	// Set up the helm pull config
@@ -99,7 +99,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	// @todo: process OCI-based charts
 
 	// Perform simple chart download
-	chartURL, err := repo.FindChartInRepoURL(h.Chart.Url, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+	chartURL, err := repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to pull the helm chart")
 	}

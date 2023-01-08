@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -45,7 +45,7 @@ var destroyCmd = &cobra.Command{
 
 		// If Zarf deployed the cluster, burn it all down
 		if state.ZarfAppliance || (state.Distro == "") {
-			// Check if we have the scripts to destory everything
+			// Check if we have the scripts to destroy everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
 				message.Fatalf(lang.CmdDestroyErrNoScriptPath, config.ZarfCleanupScriptsPath)

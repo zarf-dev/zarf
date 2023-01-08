@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package sbom contains tools for generating SBOMs
+// Package sbom contains tools for generating SBOMs.
 package sbom
 
 import (
@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
+// Builder is the main struct used to build SBOM artifacts.
 type Builder struct {
 	spinner    *message.Spinner
 	cachePath  string
@@ -42,6 +43,7 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 var componentPrefix = "zarf-component-"
 
+// Catalog catalogs the given components and images to create an SBOM.
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image, imagesPath, sbomPath string) {
 	imageCount := len(tagToImage)
 	componentCount := len(componentSBOMs)
@@ -108,7 +110,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 }
 
 // createImageSBOM uses syft to generate SBOM for an image,
-// some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go
+// some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
 func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	// Get the image
 	tarballImg, err := tarball.ImageFromPath(b.imagesPath, &tag)
@@ -165,7 +167,7 @@ func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	return jsonData, nil
 }
 
-// createPathSBOM uses syft to generate SBOM for a filepath
+// createPathSBOM uses syft to generate SBOM for a filepath.
 func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component string) ([]byte, error) {
 	catalog := pkg.NewCatalog()
 	relationships := []artifact.Relationship{}

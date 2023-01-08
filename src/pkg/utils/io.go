@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -19,23 +19,25 @@ import (
 	"github.com/otiai10/copy"
 )
 
-const dotCharacter = 46
+const (
+	dotCharacter  = 46
+	tmpPathPrefix = "zarf-"
+)
 
-var TempPathPrefix = "zarf-"
-
+// MakeTempDir creates a temp directory with the given prefix.
 func MakeTempDir(tmpDir string) (string, error) {
-	tmp, err := os.MkdirTemp(tmpDir, TempPathPrefix)
+	tmp, err := os.MkdirTemp(tmpDir, tmpPathPrefix)
 	message.Debugf("Using temp path: '%s'", tmp)
 	return tmp, err
 }
 
-// VerifyBinary returns true if binary is available
+// VerifyBinary returns true if binary is available.
 func VerifyBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
 	return err == nil
 }
 
-// CreateDirectory creates a directory for the given path and file mode
+// CreateDirectory creates a directory for the given path and file mode.
 func CreateDirectory(path string, mode os.FileMode) error {
 	if InvalidPath(path) {
 		return os.MkdirAll(path, mode)
@@ -43,12 +45,13 @@ func CreateDirectory(path string, mode os.FileMode) error {
 	return nil
 }
 
-// InvalidPath checks if the given path exists
+// InvalidPath checks if the given path exists.
 func InvalidPath(path string) bool {
 	_, err := os.Stat(path)
 	return os.IsNotExist(err)
 }
 
+// ListDirectories returns a list of directories in the given directory.
 func ListDirectories(directory string) ([]string, error) {
 	var directories []string
 	paths, err := os.ReadDir(directory)
@@ -65,6 +68,7 @@ func ListDirectories(directory string) ([]string, error) {
 	return directories, nil
 }
 
+// WriteFile writes the given data to the given path.
 func WriteFile(path string, data []byte) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -85,7 +89,7 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
-// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place
+// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
 func ReplaceTextTemplate(path string, mappings map[string]string) {
 	text, err := os.ReadFile(path)
 	if err != nil {
@@ -101,7 +105,7 @@ func ReplaceTextTemplate(path string, mappings map[string]string) {
 	}
 }
 
-// RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths
+// RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
 func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		// Skip hidden directories
@@ -129,24 +133,22 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 	return files, err
 }
 
+// CreateFilePath creates the parent directory for the given file path.
 func CreateFilePath(destination string) error {
 	parentDest := path.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
+// CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
 func CreatePathAndCopy(source string, destination string) error {
 	if err := CreateFilePath(destination); err != nil {
 		return err
 	}
 
-	if err := copy.Copy(source, destination); err != nil {
-		return err
-	}
-
-	return nil
+	return copy.Copy(source, destination)
 }
 
-// GetFinalExecutablePath returns the absolute path to the zarf executable, following any symlinks along the way
+// GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.
 func GetFinalExecutablePath() (string, error) {
 	message.Debug("utils.GetExecutablePath()")
 
@@ -160,7 +162,7 @@ func GetFinalExecutablePath() (string, error) {
 	return linkedPath, err
 }
 
-// SplitFile splits a file into multiple parts by the given size
+// SplitFile splits a file into multiple parts by the given size.
 func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum string, err error) {
 	var file []byte
 

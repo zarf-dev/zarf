@@ -18,7 +18,7 @@ url = 'git.url: 7c63c1b9'
 
 [init.registry]
 nodeport = 186282
-pull_password = 'regisry.pull_password: b8152e38'
+pull_password = 'registry.pull_password: b8152e38'
 pull_username = 'registry.pull_username: d0961a97'
 push_password = 'registry.push_password: 8f58ca41'
 push_username = 'registry.push_username: 7aab3f6f'

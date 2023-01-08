@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -24,7 +24,7 @@ func TestLogging(t *testing.T) {
 	defer tunnel.Close()
 
 	// Make sure Grafana comes up cleanly
-	resp, err := http.Get(tunnel.HttpEndpoint())
+	resp, err := http.Get(tunnel.HTTPEndpoint())
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 

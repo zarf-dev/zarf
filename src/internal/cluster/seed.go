@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains zarf-specific cluster management functions
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.ZarfInitOptions) error {
 	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
 
@@ -119,6 +120,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 	return nil
 }
 
+// PostSeedRegistry handles cleanup once the seed registry is up.
 func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	message.Debugf("cluster.PostSeedRegistry(%#v)", tempPath)
 
@@ -134,11 +136,7 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	}
 
 	// Remove the injector service
-	if err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector"); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
@@ -179,7 +177,7 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	return containerRegistry
 }
 
-// Fill in empty GitServerInfo values with the defaults
+// Fill in empty GitServerInfo values with the defaults.
 func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
 	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {

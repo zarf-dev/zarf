@@ -18,7 +18,7 @@ func GetCryptoHash(path string, hashName crypto.Hash) (string, error) {
 	var data io.ReadCloser
 	var err error
 
-	if IsUrl(path) {
+	if IsURL(path) {
 		// Handle download from URL
 		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
 		data = Fetch(path)
