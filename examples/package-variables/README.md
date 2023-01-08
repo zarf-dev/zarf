@@ -6,16 +6,7 @@ With this templating feature, you can define values in the zarf.yaml file withou
 
 This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your zarf.yaml file.
 
-Regular files can also be templated using the `canTemplate` value of a file as seen in this example and listed below:
-
-```yaml
-- name: file-template-variable-example
-  files:
-    - source: simple-terraform.tf
-      target: modified-terraform.tf
-      # This file will be templated during zarf package deploy
-      canTemplate: true
-```
+Text files are also templated during `zarf package deploy` so you can use these variables in any text file that you want to be templated.
 
 :::note
 Because files can be deployed without a Kubernetes cluster, some built-in variables such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in variables, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `manifests`, `dataInjections`.

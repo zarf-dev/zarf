@@ -858,22 +858,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_files_items_canTemplate"></a>canTemplate</strong>
-
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** If true the file will be templated during package deploy to support variables
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
 </blockquote>
 </details>
 

@@ -72,7 +72,6 @@ type ZarfFile struct {
 	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable  bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
-	CanTemplate bool     `json:"canTemplate,omitempty" jsonschema:"description=If true the file will be templated during package deploy to support variables"`
 }
 
 // ZarfChart defines a helm chart to be deployed.

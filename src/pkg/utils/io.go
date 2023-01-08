@@ -8,12 +8,15 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/otiai10/copy"
@@ -190,4 +193,27 @@ func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum stri
 	}
 
 	return chunks, sha256sum, nil
+}
+
+// IsTextFile returns true if the given file is a text file.
+func IsTextFile(path string) (bool, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close() // Make sure to close the file when we're done
+
+	// Read the first 512 bytes of the file
+	data := make([]byte, 512)
+	n, err := f.Read(data)
+	if err != nil && err != io.EOF {
+		return false, err
+	}
+
+	// Use http.DetectContentType to determine the MIME type of the file
+	mimeType := http.DetectContentType(data[:n])
+
+	// Check if the MIME type indicates that the file is text
+	return strings.HasPrefix(mimeType, "text/"), nil
 }

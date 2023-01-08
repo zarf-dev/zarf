@@ -267,8 +267,14 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
-		// If the file is allowed to be templated, do so
-		if file.CanTemplate {
+		// Check if the file looks like a text file
+		isText, err := utils.IsTextFile(sourceFile)
+		if err != nil {
+			message.Debugf("unable to determine if file %s is a text file: %s", sourceFile, err)
+		}
+
+		// If the file is a text file, template it
+		if isText {
 			spinner.Updatef("Templating %s", file.Target)
 			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
 				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
@@ -277,7 +283,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := copy.Copy(sourceFile, file.Target)
+		err = copy.Copy(sourceFile, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
 		}

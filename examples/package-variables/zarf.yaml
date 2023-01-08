@@ -38,5 +38,3 @@ components:
     files:
       - source: simple-terraform.tf
         target: modified-terraform.tf
-        # This file will be templated during zarf package deploy
-        canTemplate: true
