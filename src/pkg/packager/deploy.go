@@ -270,8 +270,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// If the file is allowed to be templated, do so
 		if file.CanTemplate {
 			spinner.Updatef("Templating %s", file.Target)
-			if err := valueTemplate.Apply(component, file.Target, true); err != nil {
-				return fmt.Errorf("unable to template file %s: %w", file.Target, err)
+			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
+				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
 			}
 		}
 
