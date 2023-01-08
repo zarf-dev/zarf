@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package // Package types contains all the types used by Zarf.
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.

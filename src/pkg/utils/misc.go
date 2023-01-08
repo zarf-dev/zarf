@@ -48,7 +48,7 @@ func Find[T any](ss []T, test func(T) bool) (r T) {
 	return r
 }
 
-// Removes the given element from the slice that matches the test
+// RemoveMatches removes the given element from the slice that matches the test
 func RemoveMatches[T any](ss []T, test func(T) bool) (r []T) {
 	for _, s := range ss {
 		if !test(s) {

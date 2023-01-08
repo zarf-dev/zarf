@@ -16,32 +16,36 @@ import (
 	"sync"
 )
 
-// Change terminal colors
+// Change terminal colors.
 const colorReset = "\x1b[0m"
 const colorGreen = "\x1b[32;1m"
 const colorCyan = "\x1b[36;1m"
 const colorWhite = "\x1b[37;1m"
 
+// Config is a struct for configuring the Cmd function.
 type Config struct {
 	Print bool
 	Dir   string
 	Env   []string
 }
 
+// PrintCfg is a helper function for returning a Config struct with Print set to true.
 func PrintCfg() Config {
 	return Config{Print: true}
 }
 
+// Cmd executes a given command with given config.
 func Cmd(command string, args ...string) (string, string, error) {
 	return CmdWithContext(context.TODO(), Config{}, command, args...)
 }
 
+// CmdWithPrint executes a given command with given config and prints the command.
 func CmdWithPrint(command string, args ...string) error {
 	_, _, err := CmdWithContext(context.TODO(), PrintCfg(), command, args...)
 	return err
 }
 
-// CmdWithContext executes a given command with given config
+// CmdWithContext executes a given command with given config.
 func CmdWithContext(ctx context.Context, config Config, command string, args ...string) (string, string, error) {
 	if command == "" {
 		return "", "", errors.New("command is required")
@@ -100,6 +104,7 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	return stdoutBuf.String(), stderrBuf.String(), nil
 }
 
+// LaunchURL opens a URL in the default browser.
 func LaunchURL(url string) error {
 	switch runtime.GOOS {
 	case "linux":
