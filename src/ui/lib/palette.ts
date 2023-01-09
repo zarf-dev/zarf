@@ -13,7 +13,7 @@ export const ZarfPalettes: Palettes = {
 		on: {
 			primary: 'black',
 			secondary: 'white',
-			surface: '#ffffff',
+			surface: 'white',
 			success: 'white',
 			warning: 'white',
 			info: 'white',
@@ -22,11 +22,11 @@ export const ZarfPalettes: Palettes = {
 		text: {
 			primary: {
 				onDark: 'white',
-				onLight: 'rgb(0,0,0, 0.87)',
+				onLight: 'rgb(0, 0, 0, 0.87)',
 				onBackground: 'rgb(255, 255, 255, 0.87)'
 			},
 			secondary: {
-				onLight: 'rgb(0,0,0, 0.54)',
+				onLight: 'rgb(0, 0, 0, 0.6)',
 				onDark: 'rgba(255, 255, 255, 0.7)',
 				onBackground: 'rgba(255, 255, 255, 0.7)'
 			},
@@ -47,16 +47,23 @@ export const ZarfPalettes: Palettes = {
 			}
 		}
 	},
+	// custom dark + light palettes
 	dark: {
 		background: '#0a0e2e',
-		onBackground: '#ffffff'
+		onBackground: '#ffffff',
+		primary: '#00acac'
 	},
+	// source: figma
 	light: {
-		background: '#ffffff',
-		surface: '#ffffff',
+		primary: '#4adede',
+		secondary: '#787ff6',
+		background: '#f5f5f5',
+		surface: 'white',
 		on: {
 			background: 'black',
-			surface: 'black'
+			surface: 'black',
+			secondary: 'white',
+			primary: '#171717'
 		}
 	}
 };
