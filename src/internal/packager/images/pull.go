@@ -139,7 +139,7 @@ func pullImage(src string, insecure bool) (v1.Image, error) {
 		message.Debugf("unable to parse the image reference, this might have impacts on pulling from the local daemon: %s", err.Error())
 	}
 	img, err = daemon.Image(reference, daemon.WithContext(context.Background()))
-	if err != nil {
+	if err == nil {
 		return img, err
 	}
 
