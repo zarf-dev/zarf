@@ -193,6 +193,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 	displayComponent.Description = ""
 	utils.ColorPrintYAML(displayComponent)
 	if component.Description != "" {
+		pterm.Println()
 		message.Question(component.Description)
 	}
 
