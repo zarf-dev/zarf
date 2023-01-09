@@ -31,13 +31,13 @@
 		"material-symbols": "0.4.2",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
-		"yaml": "2.2.0"
+		"yaml": "2.2.1"
 	},
 	"devDependencies": {
 		"@playwright/test": "1.29.1",
-		"@sveltejs/adapter-static": "1.0.0",
-		"@sveltejs/kit": "1.0.1",
-		"@sveltejs/package": "1.0.1",
+		"@sveltejs/adapter-static": "1.0.1",
+		"@sveltejs/kit": "1.0.8",
+		"@sveltejs/package": "1.0.2",
 		"@testing-library/svelte": "3.2.2",
 		"@tsconfig/svelte": "3.0.0",
 		"@types/prismjs": "1.26.0",
@@ -49,7 +49,7 @@
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
 		"playwright": "1.29.1",
-		"prettier": "2.8.1",
+		"prettier": "2.8.2",
 		"prettier-plugin-svelte": "2.9.0",
 		"quicktype": "^16.0.14",
 		"sass": "1.57.1",
@@ -58,6 +58,6 @@
 		"svelte-preprocess": "5.0.0",
 		"tslib": "2.4.1",
 		"typescript": "4.9.4",
-		"vite": "4.0.3"
+		"vite": "4.0.4"
 	}
 }

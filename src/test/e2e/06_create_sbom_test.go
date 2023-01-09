@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -50,9 +54,9 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	// Test that the init package generates the SBOMs we expect (images + component files)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-gitea_gitea_1.17.3.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-gitea_gitea_1.17.4.html"))
 	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "gitea_gitea_1.17.3.json"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "gitea_gitea_1.17.4.json"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.NoError(t, err)

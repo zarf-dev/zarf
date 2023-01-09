@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
+// PushRepo pushes a git repository from the local path to the configured git server.
 func (g *Git) PushRepo(localPath string) error {
 	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
 	defer spinner.Stop()
@@ -43,8 +44,8 @@ func (g *Git) PushRepo(localPath string) error {
 			message.Warn("unable to get the information needed to add the read-only user to the repo")
 			return err
 		}
-		remoteUrl := remote.Config().URLs[0]
-		repoName, err := g.TransformURLtoRepoName(remoteUrl)
+		remoteURL := remote.Config().URLs[0]
+		repoName, err := g.TransformURLtoRepoName(remoteURL)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
@@ -74,8 +75,8 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 		return nil, fmt.Errorf("unable to find the git remote: %w", err)
 	}
 
-	remoteUrl := remote.Config().URLs[0]
-	targetUrl, err := g.transformURL(remoteUrl)
+	remoteURL := remote.Config().URLs[0]
+	targetURL, err := g.transformURL(remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
@@ -85,7 +86,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
-		URLs: []string{targetUrl},
+		URLs: []string{targetURL},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create offline remote: %w", err)
