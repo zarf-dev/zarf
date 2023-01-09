@@ -5,16 +5,14 @@ In this walkthrough, we are going to deploy a fun application onto your cluster.
 ## Walkthrough Prerequisites
 
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
-1. A Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))
+2. Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
+3. A Kubernetes cluster initialized by Zarf: ([Initializing a Cluster](./1-initializing-a-k8s-cluster.md))
+4. The [game package we created](./0-using-zarf-package-create.md).
 
 ## Deploying The Games
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down
-cd examples/game         # Enter the games directory, this is where the zarf.yaml for the game package is located
-
-zarf package create . --confirm    # Create the games package
 
 zarf package deploy       # Deploy the games package
                           # NOTE: Since we are not providing the path to the package as an argument, we will enter that when prompted
@@ -40,7 +38,7 @@ As we have seen a few times now, we are going to be prompted with a confirmation
 
 ### Connecting to the Games
 
-When the games package finishes deploying, you should get an output that lists a couple of new commands that you can use to connect to the games. These new commands were defined by the creators of the games package to make it easier to access the games. By typing the new command, your browser should automatically open up and connect into the application we just deployed into the cluster.
+When the games package finishes deploying, you should get an output that lists a couple of new commands that you can use to connect to the games. These new commands were defined by the creators of the games package to make it easier to access the games. By typing the new command, your browser should automatically open up and connect to the application we just deployed into the cluster.
 ![Connecting to the Games](../.images/walkthroughs/game_connect_commands.png)
 
 <br />
