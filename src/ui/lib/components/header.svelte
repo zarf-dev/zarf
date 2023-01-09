@@ -38,8 +38,7 @@
 		display: flex;
 		align-items: center;
 		background-color: #0d133d;
-		// palette.shared.text.secondary.onDark
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--mdc-theme-text-secondary-on-dark);
 		padding: 0.5rem 1rem;
 		justify-content: space-between;
 	}
