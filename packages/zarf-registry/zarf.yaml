@@ -30,6 +30,9 @@ variables:
 
 components:
   - name: zarf-seed-registry
+    description: |
+      Spins up a temporary docker registry and provides containers into the cluster to seed the long-lived registry. 
+      Removed and destroyed after the registry is booted.
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry
@@ -41,6 +44,9 @@ components:
           - registry-values-seed.yaml
 
   - name: zarf-registry
+    description: |
+      Deploys Docker registry that permanently lives in the cluster. 
+      Stores and serves container images for future zarf components.
     manifests:
       - name: registry-connect
         namespace: zarf
