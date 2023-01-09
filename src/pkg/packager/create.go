@@ -59,26 +59,29 @@ func (p *Packager) Create(baseDir string) error {
 
 	indexesToInsertFluxComponent := []int{}
 
-	// do bigbang image/repo discovery
-	for i, c := range p.cfg.Pkg.Components {
-		if c.BigBang.Version != "" {
-			if !c.BigBang.SkipFlux {
+	// If the component has a BigBang entry then mutate the component to be a BigBang component.
+	// Additionally if the BigBang entry requires flux then save the indexes of where to insert flux.
+	for i, baseComponent := range p.cfg.Pkg.Components {
+		if baseComponent.BigBang.Version != "" {
+			if !baseComponent.BigBang.SkipFlux {
 				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
 			}
-			c2, err := bigbang.MutateBigbangComponent(c)
+			mutatedComponent, err := bigbang.MutateBigbangComponent(baseComponent)
 			if err != nil {
 				return err
 			}
-			p.cfg.Pkg.Components[i] = c2
+			p.cfg.Pkg.Components[i] = mutatedComponent
 		}
 	}
 
 	for i, componentIndex := range indexesToInsertFluxComponent {
-		// Get index of where to insert keeping in mind how many times we've inserted into the slice
-		message.Infof("Index: %d", i)
+		// Get index of where to insert keeping in mind how many times we've inserted into the slice.
 		computedIndex := i + componentIndex
 		bbComponent := p.cfg.Pkg.Components[computedIndex]
-		fluxComponent := bigbang.CreateFluxComponent(bbComponent, i + 1)
+		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent, i + 1)
+		if err != nil {
+			return fmt.Errorf("unable to create flux component: %w", err)
+		}
 		p.cfg.Pkg.Components = utils.Insert(p.cfg.Pkg.Components, computedIndex, fluxComponent)
 	}
 
@@ -247,9 +250,6 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-
-	b, _ := json.MarshalIndent(component, "", "\t")
-	fmt.Printf("Component:\n%s\n", string(b))
 
 	// Create the component directory.
 	componentPath, err := p.createComponentPaths(component)

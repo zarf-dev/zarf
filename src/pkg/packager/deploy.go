@@ -109,7 +109,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		config.SetDeployingComponents(deployedComponents)
 	}
 
-	// config.ClearDeployingComponents()
+	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 

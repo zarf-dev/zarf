@@ -40,10 +40,6 @@ type InstalledChart struct {
 	ChartName string `json:"chartName"`
 }
 
-type InstalledBigBang struct {
-	//not sure yet
-}
-
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
 type GitServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
