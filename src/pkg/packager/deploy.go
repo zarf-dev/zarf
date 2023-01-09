@@ -186,7 +186,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
-	hasBigBang := component.BigBang.Version != ""
 
 	// Run the 'before' scripts and move files before we do anything else
 	if err = p.runComponentScripts(component.Scripts.Before, component.Scripts); err != nil {
@@ -197,7 +196,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasBigBang) {
+	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
@@ -480,7 +479,6 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 	return installedCharts, nil
 }
-
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 	pterm.Println()

@@ -69,7 +69,7 @@ func MutateBigbangComponent(component types.ZarfComponent) (types.ZarfComponent,
 	chart := types.ZarfChart{
 		Name:        "bigbang",
 		Namespace:   "bigbang",
-		Url:         repos[0],
+		URL:         repos[0],
 		Version:     component.BigBang.Version,
 		ValuesFiles: component.BigBang.ValuesFrom,
 		GitPath:     "./chart",
