@@ -11,7 +11,7 @@ In this walkthrough, we are going to deploy a fun application onto your cluster.
 
 ## Deploying The Games
 
-```bash
+``` bash
 cd zarf                   # Enter the zarf repository that you have cloned down
 
 zarf package deploy       # Deploy the games package
@@ -43,17 +43,17 @@ When the games package finishes deploying, you should get an output that lists a
 
 <br />
 
-```bash
+``` bash
 zarf connect games
 ```
 
 ![Connected to the Games](../.images/walkthroughs/games_connected.png)
 
-:::note
+::: note
 If your browser doesn't automatically open up, you can manually go to your browser and copy the IP address that the command printed out into the URL bar.
 :::
 
-:::note
+::: note
 The `zarf connect games` will continue running in the background until you close the connection by clicking onto your terminal and pressing the `control + c` keys on your keyboard at the same time.
 :::
 
