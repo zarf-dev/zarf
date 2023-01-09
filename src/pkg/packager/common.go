@@ -203,9 +203,8 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
-	// If SBOM files exist, temporary place them in the deploy directory
-	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-	if err := sbom.WriteSBOMFiles(p.cfg.SBOMViewFiles); err != nil {
+	// If SBOM files exist, temporarily place them in the deploy directory
+	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
