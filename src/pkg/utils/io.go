@@ -93,7 +93,7 @@ func WriteFile(path string, data []byte) error {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
-func ReplaceTextTemplate(path string, mappings map[string]string) {
+func ReplaceTextTemplate(path string, mappings map[string]string, deprecations map[string]string) {
 	text, err := os.ReadFile(path)
 	if err != nil {
 		message.Fatalf(err, "Unable to load %s", path)
@@ -101,6 +101,12 @@ func ReplaceTextTemplate(path string, mappings map[string]string) {
 
 	for template, value := range mappings {
 		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
+	}
+
+	for old, new := range deprecations {
+		if bytes.Contains(text, []byte(old)) {
+			message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", old, new)
+		}
 	}
 
 	if err = os.WriteFile(path, text, 0600); err != nil {

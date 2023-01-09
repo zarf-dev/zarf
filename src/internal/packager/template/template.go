@@ -75,6 +75,12 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
+	depMarkerOld := "DATA_INJECTON_MARKER"
+	depMarkerNew := "DATA_INJECTION_MARKER"
+	deprecations := map[string]string{
+		depMarkerOld: depMarkerNew,
+	}
+
 	builtinMap := map[string]string{
 		"STORAGE_CLASS": values.config.State.StorageClass,
 
@@ -93,8 +99,8 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	// Include the data injection marker template if the component has data injections
 	if len(component.DataInjections) > 0 {
 		// Preserve existing misspelling for backwards compatibility
-		builtinMap["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
-		builtinMap["DATA_INJECTION_MARKER"] = config.GetDataInjectionMarker()
+		builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
+		builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
 	}
 
 	// Don't template component-specific variables for every component
@@ -132,7 +138,7 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	}
 
 	message.Debugf("templateMap = %#v", templateMap)
-	utils.ReplaceTextTemplate(path, templateMap)
+	utils.ReplaceTextTemplate(path, templateMap, deprecations)
 
 	return nil
 }
