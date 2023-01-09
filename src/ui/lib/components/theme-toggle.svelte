@@ -20,4 +20,5 @@
 	toggleable
 	toggled={$themeStore === 'dark'}
 	iconClass="material-symbols-outlined"
+    toggledIconClass="material-symbols-outlined"
 />

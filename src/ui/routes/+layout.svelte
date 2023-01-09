@@ -28,7 +28,6 @@
 	getClusterSummary();
 
 	$: theme = $themeStore;
-	$: console.log(theme)
 </script>
 
 <Header />
