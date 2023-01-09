@@ -15,8 +15,8 @@
 
 <IconButton
 	on:click={toggle}
-	iconContent="light_mode"
-	toggledIconContent="dark_mode"
+	iconContent="dark_mode"
+	toggledIconContent="light_mode"
 	toggleable
 	toggled={$themeStore === 'dark'}
 	iconClass="material-symbols-outlined"
