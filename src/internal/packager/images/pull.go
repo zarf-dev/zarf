@@ -5,6 +5,7 @@
 package images
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -23,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
@@ -52,23 +54,11 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
-		var img v1.Image
-		var err error
 
-		// Check if the image provided is a path to a local tarball
-		if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
-			img, err = crane.Load(src, config.GetCraneOptions(i.Insecure)...)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load container image at path %s: %w", src, err)
-			}
-		} else {
-			// Pull the image from the internet
-			img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
-			if err != nil {
-				return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
-			}
+		img, err := pullImage(src, i.Insecure)
+		if err != nil {
+			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
-
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
@@ -129,6 +119,33 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	}
 
 	return tagToImage, nil
+}
+
+// pullImage returns a v1.Image either by loading a local tarball, the pulling from the local daemon, or the wider internet
+func pullImage(src string, insecure bool) (v1.Image, error) {
+	var img v1.Image
+	var err error
+
+	// Load image tarballs from the local filesystem
+	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+		img, err = crane.Load(src, config.GetCraneOptions(true)...)
+		return img, err
+	}
+
+	// Attempt to pull the image from the local daemon
+	reference, err := name.ParseReference(src)
+	if err != nil {
+		// log this error but don't return the error since we can still try pulling from the wider internet
+		message.Debugf("unable to parse the image reference, this might have impacts on pulling from the local daemon: %s", err.Error())
+	}
+	img, err = daemon.Image(reference, daemon.WithContext(context.Background()))
+	if err != nil {
+		return img, err
+	}
+
+	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
+	img, err = crane.Pull(src, config.GetCraneOptions(insecure)...)
+	return img, err
 }
 
 // FormatCraneOCILayout ensures that all images are in the OCI format.
