@@ -1,13 +1,12 @@
-# Deploying Doom
+# Deploying Packages
 
-In this walkthrough, we are going to deploy a fun application onto your cluster. In some of the previous walkthroughs, we have figured out how to [create a package](./0-using-zarf-package-create.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
-
+In this walkthrough, we are going to deploy a fun application onto your cluster. In previous walkthroughs, we learned how to [create a package](./0-using-zarf-package-create.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
 
 ## Walkthrough Prerequisites
+
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
 1. A Kubernetes cluster that has been initialized by Zarf: ([Initializing a Cluster Instructions](./1-initializing-a-k8s-cluster.md))
-
 
 ## Deploying The Games
 
@@ -26,6 +25,7 @@ zarf package deploy       # Deploy the games package
 <br />
 
 ### Selecting the Games Package
+
 Since we did not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. There is a useful tab-suggestions feature that makes selecting between different packages in your directories easier.
 
 ![Package Deploy Selection Tab](../.images/walkthroughs/package_deploy_tab.png)
@@ -39,6 +39,7 @@ As we have seen a few times now, we are going to be prompted with a confirmation
 <br />
 
 ### Connecting to the Games
+
 When the games package finishes deploying, you should get an output that lists a couple of new commands that you can use to connect to the games. These new commands were defined by the creators of the games package to make it easier to access the games. By typing the new command, your browser should automatically open up and connect into the application we just deployed into the cluster.
 ![Connecting to the Games](../.images/walkthroughs/game_connect_commands.png)
 
@@ -47,6 +48,7 @@ When the games package finishes deploying, you should get an output that lists a
 ```bash
 zarf connect games
 ```
+
 ![Connected to the Games](../.images/walkthroughs/games_connected.png)
 
 :::note
@@ -60,6 +62,8 @@ The `zarf connect games` will continue running in the background until you close
 <br />
 
 ## Credits
+
 :sparkles: Special thanks to these fine references! :sparkles:
-- https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/
-- https://earthly.dev/blog/dos-gaming-in-docker/
+
+- <https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/>
+- <https://earthly.dev/blog/dos-gaming-in-docker/>
