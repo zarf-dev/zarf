@@ -107,7 +107,7 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 }
 
 // Use the K8s "client-go" library to get the currently active kube context, in the same way that
-// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed
+// "kubectl" gets it if no extra config flags like "--kubeconfig" are passed.
 func connect() (config *rest.Config, clientset *kubernetes.Clientset, err error) {
 	// Build the config from the currently active kube context in the default way that the k8s client-go gets it, which
 	// is to look at the KUBECONFIG env var

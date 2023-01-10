@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the webhook
+// Package http provides a http server for the webhook.
 package http
 
 import (
@@ -12,9 +12,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// NewAdmissionServer creates and returns a http admission webhook server.
+// NewAdmissionServer creates an http.Server for the mutating webhook admission handler.
 func NewAdmissionServer(port string) *http.Server {
-	message.Debugf("http.NewAdmissionServer(%s)", port)
+	message.Debugf("http.NewServer(%s)", port)
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()

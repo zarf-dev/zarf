@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package hooks contains the mutation hooks for the zarf agent
+// Package hooks contains the mutation hooks for the Zarf agent.
 package hooks
 
 import (
@@ -19,10 +19,12 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+// SecretRef contains the name used to reference a git repository secret.
 type SecretRef struct {
 	Name string `json:"name"`
 }
 
+// GenericGitRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
 type GenericGitRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
@@ -30,7 +32,7 @@ type GenericGitRepo struct {
 	}
 }
 
-// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook
+// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
@@ -39,7 +41,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the zarfState.
+// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
@@ -69,7 +71,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = utils.DoesHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
+		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -77,8 +79,8 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Mutate the git URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the zarfState
-		patchedURL = git.New(zarfState.GitServer).MutateGitUrlsInText(patchedURL)
+		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
+		patchedURL = git.New(zarfState.GitServer).MutateGitURLsInText(patchedURL)
 		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 

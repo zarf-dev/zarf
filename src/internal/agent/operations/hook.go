@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package operations provides functions for the mutating webhook
+// Package operations provides functions for the mutating webhook.
 package operations
 
 import (
@@ -12,14 +12,14 @@ import (
 	admission "k8s.io/api/admission/v1"
 )
 
-// Result contains the result of an admission request
+// Result contains the result of an admission request.
 type Result struct {
 	Allowed  bool
 	Msg      string
 	PatchOps []PatchOperation
 }
 
-// AdmitFunc defines how to process an admission request
+// AdmitFunc defines how to process an admission request.
 type AdmitFunc func(request *admission.AdmissionRequest) (*Result, error)
 
 // Hook represents the set of functions for each operation in an admission webhook.
@@ -48,7 +48,7 @@ func (h *Hook) Execute(r *admission.AdmissionRequest) (*Result, error) {
 	return &Result{Msg: fmt.Sprintf(lang.AgentErrInvalidOp, r.Operation)}, nil
 }
 
-// If the mutatingwebhook calls for an operation with no bound function--go tell on them
+// If the mutatingwebhook calls for an operation with no bound function--go tell on them.
 func wrapperExecution(fn AdmitFunc, r *admission.AdmissionRequest) (*Result, error) {
 	if fn == nil {
 		return nil, fmt.Errorf(lang.AgentErrInvalidOp, r.Operation)

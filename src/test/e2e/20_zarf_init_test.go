@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package test provides e2e tests for zarf
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -19,7 +19,7 @@ func TestZarfInit(t *testing.T) {
 	defer e2e.teardown(t)
 
 	initComponents := "logging,git-server"
-	// Add k3s compoenent in appliance mode
+	// Add k3s component in appliance mode
 	if e2e.applianceMode {
 		initComponents = "k3s,logging,git-server"
 	}

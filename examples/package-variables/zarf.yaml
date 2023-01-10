@@ -10,15 +10,17 @@ constants:
 
 # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
 variables:
-  - name: "WOLF"
-  - name: "DOG"
+  - name: WOLF
+  - name: DOG
     default: "woof"
-  - name: "CAT"
+  - name: CAT
     description: "What sound does a cat make?"
     prompt: true
-  - name: "FOX"
+  - name: FOX
     default: "###ZARF_PKG_VAR_CONFIG_MAP###"
     prompt: true
+  - name: AWS_REGION
+    default: "us-east-1"
 
 components:
   # Note that you must specify the ACTION and CONFIG_MAP i.e. `--set ACTION=template --set CONFIG_MAP=simple-configmap.yaml` during package create
@@ -29,3 +31,10 @@ components:
       - name: variable-example-configmap
         files:
           - "###ZARF_PKG_VAR_CONFIG_MAP###"
+
+  - name: file-template-variable-example
+    description: "Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file."
+    required: true
+    files:
+      - source: simple-terraform.tf
+        target: modified-terraform.tf

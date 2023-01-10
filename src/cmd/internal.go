@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -86,7 +86,7 @@ var configSchemaCmd = &cobra.Command{
 
 var apiSchemaCmd = &cobra.Command{
 	Use:   "api-schema",
-	Short: "Generates a JSON schema from the API stypes",
+	Short: "Generates a JSON schema from the API types",
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.RestAPI{})
 		output, err := json.MarshalIndent(schema, "", "  ")

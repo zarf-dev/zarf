@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package hooks provides http handlers for the mutating webhook
+// Package hooks provides HTTP handlers for the mutating webhook.
 package hooks
 
 import (
@@ -19,7 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// NewPodMutationHook creates a new instance of pods mutation hook
+// NewPodMutationHook creates a new instance of pods mutation hook.
 func NewPodMutationHook() operations.Hook {
 	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{

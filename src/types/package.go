@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfPackage the top-level structure of a Zarf config file.
@@ -37,7 +37,7 @@ type ZarfBuildData struct {
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
 type ZarfPackageVariable struct {
-	Name        string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z_]+$"`
+	Name        string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
 	Default     string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
 	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
@@ -45,7 +45,7 @@ type ZarfPackageVariable struct {
 
 // ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
 type ZarfPackageConstant struct {
-	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z_]+$"`
+	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z0-9_]+$"`
 	Value string `json:"value" jsonschema:"description=The value to set for the constant during deploy"`
 	// Include a description that will only be displayed during package create/deploy confirm prompts
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the constant to explain its purpose on package create or deploy confirmation prompts"`

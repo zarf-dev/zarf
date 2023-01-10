@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package git contains functions for interacting with git repositories
+// Package git contains functions for interacting with git repositories.
 package git
 
 import (
@@ -15,8 +15,8 @@ import (
 // For further explanation: https://regex101.com/r/YxpfhC/1
 var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
 
-// MutateGitURlsInText Changes the giturl hostname to use the repository Zarf is configured to use
-func (g *Git) MutateGitUrlsInText(text string) string {
+// MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
+func (g *Git) MutateGitURLsInText(text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
 		output, err := g.TransformURL(match)
@@ -29,6 +29,7 @@ func (g *Git) MutateGitUrlsInText(text string) string {
 	return output
 }
 
+// TransformURLtoRepoName takes a git url and returns a Zarf-compatible repo name.
 func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	matches := gitURLRegex.FindStringSubmatch(url)
 	idx := gitURLRegex.SubexpIndex
