@@ -6,6 +6,7 @@
 	import { clusterStore } from '$lib/store';
 	import logo from '@images/zarf-logo.png';
 	import Icon from './icon.svelte';
+	import ThemeToggle from './theme-toggle.svelte';
 </script>
 
 <header class="header mdc-elevation--z8">
@@ -19,7 +20,7 @@
 	</div>
 
 	<div class="header-end">
-		<div class="header-end-icon"><Icon variant="sun" /></div>
+		<ThemeToggle />
 		<div class="header-end-icon"><Icon variant="cancelCloud" /></div>
 	</div>
 </header>
@@ -37,7 +38,7 @@
 		display: flex;
 		align-items: center;
 		background-color: #0d133d;
-		color: #ffffffdd;
+		color: var(--mdc-theme-text-secondary-on-dark);
 		padding: 0.5rem 1rem;
 		justify-content: space-between;
 	}
@@ -51,6 +52,7 @@
 		justify-content: flex-end;
 		gap: 1rem;
 		margin-right: 0.5rem;
+		align-items: center;
 	}
 	.header-end-icon {
 		cursor: pointer;
