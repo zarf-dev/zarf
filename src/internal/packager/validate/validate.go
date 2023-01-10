@@ -154,7 +154,7 @@ func validatePackageName(subject string) error {
 }
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 	// ensure the variable name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {
@@ -165,7 +165,7 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 }
 
 func validatePackageConstant(subject types.ZarfPackageConstant) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z_]+$`).MatchString
+	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 	// ensure the constant name is only capitals and underscores
 	if !isAllCapsUnderscore(subject.Name) {

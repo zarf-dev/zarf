@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"testing"
 
@@ -19,6 +20,9 @@ func TestPackageVariables(t *testing.T) {
 	defer e2e.teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-package-variables-%s.tar.zst", e2e.arch)
+	tfPath := "modified-terraform.tf"
+
+	e2e.cleanFiles(tfPath)
 
 	// Test that not specifying a prompted variable results in an error
 	_, stdErr, _ := e2e.execZarfCommand("package", "deploy", path, "--confirm")
@@ -26,7 +30,7 @@ func TestPackageVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy the simple configmap
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "CAT=meow")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "CAT=meow", "--set", "AWS_REGION=unicorn-land")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was properly templated
@@ -44,6 +48,12 @@ func TestPackageVariables(t *testing.T) {
 	// zebra should remain unset as it is not a component variable
 	assert.Contains(t, string(kubectlOut), "zebra=###ZARF_VAR_ZEBRA###")
 
+	outputTF, err := os.ReadFile(tfPath)
+	require.NoError(t, err)
+	require.Contains(t, string(outputTF), "unicorn-land")
+
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	e2e.cleanFiles(tfPath)
 }
