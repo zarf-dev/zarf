@@ -69,7 +69,9 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values)
+	if _, err := template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values); err != nil {
+		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+	}
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
