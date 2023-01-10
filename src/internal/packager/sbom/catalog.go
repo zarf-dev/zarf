@@ -85,7 +85,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 
 	currComponent := 1
 
-	// Generate SBOM for each image
+	// Generate SBOM for each component
 	for component := range componentSBOMs {
 		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)
 
@@ -104,6 +104,12 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 		}
 
 		currImage++
+	}
+
+	if len(componentSBOMs) > 0 && len(tagToImage) > 0 {
+		if err := builder.createSBOMCompareAsset(); err != nil {
+			builder.spinner.Fatalf(err, "Unable to create SBOM compare tool")
+		}
 	}
 
 	builder.spinner.Success()
@@ -153,7 +159,8 @@ func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image tag as the filename
-	sbomFile, err := b.createSBOMFile("%s.json", tag.String())
+	filename := fmt.Sprintf("%s.json", tag.String())
+	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -218,8 +225,9 @@ func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component st
 		return nil, err
 	}
 
-	// Write the sbom to disk using the given name as the filename
-	sbomFile, err := b.createSBOMFile("%s.json", fmt.Sprintf("%s%s", componentPrefix, component))
+	// Write the sbom to disk using the component prefix and name as the filename
+	filename := fmt.Sprintf("%s%s.json", componentPrefix, component)
+	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +245,7 @@ func (b *Builder) getNormalizedFileName(identifier string) string {
 	return transformRegex.ReplaceAllString(identifier, "_")
 }
 
-func (b *Builder) createSBOMFile(name string, identifier string) (*os.File, error) {
-	file := fmt.Sprintf(name, b.getNormalizedFileName(identifier))
-	path := filepath.Join(b.sbomPath, file)
+func (b *Builder) createSBOMFile(filename string) (*os.File, error) {
+	path := filepath.Join(b.sbomPath, b.getNormalizedFileName(filename))
 	return os.Create(path)
 }
