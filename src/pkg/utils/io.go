@@ -99,14 +99,15 @@ func ReplaceTextTemplate(path string, mappings map[string]string, deprecations m
 		message.Fatalf(err, "Unable to load %s", path)
 	}
 
-	for template, value := range mappings {
-		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
-	}
-
+	// First check for deprecated variables.
 	for old, new := range deprecations {
 		if bytes.Contains(text, []byte(old)) {
 			message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", old, new)
 		}
+	}
+
+	for template, value := range mappings {
+		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
 	}
 
 	if err = os.WriteFile(path, text, 0600); err != nil {
