@@ -64,16 +64,22 @@ func (values Values) GetRegistry() string {
 }
 
 // Apply renders the template and writes the result to the given path.
-func (values Values) Apply(component types.ZarfComponent, path string) {
+func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
 	message.Debugf("template.Apply(%#v, %s)", component, path)
 
-	if !values.Ready() {
-		// This should only occur if the state couldn't be pulled or on init if a template is attempted before the pre-seed stage
-		message.Fatalf(nil, "template.Apply() called before template.Generate()")
+	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
+	if !values.Ready() && !ignoreReady {
+		return fmt.Errorf("template.Apply() called before template.Generate()")
 	}
 
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
+
+	depMarkerOld := "DATA_INJECTON_MARKER"
+	depMarkerNew := "DATA_INJECTION_MARKER"
+	deprecations := map[string]string{
+		depMarkerOld: depMarkerNew,
+	}
 
 	builtinMap := map[string]string{
 		"STORAGE_CLASS": values.config.State.StorageClass,
@@ -91,9 +97,10 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	}
 
 	// Include the data injection marker template if the component has data injections
-	// TODO: (@jeff-mccoy) DATA_INJECTON_MARKER is misspelled however it is in use by other packages and would be a breaking change!
 	if len(component.DataInjections) > 0 {
-		builtinMap["DATA_INJECTON_MARKER"] = config.GetDataInjectionMarker()
+		// Preserve existing misspelling for backwards compatibility
+		builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
+		builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
 	}
 
 	// Don't template component-specific variables for every component
@@ -131,5 +138,7 @@ func (values Values) Apply(component types.ZarfComponent, path string) {
 	}
 
 	message.Debugf("templateMap = %#v", templateMap)
-	utils.ReplaceTextTemplate(path, templateMap)
+	utils.ReplaceTextTemplate(path, templateMap, deprecations)
+
+	return nil
 }

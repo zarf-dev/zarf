@@ -21,7 +21,7 @@ spec:
             [
               "sh",
               "-c",
-              'while [ ! -f /test/###ZARF_DATA_INJECTON_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
+              'while [ ! -f /test/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
             ]
           resources:
             requests:
@@ -52,7 +52,7 @@ spec:
             exec:
               command:
                 - "cat"
-                - "/test/###ZARF_DATA_INJECTON_MARKER###"
+                - "/test/###ZARF_DATA_INJECTION_MARKER###"
             initialDelaySeconds: 1
             periodSeconds: 1
 
