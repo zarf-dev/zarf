@@ -192,7 +192,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
 	}
 
-	if err := p.processComponentFiles(component.Files, componentPath.Files); err != nil {
+	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
@@ -243,16 +243,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Move files onto the host of the machine performing the deployment.
-func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
+func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
 	// If there are no files to process, return early.
-	if len(componentFiles) < 1 {
+	if len(component.Files) < 1 {
 		return nil
 	}
 
-	spinner := *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+	spinner := *message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
-	for index, file := range componentFiles {
+	for index, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
 		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
 
@@ -267,9 +267,23 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
+		// Check if the file looks like a text file
+		isText, err := utils.IsTextFile(sourceFile)
+		if err != nil {
+			message.Debugf("unable to determine if file %s is a text file: %s", sourceFile, err)
+		}
+
+		// If the file is a text file, template it
+		if isText {
+			spinner.Updatef("Templating %s", file.Target)
+			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
+				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
+			}
+		}
+
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := copy.Copy(sourceFile, file.Target)
+		err = copy.Copy(sourceFile, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
 		}
@@ -422,7 +436,9 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(component, chartValueName)
+			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
+				return installedCharts, err
+			}
 		}
 
 		// Generate helm templates to pass to gitops engine
