@@ -59,8 +59,6 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
-		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
-		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
 	}
 
@@ -128,8 +126,8 @@ func pullImage(src string, insecure bool) (v1.Image, error) {
 
 	// Load image tarballs from the local filesystem
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
-		img, err = crane.Load(src, config.GetCraneOptions(true)...)
-		return img, err
+		message.Debugf("loading image tarball: %s", src)
+		return crane.Load(src, config.GetCraneOptions(true)...)
 	}
 
 	// Attempt to pull the image from the local daemon
@@ -138,14 +136,24 @@ func pullImage(src string, insecure bool) (v1.Image, error) {
 		// log this error but don't return the error since we can still try pulling from the wider internet
 		message.Debugf("unable to parse the image reference, this might have impacts on pulling from the local daemon: %s", err.Error())
 	}
-	img, err = daemon.Image(reference, daemon.WithContext(context.Background()))
-	if err == nil {
+
+	daemonOpts := daemon.WithContext(context.Background())
+	if img, err = daemon.Image(reference, daemonOpts); err == nil {
+		message.Debugf("loading image from docker daemon: %s", src)
 		return img, err
 	}
 
 	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
 	img, err = crane.Pull(src, config.GetCraneOptions(insecure)...)
-	return img, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+	}
+
+	message.Debugf("loading image with cache: %s", src)
+	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
+	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
+
+	return img, nil
 }
 
 // FormatCraneOCILayout ensures that all images are in the OCI format.
