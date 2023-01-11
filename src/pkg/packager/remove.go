@@ -82,7 +82,7 @@ func (p *Packager) Remove(packageName string) error {
 				}
 
 				// Remove the uninstalled chart from the list of installed charts
-				deployedPackage.DeployedComponents[i].InstalledCharts = append(installedComponent.InstalledCharts[:h], installedComponent.InstalledCharts[h+1:]...)
+				deployedPackage.DeployedComponents[i].InstalledCharts = deployedPackage.DeployedComponents[i].InstalledCharts[:h]
 				p.updatePackageSecret(deployedPackage, secretName)
 			}
 
