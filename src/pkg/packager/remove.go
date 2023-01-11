@@ -42,8 +42,8 @@ func (p *Packager) Remove(packageName string) error {
 	}
 
 	// Get the list of components the package had deployed
-	packages := types.DeployedPackage{}
-	err = json.Unmarshal(packageSecret.Data["data"], &packages)
+	deployedPackage := types.DeployedPackage{}
+	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
 	if err != nil {
 		spinner.Errorf(err, "Unable to load the secret for the package we are attempting to remove")
 
@@ -57,17 +57,19 @@ func (p *Packager) Remove(packageName string) error {
 	if len(requestedComponents) < 1 || requestedComponents[0] == "" {
 		requestedComponents = []string{}
 
-		for _, component := range packages.DeployedComponents {
+		for _, component := range deployedPackage.DeployedComponents {
 			requestedComponents = append(requestedComponents, component.Name)
 		}
 	}
 
 	// Loop through the deployed components (in reverse order) check if they were requested and remove them if so
-	for i := len(packages.DeployedComponents) - 1; i >= 0; i-- {
-		installedComponent := packages.DeployedComponents[i]
+	for i := len(deployedPackage.DeployedComponents) - 1; i >= 0; i-- {
+		installedComponent := deployedPackage.DeployedComponents[i]
 
 		if slices.Contains(requestedComponents, installedComponent.Name) {
-			for _, installedChart := range installedComponent.InstalledCharts {
+			for h := len(installedComponent.InstalledCharts) - 1; h >= 0; h-- {
+				installedChart := installedComponent.InstalledCharts[h]
+
 				spinner.Updatef("Uninstalling chart (%s) from the (%s) component", installedChart.ChartName, installedComponent.Name)
 
 				helmCfg := helm.Helm{}
@@ -78,27 +80,35 @@ func (p *Packager) Remove(packageName string) error {
 
 					return err
 				}
+
+				// Remove the uninstalled chart from the list of installed charts
+				deployedPackage.DeployedComponents[i].InstalledCharts = append(installedComponent.InstalledCharts[:h], installedComponent.InstalledCharts[h+1:]...)
+				p.updatePackageSecret(deployedPackage, secretName)
 			}
 
 			// Remove the component we just removed from the array
-			packages.DeployedComponents = append(packages.DeployedComponents[:i], packages.DeployedComponents[i+1:]...)
+			deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents[:i], deployedPackage.DeployedComponents[i+1:]...)
 		}
 
-		if len(packages.DeployedComponents) == 0 {
+		if len(deployedPackage.DeployedComponents) == 0 {
 			// All the installed components were deleted, there for this package is no longer actually deployed
 			_ = p.cluster.Kube.DeleteSecret(packageSecret)
 		} else {
-			// Save the new secret with the removed components removed from the secret
-			newPackageSecret := p.cluster.Kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
-			newPackageSecret.Labels["package-deploy-info"] = p.cfg.Pkg.Metadata.Name
-			newPackageSecretData, _ := json.Marshal(packages)
-			newPackageSecret.Data["data"] = newPackageSecretData
-			err = p.cluster.Kube.ReplaceSecret(newPackageSecret)
-			if err != nil {
-				message.Warnf("Unable to replace the %s package secret: %#v", secretName, err)
-			}
+			p.updatePackageSecret(deployedPackage, secretName)
 		}
 	}
 
 	return nil
+}
+
+func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, secretName string) {
+	// Save the new secret with the removed components removed from the secret
+	newPackageSecret := p.cluster.Kube.GenerateSecret("zarf", secretName, corev1.SecretTypeOpaque)
+	newPackageSecret.Labels["package-deploy-info"] = p.cfg.Pkg.Metadata.Name
+	newPackageSecretData, _ := json.Marshal(deployedPackage)
+	newPackageSecret.Data["data"] = newPackageSecretData
+	err := p.cluster.Kube.UpdateSecret(newPackageSecret)
+	if err != nil {
+		message.Warnf("Unable to update the %s package secret: %#v", secretName, err)
+	}
 }

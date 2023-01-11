@@ -101,3 +101,15 @@ func (k *K8s) CreateSecret(secret *corev1.Secret) error {
 
 	return nil
 }
+
+// UpdateSecret updates a Kubernetes secret.
+func (k *K8s) UpdateSecret(secret *corev1.Secret) error {
+	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
+
+	// update the given secret
+	if _, err := namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("unable to update the secret: %w", err)
+	}
+
+	return nil
+}
