@@ -700,6 +700,10 @@ export interface ZarfCreateOptions {
      */
     maxPackageSizeMB: number;
     /**
+     * Disable the use of local container images during package creation
+     */
+    noLocalImages: boolean;
+    /**
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
@@ -1157,6 +1161,7 @@ const typeMap: any = {
     "ZarfCreateOptions": o([
         { json: "insecure", js: "insecure", typ: true },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
+        { json: "noLocalImages", js: "noLocalImages", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
