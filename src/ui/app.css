@@ -3,16 +3,6 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors 
  */
 :root {
-	/* Theme | vars */
-	--mdc-theme-primary: #4adede;
-	--mdc-theme-primary-dark: #00acac;
-	--mdc-theme-secondary: #787ff6;
-	--mdc-theme-on-primary: #171717;
-	--mdc-theme-on-secondary: white;
-	--mdc-theme-surface: white;
-	--mdc-theme-text-secondary-on-light: rgba(0, 0, 0, 0.6);
-	--mdc-theme-text-primary-on-light: rgba(0, 0, 0, 0.87);
-
 	/* Typography | vars */
 	--mdc-typography-font-family: Roboto, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
 		Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -41,9 +31,11 @@
 	font-family: var(--mdc-typography-font-family);
 }
 
+/* temporary addition of !important while theme updates are in flux */
+
 .mdc-typography--body2,
 .mdc-typography--caption {
-	color: var(--mdc-theme-text-secondary-on-light);
+	color: var(--mdc-theme-text-secondary-on-light) !important;
 }
 
 .mdc-typography--body3 {
@@ -60,7 +52,7 @@
 	font-size: var(--mdc-typography-th-font-size);
 	line-height: var(--mdc-typography-th-line-height);
 	letter-spacing: var(--mdc-typography-th-letter-spacing);
-	color: var(--mdc-theme-text-primary-on-light);
+	color: var(--mdc-theme-text-primary-on-light) !important;
 }
 
 *,
@@ -73,7 +65,6 @@ html,
 body {
 	margin: 0;
 	padding: 0;
-	background-color: #f5f5f5;
 }
 
 .card {

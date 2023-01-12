@@ -4,14 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarf SBOM Viewer</title>
+    <title>Zarf SBOM Comparison</title>
     <style>
         {{.ThemeCSS}}
         {{.ViewerCSS}}
     </style>
     <script type="text/javascript">
         ZARF_SBOM_LIST = {{.List}};
-		ZARF_SBOM_DATA = {{.Data}};
         {{.LibraryJS}}
     </script>
 </head>
@@ -239,10 +238,10 @@
                     </linearGradient>
                 </defs>
             </svg>
-            <span class="title">Zarf SBOM Viewer</span>
+            <span class="title">Zarf SBOM Comparison</span>
         </div>
         <div class="element sbom-tools">
-            <button id="sbom-compare" onclick="compare()" class="sbom-button">
+            <button id="sbom-compare" disabled="true" class="sbom-button">
                 Compare Tool
             </button>
             <div class="sbom-selector-wrapper">
@@ -251,6 +250,7 @@
             </div>
         </div>
     </div>
+    <h2 id="distro-info"></h2>
 
 
     <div id="modal">
@@ -259,19 +259,34 @@
         <button class="modal-btn modal-hide" onclick="hideModal()">Close</button>
     </div>
     <div id="modal-fader"></div>
-
     <div id="actions">
-        <h2 id="distro-info"></h2>
+        <div class="file-selector">
+            <h4>Old File</h4>
+            <input type="file" id="leftJson" name="leftJson" accept="application/json" class="sbom-file">
+        </div>
+        <div class="file-selector">
+            <h4>New File</h4>
+            <input type="file" id="rightJson" name="rightJson" accept="application/json" class="sbom-file">
+        </div>
+        <div>
+            <h4>&nbsp;</h4>
+            <button id="compare" onclick="compare()" class="sbom-button">
+                Run Comparison
+            </button>
+        </div>
         <div class="sbom-spacer"></div>
-        <button id="sbom-export" onclick="exportCSV(sbomSelector.selectedOptions[0].value)" class="sbom-button">
-            Export CSV
-        </button>
+        <div>
+            <h4>&nbsp;</h4>
+            <button id="sbom-export" onclick="exportCSV(getCompareName())" class="sbom-button">
+                Export CSV
+            </button>
+        </div>
     </div>
 </body>
 
 <script type="text/javascript">
     {{.CommonJS}}
-    {{.ViewerJS}}
+    {{.CompareJS}}
 </script>
 
 </html>
