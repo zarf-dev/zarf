@@ -323,7 +323,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
-	// Check if the state is empty
+	// Check if the state is empty (uninitialized cluster)
 	if state.Distro == "" {
 		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
