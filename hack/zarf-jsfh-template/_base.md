@@ -2,7 +2,7 @@
 {{ schema.keywords.get("title").literal | default("Zarf Package Schema") | md_heading(depth) }}
 {% set contentBase %}
 {% with schema=schema, skip_headers=False, depth=depth %}
-    {% include "content.md" %}
+    {% include "_content.md" %}
 {% endwith %}
 {% endset %}
 

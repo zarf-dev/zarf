@@ -19,7 +19,7 @@
 {% endif %}
 
 {% set description = (schema | get_description) %}
-{% include "section_description.md" %}
+{% include "_section_description.md" %}
 
 {{ schema | md_type_info_table | md_generate_table }}
 
@@ -28,33 +28,33 @@
 {% if schema.should_be_a_link(config) %}
 {% elif schema.refers_to -%}
     {%- with schema=schema.refers_to_merged, skip_headers=True, depth=depth -%}
-        {% include "content.md" %}
+        {% include "_content.md" %}
     {% endwith %}
 {% else %}
 
     {# Combining: allOf, anyOf, oneOf, not #}
     {% if schema.kw_all_of %}
         {% with operator="allOf", title="All of(Requirement)", current_node=schema.kw_all_of, skip_required=True %}
-            {% include "tabbed_section.md" %}
+            {% include "_tabbed_section.md" %}
         {% endwith %}
     {% endif %}
     {% if schema.kw_any_of %}
         {% with operator="anyOf", title="Any of(Option)", current_node=schema.kw_any_of, skip_required=True %}
-            {% include "tabbed_section.md" %}
+            {% include "_tabbed_section.md" %}
         {% endwith %}
     {% endif %}
     {% if schema.kw_one_of %}
         {% with operator="oneOf", title="One of(Option)",current_node=schema.kw_one_of, skip_required=True %}
-            {% include "tabbed_section.md" %}
+            {% include "_tabbed_section.md" %}
         {% endwith %}
     {% endif %}
     {% if schema.kw_not %}
-        {% include "section_not.md" %}
+        {% include "_section_not.md" %}
     {% endif %}
 
     {# Enum and const #}
     {% if schema.kw_enum -%}
-        {% include "section_one_of.md" %}
+        {% include "_section_one_of.md" %}
     {%- endif %}
     {%- if schema.kw_const -%}
         Specific value: `{{ schema.kw_const.raw | python_to_json }}`
@@ -63,31 +63,31 @@
     {# Conditional subschema, or if-then-else section #}
     {% if schema.has_conditional %}
         {% with skip_headers=False, depth=depth+1 %}
-            {% include "section_conditional_subschema.md" %}
+            {% include "_section_conditional_subschema.md" %}
         {% endwith %}
     {% endif %}
 
     {# Required properties that are not defined under "properties". They will only be listed #}
-    {% include "section_undocumented_required_properties.md" %}
+    {% include "_section_undocumented_required_properties.md" %}
 
     {# Show the requested type(s) #}
     {{- schema | md_restrictions_table | md_generate_table -}}
 
     {# Show array restrictions #}
     {% if schema.type_name.startswith("array") %}
-        {% include "section_array.md" %}
+        {% include "_section_array.md" %}
     {% endif %}
 
     {# Display examples #}
     {% set examples = schema.examples %}
     {% if examples %}
-        {% include "section_examples.md" %}
+        {% include "_section_examples.md" %}
     {% endif %}
 
     {# details of Properties, pattern properties, additional properties #}
     {% if schema.type_name == "object" %}
     {% with skip_required=False %}
-        {% include "section_properties_details.md" %}
+        {% include "_section_properties_details.md" %}
     {% endwith %}
     {% endif %}
 {% endif %}
