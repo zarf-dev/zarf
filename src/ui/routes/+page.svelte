@@ -6,8 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { Button, Typography } from '@ui';
 	import { clusterStore } from '$lib/store';
-	import Hero from '$lib/components/hero.svelte';
-	import Spinner from '$lib/components/spinner.svelte';
+	import { Hero, Spinner } from '$lib/components';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 </script>
 

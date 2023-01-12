@@ -8,7 +8,7 @@
 	import '@fontsource/roboto';
 	import { Cluster } from '$lib/api';
 	import { clusterStore } from '$lib/store';
-	import Header from '$lib/components/header.svelte';
+	import { Header } from '$lib/components';
 	import 'material-symbols/';
 	import { Theme } from '@ui';
 	import { ZarfPalettes } from '$lib/palette';
