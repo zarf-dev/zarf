@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import Modal from '$lib/components/modal.svelte';
+	import { Modal } from '$lib/components';
 	import zarfLogo from '@images/zarf-bubbles-right.png';
 </script>
 
