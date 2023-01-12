@@ -96,5 +96,5 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
-	c.Kube.ReplaceSecret(deployedPackageSecret)
+	c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
 }

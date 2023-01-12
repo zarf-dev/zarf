@@ -109,7 +109,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, se
 	newPackageSecretData, _ := json.Marshal(deployedPackage)
 	newPackageSecret.Data["data"] = newPackageSecretData
 
-	err := p.cluster.Kube.UpdateSecret(newPackageSecret)
+	err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
 	if err != nil {
 		message.Warnf("Unable to update the %s package secret: %#v", secretName, err)
 	}
