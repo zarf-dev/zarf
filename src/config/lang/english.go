@@ -90,15 +90,12 @@ const (
 	CmdInitLong  = "Injects a docker registry as well as other optional useful things (such as a git server " +
 		"and a logging stack) into a k8s cluster under the 'zarf' namespace " +
 		"to support future application deployments. \n" +
-
 		"If you do not have a k8s cluster already configured, this command will give you " +
 		"the ability to install a cluster locally.\n\n" +
-
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
 		"that the Zarf binary is located in.\n\n\n\n" +
-
 		"Example Usage:\n" +
 		"# Initializing without any optional components:\nzarf init\n\n" +
 		"# Initializing w/ Zarfs internal git server:\nzarf init --components=git-server\n\n" +
@@ -121,6 +118,7 @@ const (
 	CmdInitFlagConfirm      = "Confirm the install without prompting"
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
+	CmdInitFlagInseure      = "Allow insecure access for remote registry"
 
 	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
 	CmdInitFlagGitPushUser = "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'"

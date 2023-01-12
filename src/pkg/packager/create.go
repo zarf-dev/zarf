@@ -208,9 +208,10 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 	return pulledImages, utils.Retry(func() error {
 		imgConfig := images.ImgConfig{
-			TarballPath: path,
-			ImgList:     imgList,
-			Insecure:    p.cfg.CreateOpts.Insecure,
+			TarballPath:  path,
+			ImgList:      imgList,
+			InsecurePull: p.cfg.CreateOpts.Insecure,
+			InsecurePush: p.cfg.InitOpts.Insecure || p.cfg.DeployOpts.Insecure,
 		}
 
 		pulledImages, err = imgConfig.PullAll()

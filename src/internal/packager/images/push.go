@@ -5,11 +5,14 @@
 package images
 
 import (
+	"crypto/tls"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"net/http"
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
@@ -24,6 +27,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		target      string
 	)
 
+	registryURL = i.RegInfo.Address
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
 		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
@@ -46,12 +50,27 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword)
+	pushOptions := []crane.Option{
+		crane.WithAuth(
+			authn.FromConfig(authn.AuthConfig{
+				Username: i.RegInfo.PushUsername,
+				Password: i.RegInfo.PushPassword,
+			})),
+	}
+
+	if i.InsecurePush {
+		roundTripper := http.DefaultTransport.(*http.Transport).Clone()
+		roundTripper.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+		pushOptions = append(pushOptions, crane.Insecure, crane.WithTransport(roundTripper))
+	}
+
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
+		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.InsecurePull)...)
 		if err != nil {
 			return err
 		}
@@ -67,7 +86,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
 
-		if err = crane.Push(img, offlineName, pushOptions); err != nil {
+		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err
 		}
 	}

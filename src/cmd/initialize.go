@@ -159,6 +159,7 @@ func init() {
 
 	v.SetDefault(V_INIT_COMPONENTS, "")
 	v.SetDefault(V_INIT_STORAGE_CLASS, "")
+	v.SetDefault(V_INIT_INSECURE, false)
 
 	v.SetDefault(V_INIT_GIT_URL, "")
 	v.SetDefault(V_INIT_GIT_PUSH_USER, config.ZarfGitPushUser)
@@ -181,6 +182,7 @@ func init() {
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
+	initCmd.Flags().BoolVar(&pkgConfig.InitOpts.Insecure, "insecure", v.GetBool(V_INIT_INSECURE), lang.CmdInitFlagInseure)
 
 	// Flags for using an external Git server
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitURL)

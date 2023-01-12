@@ -24,6 +24,7 @@ const (
 	// Init config keys
 	V_INIT_COMPONENTS    = "init.components"
 	V_INIT_STORAGE_CLASS = "init.storage_class"
+	V_INIT_INSECURE      = "init.insecure"
 
 	// Init Git config keys
 	V_INIT_GIT_URL       = "init.git.url"

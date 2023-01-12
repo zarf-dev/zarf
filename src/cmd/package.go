@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var insecureDeploy bool
 var shasum string
 var includeInspectSBOM bool
 var outputInspectSBOM string
@@ -266,7 +265,7 @@ func bindDeployFlags() {
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
-	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.Insecure, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }

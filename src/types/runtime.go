@@ -34,6 +34,8 @@ type ZarfInitOptions struct {
 	Components string `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 
 	StorageClass string `json:"storageClass" jsonschema:"description=StorageClass of the k8s cluster Zarf is initializing"`
+
+	Insecure bool `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
