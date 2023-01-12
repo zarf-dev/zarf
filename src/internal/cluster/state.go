@@ -18,9 +18,10 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespace       = "zarf"
-	ZarfStateSecretName = "zarf-state"
-	ZarfStateDataKey    = "state"
+	ZarfNamespace        = "zarf"
+	ZarfStateSecretName  = "zarf-state"
+	ZarfStateDataKey     = "state"
+	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.

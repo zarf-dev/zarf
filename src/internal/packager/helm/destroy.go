@@ -7,6 +7,7 @@ package helm
 import (
 	"regexp"
 
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 )
@@ -43,7 +44,7 @@ func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, release := range releases {
-		if !purgeAllZarfInstallations && release.Namespace != "zarf" {
+		if !purgeAllZarfInstallations && release.Namespace != cluster.ZarfNamespace {
 			// Don't process releases outside the zarf namespace unless purge all is true
 			continue
 		}
