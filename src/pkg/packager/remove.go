@@ -66,7 +66,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		})
 
 		if len(packages.DeployedComponents) < 1 {
-			// All the installed components were deleted, there for this package is no longer actually deployed
+			// All the installed components were deleted, therefore this package is no longer actually deployed
 			_ = p.cluster.Kube.DeleteSecret(packageSecret)
 		} else {
 			// Save the new secret with the removed components removed from the secret
@@ -97,7 +97,7 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 
 	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.Before); err != nil {
 		onFailure()
-		return fmt.Errorf("unable to run the first action for component (%s): %w", c.Name, err)
+		return fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
 	for _, chart := range utils.Reverse(deployedComponent.InstalledCharts) {
@@ -113,7 +113,7 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 
 	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.After); err != nil {
 		onFailure()
-		return fmt.Errorf("unable to run the last action: %w", err)
+		return fmt.Errorf("unable to run the after action: %w", err)
 	}
 
 	if err := p.runComponentActions(c.Actions.OnRemove, c.Actions.OnRemove.OnSuccess); err != nil {

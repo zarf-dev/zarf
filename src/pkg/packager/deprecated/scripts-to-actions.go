@@ -5,6 +5,8 @@
 package deprecated
 
 import (
+	"math"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -29,7 +31,7 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 
 	// Retry is now an integer vs a boolean (implicit infinite retries), so set to an absurdly high number
 	if c.DeprecatedScripts.Retry {
-		defaults.MaxRetries = 9999
+		defaults.MaxRetries = math.MaxInt
 	}
 
 	// Scripts.Prepare -> Actions.Create.Before

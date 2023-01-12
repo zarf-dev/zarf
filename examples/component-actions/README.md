@@ -2,7 +2,7 @@
 
 :::note
 
-Component Actions have replaced Component Scripts. Zarf will still read scripts entries, but will convert them to actions. This will be removed in a future release.
+Component Actions have replaced Component Scripts. Zarf will still read scripts entries, but will convert them to actions. Component Scripts will be removed in a future release.
 
 :::
 

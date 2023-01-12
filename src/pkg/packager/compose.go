@@ -51,12 +51,12 @@ func (p *Packager) composeComponents() error {
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
-	// Make sure the component we're trying to import cant be accessed.
+	// Make sure the component we're trying to import can't be accessed.
 	if err := validate.ImportPackage(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 
-	// Keep track of the composed components import path to build nestedily composed components.
+	// Keep track of the composed components import path to build nested composed components.
 	pathAncestry := ""
 
 	// Get the component that we are trying to import.
