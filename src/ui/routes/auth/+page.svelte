@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Auth } from '$lib/api';
-	import Hero from '$lib/components/hero.svelte';
+	import { Hero } from '$lib/components';
 	import sadDay from '@images/sadness.png';
 
 	let authFailure = false;
