@@ -17,7 +17,8 @@ export const ZarfTypography: ThemeTypography = {
 		fontSize: '14px',
 		fontWeight: '400',
 		lineHeight: '120%',
-		letterSpacing: '0.17px'
+		letterSpacing: '0.17px',
+		color: 'var(--mdc-theme-text-secondary-on-light)'
 	},
 	subtitle1: {
 		fontSize: '16px',
@@ -35,7 +36,8 @@ export const ZarfTypography: ThemeTypography = {
 		fontSize: '12px',
 		fontWeight: '400',
 		lineHeight: '166%',
-		letterSpacing: '0.4px'
+		letterSpacing: '0.4px',
+		color: 'var(--mdc-theme-text-secondary-on-light)'
 	},
 	overline: {
 		fontSize: '12px',
