@@ -6,7 +6,7 @@ metadata:
 components:
   - name: zarf-injector
     description: |
-      Injects Zarf into the cluster so it can bootstrap other core Zarf components. 
+      Bootstraps a cluster using a tiny Rust binary to deploy the internal Zarf Registry. 
       Removed and destroyed after the registry is booted.
     required: true
     cosignKeyPath: ../../cosign.pub

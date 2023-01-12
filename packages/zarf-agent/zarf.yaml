@@ -10,8 +10,10 @@ constants:
 components:
   - name: zarf-agent
     description: |
-      Mutating webhook that enables Kubernetes (or cloud) resources to run in airgap.
-      Directs requests for external resources to internal Zarf-managed resources.
+      Mutating webhook that enables Kubernetes (or cloud) resource to run in airgap.
+      This enables the cluster to redirect requests for external resources
+      (namely images and git repositories) that are vital to deploying and
+      updating Zarf Packages to internal Zarf-defined resources.
     required: true
     images:
       - "ghcr.io/defenseunicorns/zarf/###ZARF_PKG_VAR_AGENT_IMAGE###"
