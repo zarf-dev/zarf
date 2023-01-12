@@ -27,7 +27,7 @@ Depending on the permissions of your user, if you are installing k3s with `zarf 
 
 <!-- The most common use case (like 99.9% of the time) is deploying onto a k8s cluster.. but that doesn't HAVE to be the case.. How do I write the docs for this then? -->
 <!-- TODO: Write some docs (or reddirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
-The [`zarf package deploy`](./100-cli-commands/zarf_package_deploy.md) command is where the air-gapped magic happens. It deploys our packaged capabilities into our target environment. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few rare cases where this doesn't apply.
+The [`zarf package deploy`](./100-cli-commands/zarf_package_deploy.md) command is where the air-gapped magic happens. It deploys our packaged capabilities into our target environment. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few cases where this doesn't apply such as [YOLO Mode](../../9-faq.md#what-is-yolo-mode-and-why-would-i-use-it)
 
 Since the package has all of its dependencies built-in, it can be deployed onto any cluster, even without an external internet connection. The dependency resources are pushed onto the cluster in their respective places, such as an in-cluster Gitea Git server or Docker registry, and then the application is deployed as instructed in the `zarf.yaml` file (i.e. deploying a helm chart, deploying raw k8s manifests, or even just executing a series of shell commands).
 
