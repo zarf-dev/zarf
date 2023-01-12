@@ -3,11 +3,12 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import AccordionGroup from '../../../lib/components/accordion-group.svelte';
-
-	import Icon from '$lib/components/icon.svelte';
-	import PackageDetails from '$lib/components/package-details-card.svelte';
-	import PackageComponent from '$lib/components/package-component-accordion.svelte';
+	import {
+		AccordionGroup,
+		Icon,
+		PackageDetailsCard as PackageDetails,
+		PackageComponentAccordion as PackageComponent
+	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
 </script>
