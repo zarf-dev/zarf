@@ -446,7 +446,11 @@ export interface ZarfState {
      */
     loggingSecret: string;
     /**
-     * Information about the registry Zarf is configured to use
+     * Information about the package registry Zarf is configured to use
+     */
+    packageServer: PackageServerInfo;
+    /**
+     * Information about the container registry Zarf is configured to use
      */
     registryInfo: RegistryInfo;
     storageClass: string;
@@ -497,9 +501,33 @@ export interface GitServerInfo {
 }
 
 /**
- * Information about the registry Zarf is configured to use
+ * Information about the package registry Zarf is configured to use
  *
- * Information about the registry Zarf is going to be using
+ * Information about the package registry Zarf is going to be using
+ */
+export interface PackageServerInfo {
+    /**
+     * URL address of the package registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a package registry that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with push access to the package registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the package registry
+     */
+    pushUsername: string;
+}
+
+/**
+ * Information about the container registry Zarf is configured to use
+ *
+ * Information about the container registry Zarf is going to be using
  */
 export interface RegistryInfo {
     /**
@@ -661,7 +689,11 @@ export interface ZarfInitOptions {
      */
     gitServer: GitServerInfo;
     /**
-     * Information about the registry Zarf is going to be using
+     * Information about the package registry Zarf is going to be using
+     */
+    packageServer: PackageServerInfo;
+    /**
+     * Information about the container registry Zarf is going to be using
      */
     registryInfo: RegistryInfo;
     /**
@@ -973,6 +1005,7 @@ const typeMap: any = {
         { json: "distro", js: "distro", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "loggingSecret", js: "loggingSecret", typ: "" },
+        { json: "packageServer", js: "packageServer", typ: r("PackageServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
         { json: "zarfAppliance", js: "zarfAppliance", typ: true },
@@ -987,6 +1020,12 @@ const typeMap: any = {
         { json: "internalServer", js: "internalServer", typ: true },
         { json: "pullPassword", js: "pullPassword", typ: "" },
         { json: "pullUsername", js: "pullUsername", typ: "" },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+    ], false),
+    "PackageServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
         { json: "pushPassword", js: "pushPassword", typ: "" },
         { json: "pushUsername", js: "pushUsername", typ: "" },
     ], false),
@@ -1045,6 +1084,7 @@ const typeMap: any = {
         { json: "applianceMode", js: "applianceMode", typ: true },
         { json: "components", js: "components", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
+        { json: "packageServer", js: "packageServer", typ: r("PackageServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
