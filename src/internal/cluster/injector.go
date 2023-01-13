@@ -38,12 +38,6 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 	var payloadConfigmaps []string
 	var sha256sum string
 
-	// Try to create the zarf namespace
-	spinner.Updatef("Creating the Zarf namespace")
-	if _, err := c.Kube.CreateNamespace(ZarfNamespace, nil); err != nil {
-		spinner.Fatalf(err, "Unable to create the zarf namespace")
-	}
-
 	// Get all the images from the cluster
 	spinner.Updatef("Getting the list of existing cluster images")
 	if images, err = c.Kube.GetAllImages(); err != nil {

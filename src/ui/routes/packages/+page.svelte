@@ -4,11 +4,8 @@
  -->
 <script>
 	import { Packages } from '$lib/api';
-	import Hero from '$lib/components/hero.svelte';
-	import PackageDetails from '$lib/components/package-details-card.svelte';
-	import Spinner from '$lib/components/spinner.svelte';
-	import { Button, Typography } from '@ui';
-	import Icon from '$lib/components/icon.svelte';
+	import { Hero, PackageDetailsCard as PackageDetails, Spinner, Icon } from '$lib/components';
+	import { Button, Typography, ButtonIcon } from '@ui';
 </script>
 
 {#await Packages.getDeployedPackages()}
@@ -25,7 +22,7 @@
 		<section class="page-title deployed-packages">
 			<Typography variant="h5">Deployment Details</Typography>
 			<Button variant="raised" color="secondary">
-				<Icon variant="rocket" />
+				<ButtonIcon slot="leadingIcon" class="material-symbols-outlined">rocket_launch</ButtonIcon>
 				Deploy Package
 			</Button>
 		</section>
