@@ -146,6 +146,13 @@ func validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
 		}
 	}
+
+	//If 'package-url' is provided, make sure they provided values for the username and password of the push user
+	if pkgConfig.InitOpts.PackageServer.Address != "" {
+		if pkgConfig.InitOpts.PackageServer.PushUsername == "" || pkgConfig.InitOpts.PackageServer.PushToken == "" {
+			return fmt.Errorf(lang.CmdInitErrValidatePackage)
+		}
+	}
 	return nil
 }
 
@@ -197,6 +204,11 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
+
+	// Flags for using an external Package server
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.Address, "package-url", v.GetString(V_INIT_PACKAGE_URL), lang.CmdInitFlagPackURL)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.PushUsername, "package-push-username", v.GetString(V_INIT_PACKAGE_PUSH_USER), lang.CmdInitFlagPackPushUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.PushToken, "package-push-token", v.GetString(V_INIT_PACKAGE_PUSH_TOKEN), lang.CmdInitFlagPackPushToken)
 
 	initCmd.Flags().SortFlags = true
 }

@@ -14,9 +14,10 @@ type ZarfState struct {
 	StorageClass  string           `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
 	AgentTLS      k8s.GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServer     GitServerInfo `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
-	RegistryInfo  RegistryInfo  `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is configured to use"`
-	LoggingSecret string        `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
+	GitServer     GitServerInfo     `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
+	RegistryInfo  RegistryInfo      `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is configured to use"`
+	PackageServer PackageServerInfo `json:"packageServer" jsonschema:"description=Information about the package registry Zarf is configured to use"`
+	LoggingSecret string            `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
@@ -50,6 +51,15 @@ type GitServerInfo struct {
 
 	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
+}
+
+// PackageServerInfo contains information Zarf uses to communicate with a package registry to push/pull repositories to.
+type PackageServerInfo struct {
+	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the package registry"`
+	PushToken    string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the package registry"`
+
+	Address        string `json:"address" jsonschema:"description=URL address of the package registry"`
+	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a package registry that Zarf is directly managing"`
 }
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.

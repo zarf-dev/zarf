@@ -29,6 +29,7 @@ const (
 	ZarfMaxChartNameLength   = 40
 	ZarfGitPushUser          = "zarf-git-user"
 	ZarfGitReadUser          = "zarf-git-read-user"
+	ZarfPackageTokenName     = "zarf-package-registry-token"
 	ZarfRegistryPushUser     = "zarf-push"
 	ZarfRegistryPullUser     = "zarf-pull"
 	ZarfImagePullSecretName  = "private-registry"
@@ -55,7 +56,8 @@ const (
 	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
 	ZarfInClusterContainerRegistryNodePort = 31999
 
-	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterGitServiceURL     = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterPackageServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
 	ZarfSeedImage = "registry"
 	ZarfSeedTag   = "2.8.1"

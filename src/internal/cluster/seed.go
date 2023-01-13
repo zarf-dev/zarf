@@ -109,6 +109,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 
 	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
 	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+	state.PackageServer = c.fillInEmptyPackageServerValues(initOptions.PackageServer)
 
 	spinner.Success()
 
@@ -209,4 +210,20 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 	}
 
 	return gitServer
+}
+
+// Fill in empty PackageServerInfo values with the defaults.
+func (c *Cluster) fillInEmptyPackageServerValues(packageServer types.PackageServerInfo) types.PackageServerInfo {
+	// Set default svc url if an external registry was not provided
+	if packageServer.Address == "" {
+		packageServer.Address = config.ZarfInClusterPackageServiceURL
+		packageServer.InternalServer = true
+	}
+
+	// Set the push username to the git push user if not specified
+	if packageServer.PushUsername == "" {
+		packageServer.PushUsername = config.ZarfGitPushUser
+	}
+
+	return packageServer
 }

@@ -41,6 +41,11 @@ const (
 	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
 	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
 
+	// Init Package config keys
+	V_INIT_PACKAGE_URL        = "init.package.url"
+	V_INIT_PACKAGE_PUSH_USER  = "init.package.push_username"
+	V_INIT_PACKAGE_PUSH_TOKEN = "init.package.push_token"
+
 	// Package create config keys
 	V_PKG_CREATE_SET              = "package.create.set"
 	V_PKG_CREATE_OUTPUT_DIR       = "package.create.output_directory"

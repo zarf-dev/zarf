@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/proxy"
+	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
@@ -33,46 +34,50 @@ func proxyDirector(req *http.Request) {
 	req.Header.Del("Accept-Encoding")
 
 	// TODO: (@WSTARR) we will eventually need to support a separate git host and package registry host (potential to expand the NPM job)
-	zarfState, npmToken, err := proxy.GetProxyState()
+	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
 		message.Debugf("%#v", err)
 	}
 
-	// Setup authentication for the given service
-	if isNpmUserAgent(req.UserAgent()) {
-		req.Header.Set("Authorization", "Bearer "+npmToken)
+	var targetURL *url.URL
+
+	// If 'git' is the username use the configured git server, otherwise use the package server
+	if isGitUserAgent(req.UserAgent()) {
+		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
+		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
+			targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, req.URL.Path)
+		} else {
+			g := git.New(zarfState.GitServer)
+
+			var transformedURL string
+			transformedURL, err = g.TransformURL(getTLSScheme(req.TLS) + req.Host + req.URL.String())
+			if err != nil {
+				message.Debugf("%#v", err)
+			}
+			targetURL, err = url.Parse(transformedURL)
+			req.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
+		}
 	} else {
-		req.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
+		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
+		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
+			targetURL, err = proxy.NoTransformTarget(zarfState.PackageServer.Address, req.URL.Path)
+		} else {
+			switch {
+			case isPipUserAgent(req.UserAgent()):
+				targetURL, err = proxy.PipTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
+				req.SetBasicAuth(zarfState.PackageServer.PushUsername, zarfState.PackageServer.PushToken)
+			case isNpmUserAgent(req.UserAgent()):
+				targetURL, err = proxy.NpmTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
+				req.Header.Set("Authorization", "Bearer "+zarfState.PackageServer.PushToken)
+			default:
+				targetURL, err = proxy.GenTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
+				req.SetBasicAuth(zarfState.PackageServer.PushUsername, zarfState.PackageServer.PushToken)
+			}
+		}
 	}
 
-	var targetURL *url.URL
-	var transformedURL string
-
-	// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
-	if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
-		if targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, req.URL.Path); err != nil {
-			message.Debugf("%#v", err)
-		}
-	} else {
-		switch {
-		case isGitUserAgent(req.UserAgent()):
-			g := git.New(zarfState.GitServer)
-			transformedURL, err = g.TransformURL(getTLSScheme(req.TLS) + req.Host + req.URL.String())
-		case isPipUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.PipTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
-		case isNpmUserAgent(req.UserAgent()):
-			transformedURL, err = proxy.NpmTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
-		default:
-			transformedURL, err = proxy.GenTransformURL(zarfState.GitServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.GitServer.PushUsername)
-		}
-
-		if err != nil {
-			message.Debugf("%#v", err)
-		}
-
-		if targetURL, err = url.Parse(transformedURL); err != nil {
-			message.Debugf("%#v", err)
-		}
+	if err != nil {
+		message.Debugf("%#v", err)
 	}
 
 	req.Host = targetURL.Host

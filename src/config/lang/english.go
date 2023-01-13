@@ -110,7 +110,8 @@ const (
 	CmdInitErrFlags            = "Invalid command flags were provided."
 	CmdInitErrDownload         = "failed to download the init package: %s"
 	CmdInitErrValidateGit      = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
-	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided "
+	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
+	CmdInitErrValidatePackage  = "the 'package-push-username' and 'package-push-token' flags must be provided if the 'package-url' flag is provided"
 
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
@@ -135,6 +136,10 @@ const (
 	CmdInitFlagRegPullUser = "Username for pull-only access to the registry"
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
+
+	CmdInitFlagPackURL       = "External package registry url to use for this Zarf cluster"
+	CmdInitFlagPackPushUser  = "Username to access to the package registry Zarf is configured to use. User must be able to upload packages."
+	CmdInitFlagPackPushToken = "API Token for the push-user to access the package registry"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
