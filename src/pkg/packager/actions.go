@@ -139,7 +139,10 @@ func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentA
 	for k, v := range vars {
 		// Remove # from env variable name.
 		k = strings.ReplaceAll(k, "#", "")
+		// Make terraform variables available to the action.
+		k1 := strings.ReplaceAll(k, "ZARF_VAR", "TF_VAR")
 		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v))
 	}
 
 	return cfg
