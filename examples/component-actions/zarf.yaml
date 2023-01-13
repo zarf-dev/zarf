@@ -3,6 +3,10 @@ metadata:
   name: component-actions
   description: "Component actions examples"
 
+variables:
+  - name: DEMO
+    default: test
+
 components:
   - name: on-create
     actions:
@@ -18,6 +22,12 @@ components:
           - cmd: touch test-deploy-before.txt
         after:
           - cmd: touch test-deploy-after.txt
+
+  - name: on-deploy-with-variable
+    actions:
+      onDeploy:
+        before:
+          - cmd: env
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second

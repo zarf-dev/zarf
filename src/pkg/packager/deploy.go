@@ -84,15 +84,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	config.SetDeployingComponents(deployedComponents)
 
 	// Generate a value template
-	valueTemplate, err = template.Generate(p.cfg)
-	if err != nil {
+	if valueTemplate, err = template.Generate(p.cfg); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
 	for _, component := range componentsToDeploy {
 		var charts []types.InstalledChart
-
-		deployedComponent := types.DeployedComponent{Name: component.Name}
 
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
@@ -100,14 +97,18 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			charts, err = p.deployComponent(component, false /* keep img checksum */)
 		}
 
+		deployedComponent := types.DeployedComponent{Name: component.Name}
+		onDeploy := component.Actions.OnDeploy
+		vars, _ := valueTemplate.GetVariables(component)
+
 		if err != nil {
-			if err := p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.OnFailure); err != nil {
+			if err := p.runComponentActions(onDeploy, onDeploy.OnFailure, vars); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.OnSuccess); err != nil {
+		if err := p.runComponentActions(onDeploy, onDeploy.OnSuccess, vars); err != nil {
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 
@@ -195,7 +196,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
-	if err = p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.Before); err != nil {
+	onDeploy := component.Actions.OnDeploy
+	vars, _ := valueTemplate.GetVariables(component)
+
+	if err = p.runComponentActions(onDeploy, onDeploy.Before, vars); err != nil {
 		return charts, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
@@ -243,7 +247,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runComponentActions(component.Actions.OnDeploy, component.Actions.OnDeploy.After); err != nil {
+	if err = p.runComponentActions(onDeploy, onDeploy.After, vars); err != nil {
 		return charts, fmt.Errorf("unable to run component last action: %w", err)
 	}
 

@@ -19,7 +19,7 @@ import (
 )
 
 // Run commands that a component has provided.
-func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction) error {
+func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction, vars map[string]string) error {
 ACTION:
 	for _, a := range actions {
 		spinner := message.NewProgressSpinner("Running command \"%s\"", a.Cmd)
@@ -32,7 +32,7 @@ ACTION:
 			err    error
 		)
 
-		cfg := actionGetCfg(actionSet, a)
+		cfg := actionGetCfg(actionSet, a, vars)
 
 		if cmd, err = actionCmdMutation(a.Cmd); err != nil {
 			spinner.Errorf(err, "Error mutating command: %s", cmd)
@@ -111,7 +111,7 @@ func actionCmdMutation(cmd string) (string, error) {
 }
 
 // Merge the actionset defaults with the action config.
-func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentAction) types.ZarfComponentActionDefaults {
+func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
 	cfg := actionSet.Defaults
 
 	if !a.Mute {
@@ -133,6 +133,13 @@ func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentA
 
 	if len(a.Env) > 0 {
 		cfg.Env = append(cfg.Env, a.Env...)
+	}
+
+	// Add variables to the environment.
+	for k, v := range vars {
+		// Remove # from env variable name.
+		k = strings.ReplaceAll(k, "#", "")
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	return cfg

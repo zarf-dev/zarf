@@ -63,15 +63,7 @@ func (values Values) GetRegistry() string {
 	return values.registry
 }
 
-// Apply renders the template and writes the result to the given path.
-func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	message.Debugf("template.Apply(%#v, %s)", component, path)
-
-	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
-	if !values.Ready() && !ignoreReady {
-		return fmt.Errorf("template.Apply() called before template.Generate()")
-	}
-
+func (values Values) GetVariables(component types.ZarfComponent) (map[string]string, map[string]string) {
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
@@ -138,6 +130,21 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	}
 
 	message.Debugf("templateMap = %#v", templateMap)
+	message.Debugf("deprecations = %#v", deprecations)
+
+	return templateMap, deprecations
+}
+
+// Apply renders the template and writes the result to the given path.
+func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
+	message.Debugf("template.Apply(%#v, %s)", component, path)
+
+	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
+	if !values.Ready() && !ignoreReady {
+		return fmt.Errorf("template.Apply() called before template.Generate()")
+	}
+
+	templateMap, deprecations := values.GetVariables(component)
 	utils.ReplaceTextTemplate(path, templateMap, deprecations)
 
 	return nil
