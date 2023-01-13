@@ -22,7 +22,7 @@
 
 	<div class="header-end">
 		<ThemeToggle />
-		<div class="header-end-icon"><Icon variant="cancelCloud" /></div>
+		<Icon variant="cloud_off" />
 	</div>
 </header>
 
@@ -54,8 +54,5 @@
 		gap: 1rem;
 		margin-right: 0.5rem;
 		align-items: center;
-	}
-	.header-end-icon {
-		cursor: pointer;
 	}
 </style>

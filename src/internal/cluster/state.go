@@ -18,9 +18,10 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespace       = "zarf"
-	ZarfStateSecretName = "zarf-state"
-	ZarfStateDataKey    = "state"
+	ZarfNamespace        = "zarf"
+	ZarfStateSecretName  = "zarf-state"
+	ZarfStateDataKey     = "state"
+	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
@@ -75,8 +76,8 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 		Data: dataWrapper,
 	}
 
-	// Attempt to create or replace the secret and return
-	if err := c.Kube.ReplaceSecret(secret); err != nil {
+	// Attempt to create or update the secret and return
+	if err := c.Kube.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 
