@@ -94,7 +94,7 @@ var k9sCmd = &cobra.Command{
 	Short:   lang.CmdToolsMonitorShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
-		os.Args = []string{os.Args[0], "-n", cluster.ZarfNamespace}
+		os.Args = []string{os.Args[0]}
 		k9s.Execute()
 	},
 }
