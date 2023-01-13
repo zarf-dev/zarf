@@ -22,6 +22,9 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
+// Set the default helm client timeout to 15 minutes
+const defaultClientTimeout = 15 * time.Minute
+
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	fromMessage := h.Chart.URL
@@ -214,13 +217,23 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	return h.InstallOrUpgradeChart()
 }
 
+// RemoveChart removes a chart from the cluster.
+func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+	// Establish a new actionConfig for the namespace
+	_ = h.createActionConfig(namespace, spinner)
+	// Perform the uninstall
+	response, err := h.uninstallChart(name)
+	message.Debug(response)
+	return err
+}
+
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	message.Debugf("helm.installChart(%#v)", postRender)
 	// Bind the helm action
 	client := action.NewInstall(h.actionConfig)
 
-	// Let each chart run for 15 minutes
-	client.Timeout = 15 * time.Minute
+	// Let each chart run for the default timeout
+	client.Timeout = defaultClientTimeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)
 	client.Wait = !h.Chart.NoWait
@@ -250,8 +263,8 @@ func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
 	message.Debugf("helm.upgradeChart(%#v)", postRender)
 	client := action.NewUpgrade(h.actionConfig)
 
-	// Let each chart run for 15 minutes
-	client.Timeout = 15 * time.Minute
+	// Let each chart run for the default timeout
+	client.Timeout = defaultClientTimeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection)k3
 	client.Wait = !h.Chart.NoWait
@@ -279,7 +292,7 @@ func (h *Helm) rollbackChart(name string) error {
 	client.CleanupOnFail = true
 	client.Force = true
 	client.Wait = true
-	client.Timeout = 1 * time.Minute
+	client.Timeout = defaultClientTimeout
 	return client.Run(name)
 }
 
@@ -287,8 +300,8 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 	message.Debugf("helm.uninstallChart(%s)", name)
 	client := action.NewUninstall(h.actionConfig)
 	client.KeepHistory = false
-	client.Timeout = 3 * time.Minute
 	client.Wait = true
+	client.Timeout = defaultClientTimeout
 	return client.Run(name)
 }
 
