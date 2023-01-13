@@ -1,7 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
   name: "init-package-zarf-registry"
-  description: "Used to establish a new Zarf cluster"
 
 variables:
   - name: REGISTRY_EXISTING_PVC
@@ -31,8 +30,7 @@ variables:
 components:
   - name: zarf-seed-registry
     description: |
-      Spins up a temporary docker registry and provides containers into the cluster to seed the long-lived registry. 
-      Removed and destroyed after the registry is booted.
+      Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry
@@ -45,8 +43,8 @@ components:
 
   - name: zarf-registry
     description: |
-      Deploys Docker registry that permanently lives in the cluster. 
-      Stores and serves container images for future zarf components.
+      Updates the Zarf Registry to use the self-hosted registry image. 
+      Serves as the primary docker registry for the cluster.
     manifests:
       - name: registry-connect
         namespace: zarf
