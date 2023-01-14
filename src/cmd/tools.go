@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -32,7 +32,6 @@ var toolsCmd = &cobra.Command{
 	Short: lang.CmdToolsShort,
 }
 
-// destroyCmd represents the init command
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
@@ -95,7 +94,7 @@ var k9sCmd = &cobra.Command{
 	Short:   lang.CmdToolsMonitorShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Hack to make k9s think it's all alone
-		os.Args = []string{os.Args[0], "-n", "zarf"}
+		os.Args = []string{os.Args[0]}
 		k9s.Execute()
 	},
 }

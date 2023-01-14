@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the documentation about Zarf, the air-gap tool! Let's get you started down your Zarfing journey!
+Welcome to the documentation about Zarf, the air-gap tool! Let's get you started on your Zarfing journey!
 
 ## Installing Zarf
 
@@ -28,16 +28,7 @@ mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
 ### Building the CLI from scratch
 
 If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.19.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
-
-```bash
-git clone git@github.com:defenseunicorns/zarf.git
-cd zarf
-make build-cli                                      # This builds all combinations of OS and architecture
-mv ./build/{ZARF_FILE} /usr/local/bin/zarf
-```
-
-:::note
-The `make build-cli` command builds a binary for each combinations of OS and architecture. If you want to shorten the build time, you can use an alternative command to only build the binary you need:
+::: note The `make` build-cli` command builds a binary for each combinations of OS and architecture. If you want to shorten the build time, you can use an alternative command to only build the binary you need:
 
 - `make build-cli-mac-intel`
 - `make build-cli-mac-apple`
@@ -47,7 +38,7 @@ The `make build-cli` command builds a binary for each combinations of OS and arc
 You can learn more about building [here](./4-user-guide/1-the-zarf-cli/1-building-your-own-cli.md).
 :::
 
-<br />
+---
 
 ## Verifying Zarf Install
 
@@ -62,16 +53,16 @@ vX.X.X  # X.X.X is replaced with the version number of your specific installatio
 
 If you are not seeing that, then it's possible that Zarf was not installed onto your $PATH, [this $PATH guide](https://zwbetz.com/how-to-add-a-binary-to-your-path-on-macos-linux-windows/) should help with that.
 
-<br />
+---
 
 ## Where to next?
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you!
 
-- If you want to dive straight into Zarf, you can find examples and guides in the [Walkthroughs](./13-walkthroughs/index.md) page.
+- If you want to dive straight into Zarf, you can find examples and guides on the [Walkthroughs](./13-walkthroughs/index.md)](./13-walkthroughs/index.md) page.
 
-- More information about the Zarf CLI is available in the [Zarf CLI](./4-user-guide/1-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
+- More information about the Zarf CLI is available on the [Zarf](./4-user-guide/1-the-zarf-cli/index.md) CLI](./4-user-guide/1-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 
-- More information about the packages that Zarf create and deploy is available in the [Understanding Zarf Packages](./4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+- More information about the packages that Zarf creates and deploy is available in the [Understanding Zarf Packages](./4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
-- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context in the [Understand the Basics](./1-understand-the-basics.md) and [Core Concepts](./2-core-concepts.md) page.
+- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand](./1-understand-the-basics.md) the Basics](./1-understand-the-basics.md) and [Core Concepts](./2-core-concepts.md) pages.

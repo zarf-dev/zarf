@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package images provides functions for building and pushing images
+// Package images provides functions for building and pushing images.
 package images
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -23,9 +24,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
+// PullAll pulls all of the images in the provided tag map.
 func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	var (
 		longer   string
@@ -51,12 +54,11 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
-		img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
+
+		img, err := i.pullImage(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
-		imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
-		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 		imageMap[src] = img
 	}
 
@@ -117,6 +119,43 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	return tagToImage, nil
 }
 
+// pullImage returns a v1.Image either by loading a local tarball, the pulling from the local daemon, or the wider internet
+func (i *ImgConfig) pullImage(src string) (v1.Image, error) {
+	// Load image tarballs from the local filesystem
+	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+		message.Debugf("loading image tarball: %s", src)
+		return crane.Load(src, config.GetCraneOptions(true)...)
+	}
+
+	// Unless disabled, attempt to pull the image from the local daemon
+	if !i.NoLocalImages {
+		reference, err := name.ParseReference(src)
+		if err != nil {
+			// log this error but don't return the error since we can still try pulling from the wider internet
+			message.Debugf("unable to parse the image reference, this might have impacts on pulling from the local daemon: %s", err.Error())
+		}
+
+		daemonOpts := daemon.WithContext(context.Background())
+		if img, err := daemon.Image(reference, daemonOpts); err == nil {
+			message.Debugf("loading image from docker daemon: %s", src)
+			return img, err
+		}
+	}
+
+	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
+	img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+	}
+
+	message.Debugf("loading image with cache: %s", src)
+	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
+	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
+
+	return img, nil
+}
+
+// FormatCraneOCILayout ensures that all images are in the OCI format.
 func FormatCraneOCILayout(ociPath string) error {
 	type IndexJSON struct {
 		SchemaVersion int `json:"schemaVersion"`
@@ -127,13 +166,13 @@ func FormatCraneOCILayout(ociPath string) error {
 		} `json:"manifests"`
 	}
 
-	indexJson, err := os.Open(path.Join(ociPath, "index.json"))
+	indexJSON, err := os.Open(path.Join(ociPath, "index.json"))
 	if err != nil {
 		message.Errorf(err, "Unable to open %s/index.json", ociPath)
 		return err
 	}
 	var index IndexJSON
-	byteValue, _ := io.ReadAll(indexJson)
+	byteValue, _ := io.ReadAll(indexJSON)
 	json.Unmarshal(byteValue, &index)
 
 	digest := strings.TrimPrefix(index.Manifests[0].Digest, "sha256:")
@@ -170,24 +209,24 @@ func FormatCraneOCILayout(ociPath string) error {
 	index.Manifests[0].Digest = fmt.Sprintf("sha256:%x", bs)
 	index.Manifests[0].Size = len(manifest)
 	index.Manifests[0].MediaType = "application/vnd.oci.image.manifest.v1+json"
-	indexJson.Close()
+	indexJSON.Close()
 	_ = os.Remove(path.Join(ociPath, "index.json"))
-	indexJson, err = os.Create(path.Join(ociPath, "index.json"))
+	indexJSON, err = os.Create(path.Join(ociPath, "index.json"))
 	if err != nil {
 		message.Errorf(err, "Unable to create %s/index.json", ociPath)
 		return err
 	}
-	indexJsonBytes, err := json.Marshal(index)
+	indexJSONBytes, err := json.Marshal(index)
 	if err != nil {
 		message.Errorf(err, "Unable to marshal %s/index.json", ociPath)
 		return err
 	}
-	_, err = indexJson.Write(indexJsonBytes)
+	_, err = indexJSON.Write(indexJSONBytes)
 	if err != nil {
 		message.Errorf(err, "Unable to write to %s/index.json", ociPath)
 		return err
 	}
-	indexJson.Close()
+	indexJSON.Close()
 
 	return nil
 }

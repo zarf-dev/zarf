@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions
+// Package utils provides generic helper functions.
 package utils
 
 import (
@@ -11,10 +11,10 @@ import (
 )
 
 // Very limited special chars for git / basic auth
-// https://owasp.org/www-community/password-special-characters has complete list of safe chars
+// https://owasp.org/www-community/password-special-characters has complete list of safe chars.
 const randomStringChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!~-"
 
-// RandomString generates a secure random string of the specified length
+// RandomString generates a secure random string of the specified length.
 func RandomString(length int) string {
 	bytes := make([]byte, length)
 

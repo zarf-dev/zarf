@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package api provides the UI API server
+// Package api provides the UI API server.
 package api
 
 import (
@@ -24,7 +24,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// LaunchAPIServer launches UI API server
+// LaunchAPIServer launches UI API server.
 func LaunchAPIServer() {
 	message.Debug("api.LaunchAPIServer()")
 

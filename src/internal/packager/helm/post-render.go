@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helm contins operations for working with helm charts
+// Package helm contains operations for working with helm charts.
 package helm
 
 import (
@@ -33,7 +33,7 @@ type renderer struct {
 	values         template.Values
 }
 
-func (h *Helm) NewRenderer() (*renderer, error) {
+func (h *Helm) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
 	valueTemplate, err := template.Generate(h.Cfg)
@@ -69,7 +69,9 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values)
+	if _, err := template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values); err != nil {
+		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+	}
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
@@ -77,7 +79,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
 	}
 
-	// Use helm to resplit the manifest byte (same call used by helm to pass this data to postRender)
+	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
 	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
 		r.actionConfig.Capabilities.APIVersions,
 		releaseutil.InstallOrder,
@@ -104,7 +106,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		switch rawData.GetKind() {
 		case "Namespace":
 			var namespace corev1.Namespace
-			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shennanigans
+			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
 				message.Errorf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
@@ -132,10 +134,10 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
 
-				// Add the connectstring for processing later in the deployment
+				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{
 					Description: annotations[config.ZarfConnectAnnotationDescription],
-					Url:         annotations[config.ZarfConnectAnnotationUrl],
+					URL:         annotations[config.ZarfConnectAnnotationURL],
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 paths-ignore:
   - src/pkg/packager/network.go
   - src/pkg/utils/network.go
+  - build/**
 
 query-filters:
   - exclude:

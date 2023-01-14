@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for zarf
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -49,6 +49,7 @@ const (
 	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
 	V_PKG_CREATE_INSECURE         = "package.create.insecure"
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
+	V_PKG_CREATE_NO_LOCAL_IMAGES  = "package.create.no_local_images"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
@@ -59,7 +60,7 @@ const (
 )
 
 func initViper() {
-	// Already initializedby some other command
+	// Already initialized by some other command
 	if v != nil {
 		return
 	}

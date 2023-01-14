@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -31,7 +31,7 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// Create generates a zarf package tarball for a given PackageConfg and optional base directory.
+// Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
@@ -208,9 +208,10 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 
 	return pulledImages, utils.Retry(func() error {
 		imgConfig := images.ImgConfig{
-			TarballPath: path,
-			ImgList:     imgList,
-			Insecure:    p.cfg.CreateOpts.Insecure,
+			TarballPath:   path,
+			ImgList:       imgList,
+			Insecure:      p.cfg.CreateOpts.Insecure,
+			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
 		}
 
 		pulledImages, err = imgConfig.PullAll()
@@ -246,7 +247,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		re := regexp.MustCompile(`\.git$`)
 
 		for _, chart := range component.Charts {
-			isGitURL := re.MatchString(chart.Url)
+			isGitURL := re.MatchString(chart.URL)
 			helmCfg := helm.Helm{
 				Chart: chart,
 				Cfg:   p.cfg,
@@ -254,7 +255,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 			if isGitURL {
 				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
-			} else if len(chart.Url) > 0 {
+			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
 				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
@@ -280,7 +281,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			message.Debugf("Loading %#v", file)
 			destinationFile := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
-			if utils.IsUrl(file.Source) {
+			if utils.IsURL(file.Source) {
 				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
 			} else {
 				if err := utils.CreatePathAndCopy(file.Source, destinationFile); err != nil {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -77,7 +77,7 @@ func (p *Packager) Deploy() error {
 	return nil
 }
 
-// deployComponents loops through a list of ZarfComponents and deploys them
+// deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
 	config.SetDeployingComponents(deployedComponents)
@@ -168,7 +168,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	return charts, nil
 }
 
-// Deploy a Zarf Component
+// Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
@@ -192,7 +192,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
 	}
 
-	if err := p.processComponentFiles(component.Files, componentPath.Files); err != nil {
+	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
@@ -242,17 +242,17 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	return charts, nil
 }
 
-// Move files onto the host of the machine performing the deployment
-func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, sourceLocation string) error {
+// Move files onto the host of the machine performing the deployment.
+func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
 	// If there are no files to process, return early.
-	if len(componentFiles) < 1 {
+	if len(component.Files) < 1 {
 		return nil
 	}
 
-	spinner := *message.NewProgressSpinner("Copying %d files", len(componentFiles))
+	spinner := *message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
-	for index, file := range componentFiles {
+	for index, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
 		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
 
@@ -267,9 +267,23 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
+		// Check if the file looks like a text file
+		isText, err := utils.IsTextFile(sourceFile)
+		if err != nil {
+			message.Debugf("unable to determine if file %s is a text file: %s", sourceFile, err)
+		}
+
+		// If the file is a text file, template it
+		if isText {
+			spinner.Updatef("Templating %s", file.Target)
+			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
+				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
+			}
+		}
+
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := copy.Copy(sourceFile, file.Target)
+		err = copy.Copy(sourceFile, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
 		}
@@ -297,7 +311,7 @@ func (p *Packager) processComponentFiles(componentFiles []types.ZarfFile, source
 	return nil
 }
 
-// Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values
+// Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
 func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
@@ -345,7 +359,7 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 	return values, nil
 }
 
-// Push all of the components images to the configured container registry
+// Push all of the components images to the configured container registry.
 func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) error {
 	if len(componentImages) == 0 {
 		return nil
@@ -363,7 +377,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}, 3, 5*time.Second)
 }
 
-// Push all of the components git repos to the configured git server
+// Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
 	for _, repoURL := range repos {
 
@@ -373,21 +387,24 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 
 			// If this is a serviceURL, create a port-forward tunnel to that resource
 			if cluster.IsServiceURL(gitClient.Server.Address) {
-				if tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address); err != nil {
+				tunnel, err := cluster.NewTunnelFromServiceURL(gitClient.Server.Address)
+
+				if err != nil {
 					return err
-				} else {
-					tunnel.Connect("", false)
-					defer tunnel.Close()
-					gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
 				}
+
+				tunnel.Connect("", false)
+				defer tunnel.Close()
+				gitClient.Server.Address = fmt.Sprintf("http://%s", tunnel.Endpoint())
 			}
 
 			// Convert the repo URL to a Zarf-formatted repo name
-			if repoPath, err := gitClient.TransformURLtoRepoName(repoURL); err != nil {
+			repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
+			if err != nil {
 				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-			} else {
-				return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
 			}
+
+			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
 		}
 
 		// Try repo push up to 3 times
@@ -399,7 +416,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// Async'ly move data into a container running in a pod on the k8s cluster
+// Async move data into a container running in a pod on the k8s cluster.
 func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
 	if len(dataInjections) > 0 {
 		message.Info("Loading data injections")
@@ -411,7 +428,7 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 	}
 }
 
-// Install all Helm charts and raw k8s manifests into the k8s cluster
+// Install all Helm charts and raw k8s manifests into the k8s cluster.
 func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) ([]types.InstalledChart, error) {
 	installedCharts := []types.InstalledChart{}
 
@@ -419,7 +436,9 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-			valueTemplate.Apply(component, chartValueName)
+			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
+				return installedCharts, err
+			}
 		}
 
 		// Generate helm templates to pass to gitops engine

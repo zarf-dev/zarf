@@ -1518,9 +1518,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[A-Z_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z_%5D%2B%24) |
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
 
 </blockquote>
 </details>
@@ -1620,9 +1620,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[A-Z_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z_%5D%2B%24) |
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
 
 </blockquote>
 </details>
@@ -1665,4 +1665,4 @@ Must be one of:
 </details>
 
 ----------------------------------------------------------------------------------------------------------------------------
-Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/master/zarf.schema.json)
+Generated from [zarf.schema.json](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
