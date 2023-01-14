@@ -33,7 +33,7 @@ components:
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry
-        localPath: packages/zarf-registry/chart
+        localPath: chart
         version: 1.0.0
         namespace: zarf
         valuesFiles:
@@ -53,7 +53,7 @@ components:
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry
-        localPath: packages/zarf-registry/chart
+        localPath: chart
         version: 1.0.0
         namespace: zarf
         valuesFiles:
