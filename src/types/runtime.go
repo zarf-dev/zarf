@@ -31,8 +31,6 @@ type ZarfInitOptions struct {
 
 	RegistryInfo RegistryInfo `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is going to be using"`
 
-	Components string `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
-
 	StorageClass string `json:"storageClass" jsonschema:"description=StorageClass of the k8s cluster Zarf is initializing"`
 }
 
