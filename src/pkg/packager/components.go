@@ -32,11 +32,6 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	// The component list is comma-delimited list
 	requestedNames := getRequestedComponentList(p.cfg.DeployOpts.Components)
 
-	// Init packages use a different component list
-	if p.cfg.IsInitConfig {
-		requestedNames = getRequestedComponentList(p.cfg.InitOpts.Components)
-	}
-
 	// Break up components into choice groups
 	for _, component := range p.cfg.Pkg.Components {
 		key := component.Group
@@ -193,6 +188,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 	displayComponent.Description = ""
 	utils.ColorPrintYAML(displayComponent)
 	if component.Description != "" {
+		pterm.Println()
 		message.Question(component.Description)
 	}
 
