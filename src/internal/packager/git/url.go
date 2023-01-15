@@ -19,10 +19,9 @@ var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/
 func (g *Git) MutateGitURLsInText(text string) string {
 	extractPathRegex := regexp.MustCompilePOSIX(`https?://[^/]+/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		output, err := g.transformURL(match)
+		output, err := g.TransformURL(match)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
-			output = match
 		}
 		return output
 	})
@@ -52,10 +51,11 @@ func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	return newRepoName, nil
 }
 
-func (g *Git) transformURL(url string) (string, error) {
+// TransformURL takes a git url and returns a Zarf-compatible url.
+func (g *Git) TransformURL(url string) (string, error) {
 	repoName, err := g.TransformURLtoRepoName(url)
 	if err != nil {
-		return "", err
+		return url, err
 	}
 	output := fmt.Sprintf("%s/%s/%s", g.Server.Address, g.Server.PushUsername, repoName)
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)

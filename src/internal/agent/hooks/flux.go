@@ -81,7 +81,10 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// Mutate the git URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		patchedURL = git.New(state.GitServer).MutateGitURLsInText(patchedURL)
+		patchedURL, err = git.New(state.GitServer).TransformURL(patchedURL)
+		if err != nil {
+			message.Warnf("Unable to transform the git url, using the original url we have: %s", patchedURL)
+		}
 		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
