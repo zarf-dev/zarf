@@ -51,8 +51,8 @@
 				{component.description || ' '}
 			</Typography>
 		</div>
-		{#if !component.required}
-			<div style="gap: 5px;">
+		{#if !readOnly}
+			<div style={`gap: 5px; visibility: ${component.required ? "hidden": "initial"}`}>
 				<IconButton
 					toggleable
 					class="deploy-component-toggle"
@@ -62,7 +62,7 @@
 					id={`deploy-component-${idx}`}
 					toggledIconContent="toggle_on"
 					iconClass="material-symbols-outlined"
-					disabled={readOnly || component.required}
+					disabled={component.required}
 					toggled={$pkgComponentDeployStore.includes(idx)}
 					on:click={() => toggleComponentDeployment($pkgComponentDeployStore, idx)}
 				/>
@@ -70,7 +70,9 @@
 					variant="body1"
 					element="label"
 					for={`deploy-component-${idx}`}
-					style={readOnly ? 'color: var(--mdc-theme-text-secondary-on-light);' : ''}
+					style={component.required
+						? 'color: var(--mdc-theme-text-secondary-on-light);'
+						: 'var(--mdc-theme-text-disabled-on-light, rgba(0, 0, 0, 0.38))'}
 				>
 					Deploy
 				</Typography>
