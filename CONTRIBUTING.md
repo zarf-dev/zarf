@@ -41,7 +41,7 @@ This section dives deeper into how we test Zarf
 
 ### (Optional) Pre-Commit Hooks and Linting
 
-In this repo you can optinally use [pre-commit](https://pre-commit.com/) hooks for automated validation and linting, but if not the CI will run these checks for you.
+In this repo you can optinally use [pre-commit](https://pre-commit.com/) hooks for automated validation and linting, but if not CI will run these checks for you.
 
 ### Code Testing
 
