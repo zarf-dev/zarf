@@ -6,6 +6,16 @@ List the repos in a registry
 zarf tools registry catalog [REGISTRY] [flags]
 ```
 
+### Examples
+
+```
+  # list the repos internal to Zarf
+  $ zarf tools registry catalog
+
+  # list the repos for reg.example.com
+  $ zarf tools registry catalog reg.example.com
+```
+
 ### Options
 
 ```
