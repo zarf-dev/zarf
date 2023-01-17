@@ -681,10 +681,6 @@ export interface ZarfInitOptions {
      */
     applianceMode: boolean;
     /**
-     * Comma separated list of optional components to deploy
-     */
-    components: string;
-    /**
      * Information about the repository Zarf is going to be using
      */
     gitServer: GitServerInfo;
@@ -1082,7 +1078,6 @@ const typeMap: any = {
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
-        { json: "components", js: "components", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "packageServer", js: "packageServer", typ: r("PackageServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },

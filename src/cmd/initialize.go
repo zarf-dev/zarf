@@ -77,7 +77,7 @@ func findInitPackage(initPackageName string) (string, error) {
 	// Create the cache directory if it doesn't exist
 	if utils.InvalidPath(config.GetAbsCachePath()) {
 		if err := os.MkdirAll(config.GetAbsCachePath(), 0755); err != nil {
-			message.Fatalf(err, "Unable to create cache directory: %s", config.GetAbsCachePath())
+			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
 		}
 	}
 
@@ -182,11 +182,11 @@ func init() {
 	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
+	initCmd.Flags().StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server

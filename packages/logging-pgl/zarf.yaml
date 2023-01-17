@@ -4,7 +4,10 @@ metadata:
 
 components:
   - name: logging
-    description: "Add Promtail, Grafana and Loki (PGL) to this cluster for log monitoring."
+    description: |
+      Deploys the Promtail Grafana & Loki (PGL) stack. 
+      Aggregates logs from different containers and presents them in a web dashboard. 
+      Recommended if no other logging stack is deployed in the cluster.
     images:
       - docker.io/grafana/promtail:2.7.0
       - grafana/grafana:8.3.5

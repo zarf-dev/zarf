@@ -22,7 +22,6 @@ func (g *Git) MutateGitURLsInText(text string) string {
 		output, err := g.TransformURL(match)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
-			output = match
 		}
 		return output
 	})
@@ -52,10 +51,11 @@ func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	return newRepoName, nil
 }
 
+// TransformURL takes a git url and returns a Zarf-compatible url.
 func (g *Git) TransformURL(url string) (string, error) {
 	repoName, err := g.TransformURLtoRepoName(url)
 	if err != nil {
-		return "", err
+		return url, err
 	}
 
 	// Get the full path

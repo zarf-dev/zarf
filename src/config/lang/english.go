@@ -107,17 +107,20 @@ const (
 		"# Initializing w/ an external registry:\nzarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
 		"# Initializing w/ an external git server:\nzarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}\n\n"
 
-	CmdInitErrFlags            = "Invalid command flags were provided."
-	CmdInitErrDownload         = "failed to download the init package: %s"
-	CmdInitErrValidateGit      = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
-	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
-	CmdInitErrValidatePackage  = "the 'package-push-username' and 'package-push-token' flags must be provided if the 'package-url' flag is provided"
+	CmdInitErrFlags             = "Invalid command flags were provided."
+	CmdInitErrDownload          = "failed to download the init package: %s"
+	CmdInitErrValidateGit       = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
+	CmdInitErrValidateRegistry  = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
+	CmdInitErrValidatePackage   = "the 'package-push-username' and 'package-push-token' flags must be provided if the 'package-url' flag is provided"
+	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
 	CmdInitDownloadConfirm   = "Do you want to download this init package?"
 	CmdInitDownloadCancel    = "Confirm selection canceled: %s"
 	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
+
+	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirm the install without prompting"
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
