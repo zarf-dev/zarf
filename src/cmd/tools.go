@@ -195,30 +195,30 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	craneCatalog.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			return originalCatalogFn(cmd, args)
-		} else {
-			// Load Zarf state
-			zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
-			if err != nil {
-				return err
-			}
-
-			// Open a tunnel to the Zarf registry
-			tunnelReg, err := cluster.NewZarfTunnel()
-			if err != nil {
-				return err
-			}
-			tunnelReg.Connect(cluster.ZarfRegistry, false)
-			registryURL, err := url.Parse(tunnelReg.HTTPEndpoint())
-			if err != nil {
-				return err
-			}
-
-			// Add the correct authentication to the crane command options
-			authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
-			*cranePlatformOptions = append(*cranePlatformOptions, authOption)
-
-			return originalCatalogFn(cmd, []string{registryURL.Host})
 		}
+
+		// Load Zarf state
+		zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil {
+			return err
+		}
+
+		// Open a tunnel to the Zarf registry
+		tunnelReg, err := cluster.NewZarfTunnel()
+		if err != nil {
+			return err
+		}
+		tunnelReg.Connect(cluster.ZarfRegistry, false)
+		registryURL, err := url.Parse(tunnelReg.HTTPEndpoint())
+		if err != nil {
+			return err
+		}
+
+		// Add the correct authentication to the crane command options
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		return originalCatalogFn(cmd, []string{registryURL.Host})
 	}
 
 	return craneCatalog
