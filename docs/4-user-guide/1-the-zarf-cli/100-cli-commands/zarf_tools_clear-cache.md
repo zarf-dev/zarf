@@ -10,7 +10,7 @@ zarf tools clear-cache [flags]
 
 ```
   -h, --help                help for clear-cache
-      --zarf-cache string   Specify the location of the Zarf  artifact cache (images and git repositories) (default "~/.zarf-cache")
+      --zarf-cache string   Specify the location of the Zarf artifact cache (images and git repositories) (default "~/.zarf-cache")
 ```
 
 ### Options inherited from parent commands

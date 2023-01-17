@@ -140,9 +140,9 @@ const (
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
 
-	CmdInitFlagArtifactURL       = "External package registry url to use for this Zarf cluster"
-	CmdInitFlagArtifactPushUser  = "Username to access to the package registry Zarf is configured to use. User must be able to upload packages."
-	CmdInitFlagArtifactPushToken = "API Token for the push-user to access the package registry"
+	CmdInitFlagArtifactURL       = "External artifact registry url to use for this Zarf cluster"
+	CmdInitFlagArtifactPushUser  = "Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
+	CmdInitFlagArtifactPushToken = "API Token for the push-user to access the artifact registry"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
@@ -164,7 +164,7 @@ const (
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory."
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
-	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf  artifact cache (images and git repositories)"
+	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"

@@ -39,9 +39,9 @@ zarf init [flags]
 ### Options
 
 ```
-      --artifact-push-token string      API Token for the push-user to access the package registry
-      --artifact-push-username string   Username to access to the package registry Zarf is configured to use. User must be able to upload packages.
-      --artifact-url string             External package registry url to use for this Zarf cluster
+      --artifact-push-token string      API Token for the push-user to access the artifact registry
+      --artifact-push-username string   Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
+      --artifact-url string             External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
