@@ -15,6 +15,11 @@ body {
 	padding: 0;
 }
 
+/* https://github.com/sveltejs/kit/discussions/7585 */
+body > div {
+	display: contents;
+}
+
 .card {
 	background-color: var(--mdc-theme-surface);
 }
