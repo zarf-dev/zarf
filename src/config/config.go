@@ -56,8 +56,8 @@ const (
 	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
 	ZarfInClusterContainerRegistryNodePort = 31999
 
-	ZarfInClusterGitServiceURL     = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterPackageServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
 	ZarfSeedImage = "registry"
 	ZarfSeedTag   = "2.8.1"
