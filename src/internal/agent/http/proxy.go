@@ -18,72 +18,82 @@ import (
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
 func ProxyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		proxy := &httputil.ReverseProxy{Director: proxyDirector, ModifyResponse: proxyResponse}
+		err := setReqURL(r)
+		if err != nil {
+			message.Debugf("%#v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("%#v", err)))
+			return
+		}
+
+		proxy := &httputil.ReverseProxy{ModifyResponse: proxyResponse}
 		proxy.ServeHTTP(w, r)
 	}
 }
 
-func proxyDirector(req *http.Request) {
-	message.Debugf("Before Req %#v", req)
-	message.Debugf("Before Req URL %#v", req.URL)
+func setReqURL(r *http.Request) error {
+	message.Debugf("Before Req %#v", r)
+	message.Debugf("Before Req URL %#v", r.URL)
 
 	// We add this so that we can use it to rewrite urls in the response if needed
-	req.Header.Add("X-Forwarded-Host", req.Host)
+	r.Header.Add("X-Forwarded-Host", r.Host)
 
 	// We remove this so that go will encode and decode on our behalf (see https://pkg.go.dev/net/http#Transport DisableCompression)
-	req.Header.Del("Accept-Encoding")
+	r.Header.Del("Accept-Encoding")
 
 	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
-		message.Debugf("%#v", err)
+		return err
 	}
 
 	var targetURL *url.URL
 
 	// If 'git' is the username use the configured git server, otherwise use the artifact server
-	if isGitUserAgent(req.UserAgent()) {
+	if isGitUserAgent(r.UserAgent()) {
 		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
-		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
-			targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, req.URL.Path)
+		if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
+			targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, r.URL.Path)
 		} else {
 			g := git.New(zarfState.GitServer)
 
 			var transformedURL string
-			transformedURL, err = g.TransformURL(getTLSScheme(req.TLS) + req.Host + req.URL.String())
+			transformedURL, err = g.TransformURL(getTLSScheme(r.TLS) + r.Host + r.URL.String())
 			if err != nil {
-				message.Debugf("%#v", err)
+				return err
 			}
 			targetURL, err = url.Parse(transformedURL)
-			req.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
+			r.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
 		}
 	} else {
 		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
-		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
-			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, req.URL.Path)
+		if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
+			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
 		} else {
 			switch {
-			case isPipUserAgent(req.UserAgent()):
-				targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
-				req.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
-			case isNpmUserAgent(req.UserAgent()):
-				targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
-				req.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
+			case isPipUserAgent(r.UserAgent()):
+				targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+				r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
+			case isNpmUserAgent(r.UserAgent()):
+				targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+				r.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
 			default:
-				targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
-				req.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
+				targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+				r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
 			}
 		}
 	}
 
 	if err != nil {
-		message.Debugf("%#v", err)
+		return err
 	}
 
-	req.Host = targetURL.Host
-	req.URL = targetURL
+	r.Host = targetURL.Host
+	r.URL = targetURL
 
-	message.Debugf("After Req %#v", req)
-	message.Debugf("After Req URL%#v", req.URL)
+	message.Debugf("After Req %#v", r)
+	message.Debugf("After Req URL%#v", r.URL)
+
+	return nil
 }
 
 func proxyResponse(resp *http.Response) error {
