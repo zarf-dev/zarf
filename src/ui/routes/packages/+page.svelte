@@ -8,6 +8,10 @@
 	import { Button, Typography, ButtonIcon } from '@ui';
 </script>
 
+<svelte:head>
+	<title>Packages</title>
+</svelte:head>
+
 {#await Packages.getDeployedPackages()}
 	<Spinner />
 {:then packages}
