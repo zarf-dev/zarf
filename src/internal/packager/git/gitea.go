@@ -142,14 +142,14 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	}
 
 	for _, token := range tokens {
-		if token["name"] == config.ZarfPackageTokenName {
+		if token["name"] == config.ZarfArtifactTokenName {
 			hasPackageToken = true
 		}
 	}
 
 	if hasPackageToken {
 		// Delete the existing token to be replaced
-		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfPackageTokenName)
+		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfArtifactTokenName)
 		deleteTokensRequest, _ := netHttp.NewRequest("DELETE", deleteTokensEndpoint, nil)
 		out, err := g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
 		message.Debugf("DELETE %s:\n%s", deleteTokensEndpoint, string(out))
@@ -160,7 +160,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 
 	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
 	createTokensBody := map[string]interface{}{
-		"name": config.ZarfPackageTokenName,
+		"name": config.ZarfArtifactTokenName,
 	}
 	createTokensData, _ := json.Marshal(createTokensBody)
 	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
