@@ -221,7 +221,7 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
 	// Set default svc url if an external registry was not provided
 	if artifactServer.Address == "" {
-		artifactServer.Address = config.ZarfInClusterPackageServiceURL
+		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
 		artifactServer.InternalServer = true
 	}
 
