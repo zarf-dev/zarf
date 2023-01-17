@@ -13,13 +13,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Run commands that a component has provided.
-func (p *Packager) runComponentActions(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction, vars map[string]string) error {
+func (p *Packager) runAction(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
 ACTION:
 	for _, a := range actions {
 		spinner := message.NewProgressSpinner("Running command \"%s\"", a.Cmd)
@@ -29,8 +30,17 @@ ACTION:
 			ctx    context.Context
 			cancel context.CancelFunc
 			cmd    string
+			out    string
 			err    error
+			vars   map[string]string
 		)
+
+		// If the value template is not nil, get the variables for the action.
+		// No special variables or deprecations will be used the action.
+		// Reload the variables each time in case they have been changed by a previous action.
+		if valueTemplate != nil {
+			vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
+		}
 
 		cfg := actionGetCfg(actionSet, a, vars)
 
@@ -49,9 +59,14 @@ ACTION:
 				spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
 
 				// Try running the command and continue the retry loop if it fails.
-				if err := actionRun(context.TODO(), cfg, cmd); err != nil {
+				if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
 					message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
 					continue
+				}
+
+				// If an output variable is defined, set it.
+				if a.SetVariable != "" {
+					p.setVariable(a.SetVariable, out)
 				}
 
 				// If the command ran successfully, continue to the next action.
@@ -72,9 +87,14 @@ ACTION:
 				defer cancel()
 
 				// Try running the command and continue the retry loop if it fails.
-				if err := actionRun(ctx, cfg, cmd); err != nil {
+				if out, err = actionRun(ctx, cfg, cmd); err != nil {
 					message.Debug(err)
 					continue
+				}
+
+				// If an output variable is defined, set it.
+				if a.SetVariable != "" {
+					p.setVariable(a.SetVariable, out)
 				}
 
 				// If the command ran successfully, continue to the next action.
@@ -139,8 +159,8 @@ func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentA
 	for k, v := range vars {
 		// Remove # from env variable name.
 		k = strings.ReplaceAll(k, "#", "")
-		// Make terraform variables available to the action.
-		k1 := strings.ReplaceAll(k, "ZARF_VAR", "TF_VAR")
+		// Make terraform variables available to the action as TF_VAR_lowercase_name.
+		k1 := strings.ReplaceAll(strings.ToLower(k), "zarf_var", "TF_VAR")
 		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
 		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v))
 	}
@@ -148,7 +168,7 @@ func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentA
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) error {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) (string, error) {
 	var shell string
 	var shellArgs string
 
@@ -171,5 +191,5 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 		message.Debug(output, errOut)
 	}
 
-	return err
+	return output, err
 }

@@ -4,37 +4,79 @@ metadata:
   description: "Component actions examples"
 
 variables:
-  - name: DEMO
-    default: test
+  - name: DOG_SOUND
+    default: ruff
 
 components:
   - name: on-create
     actions:
+      # runs during "zarf package create"
       onCreate:
+        # runs before the component is created
         before:
           # on Windows, touch is replaced with New-Item
           - cmd: touch test-create.txt
 
   - name: on-deploy
     actions:
+      # runs during "zarf package deploy"
       onDeploy:
+        # runs before the component is deployed
         before:
           - cmd: touch test-deploy-before.txt
+        # runs after the component is deployed
         after:
           - cmd: touch test-deploy-after.txt
 
   - name: on-deploy-with-variable
     actions:
+      # runs during "zarf package deploy"
       onDeploy:
+        # runs before the component is deployed
         before:
-          - cmd: env
+          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+
+  - name: on-deploy-with-dynamic-variable
+    actions:
+      # runs during "zarf package deploy"
+      onDeploy:
+        # runs before the component is deployed
+        before:
+          # setVariable can be used to set a variable for use in other actions or components
+          - cmd: echo "meow"
+            setVariable: CAT_SOUND
+          # this action will have access to the variable set in the previous action
+          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+
+  - name: on-deploy-with-multiple-variables
+    actions:
+      # runs during "zarf package deploy"
+      onDeploy:
+        # runs before the component is deployed
+        before:
+          # setting this variable will allow it to be used in other actions in addition variables
+          # set in other actions or components
+          - cmd: echo "hiss"
+            setVariable: SNAKE_SOUND
+        # onSuccess will only run if steps in this component are successful
+        onSuccess:
+          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+          - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second
     actions:
+      # runs during "zarf package deploy"
       onDeploy:
+        # defaults allow you to specify default values for the actions in that acitonSet
         defaults:
+          # maxTotalSeconds is the maximum amount of time the action can run before it is killed, including retries
           maxTotalSeconds: 1
+          # maxRetries is the maximum number of times the action will be retried on failure
           maxRetries: 3
         before:
+          # this action will fail after 1 second
           - cmd: sleep 30
+        onFailure:
+          - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"

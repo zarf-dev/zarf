@@ -70,11 +70,11 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source      string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
-	Shasum      string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
-	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
-	Executable  bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
-	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
+	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
+	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
+	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
+	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -143,6 +143,7 @@ type ZarfComponentAction struct {
 	Dir             string   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd             string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
+	SetVariable     string   `json:"setVariable,omitempty" jsonschema:"description=The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

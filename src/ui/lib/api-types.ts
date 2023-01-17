@@ -201,6 +201,11 @@ export interface ZarfComponentAction {
      * Hide the output of the command during package deployment (default false)
      */
     mute?: boolean;
+    /**
+     * The name of a variable to update with the output of the command. This variable will be
+     * available to all remaining actions and components in the package.
+     */
+    setVariable?: string;
 }
 
 /**
@@ -1006,6 +1011,7 @@ const typeMap: any = {
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
     ], false),
     "ZarfComponentActionDefaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },

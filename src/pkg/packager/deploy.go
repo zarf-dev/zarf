@@ -99,16 +99,15 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		deployedComponent := types.DeployedComponent{Name: component.Name}
 		onDeploy := component.Actions.OnDeploy
-		vars, _ := valueTemplate.GetVariables(component)
 
 		if err != nil {
-			if err := p.runComponentActions(onDeploy, onDeploy.OnFailure, vars); err != nil {
+			if err := p.runAction(onDeploy, onDeploy.OnFailure, &valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runComponentActions(onDeploy, onDeploy.OnSuccess, vars); err != nil {
+		if err := p.runAction(onDeploy, onDeploy.OnSuccess, &valueTemplate); err != nil {
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 
@@ -197,9 +196,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasDataInjections := len(component.DataInjections) > 0
 
 	onDeploy := component.Actions.OnDeploy
-	vars, _ := valueTemplate.GetVariables(component)
 
-	if err = p.runComponentActions(onDeploy, onDeploy.Before, vars); err != nil {
+	if err = p.runAction(onDeploy, onDeploy.Before, &valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
@@ -247,7 +245,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runComponentActions(onDeploy, onDeploy.After, vars); err != nil {
+	if err = p.runAction(onDeploy, onDeploy.After, &valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component last action: %w", err)
 	}
 

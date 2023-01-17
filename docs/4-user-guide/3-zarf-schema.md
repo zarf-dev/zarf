@@ -1012,6 +1012,26 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

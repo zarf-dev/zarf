@@ -17,6 +17,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+var (
+	// https://regex101.com/r/vpi8a8/1
+	isLowercaseNumberHyphen     = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	isUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+)
+
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
 	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
@@ -119,6 +125,44 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 	}
 
+	if err := validateOnDeployActions(component.Actions.OnDeploy); err != nil {
+		return fmt.Errorf(lang.PkgValidateErrAction, err)
+	}
+
+	return nil
+}
+
+func validateOnDeployActions(actions types.ZarfComponentActionSet) error {
+	// Validate actions.OnDeploy.*.SetVariable
+	for _, action := range actions.Before {
+		if err := validateActionSetVariable(action); err != nil {
+			return err
+		}
+	}
+	for _, action := range actions.After {
+		if err := validateActionSetVariable(action); err != nil {
+			return err
+		}
+	}
+	for _, action := range actions.OnSuccess {
+		if err := validateActionSetVariable(action); err != nil {
+			return err
+		}
+	}
+	for _, action := range actions.OnFailure {
+		if err := validateActionSetVariable(action); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateActionSetVariable(action types.ZarfComponentAction) error {
+	if action.SetVariable != "" && !isUppercaseNumberUnderscore(action.SetVariable) {
+		return fmt.Errorf(lang.PkgValidateMustBeUppercase, action.SetVariable)
+	}
+
 	return nil
 }
 
@@ -143,10 +187,7 @@ func validateYOLO(component types.ZarfComponent) error {
 }
 
 func validatePackageName(subject string) error {
-	// https://regex101.com/r/vpi8a8/1
-	isValid := regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
-
-	if !isValid(subject) {
+	if !isLowercaseNumberHyphen(subject) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 
@@ -154,21 +195,17 @@ func validatePackageName(subject string) error {
 }
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
-
 	// ensure the variable name is only capitals and underscores
-	if !isAllCapsUnderscore(subject.Name) {
-		return fmt.Errorf(lang.PkgValidateErrPkgVariableName, subject.Name)
+	if !isUppercaseNumberUnderscore(subject.Name) {
+		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)
 	}
 
 	return nil
 }
 
 func validatePackageConstant(subject types.ZarfPackageConstant) error {
-	isAllCapsUnderscore := regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
-
 	// ensure the constant name is only capitals and underscores
-	if !isAllCapsUnderscore(subject.Name) {
+	if !isUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)
 	}
 
