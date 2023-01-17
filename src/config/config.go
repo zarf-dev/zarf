@@ -29,7 +29,7 @@ const (
 	ZarfMaxChartNameLength   = 40
 	ZarfGitPushUser          = "zarf-git-user"
 	ZarfGitReadUser          = "zarf-git-read-user"
-	ZarfPackageTokenName     = "zarf-package-registry-token"
+	ZarfArtifactTokenName    = "zarf-artifact-registry-token"
 	ZarfRegistryPushUser     = "zarf-push"
 	ZarfRegistryPullUser     = "zarf-pull"
 	ZarfImagePullSecretName  = "private-registry"
