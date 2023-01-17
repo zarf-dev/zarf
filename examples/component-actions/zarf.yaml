@@ -64,6 +64,12 @@ components:
           - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
 
+  - name: on-deploy-with-template-use-of-variable
+    files:
+      # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
+      - source: test.txt
+        target: templated.txt
+
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second
     actions:
