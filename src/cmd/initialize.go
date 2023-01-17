@@ -148,9 +148,9 @@ func validateInitFlags() error {
 	}
 
 	//If 'package-url' is provided, make sure they provided values for the username and password of the push user
-	if pkgConfig.InitOpts.PackageServer.Address != "" {
-		if pkgConfig.InitOpts.PackageServer.PushUsername == "" || pkgConfig.InitOpts.PackageServer.PushToken == "" {
-			return fmt.Errorf(lang.CmdInitErrValidatePackage)
+	if pkgConfig.InitOpts.ArtifactServer.Address != "" {
+		if pkgConfig.InitOpts.ArtifactServer.PushUsername == "" || pkgConfig.InitOpts.ArtifactServer.PushToken == "" {
+			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
 	return nil
@@ -205,10 +205,10 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
 
-	// Flags for using an external Package server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.Address, "package-url", v.GetString(V_INIT_PACKAGE_URL), lang.CmdInitFlagPackURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.PushUsername, "package-push-username", v.GetString(V_INIT_PACKAGE_PUSH_USER), lang.CmdInitFlagPackPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.PackageServer.PushToken, "package-push-token", v.GetString(V_INIT_PACKAGE_PUSH_TOKEN), lang.CmdInitFlagPackPushToken)
+	// Flags for using an external artifact server
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
 
 	initCmd.Flags().SortFlags = true
 }

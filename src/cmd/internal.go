@@ -117,9 +117,9 @@ var createReadOnlyGiteaUser = &cobra.Command{
 }
 
 var createPackageRegistryToken = &cobra.Command{
-	Use:   "create-package-registry-token",
-	Short: "Creates a package registry token for Gitea",
-	Long: "Creates a package registry token in Gitea using the Gitea API. " +
+	Use:   "create-artifact-registry-token",
+	Short: "Creates an artifact registry token for Gitea",
+	Long: "Creates an artifact registry token in Gitea using the Gitea API. " +
 		"This is called internally by the supported Gitea package component.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
@@ -129,14 +129,14 @@ var createPackageRegistryToken = &cobra.Command{
 			message.Error(err, "Unable to load the Zarf state")
 		}
 
-		// If we are setup to use an internal package server, create the package registry token
-		if state.PackageServer.InternalServer {
+		// If we are setup to use an internal artifact server, create the artifact registry token
+		if state.ArtifactServer.InternalServer {
 			token, err := git.New(state.GitServer).CreatePackageRegistryToken()
 			if err != nil {
-				message.Error(err, "Unable to create a package registry token for the Gitea service.")
+				message.Error(err, "Unable to create an artifact registry token for the Gitea service.")
 			}
 
-			state.PackageServer.PushToken = token.Sha1
+			state.ArtifactServer.PushToken = token.Sha1
 
 			cluster.SaveZarfState(state)
 		}

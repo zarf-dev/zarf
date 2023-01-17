@@ -53,4 +53,4 @@ components:
       timeoutSeconds: 60
       after:
         - "./zarf internal create-read-only-gitea-user"
-        - "./zarf internal create-package-registry-token"
+        - "./zarf internal create-artifact-registry-token"

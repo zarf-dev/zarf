@@ -39,6 +39,9 @@ zarf init [flags]
 ### Options
 
 ```
+      --artifact-push-token string      API Token for the push-user to access the package registry
+      --artifact-push-username string   Username to access to the package registry Zarf is configured to use. User must be able to upload packages.
+      --artifact-url string             External package registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
@@ -48,9 +51,6 @@ zarf init [flags]
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
-      --package-push-token string       API Token for the push-user to access the package registry
-      --package-push-username string    Username to access to the package registry Zarf is configured to use. User must be able to upload packages.
-      --package-url string              External package registry url to use for this Zarf cluster
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry

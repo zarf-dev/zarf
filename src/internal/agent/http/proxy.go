@@ -33,7 +33,6 @@ func proxyDirector(req *http.Request) {
 	// We remove this so that go will encode and decode on our behalf (see https://pkg.go.dev/net/http#Transport DisableCompression)
 	req.Header.Del("Accept-Encoding")
 
-	// TODO: (@WSTARR) we will eventually need to support a separate git host and package registry host (potential to expand the NPM job)
 	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
 		message.Debugf("%#v", err)
@@ -41,7 +40,7 @@ func proxyDirector(req *http.Request) {
 
 	var targetURL *url.URL
 
-	// If 'git' is the username use the configured git server, otherwise use the package server
+	// If 'git' is the username use the configured git server, otherwise use the artifact server
 	if isGitUserAgent(req.UserAgent()) {
 		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
 		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
@@ -60,18 +59,18 @@ func proxyDirector(req *http.Request) {
 	} else {
 		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
 		if strings.HasPrefix(req.URL.Path, proxy.NoTransform) {
-			targetURL, err = proxy.NoTransformTarget(zarfState.PackageServer.Address, req.URL.Path)
+			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, req.URL.Path)
 		} else {
 			switch {
 			case isPipUserAgent(req.UserAgent()):
-				targetURL, err = proxy.PipTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
-				req.SetBasicAuth(zarfState.PackageServer.PushUsername, zarfState.PackageServer.PushToken)
+				targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
+				req.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
 			case isNpmUserAgent(req.UserAgent()):
-				targetURL, err = proxy.NpmTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
-				req.Header.Set("Authorization", "Bearer "+zarfState.PackageServer.PushToken)
+				targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
+				req.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
 			default:
-				targetURL, err = proxy.GenTransformURL(zarfState.PackageServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.PackageServer.PushUsername)
-				req.SetBasicAuth(zarfState.PackageServer.PushUsername, zarfState.PackageServer.PushToken)
+				targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(req.TLS)+req.Host+req.URL.String(), zarfState.ArtifactServer.PushUsername)
+				req.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
 			}
 		}
 	}

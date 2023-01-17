@@ -434,6 +434,10 @@ export interface ZarfState {
      */
     architecture: string;
     /**
+     * Information about the artifact registry Zarf is configured to use
+     */
+    artifactServer: ArtifactServerInfo;
+    /**
      * K8s distribution of the cluster Zarf was deployed to
      */
     distro: string;
@@ -445,10 +449,6 @@ export interface ZarfState {
      * Secret value that the internal Grafana server was seeded with
      */
     loggingSecret: string;
-    /**
-     * Information about the package registry Zarf is configured to use
-     */
-    packageServer: PackageServerInfo;
     /**
      * Information about the container registry Zarf is configured to use
      */
@@ -464,6 +464,30 @@ export interface GeneratedPKI {
     ca:   string;
     cert: string;
     key:  string;
+}
+
+/**
+ * Information about the artifact registry Zarf is configured to use
+ *
+ * Information about the artifact registry Zarf is going to be using
+ */
+export interface ArtifactServerInfo {
+    /**
+     * URL address of the artifact registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a artifact registry that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with push access to the artifact registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the artifact registry
+     */
+    pushUsername: string;
 }
 
 /**
@@ -496,30 +520,6 @@ export interface GitServerInfo {
     pushPassword: string;
     /**
      * Username of a user with push access to the git repository
-     */
-    pushUsername: string;
-}
-
-/**
- * Information about the package registry Zarf is configured to use
- *
- * Information about the package registry Zarf is going to be using
- */
-export interface PackageServerInfo {
-    /**
-     * URL address of the package registry
-     */
-    address: string;
-    /**
-     * Indicates if we are using a package registry that Zarf is directly managing
-     */
-    internalServer: boolean;
-    /**
-     * Password of a user with push access to the package registry
-     */
-    pushPassword: string;
-    /**
-     * Username of a user with push access to the package registry
      */
     pushUsername: string;
 }
@@ -681,13 +681,13 @@ export interface ZarfInitOptions {
      */
     applianceMode: boolean;
     /**
+     * Information about the artifact registry Zarf is going to be using
+     */
+    artifactServer: ArtifactServerInfo;
+    /**
      * Information about the repository Zarf is going to be using
      */
     gitServer: GitServerInfo;
-    /**
-     * Information about the package registry Zarf is going to be using
-     */
-    packageServer: PackageServerInfo;
     /**
      * Information about the container registry Zarf is going to be using
      */
@@ -998,10 +998,10 @@ const typeMap: any = {
     "ZarfState": o([
         { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
         { json: "distro", js: "distro", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "loggingSecret", js: "loggingSecret", typ: "" },
-        { json: "packageServer", js: "packageServer", typ: r("PackageServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
         { json: "zarfAppliance", js: "zarfAppliance", typ: true },
@@ -1011,17 +1011,17 @@ const typeMap: any = {
         { json: "cert", js: "cert", typ: "" },
         { json: "key", js: "key", typ: "" },
     ], false),
+    "ArtifactServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+    ], false),
     "GitServerInfo": o([
         { json: "address", js: "address", typ: "" },
         { json: "internalServer", js: "internalServer", typ: true },
         { json: "pullPassword", js: "pullPassword", typ: "" },
         { json: "pullUsername", js: "pullUsername", typ: "" },
-        { json: "pushPassword", js: "pushPassword", typ: "" },
-        { json: "pushUsername", js: "pushUsername", typ: "" },
-    ], false),
-    "PackageServerInfo": o([
-        { json: "address", js: "address", typ: "" },
-        { json: "internalServer", js: "internalServer", typ: true },
         { json: "pushPassword", js: "pushPassword", typ: "" },
         { json: "pushUsername", js: "pushUsername", typ: "" },
     ], false),
@@ -1078,8 +1078,8 @@ const typeMap: any = {
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
-        { json: "packageServer", js: "packageServer", typ: r("PackageServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
     ], false),

@@ -27,9 +27,9 @@ type ZarfInitOptions struct {
 	ApplianceMode bool `json:"applianceMode" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 
 	// Using alternative services
-	GitServer     GitServerInfo     `json:"gitServer" jsonschema:"description=Information about the repository Zarf is going to be using"`
-	RegistryInfo  RegistryInfo      `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is going to be using"`
-	PackageServer PackageServerInfo `json:"packageServer" jsonschema:"description=Information about the package registry Zarf is going to be using"`
+	GitServer      GitServerInfo      `json:"gitServer" jsonschema:"description=Information about the repository Zarf is going to be using"`
+	RegistryInfo   RegistryInfo       `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is going to be using"`
+	ArtifactServer ArtifactServerInfo `json:"artifactServer" jsonschema:"description=Information about the artifact registry Zarf is going to be using"`
 
 	StorageClass string `json:"storageClass" jsonschema:"description=StorageClass of the k8s cluster Zarf is initializing"`
 }
