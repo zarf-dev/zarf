@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/anchore/syft/cmd/syft/cli"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
@@ -153,14 +155,11 @@ func init() {
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
 
-	craneCatalog := craneCmd.NewCmdCatalog(&cranePlatformOptions)
-	craneCatalog.Example = ""
-
 	registryCmd.AddCommand(craneLogin)
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
-	registryCmd.AddCommand(craneCatalog)
+	registryCmd.AddCommand(zarfCraneCatalog(&cranePlatformOptions))
 
 	syftCmd, err := cli.New()
 	if err != nil {
@@ -176,4 +175,51 @@ func init() {
 	}
 
 	toolsCmd.AddCommand(syftCmd)
+}
+
+// Wrap the original crane catalog with a zarf specific version
+func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
+	craneCatalog := craneCmd.NewCmdCatalog(cranePlatformOptions)
+
+	eg := `  # list the repos internal to Zarf
+  $ zarf tools registry catalog
+
+  # list the repos for reg.example.com
+  $ zarf tools registry catalog reg.example.com`
+
+	craneCatalog.Example = eg
+	craneCatalog.Args = nil
+
+	originalCatalogFn := craneCatalog.RunE
+
+	craneCatalog.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return originalCatalogFn(cmd, args)
+		}
+
+		// Load Zarf state
+		zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil {
+			return err
+		}
+
+		// Open a tunnel to the Zarf registry
+		tunnelReg, err := cluster.NewZarfTunnel()
+		if err != nil {
+			return err
+		}
+		tunnelReg.Connect(cluster.ZarfRegistry, false)
+		registryURL, err := url.Parse(tunnelReg.HTTPEndpoint())
+		if err != nil {
+			return err
+		}
+
+		// Add the correct authentication to the crane command options
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		return originalCatalogFn(cmd, []string{registryURL.Host})
+	}
+
+	return craneCatalog
 }
