@@ -2,40 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors 
  */
-:root {
-	/* body3 */
-	--mdc-typography-body3-font-style: normal;
-	--mdc-typography-body3-font-weight: 400;
-	--mdc-typography-body3-font-size: 0.875em;
-	--mdc-typography-body3-line-height: 143%;
-	--mdc-typography-body3-letter-spacing: 0.17px;
-
-	/* th */
-	--mdc-typography-th-font-style: normal;
-	--mdc-typography-th-font-weight: 500;
-	--mdc-typography-th-font-size: 0.875em;
-	--mdc-typography-th-line-height: 24px;
-	--mdc-typography-th-letter-spacing: 0.17px;
-}
-
-/* temporary addition of !important while theme updates are in flux */
-
-.mdc-typography--body3 {
-	font-style: var(--mdc-typography-body3-font-style);
-	font-weight: var(--mdc-typography-body3-font-weight);
-	font-size: var(--mdc-typography-body3-font-size);
-	line-height: var(--mdc-typography-body3-line-height);
-	letter-spacing: var(--mdc-typography-body3-letter-spacing);
-}
-
-.mdc-typography--th {
-	font-style: var(--mdc-typography-th-font-style);
-	font-weight: var(--mdc-typography-th-font-weight);
-	font-size: var(--mdc-typography-th-font-size);
-	line-height: var(--mdc-typography-th-line-height);
-	letter-spacing: var(--mdc-typography-th-letter-spacing);
-	color: var(--mdc-theme-text-primary-on-light) !important;
-}
 
 *,
 ::before,

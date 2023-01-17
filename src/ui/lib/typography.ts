@@ -4,8 +4,27 @@
 import type { ThemeTypography } from '@ui';
 import { UUI_TYPOGRAPHY } from '@ui';
 
+// custom typography from figma only for Zarf UI
+const extra = {
+	body3: {
+		fontWeight: '400',
+		fontSize: '14px',
+		lineHeight: '143%',
+		fontStyle: 'normal',
+		letterSpacing: '.17px',
+	},
+	th: {
+		fontStyle: 'normal',
+		fontWeight: '500',
+		fontSize: '0.875em',
+		lineHeight: '24px',
+		letterSpacing: '0.17px',
+	}
+};
+
 export const ZarfTypography: ThemeTypography = {
 	...UUI_TYPOGRAPHY,
+	...extra,
 	// custom typography from figma
 	body1: {
 		fontSize: '16px',
@@ -17,8 +36,7 @@ export const ZarfTypography: ThemeTypography = {
 		fontSize: '14px',
 		fontWeight: '400',
 		lineHeight: '120%',
-		letterSpacing: '0.17px',
-		color: 'var(--mdc-theme-text-secondary-on-light)'
+		letterSpacing: '0.17px'
 	},
 	subtitle1: {
 		fontSize: '16px',
@@ -36,8 +54,7 @@ export const ZarfTypography: ThemeTypography = {
 		fontSize: '12px',
 		fontWeight: '400',
 		lineHeight: '166%',
-		letterSpacing: '0.4px',
-		color: 'var(--mdc-theme-text-secondary-on-light)'
+		letterSpacing: '0.4px'
 	},
 	overline: {
 		fontSize: '12px',
