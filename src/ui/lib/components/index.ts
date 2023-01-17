@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 import AccordionGroup from './accordion-group.svelte';
-import Container from './container.svelte';
 import Divider from './divider.svelte';
 import Header from './header.svelte';
 import Hero from './hero.svelte';
@@ -16,7 +15,6 @@ import YamlCode from './yaml-code.svelte';
 
 export {
 	AccordionGroup,
-	Container,
 	Divider,
 	Header,
 	Hero,
