@@ -4,7 +4,7 @@
 
 ## Related Issue
 
-...
+Fixes #
 
 ## Type of change
 
@@ -12,7 +12,7 @@
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Other (security config, docs update, etc)
 
-## Checklist before merging 
+## Checklist before merging
 
 - [ ] Test, docs, adr added or updated as needed
 - [ ] [Contributor Guide Steps](https://github.com/defenseunicorns/zarf/blob/main/CONTRIBUTING.md#developer-workflow) followed
