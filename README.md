@@ -9,7 +9,7 @@
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
-Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
+Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 📦 Out of the Box Features
 
@@ -21,7 +21,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Builtin git server with [Gitea](https://gitea.com/)
 - Builtin docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
-- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pods image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
+- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
 - Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
 - Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
@@ -37,7 +37,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 [![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
 
-_https://www.youtube.com/watch?v=WnOYlFVVKDE_
+_<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
 ## Getting Started
 
@@ -45,7 +45,7 @@ To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install)
 
 From the docs you can learn more about [installation](https://docs.zarf.dev/docs/operator-manual/set-up-and-install), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
 
-Using Zarf in Github workflows? Checkout the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and it's `init` package with zero added dependencies.
+Using Zarf in Github workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf)](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
 
 ## Developing
 
