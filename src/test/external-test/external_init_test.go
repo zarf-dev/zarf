@@ -36,9 +36,9 @@ func TestExternalDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
-	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=5s"}
+	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=60s"}
 	registryErrStr := "unable to verify the docker-registry chart installed successfully"
-	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
+	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=60s"}
 	giteaErrStr := "unable to verify the gitea chart installed successfully"
 	success := verifyKubectlWaitSuccess(t, 2, registryWaitCmd, registryErrStr)
 	require.True(t, success, registryErrStr)
