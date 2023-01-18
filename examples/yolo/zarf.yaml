@@ -11,5 +11,5 @@ components:
       - name: multi-games
         namespace: zarf-yolo-example
         files:
-          - ../game/manifests/deployment.yaml
-          - ../game/manifests/service.yaml
+          - ../doom/manifests/deployment.yaml
+          - ../doom/manifests/service.yaml
