@@ -64,12 +64,12 @@ test.describe('initialize a zarf cluster', () => {
 
 async function validateRequiredCheckboxes(page) {
 	// Check remaining components for deploy states
-	let injector = page.locator('.accordion:has-text("zarf-injector (Required)")');
-	expect(injector.locator('text=Deploy')).toBeHidden();
+	const injector = page.locator('.accordion:has-text("zarf-injector (Required)")');
+	await expect(injector.locator('.deploy-component-toggle')).toBeHidden();
 
-	let seedRegistry = page.locator('.accordion:has-text("zarf-seed-registry (Required)")');
-	expect(seedRegistry.locator('text=Deploy')).toBeHidden();
+	const seedRegistry = page.locator('.accordion:has-text("zarf-seed-registry (Required)")');
+	await expect(seedRegistry.locator('.deploy-component-toggle')).toBeHidden();
 
-	let registry = page.locator('.accordion:has-text("zarf-registry (Required)")');
-	expect(registry.locator('text=Deploy')).toBeHidden();
+	const registry = page.locator('.accordion:has-text("zarf-registry (Required)")');
+	await expect(registry.locator('.deploy-component-toggle')).toBeHidden();
 }
