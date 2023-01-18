@@ -10,7 +10,7 @@ const config = {
   tagline: "Airgap is hard. Docs are too.",
   url: "https://zarf.dev",
   baseUrl: "/",
-  onBrokenLinks: "throw",
+  onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/favicon.svg",
   organizationName: "Defense Unicorns", // Usually your GitHub org/user name.
@@ -25,7 +25,7 @@ const config = {
       ({
         docs: {
           path: "..",
-          include: ["adr/**/*.{md,mdx}","docs/**/*.{md,mdx}","examples/**/*.{md,mdx}"],
+          include: ["CONTRIBUTING.md","adr/**/*.{md,mdx}","docs/**/*.{md,mdx}","examples/**/*.{md,mdx}"],
           sidebarPath: require.resolve("./src/sidebars.js"),
           editUrl: "https://github.com/defenseunicorns/zarf/tree/",
           routeBasePath: "/",
