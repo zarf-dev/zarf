@@ -3,16 +3,20 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Modal } from '$lib/components';
+	import { Dialog, Typography } from '@ui';
 	import zarfLogo from '@images/zarf-bubbles-right.png';
 </script>
 
-<Modal open={true}>
-	<div style="text-align:center;">
+<svelte:head>
+	<title>Finished</title>
+</svelte:head>
+
+<Dialog open={true}>
+	<div slot="content" style="text-align:center;margin: 0.5rem 2rem 1rem 2rem;">
 		<img src={zarfLogo} alt="zarf" width="60px" />
-		<h3 style="font-size: 20px; color: #000000DE;">Package Successfully Deployed</h3>
-		<p style="color: gray; font-size: 14px;">
+		<Typography style="margin: 1rem 0;" variant="h6">Package Successfully Deployed</Typography>
+		<Typography variant="body2">
 			You will be redirected to the deployment details page
-		</p>
+		</Typography>
 	</div>
-</Modal>
+</Dialog>

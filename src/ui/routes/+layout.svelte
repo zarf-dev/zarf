@@ -12,6 +12,7 @@
 	import 'material-symbols/';
 	import { Theme } from '@ui';
 	import { ZarfPalettes } from '$lib/palette';
+	import { ZarfTypography } from '$lib/typography';
 	import { themeStore } from '$lib/store';
 
 	function getClusterSummary() {
@@ -32,7 +33,7 @@
 
 <Header />
 
-<Theme {theme} palettes={ZarfPalettes}>
+<Theme {theme} palettes={ZarfPalettes} typography={ZarfTypography}>
 	<main class="mdc-typography">
 		<slot />
 	</main>
