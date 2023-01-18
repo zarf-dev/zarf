@@ -76,7 +76,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	}
 
 	remoteURL := remote.Config().URLs[0]
-	targetURL, err := g.transformURL(remoteURL)
+	targetURL, err := g.TransformURL(remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}

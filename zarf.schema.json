@@ -542,7 +542,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[A-Z_]+$",
+          "pattern": "^[A-Z0-9_]+$",
           "type": "string",
           "description": "The name to be used for the constant"
         },
@@ -564,7 +564,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[A-Z_]+$",
+          "pattern": "^[A-Z0-9_]+$",
           "type": "string",
           "description": "The name to be used for the variable"
         },

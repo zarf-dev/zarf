@@ -8,8 +8,12 @@
 	import '@fontsource/roboto';
 	import { Cluster } from '$lib/api';
 	import { clusterStore } from '$lib/store';
-	import Header from '$lib/components/header.svelte';
+	import { Header } from '$lib/components';
 	import 'material-symbols/';
+	import { Theme } from '@ui';
+	import { ZarfPalettes } from '$lib/palette';
+	import { ZarfTypography } from '$lib/typography';
+	import { themeStore } from '$lib/store';
 
 	function getClusterSummary() {
 		// Try to get the cluster summary
@@ -23,10 +27,14 @@
 	}
 
 	getClusterSummary();
+
+	$: theme = $themeStore;
 </script>
 
 <Header />
 
-<main class="mdc-typography">
-	<slot />
-</main>
+<Theme {theme} palettes={ZarfPalettes} typography={ZarfTypography}>
+	<main class="mdc-typography">
+		<slot />
+	</main>
+</Theme>

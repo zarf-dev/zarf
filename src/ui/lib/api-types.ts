@@ -619,6 +619,10 @@ export interface ZarfCreateOptions {
      */
     maxPackageSizeMB: number;
     /**
+     * Disable the use of local container images during package creation
+     */
+    noLocalImages: boolean;
+    /**
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
@@ -674,10 +678,6 @@ export interface ZarfInitOptions {
      * Indicates if Zarf was initialized while deploying its own k8s cluster
      */
     applianceMode: boolean;
-    /**
-     * Comma separated list of optional components to deploy
-     */
-    components: string;
     /**
      * Information about the repository Zarf is going to be using
      */
@@ -1055,6 +1055,7 @@ const typeMap: any = {
     "ZarfCreateOptions": o([
         { json: "insecure", js: "insecure", typ: true },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
+        { json: "noLocalImages", js: "noLocalImages", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
@@ -1071,7 +1072,6 @@ const typeMap: any = {
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
-        { json: "components", js: "components", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
