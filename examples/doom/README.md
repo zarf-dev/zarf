@@ -4,7 +4,7 @@ This example provides the basis for Zarf's [Doom Walkthrough](../../docs/13-walk
 
 :::note
 
-In this example there is no "GitOps" service&mdash;Zarf is only showing off it's ability to act as a standard means of packaging, distribution, and runtime.
+In this example, there is no "GitOps" service. Zarf is only showing off its ability to act as a standard means of packaging, distribution, and runtime.
 
 :::
 
