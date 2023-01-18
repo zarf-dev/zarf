@@ -7,15 +7,35 @@ variables:
   - name: DOG_SOUND
     default: ruff
 
+# See the example README.md in this folder or /adrs/0010-scripts-actions.md for more info.
 components:
   - name: on-create
     actions:
       # runs during "zarf package create"
       onCreate:
+        # defaults are applied to all actions in this actionSet
+        defaults:
+          dir: ""
+          env: []
+          maxRetries: 0
+          maxTotalSeconds: 30
         # runs before the component is created
         before:
           # on Windows, touch is replaced with New-Item
           - cmd: touch test-create.txt
+            # dir is the directory to run the command in
+            dir: ""
+            # this environment variable will be set for this action only
+            env:
+              - "thing=stuff"
+            # the number of times to retry the action if it fails
+            maxRetries: 0
+            # the maximum amount of time the action can run before it is killed, including retries
+            maxTotalSeconds: 30
+            # determine if actions output should be printed to the console
+            mute: false
+            # the name of the variable to set with the output of the action
+            setVariable: BLEH
 
   - name: on-deploy
     actions:
