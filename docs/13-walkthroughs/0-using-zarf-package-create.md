@@ -45,10 +45,10 @@ Congratulations! You've just created your first Zarf package!
 
 ## Building the game package
 
-Creating the game package is just as simple as creating the init-package! Once again, we will be using the `zarf package create` command to create the package. Since the game package definition lives in `examples/game` within the Zarf repository, the only thing we need to do differently is specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save a bit of time.
+Creating the game package is just as simple as creating the init-package! Once again, we will be using the `zarf package create` command to create the package. Since the game package definition lives in `examples/doom` within the Zarf repository, the only thing we need to do differently is specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save a bit of time.
 
 ```bash
-zarf package create examples/game --confirm
+zarf package create examples/doom --confirm
 ```
 
 This will create a zarf package in the current directory with a package name that looks something like `zarf-package-dos-games-amd64.tar.zst`, although it might be slightly different depending on your system architecture.

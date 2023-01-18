@@ -22,7 +22,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/doom", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
