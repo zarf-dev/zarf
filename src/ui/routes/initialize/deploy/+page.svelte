@@ -43,14 +43,16 @@
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
-			setVariables: {}
+			setVariables: {},
+			insecure: false,
+		  // "as" will cause the obj to satisfy the type
+		  // it is missing "shasum"
 		} as ZarfDeployOptions
 	};
 
 	if (isInitPkg) {
 		options.initOptions = {
 			applianceMode: false,
-			components: requestedComponents,
 			gitServer: {
 				address: '',
 				pushUsername: 'zarf-git-user',
@@ -70,7 +72,7 @@
 				pushUsername: 'zarf-push',
 				secret: ''
 			}
-		} as ZarfInitOptions;
+		};
 	}
 
 	let successful = false;
