@@ -20,7 +20,7 @@ Running the end-to-end tests locally have the same prerequisites as running and 
 
 Here are a few different ways to run the tests, based on your specific situation:
 
-```shell
+``` bash
 # Note: You can prepend CI=true to these commands to force the --no-progress flag like CI does
 
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
@@ -90,7 +90,7 @@ Running the unit tests locally have the same prerequisites as building Zarf:
 
 Here are a few different ways to run the tests, based on your specific situation:
 
-```shell
+``` bash
 # The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
 make test-unit
 
