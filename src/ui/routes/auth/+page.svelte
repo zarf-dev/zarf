@@ -7,6 +7,7 @@
 	import { page } from '$app/stores';
 	import { Auth } from '$lib/api';
 	import { Hero } from '$lib/components';
+	import { Typography } from '@ui';
 	import sadDay from '@images/sadness.png';
 
 	let authFailure = false;
@@ -27,11 +28,9 @@
 	<Hero>
 		<img src={sadDay} alt="Sadness" id="sadness" width="40%" />
 
-		<div class="hero-text">
-			<h1 class="hero-title">Could not authenticate!</h1>
-			<h2 class="hero-subtitle">
-				Please make sure you are using the complete link to connect provided by Zarf.
-			</h2>
-		</div>
+		<Typography variant="h5">Could not authenticate!</Typography>
+		<Typography variant="body2">
+			Please make sure you are using the complete link to connect provided by Zarf.
+		</Typography>
 	</Hero>
 {/if}
