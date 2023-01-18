@@ -17,7 +17,6 @@ zarf package create [DIRECTORY] [flags]
 ```
       --confirm                   Confirm package creation without prompting
   -h, --help                      help for create
-      --insecure                  Allow insecure registry connections when pulling OCI images
   -m, --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
   -o, --output-directory string   Specify the output directory for the created Zarf package
   -s, --sbom                      View SBOM contents after creating the package
@@ -30,6 +29,7 @@ zarf package create [DIRECTORY] [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
+      --insecure              Allow insecure access for remote registry
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

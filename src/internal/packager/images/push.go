@@ -58,7 +58,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 			})),
 	}
 
-	if i.InsecurePush {
+	if i.Insecure {
 		roundTripper := http.DefaultTransport.(*http.Transport).Clone()
 		roundTripper.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
@@ -70,7 +70,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.InsecurePull)...)
+		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
 		if err != nil {
 			return err
 		}

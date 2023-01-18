@@ -16,7 +16,5 @@ type ImgConfig struct {
 
 	NoChecksum bool
 
-	InsecurePull bool
-
-	InsecurePush bool
+	Insecure bool
 }

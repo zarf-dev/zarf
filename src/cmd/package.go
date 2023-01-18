@@ -239,7 +239,6 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
-	v.SetDefault(V_PKG_CREATE_INSECURE, false)
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
@@ -247,7 +246,6 @@ func bindCreateFlags() {
 	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), "View SBOM contents after creating the package")
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
-	createFlags.BoolVar(&pkgConfig.CreateOpts.Insecure, "insecure", v.GetBool(V_PKG_CREATE_INSECURE), "Allow insecure registry connections when pulling OCI images")
 	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.")
 }
 
@@ -259,13 +257,11 @@ func bindDeployFlags() {
 
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
-	v.SetDefault(V_PKG_DEPLOY_INSECURE, false)
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
-	deployFlags.BoolVar(&pkgConfig.DeployOpts.Insecure, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
 }

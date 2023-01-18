@@ -18,6 +18,7 @@ See each sub-command's help for details on how to use the generated script.
 
 ```
   -a, --architecture string   Architecture for OCI images
+      --insecure              Allow insecure access for remote registry
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

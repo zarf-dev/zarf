@@ -153,13 +153,14 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 		imgConfig := images.ImgConfig{
-			TarballPath:  p.tmp.SeedImage,
-			ImgList:      []string{seedImage},
-			NoChecksum:   true,
-			RegInfo:      p.cfg.State.RegistryInfo,
-			InsecurePull: p.cfg.CreateOpts.Insecure,
-			InsecurePush: p.cfg.InitOpts.Insecure || p.cfg.DeployOpts.Insecure,
+			TarballPath: p.tmp.SeedImage,
+			ImgList:     []string{seedImage},
+			NoChecksum:  true,
+			RegInfo:     p.cfg.State.RegistryInfo,
+			Insecure:    p.cfg.Insecure,
 		}
+
+		message.Info(fmt.Sprintf("======== INSECURE %v %v", p.cfg.Insecure, p.cfg.ZarfCommonOptions.Insecure))
 
 		// Push the seed images into to Zarf registry
 		if err = imgConfig.PushToZarfRegistry(); err != nil {
@@ -368,13 +369,14 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		TarballPath:  p.tmp.Images,
-		ImgList:      componentImages,
-		NoChecksum:   noImgChecksum,
-		RegInfo:      p.cfg.State.RegistryInfo,
-		InsecurePull: p.cfg.CreateOpts.Insecure,
-		InsecurePush: p.cfg.InitOpts.Insecure || p.cfg.DeployOpts.Insecure,
+		TarballPath: p.tmp.Images,
+		ImgList:     componentImages,
+		NoChecksum:  noImgChecksum,
+		RegInfo:     p.cfg.State.RegistryInfo,
+		Insecure:    p.cfg.Insecure,
 	}
+
+	message.Info(fmt.Sprintf("======== INSECURE %v %v", p.cfg.Insecure, p.cfg.ZarfCommonOptions.Insecure))
 
 	return utils.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()

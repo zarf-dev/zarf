@@ -37,6 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
+	RootCmdFlagInseure     = "Allow insecure access for remote registry"
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
@@ -118,7 +119,6 @@ const (
 	CmdInitFlagConfirm      = "Confirm the install without prompting"
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
-	CmdInitFlagInseure      = "Allow insecure access for remote registry"
 
 	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
 	CmdInitFlagGitPushUser = "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'"
