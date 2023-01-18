@@ -39,8 +39,7 @@ const Packages = {
 	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
-	deploy: (body: ZarfDeployOptions | ZarfInitOptions, isInitPkg: boolean) =>
-		http.put<boolean>(isInitPkg ? `/packages/deploy?isInitPkg=true` : `/packages/deploy`, body),
+	deploy: (body: any) => http.put<boolean>(`/packages/deploy`, body),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 

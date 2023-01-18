@@ -32,10 +32,23 @@
 		.join(',');
 
 	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
-	let options: ZarfDeployOptions | ZarfInitOptions;
+	
+	type DeployPayloadBody = {
+		initOptions?: ZarfInitOptions;
+		deployOptions: ZarfDeployOptions;
+	}
+
+	let options: DeployPayloadBody = {
+		deployOptions: {
+			components: requestedComponents,
+			sGetKeyPath: '',
+			packagePath: $pkgStore.path,
+			setVariables: {}
+		} as ZarfDeployOptions
+	};
 
 	if (isInitPkg) {
-		options = {
+		options.initOptions = {
 			applianceMode: false,
 			components: requestedComponents,
 			gitServer: {
@@ -57,14 +70,7 @@
 				pushUsername: 'zarf-push',
 				secret: ''
 			}
-		};
-	} else {
-		options = {
-			components: requestedComponents,
-			sGetKeyPath: '',
-			packagePath: $pkgStore.path,
-			setVariables: {}
-		};
+		} as ZarfInitOptions;
 	}
 
 	let successful = false;
@@ -81,7 +87,7 @@
 	}
 
 	onMount(() => {
-		Packages.deploy(options, isInitPkg).then(
+		Packages.deploy(options).then(
 			(value: boolean) => {
 				finishedDeploying = true;
 				successful = value;
