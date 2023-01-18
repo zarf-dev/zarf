@@ -30,6 +30,7 @@ const config = {
             'adr/**/*.{md,mdx}',
             'docs/**/*.{md,mdx}',
             'examples/**/*.{md,mdx}',
+            'packages/**/*.{md,mdx}',
           ],
           sidebarPath: require.resolve('./src/sidebars.js'),
           editUrl: 'https://github.com/defenseunicorns/zarf/tree/',
