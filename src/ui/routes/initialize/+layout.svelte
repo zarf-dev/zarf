@@ -55,7 +55,7 @@
 	{:else if status == LoadingStatus.Error}
 		<!-- replace w/ error dialog -->
 		<div class="center">
-			<Typography variant="h1">Package Not Found</Typography>
+			<Typography variant="h4">Package Not Found</Typography>
 			<Typography variant="body2">
 				Make sure the following package is in the current working directory:
 			</Typography>
