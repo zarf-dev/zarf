@@ -74,12 +74,24 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		if err != nil {
 			return err
 		}
-		offlineName := ""
-		if i.NoChecksum {
-			offlineName, err = utils.SwapHostWithoutChecksum(src, registryURL)
-		} else {
-			offlineName, err = utils.SwapHost(src, registryURL)
+
+		// If this is not a no checksum image push it for use with the Zarf agent
+		if !i.NoChecksum {
+			offlineNameCRC, err := utils.SwapHost(src, registryURL)
+			if err != nil {
+				return err
+			}
+
+			message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineNameCRC)
+
+			if err = crane.Push(img, offlineNameCRC, pushOptions); err != nil {
+				return err
+			}
 		}
+
+		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+		// (this may result in collisions but this is acceptable for this use case)
+		offlineName, err := utils.SwapHostWithoutChecksum(src, registryURL)
 		if err != nil {
 			return err
 		}

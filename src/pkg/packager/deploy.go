@@ -326,15 +326,21 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
-	// Check if the state is empty
+	// Check if the state is empty (uninitialized cluster)
 	if state.Distro == "" {
-		// If we are in YOLO mode, return an error
+		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
 			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 		}
 
-		// YOLO mode, so no state needed
+		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
+
+		// Try to create the zarf namespace
+		spinner.Updatef("Creating the Zarf namespace")
+		if _, err := p.cluster.Kube.CreateNamespace(cluster.ZarfNamespace, nil); err != nil {
+			spinner.Fatalf(err, "Unable to create the zarf namespace")
+		}
 	}
 
 	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
