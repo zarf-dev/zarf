@@ -1,6 +1,10 @@
 package utils
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -10,7 +14,7 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 	if len(componentsToDeploy) == 0 {
 		componentsToDeploy = append(componentsToDeploy, types.DeployedComponent{Name: "logging"}, types.DeployedComponent{Name: "git-server"})
 	}
-	
+
 	pterm.Println()
 	loginTableHeader := pterm.TableData{
 		{"     Application", "Username", "Password", "Connect"},
@@ -38,5 +42,25 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 	if len(loginTable) > 0 {
 		loginTable = append(loginTableHeader, loginTable...)
 		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+	}
+}
+
+// Display credentials for a single component
+func PrintComponentCredential(state types.ZarfState, componentName string) {
+	switch strings.ToLower(componentName) {
+	case "logging":
+		message.Note("Logging credentials (username: zarf-admin):")
+		fmt.Println(state.LoggingSecret)
+	case "git":
+		message.Note("Git Server push password (username: " + state.GitServer.PushUsername + "):")
+		fmt.Println(state.GitServer.PushPassword)
+	case "git-readonly":
+		message.Note("Git Server (read-only) password (username: " + state.GitServer.PullUsername + "):")
+		fmt.Println(state.GitServer.PullPassword)
+	case "registry":
+		message.Note("Image Registry password (username: " + state.RegistryInfo.PushUsername + "):")
+		fmt.Println(state.RegistryInfo.PushPassword)
+	default:
+		message.Warn("Unknown component: " + componentName)
 	}
 }

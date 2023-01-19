@@ -150,6 +150,7 @@ const (
 
 	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
 
+	CmdToolGetGitDeprecation  = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
 	CmdToolsGetGitPasswdShort = "Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong  = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
 	CmdToolsGetGitPasswdInfo  = "Git Server Push Password: "
@@ -168,7 +169,8 @@ const (
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
-	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components"
+	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
+	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
 
 	// zarf version
 	CmdVersionShort = "SBOM tools provided by Anchore Syft"

@@ -77,9 +77,10 @@ var registryCmd = &cobra.Command{
 }
 
 var readCredsCmd = &cobra.Command{
-	Use:   "get-git-password",
-	Short: lang.CmdToolsGetGitPasswdShort,
-	Long:  lang.CmdToolsGetGitPasswdLong,
+	Use:    "get-git-password",
+	Hidden: true,
+	Short:  lang.CmdToolsGetGitPasswdShort,
+	Long:   lang.CmdToolsGetGitPasswdLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil || state.Distro == "" {
@@ -88,14 +89,17 @@ var readCredsCmd = &cobra.Command{
 		}
 
 		message.Note(lang.CmdToolsGetGitPasswdInfo)
+		message.Warn(lang.CmdToolGetGitDeprecation)
 		fmt.Println(state.GitServer.PushPassword)
 	},
 }
 
 var readAllCredsCmd = &cobra.Command{
-	Use:   "get-creds",
-	Short: lang.CmdToolsGetCredsShort,
+	Use:     "get-creds",
+	Short:   lang.CmdToolsGetCredsShort,
+	Long:    lang.CmdToolsGetCredsLong,
 	Aliases: []string{"gc"},
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil || state.Distro == "" {
@@ -103,7 +107,12 @@ var readAllCredsCmd = &cobra.Command{
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
 
-		utils.PrintCredentialTable(state, []types.DeployedComponent{})
+		if len(args) > 0 {
+			// If a component name is provided, only show that component's credentials
+			utils.PrintComponentCredential(state, args[0])
+		} else {
+			utils.PrintCredentialTable(state, []types.DeployedComponent{})
+		}
 	},
 }
 
