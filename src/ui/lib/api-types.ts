@@ -8,16 +8,146 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
-    apiZarfPackage:    APIZarfPackage;
-    clusterSummary:    ClusterSummary;
-    connectStrings:    { [key: string]: ConnectString };
-    deployedPackage:   DeployedPackage;
-    zarfCommonOptions: ZarfCommonOptions;
-    zarfCreateOptions: ZarfCreateOptions;
-    zarfDeployOptions: ZarfDeployOptions;
-    zarfInitOptions:   ZarfInitOptions;
-    zarfPackage:       ZarfPackage;
-    zarfState:         ZarfState;
+    apiZarfDeployPayload: APIZarfDeployPayload;
+    apiZarfPackage:       APIZarfPackage;
+    clusterSummary:       ClusterSummary;
+    connectStrings:       { [key: string]: ConnectString };
+    deployedPackage:      DeployedPackage;
+    zarfCommonOptions:    ZarfCommonOptions;
+    zarfCreateOptions:    ZarfCreateOptions;
+    zarfDeployOptions:    ZarfDeployOptions;
+    zarfInitOptions:      ZarfInitOptions;
+    zarfPackage:          ZarfPackage;
+    zarfState:            ZarfState;
+}
+
+export interface APIZarfDeployPayload {
+    deployOpts: ZarfDeployOptions;
+    initOpts?:  ZarfInitOptions;
+}
+
+export interface ZarfDeployOptions {
+    /**
+     * Comma separated list of optional components to deploy
+     */
+    components: string;
+    /**
+     * Allow insecure connections for remote packages
+     */
+    insecure: boolean;
+    /**
+     * Location where a Zarf package to deploy can be found
+     */
+    packagePath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template against the Zarf package being used
+     */
+    setVariables: { [key: string]: string };
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    sGetKeyPath: string;
+    /**
+     * The SHA256 checksum of the package to deploy
+     */
+    shasum: string;
+}
+
+export interface ZarfInitOptions {
+    /**
+     * Indicates if Zarf was initialized while deploying its own k8s cluster
+     */
+    applianceMode: boolean;
+    /**
+     * Information about the repository Zarf is going to be using
+     */
+    gitServer: GitServerInfo;
+    /**
+     * Information about the registry Zarf is going to be using
+     */
+    registryInfo: RegistryInfo;
+    /**
+     * StorageClass of the k8s cluster Zarf is initializing
+     */
+    storageClass: string;
+}
+
+/**
+ * Information about the repository Zarf is going to be using
+ *
+ * Information about the repository Zarf is configured to use
+ */
+export interface GitServerInfo {
+    /**
+     * URL address of the git server
+     */
+    address: string;
+    /**
+     * Indicates if we are using a git server that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with pull-only access to the git repository. If not provided for an
+     * external repository than the push-user is used
+     */
+    pullPassword: string;
+    /**
+     * Username of a user with pull-only access to the git repository. If not provided for an
+     * external repository than the push-user is used
+     */
+    pullUsername: string;
+    /**
+     * Password of a user with push access to the git repository
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the git repository
+     */
+    pushUsername: string;
+}
+
+/**
+ * Information about the registry Zarf is going to be using
+ *
+ * Information about the registry Zarf is configured to use
+ */
+export interface RegistryInfo {
+    /**
+     * URL address of the registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a registry that Zarf is directly managing
+     */
+    internalRegistry: boolean;
+    /**
+     * Nodeport of the registry. Only needed if the registry is running inside the kubernetes
+     * cluster
+     */
+    nodePort: number;
+    /**
+     * Password of a user with pull-only access to the registry. If not provided for an external
+     * registry than the push-user is used
+     */
+    pullPassword: string;
+    /**
+     * Username of a user with pull-only access to the registry. If not provided for an external
+     * registry than the push-user is used
+     */
+    pullUsername: string;
+    /**
+     * Password of a user with push access to the registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the registry
+     */
+    pushUsername: string;
+    /**
+     * Secret value that the registry was seeded with
+     */
+    secret: string;
 }
 
 export interface APIZarfPackage {
@@ -462,83 +592,6 @@ export interface GeneratedPKI {
     key:  string;
 }
 
-/**
- * Information about the repository Zarf is configured to use
- *
- * Information about the repository Zarf is going to be using
- */
-export interface GitServerInfo {
-    /**
-     * URL address of the git server
-     */
-    address: string;
-    /**
-     * Indicates if we are using a git server that Zarf is directly managing
-     */
-    internalServer: boolean;
-    /**
-     * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
-     */
-    pullPassword: string;
-    /**
-     * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
-     */
-    pullUsername: string;
-    /**
-     * Password of a user with push access to the git repository
-     */
-    pushPassword: string;
-    /**
-     * Username of a user with push access to the git repository
-     */
-    pushUsername: string;
-}
-
-/**
- * Information about the registry Zarf is configured to use
- *
- * Information about the registry Zarf is going to be using
- */
-export interface RegistryInfo {
-    /**
-     * URL address of the registry
-     */
-    address: string;
-    /**
-     * Indicates if we are using a registry that Zarf is directly managing
-     */
-    internalRegistry: boolean;
-    /**
-     * Nodeport of the registry. Only needed if the registry is running inside the kubernetes
-     * cluster
-     */
-    nodePort: number;
-    /**
-     * Password of a user with pull-only access to the registry. If not provided for an external
-     * registry than the push-user is used
-     */
-    pullPassword: string;
-    /**
-     * Username of a user with pull-only access to the registry. If not provided for an external
-     * registry than the push-user is used
-     */
-    pullUsername: string;
-    /**
-     * Password of a user with push access to the registry
-     */
-    pushPassword: string;
-    /**
-     * Username of a user with push access to the registry
-     */
-    pushUsername: string;
-    /**
-     * Secret value that the registry was seeded with
-     */
-    secret: string;
-}
-
 export interface ConnectString {
     /**
      * Descriptive text that explains what the resource you would be connecting to is used for
@@ -617,53 +670,6 @@ export interface ZarfCreateOptions {
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
-}
-
-export interface ZarfDeployOptions {
-    /**
-     * Comma separated list of optional components to deploy
-     */
-    components: string;
-    /**
-     * Allow insecure connections for remote packages
-     */
-    insecure: boolean;
-    /**
-     * Location where a Zarf package to deploy can be found
-     */
-    packagePath: string;
-    /**
-     * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
-     */
-    setVariables: { [key: string]: string };
-    /**
-     * Location where the public key component of a cosign key-pair can be found
-     */
-    sGetKeyPath: string;
-    /**
-     * The SHA256 checksum of the package to deploy
-     */
-    shasum: string;
-}
-
-export interface ZarfInitOptions {
-    /**
-     * Indicates if Zarf was initialized while deploying its own k8s cluster
-     */
-    applianceMode: boolean;
-    /**
-     * Information about the repository Zarf is going to be using
-     */
-    gitServer: GitServerInfo;
-    /**
-     * Information about the registry Zarf is going to be using
-     */
-    registryInfo: RegistryInfo;
-    /**
-     * StorageClass of the k8s cluster Zarf is initializing
-     */
-    storageClass: string;
 }
 
 // Converts JSON strings to/from your types
@@ -832,6 +838,7 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
+        { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
@@ -842,6 +849,42 @@ const typeMap: any = {
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "APIZarfDeployPayload": o([
+        { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
+        { json: "initOpts", js: "initOpts", typ: u(undefined, r("ZarfInitOptions")) },
+    ], false),
+    "ZarfDeployOptions": o([
+        { json: "components", js: "components", typ: "" },
+        { json: "insecure", js: "insecure", typ: true },
+        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "shasum", js: "shasum", typ: "" },
+    ], false),
+    "ZarfInitOptions": o([
+        { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
+        { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
+        { json: "storageClass", js: "storageClass", typ: "" },
+    ], false),
+    "GitServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
+        { json: "pullPassword", js: "pullPassword", typ: "" },
+        { json: "pullUsername", js: "pullUsername", typ: "" },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+    ], false),
+    "RegistryInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalRegistry", js: "internalRegistry", typ: true },
+        { json: "nodePort", js: "nodePort", typ: 0 },
+        { json: "pullPassword", js: "pullPassword", typ: "" },
+        { json: "pullUsername", js: "pullUsername", typ: "" },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
+        { json: "secret", js: "secret", typ: "" },
     ], false),
     "APIZarfPackage": o([
         { json: "path", js: "path", typ: "" },
@@ -978,24 +1021,6 @@ const typeMap: any = {
         { json: "cert", js: "cert", typ: "" },
         { json: "key", js: "key", typ: "" },
     ], false),
-    "GitServerInfo": o([
-        { json: "address", js: "address", typ: "" },
-        { json: "internalServer", js: "internalServer", typ: true },
-        { json: "pullPassword", js: "pullPassword", typ: "" },
-        { json: "pullUsername", js: "pullUsername", typ: "" },
-        { json: "pushPassword", js: "pushPassword", typ: "" },
-        { json: "pushUsername", js: "pushUsername", typ: "" },
-    ], false),
-    "RegistryInfo": o([
-        { json: "address", js: "address", typ: "" },
-        { json: "internalRegistry", js: "internalRegistry", typ: true },
-        { json: "nodePort", js: "nodePort", typ: 0 },
-        { json: "pullPassword", js: "pullPassword", typ: "" },
-        { json: "pullUsername", js: "pullUsername", typ: "" },
-        { json: "pushPassword", js: "pushPassword", typ: "" },
-        { json: "pushUsername", js: "pushUsername", typ: "" },
-        { json: "secret", js: "secret", typ: "" },
-    ], false),
     "ConnectString": o([
         { json: "description", js: "description", typ: "" },
         { json: "url", js: "url", typ: "" },
@@ -1028,20 +1053,6 @@ const typeMap: any = {
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
-    ], false),
-    "ZarfDeployOptions": o([
-        { json: "components", js: "components", typ: "" },
-        { json: "insecure", js: "insecure", typ: true },
-        { json: "packagePath", js: "packagePath", typ: "" },
-        { json: "setVariables", js: "setVariables", typ: m("") },
-        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
-        { json: "shasum", js: "shasum", typ: "" },
-    ], false),
-    "ZarfInitOptions": o([
-        { json: "applianceMode", js: "applianceMode", typ: true },
-        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
-        { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
-        { json: "storageClass", js: "storageClass", typ: "" },
     ], false),
     "Architecture": [
         "amd64",

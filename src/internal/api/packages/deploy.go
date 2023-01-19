@@ -20,12 +20,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	config := types.PackagerConfig{}
 	config.IsInteractive = false
 
-	type DeployPayload struct {
-		DeployOpts types.ZarfDeployOptions `json:"deployOpts"`
-		InitOpts   *types.ZarfInitOptions  `json:"initOpts,omitempty"`
-	}
-
-	var body DeployPayload
+	var body types.APIZarfDeployPayload
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

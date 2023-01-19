@@ -15,7 +15,7 @@
 	import { Packages } from '$lib/api';
 	import { Dialog, Stepper, Typography } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import type { ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
+	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
 
@@ -32,13 +32,8 @@
 		.join(',');
 
 	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
-	
-	type DeployPayloadBody = {
-		initOpts?: ZarfInitOptions;
-		deployOpts: ZarfDeployOptions;
-	}
 
-	let options: DeployPayloadBody = {
+	let options: APIZarfDeployPayload = {
 		deployOpts: {
 			components: requestedComponents,
 			sGetKeyPath: '',
