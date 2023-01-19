@@ -26,7 +26,7 @@ Each of these action sets are optional and contain different hooks and events th
 - `onSuccess` - array of actions that will run after any `after` actions have successfully completed
 - `onFailure` - array of actions that will run after any error during the above actions or component operations
 
-Within aach `before`, `after`, `onSuccess`, and `onFailure` action set, the following configurations are available:
+Within each `before`, `after`, `onSuccess`, and `onFailure` action set, the following configurations are available:
 
 - `cmd` - (required) the command to run
 - `dir` - the directory to run the command in
