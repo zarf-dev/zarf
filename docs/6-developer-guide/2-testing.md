@@ -110,6 +110,9 @@ The UI end-to-end tests are run using [Playwright](https://playwright.dev/).  Pl
 Here are a few different ways to run the tests, based on your specific situation:
 
 ```shell
+# dont forget to install dependencies
+npm ci
+
 # get help with playwright
 npx playwright --help
 
