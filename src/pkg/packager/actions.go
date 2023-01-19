@@ -125,6 +125,17 @@ func actionCmdMutation(cmd string) (string, error) {
 	// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 	if runtime.GOOS == "windows" {
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
+
+		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to $env:ZARF_VAR_*
+		// https://regex101.com/r/YVNkNU/1
+		envVarRegex := regexp.MustCompile(`\?P<envIndicator>${?(?P<varName>ZARF_VAR_([a-zA-Z0-9_-])+)}?`)
+		matches := envVarRegex.FindStringSubmatch(cmd)
+		matchIndex := envVarRegex.SubexpIndex
+		if len(matches) > 0 {
+			newCmd := strings.ReplaceAll(cmd, matches[matchIndex("envIndicator")], fmt.Sprintf("$Env:%s", matches[matchIndex("varName")]))
+			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)
+			cmd = newCmd
+		}
 	}
 
 	return cmd, nil
