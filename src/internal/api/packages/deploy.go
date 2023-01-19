@@ -28,13 +28,10 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if init options is empty
 	if body.InitOpts != nil {
 		config.InitOpts = *body.InitOpts
-		config.DeployOpts = body.DeployOpts
-	} else {
-		config.DeployOpts = body.DeployOpts
 	}
+	config.DeployOpts = body.DeployOpts
 
 	globalConfig.CommonOptions.Confirm = true
 
