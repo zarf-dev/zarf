@@ -1,9 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { execSync } from 'child_process';
-
-function resetK3D() {
-	execSync('k3d cluster delete && k3d cluster create');
-}
 
 test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
@@ -100,8 +95,6 @@ test.describe('initialize a zarf cluster', () => {
 
 		// then verify the page redirects to the packages dashboard
 		await page.waitForURL('/packages', { timeout: 10000 });
-		// finally reset the cluster
-		resetK3D();
 	});
 });
 
