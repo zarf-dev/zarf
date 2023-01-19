@@ -80,9 +80,14 @@ components:
             setVariable: SNAKE_SOUND
         # onSuccess will only run if steps in this component are successful
         onSuccess:
+          # this action will have access to the variables set in a previous component
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+          # this action will have access to the variables set at the top of the zarf.yaml file
           - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+          # this action will have access to the variables set within this component
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
+          # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
+          - cmd: echo "the snake says ${TF_VAR_snake_sound}"
 
   - name: on-deploy-with-template-use-of-variable
     files:
