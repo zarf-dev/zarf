@@ -36,13 +36,13 @@ func TestExternalDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
-	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=60s"}
+	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=5s"}
 	registryErrStr := "unable to verify the docker-registry chart installed successfully"
-	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=60s"}
+	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
 	giteaErrStr := "unable to verify the gitea chart installed successfully"
 	success := verifyKubectlWaitSuccess(t, 2, registryWaitCmd, registryErrStr)
 	require.True(t, success, registryErrStr)
-	success = verifyKubectlWaitSuccess(t, 2, giteaWaitCmd, giteaErrStr)
+	success = verifyKubectlWaitSuccess(t, 3, giteaWaitCmd, giteaErrStr)
 	require.True(t, success, giteaErrStr)
 
 	// Use Zarf to initialize the cluster
@@ -88,7 +88,7 @@ func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCm
 			// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
-			kubectlOut, kubectlErr, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "kubectl", waitCmd...)
+			kubectlOut, kubectlErr, err := exec.CmdWithContext(context.TODO(), exec.Config{Print: true}, "kubectl", waitCmd...)
 			// Log error
 			if err != nil {
 				t.Logf("Error (%v) when running wait command with stdout of (%s) and stderr of (%s)", err, kubectlOut, kubectlErr)

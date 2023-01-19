@@ -22,7 +22,7 @@ components:
         # runs before the component is created
         before:
           # on Windows, touch is replaced with New-Item
-          - cmd: touch test-create.txt
+          - cmd: touch test-create-before.txt
             # dir is the directory to run the command in
             dir: ""
             # this environment variable will be set for this action only
@@ -30,12 +30,15 @@ components:
               - "thing=stuff"
             # the number of times to retry the action if it fails
             maxRetries: 0
-            # the maximum amount of time the action can run before it is killed, including retries
+            # the maximum amount of times the action can run before it is killed, including retries
             maxTotalSeconds: 30
             # determine if actions output should be printed to the console
             mute: false
             # the name of the variable to set with the output of the action
             setVariable: BLEH
+        # runs after the component is deployed
+        after:
+         - cmd: touch test-create-after.txt
 
   - name: on-deploy
     actions:
@@ -111,3 +114,20 @@ components:
           - cmd: sleep 30
         onFailure:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
+
+  - name: on-remove
+    actions:
+      # runs during "zarf package remove"
+      onRemove:
+        before:
+          - cmd: touch test-remove-before.txt
+        after:
+          - cmd: touch test-remove-after.txt
+
+  - name: on-deploy-with-env-var
+    actions:
+      onDeploy:
+        before:
+          - cmd: touch $ZARF_TEST_FILENAME
+            env:
+              - "ZARF_TEST_FILENAME=filename-from-env.txt"
