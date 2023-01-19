@@ -88,10 +88,10 @@ func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCm
 			// after delay, try running
 		default:
 			// Check that flux deployed the podinfo example
-			kubectlOut, _, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "kubectl", waitCmd...)
+			kubectlOut, kubectlErr, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "kubectl", waitCmd...)
 			// Log error
 			if err != nil {
-				t.Log(string(kubectlOut), err)
+				t.Logf("Error (%v) when running wait command with stdout of (%s) and stderr of (%s)", err, kubectlOut, kubectlErr)
 			}
 			if strings.Contains(string(kubectlOut), "condition met") {
 				return true
