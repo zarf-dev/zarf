@@ -34,12 +34,12 @@
 	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
 	
 	type DeployPayloadBody = {
-		initOptions?: ZarfInitOptions;
-		deployOptions: ZarfDeployOptions;
+		initOpts?: ZarfInitOptions;
+		deployOpts: ZarfDeployOptions;
 	}
 
 	let options: DeployPayloadBody = {
-		deployOptions: {
+		deployOpts: {
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
@@ -51,7 +51,7 @@
 	};
 
 	if (isInitPkg) {
-		options.initOptions = {
+		options.initOpts = {
 			applianceMode: false,
 			gitServer: {
 				address: '',
@@ -89,6 +89,7 @@
 	}
 
 	onMount(() => {
+		console.log('deploying', options)
 		Packages.deploy(options).then(
 			(value: boolean) => {
 				finishedDeploying = true;
