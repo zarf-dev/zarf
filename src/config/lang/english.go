@@ -168,6 +168,8 @@ const (
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
+	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components"
+
 	// zarf version
 	CmdVersionShort = "SBOM tools provided by Anchore Syft"
 	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."

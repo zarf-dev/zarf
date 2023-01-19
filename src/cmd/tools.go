@@ -15,6 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -90,6 +92,21 @@ var readCredsCmd = &cobra.Command{
 	},
 }
 
+var readAllCredsCmd = &cobra.Command{
+	Use:   "get-creds",
+	Short: lang.CmdToolsGetCredsShort,
+	Aliases: []string{"gc"},
+	Run: func(cmd *cobra.Command, args []string) {
+		state, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil || state.Distro == "" {
+			// If no distro the zarf secret did not load properly
+			message.Fatalf(nil, lang.ErrLoadState)
+		}
+
+		utils.PrintCredentialTable(state, []types.DeployedComponent{})
+	},
+}
+
 var k9sCmd = &cobra.Command{
 	Use:     "monitor",
 	Aliases: []string{"m", "k9s"},
@@ -140,6 +157,7 @@ func init() {
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
+	toolsCmd.AddCommand(readAllCredsCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
 	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
