@@ -210,7 +210,7 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 		imgConfig := images.ImgConfig{
 			TarballPath:   path,
 			ImgList:       imgList,
-			Insecure:      p.cfg.CreateOpts.Insecure,
+			Insecure:      config.CommonOptions.Insecure,
 			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
 		}
 
