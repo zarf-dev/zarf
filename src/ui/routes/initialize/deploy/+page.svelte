@@ -84,7 +84,6 @@
 	}
 
 	onMount(() => {
-		console.log('deploying', options)
 		Packages.deploy(options).then(
 			(value: boolean) => {
 				finishedDeploying = true;
