@@ -43,7 +43,10 @@ jobs:
           key: ${{ runner.os }}-browsers
 
       - name: Run UI tests
-        run: npm test
+        run: |
+          npm test:pre-init &&
+          npm test:init &&
+          npm test:post-init
 
       - name: Save logs
         if: always()
