@@ -20,7 +20,7 @@ import (
 )
 
 // Run commands that a component has provided.
-func (p *Packager) runAction(actionSet types.ZarfComponentActionSet, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
+func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
 ACTION:
 	for _, a := range actions {
 		spinner := message.NewProgressSpinner("Running command \"%s\"", a.Cmd)
@@ -42,7 +42,7 @@ ACTION:
 			vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
 		}
 
-		cfg := actionGetCfg(actionSet, a, vars)
+		cfg := actionGetCfg(defaultCfg, a, vars)
 
 		if cmd, err = actionCmdMutation(a.Cmd); err != nil {
 			spinner.Errorf(err, "Error mutating command: %s", cmd)
@@ -141,10 +141,8 @@ func actionCmdMutation(cmd string) (string, error) {
 	return cmd, nil
 }
 
-// Merge the actionset defaults with the action config.
-func actionGetCfg(actionSet types.ZarfComponentActionSet, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
-	cfg := actionSet.Defaults
-
+// Merge the ActionSet defaults with the action config.
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
 	if !a.Mute {
 		cfg.Mute = a.Mute
 	}

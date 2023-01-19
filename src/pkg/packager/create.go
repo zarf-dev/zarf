@@ -101,13 +101,13 @@ func (p *Packager) Create(baseDir string) error {
 		componentSBOM, err := p.addComponent(component)
 		onCreate := component.Actions.OnCreate
 		if err != nil {
-			if err := p.runAction(onCreate, onCreate.OnFailure, nil); err != nil {
+			if err := p.runAction(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 			return fmt.Errorf("unable to add component: %w", err)
 		}
 
-		if err := p.runAction(onCreate, onCreate.OnSuccess, nil); err != nil {
+		if err := p.runAction(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
@@ -246,7 +246,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 	onCreate := component.Actions.OnCreate
 
-	if err := p.runAction(onCreate, onCreate.Before, nil); err != nil {
+	if err := p.runAction(onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return nil, fmt.Errorf("unable to run component first action: %w", err)
 	}
 
@@ -388,7 +388,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 	}
 
-	if err := p.runAction(onCreate, onCreate.After, nil); err != nil {
+	if err := p.runAction(onCreate.Defaults, onCreate.After, nil); err != nil {
 		return nil, fmt.Errorf("unable to run component last action: %w", err)
 	}
 
