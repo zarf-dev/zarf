@@ -150,7 +150,7 @@ As stated before, Zarf was built to make deploying applications into disconnecte
 
 <!-- TODO: Find a good place to talk about what the init command is actually doing (there's a lot of special magic sauce going on with that command) -->
 
-`zarf init` is used to prepare a k8s cluster for the deployment of future Zarf packages. The init command uses a specialized 'init-package' to operate. This package can either be located in your current working directory, in the directory where the Zarf CLI binary lives, or be downloaded from the GitHub releases as the command is running. More information about what the 'init' command is doing will be provided soon. More information about the init-package can be found on the [init-package](../2-zarf-packages/3-the-zarf-init-package.md) page.
+`zarf init` is used to prepare a k8s cluster for the deployment of future Zarf packages. The init command uses a specialized 'init-package' to operate. This package can either be located in your current working directory, in the directory where the Zarf CLI binary lives, or be downloaded from the GitHub releases as the command is running. More information about the init-package can be found on the [init-package](../2-zarf-packages/3-the-zarf-init-package.md) page.
 
 ### zarf package deploy
 
