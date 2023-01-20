@@ -19,92 +19,98 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Run commands that a component has provided.
-func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
-ACTION:
+func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
 	for _, a := range actions {
-		spinner := message.NewProgressSpinner("Running command \"%s\"", a.Cmd)
-		defer spinner.Success()
-
-		var (
-			ctx    context.Context
-			cancel context.CancelFunc
-			cmd    string
-			out    string
-			err    error
-			vars   map[string]string
-		)
-
-		// If the value template is not nil, get the variables for the action.
-		// No special variables or deprecations will be used the action.
-		// Reload the variables each time in case they have been changed by a previous action.
-		if valueTemplate != nil {
-			vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
+		if err := p.runAction(defaultCfg, a, valueTemplate); err != nil {
+			return err
 		}
-
-		cfg := actionGetCfg(defaultCfg, a, vars)
-
-		if cmd, err = actionCmdMutation(a.Cmd); err != nil {
-			spinner.Errorf(err, "Error mutating command: %s", cmd)
-		}
-
-		duration := time.Duration(cfg.MaxTotalSeconds) * time.Second
-		timeout := time.After(duration)
-
-		// Keep trying until the max retries is reached.
-		for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
-
-			// If no timeout is set, run the command and return.
-			if cfg.MaxTotalSeconds < 1 {
-				spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
-
-				// Try running the command and continue the retry loop if it fails.
-				if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
-					message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
-					continue
-				}
-
-				// If an output variable is defined, set it.
-				if a.SetVariable != "" {
-					p.setVariable(a.SetVariable, out)
-				}
-
-				// If the command ran successfully, continue to the next action.
-				continue ACTION
-			}
-
-			spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxTotalSeconds)
-
-			select {
-			// On timeout abort.
-			case <-timeout:
-				cancel()
-				return fmt.Errorf("command \"%s\" timed out", cmd)
-
-			// Otherwise, try running the command.
-			default:
-				ctx, cancel = context.WithTimeout(context.Background(), duration)
-				defer cancel()
-
-				// Try running the command and continue the retry loop if it fails.
-				if out, err = actionRun(ctx, cfg, cmd); err != nil {
-					message.Debug(err)
-					continue
-				}
-
-				// If an output variable is defined, set it.
-				if a.SetVariable != "" {
-					p.setVariable(a.SetVariable, out)
-				}
-
-				// If the command ran successfully, continue to the next action.
-				continue ACTION
-			}
-		}
-
-		// If we've reached this point, the retry limit has been reached.
-		return fmt.Errorf("command \"%s\" failed after %d retries", cmd, cfg.MaxRetries)
 	}
+	return nil
+}
+
+// Run commands that a component has provided.
+func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
+	spinner := message.NewProgressSpinner("Running command \"%s\"", action.Cmd)
+	defer spinner.Success()
+
+	var (
+		ctx    context.Context
+		cancel context.CancelFunc
+		cmd    string
+		out    string
+		err    error
+		vars   map[string]string
+	)
+
+	// If the value template is not nil, get the variables for the action.
+	// No special variables or deprecations will be used the action.
+	// Reload the variables each time in case they have been changed by a previous action.
+	if valueTemplate != nil {
+		vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
+	}
+
+	cfg := actionGetCfg(defaultCfg, action, vars)
+
+	if cmd, err = actionCmdMutation(action.Cmd); err != nil {
+		spinner.Errorf(err, "Error mutating command: %s", cmd)
+	}
+
+	duration := time.Duration(cfg.MaxTotalSeconds) * time.Second
+	timeout := time.After(duration)
+
+	// Keep trying until the max retries is reached.
+	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
+
+		// If no timeout is set, run the command and return or continue retrying.
+		if cfg.MaxTotalSeconds < 1 {
+			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+
+			// Try running the command and continue the retry loop if it fails.
+			if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
+				message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
+				continue
+			}
+
+			// If an output variable is defined, set it.
+			if action.SetVariable != "" {
+				p.setVariable(action.SetVariable, out)
+			}
+
+			// If the command ran successfully, continue to the next action.
+			return nil
+		}
+
+		// Run the command on repeat until success or timeout.
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxTotalSeconds)
+		select {
+		// On timeout abort.
+		case <-timeout:
+			cancel()
+			return fmt.Errorf("command \"%s\" timed out", cmd)
+
+		// Otherwise, try running the command.
+		default:
+			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			defer cancel()
+
+			// Try running the command and continue the retry loop if it fails.
+			if out, err = actionRun(ctx, cfg, cmd); err != nil {
+				message.Debug(err)
+				continue
+			}
+
+			// If an output variable is defined, set it.
+			if action.SetVariable != "" {
+				p.setVariable(action.SetVariable, out)
+			}
+
+			// If the command ran successfully, continue to the next action.
+			return nil
+		}
+	}
+
+	// If we've reached this point, the retry limit has been reached.
+	return fmt.Errorf("command \"%s\" failed after %d retries", cmd, cfg.MaxRetries)
 
 	// If we've reached this point, all actions have been run successfully.
 	return nil
