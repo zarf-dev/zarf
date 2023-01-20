@@ -35,5 +35,5 @@ Deployments of BigBang can be managed with a new `bigbang` noun in the zarf.yaml
 
 
 - By doing package time rendering and discovery of images for inclusion into the zarf package, the flexibility for deploy time configuration is limited since new parts of BigBang can't be added arbitrarily, since the necessary artifacts to deploy those BigBang packages won't be present in the zarf package
-- BigBang is every changing and improving, and while it is available as open source, we do not control the change in how the deployment is handled as [BigBang 2.0](https://repo1.dso.mil/groups/big-bang/-/epics/217) is progressing.  This creates a burdon on the Zarf team to ensure new changes in Big Bang do not break how BigBang is deployed, and a burdon to ensure as the way BigBang gets deployed is changed, it does not break older versions of deploying BigBang.
+- BigBang is every changing and improving, and while it is available as open source, we do not control the change in how the deployment is handled as [BigBang 2.0](https://repo1.dso.mil/groups/big-bang/-/epics/217) is progressing.  This creates a burden on the Zarf team to ensure new changes in Big Bang do not break how BigBang is deployed, and a burden to ensure as the way BigBang gets deployed is changed, it does not break older versions of deploying BigBang.
 
