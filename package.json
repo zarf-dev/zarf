@@ -7,6 +7,9 @@
 		"dev": "hack/ui-dev.sh",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
+		"test:pre-init": "playwright test -x --reporter github,html --grep @pre-init",
+		"test:init": "playwright test -x --reporter github,html --grep @init",
+		"test:post-init": "playwright test -x --reporter github,html --grep @post-init",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
