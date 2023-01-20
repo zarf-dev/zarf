@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('view packages', () => {
-	test('is initially blank', async ({ page }) => {
+	test('is initially blank @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure&next=/packages');
 		await expect(page.locator('text=No deployed packages found 🙁')).toBeVisible();
 		await expect(page.locator("a:has-text('Go Home')")).toHaveAttribute('href', '/');
