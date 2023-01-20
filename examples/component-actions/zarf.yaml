@@ -128,6 +128,6 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: touch $ZARF_TEST_FILENAME
+          - cmd: touch $ZARF_VAR_TEST_FILENAME
             env:
-              - "ZARF_TEST_FILENAME=filename-from-env.txt"
+              - "ZARF_VAR_TEST_FILENAME=filename-from-env.txt"
