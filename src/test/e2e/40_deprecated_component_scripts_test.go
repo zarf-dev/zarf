@@ -19,10 +19,10 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	defer e2e.teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
-	prepareArtifact := "src/test/test-packages/deprecated-component-scripts/test-prepare.txt"
+	prepareArtifact := "src/test/test-packages/deprecated-component-scripts/test-deprecated-prepare-hook.txt"
 	deployArtifacts := []string{
-		"test-deploy-before.txt",
-		"test-deploy-after.txt",
+		"test-deprecated-deploy-before-hook.txt",
+		"test-deprecated-deploy-after-hook.txt",
 	}
 	allArtifacts := append(deployArtifacts, prepareArtifact)
 	e2e.cleanFiles(allArtifacts...)

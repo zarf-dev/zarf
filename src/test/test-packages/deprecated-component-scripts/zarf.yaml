@@ -9,14 +9,14 @@ components:
       # Note this file will be created in this directory, regardless of where the package create command is called from
       prepare:
         # on Windows, touch is replaced with New-Item
-        - "touch test-prepare-hook.txt"
+        - "touch test-deprecated-prepare-hook.txt"
 
   - name: deploy
     scripts:
       before:
-        - "touch test-deploy-before-hook.txt"
+        - "touch test-deprecated-deploy-before-hook.txt"
       after:
-        - "touch test-deploy-after-hook.txt"
+        - "touch test-deprecated-deploy-after-hook.txt"
 
   # This script will fail after 1 seconds
   - name: timeout
