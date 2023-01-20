@@ -120,15 +120,16 @@ func actionCmdMutation(cmd string) (string, error) {
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
-	// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliases by M$.
-	// See https://mathieubuisson.github.io/powershell-linux-bash/ &
-	// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
+	// Make commands 'more' compatible with Windows OS PowerShell
 	if runtime.GOOS == "windows" {
+		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliases by M$.
+		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
+		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
 
 		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to $env:ZARF_VAR_*
-		// https://regex101.com/r/YVNkNU/1
-		envVarRegex := regexp.MustCompile(`\?P<envIndicator>${?(?P<varName>ZARF_VAR_([a-zA-Z0-9_-])+)}?`)
+		// https://regex101.com/r/BdtUfO/1
+		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>ZARF_VAR_([a-zA-Z0-9_-])+)}?)`)
 		matches := envVarRegex.FindStringSubmatch(cmd)
 		matchIndex := envVarRegex.SubexpIndex
 		if len(matches) > 0 {
