@@ -11,7 +11,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -48,7 +47,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Sec
 	fieldValue := zarfState.RegistryInfo.PullUsername + ":" + credential
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
-	registry := config.GetRegistry(zarfState)
+	registry := zarfState.RegistryInfo.Address
 	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{

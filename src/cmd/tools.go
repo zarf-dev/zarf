@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/anchore/syft/cmd/syft/cli"
@@ -209,16 +208,13 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 		tunnelReg.Connect(cluster.ZarfRegistry, false)
-		registryURL, err := url.Parse(tunnelReg.HTTPEndpoint())
-		if err != nil {
-			return err
-		}
 
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+		registryEndpoint := tunnelReg.Endpoint()
 
-		return originalCatalogFn(cmd, []string{registryURL.Host})
+		return originalCatalogFn(cmd, []string{registryEndpoint})
 	}
 
 	return craneCatalog

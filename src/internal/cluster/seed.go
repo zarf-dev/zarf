@@ -147,10 +147,15 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+	// TODO (@WSTARR): Implement a test for this!
+	// Set default NodePort if none was provided
+	if containerRegistry.NodePort == 0 {
+		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
+	}
+
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
 		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
 	}
 

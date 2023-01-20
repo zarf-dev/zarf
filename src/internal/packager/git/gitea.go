@@ -29,10 +29,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
-	tunnelURL := tunnel.Endpoint()
+	tunnelURL := tunnel.HTTPEndpoint()
 
 	// Determine if the read only user already exists
-	getUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelURL)
+	getUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
 	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
