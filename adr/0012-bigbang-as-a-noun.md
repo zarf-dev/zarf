@@ -10,7 +10,7 @@ Accepted
 
 One primary application component that end users of Zarf are deploying is [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang).  The installation of BigBang is complicated for several reason:
 
-- It requires Flux to be installed to deploy correctly do to the use of Flux CRDs. 
+- It requires Flux to be installed to deploy correctly due to the use of Flux CRDs. 
 - The [images](https://umbrella-bigbang-releases.s3-us-gov-west-1.amazonaws.com/umbrella/1.51.0/package-images.yaml) defined within BigBang are normally a superset of the images needed for any individual deployment.
 - All images that BigBang might need takes 10s of gigabytes of storage to include in a Zarf package.
 - The git repositories defined within BigBang are normally a superset of the git repositories needed for any individual deployment.
