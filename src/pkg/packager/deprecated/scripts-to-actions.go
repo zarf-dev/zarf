@@ -8,7 +8,6 @@ import (
 	"math"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -72,9 +71,6 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 	if hasScripts {
 		message.Warnf("Component \"%s\" is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
 	}
-
-	message.Warnf("@JPERRY the finished migrated component: %#v", c.Actions)
-	utils.ColorPrintYAML(c.Actions)
 
 	return c
 }
