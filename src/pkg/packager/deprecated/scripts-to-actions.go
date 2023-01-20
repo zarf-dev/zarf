@@ -8,6 +8,7 @@ import (
 	"math"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -41,6 +42,8 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.Prepare {
 			c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, types.ZarfComponentAction{Cmd: s})
 		}
+
+		c.DeprecatedScripts.Prepare = []string{}
 	}
 
 	// Scripts.Before -> Actions.Deploy.Before
@@ -50,6 +53,8 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.Before {
 			c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{Cmd: s})
 		}
+
+		c.DeprecatedScripts.Before = []string{}
 	}
 
 	// Scripts.After -> Actions.Deploy.After
@@ -59,12 +64,17 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.After {
 			c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{Cmd: s})
 		}
+
+		c.DeprecatedScripts.After = []string{}
 	}
 
 	// Leave deprecated scripts in place, but warn users
 	if hasScripts {
 		message.Warnf("Component \"%s\" is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
 	}
+
+	message.Warnf("@JPERRY the finished migrated component: %#v", c.Actions)
+	utils.ColorPrintYAML(c.Actions)
 
 	return c
 }
