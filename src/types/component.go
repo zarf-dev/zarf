@@ -137,10 +137,10 @@ type ZarfComponentActionDefaults struct {
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
-	Mute            bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxTotalSeconds int      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
-	MaxRetries      int      `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
-	Dir             string   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Mute            *bool    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxTotalSeconds *int     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
+	MaxRetries      *int     `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
+	Dir             *string  `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd             string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
 	SetVariable     string   `json:"setVariable,omitempty" jsonschema:"description=The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`

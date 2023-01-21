@@ -111,9 +111,6 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	// If we've reached this point, the retry limit has been reached.
 	return fmt.Errorf("command \"%s\" failed after %d retries", cmd, cfg.MaxRetries)
-
-	// If we've reached this point, all actions have been run successfully.
-	return nil
 }
 
 // Perform some basic string mutations to make commands more useful.
@@ -150,21 +147,21 @@ func actionCmdMutation(cmd string) (string, error) {
 
 // Merge the ActionSet defaults with the action config.
 func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
-	if !a.Mute {
-		cfg.Mute = a.Mute
+	if a.Mute != nil {
+		cfg.Mute = *a.Mute
 	}
 
 	// Default is no timeout, but add a timeout if one is provided.
-	if a.MaxTotalSeconds > 0 {
-		cfg.MaxTotalSeconds = a.MaxTotalSeconds
+	if a.MaxTotalSeconds != nil {
+		cfg.MaxTotalSeconds = *a.MaxTotalSeconds
 	}
 
-	if a.MaxRetries > 0 {
-		cfg.MaxRetries = a.MaxRetries
+	if a.MaxRetries != nil {
+		cfg.MaxRetries = *a.MaxRetries
 	}
 
-	if a.Dir != "" {
-		cfg.Dir = a.Dir
+	if a.Dir != nil {
+		cfg.Dir = *a.Dir
 	}
 
 	if len(a.Env) > 0 {
