@@ -57,6 +57,8 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
+		pkgConfig.CreateOpts.ConfigVariables = v.GetStringMapString(V_PKG_CREATE_SET)
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
@@ -76,6 +78,8 @@ var packageDeployCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		pkgConfig.DeployOpts.ConfigVariables = v.GetStringMapString(V_PKG_DEPLOY_SET)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -244,7 +248,7 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 	v.SetDefault(V_PKG_CREATE_NO_LOCAL_IMAGES, false)
 
-	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", map[string]string{}, "Specify package variables to set on the command line (KEY=value)")
 	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
 	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), "View SBOM contents after creating the package")
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
@@ -266,7 +270,7 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
+	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", map[string]string{}, "Specify deployment variables to set on the command line (KEY=value)")
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
 	deployFlags.BoolVar(&insecureDeploy, "insecure", v.GetBool(V_PKG_DEPLOY_INSECURE), "Skip shasum validation of remote package. Required if deploying a remote package and `--shasum` is not provided")
 	deployFlags.StringVar(&shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and `--insecure` is not provided")

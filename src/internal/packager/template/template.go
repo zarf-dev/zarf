@@ -129,7 +129,7 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 
 	for key, value := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = *value
 	}
 
 	for _, constant := range values.config.Pkg.Constants {

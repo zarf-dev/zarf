@@ -46,6 +46,8 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
+		pkgConfig.DeployOpts.ConfigVariables = v.GetStringMapString(V_PKG_DEPLOY_SET)
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
@@ -175,7 +177,7 @@ func init() {
 	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
+	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", map[string]string{}, lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)

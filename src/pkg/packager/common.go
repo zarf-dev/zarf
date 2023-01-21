@@ -44,7 +44,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	if cfg.SetVariableMap == nil {
-		cfg.SetVariableMap = make(map[string]string)
+		cfg.SetVariableMap = make(map[string]*string)
 	}
 
 	var (

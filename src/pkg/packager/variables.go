@@ -20,9 +20,15 @@ func (p *Packager) fillActiveTemplate() error {
 		return err
 	}
 
-	for key := range p.cfg.CreateOpts.SetVariables {
-		value := p.cfg.CreateOpts.SetVariables[key]
-		// Ensure uppercase for VIPER
+	// Process viper variables first
+	for key, value := range p.cfg.CreateOpts.ConfigVariables {
+		// Ensure uppercase keys
+		packageVariables[strings.ToUpper(key)] = &value
+	}
+
+	// Process --set as overrides
+	for key, value := range p.cfg.CreateOpts.SetVariables {
+		// Ensure uppercase keys
 		packageVariables[strings.ToUpper(key)] = &value
 	}
 
@@ -56,10 +62,16 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
-	for key := range p.cfg.DeployOpts.SetVariables {
-		value := p.cfg.DeployOpts.SetVariables[key]
-		// Ensure uppercase for VIPER
-		p.cfg.SetVariableMap[strings.ToUpper(key)] = value
+	// Process viper variables first
+	for key, value := range p.cfg.DeployOpts.ConfigVariables {
+		// Ensure uppercase keys
+		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
+	}
+
+	// Process --set as overrides
+	for key, value := range p.cfg.DeployOpts.SetVariables {
+		// Ensure uppercase keys
+		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
 	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
@@ -71,7 +83,7 @@ func (p *Packager) setActiveVariables() error {
 		}
 
 		// First set default (may be overridden by prompt)
-		p.cfg.SetVariableMap[variable.Name] = variable.Default
+		p.cfg.SetVariableMap[variable.Name] = &variable.Default
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -82,7 +94,7 @@ func (p *Packager) setActiveVariables() error {
 				return err
 			}
 
-			p.cfg.SetVariableMap[variable.Name] = val
+			p.cfg.SetVariableMap[variable.Name] = &val
 		}
 	}
 

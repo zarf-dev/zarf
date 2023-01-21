@@ -102,23 +102,18 @@ dev: ensure-ui-build-dir ## Start a Dev Server for the UI
 	npm ci
 	npm run dev
 
-# Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
-# @todo: find a clean way to dynamically support Kind or k3d:
-#        when using kind: kind load docker-image $(tag)
-#        when using k3d: k3d image import $(tag)
-dev-agent-image: ## Create a new agent image and inject it into a currently inited cluster
-	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
-	$(eval arch := $(shell uname -m))
-	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
-	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
-	k3d image import $(tag) && \
-	kubectl -n zarf set image deployment/agent-hook server=$(tag)
+build-local-agent-image: ## Create a new local agent image to be used in the locally built init package
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli-linux
+	cp build/zarf build/zarf-linux-amd64
+	cp build/zarf-arm build/zarf-linux-arm64
+	docker buildx build --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
-ci-release: init-package
+release-init-package:
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
