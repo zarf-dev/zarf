@@ -156,7 +156,8 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+		// TODO (@WSTARR): Implement a shim for old states with http in the registry address
+		containerRegistry.Address = fmt.Sprintf("%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag
