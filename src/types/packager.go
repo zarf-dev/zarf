@@ -28,7 +28,7 @@ type PackagerConfig struct {
 	State ZarfState
 
 	// Variables set by the user
-	SetVariableMap map[string]*string
+	SetVariableMap map[string]string
 
 	// SBOM file paths in the package
 	SBOMViewFiles []string

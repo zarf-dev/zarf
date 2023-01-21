@@ -15,51 +15,45 @@ import (
 
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
+	setVariableMap := map[string]string{}
+
+	// Process viper variables first
+	for key, value := range p.cfg.CreateOpts.ConfigVariables {
+		// Ensure uppercase keys
+		setVariableMap[strings.ToUpper(key)] = value
+	}
+
+	// Process --set as overrides
+	for key, value := range p.cfg.CreateOpts.SetVariables {
+		// Ensure uppercase keys
+		setVariableMap[strings.ToUpper(key)] = value
+	}
+
 	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
 		return err
 	}
 
-	// Process viper variables first
-	for key := range p.cfg.CreateOpts.ConfigVariables {
-		// Create a distinct variable to hold the value from the range
-		value := p.cfg.CreateOpts.ConfigVariables[key]
-		// Ensure uppercase keys
-		packageVariables[strings.ToUpper(key)] = &value
-	}
-
-	// Process --set as overrides
-	for key := range p.cfg.CreateOpts.SetVariables {
-		// Create a distinct variable to hold the value from the range
-		value := p.cfg.CreateOpts.SetVariables[key]
-		// Ensure uppercase keys
-		packageVariables[strings.ToUpper(key)] = &value
-	}
-
-	for key, value := range packageVariables {
-		if value == nil && !config.CommonOptions.Confirm {
+	for key := range packageVariables {
+		_, present := setVariableMap[key]
+		if !present && !config.CommonOptions.Confirm {
 			setVal, err := p.promptVariable(types.ZarfPackageVariable{
 				Name: key,
 			})
 
 			if err == nil {
-				packageVariables[key] = &setVal
+				setVariableMap[key] = setVal
 			} else {
 				return err
 			}
-		} else if value == nil {
+		} else if !present {
 			return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
 		}
 	}
 
 	templateMap := map[string]string{}
-	for key := range packageVariables {
-		// Create a distinct variable to hold the value from the range
-		value := packageVariables[key]
-		if value != nil {
-			// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
-			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
-		}
+	for key, value := range setVariableMap {
+		templateMap[fmt.Sprintf("###ZARF_PKG_VAR_%s###", key)] = value
 	}
 
 	// Add special variable for the current package architecture
@@ -71,19 +65,15 @@ func (p *Packager) fillActiveTemplate() error {
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
 	// Process viper variables first
-	for key := range p.cfg.DeployOpts.ConfigVariables {
-		// Create a distinct variable to hold the value from the range
-		value := p.cfg.DeployOpts.ConfigVariables[key]
+	for key, value := range p.cfg.DeployOpts.ConfigVariables {
 		// Ensure uppercase keys
-		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
+		p.cfg.SetVariableMap[strings.ToUpper(key)] = value
 	}
 
 	// Process --set as overrides
-	for key := range p.cfg.DeployOpts.SetVariables {
-		// Create a distinct variable to hold the value from the range
-		value := p.cfg.DeployOpts.SetVariables[key]
+	for key, value := range p.cfg.DeployOpts.SetVariables {
 		// Ensure uppercase keys
-		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
+		p.cfg.SetVariableMap[strings.ToUpper(key)] = value
 	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
@@ -95,7 +85,7 @@ func (p *Packager) setActiveVariables() error {
 		}
 
 		// First set default (may be overridden by prompt)
-		p.cfg.SetVariableMap[variable.Name] = &variable.Default
+		p.cfg.SetVariableMap[variable.Name] = variable.Default
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -106,7 +96,7 @@ func (p *Packager) setActiveVariables() error {
 				return err
 			}
 
-			p.cfg.SetVariableMap[variable.Name] = &val
+			p.cfg.SetVariableMap[variable.Name] = val
 		}
 	}
 
