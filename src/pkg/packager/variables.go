@@ -21,13 +21,15 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// Process viper variables first
-	for key, value := range p.cfg.CreateOpts.ConfigVariables {
+	for key := range p.cfg.CreateOpts.ConfigVariables {
+		value := p.cfg.CreateOpts.ConfigVariables[key]
 		// Ensure uppercase keys
 		packageVariables[strings.ToUpper(key)] = &value
 	}
 
 	// Process --set as overrides
-	for key, value := range p.cfg.CreateOpts.SetVariables {
+	for key := range p.cfg.CreateOpts.SetVariables {
+		value := p.cfg.CreateOpts.SetVariables[key]
 		// Ensure uppercase keys
 		packageVariables[strings.ToUpper(key)] = &value
 	}
@@ -63,13 +65,15 @@ func (p *Packager) fillActiveTemplate() error {
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
 	// Process viper variables first
-	for key, value := range p.cfg.DeployOpts.ConfigVariables {
+	for key := range p.cfg.DeployOpts.ConfigVariables {
+		value := p.cfg.DeployOpts.ConfigVariables[key]
 		// Ensure uppercase keys
 		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
 	}
 
 	// Process --set as overrides
-	for key, value := range p.cfg.DeployOpts.SetVariables {
+	for key := range p.cfg.DeployOpts.SetVariables {
+		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase keys
 		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
 	}
