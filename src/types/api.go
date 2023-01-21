@@ -16,6 +16,7 @@ type RestAPI struct {
 	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
 	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
 	APIZarfPackage    APIZarfPackage    `json:"apiZarfPackage"`
+	APIZarfDeployPayload APIZarfDeployPayload `json:"apiZarfDeployPayload"`
 }
 
 // ClusterSummary contains the summary of a cluster for the API.
@@ -30,4 +31,10 @@ type ClusterSummary struct {
 type APIZarfPackage struct {
 	Path        string      `json:"path"`
 	ZarfPackage ZarfPackage `json:"zarfPackage"`
+}
+
+// APIZarfDeployPayload represents the needed data to deploy a ZarfPackage/ZarfInit
+type APIZarfDeployPayload struct {
+	DeployOpts ZarfDeployOptions `json:"deployOpts"`
+	InitOpts   *ZarfInitOptions  `json:"initOpts,omitempty"`
 }
