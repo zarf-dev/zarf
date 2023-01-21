@@ -55,9 +55,11 @@ func (p *Packager) fillActiveTemplate() error {
 	templateMap := map[string]string{}
 	for key := range packageVariables {
 		// Create a distinct variable to hold the value from the range
-		value := p.cfg.CreateOpts.SetVariables[key]
-		// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = value
+		value := packageVariables[key]
+		if value != nil {
+			// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
+		}
 	}
 
 	// Add special variable for the current package architecture
