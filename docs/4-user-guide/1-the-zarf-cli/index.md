@@ -49,7 +49,7 @@ First, lets test to make sure the CLI you have works by running the CLI to get a
 
 <details><summary>Expected Help Output</summary>
 <p>
-The output of the help command should look <b>something</b> like this:
+The output of the help command should look <b>something</b> like this (CLI flags will also appear at the end of the output):
 
 ```text
 Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads
@@ -69,20 +69,6 @@ Available Commands:
   prepare           Tools to help prepare assets for packaging
   tools             Collection of additional tools to make airgap easier
   version           Displays the version of the Zarf binary
-
-Flags:
-  -a, --architecture string   Architecture for OCI images
-  -h, --help                  help for zarf
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-  
-      --no-log-file           Disable log file creation
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
-      --tmpdir string         Specify the temporary directory to use for intermediate files
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
-
-Use "zarf [command] --help" for more information about a command.
-
-
 ```
 
 </p>
