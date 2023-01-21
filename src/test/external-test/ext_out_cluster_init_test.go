@@ -17,25 +17,36 @@ import (
 
 func TestExtOutClusterDeploy(t *testing.T) {
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
+	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "k3d", "cluster", "delete")
+	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "k3d", "registry", "delete", "registry.localhost")
+
+	// Install a k3d-managed registry server to act as the 'remote' container registry
+	_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "k3d", "registry", "create", "registry.localhost", "--port", "5000")
+	require.NoError(t, err, "unable to create the k3d registry")
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "k3d", "cluster", "create", "--registry-use", "k3d-registry.localhost:5000")
+	require.NoError(t, err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
-	_, _, err := utils.ExecCommandWithContext(context.TODO(), true, "docker", "compose", "up", "-d")
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "docker", "compose", "up", "-d")
 	require.NoError(t, err, "unable to install the gitea-server")
 
-	giteaArgs := []string{"inspect", "-f", "{{.State.Status}}", "gitea-init"}
+	giteaArgs := []string{"inspect", "-f", "{{.State.Status}}", "gitea.init"}
 	giteaErrStr := "unable to verify the gitea container installed successfully"
 	success := verifyWaitSuccess(t, 2, "docker", giteaArgs, "exited", giteaErrStr)
 	require.True(t, success, giteaErrStr)
+
+	// Connect gitea to the k3d network
+	_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "docker", "network", "connect", "k3d-k3s-default", "gitea.localhost")
 
 	// TODO: (@WSTARR) Make this networking actually work
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init",
 		"--git-push-username=git-user",
 		"--git-push-password=superSecurePassword",
-		"--git-url=http://host.k3d.internal:3000",
+		"--git-url=http://gitea.localhost:3000",
 		"--registry-push-username=git-user",
 		"--registry-push-password=superSecurePassword",
-		"--registry-url=kubernetes.docker.internal:3000/git-user",
+		"--registry-url=k3d-registry.localhost:5000",
 		"--confirm"}
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, initArgs...)
 
@@ -53,9 +64,12 @@ func TestExtOutClusterDeploy(t *testing.T) {
 	success = verifyKubectlWaitSuccess(t, 2, podinfoArgs, errorStr)
 	assert.True(t, success, errorStr)
 
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, "destroy", "--confirm")
+	require.NoError(t, err, "unable to teardown zarf")
+
 	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "docker", "compose", "down")
 	require.NoError(t, err, "unable to teardown the gitea-server")
 
-	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, zarfBinPath, "destroy", "--confirm")
-	require.NoError(t, err, "unable to teardown zarf")
+	_, _, err = utils.ExecCommandWithContext(context.TODO(), true, "k3d", "registry", "delete", "registry.localhost")
+	require.NoError(t, err, "unable to teardown the k3d registry")
 }

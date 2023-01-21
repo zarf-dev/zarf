@@ -3,7 +3,7 @@ version: "3"
 services:
   server:
     image: gitea/gitea:1.18.1
-    container_name: gitea
+    container_name: gitea.localhost
     environment:
       - USER_UID=1000
       - USER_GID=1000
@@ -25,7 +25,7 @@ services:
       - "222:22"
   init:
     image: gitea/gitea:1.18.1
-    container_name: gitea-init
+    container_name: gitea.init
     environment:
       - GITEA_APP_INI=/data/gitea/conf/app.ini
       - GITEA_CUSTOM=/data/gitea
