@@ -22,6 +22,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 	// Process viper variables first
 	for key := range p.cfg.CreateOpts.ConfigVariables {
+		// Create a distinct variable to hold the value from the range
 		value := p.cfg.CreateOpts.ConfigVariables[key]
 		// Ensure uppercase keys
 		packageVariables[strings.ToUpper(key)] = &value
@@ -29,6 +30,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 	// Process --set as overrides
 	for key := range p.cfg.CreateOpts.SetVariables {
+		// Create a distinct variable to hold the value from the range
 		value := p.cfg.CreateOpts.SetVariables[key]
 		// Ensure uppercase keys
 		packageVariables[strings.ToUpper(key)] = &value
@@ -51,9 +53,11 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	templateMap := map[string]string{}
-	for key, value := range packageVariables {
+	for key := range packageVariables {
+		// Create a distinct variable to hold the value from the range
+		value := p.cfg.CreateOpts.SetVariables[key]
 		// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = value
 	}
 
 	// Add special variable for the current package architecture
@@ -66,6 +70,7 @@ func (p *Packager) fillActiveTemplate() error {
 func (p *Packager) setActiveVariables() error {
 	// Process viper variables first
 	for key := range p.cfg.DeployOpts.ConfigVariables {
+		// Create a distinct variable to hold the value from the range
 		value := p.cfg.DeployOpts.ConfigVariables[key]
 		// Ensure uppercase keys
 		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
@@ -73,6 +78,7 @@ func (p *Packager) setActiveVariables() error {
 
 	// Process --set as overrides
 	for key := range p.cfg.DeployOpts.SetVariables {
+		// Create a distinct variable to hold the value from the range
 		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase keys
 		p.cfg.SetVariableMap[strings.ToUpper(key)] = &value
