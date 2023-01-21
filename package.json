@@ -24,7 +24,7 @@
 		]
 	},
 	"dependencies": {
-		"@defense-unicorns/unicorn-ui": "0.0.30",
+		"@defense-unicorns/unicorn-ui": "0.0.32",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
 		"@material/data-table": "14.0.0",
@@ -39,7 +39,7 @@
 	"devDependencies": {
 		"@playwright/test": "1.29.1",
 		"@sveltejs/adapter-static": "1.0.4",
-		"@sveltejs/kit": "1.0.13",
+		"@sveltejs/kit": "1.2.2",
 		"@sveltejs/package": "1.0.2",
 		"@testing-library/svelte": "3.2.2",
 		"@tsconfig/svelte": "3.0.0",
