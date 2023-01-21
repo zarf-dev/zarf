@@ -84,7 +84,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 			message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineNameCRC)
 
-			if err = crane.Push(img, offlineNameCRC, pushOptions); err != nil {
+			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
 			}
 		}
