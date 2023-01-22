@@ -125,32 +125,40 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 	}
 
-	if err := validateOnDeployActions(component.Actions.OnDeploy); err != nil {
+	if err := validateActionsetVariable(component.Actions.OnCreate); err != nil {
+		return fmt.Errorf(lang.PkgValidateErrAction, err)
+	}
+
+	if err := validateActionsetVariable(component.Actions.OnDeploy); err != nil {
+		return fmt.Errorf(lang.PkgValidateErrAction, err)
+	}
+
+	if err := validateActionsetVariable(component.Actions.OnRemove); err != nil {
 		return fmt.Errorf(lang.PkgValidateErrAction, err)
 	}
 
 	return nil
 }
 
-func validateOnDeployActions(actions types.ZarfComponentActionSet) error {
+func validateActionsetVariable(actions types.ZarfComponentActionSet) error {
 	// Validate actions.OnDeploy.*.SetVariable
 	for _, action := range actions.Before {
-		if err := validateActionSetVariable(action); err != nil {
+		if err := validateActionVariable(action); err != nil {
 			return err
 		}
 	}
 	for _, action := range actions.After {
-		if err := validateActionSetVariable(action); err != nil {
+		if err := validateActionVariable(action); err != nil {
 			return err
 		}
 	}
 	for _, action := range actions.OnSuccess {
-		if err := validateActionSetVariable(action); err != nil {
+		if err := validateActionVariable(action); err != nil {
 			return err
 		}
 	}
 	for _, action := range actions.OnFailure {
-		if err := validateActionSetVariable(action); err != nil {
+		if err := validateActionVariable(action); err != nil {
 			return err
 		}
 	}
@@ -158,7 +166,7 @@ func validateOnDeployActions(actions types.ZarfComponentActionSet) error {
 	return nil
 }
 
-func validateActionSetVariable(action types.ZarfComponentAction) error {
+func validateActionVariable(action types.ZarfComponentAction) error {
 	if action.SetVariable != "" && !isUppercaseNumberUnderscore(action.SetVariable) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, action.SetVariable)
 	}
