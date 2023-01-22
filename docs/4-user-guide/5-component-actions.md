@@ -12,7 +12,7 @@ Component Actions provide a number of exec entrypoints for a component to perfor
 
 ## Action Lists
 
-These `action sets` contain (optionl) `action` lists. The `onSuccess` and `onFailure` action lists are conditional and depend on the success or failure of previous actions in the same component as well as steps in the component lifecycle.
+These `action sets` contain (optional) `action` lists. The `onSuccess` and `onFailure` action lists are conditional and depend on the success or failure of previous actions in the same component as well as steps in the component lifecycle.
 
 - `before` - sequential list of actions that will run before this component is processed for `create`, `deploy`, or `remove`
 - `after` - sequential list of actions that will run after this component is processed for `create`, `deploy`, or `remove` successfully
