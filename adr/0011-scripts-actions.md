@@ -24,4 +24,4 @@ Further details can be found in the `component-actions` [component actions docum
 
 ## Consequences
 
-With the current team agreement to not introduce breakng changing as we stabilize the API, a deprecation model was introduced that allows existing Zarf binaries to run with older `zarf.yaml` configs while also allowing the new features to be used by those who have updated their Zarf binary.
+With the current team agreement to not introduce breaking changes as we stabilize the API, a deprecation model was introduced that allows existing Zarf binaries to run with older `zarf.yaml` configs while also allowing the new features to be used by those who have updated their Zarf binary.
