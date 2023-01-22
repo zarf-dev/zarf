@@ -106,7 +106,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 		currImage++
 	}
 
-	if len(componentSBOMs) > 0 && len(tagToImage) > 0 {
+	if len(componentSBOMs) > 0 || len(tagToImage) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM compare tool")
 		}
