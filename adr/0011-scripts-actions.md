@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Originally, the `scripts` noun was added to components to allow us to move hard-coded init business logic out of the codebase and into the package system. At the time there was only a `before` and `after` section with simply an array entry per command. Later, `prepare` was added as a way to do some thing during `zarf package create`. As teams began to find new ways to use the capabilities, their limitations became more obvious.
+Originally, the `scripts` noun was added to components to allow us to move hard-coded init business logic out of the codebase and into the package system. At the time there was only a `before` and `after` section with simply an array entry per command. Later, `prepare` was added as a way to do something during `zarf package create`. As teams began to find new ways to use the capabilities, their limitations became more obvious.
 
 ## Decision
 
