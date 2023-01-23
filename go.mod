@@ -11,7 +11,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0-20221208165359-362910506bc2
 	github.com/fatih/color v1.13.0
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-git/go-git/v5 v5.5.1 // reverting due to https://github.com/go-git/go-git/issues/624
+	github.com/go-git/go-git/v5 v5.5.2 // reverting due to https://github.com/go-git/go-git/issues/624
 	github.com/go-logr/logr v1.2.3
 	github.com/goccy/go-yaml v1.9.8
 	github.com/google/go-containerregistry v0.12.1
