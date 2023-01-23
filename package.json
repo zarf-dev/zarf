@@ -48,7 +48,7 @@
 		"@typescript-eslint/parser": "5.47.1",
 		"concurrently": "7.6.0",
 		"eslint": "8.32.0",
-		"eslint-config-prettier": "8.5.0",
+		"eslint-config-prettier": "8.6.0",
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
 		"playwright": "1.29.2",
