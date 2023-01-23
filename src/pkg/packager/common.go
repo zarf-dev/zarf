@@ -211,7 +211,7 @@ func (p *Packager) loadZarfPkg() error {
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
 
-	// Handle scripts deprecation
+	// Handle component configuration deprecations
 	for idx, component := range p.cfg.Pkg.Components {
 		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(component)
 	}
