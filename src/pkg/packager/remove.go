@@ -56,20 +56,8 @@ func (p *Packager) Remove(packageName string) (err error) {
 			continue
 		}
 
-		if err := p.removeComponent(deployedPackage.Data.Components, c, spinner); err != nil {
+		if deployedPackage, err = p.removeComponent(deployedPackage, c, secretName, spinner); err != nil {
 			return fmt.Errorf("unable to remove the component (%s): %w", c.Name, err)
-		}
-
-		// Remove the component we just removed from the array
-		deployedPackage.DeployedComponents = utils.RemoveMatches(deployedPackage.DeployedComponents, func(t types.DeployedComponent) bool {
-			return t.Name == c.Name
-		})
-
-		if len(deployedPackage.DeployedComponents) == 0 {
-			// All the installed components were deleted, therefore this package is no longer actually deployed
-			_ = p.cluster.Kube.DeleteSecret(packageSecret)
-		} else {
-			p.updatePackageSecret(deployedPackage, secretName)
 		}
 	}
 
@@ -90,7 +78,9 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, se
 	}
 }
 
-func (p *Packager) removeComponent(components []types.ZarfComponent, deployedComponent types.DeployedComponent, spinner *message.Spinner) error {
+func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deployedComponent types.DeployedComponent, secretName string, spinner *message.Spinner) (types.DeployedPackage, error) {
+	components := deployedPackage.Data.Components
+
 	c := utils.Find(components, func(t types.ZarfComponent) bool {
 		return t.Name == deployedComponent.Name
 	})
@@ -104,7 +94,7 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 
 	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
-		return fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
+		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
 	for _, chart := range utils.Reverse(deployedComponent.InstalledCharts) {
@@ -113,20 +103,46 @@ func (p *Packager) removeComponent(components []types.ZarfComponent, deployedCom
 		helmCfg := helm.Helm{}
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			onFailure()
-			return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
+			return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
 				chart.ChartName, chart.Namespace, err)
 		}
+
+		// Remove the uninstalled chart from the list of installed charts
+		// NOTE: We are saving the secret as we remove charts in case a failure happens later on in the process of removing the component.
+		//       If we don't save the secrets as we remove charts, we will run into issues if we try to remove the component again as we will
+		//       be trying to remove charts that have already been removed.
+		deployedComponent.InstalledCharts = utils.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
+			return t.ChartName == chart.ChartName
+		})
+		p.updatePackageSecret(deployedPackage, secretName)
+
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
-		return fmt.Errorf("unable to run the after action: %w", err)
+		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
-		return fmt.Errorf("unable to run the success action: %w", err)
+		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}
 
-	return nil
+	// Remove the component we just removed from the array
+	deployedPackage.DeployedComponents = utils.RemoveMatches(deployedPackage.DeployedComponents, func(t types.DeployedComponent) bool {
+		return t.Name == c.Name
+	})
+
+	if len(deployedPackage.DeployedComponents) == 0 {
+		// All the installed components were deleted, therefore this package is no longer actually deployed
+		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
+		if err != nil {
+			return deployedPackage, fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
+		}
+		_ = p.cluster.Kube.DeleteSecret(packageSecret)
+	} else {
+		p.updatePackageSecret(deployedPackage, secretName)
+	}
+
+	return deployedPackage, nil
 }
