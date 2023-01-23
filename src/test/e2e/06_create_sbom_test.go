@@ -28,6 +28,8 @@ func TestCreateSBOM(t *testing.T) {
 	// Test that the game package generates the SBOMs we expect (images only)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "compare.html"))
+	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "defenseunicorns_zarf-game_multi-tile-dark.json"))
 	require.NoError(t, err)
 
@@ -38,6 +40,8 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that the game package generates the SBOMs we expect (images only)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	require.NoError(t, err)
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "compare.html"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "defenseunicorns_zarf-game_multi-tile-dark.json"))
 	require.NoError(t, err)
@@ -61,6 +65,8 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "zarf-component-k3s.json"))
+	require.NoError(t, err)
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "compare.html"))
 	require.NoError(t, err)
 
 	e2e.cleanFiles(cachePath, sbomPath, pkgName)
