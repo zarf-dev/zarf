@@ -39,7 +39,7 @@
 	"devDependencies": {
 		"@playwright/test": "1.29.2",
 		"@sveltejs/adapter-static": "1.0.5",
-		"@sveltejs/kit": "1.2.2",
+		"@sveltejs/kit": "1.2.5",
 		"@sveltejs/package": "1.0.2",
 		"@testing-library/svelte": "3.2.2",
 		"@tsconfig/svelte": "3.0.0",
