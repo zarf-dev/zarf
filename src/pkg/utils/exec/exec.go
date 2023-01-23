@@ -51,9 +51,10 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		return "", "", errors.New("command is required")
 	}
 
+	// Print the command if requested.
 	if config.Print {
 		fmt.Println()
-		fmt.Printf("  %s", colorGreen)
+		fmt.Printf("   %s", colorGreen)
 		fmt.Print(command + " ")
 		fmt.Printf("%s", colorCyan)
 		fmt.Printf("%v", args)
@@ -62,46 +63,55 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		fmt.Println("")
 	}
 
+	// Set up the command.
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = config.Dir
 	cmd.Env = append(os.Environ(), config.Env...)
 
-	var stdoutBuf, stderrBuf bytes.Buffer
-	stdoutIn, _ := cmd.StdoutPipe()
-	stderrIn, _ := cmd.StderrPipe()
+	// Capture the command outputs.
+	cmdStdout, _ := cmd.StdoutPipe()
+	cmdStderr, _ := cmd.StderrPipe()
 
-	var errStdout, errStderr error
+	var stdoutBuf, stderrBuf bytes.Buffer
 	stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
 	stderr := io.MultiWriter(os.Stderr, &stderrBuf)
 
+	// Start the command.
 	if err := cmd.Start(); err != nil {
 		return "", "", err
 	}
 
+	// If printing live output, copy the command outputs to stdout/stderr.
 	if config.Print {
+		var errStdout, errStderr error
 		var wg sync.WaitGroup
-		wg.Add(1)
 
+		// Set the wait group to 2 so we wait for both stdout and stderr.
+		wg.Add(2)
+
+		// Run a goroutine to capture the command's stdout live.
 		go func() {
-			_, errStdout = io.Copy(stdout, stdoutIn)
+			_, errStdout = io.Copy(stdout, cmdStdout)
 			wg.Done()
 		}()
 
-		_, errStderr = io.Copy(stderr, stderrIn)
+		// Run a goroutine to capture the command's stderr live.
+		go func() {
+			_, errStderr = io.Copy(stderr, cmdStderr)
+			wg.Done()
+		}()
+
+		// Wait for the goroutines to finish.
 		wg.Wait()
-	}
 
-	if err := cmd.Wait(); err != nil {
-		return "", "", err
-	}
-
-	if config.Print {
+		// Abort if there was an error capturing the command's outputs.
 		if errStdout != nil || errStderr != nil {
-			return "", "", errors.New("unable to capture stdOut or stdErr")
+			return "", "", fmt.Errorf("failed to capture the command output:\n%w\n%w", errStdout, errStderr)
 		}
 	}
 
-	return stdoutBuf.String(), stderrBuf.String(), nil
+	// Wait for the command to finish and return the buffered outputs, regardless of whether we printed them.
+	return stdoutBuf.String(), stderrBuf.String(), cmd.Wait()
 }
 
 // LaunchURL opens a URL in the default browser.
