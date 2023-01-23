@@ -130,7 +130,7 @@ func actionCmdMutation(cmd string) (string, error) {
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
 
-		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to $env:ZARF_VAR_*
+		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively
 		// https://regex101.com/r/BdtUfO/1
 		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>ZARF_VAR_([a-zA-Z0-9_-])+)}?)`)
 		matches := envVarRegex.FindStringSubmatch(cmd)
