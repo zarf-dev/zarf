@@ -83,10 +83,24 @@ func TestComponentActions(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, deployWithEnvVarArtifact)
 
-	// Test using a templated file with a Zarf Variable
+	// Test using a templated file but without dynamic variables
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-template-use-of-variable")
 	require.NoError(t, err, stdOut, stdErr)
 	outTemplated, err := os.ReadFile("templated.txt")
 	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says ###ZARF_VAR_CAT_SOUND###")
+	require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
+
+	// Remove the templated file so we can test with dynamic variables
+	e2e.cleanFiles("templated.txt")
+
+	// Test using a templated file with dynamic variables
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables")
+	require.NoError(t, err, stdOut, stdErr)
+	outTemplated, err = os.ReadFile("templated.txt")
+	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says meow")
 	require.Contains(t, string(outTemplated), "The snake says hiss")
 }

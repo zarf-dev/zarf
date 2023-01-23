@@ -95,6 +95,7 @@ components:
   - name: on-deploy-with-template-use-of-variable
     files:
       # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
+      # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
       - source: test.txt
         target: templated.txt
 
