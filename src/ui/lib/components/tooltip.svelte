@@ -79,7 +79,7 @@
 	on:blur={hideTooltip}
     class="tooltip-trigger"
 >
-	<Icon variant="info" class="tooltip-icon" /></button
+	<Icon variant="info" /></button
 >
 <div role="tooltip" bind:this={tooltip} class="tooltip">
 	<slot />
@@ -114,10 +114,4 @@
         border: none;
         padding: 0;
     }
-    :global(.tooltip-icon) {
-        color: #FFFFFF8F;
-    }
-	:global(:root[data-theme='dark'] .tooltip-icon) {
-		color: var(--mdc-theme-text-icon-on-dark);
-	}
 </style>
