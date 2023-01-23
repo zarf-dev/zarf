@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"@defense-unicorns/unicorn-ui": "0.0.32",
+		"@floating-ui/dom": "^1.1.0",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
 		"@material/data-table": "14.0.0",
