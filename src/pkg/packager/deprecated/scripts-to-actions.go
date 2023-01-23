@@ -41,8 +41,6 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.Prepare {
 			c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, types.ZarfComponentAction{Cmd: s})
 		}
-
-		c.DeprecatedScripts.Prepare = []string{}
 	}
 
 	// Scripts.Before -> Actions.Deploy.Before
@@ -52,8 +50,6 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.Before {
 			c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{Cmd: s})
 		}
-
-		c.DeprecatedScripts.Before = []string{}
 	}
 
 	// Scripts.After -> Actions.Deploy.After
@@ -63,8 +59,6 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 		for _, s := range c.DeprecatedScripts.After {
 			c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{Cmd: s})
 		}
-
-		c.DeprecatedScripts.After = []string{}
 	}
 
 	// Leave deprecated scripts in place, but warn users
