@@ -4,6 +4,10 @@ metadata:
   description: "Deploy a EKS K8s cluster"
   architecture: multi
 
+variables:
+  - name: CLUSTER_NAME
+    prompt: true
+
 components:
   - name: load-eksctl
     required: true
@@ -37,4 +41,4 @@ components:
           - cmd: sleep 15
           - cmd: ./eksctl create cluster -f eks.yaml
         after:
-          - cmd: ./eksctl utils write-kubeconfig -c CHANGE_ME
+          - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
