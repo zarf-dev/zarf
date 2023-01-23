@@ -62,7 +62,7 @@ func TestComponentActions(t *testing.T) {
 	// Deploy the simple action that should fail the timeout.
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-timeout")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
+	require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 
 	// Test using a Zarf Variable within the action
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-variable", "-l=trace")
