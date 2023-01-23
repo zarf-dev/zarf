@@ -61,10 +61,7 @@ graph TD
     B3(extract archive to temp dir)-->B4
     B4(filter components by architecture & OS)-->B5
     B5(save SBOM files to current dir)-->B6
-    B6(handle deprecations)-->B7
-    B7{Init package?}
-    B7-->|Yes|B8(run preflight checks)-->B9
-    B7-->|No|B9
+    B6(handle deprecations)-->B9
     B9(confirm package deploy):::prompt-->B10
     B10(process deploy-time variables)-->B11
     B11(prompt for missing variables)-->B12

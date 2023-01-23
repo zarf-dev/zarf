@@ -19,9 +19,10 @@ components:
     actions:
       onDeploy:
         defaults:
-          mute: true
           maxRetries: 5
         before:
+          - cmd: ./zarf internal is-valid-hostname
+            maxRetries: 0
           # If running RHEL variant, disable firewalld
           # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
           # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error

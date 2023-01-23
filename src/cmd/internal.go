@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -113,6 +114,16 @@ var uiCmd = &cobra.Command{
 	},
 }
 
+var isValidHostname = &cobra.Command{
+	Use:   "is-valid-hostname",
+	Short: "Checks if the machine hostname is RFC1123 compliant",
+	Run: func(cmd *cobra.Command, args []string) {
+		if valid := utils.IsValidHostName(); !valid {
+			message.Fatal(nil, "The hostname is not RFC1123 compliant")
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(internalCmd)
 
@@ -122,4 +133,5 @@ func init() {
 	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(uiCmd)
+	internalCmd.AddCommand(isValidHostname)
 }

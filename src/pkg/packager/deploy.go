@@ -44,11 +44,6 @@ func (p *Packager) Deploy() error {
 		p.cfg.IsInitConfig = true
 	}
 
-	// If init config, make sure things are ready
-	if p.cfg.IsInitConfig {
-		utils.RunPreflightChecks()
-	}
-
 	// Confirm the overall package deployment
 	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
