@@ -9,7 +9,7 @@ require (
 	github.com/anchore/syft v0.64.0
 	github.com/derailed/k9s v0.26.7
 	github.com/distribution/distribution/v3 v3.0.0-20221208165359-362910506bc2
-	github.com/fatih/color v1.13.0
+	github.com/fatih/color v1.14.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.1 // reverting due to https://github.com/go-git/go-git/issues/624
 	github.com/go-logr/logr v1.2.3
