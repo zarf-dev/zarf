@@ -100,14 +100,19 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponent := types.DeployedComponent{Name: component.Name}
 		onDeploy := component.Actions.OnDeploy
 
-		if err != nil {
+		onFailure := func() {
 			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, &valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
+		}
+
+		if err != nil {
+			onFailure()
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, &valueTemplate); err != nil {
+			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 

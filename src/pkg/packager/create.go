@@ -100,14 +100,19 @@ func (p *Packager) Create(baseDir string) error {
 	for _, component := range p.cfg.Pkg.Components {
 		componentSBOM, err := p.addComponent(component)
 		onCreate := component.Actions.OnCreate
-		if err != nil {
+		onFailure := func() {
 			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
+		}
+
+		if err != nil {
+			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
 		}
 
 		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
