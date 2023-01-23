@@ -27,5 +27,5 @@ components:
           - manifests/webhook.yaml
     scripts:
       prepare:
-        - "[ \"###ZARF_PKG_VAR_AGENT_IMAGE###\" = \"agent:local\" ] && make build-local-agent-image"
+        - "make init-package-local-agent AGENT_IMAGE=\"###ZARF_PKG_VAR_AGENT_IMAGE###\""
       showOutput: true

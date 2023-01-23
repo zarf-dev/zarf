@@ -104,6 +104,10 @@ dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	npm ci
 	npm run dev
 
+# INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
+init-package-local-agent:
+	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
+
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli-linux
 	cp build/zarf build/zarf-linux-amd64
