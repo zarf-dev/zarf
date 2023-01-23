@@ -37,7 +37,7 @@ func TestComponentActions(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Test for package create prepare artifact.
+	// Test for package create prepare artifacts.
 	for _, artifact := range createArtifacts {
 		require.FileExists(t, artifact)
 	}
