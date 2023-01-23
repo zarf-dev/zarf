@@ -25,9 +25,9 @@ require (
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.4.0
 	helm.sh/helm/v3 v3.10.3
-	k8s.io/api v0.25.5 // not updating due to breaking api change in .26
-	k8s.io/apimachinery v0.25.5
-	k8s.io/client-go v0.25.5
+	k8s.io/api v0.26.1 // not updating due to breaking api change in .26
+	k8s.io/apimachinery v0.26.1
+	k8s.io/client-go v0.26.1
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	sigs.k8s.io/kustomize/api v0.12.1
