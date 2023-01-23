@@ -24,7 +24,7 @@ func (p *Packager) composeComponents() error {
 
 	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" {
-			// Migrate any scripts to actions now
+			// Migrate any deprecated component configurations now
 			component = deprecated.MigrateComponent(component)
 			components = append(components, component)
 		} else {
@@ -131,7 +131,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	// Fix the filePaths of imported components to be accessible from our current location.
 	child = p.fixComposedFilepaths(parent, child)
 
-	// Migrate any scripts to actions.
+	// Migrate any deprecated component configurations now
 	child = deprecated.MigrateComponent(child)
 
 	return

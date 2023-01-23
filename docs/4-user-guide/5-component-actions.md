@@ -109,11 +109,11 @@ Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailur
 
 - `cmd` - (required) the command to run
 - `dir` - the directory to run the command in, defaults to the current working directory
-- `mute` - whether to mute the output of the in realtime, output always shown at the end on failure (default: `false`)
+- `mute` - whether to mute the realtime output of the command, output is always shown at the end on failure (default: `false`)
 - `maxTotalSeconds` - the maximum total time to allow the command to run (default: `0` - no limit)
 - `maxRetries` - the maximum number of times to retry the command if it fails (default: `0` - no retries)
 - `env` - an array of environment variables to set for the command in the form of `name=value`
-- `setVariable` - set the output of the command to a variable that can be used in other actions or components
+- `setVariable` - set the standard output of the command to a variable that can be used in other actions or components
 
 ---
 

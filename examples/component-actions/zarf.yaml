@@ -77,7 +77,7 @@ components:
       onDeploy:
         # runs before the component is deployed
         before:
-          # setting this variable will allow it to be used in other actions in addition variables
+          # setting this variable will allow it to be used in other actions with additional variables
           # set in other actions or components
           - cmd: echo "hiss"
             setVariable: SNAKE_SOUND

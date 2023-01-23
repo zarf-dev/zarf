@@ -198,7 +198,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	onDeploy := component.Actions.OnDeploy
 
 	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, &valueTemplate); err != nil {
-		return charts, fmt.Errorf("unable to run component first action: %w", err)
+		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
@@ -246,7 +246,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if err = p.runActions(onDeploy.Defaults, onDeploy.After, &valueTemplate); err != nil {
-		return charts, fmt.Errorf("unable to run component last action: %w", err)
+		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	return charts, nil

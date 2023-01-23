@@ -43,7 +43,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	)
 
 	// If the value template is not nil, get the variables for the action.
-	// No special variables or deprecations will be used the action.
+	// No special variables or deprecations will be used in the action.
 	// Reload the variables each time in case they have been changed by a previous action.
 	if valueTemplate != nil {
 		vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
@@ -125,7 +125,7 @@ func actionCmdMutation(cmd string) (string, error) {
 
 	// Make commands 'more' compatible with Windows OS PowerShell
 	if runtime.GOOS == "windows" {
-		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliases by M$.
+		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)

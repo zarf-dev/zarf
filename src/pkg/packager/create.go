@@ -247,7 +247,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	onCreate := component.Actions.OnCreate
 
 	if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component first action: %w", err)
+		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	// If any helm charts are defined, process them.
@@ -389,7 +389,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component last action: %w", err)
+		return nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	return &componentSBOM, nil

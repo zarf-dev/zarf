@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf deployedPackage.
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -66,7 +66,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		})
 
 		if len(deployedPackage.DeployedComponents) == 0 {
-			// All the installed components were deleted, there for this package is no longer actually deployed
+			// All the installed components were deleted, therefore this package is no longer actually deployed
 			_ = p.cluster.Kube.DeleteSecret(packageSecret)
 		} else {
 			p.updatePackageSecret(deployedPackage, secretName)
