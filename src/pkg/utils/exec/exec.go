@@ -105,8 +105,11 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		wg.Wait()
 
 		// Abort if there was an error capturing the command's outputs.
-		if errStdout != nil || errStderr != nil {
-			return "", "", fmt.Errorf("failed to capture the command output:\n%w\n%w", errStdout, errStderr)
+		if errStdout != nil {
+			return "", "", fmt.Errorf("failed to capture the stdout command output: %w", errStdout)
+		}
+		if errStderr != nil {
+			return "", "", fmt.Errorf("failed to capture the stderr command output: %w", errStderr)
 		}
 	}
 
