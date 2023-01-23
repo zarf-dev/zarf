@@ -30,6 +30,7 @@ func TestComponentActions(t *testing.T) {
 
 	allArtifacts := append(deployArtifacts, createArtifacts...)
 	allArtifacts = append(allArtifacts, deployWithEnvVarArtifact)
+	allArtifacts = append(allArtifacts, "templated.txt")
 	e2e.cleanFiles(allArtifacts...)
 	defer e2e.cleanFiles(allArtifacts...)
 
