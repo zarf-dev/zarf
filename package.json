@@ -38,7 +38,7 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "1.29.2",
-		"@sveltejs/adapter-static": "1.0.4",
+		"@sveltejs/adapter-static": "1.0.5",
 		"@sveltejs/kit": "1.2.2",
 		"@sveltejs/package": "1.0.2",
 		"@testing-library/svelte": "3.2.2",
@@ -47,7 +47,7 @@
 		"@typescript-eslint/eslint-plugin": "5.47.1",
 		"@typescript-eslint/parser": "5.47.1",
 		"concurrently": "7.6.0",
-		"eslint": "8.30.0",
+		"eslint": "8.32.0",
 		"eslint-config-prettier": "8.5.0",
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
