@@ -119,13 +119,13 @@ Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailur
 
 ## Creating dynamic variables from actions
 
-You can use the `setVariable` action configuration to set a variable that can be used in other actions or components. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `ZARF_VAR_{NAME}`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. *Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml`.*
+You can use the `setVariable` action configuration to set a variable that can be used in other actions or components. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `###ZARF_VAR_{NAME}###`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. *Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml`.*
 
 ## More examples
 
 ### `onCreate`
 
-`onCreate` runs during `zarf package create` and allow a package creator to run commands during package creation. For example if you have a large data file that you need to include in your package you could include something like the following (replacing the url as needed):
+`onCreate` runs during `zarf package create` and allows a package creator to run commands during package creation. For example if you have a large data file that you need to include in your package you could include something like the following (replacing the url as needed):
 
 ```yaml
 components:
@@ -140,7 +140,7 @@ components:
 
 `onDeploy` runs during `zarf package deploy` and allow a package to execute commands during component deployment.
 
-You can use `onDeploy.before` to create execute a command _before_ the component is deployed. This example uses the `eksctl` binary to create an EKS cluster. The `eks.yaml` file is included in the package and contains the configuration for the cluster:
+You can use `onDeploy.before` to execute a command _before_ the component is deployed. This example uses the `eksctl` binary to create an EKS cluster. The `eks.yaml` file is included in the package and contains the configuration for the cluster:
 
 ```yaml
 components:
@@ -166,7 +166,7 @@ components:
 
 ### `onRemove`
 
-`onRemove` runs during `zarf package remove` and allow a package to execute commands during component removal.
+`onRemove` runs during `zarf package remove` and allows a package to execute commands during component removal.
 
 :::note
 
