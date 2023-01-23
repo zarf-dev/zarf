@@ -29,7 +29,7 @@ require (
 	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5
 	k8s.io/klog/v2 v2.80.1
-	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
+	k8s.io/utils 391b47cb4029
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // not updating due to bug in kyaml
 	sigs.k8s.io/yaml v1.3.0
