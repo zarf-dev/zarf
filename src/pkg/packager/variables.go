@@ -90,7 +90,7 @@ func (p *Packager) setActiveVariables() error {
 }
 
 func (p *Packager) setVariable(name, value string) {
-	p.cfg.SetVariableMap[name] = strings.TrimSpace(value)
+	p.cfg.SetVariableMap[name] = value
 }
 
 // injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.

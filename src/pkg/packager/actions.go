@@ -73,7 +73,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 			// If an output variable is defined, set it.
 			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, out)
+				p.setVariable(action.SetVariable, strings.TrimSpace(out))
 			}
 
 			// If the command ran successfully, continue to the next action.
@@ -101,7 +101,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 			// If an output variable is defined, set it.
 			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, out)
+				p.setVariable(action.SetVariable, strings.TrimSpace(out))
 			}
 
 			// If the command ran successfully, continue to the next action.
