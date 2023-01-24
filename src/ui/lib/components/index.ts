@@ -8,6 +8,7 @@ import Hero from './hero.svelte';
 import Icon from './icon.svelte';
 import PackageComponentAccordion from './package-component-accordion.svelte';
 import PackageDetailsCard from './package-details-card.svelte';
+import PackageSectionHeader from './package-section-header.svelte';
 import Spinner from './spinner.svelte';
 import ThemeToggle from './theme-toggle.svelte';
 import YamlCode from './yaml-code.svelte';
@@ -20,6 +21,7 @@ export {
 	Icon,
 	PackageComponentAccordion,
 	PackageDetailsCard,
+	PackageSectionHeader,
 	Spinner,
 	ThemeToggle,
 	YamlCode

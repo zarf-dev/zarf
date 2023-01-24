@@ -52,4 +52,10 @@
 	:global(.tooltip-container .tooltip-trigger) {
 		color: rgba(255, 255, 255, 0.56);
 	}
+	:global(.tooltip-container .tooltip) {
+		color: var(--mdc-theme-on-primary);
+	}
+	:global(:root[data-theme='dark'] .tooltip-container .tooltip) {
+		color: var(--mdc-theme-on-secondary);
+	}
 </style>
