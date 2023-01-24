@@ -109,7 +109,7 @@ init-package-local-agent:
 	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
 
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
-	@test -s ./build/zarf || $(MAKE) build-cli-linux
+	$(MAKE) build-cli-linux
 	cp build/zarf build/zarf-linux-amd64
 	cp build/zarf-arm build/zarf-linux-arm64
 	docker buildx build --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
