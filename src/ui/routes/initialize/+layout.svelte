@@ -65,28 +65,30 @@
 			>
 		</div>
 	{:else}
-		<Stepper
-			orientation="horizontal"
-			steps={[
-				{
-					title: 'Configure',
-					iconContent: $page.routeId === 'initialize/configure' ? '1' : undefined,
-					variant: 'primary'
-				},
-				{
-					title: 'Review',
-					iconContent: $page.routeId !== 'initialize/deploy' ? '2' : undefined,
-					disabled: $page.routeId === 'initialize/configure',
-					variant: 'primary'
-				},
-				{
-					title: 'Deploy',
-					iconContent: '3',
-					disabled: $page.routeId !== 'initialize/deploy',
-					variant: 'primary'
-				}
-			]}
-		/>
+		<div class="deploy-stepper-container">
+				<Stepper
+					orientation="horizontal"
+					steps={[
+						{
+							title: 'Configure',
+							iconContent: $page.routeId === 'initialize/configure' ? '1' : undefined,
+							variant: 'primary'
+						},
+						{
+							title: 'Review',
+							iconContent: $page.routeId !== 'initialize/deploy' ? '2' : undefined,
+							disabled: $page.routeId === 'initialize/configure',
+							variant: 'primary'
+						},
+						{
+							title: 'Deploy',
+							iconContent: '3',
+							disabled: $page.routeId !== 'initialize/deploy',
+							variant: 'primary'
+						}
+					]}
+				/>
+		</div>
 		{#if $pkgStore}
 			<slot />
 		{/if}
@@ -94,11 +96,16 @@
 </section>
 
 <style>
-	.center {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 1rem;
+	.deploy-stepper-container {
+		max-width: 600px;
+		margin: 0 auto;
+		width: 100%;
+	}
+	/* remove when UnicornUI updates w/ fix */
+	:global(.deploy-stepper-container ol) {
+		padding-inline: 0;
+	}
+	:global(.deploy-stepper-container li:last-child) {
+		flex-grow: 0;
 	}
 </style>
