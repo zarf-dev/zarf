@@ -119,7 +119,8 @@ var isValidHostname = &cobra.Command{
 	Short: "Checks if the current machine's hostname is RFC1123 compliant",
 	Run: func(cmd *cobra.Command, args []string) {
 		if valid := utils.IsValidHostName(); !valid {
-			message.Fatal(nil, "The hostname is not RFC1123 compliant")
+			hostname, _ := os.Hostname()
+			message.Fatalf(nil, "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html.", hostname)
 		}
 	},
 }
