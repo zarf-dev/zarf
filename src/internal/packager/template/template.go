@@ -63,6 +63,7 @@ func (values Values) GetRegistry() string {
 	return values.registry
 }
 
+// GetVariables returns the variables to be used in the template.
 func (values Values) GetVariables(component types.ZarfComponent) (map[string]string, map[string]string) {
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
