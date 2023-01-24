@@ -4,13 +4,12 @@
  -->
 <script lang="ts">
 	import {
-		Icon,
 		PackageDetailsCard as PackageDetails,
 		PackageComponentAccordion as PackageComponent,
 		PackageSectionHeader as SectionHeader,
-		AccordionGroup
+		AccordionGroup,
+		Divider
 	} from '$lib/components';
-  import Divider from '$lib/components/divider.svelte';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
