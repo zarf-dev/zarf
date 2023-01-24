@@ -187,6 +187,7 @@ export interface ZarfPackage {
  */
 export interface ZarfBuildData {
     architecture: string;
+    migrations:   string[];
     terminal:     string;
     timestamp:    string;
     user:         string;
@@ -1012,6 +1013,7 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "migrations", js: "migrations", typ: a("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },

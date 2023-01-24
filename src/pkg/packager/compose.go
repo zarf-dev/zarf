@@ -25,7 +25,7 @@ func (p *Packager) composeComponents() error {
 	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" {
 			// Migrate any deprecated component configurations now
-			component = deprecated.MigrateComponent(component)
+			component = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 			components = append(components, component)
 		} else {
 			composedComponent, err := p.getComposedComponent(component)
@@ -132,7 +132,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	child = p.fixComposedFilepaths(parent, child)
 
 	// Migrate any deprecated component configurations now
-	child = deprecated.MigrateComponent(child)
+	child = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
 
 	return
 }

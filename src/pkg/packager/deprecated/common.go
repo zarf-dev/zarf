@@ -5,14 +5,22 @@
 package deprecated
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// MigrateComponent runs all migrations on a component
-func MigrateComponent(c types.ZarfComponent) types.ZarfComponent {
-	// Migrate scripts to actions
-	c = migrateScriptsToActions(c)
+const (
+	ScriptsToActionsMigrated = "scripts-to-actions"
+)
 
-	// Future migrations here
+// MigrateComponent runs all migrations on a component.
+// build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
+func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.ZarfComponent {
+	// Run the scripts-to-actions migration if it hasn't been run yet.
+	if !utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
+		c = migrateScriptsToActions(c)
+	}
+
+	// Future migrations here.
 	return c
 }

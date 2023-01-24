@@ -47,7 +47,8 @@
         "user",
         "architecture",
         "timestamp",
-        "version"
+        "version",
+        "migrations"
       ],
       "properties": {
         "terminal": {
@@ -64,6 +65,12 @@
         },
         "version": {
           "type": "string"
+        },
+        "migrations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,

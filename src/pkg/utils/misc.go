@@ -71,3 +71,13 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 
 	return err
 }
+
+// SliceContains returns true if the given element is in the slice
+func SliceContains[T comparable](s []T, e T) bool {
+    for _, v := range s {
+        if v == e {
+            return true
+        }
+    }
+    return false
+}
