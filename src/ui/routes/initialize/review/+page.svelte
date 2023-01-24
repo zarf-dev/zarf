@@ -20,7 +20,7 @@
 </svelte:head>
 
 <section class="page-header">
-	<Typography variant="h4">Review Deployment</Typography>
+	<Typography variant="h5">Review Deployment</Typography>
 </section>
 
 <section class="page-section">

@@ -18,7 +18,7 @@
 	<title>Configure</title>
 </svelte:head>
 <section class="page-header">
-	<Typography variant="h4">Configure Package Deployment</Typography>
+	<Typography variant="h5">Configure Package Deployment</Typography>
 </section>
 
 <section class="page-section">
@@ -31,7 +31,7 @@
 
 <section class="page-section">
 	<SectionHeader>
-		<Typography variant="h5" slot="title">Package Components</Typography>
+		<Typography variant="h5" slot="title">Components</Typography>
 	</SectionHeader>
 	<Typography variant="caption" element="p">
 		<span aria-hidden="true">
