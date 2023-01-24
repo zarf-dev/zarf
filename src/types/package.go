@@ -28,11 +28,12 @@ type ZarfMetadata struct {
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	Terminal     string `json:"terminal"`
-	User         string `json:"user"`
-	Architecture string `json:"architecture"`
-	Timestamp    string `json:"timestamp"`
-	Version      string `json:"version"`
+	Terminal     string   `json:"terminal"`
+	User         string   `json:"user"`
+	Architecture string   `json:"architecture"`
+	Timestamp    string   `json:"timestamp"`
+	Version      string   `json:"version"`
+	Migrations   []string `json:"migrations"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
