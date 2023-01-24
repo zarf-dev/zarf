@@ -7,6 +7,7 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
+	import { PackageErrNotFound } from '$lib/components';
 
 	enum LoadingStatus {
 		Loading,
@@ -53,41 +54,31 @@
 		<!-- placeholder loading content -->
 		<div>loading...</div>
 	{:else if status == LoadingStatus.Error}
-		<!-- replace w/ error dialog -->
-		<div class="center">
-			<Typography variant="h4">Package Not Found</Typography>
-			<Typography variant="body2">
-				Make sure the following package is in the current working directory:
-			</Typography>
-			<Typography variant="code">{errMessage}</Typography>
-			<Button href="/" color="secondary" style="margin-top: 0.5rem;" variant="flat"
-				>Return Home</Button
-			>
-		</div>
+		<PackageErrNotFound pkgName={errMessage.split(':')[1]} />
 	{:else}
 		<div class="deploy-stepper-container">
-				<Stepper
-					orientation="horizontal"
-					steps={[
-						{
-							title: 'Configure',
-							iconContent: $page.routeId === 'initialize/configure' ? '1' : undefined,
-							variant: 'primary'
-						},
-						{
-							title: 'Review',
-							iconContent: $page.routeId !== 'initialize/deploy' ? '2' : undefined,
-							disabled: $page.routeId === 'initialize/configure',
-							variant: 'primary'
-						},
-						{
-							title: 'Deploy',
-							iconContent: '3',
-							disabled: $page.routeId !== 'initialize/deploy',
-							variant: 'primary'
-						}
-					]}
-				/>
+			<Stepper
+				orientation="horizontal"
+				steps={[
+					{
+						title: 'Configure',
+						iconContent: $page.routeId === 'initialize/configure' ? '1' : undefined,
+						variant: 'primary'
+					},
+					{
+						title: 'Review',
+						iconContent: $page.routeId !== 'initialize/deploy' ? '2' : undefined,
+						disabled: $page.routeId === 'initialize/configure',
+						variant: 'primary'
+					},
+					{
+						title: 'Deploy',
+						iconContent: '3',
+						disabled: $page.routeId !== 'initialize/deploy',
+						variant: 'primary'
+					}
+				]}
+			/>
 		</div>
 		{#if $pkgStore}
 			<slot />
