@@ -17,8 +17,11 @@ const (
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
 func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.ZarfComponent {
-	// Run the scripts-to-actions migration if it hasn't been run yet.
-	if !utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
+	// If the component has already been migrated, clear the deprecated scripts.
+	if utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
+		c.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
+	} else {
+		// Otherwise, run the migration.
 		c = migrateScriptsToActions(c)
 	}
 
