@@ -7,6 +7,7 @@
 		Icon,
 		PackageDetailsCard as PackageDetails,
 		PackageComponentAccordion as PackageComponent,
+		PackageSectionHeader as SectionHeader,
 		AccordionGroup
 	} from '$lib/components';
 
@@ -23,18 +24,17 @@
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="package" />
-		Package Details
-	</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Package Details</Typography>
+		<span slot="tooltip">At-a-glance simple metadata about the package</span>
+	</SectionHeader>
 	<PackageDetails pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="component" />
-		Selected Package Components
-	</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Selected Package Components</Typography>
+	</SectionHeader>
 	<AccordionGroup>
 		{#each $pkgComponentDeployStore as idx}
 			<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
