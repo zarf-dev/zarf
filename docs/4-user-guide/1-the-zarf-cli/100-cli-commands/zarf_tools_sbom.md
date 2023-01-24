@@ -41,8 +41,7 @@ zarf tools sbom [flags]
 ### SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf tools sbom attest](zarf_tools_sbom_attest.md)	 - Generate a package SBOM as an attestation for the given [SOURCE] container image
-* [zarf tools sbom completion](zarf_tools_sbom_completion.md)	 - Generate a shell completion for Syft (listing local docker images)
+* [zarf tools sbom attest](zarf_tools_sbom_attest.md)	 - Generate an SBOM as an attestation for the given [SOURCE] container image
 * [zarf tools sbom convert](zarf_tools_sbom_convert.md)	 - Convert between SBOM formats
 * [zarf tools sbom login](zarf_tools_sbom_login.md)	 - Log in to a registry
 * [zarf tools sbom packages](zarf_tools_sbom_packages.md)	 - Generate a package SBOM

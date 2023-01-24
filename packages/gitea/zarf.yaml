@@ -47,9 +47,9 @@ components:
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
-    scripts:
-      retry: true
-      showOutput: true
-      timeoutSeconds: 60
-      after:
-        - "./zarf internal create-read-only-gitea-user"
+    actions:
+      onDeploy:
+        after:
+          - cmd: "./zarf internal create-read-only-gitea-user"
+            maxRetries: 3
+            maxTotalSeconds: 60

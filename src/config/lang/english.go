@@ -202,6 +202,8 @@ const (
 
 // src/internal/packager/validate.
 const (
+	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
+	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
@@ -224,7 +226,6 @@ const (
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
-	PkgValidateErrPkgVariableName         = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
 	PkgValidateErrYOLONoDistro            = "cluster distros not allowed"
