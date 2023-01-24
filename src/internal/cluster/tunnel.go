@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -233,7 +234,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors.
 		if tunnel.autoOpen {
-			if err := utils.ExecLaunchURL(url); err != nil {
+			if err := exec.LaunchURL(url); err != nil {
 				message.Debug(err)
 			}
 		}
