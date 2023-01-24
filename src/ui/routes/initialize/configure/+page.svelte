@@ -8,7 +8,8 @@
 		Icon,
 		PackageDetailsCard as PackageDetails,
 		PackageComponentAccordion as PackageComponent,
-		PackageSectionHeader as SectionHeader
+		PackageSectionHeader as SectionHeader,
+		Divider
 	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
@@ -47,6 +48,8 @@
 		{/each}
 	</AccordionGroup>
 </section>
+
+<Divider />
 
 <section class="actionButtonsContainer" aria-label="action buttons">
 	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>

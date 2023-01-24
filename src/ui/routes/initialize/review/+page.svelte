@@ -10,6 +10,7 @@
 		PackageSectionHeader as SectionHeader,
 		AccordionGroup
 	} from '$lib/components';
+  import Divider from '$lib/components/divider.svelte';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
@@ -41,6 +42,8 @@
 		{/each}
 	</AccordionGroup>
 </section>
+
+<Divider />
 
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined" color="secondary">configure</Button>
