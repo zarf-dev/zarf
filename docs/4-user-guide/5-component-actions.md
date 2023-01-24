@@ -119,7 +119,7 @@ Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailur
 
 ## Creating dynamic variables from actions
 
-You can use the `setVariable` action configuration to set a variable that can be used in other actions or components. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `###ZARF_VAR_{NAME}###`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. *Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml`.*
+You can use the `setVariable` action configuration to set a variable that can be used in other actions or components. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `###ZARF_VAR_{NAME}###`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. *Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml` and can be used during `package create`, `package deploy` or `package remove`.*
 
 ## More examples
 

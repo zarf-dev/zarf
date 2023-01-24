@@ -38,7 +38,7 @@ components:
             setVariable: BLEH
         # runs after the component is deployed
         after:
-         - cmd: touch test-create-after.txt
+          - cmd: touch test-create-after.txt
 
   - name: on-deploy
     actions:
@@ -117,6 +117,11 @@ components:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
 
   - name: on-remove
+    # A manifest so we can test the onRemove action
+    manifests:
+      - name: test-configmap
+        files:
+          - "test-configmap.yaml"
     actions:
       # runs during "zarf package remove"
       onRemove:
