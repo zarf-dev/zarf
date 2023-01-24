@@ -59,7 +59,7 @@ func (p *Packager) setActiveVariables() error {
 	for key := range p.cfg.DeployOpts.SetVariables {
 		value := p.cfg.DeployOpts.SetVariables[key]
 		// Ensure uppercase for VIPER
-		p.cfg.SetVariableMap[strings.ToUpper(key)] = value
+		p.setVariable(strings.ToUpper(key), value)
 	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
@@ -71,7 +71,7 @@ func (p *Packager) setActiveVariables() error {
 		}
 
 		// First set default (may be overridden by prompt)
-		p.cfg.SetVariableMap[variable.Name] = variable.Default
+		p.setVariable(variable.Name, variable.Default)
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -82,11 +82,15 @@ func (p *Packager) setActiveVariables() error {
 				return err
 			}
 
-			p.cfg.SetVariableMap[variable.Name] = val
+			p.setVariable(variable.Name, val)
 		}
 	}
 
 	return nil
+}
+
+func (p *Packager) setVariable(name, value string) {
+	p.cfg.SetVariableMap[name] = value
 }
 
 // injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
