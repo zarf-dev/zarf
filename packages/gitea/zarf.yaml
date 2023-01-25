@@ -29,9 +29,11 @@ variables:
 
 components:
   - name: git-server
-    description: "Add Gitea for serving gitops-based clusters in an airgap"
+    description: |
+      Deploys Gitea to provide git repositories for Kubernetes configurations.
+      Required for GitOps deployments if no other git server is available.
     images:
-      - gitea/gitea:1.17.4
+      - gitea/gitea:1.18.3
     manifests:
       - name: git-connect
         namespace: zarf
@@ -41,13 +43,13 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
-        version: 6.0.5
+        version: 7.0.2
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
-    scripts:
-      retry: true
-      showOutput: true
-      timeoutSeconds: 60
-      after:
-        - "./zarf internal create-read-only-gitea-user"
+    actions:
+      onDeploy:
+        after:
+          - cmd: "./zarf internal create-read-only-gitea-user"
+            maxRetries: 3
+            maxTotalSeconds: 60

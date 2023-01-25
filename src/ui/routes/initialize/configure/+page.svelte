@@ -3,11 +3,14 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import AccordionGroup from '../../../lib/components/accordion-group.svelte';
-
-	import Icon from '$lib/components/icon.svelte';
-	import PackageDetails from '$lib/components/package-details-card.svelte';
-	import PackageComponent from '$lib/components/package-component-accordion.svelte';
+	import {
+		AccordionGroup,
+		Icon,
+		PackageDetailsCard as PackageDetails,
+		PackageComponentAccordion as PackageComponent,
+		PackageSectionHeader as SectionHeader,
+		Divider
+	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
 </script>
@@ -16,28 +19,27 @@
 	<title>Configure</title>
 </svelte:head>
 <section class="page-header">
-	<Typography variant="h4">Configure Package Deployment</Typography>
+	<Typography variant="h5">Configure Package Deployment</Typography>
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="package" />
-		Package Details
-	</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Package Details</Typography>
+		<span slot="tooltip">At-a-glance simple metadata about the package</span>
+	</SectionHeader>
 	<PackageDetails pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="component" />
-		Package Components
-		<Typography variant="caption" element="p">
-			<span aria-hidden="true">
-				<Icon variant="component" className="invisible" />
-			</span>
-			The following components will be deployed into the cluster. Optional components that are not selected
-			will not be deployed.
-		</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Components</Typography>
+	</SectionHeader>
+	<Typography variant="caption" element="p">
+		<span aria-hidden="true">
+			<Icon variant="component" class="invisible" />
+		</span>
+		The following components will be deployed into the cluster. Optional components that are not selected
+		will not be deployed.
 	</Typography>
 
 	<AccordionGroup>
@@ -46,6 +48,8 @@
 		{/each}
 	</AccordionGroup>
 </section>
+
+<Divider />
 
 <section class="actionButtonsContainer" aria-label="action buttons">
 	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>

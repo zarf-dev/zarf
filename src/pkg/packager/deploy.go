@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,11 +44,6 @@ func (p *Packager) Deploy() error {
 		p.cfg.IsInitConfig = true
 	}
 
-	// If init config, make sure things are ready
-	if p.cfg.IsInitConfig {
-		utils.RunPreflightChecks()
-	}
-
 	// Confirm the overall package deployment
 	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
@@ -83,15 +79,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	config.SetDeployingComponents(deployedComponents)
 
 	// Generate a value template
-	valueTemplate, err = template.Generate(p.cfg)
-	if err != nil {
+	if valueTemplate, err = template.Generate(p.cfg); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
 	for _, component := range componentsToDeploy {
 		var charts []types.InstalledChart
-
-		deployedComponent := types.DeployedComponent{Name: component.Name}
 
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
@@ -99,8 +92,23 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			charts, err = p.deployComponent(component, false /* keep img checksum */)
 		}
 
+		deployedComponent := types.DeployedComponent{Name: component.Name}
+		onDeploy := component.Actions.OnDeploy
+
+		onFailure := func() {
+			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, &valueTemplate); err != nil {
+				message.Debugf("unable to run component failure action: %s", err.Error())
+			}
+		}
+
 		if err != nil {
+			onFailure()
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+		}
+
+		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, &valueTemplate); err != nil {
+			onFailure()
+			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		// Deploy the component
@@ -187,9 +195,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
-	// Run the 'before' scripts and move files before we do anything else
-	if err = p.runComponentScripts(component.Scripts.Before, component.Scripts); err != nil {
-		return charts, fmt.Errorf("unable to run the 'before' scripts: %w", err)
+	onDeploy := component.Actions.OnDeploy
+
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, &valueTemplate); err != nil {
+		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
@@ -236,8 +245,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	// Run the 'after' scripts after all other attributes of the component has been deployed
-	p.runComponentScripts(component.Scripts.After, component.Scripts)
+	if err = p.runActions(onDeploy.Defaults, onDeploy.After, &valueTemplate); err != nil {
+		return charts, fmt.Errorf("unable to run component after action: %w", err)
+	}
 
 	return charts, nil
 }
@@ -259,7 +269,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetSha256Sum(sourceFile); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHash(sourceFile, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -323,15 +333,21 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
-	// Check if the state is empty
+	// Check if the state is empty (uninitialized cluster)
 	if state.Distro == "" {
-		// If we are in YOLO mode, return an error
+		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
 			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 		}
 
-		// YOLO mode, so no state needed
+		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
+
+		// Try to create the zarf namespace
+		spinner.Updatef("Creating the Zarf namespace")
+		if _, err := p.cluster.Kube.CreateNamespace(cluster.ZarfNamespace, nil); err != nil {
+			spinner.Fatalf(err, "Unable to create the zarf namespace")
+		}
 	}
 
 	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {

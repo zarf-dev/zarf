@@ -4,19 +4,16 @@ Currently, we primarily test Zarf through a series of end-to-end tests which can
 
 For certain functions, we also test Zarf with a set of unit tests where there are edge cases that are difficult to fully flesh out with an end-to-end test alone.  These tests are located as `*_test.go` files within the [src/pkg directory](https://github.com/defenseunicorns/zarf/tree/main/src/pkg).
 
-## Running E2E Tests Locally
-
-Below are instructions on how you can run our end-to-end tests locally
-
-### Dependencies
+## Dependencies
 
 Running the end-to-end tests locally have the same prerequisites as running and building Zarf:
 
-1.  GoLang >= `1.19.x`
-2.  Make
-3.  Any clean K8s cluster (local or remote) or Linux with sudo if you want to do the Zarf-installed K3s cluster
+1. GoLang >= `1.19.x`
+2. Make
+3. Any clean K8s cluster (local or remote) or Linux with sudo if you want to do the Zarf-installed K3s cluster
+4. NodeJS >= `18.x.x`
 
-### Actually Running The Tests
+### CLI End-To-End Tests
 
 Here are a few different ways to run the tests, based on your specific situation:
 
@@ -40,7 +37,7 @@ go test ./src/test/... -v -run TestFooBarBaz
 The zarf binary and built packages need to live in the ./build directory but if you're trying to run the tests locally with 'go test ./...' then the zarf-init package will need to be in this directory.
 :::
 
-## Adding More End-to-End Tests
+### Adding More CLI End-to-End Tests
 
 There are a few requirements for all of our tests, that will need to be followed when new tests are added.
 
@@ -57,7 +54,7 @@ func TestFooBarBaz(t *testing.T) {
 }
 ```
 
-## End-to-End Test Naming Conventions
+### CLI End-to-End Test Naming Conventions
 
 The end-to-end tests are run sequentially and the naming convention is set intentionally:
 
@@ -75,18 +72,9 @@ Due to resource constraints in public github runners, K8s tests are only perform
 - 23-98 are for the remaining tests that only require a basic zarf cluster without logging for the git-server
 - 99 is reserved for the `zarf destroy` and [YOLO Mode](../../examples/yolo/README.md) test
 
-## Running Unit Tests Locally
+## CLI Unit Tests
 
-Below are instructions on how you can run our unit tests locally
-
-### Dependencies
-
-Running the unit tests locally have the same prerequisites as building Zarf:
-
-1.  GoLang >= `1.19.x`
-2.  Make
-
-### Actually Running The Tests
+### Running CLI Unit Tests
 
 Here are a few different ways to run the tests, based on your specific situation:
 
@@ -101,7 +89,7 @@ go test ./src/pkg/... -v
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
 
-## Adding More Unit Tests
+### Adding More CLI Unit Tests
 
 There are a few requirements to be considered when thinking about adding new unit tests.
 
@@ -112,3 +100,28 @@ There are a few requirements to be considered when thinking about adding new uni
 If the answer to these is yes, then this would be a great place for a unit test, if not, you should likely consider writing an end-to-end test instead, or modifying your approach so that you can answer yes.
 
 To create a unit test, look for or add a file ending in `_test.go` to the package for the file you are looking to test (e.g. `auth.go` -> `auth_test.go`).  Import the testing library and then create your test functions as needed.  If you need to mock something out consider the best way to do this, and if it is something that can be used in many tests, consider placing the mock in `./src/test/mocks/`.
+
+## UI End-To-End Tests
+
+The UI end-to-end tests are run using [Playwright](https://playwright.dev/).  Playwright is a NodeJS library that allows you to run end-to-end tests against a browser.  The tests are run against the Zarf UI and are located in the `./src/test/ui` directory.
+
+### Running UI End-To-End Tests
+
+Here are a few different ways to run the tests, based on your specific situation:
+
+```shell
+# dont forget to install dependencies
+npm ci
+
+# get help with playwright
+npx playwright --help
+
+# run tests with @pre-init tag
+npm run test:pre-init
+
+# run tests with @init tag
+npm run test:init
+
+# run tests with @post-init tag
+npm run test:post-init
+```

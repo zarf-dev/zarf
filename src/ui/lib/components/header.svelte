@@ -4,6 +4,7 @@
  -->
 <script>
 	import { clusterStore } from '$lib/store';
+	import { Typography } from '@defense-unicorns/unicorn-ui';
 	import logo from '@images/zarf-logo.png';
 	import Icon from './icon.svelte';
 	import ThemeToggle from './theme-toggle.svelte';
@@ -12,16 +13,16 @@
 <header class="header mdc-elevation--z8">
 	<div class="header-start">
 		<a href="/"><img alt="Zarf logo" id="logo" src={logo} width="100" /></a>
-		<div id="cluster-selector">
+		<Typography variant="body1" id="cluster-selector">
 			{#if $clusterStore}
 				> {$clusterStore.distro}
 			{/if}
-		</div>
+		</Typography>
 	</div>
 
 	<div class="header-end">
 		<ThemeToggle />
-		<div class="header-end-icon"><Icon variant="cancelCloud" /></div>
+		<Icon variant="cloud_off" />
 	</div>
 </header>
 
@@ -38,7 +39,7 @@
 		display: flex;
 		align-items: center;
 		background-color: #0d133d;
-		color: var(--mdc-theme-text-secondary-on-dark);
+		color: rgba(255, 255, 255, 0.7);
 		padding: 0.5rem 1rem;
 		justify-content: space-between;
 	}
@@ -53,8 +54,5 @@
 		gap: 1rem;
 		margin-right: 0.5rem;
 		align-items: center;
-	}
-	.header-end-icon {
-		cursor: pointer;
 	}
 </style>

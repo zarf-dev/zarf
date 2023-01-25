@@ -86,6 +86,11 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 			}
 		}
 
+		// Try to create the zarf namespace
+		spinner.Updatef("Creating the Zarf namespace")
+		if _, err := c.Kube.CreateNamespace(ZarfNamespace, nil); err != nil {
+			spinner.Fatalf(err, "Unable to create the zarf namespace")
+		}
 	}
 
 	if clusterArch != state.Architecture {
@@ -136,9 +141,7 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	}
 
 	// Remove the injector service
-	err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
-
-	return err
+	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {

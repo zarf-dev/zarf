@@ -3,10 +3,13 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import Icon from '$lib/components/icon.svelte';
-	import PackageDetails from '$lib/components/package-details-card.svelte';
-	import PackageComponent from '$lib/components/package-component-accordion.svelte';
-	import AccordionGroup from '$lib/components/accordion-group.svelte';
+	import {
+		PackageDetailsCard as PackageDetails,
+		PackageComponentAccordion as PackageComponent,
+		PackageSectionHeader as SectionHeader,
+		AccordionGroup,
+		Divider
+	} from '$lib/components';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
@@ -17,28 +20,29 @@
 </svelte:head>
 
 <section class="page-header">
-	<Typography variant="h4">Review Deployment</Typography>
+	<Typography variant="h5">Review Deployment</Typography>
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="package" />
-		Package Details
-	</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Package Details</Typography>
+		<span slot="tooltip">At-a-glance simple metadata about the package</span>
+	</SectionHeader>
 	<PackageDetails pkg={$pkgStore.zarfPackage} />
 </section>
 
 <section class="page-section">
-	<Typography variant="h5">
-		<Icon variant="component" />
-		Selected Package Components
-	</Typography>
+	<SectionHeader>
+		<Typography variant="h5" slot="title">Selected Package Components</Typography>
+	</SectionHeader>
 	<AccordionGroup>
 		{#each $pkgComponentDeployStore as idx}
 			<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
 		{/each}
 	</AccordionGroup>
 </section>
+
+<Divider />
 
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined" color="secondary">configure</Button>

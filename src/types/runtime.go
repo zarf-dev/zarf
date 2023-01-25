@@ -31,8 +31,6 @@ type ZarfInitOptions struct {
 
 	RegistryInfo RegistryInfo `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is going to be using"`
 
-	Components string `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
-
 	StorageClass string `json:"storageClass" jsonschema:"description=StorageClass of the k8s cluster Zarf is initializing"`
 }
 
@@ -45,6 +43,7 @@ type ZarfCreateOptions struct {
 	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
+	NoLocalImages    bool              `json:"noLocalImages" jsonschema:"description=Disable the use of local container images during package creation"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.
