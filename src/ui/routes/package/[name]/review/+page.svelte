@@ -13,6 +13,7 @@
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import { Button, Typography } from '@ui';
+	import { page } from '$app/stores';
 </script>
 
 <svelte:head>
@@ -46,5 +47,5 @@
 
 <div class="actionButtonsContainer">
 	<Button href="/initialize/configure" variant="outlined" color="secondary">configure</Button>
-	<Button href="/initialize/deploy" variant="flat" color="secondary">deploy</Button>
+	<Button href={`/package/${$page.params.name}/deploy`} variant="flat" color="secondary">deploy</Button>
 </div>

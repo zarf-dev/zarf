@@ -1,0 +1,63 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { Packages } from '$lib/api';
+	import { pkgStore } from '$lib/store';
+	import { PackageErrNotFound } from '$lib/components';
+    
+	enum LoadingStatus {
+		Loading,
+		Success,
+		Error
+	}
+	let status: LoadingStatus = LoadingStatus.Loading;
+	let errMessage: string = '';
+	const pkgPath = $page.url.searchParams.get('path');
+
+	if (pkgPath === null) {
+		errMessage = 'No package path provided';
+		status = LoadingStatus.Error;
+		throw new Error('No package path provided');
+	}
+
+	const pkgName = pkgPath
+		?.split('/')
+		.at(-1)
+		?.replaceAll('zarf-package-', '')
+		.replaceAll('.tar', '')
+		.replaceAll('.zst', '');
+
+	if (pkgPath === 'init') {
+		Packages.findInit()
+			.catch(async (err: Error) => {
+				errMessage = err.message;
+				status = LoadingStatus.Error;
+			})
+			.then((res) => {
+				if (Array.isArray(res)) {
+					Packages.read(res[0]).then(pkgStore.set);
+					status = LoadingStatus.Success;
+				}
+			});
+	} else {
+		Packages.read(pkgPath)
+			.then(pkgStore.set)
+			.then(() => {
+				status = LoadingStatus.Success;
+			})
+			.catch(async (err: Error) => {
+				errMessage = err.message;
+				status = LoadingStatus.Error;
+			});
+	}
+</script>
+
+{#if status == LoadingStatus.Loading}
+	<!-- placeholder loading content -->
+	<div>loading...</div>
+{:else if status == LoadingStatus.Error}
+	<PackageErrNotFound pkgName={errMessage.split(':')[1]} />
+{:else}
+	<!-- placeholder success content -->
+	{goto(`/package/${pkgName}/configure`)}
+{/if}
