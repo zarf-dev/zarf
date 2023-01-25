@@ -131,7 +131,7 @@
 	<title>Deploy</title>
 </svelte:head>
 <section class="page-header">
-	<Typography variant="h4">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
+	<Typography variant="h5">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" steps={componentSteps} />
