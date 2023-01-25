@@ -8,12 +8,11 @@
 	import 'prismjs/themes/prism-okaidia.css';
 	import { stringify } from 'yaml';
 
-	import type { ZarfComponent } from '$lib/api-types';
 	import { onMount } from 'svelte';
 
-	export let component: ZarfComponent;
+	export let code: any;
 
-	const yaml = stringify(component);
+	const yaml = stringify(code);
 
 	onMount(() => {
 		Prism.highlightAll();
