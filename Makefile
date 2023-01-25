@@ -112,7 +112,7 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	$(MAKE) build-cli-linux
 	cp build/zarf build/zarf-linux-amd64
 	cp build/zarf-arm build/zarf-linux-arm64
-	docker buildx build --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+	docker build --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
