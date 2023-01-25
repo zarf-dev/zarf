@@ -11,6 +11,8 @@ components:
         url:  https://charts.longhorn.io
         version: 1.4.0
         namespace: longhorn-system
+        valuesFiles:
+        - "values.yaml"
     images:
       - longhornio/csi-attacher:v3.4.0
       - longhornio/csi-provisioner:v2.1.2

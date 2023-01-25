@@ -10,6 +10,10 @@ If you wish to support RWX access modes you'll need to install an [NFSv4 client]
 
 If you're working with K3s, there is extra setup required see [Longhorn CSI on K3s](https://longhorn.io/docs/1.4.0/advanced-resources/os-distro-specific/csi-on-k3s/).
 
+The values file from this example was pulled using the directions at [Customizing Default Settings](https://longhorn.io/docs/1.4.0/advanced-resources/deploy/customizing-default-settings/#using-helm) as the path for kubelet needs to be set for K3s as per [Longhorn CSI on K3s](https://longhorn.io/docs/1.4.0/advanced-resources/os-distro-specific/csi-on-k3s/)
+
+You do not need to use the values file and can remove it from the Zarf package configuration if you're not using K3s and don't need that variable set.
+
 :::info
 
 To view the example source code, select the `Edit this page` link below the article and select the parent folder.
@@ -26,6 +30,8 @@ components:
         url:  https://charts.longhorn.io
         version: 1.4.0
         namespace: longhorn-system
+        valuesFiles:
+        - "values.yaml"
     images:
       - longhornio/csi-attacher:v3.4.0
       - longhornio/csi-provisioner:v2.1.2
