@@ -6,7 +6,8 @@
 	import { Stepper } from '@ui';
 	import { page } from '$app/stores';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import { PackageErrNotFound } from '$lib/components';
+
+	import { goto } from '$app/navigation';
 
 	let setupComplete = false;
 
@@ -25,6 +26,9 @@
 			setupComplete = true;
 		}
 	});
+	if (!$pkgStore) {
+		goto('/', { replaceState: true });
+	}
 </script>
 
 <section class="page">
@@ -34,19 +38,19 @@
 			steps={[
 				{
 					title: 'Configure',
-					iconContent: $page.route.id?.endsWith("/configure") ? '1' : undefined,
+					iconContent: $page.route.id?.endsWith('/configure') ? '1' : undefined,
 					variant: 'primary'
 				},
 				{
 					title: 'Review',
-					iconContent: !$page.route.id?.endsWith("/deploy") ? '2' : undefined,
-					disabled: !$page.route.id?.endsWith("/review"),
+					iconContent: !$page.route.id?.endsWith('/deploy') ? '2' : undefined,
+					disabled: !$page.route.id?.endsWith('/review'),
 					variant: 'primary'
 				},
 				{
 					title: 'Deploy',
 					iconContent: '3',
-					disabled: !$page.route.id?.endsWith("/deploy"),
+					disabled: !$page.route.id?.endsWith('/deploy'),
 					variant: 'primary'
 				}
 			]}
