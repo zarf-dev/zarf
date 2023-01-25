@@ -34,19 +34,19 @@
 			steps={[
 				{
 					title: 'Configure',
-					iconContent: $page.route.id === 'initialize/configure' ? '1' : undefined,
+					iconContent: $page.route.id?.endsWith("/configure") ? '1' : undefined,
 					variant: 'primary'
 				},
 				{
 					title: 'Review',
-					iconContent: $page.route.id !== 'initialize/deploy' ? '2' : undefined,
-					disabled: $page.route.id === 'initialize/configure',
+					iconContent: !$page.route.id?.endsWith("/deploy") ? '2' : undefined,
+					disabled: !$page.route.id?.endsWith("/review"),
 					variant: 'primary'
 				},
 				{
 					title: 'Deploy',
 					iconContent: '3',
-					disabled: $page.route.id !== 'initialize/deploy',
+					disabled: !$page.route.id?.endsWith("/deploy"),
 					variant: 'primary'
 				}
 			]}

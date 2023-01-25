@@ -46,6 +46,6 @@
 <Divider />
 
 <div class="actionButtonsContainer">
-	<Button href="/initialize/configure" variant="outlined" color="secondary">configure</Button>
+	<Button href={`/package/${$page.params.name}/configure`} variant="outlined" color="secondary">configure</Button>
 	<Button href={`/package/${$page.params.name}/deploy`} variant="flat" color="secondary">deploy</Button>
 </div>
