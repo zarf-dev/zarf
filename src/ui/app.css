@@ -45,15 +45,11 @@ body > div {
 .page .actionButtonsContainer {
 	display: flex;
 	justify-content: space-between;
-	margin-top: 2rem;
 }
 .page .page-section {
-	gap: 20px;
+	gap: 4px;
 	display: flex;
 	flex-direction: column;
-}
-.page .page-header {
-	margin-top: 2rem;
 }
 
 /* Shorthand Classes */
