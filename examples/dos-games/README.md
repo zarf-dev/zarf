@@ -1,4 +1,4 @@
-# Doom in the Cluster!
+# DOS Games in the Cluster!
 
 This example provides the basis for Zarf's [Doom Walkthrough](../../docs/13-walkthroughs/2-deploying-doom.md) tutorial.  It deploys Doom into the cluster and provides an easy way to connect and play the game.
 
