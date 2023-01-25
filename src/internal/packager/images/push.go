@@ -5,14 +5,11 @@
 package images
 
 import (
-	"crypto/tls"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"net/http"
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
@@ -50,24 +47,9 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := []crane.Option{
-		crane.WithAuth(
-			authn.FromConfig(authn.AuthConfig{
-				Username: i.RegInfo.PushUsername,
-				Password: i.RegInfo.PushPassword,
-			})),
-	}
-
-	if i.Insecure {
-		roundTripper := http.DefaultTransport.(*http.Transport).Clone()
-		roundTripper.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-		pushOptions = append(pushOptions, crane.Insecure, crane.WithTransport(roundTripper))
-	}
-
+	pushOptions := config.GetCraneOptions(i.Insecure)
+	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 	message.Debugf("crane pushOptions = %#v", pushOptions)
-
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
 		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
