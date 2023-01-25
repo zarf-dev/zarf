@@ -1,10 +1,14 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgStore } from '$lib/store';
 	import { PackageErrNotFound } from '$lib/components';
-    
+
 	enum LoadingStatus {
 		Loading,
 		Success,
@@ -53,11 +57,9 @@
 </script>
 
 {#if status == LoadingStatus.Loading}
-	<!-- placeholder loading content -->
 	<div>loading...</div>
 {:else if status == LoadingStatus.Error}
 	<PackageErrNotFound pkgName={errMessage.split(':')[1]} />
 {:else}
-	<!-- placeholder success content -->
 	{goto(`/package/${pkgName}/configure`)}
 {/if}
