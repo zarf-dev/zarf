@@ -41,6 +41,7 @@
 	{/if}
 {:else}
 	<Spinner
+	    title="Checking for cluster"
 		msg="Checking if a Kubernetes cluster is available and initialized by Zarf. This may take a few seconds."
 	/>
 {/if}

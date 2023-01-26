@@ -7,7 +7,7 @@
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
 	import { pkgStore } from '$lib/store';
-	import { PackageErrNotFound } from '$lib/components';
+	import { PackageErrNotFound, Spinner } from '$lib/components';
 
 	enum LoadingStatus {
 		Loading,
@@ -62,9 +62,9 @@
 </script>
 
 {#if status == LoadingStatus.Loading}
-	<div>loading...</div>
+	<Spinner title="Retrieving package" />
 {:else if status == LoadingStatus.Error}
 	<PackageErrNotFound pkgName={errMessage} />
 {:else}
-	{goto(`/package/${pkgName}/configure`)}
+	<div class="invisible">{goto(`/package/${pkgName}/configure`)}</div>
 {/if}

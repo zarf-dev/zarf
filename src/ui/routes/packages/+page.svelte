@@ -13,7 +13,7 @@
 </svelte:head>
 
 {#await Packages.getDeployedPackages()}
-	<Spinner />
+	<Spinner title="Retrieving deployed packages"/>
 {:then packages}
 	{#if packages.length < 1}
 		<Hero>
