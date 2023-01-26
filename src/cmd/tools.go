@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -90,7 +88,7 @@ var readCredsCmd = &cobra.Command{
 
 		message.Note(lang.CmdToolsGetGitPasswdInfo)
 		message.Warn(lang.CmdToolGetGitDeprecation)
-		fmt.Println(state.GitServer.PushPassword)
+		utils.PrintComponentCredential(state, "git")
 	},
 }
 
@@ -111,7 +109,7 @@ var readAllCredsCmd = &cobra.Command{
 			// If a component name is provided, only show that component's credentials
 			utils.PrintComponentCredential(state, args[0])
 		} else {
-			utils.PrintCredentialTable(state, []types.DeployedComponent{})
+			utils.PrintCredentialTable(state, nil)
 		}
 	},
 }
