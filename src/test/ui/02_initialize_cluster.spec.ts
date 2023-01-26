@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('initialize a zarf cluster', () => {
-	test('configure the init package', async ({ page }) => {
+	test('configure the init package @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure&next=/initialize/configure');
 
 		// Stepper
@@ -55,10 +55,46 @@ test.describe('initialize a zarf cluster', () => {
 		await expect(page).toHaveURL('/initialize/review');
 	});
 
-	test('review the init package', async ({ page }) => {
+	test('review the init package @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure&next=/initialize/review');
 
 		await validateRequiredCheckboxes(page);
+	});
+
+	test('deploy the init package @init', async ({ page }) => {
+		await page.goto('/auth?token=insecure&next=/');
+		await page.getByRole('link', { name: 'Initialize Cluster' }).click();
+		await page.waitForURL('/initialize/configure');
+		await page.getByRole('link', { name: 'review deployment' }).click();
+		await page.waitForURL('/initialize/review');
+		await page.getByRole('link', { name: 'deploy' }).click();
+		await page.waitForURL('/initialize/deploy');
+
+		// expect all steps to have success class
+		const stepperItems = page.locator('.stepper-vertical .step-icon');
+
+		// deploy zarf-injector
+		await expect(stepperItems.nth(0)).toHaveClass(/success/, {
+			timeout: 45000
+		});
+		// deploy zarf-seed-registry
+		await expect(stepperItems.nth(1)).toHaveClass(/success/, {
+			timeout: 45000
+		});
+		// deploy zarf-registry
+		await expect(stepperItems.nth(2)).toHaveClass(/success/, {
+			timeout: 45000
+		});
+		// deploy zarf-agent
+		await expect(stepperItems.nth(3)).toHaveClass(/success/, {
+			timeout: 45000
+		});
+
+		// verify the final step succeeded
+		await expect(page.locator('text=Deployment Succeeded')).toBeVisible();
+
+		// then verify the page redirects to the packages dashboard
+		await page.waitForURL('/packages', { timeout: 10000 });
 	});
 });
 

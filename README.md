@@ -5,7 +5,7 @@
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
-[![Build Status](https://img.shields.io/github/workflow/status/defenseunicorns/zarf/Publish%20Zarf%20Packages%20on%20Tag)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
 
 <img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
