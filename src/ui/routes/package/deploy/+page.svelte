@@ -24,12 +24,14 @@
 		throw new Error('No package path provided');
 	}
 
-	const pkgName = pkgPath
-		?.split('/')
-		.at(-1)
-		?.replaceAll('zarf-package-', '')
-		.replaceAll('.tar', '')
-		.replaceAll('.zst', '');
+	const pkgName = encodeURIComponent(
+		pkgPath
+			?.split('/')
+			.at(-1)
+			?.replaceAll('zarf-package-', '')
+			.replaceAll('.tar', '')
+			.replaceAll('.zst', '')
+	);
 
 	if (pkgPath === 'init') {
 		Packages.findInit()
