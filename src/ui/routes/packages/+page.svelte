@@ -5,6 +5,7 @@
 <script>
 	import { Packages } from '$lib/api';
 	import { Hero, PackageDetailsCard as PackageDetails, Spinner, Icon } from '$lib/components';
+  import PackageSectionHeader from '$lib/components/package-section-header.svelte';
 	import { Button, Typography, ButtonIcon } from '@ui';
 </script>
 
@@ -32,10 +33,10 @@
 		</section>
 		{#each packages as pkg}
 			<section class="page-section">
-				<Typography variant="h6">
-					<Icon variant="package" />
-					Deployed Packages
-				</Typography>
+				<PackageSectionHeader>
+					<Typography variant="h5" slot="title">Package Details</Typography>
+					<span slot="tooltip">A table of deployed packages</span>
+				</PackageSectionHeader>
 				<PackageDetails pkg={pkg.data} />
 			</section>
 		{/each}
