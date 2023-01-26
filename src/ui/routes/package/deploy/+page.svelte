@@ -17,54 +17,54 @@
 	let status: LoadingStatus = LoadingStatus.Loading;
 	let errMessage: string = '';
 	const pkgPath = $page.url.searchParams.get('path');
+	let pkgName: string;
 
 	if (pkgPath === null) {
 		errMessage = 'No package path provided';
 		status = LoadingStatus.Error;
-		throw new Error('No package path provided');
-	}
-
-	const pkgName = encodeURIComponent(
-		pkgPath
-			?.split('/')
-			.at(-1)
-			?.replaceAll('zarf-package-', '')
-			.replaceAll('.tar', '')
-			.replaceAll('.zst', '')
-	);
-
-	if (pkgPath === 'init') {
-		Packages.findInit()
-			.catch(async (err: Error) => {
-				errMessage = err.message;
-				status = LoadingStatus.Error;
-			})
-			.then((res) => {
-				if (Array.isArray(res)) {
-					Packages.read(res[0])
-						.then(pkgStore.set)
-						.then(() => {
-							status = LoadingStatus.Success;
-						});
-				}
-			});
 	} else {
-		Packages.read(pkgPath)
-			.then(pkgStore.set)
-			.then(() => {
-				status = LoadingStatus.Success;
-			})
-			.catch(async (err: Error) => {
-				errMessage = err.message;
-				status = LoadingStatus.Error;
-			});
+		pkgName = encodeURIComponent(
+			pkgPath
+				?.split('/')
+				.at(-1)
+				?.replaceAll('zarf-package-', '')
+				.replaceAll('.tar', '')
+				.replaceAll('.zst', '') ?? ''
+		);
+
+		if (pkgPath === 'init') {
+			Packages.findInit()
+				.catch(async (err: Error) => {
+					errMessage = err.message;
+					status = LoadingStatus.Error;
+				})
+				.then((res) => {
+					if (Array.isArray(res)) {
+						Packages.read(res[0])
+							.then(pkgStore.set)
+							.then(() => {
+								status = LoadingStatus.Success;
+							});
+					}
+				});
+		} else {
+			Packages.read(pkgPath)
+				.then(pkgStore.set)
+				.then(() => {
+					status = LoadingStatus.Success;
+				})
+				.catch(async (err: Error) => {
+					errMessage = err.message;
+					status = LoadingStatus.Error;
+				});
+		}
 	}
 </script>
 
 {#if status == LoadingStatus.Loading}
 	<div>loading...</div>
 {:else if status == LoadingStatus.Error}
-	<PackageErrNotFound pkgName={errMessage.split(':')[1]} />
+	<PackageErrNotFound pkgName={errMessage} />
 {:else}
 	{goto(`/package/${pkgName}/configure`)}
 {/if}
