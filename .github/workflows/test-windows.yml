@@ -36,7 +36,7 @@ jobs:
         uses: ./.github/actions/node
 
       - name: Switch to the Linux Docker Engine
-        run: "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
+        run: C:\Program\ Files\Docker\Docker\DockerCli.exe -SwitchLinuxEngine
         shell: pwsh
 
       - name: Build windows binary
