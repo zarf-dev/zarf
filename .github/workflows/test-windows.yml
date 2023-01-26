@@ -35,13 +35,15 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
-      - name: Switch to the Linux Docker Engine
-        run: "ls \"C:\\Program Files\\Docker\""
-        shell: pwsh
-
       - name: Build windows binary
         run: make build-cli-windows-amd
         shell: pwsh
+
+      # Builds an init package manually off of the last release
+      # Windows in GitHub cannot natively build linux containers
+      - name: Build init-package
+        run: |
+          make release-init-package ARCH=amd64 AGENT_IMAGE=agent:v0.23.6
 
       - name: Build zarf packages
         run: make build-examples ARCH=amd64
