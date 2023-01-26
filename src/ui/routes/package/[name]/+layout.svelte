@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Stepper } from '@ui';
+	import { Stepper, Typography } from '@ui';
 	import { page } from '$app/stores';
-	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
+	import { pkgComponentDeployStore, pkgStore, clusterStore } from '$lib/store';
 
 	import { goto } from '$app/navigation';
 
@@ -30,6 +30,14 @@
 		goto('/', { replaceState: true });
 	}
 </script>
+
+{#if $clusterStore.hasZarf == false && $pkgStore.zarfPackage.kind != "ZarfInitConfig"}
+	<div class="warning-banner">
+		<Typography variant="body1"
+			>WARNING: You are deploying a package without an initialized Zarf cluster</Typography
+		>
+	</div>
+{/if}
 
 <section class="page">
 	<div class="deploy-stepper-container">
@@ -73,5 +81,16 @@
 	}
 	:global(.deploy-stepper-container li:last-child) {
 		flex-grow: 0;
+	}
+	.warning-banner {
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background-color: var(--uui-default-colors-warning);
+		margin-top: 1rem;
+		padding: 1rem;
+		position: sticky;
+		top: 0;
 	}
 </style>
