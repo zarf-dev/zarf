@@ -13,6 +13,7 @@ const storedTheme = localStorage.theme ?? getPreferredTheme(window) ?? 'light';
 const themeStore = writable<'dark' | 'light'>(storedTheme);
 // update localstorage when theme changes
 themeStore.subscribe((theme) => {
+	document.documentElement.setAttribute('data-theme', theme);
 	localStorage.theme = theme;
 });
 
