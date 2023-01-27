@@ -8,7 +8,7 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-```
+``` yaml
 components:
   - name: component-name
     manifests:
