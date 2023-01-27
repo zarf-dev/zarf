@@ -14,7 +14,7 @@ This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang
 
 ### Pull down the code and binaries
 
-```shell
+``` bash
 # Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
@@ -31,7 +31,7 @@ Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-thro
 Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
 
 (Optional) Alternatively, build the zarf components from the repo
-```shell
+``` bash
 # Build zarf components from scratch (NOTE: golang and npm must be installed)
 make init-package
 
@@ -41,7 +41,7 @@ export PATH=$(pwd)/build:$PATH
 
 ### Build the deploy package
 
-```shell
+``` bash
 # Change dir
 cd packages/big-bang-core
 
@@ -58,7 +58,7 @@ zarf package create . --confirm
 
 ### Initialize Zarf
 
-```shell
+``` bash
 # Start k3d cluster
 k3d cluster create
 
@@ -82,7 +82,7 @@ zarf tools k9s
 
 ### Deploy Big Bang
 
-```shell
+``` bash
 # Deploy Big Bang (lightweight version)
 cd ../packages/big-bang-core
 zarf package deploy --confirm $(ls -1 zarf-package-big-bang-core-demo-*.tar.zst) --components big-bang-core-limited-resources
@@ -95,7 +95,7 @@ zarf tools k9s
 
 ### Clean Up
 
-```shell
+``` bash
 # Destroy the k3d cluster
 k3d cluster delete
 ```

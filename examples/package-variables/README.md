@@ -18,8 +18,6 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-&nbsp;
-
 ## How to Use Deploy-Time Variables and Constants
 
 The 'placeholder' text in the manifest or chart yaml should have your desired key name in all caps with `###ZARF_VAR` prepended and `###` appended for `variables` or `###ZARF_CONST` prepended and `###` appended for `constants`.
@@ -104,7 +102,7 @@ You can only template string values in this way as non-string values will not ma
 
 :::note
 
-If you use `--confirm` and do not `--set` all of the varaibles you will receive an error
+If you use `--confirm` and do not `--set` all of the variables you will receive an error
 
 :::
 

@@ -51,7 +51,7 @@ For more information on how zarf works under the hood visit our [Nerd Notes page
 
 ## Target Use Cases
 
-Zarf's possibilities are endless&mdash;Zarf developers' time is not. Thus, scope definition is in order.
+Zarf's possibilities are endless. Zarf developers' time is not. Thus, scope definition is in order.
 
 Here are the things we think Zarf should get really good at, listed top-down in order of importance:
 
@@ -67,15 +67,22 @@ Here are the things we think Zarf should get really good at, listed top-down in 
 
 ## What can be packaged?
 
-To reiterate: Zarf's possibilities are endless&mdash;Zarf developers' time is not. Thus, scope definition is again in order.
+To reiterate: Zarf's possibilities are endless. Zarf developers' time is not. Thus, scope definition is again in order.
 
 Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following types of software can be rolled into a Zarf package:
 
-- container images &mdash; to serve images for the Zarf & downstream clusters to run containers from.
+- container images: to serve images for the Zarf & downstream clusters to run containers from.
 
-- git repositories &mdash; to serve as the git-based "source of truth" for downstream "GitOps"ed k8s clusters to watch.
+- git repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed k8s clusters to watch.
 
-- pre-compiled binaries &mdash; to provide the software necessary to start & support the Zarf cluster.
+- pre-compiled binaries: to provide the software necessary to start & support the Zarf cluster.
+
+- [component actions](4-user-guide/7-github-action.md): to support scripts and commands that run at various stages of the Zarf [component lifecycle](4-user-guide/4-package-command-lifecycle.md)
+
+- helm charts, kustomizations, and other k8s manifests: to apply in a Kubernetes cluster
+
+- [data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster
+
 
 ## How To Use Zarf
 

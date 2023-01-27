@@ -15,7 +15,7 @@ Running the tests locally have the same prerequisites as running and building Za
 ### Actually Running The Test
 Here are a few different ways to run the tests, based on your specific situation:
 
-```shell
+``` bash
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
 APPLIANCE_MODE=true|false make test-e2e ARCH=arm64|amd64
 

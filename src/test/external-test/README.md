@@ -15,12 +15,12 @@ Running the tests locally have the same prerequisites as running and building Za
 ### Actually Running The Test
 Here are a few different ways to run the tests, based on your specific situation:
 
-```shell
+``` bash
 # The default way, from the root directory of the repo. This will automatically build any Zarf related resources if they don't already exist (i.e. binary, init-package, example packages):
 make test-external
 ```
 
-```shell
+``` bash
 # If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
 go test ./src/test/external-git/...
 ```
