@@ -1,4 +1,4 @@
-## zarf tools sbom packages
+# zarf tools sbom packages
 
 Generate a package SBOM
 

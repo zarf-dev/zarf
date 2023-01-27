@@ -1,4 +1,4 @@
-## zarf destroy
+# zarf destroy
 
 Tear it all down, we'll miss you Zarf...
 

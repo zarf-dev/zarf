@@ -1,4 +1,4 @@
-## zarf tools sbom attest
+# zarf tools sbom attest
 
 Generate an SBOM as an attestation for the given [SOURCE] container image
 

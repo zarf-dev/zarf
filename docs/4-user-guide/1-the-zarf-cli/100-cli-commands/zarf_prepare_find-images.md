@@ -1,4 +1,4 @@
-## zarf prepare find-images
+# zarf prepare find-images
 
 Evaluates components in a zarf file to identify images specified in their helm charts and manifests
 

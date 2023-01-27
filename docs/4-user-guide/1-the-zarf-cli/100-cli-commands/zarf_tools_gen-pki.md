@@ -1,4 +1,4 @@
-## zarf tools gen-pki
+# zarf tools gen-pki
 
 Generates a Certificate Authority and PKI chain of trust for the given host
 

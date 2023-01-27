@@ -1,4 +1,4 @@
-## zarf tools sbom version
+# zarf tools sbom version
 
 show the version
 

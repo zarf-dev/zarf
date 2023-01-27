@@ -1,4 +1,4 @@
-## zarf init
+# zarf init
 
 Prepares a k8s cluster for the deployment of Zarf packages
 

@@ -1,4 +1,4 @@
-## zarf tools registry copy
+# zarf tools registry copy
 
 Efficiently copy a remote image from src to dst while retaining the digest value
 

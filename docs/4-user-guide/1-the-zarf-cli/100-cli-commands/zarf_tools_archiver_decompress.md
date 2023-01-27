@@ -1,4 +1,4 @@
-## zarf tools archiver decompress
+# zarf tools archiver decompress
 
 Decompress an archive or Zarf package based off of the source file extension.
 

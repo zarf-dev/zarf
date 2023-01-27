@@ -1,4 +1,4 @@
-## zarf package deploy
+# zarf package deploy
 
 Use to deploy a Zarf package from a local file or URL (runs offline)
 

@@ -1,4 +1,4 @@
-## zarf tools sbom convert
+# zarf tools sbom convert
 
 Convert between SBOM formats
 

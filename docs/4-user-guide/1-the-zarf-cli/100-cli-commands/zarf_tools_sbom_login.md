@@ -1,4 +1,4 @@
-## zarf tools sbom login
+# zarf tools sbom login
 
 Log in to a registry
 

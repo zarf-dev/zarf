@@ -1,4 +1,4 @@
-## zarf prepare
+# zarf prepare
 
 Tools to help prepare assets for packaging
 

@@ -1,4 +1,4 @@
-## zarf tools registry login
+# zarf tools registry login
 
 Log in to a registry
 

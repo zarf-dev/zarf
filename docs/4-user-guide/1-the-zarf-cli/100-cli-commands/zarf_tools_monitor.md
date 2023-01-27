@@ -1,4 +1,4 @@
-## zarf tools monitor
+# zarf tools monitor
 
 Launch a terminal UI to monitor the connected cluster using K9s.
 

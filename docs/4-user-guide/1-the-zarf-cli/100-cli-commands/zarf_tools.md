@@ -1,4 +1,4 @@
-## zarf tools
+# zarf tools
 
 Collection of additional tools to make airgap easier
 

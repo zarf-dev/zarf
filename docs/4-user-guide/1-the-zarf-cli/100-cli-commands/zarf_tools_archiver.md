@@ -1,4 +1,4 @@
-## zarf tools archiver
+# zarf tools archiver
 
 Compress/Decompress generic archives, including Zarf packages.
 

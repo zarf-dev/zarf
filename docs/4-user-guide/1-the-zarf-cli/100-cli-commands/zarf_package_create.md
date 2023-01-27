@@ -1,4 +1,4 @@
-## zarf package create
+# zarf package create
 
 Use to create a Zarf package from a given directory or the current directory
 

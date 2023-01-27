@@ -1,4 +1,4 @@
-## zarf completion
+# zarf completion
 
 Generate the autocompletion script for the specified shell
 

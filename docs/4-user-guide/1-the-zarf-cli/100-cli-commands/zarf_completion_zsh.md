@@ -1,4 +1,4 @@
-## zarf completion zsh
+# zarf completion zsh
 
 Generate the autocompletion script for zsh
 

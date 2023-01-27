@@ -1,4 +1,4 @@
-## zarf package list
+# zarf package list
 
 List out all of the packages that have been deployed to the cluster
 

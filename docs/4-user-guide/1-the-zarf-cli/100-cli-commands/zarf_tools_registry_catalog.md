@@ -1,4 +1,4 @@
-## zarf tools registry catalog
+# zarf tools registry catalog
 
 List the repos in a registry
 

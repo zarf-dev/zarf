@@ -1,4 +1,4 @@
-## zarf connect list
+# zarf connect list
 
 List all available connection shortcuts.
 

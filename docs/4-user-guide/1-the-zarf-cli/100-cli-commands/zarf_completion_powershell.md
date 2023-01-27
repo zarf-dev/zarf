@@ -1,4 +1,4 @@
-## zarf completion powershell
+# zarf completion powershell
 
 Generate the autocompletion script for powershell
 

@@ -1,4 +1,4 @@
-## zarf package remove
+# zarf package remove
 
 Use to remove a Zarf package that has been deployed already
 

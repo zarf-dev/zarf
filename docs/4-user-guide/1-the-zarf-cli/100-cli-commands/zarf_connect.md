@@ -1,4 +1,4 @@
-## zarf connect
+# zarf connect
 
 Access services or pods deployed in the cluster.
 

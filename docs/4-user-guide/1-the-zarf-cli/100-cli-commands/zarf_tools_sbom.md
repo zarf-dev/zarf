@@ -1,4 +1,4 @@
-## zarf tools sbom
+# zarf tools sbom
 
 Generates a Software Bill of Materials (SBOM) for the given package
 

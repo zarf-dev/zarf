@@ -1,4 +1,4 @@
-## zarf prepare sha256sum
+# zarf prepare sha256sum
 
 Generate a SHA256SUM for the given file
 

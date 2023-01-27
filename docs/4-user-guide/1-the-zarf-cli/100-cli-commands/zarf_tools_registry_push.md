@@ -1,4 +1,4 @@
-## zarf tools registry push
+# zarf tools registry push
 
 Push local image contents to a remote registry
 

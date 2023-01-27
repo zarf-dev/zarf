@@ -1,4 +1,4 @@
-## zarf tools registry pull
+# zarf tools registry pull
 
 Pull remote images by reference and store their contents locally
 

@@ -1,4 +1,4 @@
-## zarf version
+# zarf version
 
 SBOM tools provided by Anchore Syft
 

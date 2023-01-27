@@ -1,4 +1,4 @@
-## zarf tools get-creds
+# zarf tools get-creds
 
 Display a Table of credentials for deployed components. Pass a component name to get a single credential.
 

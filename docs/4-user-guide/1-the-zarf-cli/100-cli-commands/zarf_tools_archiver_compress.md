@@ -1,4 +1,4 @@
-## zarf tools archiver compress
+# zarf tools archiver compress
 
 Compress a collection of sources based off of the destination file extension.
 

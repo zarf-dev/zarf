@@ -1,4 +1,4 @@
-## zarf tools registry
+# zarf tools registry
 
 Tools for working with container registries using go-containertools.
 

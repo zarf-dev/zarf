@@ -1,4 +1,4 @@
-## zarf package
+# zarf package
 
 Zarf package commands for creating, deploying, and inspecting packages
 

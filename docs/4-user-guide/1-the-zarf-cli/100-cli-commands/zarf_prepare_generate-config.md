@@ -1,4 +1,4 @@
-## zarf prepare generate-config
+# zarf prepare generate-config
 
 Generates a config file for Zarf
 

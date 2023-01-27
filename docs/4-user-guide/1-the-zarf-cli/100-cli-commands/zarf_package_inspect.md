@@ -1,4 +1,4 @@
-## zarf package inspect
+# zarf package inspect
 
 Lists the payload of a Zarf package (runs offline)
 
