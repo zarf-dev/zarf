@@ -46,6 +46,8 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_DEPLOY_SET), pkgConfig.DeployOpts.SetVariables)
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()

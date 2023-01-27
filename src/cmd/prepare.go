@@ -98,6 +98,8 @@ var prepareFindImages = &cobra.Command{
 			baseDir = args[0]
 		}
 
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_CREATE_SET), pkgConfig.CreateOpts.SetVariables)
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
