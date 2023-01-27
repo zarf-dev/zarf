@@ -18,7 +18,7 @@ type ZarfDeployOptions struct {
 	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
 	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of --set variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -41,7 +41,7 @@ type ZarfCreateOptions struct {
 	OutputDirectory  string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM         bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
 	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
-	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of --set variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 	NoLocalImages    bool              `json:"noLocalImages" jsonschema:"description=Disable the use of local container images during package creation"`
 }
