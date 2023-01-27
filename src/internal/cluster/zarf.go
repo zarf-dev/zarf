@@ -21,9 +21,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
 	var deployedPackages = []types.DeployedPackage{}
 
 	// Get the secrets that describe the deployed packages
-	namespace := "zarf"
-	labelSelector := "package-deploy-info"
-	secrets, err := c.Kube.GetSecretsWithLabel(namespace, labelSelector)
+	secrets, err := c.Kube.GetSecretsWithLabel(ZarfNamespace, ZarfPackageInfoLabel)
 	if err != nil {
 		return deployedPackages, err
 	}
@@ -86,8 +84,8 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent) {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
-	deployedPackageSecret := c.Kube.GenerateSecret("zarf", config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
-	deployedPackageSecret.Labels["package-deploy-info"] = packageName
+	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespace, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
+	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
 
 	stateData, _ := json.Marshal(types.DeployedPackage{
 		Name:               packageName,
@@ -98,5 +96,5 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
-	c.Kube.ReplaceSecret(deployedPackageSecret)
+	c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
 }

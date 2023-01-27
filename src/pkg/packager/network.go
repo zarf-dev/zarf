@@ -35,8 +35,8 @@ func (p *Packager) handlePackagePath() error {
 		return p.handleSgetPackage()
 	}
 
-	if !p.cfg.Insecure && opts.Shasum == "" {
-		return fmt.Errorf("remote package provided without a shasum, use --insecure-deploy to ignore")
+	if !config.CommonOptions.Insecure && opts.Shasum == "" {
+		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore")
 	}
 
 	// Check the extension on the package is what we expect
@@ -60,7 +60,7 @@ func (p *Packager) handlePackagePath() error {
 	}
 
 	// Check the shasum if necessary
-	if !p.cfg.Insecure {
+	if !config.CommonOptions.Insecure {
 		hasher := sha256.New()
 		_, err = io.Copy(hasher, packageFile)
 		if err != nil {

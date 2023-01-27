@@ -55,27 +55,14 @@ func (k *K8s) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*cor
 	return secretTLS, nil
 }
 
-// ReplaceTLSSecret replaces a Kubernetes secret with a new TLS secret.
-func (k *K8s) ReplaceTLSSecret(namespace, name string, conf GeneratedPKI) error {
+// CreateOrUpdateTLSSecret creates or updates a Kubernetes secret with a new TLS secret.
+func (k *K8s) CreateOrUpdateTLSSecret(namespace, name string, conf GeneratedPKI) error {
 	secret, err := k.GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
 		return err
 	}
 
-	return k.ReplaceSecret(secret)
-}
-
-// ReplaceSecret replaces a Kubernetes secret with a new secret.
-func (k *K8s) ReplaceSecret(secret *corev1.Secret) error {
-	if _, err := k.CreateNamespace(secret.Namespace, nil); err != nil {
-		return fmt.Errorf("unable to create or read the namespace: %w", err)
-	}
-
-	if err := k.DeleteSecret(secret); err != nil {
-		return err
-	}
-
-	return k.CreateSecret(secret)
+	return k.CreateOrUpdateSecret(secret)
 }
 
 // DeleteSecret deletes a Kubernetes secret.
@@ -97,6 +84,25 @@ func (k *K8s) CreateSecret(secret *corev1.Secret) error {
 	// create the given secret
 	if _, err := namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("unable to create the secret: %w", err)
+	}
+
+	return nil
+}
+
+// CreateOrUpdateSecret creates or updates a Kubernetes secret.
+func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) error {
+	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
+
+	if _, err := k.GetSecret(secret.Namespace, secret.Name); err != nil {
+		// create the given secret
+		if err := k.CreateSecret(secret); err != nil {
+			return fmt.Errorf("unable to create the secret: %w", err)
+		}
+	} else {
+		// update the given secret
+		if _, err := namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("unable to update the secret: %w", err)
+		}
 	}
 
 	return nil

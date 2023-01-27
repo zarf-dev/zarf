@@ -6,9 +6,6 @@ package types
 
 // PackagerConfig is the main struct that the packager uses to hold high-level options.
 type PackagerConfig struct {
-	//ZarfCommonOptions inline common options
-	ZarfCommonOptions
-
 	// CreateOpts tracks the user-defined options used to create the package
 	CreateOpts ZarfCreateOptions
 
