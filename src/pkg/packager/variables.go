@@ -15,37 +15,38 @@ import (
 
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
+	setVariableMap := map[string]string{}
+
+	for key, value := range p.cfg.CreateOpts.SetVariables {
+		// Ensure uppercase keys
+		setVariableMap[strings.ToUpper(key)] = value
+	}
+
 	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
 		return err
 	}
 
-	for key := range p.cfg.CreateOpts.SetVariables {
-		value := p.cfg.CreateOpts.SetVariables[key]
-		// Ensure uppercase for VIPER
-		packageVariables[strings.ToUpper(key)] = &value
-	}
-
-	for key, value := range packageVariables {
-		if value == nil && !config.CommonOptions.Confirm {
+	for key := range packageVariables {
+		_, present := setVariableMap[key]
+		if !present && !config.CommonOptions.Confirm {
 			setVal, err := p.promptVariable(types.ZarfPackageVariable{
 				Name: key,
 			})
 
 			if err == nil {
-				packageVariables[key] = &setVal
+				setVariableMap[key] = setVal
 			} else {
 				return err
 			}
-		} else if value == nil {
+		} else if !present {
 			return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
 		}
 	}
 
 	templateMap := map[string]string{}
-	for key, value := range packageVariables {
-		// Variable keys are always uppercase in the format ###ZARF_PKG_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_PKG_VAR_%s###", key))] = *value
+	for key, value := range setVariableMap {
+		templateMap[fmt.Sprintf("###ZARF_PKG_VAR_%s###", key)] = value
 	}
 
 	// Add special variable for the current package architecture
@@ -56,9 +57,8 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
-	for key := range p.cfg.DeployOpts.SetVariables {
-		value := p.cfg.DeployOpts.SetVariables[key]
-		// Ensure uppercase for VIPER
+	for key, value := range p.cfg.DeployOpts.SetVariables {
+		// Ensure uppercase keys
 		p.setVariable(strings.ToUpper(key), value)
 	}
 
