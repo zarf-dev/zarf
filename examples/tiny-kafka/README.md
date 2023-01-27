@@ -1,6 +1,6 @@
 # Tiny Kafka
 
-This example demonstrates using Zarf to deploy a simple operator example, in this case [Strimzi Kafka Operator](https://strimzi.io/).
+This example demonstrates using Zarf to deploy a simple operator example, in this case, [Strimzi Kafka](https://strimzi.io/) Operator](https://strimzi.io/).
 
 :::info
 
@@ -18,7 +18,7 @@ Before the magic can happen you have to do a few things:
 
 1. Install [Kind](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using Kind for this example since it is easy and tested frequently and thoroughly.
 
-1. Clone the Zarf project &mdash; for the example configuration files.
+1. Clone the Zarf project for the example configuration files.
 
 1. Build the package using `zarf package create examples/tiny-kafka`
 
@@ -34,7 +34,7 @@ Before the magic can happen you have to do a few things:
 
 Run the following command to deploy the created package to the cluster
 
-```sh
+``` bash
 zarf package deploy zarf-package-tiny-kafka-amd64.tar.zst --confirm
 ```
 
@@ -44,7 +44,7 @@ Wait a few seconds for the cluster to deploy the package.
 
 ### Access Kafka
 
-Testing requires JDK and the kafka tools: `sudo apt install openjdk-14-jdk-headless` (on Ubuntu). More details can be found at https://kafka.apache.org/quickstart. Steps to test:
+Testing requires JDK and the Kafka tools: `sudo apt install openjdk-14-jdk-headless` (on Ubuntu). More details can be found at <https://kafka.apache.org/quickstart>. Steps to test:
 
 1. Install JDK and extract the Kafka tools from the package `kafka.tgz`
 2. Get the Nodeport: `NODEPORT=$(kubectl get service demo-kafka-external-bootstrap -n kafka-demo -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')`
