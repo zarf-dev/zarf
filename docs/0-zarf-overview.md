@@ -35,7 +35,7 @@ A typical Zarf deployment is made up of three parts
    - Automatically seeds your cluster with a container registry
    - Provide additional capabilities such as (logging, git server, and K8s cluster)
 3. A Zarf Package
-   - compressed tarball package that contains all of the files, manifests, repos, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
+   - compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
 
 :::note
 
@@ -45,11 +45,7 @@ For more information on how zarf works under the hood visit our [Nerd Notes page
 
 ## Target Use Cases
 
-Zarf's possibilities are endless. Zarf developers' time is not. Thus, scope definition is in order.
-
-Here are the things we think Zarf should get good at, listed top-down in order of importance:
-
-- Make the movement of software "across the air gap" an open-source "solved problem".
+- Make the delivery of software "across the air gap" an open-source "solved problem".
 - Make it trivial to deploy & run Kubernetes apps "at the Edge".
 - Make it easy to support GitOps-based k8s cluster updates in isolated environments.
 - Make it possible to support GitOps-based k8s cluster updates in internet-connected-but-independent environments (think: dependency caching per availability zone, etc).
@@ -58,20 +54,18 @@ Here are the things we think Zarf should get good at, listed top-down in order o
 
 Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following types of software can be rolled into a Zarf package:
 
-- container images: to serve images for the Zarf & downstream clusters to run containers from.
-- git repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed k8s clusters to watch.
-- pre-compiled binaries: to provide the software necessary to start & support the Zarf cluster.
-- [component actions](4-user-guide/7-github-action.md): to support scripts and commands that run at various stages of the Zarf [component lifecycle](4-user-guide/4-package-command-lifecycle.md)
-- helm charts, kustomizations, and other k8s manifests: to apply in a Kubernetes cluster
-- [data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster
+- Container images: to serve images for the Zarf & downstream clusters to run containers from.
+- Repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed k8s clusters to watch.
+- Pre-compiled binaries: to provide the software necessary to start & support the Zarf cluster.
+- [Component actions](4-user-guide/7-github-action.md): to support scripts and commands that run at various stages of the Zarf [component lifecycle](4-user-guide/4-package-command-lifecycle.md)
+- Helm charts, kustomizations, and other k8s manifests: to apply in a Kubernetes cluster
+- [Data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster
 
 ## How To Use Zarf
 
 Zarf is intended for use in a software deployment process that looks something like this:
 
-<a target="\_blank" href={require('./.images/what-is-zarf/how-to-use-it.png').default}>
-<img alt="diagram showing how Zarf works" src={require('./.images/what-is-zarf/how-to-use-it.png').default} heigth="262" />
-</a>
+![How Zarf works](./.images/what-is-zarf/how-to-use-it.png)
 
 ### (0) - Connect to the Internet
 
@@ -81,7 +75,7 @@ Zarf can pull from lots of places like Docker Hub, Iron Bank, GitHub, local file
 
 ### (1) - Create a Package
 
-This part of the process requires access to the internet. You feed the `zarf` binary a "recipe" (`zarf.yaml`) and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
+This part of the process requires access to the internet. You feed the `zarf` binary a `zarf.yaml` "recipe" and it makes itself busy downloading, packing, and compressing the software you asked for. It outputs a single, ready-to-move distributable (cleverly) called "a package".
 
 Find out more about what that looks like in the [Building a package](./13-walkthroughs/0-using-zarf-package-create.md) section.
 
@@ -116,7 +110,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 ## Why Use Zarf?
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
-- 🔓 **No Vender Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
+- 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
 - 💻 **OS Agnostic.** Zarf supports numerous operating systems. For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple, secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
 - 🚀 **Develop Connected Deploy Disconnected.** Teams can build, and configure individual applications or entire DevSecOps environments while connected to the internet and then package and ship them to a disconnected environment to be deployed.
@@ -138,7 +132,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
 - Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
-- Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
+- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS, or Ingress configuration required
 
 ### 🛠️ Configurable Features
 
