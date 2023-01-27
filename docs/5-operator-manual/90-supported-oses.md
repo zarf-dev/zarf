@@ -39,7 +39,7 @@ We support running an instance of Zarf _inside a local VM_ (of any of the [suppo
 
 To get a VM running, it's as easy as running a single command:
 
-```sh
+``` bash
 make vm-init OS=[VM_ID]     # e.g. make vm-init OS=ubuntu
 ```
 
@@ -54,13 +54,13 @@ make vm-init OS=[VM_ID]     # e.g. make vm-init OS=ubuntu
 
 To connect into the VM instance you just started, run:
 
-```sh
+``` bash
 vagrant ssh [VM_ID]         # e.g. vagrant ssh ubuntu
 ```
 
 Once connected, you can work with your mounted-from-the-host copy of Zarf like so:
 
-```sh
+``` bash
 sudo su                     # escalate permissions (to "root" user)
 cd /opt/zarf                # access Zarf
 ./zarf help
@@ -68,7 +68,7 @@ cd /opt/zarf                # access Zarf
 
 When you're done with the VM, you can exit back to the host terminal by running:
 
-```sh
+``` bash
 exit                        # de-escalate permissions (back to "vagrant" user)
 exit                        # exits VM shel & drops you back on the host
 ```
@@ -80,7 +80,7 @@ exit                        # exits VM shel & drops you back on the host
 
 Closing out the demo environment is _also_ a single command:
 
-```sh
+``` bash
 make vm-destroy
 ```
 

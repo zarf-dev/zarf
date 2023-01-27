@@ -4,8 +4,8 @@ test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
 });
 
-test.describe('start page without an initialized cluster', () => {
-	test('spinner loads properly, then displays init btn', async ({ page }) => {
+test.describe('start page', () => {
+	test('spinner loads properly, then displays init btn @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure');
 
 		const clusterSelector = page.locator('#cluster-selector');
@@ -29,5 +29,18 @@ test.describe('start page without an initialized cluster', () => {
 		await page.locator('span:has-text("Initialize Cluster")').click();
 
 		await page.waitForURL('**/initialize/configure');
+	});
+	test('page redirects to /packages @post-init', async ({ page }) => {
+		await page.goto('/auth?token=insecure');
+
+		// display loading spinner
+		const spinner = page.locator('.spinner');
+		await expect(spinner).toBeVisible();
+
+		// spinner disappears
+		await expect(spinner).not.toBeVisible();
+
+		// expect to be redirected to /packages
+		await page.waitForURL('/packages', { timeout: 10000 });
 	});
 });

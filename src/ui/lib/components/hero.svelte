@@ -11,8 +11,7 @@
 <style>
 	.hero {
 		position: relative;
-		width: 100vw;
-		height: 100vh;
+		height: calc(100vh - 8rem);
 		display: flex;
 		justify-content: center;
 		align-items: center;

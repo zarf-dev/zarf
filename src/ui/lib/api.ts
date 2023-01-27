@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 import type {
+	APIZarfDeployPayload,
 	APIZarfPackage,
 	ClusterSummary,
 	DeployedComponent,
@@ -39,8 +40,7 @@ const Packages = {
 	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
-	deploy: (body: ZarfDeployOptions | ZarfInitOptions, isInitPkg: boolean) =>
-		http.put<boolean>(isInitPkg ? `/packages/deploy?isInitPkg=true` : `/packages/deploy`, body),
+	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 

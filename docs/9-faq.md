@@ -6,7 +6,7 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 
 ## What dependencies does Zarf have?
 
-Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any avaiilable local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and root access.
+Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and root access.
 
 ## What is the Zarf Agent?
 
@@ -14,13 +14,13 @@ The Zarf Agent is a [Kubernetes Mutating Webhook](https://kubernetes.io/docs/ref
 
 ## Why doesn't the Zarf Agent create secrets it needs in the cluster?
 
-During early discussions and [subsequent decision](../adr/0005-mutating-webhook.md) to use a Mutating Webhook, we decided to not have the Agent create any secrets in the cluster. This is to avoid the Agent having to have more priveleges than it needs as well as avoid collisions with Helm. The Agent today simply repsonds to requests to patch PodSpec and GitRepository objects. 
+During early discussions and [subsequent decision](../adr/0005-mutating-webhook.md) to use a Mutating Webhook, we decided to not have the Agent create any secrets in the cluster. This is to avoid the Agent having to have more privileges than it needs as well as avoid collisions with Helm. The Agent today simply responds to requests to patch PodSpec and GitRepository objects.
 
 The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created as  [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
 
 ## How can a Kubernetes resource be excluded from the Zarf Agent?
 
-Resources can be exluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
+Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
 
 ## What happens to resources that exist in the cluster before `zarf init`?
 
@@ -28,7 +28,7 @@ During the `zarf init` operation, the Zarf Agent will patch any existing namespa
 
 ## What is YOLO Mode and why would I use it?
 
-YOLO Mode is a special package metatdata designation that be added to a package prior to `zarf package create` to allow the package to be installed without the need for a `zarf init` operation. In most cases this will not be used, but it can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf. This can also be used as a way to transition slowly to using Zarf without having to do a full migration.
+YOLO Mode is a special package metadata designation that be added to a package prior to `zarf package create` to allow the package to be installed without the need for a `zarf init` operation. In most cases this will not be used, but it can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf. This can also be used as a way to transition slowly to using Zarf without having to do a full migration.
 
 :::note
 Typically you should not deploy a Zarf package in YOLO mode if the cluster has already been initialized with Zarf. This could lead to an [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) if the resources in the package do not include the `zarf.dev/agent: ignore` label and are not already available in the Zarf Registry.

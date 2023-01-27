@@ -8,13 +8,17 @@
 	import { Button, Typography, ButtonIcon } from '@ui';
 </script>
 
+<svelte:head>
+	<title>Packages</title>
+</svelte:head>
+
 {#await Packages.getDeployedPackages()}
 	<Spinner />
 {:then packages}
 	{#if packages.length < 1}
 		<Hero>
 			<div>
-				<h3>No deployed packages found 🙁</h3>
+				<Typography variant="h3">No deployed packages found 🙁</Typography>
 				<Button href="/" variant="flat" color="secondary">Go Home</Button>
 			</div>
 		</Hero>
