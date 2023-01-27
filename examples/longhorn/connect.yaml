@@ -4,9 +4,14 @@ metadata:
   name: zarf-connect-longhorn-ui
   labels:
     # Enables "zarf connect longhorn-ui"
-    zarf.dev/connect-name: longhorn-ui    
+    zarf.dev/connect-name: longhorn-ui
   annotations:
     zarf.dev/connect-description: "Connect to the Longhorn User Interface"
 spec:
   ports:
-  - port: 80
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: longhorn-ui
