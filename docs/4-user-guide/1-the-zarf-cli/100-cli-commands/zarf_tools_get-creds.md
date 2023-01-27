@@ -4,7 +4,7 @@ Display a Table of credentials for deployed components. Pass a component name to
 
 ## Synopsis
 
-Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'
+Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. `zarf tools get-creds registry`
 
 ``` bash
 zarf tools get-creds [flags]
