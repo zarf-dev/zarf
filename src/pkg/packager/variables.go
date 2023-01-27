@@ -17,13 +17,6 @@ import (
 func (p *Packager) fillActiveTemplate() error {
 	setVariableMap := map[string]string{}
 
-	// Process viper variables first
-	for key, value := range p.cfg.CreateOpts.ConfigVariables {
-		// Ensure uppercase keys
-		setVariableMap[strings.ToUpper(key)] = value
-	}
-
-	// Process --set as overrides
 	for key, value := range p.cfg.CreateOpts.SetVariables {
 		// Ensure uppercase keys
 		setVariableMap[strings.ToUpper(key)] = value
@@ -64,14 +57,6 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
-
-	// Process viper variables first
-	for key, value := range p.cfg.DeployOpts.ConfigVariables {
-		// Ensure uppercase keys
-		p.setVariable(strings.ToUpper(key), value)
-	}
-
-	// Process --set as overrides
 	for key, value := range p.cfg.DeployOpts.SetVariables {
 		// Ensure uppercase keys
 		p.setVariable(strings.ToUpper(key), value)

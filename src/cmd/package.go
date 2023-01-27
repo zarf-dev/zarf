@@ -57,7 +57,7 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		pkgConfig.CreateOpts.ConfigVariables = v.GetStringMapString(V_PKG_CREATE_SET)
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_CREATE_SET), pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -79,7 +79,7 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
-		pkgConfig.DeployOpts.ConfigVariables = v.GetStringMapString(V_PKG_DEPLOY_SET)
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_DEPLOY_SET), pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
