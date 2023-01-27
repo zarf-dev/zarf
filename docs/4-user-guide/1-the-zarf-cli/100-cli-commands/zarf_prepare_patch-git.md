@@ -1,22 +1,22 @@
 # zarf prepare patch-git
 
-Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: 
+Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 
-```
+``` bash
 zarf prepare patch-git [HOST] [FILE] [flags]
 ```
 
-### Options
+## Options
 
-```
-      --git-account string   User or organization name for the git account that the repos are created under. (default "zarf-git-user")
+``` bash
+      --git-account string   User or organization name for the git account that the repositories are created under. (default "zarf-git-user")
   -h, --help                 help for patch-git
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -25,7 +25,6 @@ zarf prepare patch-git [HOST] [FILE] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
-
+* [zarf prepare](zarf_prepare.md) - Tools to help prepare assets for packaging

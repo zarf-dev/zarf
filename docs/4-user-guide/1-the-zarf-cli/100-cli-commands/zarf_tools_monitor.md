@@ -2,19 +2,19 @@
 
 Launch a terminal UI to monitor the connected cluster using K9s.
 
-```
+``` bash
 zarf tools monitor [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
   -h, --help   help for monitor
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,7 +23,6 @@ zarf tools monitor [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-
+* [zarf tools](zarf_tools.md) - Collection of additional tools to make airgap easier

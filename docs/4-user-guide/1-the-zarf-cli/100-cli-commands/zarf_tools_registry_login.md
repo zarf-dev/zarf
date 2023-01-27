@@ -2,22 +2,22 @@
 
 Log in to a registry
 
-```
+``` bash
 zarf tools registry login [OPTIONS] [SERVER] [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
   -h, --help              help for login
   -p, --password string   Password
       --password-stdin    Take the password from stdin
   -u, --username string   Username
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -26,7 +26,6 @@ zarf tools registry login [OPTIONS] [SERVER] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
-
+* [zarf tools registry](zarf_tools_registry.md) - Tools for working with container registries using `go-containertools`.

@@ -2,20 +2,20 @@
 
 Generates a Certificate Authority and PKI chain of trust for the given host
 
-```
+``` bash
 zarf tools gen-pki {HOST} [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
   -h, --help                       help for gen-pki
       --sub-alt-name stringArray   Specify Subject Alternative Names for the certificate
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -24,7 +24,6 @@ zarf tools gen-pki {HOST} [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-
+* [zarf tools](zarf_tools.md) - Collection of additional tools to make airgap easier

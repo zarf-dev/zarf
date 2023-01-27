@@ -1,37 +1,48 @@
-# zarf completion fish
+## zarf completion bash
 
-Generate the autocompletion script for fish
+Generate the autocompletion script for bash
 
-## Synopsis
+### Synopsis
 
-Generate the autocompletion script for the fish shell.
+Generate the autocompletion script for the bash shell.
+
+This script depends on the 'bash-completion' package.
+If it is not installed already, you can install it via your OS's package manager.
 
 To load completions in your current shell session:
 
 ``` bash
-zarf completion fish | source
+source <(zarf completion bash)
 ```
 
 To load completions for every new session, execute once:
 
+#### Linux
+
 ``` bash
-zarf completion fish > ~/.config/fish/completions/zarf.fish
+zarf completion bash > /etc/bash_completion.d/zarf
+```
+
+#### macOS
+
+``` bash
+zarf completion bash > $(brew --prefix)/etc/bash_completion.d/zarf
 ```
 
 You will need to start a new shell for this setup to take effect.
 
 ``` bash
-zarf completion fish [flags]
+zarf completion bash
 ```
 
-## Options
+### Options
 
 ``` bash
-  -h, --help              help for fish
+  -h, --help              help for bash
       --no-descriptions   disable completion descriptions
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
 ``` bash
   -a, --architecture string   Architecture for OCI images
@@ -42,6 +53,6 @@ zarf completion fish [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
 * [zarf completion](zarf_completion.md) - Generate the autocompletion script for the specified shell

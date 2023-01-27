@@ -2,19 +2,18 @@
 
 Use to create a Zarf package from a given directory or the current directory
 
-### Synopsis
+## Synopsis
 
-Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.
-Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', '~/.git-credentials' and '~/.netrc'.
+Builds an archive of resources and dependencies defined by the `zarf.yaml` in the active directory.
+Private registries and repositories are accessed via credentials in your local `$HOME/.docker/config.json`, `$HOME/.git-credentials`, and `$HOME/.netrc`.
 
-
-```
+``` bash
 zarf package create [DIRECTORY] [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
       --confirm                   Confirm package creation without prompting
   -h, --help                      help for create
       --insecure                  Allow insecure registry connections when pulling OCI images
@@ -27,9 +26,9 @@ zarf package create [DIRECTORY] [flags]
       --skip-sbom                 Skip generating SBOM for this package
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -38,7 +37,6 @@ zarf package create [DIRECTORY] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-
+* [zarf package](zarf_package.md) - Zarf package commands for creating, deploying, and inspecting packages

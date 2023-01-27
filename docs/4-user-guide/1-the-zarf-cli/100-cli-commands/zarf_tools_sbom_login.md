@@ -2,22 +2,22 @@
 
 Log in to a registry
 
-```
+``` bash
 zarf tools sbom login [OPTIONS] [SERVER] [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
   -h, --help              help for login
   -p, --password string   Password
       --password-stdin    Take the password from stdin
   -u, --username string   Username
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -c, --config string         application config file
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -29,7 +29,6 @@ zarf tools sbom login [OPTIONS] [SERVER] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
-
+* [zarf tools sbom](zarf_tools_sbom.md) - Generates a Software Bill of Materials (SBOM) for the given package

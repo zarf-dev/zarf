@@ -2,23 +2,23 @@
 
 Display a Table of credentials for deployed components. Pass a component name to get a single credential.
 
-### Synopsis
+## Synopsis
 
-Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' 
+Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'
 
-```
+``` bash
 zarf tools get-creds [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
   -h, --help   help for get-creds
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -27,7 +27,6 @@ zarf tools get-creds [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-
+* [zarf tools](zarf_tools.md) - Collection of additional tools to make airgap easier

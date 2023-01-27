@@ -1,33 +1,32 @@
 # zarf completion powershell
 
-Generate the autocompletion script for powershell
+Generate the autocompletion script for PowerShell
 
-### Synopsis
+## Synopsis
 
-Generate the autocompletion script for powershell.
+Generate the autocompletion script for PowerShell.
 
 To load completions in your current shell session:
 
-	zarf completion powershell | Out-String | Invoke-Expression
+ zarf completion PowerShell | Out-String | Invoke-Expression
 
 To load completions for every new session, add the output of the above command
-to your powershell profile.
+to your PowerShell profile.
 
-
+``` bash
+zarf completion PowerShell [flags]
 ```
-zarf completion powershell [flags]
-```
 
-### Options
+## Options
 
-```
-  -h, --help              help for powershell
+``` bash
+  -h, --help              help for PowerShell
       --no-descriptions   disable completion descriptions
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -36,7 +35,6 @@ zarf completion powershell [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
-
+- [zarf completion](zarf_completion.md) - Generate the autocompletion script for the specified shell

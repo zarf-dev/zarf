@@ -2,17 +2,17 @@
 
 Generate an SBOM as an attestation for the given [SOURCE] container image
 
-### Synopsis
+## Synopsis
 
 Generate a packaged-based Software Bill Of Materials (SBOM) from a container image as the predicate of an in-toto attestation that will be uploaded to the image registry
 
-```
+``` bash
 zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 ```
 
-### Options
+## Options
 
-```
+``` bash
       --catalogers stringArray   enable one or more package catalogers
       --exclude stringArray      exclude paths from being scanned using a glob expression
       --file string              file to write the default report output to (default is STDOUT)
@@ -24,9 +24,9 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
   -t, --template string          specify the path to a Go template file
 ```
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
+``` bash
   -a, --architecture string   Architecture for OCI images
   -c, --config string         application config file
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -38,7 +38,6 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-### SEE ALSO
+## SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
-
+* [zarf tools sbom](zarf_tools_sbom.md) - Generates a Software Bill of Materials (SBOM) for the given package
