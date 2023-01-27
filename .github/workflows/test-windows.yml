@@ -39,8 +39,9 @@ jobs:
         run: make build-cli-windows-amd
         shell: pwsh
 
-      # Builds an init package manually off of the last release
-      # Windows in GitHub cannot natively build linux containers
+      # Builds an init package manually off of the v0.23.6 release since
+      # Windows in GitHub cannot natively build linux containers and
+      # the tests this workflow runs do not use the agent at all!
       - name: Build init-package
         run: |
           make release-init-package ARCH=amd64 AGENT_IMAGE=agent:v0.23.6

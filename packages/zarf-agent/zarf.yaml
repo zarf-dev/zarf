@@ -25,7 +25,7 @@ components:
           - manifests/secret.yaml
           - manifests/deployment.yaml
           - manifests/webhook.yaml
-    scripts:
-      prepare:
-        - "make init-package-local-agent AGENT_IMAGE=\"###ZARF_PKG_VAR_AGENT_IMAGE###\""
-      showOutput: true
+    actions:
+      onCreate:
+        before:
+          - cmd: "make init-package-local-agent AGENT_IMAGE=\"###ZARF_PKG_VAR_AGENT_IMAGE###\""
