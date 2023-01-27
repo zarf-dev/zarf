@@ -1,6 +1,6 @@
 # Git Data
 
-This examples shows how to package `git` repositories to be bundled and pushed across the airgap.  This package does not deploy anything itself, but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, their are tow main ways to include `git` repositories as described below.
+This example shows how to package `git` repositories to be bundled and pushed across the air gap.  This package does not deploy anything itself but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, there are two main ways to include `git` repositories as described below.
 
 :::info
 
@@ -19,7 +19,7 @@ A tag-provided clone only mirrors the tag defined in the Zarf definition. The ta
 
 ## SHA-Provided Git Repository Clone
 
-SHA-provided `git` repository cloning is another supported way of cloning repos in Zarf but is not recommended as it is less readable / understandable than tag cloning.  Commit SHAs are defined using the same `url.git@sha` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e`).
+SHA-provided `git` repository cloning is another supported way of cloning repos in Zarf but is not recommended as it is less readable/understandable than tag cloning.  Commit SHAs are defined using the same `url.git@sha` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e`).
 
 A SHA-provided clone only mirrors the SHA hash defined in the Zarf definition. The SHA will be applied on the `git` mirror to the default trunk branch of the repo (i.e. `master`, `main`, or the default when the repo is cloned) as Zarf does with tagging.
 
@@ -33,8 +33,6 @@ If you use a SHA hash or a tag that is on a separate branch this will be placed 
 
 Full clones are used in this example with the `stefanprodan/podinfo` repository and follow the `url.git` format (`https://github.com/stefanprodan/podinfo.git`). Full clones will contain **all** branches and tags in the mirrored repository rather than any one specific tag.
 
-&nbsp;
-
 ## Example Usage
 
 This example assumes you have already initialized a Zarf cluster. If that is not the case, refer to the [Initializing the Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md). Be sure when initializing the Zarf cluster to deploy the `git` component, or be ready to specify an external `git` repository.
@@ -43,7 +41,7 @@ This example assumes you have already initialized a Zarf cluster. If that is not
 
 To create this Zarf package run the below command:
 
-```sh
+``` bash
 cd <zarf dir>/examples/git-data    # directory with zarf.yaml
 zarf package create                # make the package
 ```
@@ -56,7 +54,7 @@ To deploy the Zarf package, copy it to a machine that either has a Zarf cluster 
 
 With the Zarf package in the current working directory, execute the below command to deploy the package, uploading the Git repositories to Gitea and the container images to the Docker registry.
 
-```sh
+``` bash
 zarf package deploy zarf-package-git-data-<arch>-<vx.x.x>.tar.zst
 ```
 
@@ -76,7 +74,7 @@ The following assumes you are using the internal Gitea server. If you are using 
 
 :::
 
-```sh
+``` bash
 # Run 'zarf connect' and send it to the background
 zarf connect git&
 
@@ -96,6 +94,6 @@ fg
 
 Clean up simply by just deleting the whole cluster
 
-```sh
+``` bash
 kind delete cluster
 ```
