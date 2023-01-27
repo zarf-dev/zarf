@@ -6,6 +6,11 @@ components:
   - name: longhorn
     required: true
     description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
+    manifests:
+      - name: longhorn-connect
+        namespace: longhorn-system
+        files:
+          - connect.yaml
     charts:
       - name: longhorn
         url:  https://charts.longhorn.io
