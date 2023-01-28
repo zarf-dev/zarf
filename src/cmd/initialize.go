@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -46,7 +47,9 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_DEPLOY_SET), pkgConfig.DeployOpts.SetVariables)
+		// Ensure uppercase keys from viper
+		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
