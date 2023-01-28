@@ -1,0 +1,34 @@
+kind: ZarfPackageConfig
+metadata:
+  name: longhorn-example
+  description: "Example package for Longhorn cloud native distributed block storage for Kubernetes"
+components:
+  - name: longhorn
+    required: true
+    description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
+    manifests:
+      - name: longhorn-connect
+        namespace: longhorn-system
+        files:
+          - connect.yaml
+    charts:
+      - name: longhorn
+        url:  https://charts.longhorn.io
+        version: 1.4.0
+        namespace: longhorn-system
+        valuesFiles:
+        - "values.yaml"
+    images:
+      - longhornio/csi-attacher:v3.4.0
+      - longhornio/csi-provisioner:v2.1.2
+      - longhornio/csi-resizer:v1.3.0
+      - longhornio/csi-snapshotter:v5.0.1
+      - longhornio/csi-node-driver-registrar:v2.5.0
+      - longhornio/livenessprobe:v2.8.0
+      - longhornio/backing-image-manager:v1.4.0
+      - longhornio/longhorn-engine:v1.4.0
+      - longhornio/longhorn-instance-manager:v1.4.0
+      - longhornio/longhorn-manager:v1.4.0
+      - longhornio/longhorn-share-manager:v1.4.0
+      - longhornio/longhorn-ui:v1.4.0
+      - longhornio/support-bundle-kit:v0.0.17
