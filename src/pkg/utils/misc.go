@@ -74,10 +74,36 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 
 // SliceContains returns true if the given element is in the slice
 func SliceContains[T comparable](s []T, e T) bool {
-    for _, v := range s {
-        if v == e {
-            return true
-        }
-    }
-    return false
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
+
+// MergeMap merges map m2 with m1 overwriting common values with m2's values
+func MergeMap[T any](m1 map[string]T, m2 map[string]T) (r map[string]T) {
+	r = map[string]T{}
+
+	for key, value := range m1 {
+		r[key] = value
+	}
+
+	for key, value := range m2 {
+		r[key] = value
+	}
+
+	return r
+}
+
+// TransformMapKeys takes a map and transforms its keys using the provided function
+func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
+	r = map[string]T{}
+
+	for key, value := range m {
+		r[transform(key)] = value
+	}
+
+	return r
 }
