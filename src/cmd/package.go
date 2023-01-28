@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -57,7 +58,9 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_CREATE_SET), pkgConfig.CreateOpts.SetVariables)
+		// Ensure uppercase keys from viper
+		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -79,7 +82,9 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
-		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_DEPLOY_SET), pkgConfig.DeployOpts.SetVariables)
+		// Ensure uppercase keys from viper
+		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

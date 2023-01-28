@@ -15,12 +15,8 @@ import (
 
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
-	setVariableMap := map[string]string{}
-
-	for key, value := range p.cfg.CreateOpts.SetVariables {
-		// Ensure uppercase keys
-		setVariableMap[strings.ToUpper(key)] = value
-	}
+	// Ensure uppercase keys
+	setVariableMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
 
 	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
 	if err != nil {
@@ -57,10 +53,8 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setActiveVariables handles setting the active variables used to template component files.
 func (p *Packager) setActiveVariables() error {
-	for key, value := range p.cfg.DeployOpts.SetVariables {
-		// Ensure uppercase keys
-		p.setVariable(strings.ToUpper(key), value)
-	}
+	// Ensure uppercase keys
+	p.cfg.SetVariableMap = utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
 
 	for _, variable := range p.cfg.Pkg.Variables {
 		_, present := p.cfg.SetVariableMap[variable.Name]
