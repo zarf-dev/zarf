@@ -24,7 +24,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.5.0
-	helm.sh/helm/v3 v3.10.3
+	helm.sh/helm/v3 v3.11.0
 	k8s.io/api v0.25.5 // not updating due to breaking api change in .26
 	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5
