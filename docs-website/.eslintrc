@@ -1,0 +1,98 @@
+{
+  "extends": [
+    "airbnb",
+    "prettier",
+    "react-app",
+    "react-app/jest",
+    "plugin:testing-library/react",
+    "plugin:jest-dom/recommended"
+  ],
+  "plugins": [
+    "prettier",
+    "react-hooks",
+    "etc",
+    "jest",
+    "jest-dom",
+    "testing-library"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "**/*.js"
+      ]
+    }
+  ],
+  "env": {
+    "jest/globals": true
+  },
+  "ignorePatterns": [
+    "/build/**/*.js",
+    "cypress/*"
+  ],
+  "rules": {
+    "semi": 0,
+    "etc/no-commented-out-code": "error",
+    "prettier/prettier": [
+      "error",
+      {
+        "semi": false,
+        "endOfLine": "auto"
+      }
+    ],
+    "react/jsx-filename-extension": [
+      1,
+      {
+        "extensions": [
+          ".js",
+          ".jsx"
+        ]
+      }
+    ],
+    "react/jsx-props-no-spreading": "off",
+    "react/prop-types": [
+      "error"
+    ],
+    "no-underscore-dangle": 0,
+    "import/imports-first": [
+      "error",
+      "absolute-first"
+    ],
+    "import/newline-after-import": "error",
+    "import/no-cycle": [
+      2,
+      {
+        "maxDepth": 1
+      }
+    ],
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": true
+      }
+    ],
+    "react-hooks/rules-of-hooks": "error", // Check rules of hooks
+    "react-hooks/exhaustive-deps": "warn", // Checks effect dependencies
+    "react/forbid-prop-types": "off",
+    "react/jsx-uses-react": "off",
+    "react/react-in-jsx-scope": "off",
+    "jest/no-mocks-import": "off"
+  },
+  "globals": {
+    "window": true,
+    "document": true,
+    "localStorage": true,
+    "FormData": true,
+    "FileReader": true,
+    "Blob": true,
+    "navigator": true
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "paths": [
+          "src"
+        ]
+      }
+    }
+  }
+}

@@ -520,32 +520,6 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 		message.PrintConnectStringTable(connectStrings)
 	} else {
 		// otherwise, print the init config connection and passwords
-		loginTableHeader := pterm.TableData{
-			{"     Application", "Username", "Password", "Connect"},
-		}
-
-		loginTable := pterm.TableData{}
-		if p.cfg.State.RegistryInfo.InternalRegistry {
-			loginTable = append(loginTable, pterm.TableData{{"     Registry", p.cfg.State.RegistryInfo.PushUsername, p.cfg.State.RegistryInfo.PushPassword, "zarf connect registry"}}...)
-		}
-
-		for _, component := range componentsToDeploy {
-			// Show message if including logging stack
-			if component.Name == "logging" {
-				loginTable = append(loginTable, pterm.TableData{{"     Logging", "zarf-admin", p.cfg.State.LoggingSecret, "zarf connect logging"}}...)
-			}
-			// Show message if including git-server
-			if component.Name == "git-server" {
-				loginTable = append(loginTable, pterm.TableData{
-					{"     Git", p.cfg.State.GitServer.PushUsername, p.cfg.State.GitServer.PushPassword, "zarf connect git"},
-					{"     Git (read-only)", p.cfg.State.GitServer.PullUsername, p.cfg.State.GitServer.PullPassword, "zarf connect git"},
-				}...)
-			}
-		}
-
-		if len(loginTable) > 0 {
-			loginTable = append(loginTableHeader, loginTable...)
-			_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
-		}
+		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
 	}
 }

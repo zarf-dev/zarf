@@ -125,8 +125,8 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
-func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*string, error) {
-	mappings := map[string]*string{}
+func FindYamlTemplates(config any, prefix string, suffix string) (map[string]string, error) {
+	mappings := map[string]string{}
 
 	text, err := goyaml.Marshal(config)
 
@@ -139,7 +139,7 @@ func FindYamlTemplates(config any, prefix string, suffix string) (map[string]*st
 	matches := r.FindAllStringSubmatch(string(text), -1)
 
 	for _, match := range matches {
-		mappings[match[1]] = nil
+		mappings[match[1]] = ""
 	}
 
 	return mappings, nil

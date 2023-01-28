@@ -30,10 +30,10 @@ BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(
 .DEFAULT_GOAL := help
 
 .PHONY: help
-help: ## Show a list of all targets
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-	| sed -n 's/^\(.*\): \(.*\)##\(.*\)/\1:\3/p' \
-	| column -t -s ":"
+help: ## Display this help information
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
+	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 vm-init: ## Make a vagrant VM (usage -> make vm-init OS=ubuntu)
 	vagrant destroy -f
@@ -50,14 +50,16 @@ destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-remove-packages: ## Remove all zarf packages recursively
+delete-packages: ## Delete all Zarf package tarballs in the project recursively
 	find . -type f -name 'zarf-package-*' -delete
 
+# INTERNAL: used to ensure the ui directory exists
 ensure-ui-build-dir:
 	mkdir -p build/ui
 	touch build/ui/index.html
 
-check-ui: ## Build the Zarf UI if needed
+# INTERNAL: used to build the UI only if necessary
+check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
 	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
 		    $(MAKE) build-ui;\
@@ -97,33 +99,33 @@ docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Sche
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal generate-cli-docs
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
-dev: ensure-ui-build-dir ## Start a Dev Server for the UI
+dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	go mod download
 	npm ci
 	npm run dev
 
-# Inject and deploy a new dev version of zarf agent for testing (should have an existing zarf agent deployemt)
-# @todo: find a clean way to dynamically support Kind or k3d:
-#        when using kind: kind load docker-image $(tag)
-#        when using k3d: k3d image import $(tag)
-dev-agent-image: ## Create a new agent image and inject it into a currently inited cluster
-	$(eval tag := defenseunicorns/dev-zarf-agent:$(shell date +%s))
-	$(eval arch := $(shell uname -m))
-	CGO_ENABLED=0 GOOS=linux go build -o build/zarf-linux-$(arch) main.go
-	DOCKER_BUILDKIT=1 docker build --tag $(tag) --build-arg TARGETARCH=$(arch) . && \
-	k3d image import $(tag) && \
-	kubectl -n zarf set image deployment/agent-hook server=$(tag)
+# INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
+init-package-local-agent:
+	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
 
-init-package: ## Create the zarf init package (must `brew install coreutils` on macOS first)
+build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
+	$(MAKE) build-cli-linux
+	cp build/zarf build/zarf-linux-amd64
+	cp build/zarf-arm build/zarf-linux-arm64
+	docker build --build-arg TARGETARCH=$(ARCH) --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+
+init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
-ci-release: init-package
+# INTERNAL: used to build a release version of the init package with a specific agent image
+release-init-package:
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/game -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
 
@@ -147,13 +149,13 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
-## Run e2e tests. Will automatically build any required dependencies that aren't present.
-## Requires an existing cluster for the env var APPLIANCE_MODE=true
+## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests
+test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test -failfast -v -timeout 30m
 
+## NOTE: Requires an existing cluster
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -161,23 +163,25 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
-## Run unit tests within the src directory
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir
+test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
 
+.PHONY: test-built-ui
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
+# INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	hack/check-zarf-docs-and-schema.sh
 
+# INTERNAL: used to test for new CVEs that may have been introduced
 test-cves: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json | grype --fail-on low
 
-cve-report: ensure-ui-build-dir
+cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
 	go run main.go tools sbom packages . -o json | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
-lint-go:
+lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
