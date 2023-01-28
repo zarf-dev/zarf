@@ -38,7 +38,7 @@
 		"yaml": "2.2.1"
 	},
 	"devDependencies": {
-		"@playwright/test": "1.29.2",
+		"@playwright/test": "1.30.0",
 		"@sveltejs/adapter-static": "1.0.5",
 		"@sveltejs/kit": "1.2.10",
 		"@sveltejs/package": "1.0.2",
@@ -52,7 +52,7 @@
 		"eslint-config-prettier": "8.5.0",
 		"eslint-plugin-svelte3": "4.0.0",
 		"nodemon": "2.0.20",
-		"playwright": "1.29.2",
+		"playwright": "1.30.0",
 		"prettier": "2.8.3",
 		"prettier-plugin-svelte": "2.9.0",
 		"quicktype": "^17.0.0",
