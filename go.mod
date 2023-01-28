@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20221208011002-c5ff155d72f1
 	github.com/anchore/syft v0.68.0
-	github.com/derailed/k9s v0.26.7
+	github.com/derailed/k9s v0.27.0
 	github.com/distribution/distribution/v3 v3.0.0-20221208165359-362910506bc2
 	github.com/fatih/color v1.14.1
 	github.com/go-chi/chi/v5 v5.0.8
