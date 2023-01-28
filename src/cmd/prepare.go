@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"crypto"
 	"fmt"
 	"os"
 
@@ -73,7 +74,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
-		hash, err := utils.GetSha256Sum(fileName)
+		hash, err := utils.GetCryptoHash(fileName, crypto.SHA256)
 		if err != nil {
 			message.Fatal(err, "Unable to compute the hash")
 		} else {
@@ -96,6 +97,8 @@ var prepareFindImages = &cobra.Command{
 		if len(args) > 0 {
 			baseDir = args[0]
 		}
+
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(v.GetStringMapString(V_PKG_CREATE_SET), pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

@@ -7,7 +7,7 @@ The Zarf examples demonstrate different ways to utilize Zarf in your environment
 
 To build and deploy a demo, change directories to the example you want to try and run:
 
-```shell
+``` bash
 cd <directory> # This should be whatever example you want to try (i.e. game)
 zarf package create # This will create the zarf package
 zarf package deploy # This will prompt you to deploy the created zarf package

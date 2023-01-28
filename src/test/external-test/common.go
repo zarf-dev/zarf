@@ -5,10 +5,12 @@
 package external_test
 
 import (
-	"os/exec"
+	"context"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 )
 
 func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, args []string, onTimeout string) bool {
@@ -30,12 +32,12 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 			// after delay, try running
 		default:
 			// Check information from the given command
-			out, err := exec.Command(cmd, args...).Output()
+			stdOut, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), cmd, args...)
 			// Log error
 			if err != nil {
-				t.Log(string(out), err)
+				t.Log(string(stdOut), err)
 			}
-			if strings.Contains(string(out), condition) {
+			if strings.Contains(string(stdOut), condition) {
 				return true
 			}
 		}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 )
@@ -84,8 +85,10 @@ func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 		for _, refspec := range refspecs {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
-		_, _, err := utils.ExecCommandWithContextAndDir(context.TODO(), gitDirectory, false, "git", cmdArgs...)
-
+		execCfg := exec.Config{
+			Dir: gitDirectory,
+		}
+		_, _, err := exec.CmdWithContext(context.TODO(), execCfg, "git", cmdArgs...)
 		return err
 	}
 

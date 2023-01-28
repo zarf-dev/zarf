@@ -141,9 +141,7 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	}
 
 	// Remove the injector service
-	err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
-
-	return err
+	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
