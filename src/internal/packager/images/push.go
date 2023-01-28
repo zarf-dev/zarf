@@ -24,6 +24,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		target      string
 	)
 
+	registryURL = i.RegInfo.Address
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
 		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
@@ -46,9 +47,9 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword)
+	pushOptions := config.GetCraneOptions(i.Insecure)
+	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 	message.Debugf("crane pushOptions = %#v", pushOptions)
-
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
 		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
@@ -65,7 +66,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 			message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineNameCRC)
 
-			if err = crane.Push(img, offlineNameCRC, pushOptions); err != nil {
+			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
 			}
 		}
@@ -79,7 +80,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
 
-		if err = crane.Push(img, offlineName, pushOptions); err != nil {
+		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err
 		}
 	}
