@@ -15,14 +15,27 @@ import (
 )
 
 func TestExtOutClusterDeploy(t *testing.T) {
+	// Networking Constants
+	network := "k3d-k3s-external-test"
+	subnet := "172.159.0.0/16"
+	gateway := "172.159.0.1"
+	giteaIp := "172.159.0.99"
+	giteaHost := "gitea.localhost"
+	registryHost := "registry.localhost"
+
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 	_ = exec.CmdWithPrint("k3d", "cluster", "delete")
-	_ = exec.CmdWithPrint("k3d", "registry", "delete", "registry.localhost")
+	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)
+
+	// Setup a network for everything to live inside
+	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
+	require.NoError(t, err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err := exec.CmdWithPrint("k3d", "registry", "create", "registry.localhost", "--port", "5000")
+	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
 	require.NoError(t, err, "unable to create the k3d registry")
-	err = exec.CmdWithPrint("k3d", "cluster", "create", "--registry-use", "k3d-registry.localhost:5000")
+	err = exec.CmdWithPrint("k3d", "cluster", "create", "--registry-use", "k3d-"+registryHost+":5000", "--host-alias", giteaIp+":"+giteaHost, "--network", network)
 	require.NoError(t, err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -35,17 +48,17 @@ func TestExtOutClusterDeploy(t *testing.T) {
 	require.True(t, success, giteaErrStr)
 
 	// Connect gitea to the k3d network
-	_ = exec.CmdWithPrint("docker", "network", "connect", "k3d-k3s-default", "gitea.localhost")
+	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIp, network, giteaHost)
+	require.NoError(t, err, "unable to connect the gitea-server top k3d")
 
-	// TODO: (@WSTARR) Make this networking actually work
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init",
 		"--git-push-username=git-user",
 		"--git-push-password=superSecurePassword",
-		"--git-url=http://gitea.localhost:3000",
+		"--git-url=http://" + giteaHost + ":3000",
 		"--registry-push-username=git-user",
 		"--registry-push-password=superSecurePassword",
-		"--registry-url=k3d-registry.localhost:5000",
+		"--registry-url=k3d-" + registryHost + ":5000",
 		"--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, initArgs...)
 
@@ -63,12 +76,16 @@ func TestExtOutClusterDeploy(t *testing.T) {
 	success = verifyKubectlWaitSuccess(t, 2, podinfoArgs, errorStr)
 	assert.True(t, success, errorStr)
 
-	err = exec.CmdWithPrint(zarfBinPath, "destroy", "--confirm")
+	// Tear down all of that stuff we made for local runs
+	err = exec.CmdWithPrint("k3d", "cluster", "delete")
 	require.NoError(t, err, "unable to teardown zarf")
 
 	err = exec.CmdWithPrint("docker", "compose", "down")
 	require.NoError(t, err, "unable to teardown the gitea-server")
 
-	err = exec.CmdWithPrint("k3d", "registry", "delete", "registry.localhost")
+	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
 	require.NoError(t, err, "unable to teardown the k3d registry")
+
+	err = exec.CmdWithPrint("docker", "network", "remove", network)
+	require.NoError(t, err, "unable to teardown the docker test network")
 }
