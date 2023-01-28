@@ -96,3 +96,14 @@ func MergeMap[T any](m1 map[string]T, m2 map[string]T) (r map[string]T) {
 
 	return r
 }
+
+// TransformMapKeys takes a map and transforms its keys using the provided function
+func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
+	r = map[string]T{}
+
+	for key, value := range m {
+		r[transform(key)] = value
+	}
+
+	return r
+}
