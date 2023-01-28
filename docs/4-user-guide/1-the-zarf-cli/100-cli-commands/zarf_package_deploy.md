@@ -18,7 +18,7 @@ zarf package deploy [PACKAGE] [flags]
   -h, --help                 help for deploy
       --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --sget string          Path to public sget key file for remote packages signed via cosign
-      --shasum --insecure    Shasum of the package to deploy. Required if deploying a remote package and --insecure is not provided
+      --shasum string        Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
 ### Options inherited from parent commands
