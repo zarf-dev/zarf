@@ -17,9 +17,9 @@ import (
 func TestExtOutClusterDeploy(t *testing.T) {
 	// Docker/k3d networking constants
 	network := "k3d-k3s-external-test"
-	subnet := "172.159.0.0/16"
-	gateway := "172.159.0.1"
-	giteaIP := "172.159.0.99"
+	subnet := "172.31.0.0/16"
+	gateway := "172.31.0.1"
+	giteaIP := "172.31.0.99"
 	giteaHost := "gitea.localhost"
 	registryHost := "registry.localhost"
 
