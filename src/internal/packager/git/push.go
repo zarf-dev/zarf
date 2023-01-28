@@ -32,7 +32,7 @@ func (g *Git) PushRepo(localPath string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("retrying")
+		spinner.Warnf("unable to push git repo %s retrying...", basename)
 		return err
 	}
 
