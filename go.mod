@@ -14,7 +14,7 @@ require (
 	github.com/go-git/go-git/v5 v5.5.2 // reverting due to https://github.com/go-git/go-git/issues/624
 	github.com/go-logr/logr v1.2.3
 	github.com/goccy/go-yaml v1.9.8
-	github.com/google/go-containerregistry v0.12.1
+	github.com/google/go-containerregistry v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
