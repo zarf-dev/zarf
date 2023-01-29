@@ -1,6 +1,7 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    "group:allNonMajor"
   ],
   "packageRules": [
     {
@@ -13,16 +14,23 @@
       "automergeType": "pr"
     },
     {
-      "matchDepTypes": ["devDependencies"],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
       "automerge": true,
       "automergeType": "pr"
     }
   ],
   "platformAutomerge": true,
   "platformCommit": true,
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
   "regexManagers": [
     {
-      "fileMatch": ["(^|/)zarf.yaml$"],
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "charts:(.|\n)*?(^\\s{4}[\\w:]+|\n$|^\\s{2}-)",
