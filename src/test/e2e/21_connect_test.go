@@ -27,7 +27,10 @@ func TestConnect(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("tools", "registry", "catalog")
 	assert.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
-	assert.Equal(t, 12, len(registryList))
+
+	// We assert greater than or equal to since the base init has 12 images
+	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
+	assert.GreaterOrEqual(t, len(registryList), 12)
 	assert.Contains(t, stdOut, "gitea/gitea")
 	assert.Contains(t, stdOut, "gitea/gitea-3431384023")
 

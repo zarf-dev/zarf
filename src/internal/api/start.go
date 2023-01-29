@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -103,7 +104,7 @@ func LaunchAPIServer() {
 	if devPort == "" {
 		url := fmt.Sprintf("http://127.0.0.1:%s/auth?token=%s", port, token)
 		message.Infof("Zarf UI connection: %s", url)
-		message.Debug(utils.ExecLaunchURL(url))
+		message.Debug(exec.LaunchURL(url))
 	} else {
 		// Otherwise, use the dev port for the URL and don't try to open
 		message.Infof("Zarf UI connection: http://127.0.0.1:%s/auth?token=%s", devPort, token)

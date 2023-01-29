@@ -2,12 +2,12 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-# name: CHANGE_ME_MUST_BE_UNIQUE  
+  name: ###ZARF_VAR_CLUSTER_NAME###  
   region: us-west-1
   version: "1.21"
 managedNodeGroups:
 - instanceType: t3.small
-# name: CHANGE_ME_MUST_BE_UNIQUE
+  name: ###ZARF_VAR_CLUSTER_NAME###-ng
   minSize: 3
   maxSize: 6
   spot: true

@@ -10,7 +10,7 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-```
+``` yaml
 dataInjections:
   - source: path-to/pull-from
     target:

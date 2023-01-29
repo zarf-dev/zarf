@@ -187,6 +187,7 @@ export interface ZarfPackage {
  */
 export interface ZarfBuildData {
     architecture: string;
+    migrations:   string[];
     terminal:     string;
     timestamp:    string;
     user:         string;
@@ -194,6 +195,10 @@ export interface ZarfBuildData {
 }
 
 export interface ZarfComponent {
+    /**
+     * Custom commands to run at various stages of a package lifecycle
+     */
+    actions?: ZarfComponentActions;
     /**
      * Helm charts to install during package deploy
      */
@@ -248,9 +253,116 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * Custom commands to run before or after package deployment
+     * (Deprecated--use actions instead) Custom commands to run before or after package
+     * deployment
      */
-    scripts?: ZarfComponentScripts;
+    scripts?: DeprecatedZarfComponentScripts;
+}
+
+/**
+ * Custom commands to run at various stages of a package lifecycle
+ */
+export interface ZarfComponentActions {
+    /**
+     * Actions to run during package creation
+     */
+    onCreate?: ZarfComponentActionSet;
+    /**
+     * Actions to run during package deployment
+     */
+    onDeploy?: ZarfComponentActionSet;
+    /**
+     * Actions to run during package removal
+     */
+    onRemove?: ZarfComponentActionSet;
+}
+
+/**
+ * Actions to run during package creation
+ *
+ * Actions to run during package deployment
+ *
+ * Actions to run during package removal
+ */
+export interface ZarfComponentActionSet {
+    /**
+     * Actions to run at the end of an operation
+     */
+    after?: ZarfComponentAction[];
+    /**
+     * Actions to run at the start of an operation
+     */
+    before?: ZarfComponentAction[];
+    /**
+     * Default configuration for all actions in this set
+     */
+    defaults?: ZarfComponentActionDefaults;
+    /**
+     * Actions to run if all operations fail
+     */
+    onFailure?: ZarfComponentAction[];
+    /**
+     * Actions to run if all operations succeed
+     */
+    onSuccess?: ZarfComponentAction[];
+}
+
+export interface ZarfComponentAction {
+    /**
+     * The command to run
+     */
+    cmd?: string;
+    /**
+     * The working directory to run the command in (default is CWD)
+     */
+    dir?: string;
+    /**
+     * Additional environment variables to set for the command
+     */
+    env?: string[];
+    /**
+     * Retry the command if it fails up to given number of times (default 0)
+     */
+    maxRetries?: number;
+    /**
+     * Timeout in seconds for the command (default to 0
+     */
+    maxTotalSeconds?: number;
+    /**
+     * Hide the output of the command during package deployment (default false)
+     */
+    mute?: boolean;
+    /**
+     * The name of a variable to update with the output of the command. This variable will be
+     * available to all remaining actions and components in the package.
+     */
+    setVariable?: string;
+}
+
+/**
+ * Default configuration for all actions in this set
+ */
+export interface ZarfComponentActionDefaults {
+    /**
+     * Working directory for commands (default CWD)
+     */
+    dir?: string;
+    /**
+     * Additional environment variables for commands
+     */
+    env?: string[];
+    /**
+     * Retry commands given number of times if they fail (default 0)
+     */
+    maxRetries?: number;
+    /**
+     * Default timeout in seconds for commands (default to 0
+     */
+    maxTotalSeconds?: number;
+    /**
+     * Hide the output of commands during execution (default false)
+     */
+    mute?: boolean;
 }
 
 export interface ZarfChart {
@@ -438,9 +550,10 @@ export enum LocalOS {
 }
 
 /**
- * Custom commands to run before or after package deployment
+ * (Deprecated--use actions instead) Custom commands to run before or after package
+ * deployment
  */
-export interface ZarfComponentScripts {
+export interface DeprecatedZarfComponentScripts {
     /**
      * Scripts to run after the component successfully deploys
      */
@@ -900,12 +1013,14 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "migrations", js: "migrations", typ: a("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfComponent": o([
+        { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
         { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
@@ -920,7 +1035,35 @@ const typeMap: any = {
         { json: "only", js: "only", typ: u(undefined, r("ZarfComponentOnlyTarget")) },
         { json: "repos", js: "repos", typ: u(undefined, a("")) },
         { json: "required", js: "required", typ: u(undefined, true) },
-        { json: "scripts", js: "scripts", typ: u(undefined, r("ZarfComponentScripts")) },
+        { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },
+    ], false),
+    "ZarfComponentActions": o([
+        { json: "onCreate", js: "onCreate", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "onDeploy", js: "onDeploy", typ: u(undefined, r("ZarfComponentActionSet")) },
+        { json: "onRemove", js: "onRemove", typ: u(undefined, r("ZarfComponentActionSet")) },
+    ], false),
+    "ZarfComponentActionSet": o([
+        { json: "after", js: "after", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "before", js: "before", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "defaults", js: "defaults", typ: u(undefined, r("ZarfComponentActionDefaults")) },
+        { json: "onFailure", js: "onFailure", typ: u(undefined, a(r("ZarfComponentAction"))) },
+        { json: "onSuccess", js: "onSuccess", typ: u(undefined, a(r("ZarfComponentAction"))) },
+    ], false),
+    "ZarfComponentAction": o([
+        { json: "cmd", js: "cmd", typ: u(undefined, "") },
+        { json: "dir", js: "dir", typ: u(undefined, "") },
+        { json: "env", js: "env", typ: u(undefined, a("")) },
+        { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
+        { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
+        { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+    ], false),
+    "ZarfComponentActionDefaults": o([
+        { json: "dir", js: "dir", typ: u(undefined, "") },
+        { json: "env", js: "env", typ: u(undefined, a("")) },
+        { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
+        { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
+        { json: "mute", js: "mute", typ: u(undefined, true) },
     ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
@@ -971,7 +1114,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: u(undefined, r("Architecture")) },
         { json: "distros", js: "distros", typ: u(undefined, a("")) },
     ], false),
-    "ZarfComponentScripts": o([
+    "DeprecatedZarfComponentScripts": o([
         { json: "after", js: "after", typ: u(undefined, a("")) },
         { json: "before", js: "before", typ: u(undefined, a("")) },
         { json: "prepare", js: "prepare", typ: u(undefined, a("")) },

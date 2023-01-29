@@ -22,7 +22,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/dos-games", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
@@ -58,9 +58,9 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	// Test that the init package generates the SBOMs we expect (images + component files)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-gitea_gitea_1.17.4.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-gitea_gitea_1.18.3.html"))
 	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "gitea_gitea_1.17.4.json"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "gitea_gitea_1.18.3.json"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.NoError(t, err)
