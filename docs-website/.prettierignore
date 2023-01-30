@@ -1,8 +1,0 @@
-public
-static
-.cache
-.history
-dist
-coverage
-docs/app
-__mocks__
