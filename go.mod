@@ -36,6 +36,12 @@ require (
 )
 
 require (
+	github.com/fluxcd/helm-controller/api v0.28.1
+	github.com/fluxcd/source-controller/api v0.33.0
+	github.com/xanzy/go-gitlab v0.73.1
+)
+
+require (
 	atomicgo.dev/cursor v0.1.1 // indirect
 	atomicgo.dev/keyboard v0.2.8 // indirect
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
@@ -146,6 +152,9 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/facebookincubator/nvdtools v0.1.4 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
+	github.com/fluxcd/pkg/apis/acl v0.1.0 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v0.7.0 // indirect
+	github.com/fluxcd/pkg/apis/meta v0.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fullstorydev/grpcurl v1.8.7 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
@@ -323,7 +332,6 @@ require (
 	github.com/wagoodman/go-partybus v0.0.0-20210627031916-db1f5573bbc5 // indirect
 	github.com/wagoodman/go-progress v0.0.0-20200731105512-1020f39e6240 // indirect
 	github.com/wagoodman/jotframe v0.0.0-20211129225309-56b0d0a4aebb // indirect
-	github.com/xanzy/go-gitlab v0.73.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -383,10 +391,10 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.25.3 // indirect
-	k8s.io/apiserver v0.25.3 // indirect
+	k8s.io/apiextensions-apiserver v0.25.4 // indirect
+	k8s.io/apiserver v0.25.4 // indirect
 	k8s.io/cli-runtime v0.25.3 // indirect
-	k8s.io/component-base v0.25.3 // indirect
+	k8s.io/component-base v0.25.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/kubectl v0.25.3 // indirect
 	k8s.io/metrics v0.25.3 // indirect
@@ -401,7 +409,8 @@ require (
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 	oras.land/oras-go v1.2.0 // indirect
-	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
+	sigs.k8s.io/controller-runtime v0.13.1 // indirect
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/release-utils v0.7.3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )

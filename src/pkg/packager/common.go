@@ -117,11 +117,15 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
 	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
 
 	basePath := filepath.Join(p.tmp.Components, component.Name)
-	err = utils.CreateDirectory(basePath, 0700)
+
+	if _, err = os.Stat(basePath); os.IsNotExist(err) {
+		// basePath does not exist
+		err = utils.CreateDirectory(basePath, 0700)
+	}
 
 	paths = types.ComponentPaths{
 		Base:           basePath,

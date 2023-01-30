@@ -4,7 +4,7 @@ kind: ClusterConfig
 
 metadata:
   name: stack-demo
-  region: us-east-1
+  region: us-west-2
 
 managedNodeGroups:
   - name: ng-1

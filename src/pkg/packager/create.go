@@ -62,11 +62,15 @@ func (p *Packager) Create(baseDir string) error {
 	// If the component has a BigBang entry then mutate the component to be a BigBang component.
 	// Additionally if the BigBang entry requires flux then save the indexes of where to insert flux.
 	for i, baseComponent := range p.cfg.Pkg.Components {
+		componentPath, err := p.createOrGetComponentPaths(baseComponent)
+		if err != nil {
+			return err
+		}
 		if baseComponent.BigBang.Version != "" {
 			if !baseComponent.BigBang.SkipFlux {
 				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
 			}
-			mutatedComponent, err := bigbang.MutateBigbangComponent(baseComponent)
+			mutatedComponent, err := bigbang.MutateBigbangComponent(componentPath, baseComponent)
 			if err != nil {
 				return err
 			}
@@ -78,7 +82,7 @@ func (p *Packager) Create(baseDir string) error {
 		// Get index of where to insert keeping in mind how many times we've inserted into the slice.
 		computedIndex := i + componentIndex
 		bbComponent := p.cfg.Pkg.Components[computedIndex]
-		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent, i + 1)
+		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent, i+1)
 		if err != nil {
 			return fmt.Errorf("unable to create flux component: %w", err)
 		}
@@ -252,10 +256,9 @@ func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Im
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	// Create the component directory.
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create component paths: %w", err)
+		return nil, fmt.Errorf("unable to create the component paths: %w", err)
 	}
 
 	// Create an struct to hold the SBOM information for this component

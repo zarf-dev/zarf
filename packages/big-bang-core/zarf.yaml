@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
   description: "Deploy Big Bang Core"
-  version: 1.50.0
+  version: 1.52.0
   url: https://p1.dso.mil/products/big-bang
   image: https://p1.dso.mil/img/Big_Bang_Color_Logo_White_text.de14c793.webp
   # Big Bang / Iron Bank are only amd64
@@ -18,9 +18,11 @@ components:
   - name: bigbang
     required: true
     bigbang:
-      version: 1.50.0
+      version: 1.52.0
       skipFlux: false
       valuesFrom:
       - values.minimal.yaml
+      - ingress-certs.yaml
+      - loki.yaml
       # - values.gatekeeper.yaml
       # - values.kyverno.yaml

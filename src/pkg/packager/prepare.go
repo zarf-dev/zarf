@@ -92,7 +92,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath, err := p.createComponentPaths(component)
+		componentPath, err := p.createOrGetComponentPaths(component)
 		if err != nil {
 			return fmt.Errorf("unable to create component paths: %w", err)
 		}

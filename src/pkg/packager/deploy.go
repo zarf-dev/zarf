@@ -173,7 +173,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return charts, fmt.Errorf("unable to create the component paths: %w", err)
 	}
@@ -439,6 +439,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
+
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)

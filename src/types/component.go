@@ -70,19 +70,19 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source      string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
-	Shasum      string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
-	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
-	Executable  bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
-	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
+	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
+	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
+	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
+	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
 // ZarfBigBang defines a file to deploy.
 type ZarfBigBang struct {
-	Version    string    `json:"version" jsonschema:"description=The version of Big Bang you'd like to use"`
-	Repo       string    `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
-	ValuesFrom []string  `json:"valuesFrom,omitempty" jsonschema:"description=list of values files to pass to BigBang; these will be merged together"`
-	SkipFlux   bool      `json:"skipFlux,omitempty" jsonschema:"description=Should we skip deploying flux? Defaults to false"`
+	Version    string   `json:"version" jsonschema:"description=The version of Big Bang you'd like to use"`
+	Repo       string   `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
+	ValuesFrom []string `json:"valuesFrom,omitempty" jsonschema:"description=list of values files to pass to BigBang; these will be merged together"`
+	SkipFlux   bool     `json:"skipFlux,omitempty" jsonschema:"description=Should we skip deploying flux? Defaults to false"`
 }
 
 // ZarfChart defines a helm chart to be deployed.

@@ -1,10 +1,10 @@
 domain: bigbang.dev
 
 istio:
-  enabled: false
+  enabled: true
 
 istiooperator:
-  enabled: false
+  enabled: true
 
 gatekeeper:
   enabled: false
