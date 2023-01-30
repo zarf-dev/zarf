@@ -17,6 +17,5 @@ ignore:
   # From yargs - only used through quicktype as a dev dependency
   - vulnerability: GHSA-p9pc-299p-vxgp
 
-  # Chill grype--this is only used on a static docs site
-  - vulnerability: GHSA-w5p7-h5w8-2hfq
-  - vulnerability: CVE-2020-7753
+  # Grype being stupid again, https://nvd.nist.gov/vuln/detail/CVE-2018-25076 is a php vulnerability 🤦
+  - vulnerability: CVE-2018-25076
