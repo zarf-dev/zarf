@@ -23,7 +23,7 @@ import (
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
 func ProxyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := setReqURL(r)
+		err := proxyRequestTransform(r)
 		if err != nil {
 			message.Debugf("%#v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -31,12 +31,12 @@ func ProxyHandler() http.HandlerFunc {
 			return
 		}
 
-		proxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}, ModifyResponse: proxyResponse}
+		proxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}, ModifyResponse: proxyResponseTransform}
 		proxy.ServeHTTP(w, r)
 	}
 }
 
-func setReqURL(r *http.Request) error {
+func proxyRequestTransform(r *http.Request) error {
 	message.Debugf("Before Req %#v", r)
 	message.Debugf("Before Req URL %#v", r.URL)
 
@@ -105,7 +105,7 @@ func setReqURL(r *http.Request) error {
 	return nil
 }
 
-func proxyResponse(resp *http.Response) error {
+func proxyResponseTransform(resp *http.Response) error {
 	message.Debugf("Before Resp %#v", resp)
 
 	// Handle redirection codes (3xx) by adding a marker to let Zarf know this has been redirected
@@ -189,5 +189,5 @@ func isPipUserAgent(userAgent string) bool {
 }
 
 func isNpmUserAgent(userAgent string) bool {
-	return strings.HasPrefix(userAgent, "npm") || strings.HasPrefix(userAgent, "yarn")
+	return strings.HasPrefix(userAgent, "npm") || strings.HasPrefix(userAgent, "pnpm") || strings.HasPrefix(userAgent, "yarn")
 }
