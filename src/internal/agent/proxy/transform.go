@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package proxy provides helper functions for the agent proxy
 package proxy
 
 import (
@@ -26,26 +30,26 @@ func NoTransformTarget(address string, path string) (*url.URL, error) {
 }
 
 // NpmTransformURL finds the npm API path on a given URL and transforms that to align with the offline registry.
-func NpmTransformURL(baseURL string, reqURL string, username string) (*url.URL, error) {
+func NpmTransformURL(baseURL string, reqURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/RRyazc/3
 	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
 	npmURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)` +
 		`(?P<npmPath>(\/(@[\w\.\-\~]+(\/|%2[fF]))?[\w\.\-\~]+(\/-\/([\w\.\-\~]+\/)?[\w\.\-\~]+\.[\w]+)?(\/-rev\/.+)?)|(\/-\/(npm|v1|user|package)\/.+))$`)
 
-	return transformRegistryPath(baseURL, reqURL, username, npmURLRegex, "npmPath", "npm")
+	return transformRegistryPath(baseURL, reqURL, npmURLRegex, "npmPath", "npm")
 }
 
 // PipTransformURL finds the pip API path on a given URL and transforms that to align with the offline registry.
-func PipTransformURL(baseURL string, reqURL string, username string) (*url.URL, error) {
+func PipTransformURL(baseURL string, reqURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/lreZiD/1
 	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
 	pipURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)(?P<pipPath>(\/(simple|files\/)[\/\w\-\.\?\=&%#]*?))?$`)
 
-	return transformRegistryPath(baseURL, reqURL, username, pipURLRegex, "pipPath", "pypi")
+	return transformRegistryPath(baseURL, reqURL, pipURLRegex, "pipPath", "pypi")
 }
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
-func GenTransformURL(packagesBaseURL string, reqURL string, username string) (*url.URL, error) {
+func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/qcg6Gr/2
 	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.%]+?\/[\w\-\.%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.%]+?)?(?P<package>\/[\w\-\.\?\=&%#]+?)$`)
 
@@ -79,9 +83,9 @@ func GenTransformURL(packagesBaseURL string, reqURL string, username string) (*u
 	return url.Parse(transformedURL)
 }
 
-// transformRegistryPath transforms a given request path using a new base URL, username and regex.
+// transformRegistryPath transforms a given request path using a new base URL and regex.
 // - pathGroup specifies the named group for the registry's URL path inside the regex (i.e. pipPath) and registryType specifies the registry type (i.e. pypi).
-func transformRegistryPath(packagesBaseURL string, reqURL string, username string, regex *regexp.Regexp, pathGroup string, registryType string) (*url.URL, error) {
+func transformRegistryPath(packagesBaseURL string, reqURL string, regex *regexp.Regexp, pathGroup string, registryType string) (*url.URL, error) {
 	matches := regex.FindStringSubmatch(reqURL)
 	idx := regex.SubexpIndex
 

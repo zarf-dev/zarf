@@ -20,7 +20,7 @@ import (
 
 // CreateTokenResponse is the response given from creating a token in Gitea
 type CreateTokenResponse struct {
-	Id             int64  `json:"id"`
+	ID             int64  `json:"id"`
 	Name           string `json:"name"`
 	Sha1           string `json:"sha1"`
 	TokenLastEight string `json:"token_last_eight"`

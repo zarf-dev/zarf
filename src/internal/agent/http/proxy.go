@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package http provides a http server for the webhook and proxy.
 package http
 
 import (
@@ -80,11 +84,11 @@ func setReqURL(r *http.Request) error {
 
 			targetURL, err = url.Parse(transformedURL)
 		case isPipUserAgent(r.UserAgent()):
-			targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+			targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		case isNpmUserAgent(r.UserAgent()):
-			targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+			targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		default:
-			targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+			targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		}
 	}
 
