@@ -66,9 +66,24 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		message.Debug("Repo already cloned, fetching upstream changes...")
+		message.Debug("Repo already cloned, pulling any upstream changes...")
 
-		err = g.fetch(gitCachePath)
+		gitCred := utils.FindAuthForHost(gitURL)
+		pullOptions := &git.PullOptions{
+			RemoteName: onlineRemoteName,
+			Auth:       &gitCred.Auth,
+		}
+
+		worktree, err := repo.Worktree()
+		if err != nil {
+			message.Debugf("unable to get the worktree for the repo: %s", gitURL)
+			return err
+		}
+		err = worktree.Pull(pullOptions)
+		if err != nil {
+			message.Warnf("Unable to pull the repo: %s", gitURL)
+			return err
+		}
 
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
