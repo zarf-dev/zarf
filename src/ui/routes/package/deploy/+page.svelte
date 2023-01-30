@@ -11,21 +11,8 @@
 
 	const pkgPath = $page.url.searchParams.get('path');
 
-	const loadInitPkg = async () => {
-		const res = await Packages.findInit();
-		if (Array.isArray(res)) {
-			await Packages.read(res[0]).then(pkgStore.set);
-		} else {
-			throw new Error('No init package found');
-		}
-	};
-
 	const loadPkg = async (path: string) => {
-		if (path === 'init') {
-			await loadInitPkg();
-		} else {
-			await Packages.read(pkgPath).then(pkgStore.set);
-		}
+		await Packages.read(path).then(pkgStore.set);
 	};
 </script>
 
