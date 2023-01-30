@@ -60,17 +60,45 @@ export interface ZarfInitOptions {
      */
     applianceMode: boolean;
     /**
+     * Information about the artifact registry Zarf is going to be using
+     */
+    artifactServer: ArtifactServerInfo;
+    /**
      * Information about the repository Zarf is going to be using
      */
     gitServer: GitServerInfo;
     /**
-     * Information about the registry Zarf is going to be using
+     * Information about the container registry Zarf is going to be using
      */
     registryInfo: RegistryInfo;
     /**
      * StorageClass of the k8s cluster Zarf is initializing
      */
     storageClass: string;
+}
+
+/**
+ * Information about the artifact registry Zarf is going to be using
+ *
+ * Information about the artifact registry Zarf is configured to use
+ */
+export interface ArtifactServerInfo {
+    /**
+     * URL address of the artifact registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a artifact registry that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with push access to the artifact registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the artifact registry
+     */
+    pushUsername: string;
 }
 
 /**
@@ -108,9 +136,9 @@ export interface GitServerInfo {
 }
 
 /**
- * Information about the registry Zarf is going to be using
+ * Information about the container registry Zarf is going to be using
  *
- * Information about the registry Zarf is configured to use
+ * Information about the container registry Zarf is configured to use
  */
 export interface RegistryInfo {
     /**
@@ -981,9 +1009,16 @@ const typeMap: any = {
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
+    ], false),
+    "ArtifactServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
     ], false),
     "GitServerInfo": o([
         { json: "address", js: "address", typ: "" },
