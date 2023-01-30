@@ -1,21 +1,21 @@
-# zarf tools sbom version
+## zarf tools sbom version
 
 show the version
 
-``` bash
+```
 zarf tools sbom version [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help            help for version
   -o, --output string   format to show version information (available=[text, json]) (default "text")
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -c, --config string         application config file
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -27,6 +27,7 @@ zarf tools sbom version [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md) - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
+

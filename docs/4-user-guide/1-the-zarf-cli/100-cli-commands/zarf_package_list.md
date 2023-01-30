@@ -1,20 +1,20 @@
-# zarf package list
+## zarf package list
 
 List out all of the packages that have been deployed to the cluster
 
-``` bash
+```
 zarf package list [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for list
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,6 +23,7 @@ zarf package list [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf package](zarf_package.md) - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
+

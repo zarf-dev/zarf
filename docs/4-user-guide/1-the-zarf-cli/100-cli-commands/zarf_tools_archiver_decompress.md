@@ -1,20 +1,20 @@
-# zarf tools archiver decompress
+## zarf tools archiver decompress
 
-Decompress an archive or Zarf package based on the source file extension.
+Decompress an archive or Zarf package based off of the source file extension.
 
-``` bash
+```
 zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for decompress
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,6 +23,7 @@ zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf tools archiver](zarf_tools_archiver.md) - Compress/Decompress generic archives, including Zarf packages.
+* [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zarf packages.
+

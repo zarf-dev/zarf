@@ -1,18 +1,19 @@
-# zarf
+## zarf
 
 DevSecOps for Airgap
 
-## Synopsis
+### Synopsis
 
-Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
+Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads
+using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
-``` bash
+```
 zarf [COMMAND] [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -h, --help                  help for zarf
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -22,14 +23,14 @@ zarf [COMMAND] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-- [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
-- [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
-- [zarf destroy](zarf_destroy.md)	 - Tear it all down, we'll miss you Zarf...
-- [zarf init](zarf_init.md)	 - Prepares a k8s cluster for the deployment of Zarf packages
-- [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-- [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
-- [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-- [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
+* [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
+* [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
+* [zarf destroy](zarf_destroy.md)	 - Tear it all down, we'll miss you Zarf...
+* [zarf init](zarf_init.md)	 - Prepares a k8s cluster for the deployment of Zarf packages
+* [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
+* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
+* [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
 

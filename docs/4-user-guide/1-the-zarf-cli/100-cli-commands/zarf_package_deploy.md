@@ -1,18 +1,18 @@
-# zarf package deploy
+## zarf package deploy
 
 Use to deploy a Zarf package from a local file or URL (runs offline)
 
-## Synopsis
+### Synopsis
 
 Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.
 
-``` bash
+```
 zarf package deploy [PACKAGE] [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
       --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm              Confirm package deployment without prompting
   -h, --help                 help for deploy
@@ -22,9 +22,9 @@ zarf package deploy [PACKAGE] [flags]
       --shasum --insecure    Shasum of the package to deploy. Required if deploying a remote package and --insecure is not provided
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -33,6 +33,7 @@ zarf package deploy [PACKAGE] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf package](zarf_package.md) - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
+

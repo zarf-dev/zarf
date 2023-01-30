@@ -1,20 +1,20 @@
-# zarf tools registry copy
+## zarf tools registry copy
 
 Efficiently copy a remote image from src to dst while retaining the digest value
 
-``` bash
+```
 zarf tools registry copy SRC DST [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for copy
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,6 +23,7 @@ zarf tools registry copy SRC DST [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf tools registry](zarf_tools_registry.md) - Tools for working with container registries using `go-containertools`.
+* [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
+

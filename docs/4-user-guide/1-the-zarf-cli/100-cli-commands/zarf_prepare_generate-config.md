@@ -1,29 +1,29 @@
-# zarf prepare generate-config
+## zarf prepare generate-config
 
 Generates a config file for Zarf
 
-## Synopsis
+### Synopsis
 
 Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.
 
-The extension will determine the format of the config file, e.g. `env-1.yaml`, `env-2.json`, `env-3.toml` etc.
-Accepted extensions are `json`, `toml`, `yaml`.
+The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. 
+Accepted extensions are json, toml, yaml.
 
-NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as `zarf-config.toml`.
+NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml.
 
-``` bash
+```
 zarf prepare generate-config [FILENAME] [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for generate-config
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -32,6 +32,7 @@ zarf prepare generate-config [FILENAME] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf prepare](zarf_prepare.md) - Tools to help prepare assets for packaging
+* [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
+

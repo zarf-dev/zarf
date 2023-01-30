@@ -1,24 +1,24 @@
-# zarf version
+## zarf version
 
 SBOM tools provided by Anchore Syft
 
-## Synopsis
+### Synopsis
 
 Displays the version of the Zarf release that the Zarf binary was built from.
 
-``` bash
+```
 zarf version [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for version
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -27,6 +27,7 @@ zarf version [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf](zarf.md) - DevSecOps for Airgap
+* [zarf](zarf.md)	 - DevSecOps for Airgap
+

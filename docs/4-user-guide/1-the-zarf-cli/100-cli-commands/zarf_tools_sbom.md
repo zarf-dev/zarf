@@ -1,18 +1,18 @@
-# zarf tools sbom
+## zarf tools sbom
 
 Generates a Software Bill of Materials (SBOM) for the given package
 
-## Synopsis
+### Synopsis
 
 Generate a packaged-based Software Bill Of Materials (SBOM) from container images and filesystems
 
-``` bash
+```
 zarf tools sbom [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
       --catalogers stringArray   enable one or more package catalogers
   -c, --config string            application config file
       --exclude stringArray      exclude paths from being scanned using a glob expression
@@ -27,9 +27,9 @@ zarf tools sbom [flags]
   -v, --verbose count            increase verbosity (-v = info, -vv = debug)
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -38,11 +38,12 @@ zarf tools sbom [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf tools](zarf_tools.md) - Collection of additional tools to make airgap easier
-* [zarf tools sbom attest](zarf_tools_sbom_attest.md) - Generate an SBOM as an attestation for the given [SOURCE] container image
-* [zarf tools sbom convert](zarf_tools_sbom_convert.md) - Convert between SBOM formats
-* [zarf tools sbom login](zarf_tools_sbom_login.md) - Login to a registry
-* [zarf tools sbom packages](zarf_tools_sbom_packages.md) - Generate a package SBOM
-* [zarf tools sbom version](zarf_tools_sbom_version.md) - show the version
+* [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
+* [zarf tools sbom attest](zarf_tools_sbom_attest.md)	 - Generate an SBOM as an attestation for the given [SOURCE] container image
+* [zarf tools sbom convert](zarf_tools_sbom_convert.md)	 - Convert between SBOM formats
+* [zarf tools sbom login](zarf_tools_sbom_login.md)	 - Log in to a registry
+* [zarf tools sbom packages](zarf_tools_sbom_packages.md)	 - Generate a package SBOM
+* [zarf tools sbom version](zarf_tools_sbom_version.md)	 - show the version
+

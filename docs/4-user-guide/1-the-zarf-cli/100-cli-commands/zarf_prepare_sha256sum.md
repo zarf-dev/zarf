@@ -1,20 +1,20 @@
-# zarf prepare sha256sum
+## zarf prepare sha256sum
 
 Generate a SHA256SUM for the given file
 
-``` bash
+```
 zarf prepare sha256sum [FILE|URL] [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for sha256sum
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,6 +23,7 @@ zarf prepare sha256sum [FILE|URL] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf prepare](zarf_prepare.md) - Tools to help prepare assets for packaging
+* [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
+

@@ -1,18 +1,18 @@
-# zarf tools sbom convert
+## zarf tools sbom convert
 
 Convert between SBOM formats
 
-## Synopsis
+### Synopsis
 
-[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX, and Syft's format. For more info about data loss between formats see <https://github.com/anchore/syft#format-conversion-experimental>
+[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft#format-conversion-experimental
 
-``` bash
+```
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
       --catalogers stringArray   enable one or more package catalogers
       --exclude stringArray      exclude paths from being scanned using a glob expression
       --file string              file to write the default report output to (default is STDOUT)
@@ -24,9 +24,9 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
   -t, --template string          specify the path to a Go template file
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -c, --config string         application config file
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -38,6 +38,7 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf tools sbom](zarf_tools_sbom.md) - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
+

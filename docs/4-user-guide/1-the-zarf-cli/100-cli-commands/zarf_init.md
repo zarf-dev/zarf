@@ -1,43 +1,44 @@
-# zarf init
+## zarf init
 
 Prepares a k8s cluster for the deployment of Zarf packages
 
-## Synopsis
+### Synopsis
 
-Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the `zarf` namespace to support future application deployments.
+Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments. 
 If you do not have a k8s cluster already configured, this command will give you the ability to install a cluster locally.
 
-This command looks for a zarf-init package in the local directory that the command was executed from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of the current directory, Zarf will failover and attempt to find a zarf-init package in the directory where the Zarf binary is located.
+This command looks for a zarf-init package in the local directory that the command was executed from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of the current directory, Zarf will failover and attempt to find a zarf-init package in the directory that the Zarf binary is located in.
 
-``` bash
+
+
+Example Usage:
+# Initializing without any optional components:
+zarf init
+
+# Initializing w/ Zarfs internal git server:
+zarf init --components=git-server
+
+# Initializing w/ Zarfs internal git server and PLG stack:
+zarf init --components=git-server,logging
+
+# Initializing w/ an internal registry but with a different nodeport:
+zarf init --nodeport=30333
+
+# Initializing w/ an external registry:
+zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+
+# Initializing w/ an external git server:
+zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+
+
+
+```
 zarf init [flags]
 ```
 
-Example Usage:
+### Options
 
-``` bash
-## Initializing without any optional components:
-zarf init
-
-## Initializing w/ Zarfs internal git server:
-zarf init --components=git-server
-
-## Initializing w/ Zarfs internal git server and PLG stack:
-zarf init --components=git-server,logging
-
-## Initializing w/ an internal registry but with a different nodeport:
-zarf init --nodeport=30333
-
-## Initializing w/ an external registry:
-zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
-
-## Initializing w/ an external git server:
-zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 ```
-
-## Options
-
-``` bash
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
@@ -57,9 +58,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
       --storage-class string            Specify the storage class to use for the registry.  E.g. --storage-class=standard
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -68,6 +69,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-- [zarf](zarf.md) - DevSecOps for Airgap
+* [zarf](zarf.md)	 - DevSecOps for Airgap
+

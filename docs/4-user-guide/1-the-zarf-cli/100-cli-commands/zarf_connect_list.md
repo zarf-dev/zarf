@@ -1,20 +1,20 @@
-# zarf connect list
+## zarf connect list
 
 List all available connection shortcuts.
 
-``` bash
+```
 zarf connect list [flags]
 ```
 
-## Options
+### Options
 
-``` bash
+```
   -h, --help   help for list
 ```
 
-## Options inherited from parent commands
+### Options inherited from parent commands
 
-``` bash
+```
   -a, --architecture string   Architecture for OCI images
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
@@ -23,6 +23,7 @@ zarf connect list [flags]
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
-## SEE ALSO
+### SEE ALSO
 
-* [zarf connect](zarf_connect.md) - Access services or pods deployed in the cluster.
+* [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
+
