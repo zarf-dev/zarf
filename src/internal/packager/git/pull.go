@@ -81,15 +81,10 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			return err
 		}
 		err = worktree.Pull(pullOptions)
-		if err != nil {
-			message.Warnf("Unable to pull the repo: %s", gitURL)
-			return err
-		}
-
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
 		} else if err != nil {
-			g.Spinner.Warnf("Not a valid git repo or unable to fetch: %s", gitURL)
+			g.Spinner.Warnf("Not a valid git repo or unable to pull: %s", gitURL)
 			return err
 		}
 	} else if err != nil {
