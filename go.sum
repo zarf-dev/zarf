@@ -307,8 +307,8 @@ github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501 h1:AV7qjwM
 github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501/go.mod h1:Blo6OgJNiYF41ufcgHKkbCKF2MDOMlrqhXv/ij6ocR4=
 github.com/anchore/stereoscope v0.0.0-20221208011002-c5ff155d72f1 h1:DXUAm/H9chRTEzMfkFyduBIcCiJyFXhCmv3zH3C0HGs=
 github.com/anchore/stereoscope v0.0.0-20221208011002-c5ff155d72f1/go.mod h1:/zjVnu2Jdl7xQCUtASegzeEg+IHKrM7SyMqdao3e+Nc=
-github.com/anchore/syft v0.68.1 h1:lXRSy51cCwOhlXyFYJppiHuOx+Aj59l9vIr9QwRXwXQ=
-github.com/anchore/syft v0.68.1/go.mod h1:8V+ty9yieYYjEL3wQkcQC1EfEy+yM+VXLnkqpXie1FQ=
+github.com/anchore/syft v0.69.0 h1:6Zbg9iUdNDv/tL2jUehqIm9xvGwCUS24RjWKZGQ/m48=
+github.com/anchore/syft v0.69.0/go.mod h1:8V+ty9yieYYjEL3wQkcQC1EfEy+yM+VXLnkqpXie1FQ=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
@@ -828,8 +828,8 @@ github.com/go-chi/chi v4.1.2+incompatible h1:fGFk2Gmi/YKXk0OmGfBh0WgmN3XB8lVnEyN
 github.com/go-chi/chi v4.1.2+incompatible/go.mod h1:eB3wogJHnLi3x/kFX2A+IbTBlXxmMeXJVKy9tTv1XzQ=
 github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
 github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
-github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
-github.com/go-errors/errors v1.4.2/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
+github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6w=
+github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
 github.com/go-git/gcfg v1.5.0 h1:Q5ViNfGF8zFgyJWPqYwA7qGFoMTEiBmdlkcfRmpIMa4=
 github.com/go-git/gcfg v1.5.0/go.mod h1:5m20vg6GwYabIxaOonVkTdrILxQMpEShl1xiMF4ua+E=
 github.com/go-git/go-billy/v5 v5.3.1/go.mod h1:pmpqyWchKfYfrkb/UVH4otLvyi/5gJlGI4Hb3ZqZ3W0=

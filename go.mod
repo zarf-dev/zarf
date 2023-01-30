@@ -154,7 +154,7 @@ require (
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.5.4 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
-	github.com/go-errors/errors v1.4.2 // indirect
+	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.4.0 // indirect
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
