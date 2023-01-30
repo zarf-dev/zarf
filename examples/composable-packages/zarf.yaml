@@ -8,6 +8,6 @@ components:
     required: true
     description: "Example of a composed package with a unique description for this component"
     import:
-      path: ../game
+      path: ../dos-games
       # Example optional custom name to point to in the imported package
       name: baseline

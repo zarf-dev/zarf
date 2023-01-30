@@ -1,19 +1,19 @@
-## zarf tools get-git-password
+## zarf tools get-creds
 
-Returns the push user's password for the Git server
+Display a Table of credentials for deployed components. Pass a component name to get a single credential.
 
 ### Synopsis
 
-Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace
+Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' 
 
 ```
-zarf tools get-git-password [flags]
+zarf tools get-creds [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for get-git-password
+  -h, --help   help for get-creds
 ```
 
 ### Options inherited from parent commands

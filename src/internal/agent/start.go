@@ -37,7 +37,7 @@ func StartWebhook() {
 		}
 	}()
 
-	message.Info(lang.AgentErrStart)
+	message.Infof(lang.AgentInfoPort, httpPort)
 
 	// listen shutdown signal
 	signalChan := make(chan os.Signal, 1)

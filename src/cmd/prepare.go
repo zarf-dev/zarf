@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -97,6 +98,10 @@ var prepareFindImages = &cobra.Command{
 		if len(args) > 0 {
 			baseDir = args[0]
 		}
+
+		// Ensure uppercase keys from viper
+		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
