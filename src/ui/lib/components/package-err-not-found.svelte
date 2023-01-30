@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { Dialog, Typography, Button } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	export let pkgName: string;
+	export let message: string;
 </script>
 
 <Dialog open clickAway={false}>
@@ -17,7 +17,7 @@
 		</div>
 
 		<Typography variant="body2">The current operation encountered the following error:</Typography>
-		<Typography variant="code"><code>{pkgName}</code></Typography>
+		<Typography variant="code"><code>{message}</code></Typography>
 		<div class="actions">
 			<Button href="/" color="secondary" variant="flat">Return Home</Button>
 		</div>

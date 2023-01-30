@@ -9,62 +9,34 @@
 	import { pkgStore } from '$lib/store';
 	import { PackageErrNotFound, Spinner } from '$lib/components';
 
-	enum LoadingStatus {
-		Loading,
-		Success,
-		Error
-	}
-	let status: LoadingStatus = LoadingStatus.Loading;
-	let errMessage: string = '';
 	const pkgPath = $page.url.searchParams.get('path');
-	let pkgName: string;
 
-	if (pkgPath === null) {
-		errMessage = 'No package path provided';
-		status = LoadingStatus.Error;
-	} else {
-		pkgName = encodeURIComponent(
-			pkgPath
-				?.split('/')
-				.at(-1)
-				?.replaceAll('zarf-package-', '')
-				.replaceAll('.tar', '')
-				.replaceAll('.zst', '') ?? ''
-		);
-
-		if (pkgPath === 'init') {
-			Packages.findInit()
-				.catch(async (err: Error) => {
-					errMessage = err.message;
-					status = LoadingStatus.Error;
-				})
-				.then((res) => {
-					if (Array.isArray(res)) {
-						Packages.read(res[0])
-							.then(pkgStore.set)
-							.then(() => {
-								status = LoadingStatus.Success;
-							});
-					}
-				});
-		} else {
-			Packages.read(pkgPath)
-				.then(pkgStore.set)
-				.then(() => {
-					status = LoadingStatus.Success;
-				})
-				.catch(async (err: Error) => {
-					errMessage = err.message;
-					status = LoadingStatus.Error;
-				});
+	const loadInitPkg = async () => {
+		const res = await Packages.findInit();
+		if (Array.isArray(res)) {
+			await Packages.read(res[0]).then(pkgStore.set);
 		}
-	}
+	};
+
+	const loadPkg = async (path: string) => {
+		if (path === 'init') {
+			await loadInitPkg();
+		} else {
+			await Packages.read(pkgPath).then(pkgStore.set);
+		}
+	};
 </script>
 
-{#if status == LoadingStatus.Loading}
-	<Spinner title="Retrieving package" />
-{:else if status == LoadingStatus.Error}
-	<PackageErrNotFound pkgName={errMessage} />
+{#if pkgPath === null}
+	<PackageErrNotFound message="No package path provided" />
 {:else}
-	<div class="invisible">{goto(`/package/${pkgName}/configure`)}</div>
+	{#await loadPkg(pkgPath)}
+		<Spinner title="Retrieving package" />
+	{:then}
+		<div class="invisible">
+			{goto(`/package/${$pkgStore.zarfPackage.metadata?.name}/configure`)}
+		</div>
+	{:catch err}
+		<PackageErrNotFound message={err.message} />
+	{/await}
 {/if}
