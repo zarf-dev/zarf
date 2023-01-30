@@ -223,8 +223,8 @@ func IsTextFile(path string) (bool, error) {
 
 	// Check if the MIME type indicates that the file is text
 	hasText := strings.HasPrefix(mimeType, "text/")
-	hasJson := strings.Contains(mimeType, "json")
+	hasJSON := strings.Contains(mimeType, "json")
 	hasXML := strings.Contains(mimeType, "xml")
 
-	return hasText || hasJson || hasXML, nil
+	return hasText || hasJSON || hasXML, nil
 }

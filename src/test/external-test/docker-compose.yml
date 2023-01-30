@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  server:
+    image: gitea/gitea:1.18.1
+    container_name: gitea.localhost
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__DISABLE_SSH=true
+      - GITEA__server__OFFLINE_MODE=true
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__repository__ENABLE_PUSH_CREATE_USER=true
+      - GITEA__repository__FORCE_PRIVATE=true
+    restart: always
+    volumes:
+      - ./data/git:/data/git
+      - ./data/gitea:/data/gitea
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+  init:
+    image: gitea/gitea:1.18.1
+    container_name: gitea.init
+    environment:
+      - GITEA_APP_INI=/data/gitea/conf/app.ini
+      - GITEA_CUSTOM=/data/gitea
+      - GITEA_WORK_DIR=/data
+      - GITEA_TEMP=/tmp/gitea
+      - GITEA_ADMIN_USERNAME=git-user
+      - GITEA_ADMIN_PASSWORD=superSecurePassword
+      - GITEA_ADMIN_EMAIL=zarf@localhost
+    user: 1000:1000
+    command: /usr/sbin/configure-gitea.sh
+    volumes:
+      - ./configure-gitea.sh:/usr/sbin/configure-gitea.sh
+      - ./data/gitea:/data/gitea
+    depends_on:
+      - server

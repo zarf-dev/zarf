@@ -48,7 +48,7 @@ func Generate(cfg *types.PackagerConfig) (Values, error) {
 
 	generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 
-	generated.registry = config.GetRegistry(cfg.State)
+	generated.registry = regInfo.Address
 
 	return generated, nil
 }
@@ -63,15 +63,8 @@ func (values Values) GetRegistry() string {
 	return values.registry
 }
 
-// Apply renders the template and writes the result to the given path.
-func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	message.Debugf("template.Apply(%#v, %s)", component, path)
-
-	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
-	if !values.Ready() && !ignoreReady {
-		return fmt.Errorf("template.Apply() called before template.Generate()")
-	}
-
+// GetVariables returns the variables to be used in the template.
+func (values Values) GetVariables(component types.ZarfComponent) (map[string]string, map[string]string) {
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
@@ -138,6 +131,21 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	}
 
 	message.Debugf("templateMap = %#v", templateMap)
+	message.Debugf("deprecations = %#v", deprecations)
+
+	return templateMap, deprecations
+}
+
+// Apply renders the template and writes the result to the given path.
+func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
+	message.Debugf("template.Apply(%#v, %s)", component, path)
+
+	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
+	if !values.Ready() && !ignoreReady {
+		return fmt.Errorf("template.Apply() called before template.Generate()")
+	}
+
+	templateMap, deprecations := values.GetVariables(component)
 	utils.ReplaceTextTemplate(path, templateMap, deprecations)
 
 	return nil

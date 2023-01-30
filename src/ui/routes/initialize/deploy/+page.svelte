@@ -15,7 +15,7 @@
 	import { Packages } from '$lib/api';
 	import { Dialog, Stepper, Typography } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import type { ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
+	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
 
@@ -32,12 +32,22 @@
 		.join(',');
 
 	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
-	let options: ZarfDeployOptions | ZarfInitOptions;
+
+	let options: APIZarfDeployPayload = {
+		deployOpts: {
+			components: requestedComponents,
+			sGetKeyPath: '',
+			packagePath: $pkgStore.path,
+			setVariables: {},
+			insecure: false,
+		  // "as" will cause the obj to satisfy the type
+		  // it is missing "shasum"
+		} as ZarfDeployOptions
+	};
 
 	if (isInitPkg) {
-		options = {
+		options.initOpts = {
 			applianceMode: false,
-			components: requestedComponents,
 			gitServer: {
 				address: '',
 				pushUsername: 'zarf-git-user',
@@ -58,13 +68,6 @@
 				secret: ''
 			}
 		};
-	} else {
-		options = {
-			components: requestedComponents,
-			sGetKeyPath: '',
-			packagePath: $pkgStore.path,
-			setVariables: {}
-		};
 	}
 
 	let successful = false;
@@ -81,7 +84,7 @@
 	}
 
 	onMount(() => {
-		Packages.deploy(options, isInitPkg).then(
+		Packages.deploy(options).then(
 			(value: boolean) => {
 				finishedDeploying = true;
 				successful = value;
@@ -128,7 +131,7 @@
 	<title>Deploy</title>
 </svelte:head>
 <section class="page-header">
-	<Typography variant="h4">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
+	<Typography variant="h5">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" steps={componentSteps} />

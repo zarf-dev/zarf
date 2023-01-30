@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
@@ -45,7 +45,7 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
 	if runtime.GOOS != "windows" {
-		_, _, _ = utils.ExecCommandWithContext(context.TODO(), true, "sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
+		_ = exec.CmdWithPrint("sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
 	} else {
 		t.Log("Skipping kubectl describe nodes on Windows")
 	}
@@ -66,7 +66,7 @@ func (e2e *ZarfE2ETest) teardown(t *testing.T) {
 
 // execZarfCommand executes a Zarf command.
 func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
-	return utils.ExecCommandWithContext(context.TODO(), true, e2e.zarfBinPath, commandString...)
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.zarfBinPath, commandString...)
 }
 
 func (e2e *ZarfE2ETest) cleanFiles(files ...string) {

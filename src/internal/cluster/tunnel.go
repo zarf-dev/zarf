@@ -21,13 +21,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -66,6 +66,13 @@ type Tunnel struct {
 	spinner      *message.Spinner
 }
 
+// ServiceInfo contains information necessary for connecting to a cluster service.
+type ServiceInfo struct {
+	Namespace string
+	Name      string
+	Port      int
+}
+
 // PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
 func (c *Cluster) PrintConnectTable() error {
 	list, err := c.Kube.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
@@ -90,33 +97,72 @@ func (c *Cluster) PrintConnectTable() error {
 	return nil
 }
 
-// IsServiceURL will check if the provided string is a valid serviceURL based on if it properly matches a validating regexp.
-func IsServiceURL(serviceURL string) bool {
-	parsedURL, err := url.Parse(serviceURL)
+// ServiceInfoFromNodePortURL takes a nodePortURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
+// Example nodePortURL: 127.0.0.1:{PORT}.
+func ServiceInfoFromNodePortURL(nodePortURL string) *ServiceInfo {
+	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
+	parsedURL, err := url.Parse(nodePortURL)
 	if err != nil {
-		return false
+		parsedURL, err = url.Parse("scheme://" + nodePortURL)
+		if err != nil {
+			return nil
+		}
 	}
 
-	// Match hostname against local cluster service format
-	pattern := regexp.MustCompile(serviceURLPattern)
-	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
+	// Match hostname against localhost ip/hostnames
+	hostname := parsedURL.Hostname()
+	if hostname != config.IPV4Localhost && hostname != "localhost" {
+		return nil
+	}
 
-	// If incomplete match, return an error
-	return len(matches) == 3
+	// Get the node port from the nodeportURL.
+	nodePort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil {
+		return nil
+	}
+	if nodePort < 30000 || nodePort > 32767 {
+		return nil
+	}
+
+	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	if err != nil {
+		return nil
+	}
+
+	services, err := kube.GetServices("")
+	if err != nil {
+		return nil
+	}
+
+	for _, svc := range services.Items {
+		if svc.Spec.Type == "NodePort" {
+			for _, port := range svc.Spec.Ports {
+				if int(port.NodePort) == nodePort {
+					return &ServiceInfo{
+						Namespace: svc.Namespace,
+						Name:      svc.Name,
+						Port:      int(port.Port),
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
-// NewTunnelFromServiceURL takes a serviceURL and parses it to create a tunnel to the cluster. The string is expected to follow the following format:
+// ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
 // Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}.
-func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
+func ServiceInfoFromServiceURL(serviceURL string) *ServiceInfo {
 	parsedURL, err := url.Parse(serviceURL)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	// Get the remote port from the serviceURL.
 	remotePort, err := strconv.Atoi(parsedURL.Port())
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	// Match hostname against local cluster service format.
@@ -125,14 +171,14 @@ func NewTunnelFromServiceURL(serviceURL string) (*Tunnel, error) {
 
 	// If incomplete match, return an error.
 	if len(matches) != 3 {
-		return nil, lang.ErrNotAServiceURL
+		return nil
 	}
 
-	// Use the matched values to create a new tunnel.
-	name := matches[pattern.SubexpIndex("name")]
-	namespace := matches[pattern.SubexpIndex("namespace")]
-
-	return NewTunnel(namespace, SvcResource, name, 0, remotePort)
+	return &ServiceInfo{
+		Namespace: matches[pattern.SubexpIndex("namespace")],
+		Name:      matches[pattern.SubexpIndex("name")],
+		Port:      remotePort,
+	}
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -233,7 +279,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors.
 		if tunnel.autoOpen {
-			if err := utils.ExecLaunchURL(url); err != nil {
+			if err := exec.LaunchURL(url); err != nil {
 				message.Debug(err)
 			}
 		}
@@ -260,7 +306,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	return nil
 }
 
-// Endpoint returns the tunnel endpoint.
+// Endpoint returns the tunnel ip address and port (i.e. for docker registries)
 func (tunnel *Tunnel) Endpoint() string {
 	message.Debug("tunnel.Endpoint()")
 	return fmt.Sprintf("127.0.0.1:%d", tunnel.localPort)

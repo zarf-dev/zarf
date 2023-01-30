@@ -52,6 +52,11 @@ func (k *K8s) GetService(namespace, serviceName string) (*corev1.Service, error)
 	return k.Clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 }
 
+// GetServices returns a list of services in the provided namespace.  To search all namespaces, pass "" in the namespace arg.
+func (k *K8s) GetServices(namespace string) (*corev1.ServiceList, error) {
+	return k.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
 	// Creat the selector and add the requirement

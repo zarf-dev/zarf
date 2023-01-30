@@ -142,17 +142,19 @@ func (c *Cluster) PostSeedRegistry(tempPath types.TempPaths) error {
 	}
 
 	// Remove the injector service
-	err := c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
-
-	return err
+	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+	// Set default NodePort if none was provided
+	if containerRegistry.NodePort == 0 {
+		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
+	}
+
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
-		containerRegistry.Address = fmt.Sprintf("http://%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+		containerRegistry.Address = fmt.Sprintf("%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag

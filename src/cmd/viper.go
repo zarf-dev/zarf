@@ -85,9 +85,6 @@ func initViper() {
 		v.SetConfigName("zarf-config")
 	}
 
-	v.SetEnvPrefix("zarf")
-	v.AutomaticEnv()
-
 	// E.g. ZARF_LOG_LEVEL=debug
 	v.SetEnvPrefix("zarf")
 	v.AutomaticEnv()
