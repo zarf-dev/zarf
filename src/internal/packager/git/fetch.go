@@ -65,6 +65,7 @@ func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
 		RefSpecs:   refspecs,
+		Tags:       git.NoTags,
 	}
 
 	if gitCred.Auth.Username != "" {
