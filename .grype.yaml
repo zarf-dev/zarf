@@ -16,3 +16,6 @@ ignore:
 
   # From yargs - only used through quicktype as a dev dependency
   - vulnerability: GHSA-p9pc-299p-vxgp
+
+  # Grype being stupid again, https://nvd.nist.gov/vuln/detail/CVE-2018-25076 is a php vulnerability 🤦
+  - vulnerability: CVE-2018-25076
