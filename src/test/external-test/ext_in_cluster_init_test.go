@@ -7,9 +7,7 @@ package external_test
 import (
 	"context"
 	"path"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	test "github.com/defenseunicorns/zarf/src/test/e2e"
@@ -17,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExternalDeploy(t *testing.T) {
+func TestExtInClusterDeploy(t *testing.T) {
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
@@ -52,8 +50,7 @@ func TestExternalDeploy(t *testing.T) {
 		"--git-url=http://gitea-http.git-server.svc.cluster.local:3000",
 		"--registry-push-username=push-user",
 		"--registry-push-password=superSecurePassword",
-		"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
-		"--nodeport=31999",
+		"--registry-url=127.0.0.1:31999",
 		"--confirm"}
 
 	err = exec.CmdWithPrint(zarfBinPath, initArgs...)
@@ -71,31 +68,7 @@ func TestExternalDeploy(t *testing.T) {
 	errorStr := "unable to verify flux deployed the podinfo example"
 	success = verifyKubectlWaitSuccess(t, 2, podinfoWaitCmd, errorStr)
 	assert.True(t, success, errorStr)
-}
 
-func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, waitCmd []string, errorStr string) bool {
-	timeout := time.After(timeoutMinutes * time.Minute)
-	for {
-		// delay check 3 seconds
-		time.Sleep(3 * time.Second)
-		select {
-		// on timeout abort
-		case <-timeout:
-			t.Error(errorStr)
-
-			return false
-
-			// after delay, try running
-		default:
-			// Check that flux deployed the podinfo example
-			kubectlOut, kubectlErr, err := exec.CmdWithContext(context.TODO(), exec.Config{Print: true}, "kubectl", waitCmd...)
-			// Log error
-			if err != nil {
-				t.Logf("Error (%v) when running wait command with stdout of (%s) and stderr of (%s)", err, kubectlOut, kubectlErr)
-			}
-			if strings.Contains(string(kubectlOut), "condition met") {
-				return true
-			}
-		}
-	}
+	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
+	require.NoError(t, err, "unable to teardown zarf")
 }
