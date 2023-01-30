@@ -96,7 +96,7 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
-	ZARF_CONFIG=hack/empty-config.toml go run main.go internal generate-cli-docs
+	docs/gen-cli-docs.sh
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
