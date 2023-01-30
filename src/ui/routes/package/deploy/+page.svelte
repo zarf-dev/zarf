@@ -15,6 +15,8 @@
 		const res = await Packages.findInit();
 		if (Array.isArray(res)) {
 			await Packages.read(res[0]).then(pkgStore.set);
+		} else {
+			throw new Error('No init package found');
 		}
 	};
 
