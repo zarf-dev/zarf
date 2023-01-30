@@ -173,7 +173,7 @@ func (c *Cluster) injectorIsReady(spinner *message.Spinner) bool {
 
 	spinner.Updatef("Testing the injector for seed image availability")
 
-	seedRegistry := fmt.Sprintf("http://%s/v2/library/%s/manifests/%s", tunnel.Endpoint(), config.ZarfSeedImage, config.ZarfSeedTag)
+	seedRegistry := fmt.Sprintf("%s/v2/library/%s/manifests/%s", tunnel.HTTPEndpoint(), config.ZarfSeedImage, config.ZarfSeedTag)
 	if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
 		// Just debug log the output because failures just result in trying the next image
 		message.Debug(resp, err)

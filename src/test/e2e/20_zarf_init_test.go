@@ -28,7 +28,7 @@ func TestZarfInit(t *testing.T) {
 	defer cancel()
 
 	// run `zarf init`
-	_, _, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm")
+	_, _, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
 	require.NoError(t, err)
 
 	// Check that gitea is actually running and healthy
@@ -46,6 +46,11 @@ func TestZarfInit(t *testing.T) {
 	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (promtail)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
+
+	// Check that the registry is running on the correct NodePort
+	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "31337")
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")

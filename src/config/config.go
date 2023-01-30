@@ -52,7 +52,6 @@ const (
 	ZarfSBOMDir       = "zarf-sbom"
 	ZarfPackagePrefix = "zarf-package-"
 
-	ZarfInClusterContainerRegistryURL      = "http://zarf-registry-http.zarf.svc.cluster.local:5000"
 	ZarfInClusterContainerRegistryNodePort = 31999
 
 	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
@@ -163,16 +162,6 @@ func ClearDeployingComponents() {
 // GetValidPackageExtensions returns the valid package extensions.
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
-}
-
-// GetRegistry returns the registry URL based on the Zarf state.
-func GetRegistry(state types.ZarfState) string {
-	// If a node port is populated, then we are using a registry internal to the cluster. Ignore the provided address and use localhost
-	if state.RegistryInfo.NodePort >= 30000 {
-		return fmt.Sprintf("%s:%d", IPV4Localhost, state.RegistryInfo.NodePort)
-	}
-
-	return state.RegistryInfo.Address
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
