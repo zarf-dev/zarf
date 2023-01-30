@@ -207,6 +207,7 @@ const (
 	AgentErrNilReq                 = "malformed admission review: request is nil"
 	AgentErrShutdown               = "unable to properly shutdown the web server"
 	AgentErrStart                  = "Failed to start the web server"
+	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
 // src/internal/packager/validate.

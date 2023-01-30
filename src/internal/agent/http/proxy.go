@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/proxy"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -22,7 +23,7 @@ func ProxyHandler() http.HandlerFunc {
 		if err != nil {
 			message.Debugf("%#v", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%#v", err)))
+			w.Write([]byte(lang.AgentErrUnableTransform))
 			return
 		}
 

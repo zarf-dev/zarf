@@ -145,14 +145,14 @@ func validateInitFlags() error {
 		}
 	}
 
-	//If 'registry-url' is provided, make sure they provided values for the username and password of the push user
+	// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
 	if pkgConfig.InitOpts.RegistryInfo.Address != "" {
 		if pkgConfig.InitOpts.RegistryInfo.PushUsername == "" || pkgConfig.InitOpts.RegistryInfo.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
 		}
 	}
 
-	//If 'package-url' is provided, make sure they provided values for the username and password of the push user
+	// If 'artifact-url' is provided, make sure they provided values for the username and password of the push user
 	if pkgConfig.InitOpts.ArtifactServer.Address != "" {
 		if pkgConfig.InitOpts.ArtifactServer.PushUsername == "" || pkgConfig.InitOpts.ArtifactServer.PushToken == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
