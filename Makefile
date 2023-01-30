@@ -109,10 +109,11 @@ init-package-local-agent:
 	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
 
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
-	$(MAKE) build-cli-linux
-	cp build/zarf build/zarf-linux-amd64
-	cp build/zarf-arm build/zarf-linux-arm64
-	docker build --build-arg TARGETARCH=$(ARCH) --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+	@ if [ "$(ARCH)" = "amd64" ] && [ ! -s ./build/zarf ]; then $(MAKE) build-cli-linux-amd; fi
+	@ if [ "$(ARCH)" = "amd64" ]; then cp build/zarf build/zarf-linux-amd64; fi
+	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
+	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
+	docker buildx build --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -178,10 +179,10 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype --fail-on low
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype --fail-on low
 
 cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
