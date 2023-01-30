@@ -48,7 +48,7 @@ func Generate(cfg *types.PackagerConfig) (Values, error) {
 
 	generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 
-	generated.registry = config.GetRegistry(cfg.State)
+	generated.registry = regInfo.Address
 
 	return generated, nil
 }
