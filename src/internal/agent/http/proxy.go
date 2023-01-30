@@ -49,12 +49,27 @@ func setReqURL(r *http.Request) error {
 
 	var targetURL *url.URL
 
-	// If 'git' is the username use the configured git server, otherwise use the artifact server
-	if isGitUserAgent(r.UserAgent()) {
-		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
-		if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
+	// Setup authentication for each type of service based on User Agent
+	switch {
+	case isGitUserAgent(r.UserAgent()):
+		r.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
+	case isNpmUserAgent(r.UserAgent()):
+		r.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
+	default:
+		r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
+	}
+
+	// Transform the URL; if we see the NoTransform prefix, strip it; otherwise, transform the URL based on User Agent
+	if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
+		switch {
+		case isGitUserAgent(r.UserAgent()):
 			targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, r.URL.Path)
-		} else {
+		default:
+			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
+		}
+	} else {
+		switch {
+		case isGitUserAgent(r.UserAgent()):
 			g := git.New(zarfState.GitServer)
 
 			var transformedURL string
@@ -62,25 +77,14 @@ func setReqURL(r *http.Request) error {
 			if err != nil {
 				return err
 			}
+
 			targetURL, err = url.Parse(transformedURL)
-			r.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
-		}
-	} else {
-		// If we see the NoTransform prefix, just strip it otherwise, transform the URL based on User Agent
-		if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
-			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
-		} else {
-			switch {
-			case isPipUserAgent(r.UserAgent()):
-				targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
-				r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
-			case isNpmUserAgent(r.UserAgent()):
-				targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
-				r.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
-			default:
-				targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
-				r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
-			}
+		case isPipUserAgent(r.UserAgent()):
+			targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+		case isNpmUserAgent(r.UserAgent()):
+			targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
+		default:
+			targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.ArtifactServer.PushUsername)
 		}
 	}
 
