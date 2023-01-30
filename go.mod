@@ -30,7 +30,7 @@ require (
 	k8s.io/client-go v0.26.1
 	k8s.io/klog/v2 v2.90.0
 	sigs.k8s.io/kustomize/api v0.12.1
-	sigs.k8s.io/kustomize/kyaml v0.13.9 // not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
+	sigs.k8s.io/kustomize/kyaml v0.13.10 // not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
 	sigs.k8s.io/yaml v1.3.0
 )
 
