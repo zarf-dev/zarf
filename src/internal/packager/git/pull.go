@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -26,7 +25,8 @@ func (g *Git) DownloadRepoToTemp(gitURL string) string {
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	g.pull(gitURL, path, "")
+
+	err = g.pull(gitURL, path, "")
 	return path
 }
 
@@ -40,11 +40,12 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 
 	path = targetFolder + "/" + repoName
 	g.GitPath = path
-	g.pull(gitURL, path, repoName)
-	return path, nil
+	err = g.pull(gitURL, path, repoName)
+	return path, err
 }
 
-func (g *Git) pull(gitURL, targetFolder string, repoName string) {
+// internal pull function that will clone/pull the latest changes from the git repo
+func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
@@ -57,7 +58,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
-		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
+		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
 	}
 
 	onlyFetchRef := matches[idx("atRef")] != ""
@@ -88,16 +89,18 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
 		} else if err != nil {
-			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
+			g.Spinner.Warnf("Not a valid git repo or unable to fetch: %s", gitURL)
+			return err
 		}
 	} else if err != nil {
-		g.Spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		g.Spinner.Warnf("Not a valid git repo or unable to clone: %s", gitURL)
+		return err
 	}
 
 	if gitCachePath != targetFolder {
 		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
 		if err != nil {
-			message.Fatalf(err, "Unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
+			return fmt.Errorf("unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
 		}
 	}
 
@@ -122,14 +125,14 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()
 
-		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
-
-		if isHash(ref) {
-			g.fetchHash(ref)
-			g.checkoutHashAsBranch(plumbing.NewHash(ref), trunkBranchName)
-		} else {
-			g.fetchTag(ref)
-			g.checkoutTagAsBranch(ref, trunkBranchName)
+		err = g.fetchRef(ref)
+		if err != nil {
+			return fmt.Errorf("not a valid reference or unable to fetch (%s): %#v", ref, err)
 		}
+
+		err = g.checkoutRefAsBranch(ref, trunkBranchName)
+		return err
 	}
+
+	return nil
 }

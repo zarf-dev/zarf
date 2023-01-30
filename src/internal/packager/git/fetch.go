@@ -15,30 +15,37 @@ import (
 	goConfig "github.com/go-git/go-git/v5/config"
 )
 
+// fetchRef performs a `git fetch` of _only_ the provided git reference (tag or hash).
+func (g *Git) fetchRef(ref string) error {
+	var err error
+
+	if IsHash(ref) {
+		err = g.fetchHash(ref)
+	} else {
+		err = g.fetchTag(ref)
+	}
+
+	return err
+}
+
 // fetchTag performs a `git fetch` of _only_ the provided tag.
-func (g *Git) fetchTag(tag string) {
+func (g *Git) fetchTag(tag string) error {
 	message.Debugf("git.fetchTag(%s)", tag)
 
 	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
 
 	err := g.fetch(g.GitPath, refspec)
-
-	if err != nil {
-		message.Fatal(err, "Not a valid tag or unable to fetch")
-	}
+	return err
 }
 
 // fetchHash performs a `git fetch` of _only_ the provided commit hash.
-func (g *Git) fetchHash(hash string) {
+func (g *Git) fetchHash(hash string) error {
 	message.Debugf("git.fetchHash(%s)", hash)
 
 	refspec := goConfig.RefSpec(hash + ":" + hash)
 
 	err := g.fetch(g.GitPath, refspec)
-
-	if err != nil {
-		message.Fatal(err, "Not a valid hash or unable to fetch")
-	}
+	return err
 }
 
 // fetch performs a `git fetch` of _only_ the provided git refspec(s).
