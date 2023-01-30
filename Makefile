@@ -179,10 +179,10 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves: ensure-ui-build-dir
-	go run main.go tools sbom packages . -o json | grype --fail-on low
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype --fail-on low
 
 cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

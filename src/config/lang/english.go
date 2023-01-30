@@ -237,6 +237,5 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound   = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-	ErrNotAServiceURL = errors.New("the provided URL does not match service url format of http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}")
+	ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 )

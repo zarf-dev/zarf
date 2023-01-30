@@ -896,7 +896,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
         return invalidValue(typ, val, key, parent);
     }
     if (typ === false) return invalidValue(typ, val, key, parent);
-    let ref = undefined;
+    let ref: any = undefined;
     while (typeof typ === "object" && typ.ref !== undefined) {
         ref = typ.ref;
         typ = typeMap[typ.ref];
