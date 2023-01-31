@@ -30,10 +30,13 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 			return err
 		}
 		target = cluster.ZarfRegistry
-	} else if cluster.IsServiceURL(i.RegInfo.Address) {
-		// If this is a serviceURL, create a port-forward tunnel to that resource
-		if tunnel, err = cluster.NewTunnelFromServiceURL(i.RegInfo.Address); err != nil {
-			return err
+	} else {
+		svcInfo := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
+		if svcInfo != nil {
+			// If this is a service, create a port-forward tunnel to that resource
+			if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -41,12 +44,14 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		tunnel.Connect(target, false)
 		defer tunnel.Close()
 		registryURL = tunnel.Endpoint()
+	} else {
+		registryURL = i.RegInfo.Address
 	}
 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword)
+	pushOptions := []crane.Option{config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword)}
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
 	for _, src := range i.ImgList {
@@ -65,7 +70,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 			message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineNameCRC)
 
-			if err = crane.Push(img, offlineNameCRC, pushOptions); err != nil {
+			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
 			}
 		}
@@ -79,7 +84,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
 
-		if err = crane.Push(img, offlineName, pushOptions); err != nil {
+		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err
 		}
 	}
