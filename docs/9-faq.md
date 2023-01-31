@@ -10,7 +10,7 @@ Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](
 
 ## What license is Zarf under?
 
-Zarf is under the [Apache License 2.0](Apache License 2.0) This is one of the most commonly used liscnese for open source software.
+Zarf is under the [Apache License 2.0](https://github.com/defenseunicorns/zarf/blob/main/LICENSE) This is one of the most commonly used licenses for open source software.
 
 
 ## What is the Zarf Agent?
