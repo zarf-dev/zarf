@@ -9,8 +9,6 @@ import Tabs from "@theme/Tabs";
 
 Zarf is a command line interface (CLI) tool used to enable software delivery, specifically designed around delivery to disconnected environments. The Zarf tool is a statically built Go binary, meaning once it is built, it can be used anywhere without needing to bring along any other dependencies. The Zarf CLI project is, and always will be, a free to use open-source project on [GitHub](https://github.com/defenseunicorns/zarf).
 
-<br />
-
 ## Getting the CLI
 
 <!-- TODO: @JPERRY Is it better to link to 'Installing Zarf' or should we repeat the information here? (check w/ Madeline) -->
@@ -38,8 +36,6 @@ brew install zarf
 
 </TabItem>
 </Tabs>
-
-<br />
 
 ## I have a CLI.. Now What?
 
@@ -109,9 +105,6 @@ cd build
 
 </Tabs>
 
-<br />
-<br />
-
 ### Adding The CLI To Your Path
 
 :::note
@@ -123,8 +116,6 @@ If you want to make your life a little easier, you can put the Zarf CLI on your 
 :::note
 Throughout the rest of the demo, we will often be describing commands as `zarf {command}`. This assumes that the CLI is in your path.
 :::
-
-<br />
 
 ## Introduction to Zarf Commands
 

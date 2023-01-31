@@ -4,8 +4,7 @@ sidebar_position: 3
 
 # The Zarf 'init' Package
 
-The init package is the zarf.yaml file that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml). It is defined via composed components that all offer value for future packages to utilize. When the init package is deployed, it will create a `zarf` namespace within your k8s cluster and deploy various pods, services, and secrets to that namespace, depending on which optional components you choose to deploy.
-
+The init package is the `zarf.yaml` file that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml). It is defined via composed components that all offer value for future packages to utilize. When the init package is deployed, it will create a `zarf` namespace within your k8s cluster and deploy various pods, services, and secrets to that namespace, depending on which optional components you choose to deploy.
 
 ## Mandatory Components
 
@@ -17,8 +16,6 @@ Zarf's work necessitates that some components in the [init package](https://gith
 | container-registry-seed | Adds a container registry so Zarf can bootstrap itself into the cluster.                                             |
 | container-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
-
-&nbsp;
 ## Additional Components
 
 In addition to those that are always installed, Zarf's optional components provide additional functionality and can be enabled as & when you need them.
@@ -35,10 +32,8 @@ There are two ways to deploy optional components, you can either pass a comma se
 
 > Note: The 'k3s' component requires root access when deploying as it will modify your host machine to install the cluster.
 
-<br />
+## What Makes the Init Package Special
 
-# What Makes the Init Package Special
-
-Deploying onto air-gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), especially when the k8s environment you're deploying to doesn't have a container registry running for you to put your images into. This leads to a classic 'chicken or the egg' problem since the container registry image needs to make its way into the cluster but there is no container registry running on the cluster to push to yet because the image isn't in the cluster yet. In order to remain distro agnostic, we had to come up with a unique solution to seed the container registry into the cluster.
+Deploying onto air-gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), especially when the k8s environment you're deploying to doesn't have a container registry running for you to put your images into. This leads to a classic 'chicken or the egg' problem since the container registry image needs to make its way into the cluster but there is no container registry running on the cluster to push to yet because the image isn't in the cluster yet. To remain distro agnostic, we had to come up with a unique solution to seed the container registry into the cluster.
 
 The `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) within the init-package solves this problem by injecting a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod based on an existing image in the cluster.
