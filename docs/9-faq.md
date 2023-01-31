@@ -8,7 +8,7 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 
 Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and root access.
 
-## What liscense is Zarf under?
+## What license is Zarf under?
 
 Zarf is under the [Apache License 2.0](Apache License 2.0) This is one of the most commonly used liscnese for open source software.
 
