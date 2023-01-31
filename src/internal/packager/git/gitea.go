@@ -29,10 +29,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	tunnel.Connect(cluster.ZarfGit, false)
 	defer tunnel.Close()
 
-	tunnelURL := tunnel.Endpoint()
+	tunnelURL := tunnel.HTTPEndpoint()
 
 	// Determine if the read only user already exists
-	getUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelURL)
+	getUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
 	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
@@ -60,7 +60,7 @@ func (g *Git) CreateReadOnlyUser() error {
 			"password":   g.Server.PullPassword,
 		}
 		updateUserData, _ := json.Marshal(updateUserBody)
-		updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
+		updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 		updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 		message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
@@ -80,7 +80,7 @@ func (g *Git) CreateReadOnlyUser() error {
 	}
 
 	// Send API request to create the user
-	createUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users", tunnelURL)
+	createUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
 	out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
@@ -95,7 +95,7 @@ func (g *Git) CreateReadOnlyUser() error {
 		"allow_create_organization": false,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("http://%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
+	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))

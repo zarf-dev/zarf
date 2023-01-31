@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/strings/slices"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -52,7 +51,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 
 	for _, c := range utils.Reverse(deployedPackage.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
-		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
+		if partialRemove && !utils.SliceContains(requestedComponents, c.Name) {
 			continue
 		}
 

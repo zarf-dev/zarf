@@ -10,35 +10,29 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::note
 
-This example uses Zalando's postgres operator as after looking at several alternatives, this felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).
+This example uses Zalando's Postgres operator as after looking at several alternatives, this felt like the best choice. Other tools that were close runners-up were the postgres-operator by [CrunchyData](https://github.com/CrunchyData/postgres-operator) and [KubeDB](https://github.com/kubedb/operator).
 
 :::
-
-&nbsp;
 
 ## Prerequisites
 
 1. Install [Docker](https://docs.docker.com/get-docker/). Other container engines will likely work as well but aren't actively tested by the Zarf team.
 
-1. Install [Kind](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using Kind for this example since it is easy and tested frequently and thoroughly.
+2. Install [Kind](https://github.com/kubernetes-sigs/kind). Other Kubernetes distros will work as well, but we'll be using Kind for this example since it is easy and tested frequently and thoroughly.
 
-1. Clone the Zarf project &mdash; for the example configuration files.
+3. Clone the Zarf project: for the example configuration files.
 
-1. Build the package using `zarf package create examples/postgres-operator`
+4. Build the package using `zarf package create examples/postgres-operator`
 
-1. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)
-
-&nbsp;
+5. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)
 
 ## Instructions
-
-&nbsp;
 
 ### Deploy the package
 
 Run the following commands to deploy the created package to the cluster
 
-```sh
+``` bash
 # Open the directory
 cd examples/postgres-operator
 
@@ -51,9 +45,6 @@ zarf package deploy
 
 Wait a couple of minutes. You'll know it is done when Zarf exits and you get the 3 connect commands.
 
-
-&nbsp;
-
 ### Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
 
 1. Run `zarf connect minio` to navigate to the web console.
@@ -61,11 +52,9 @@ Wait a couple of minutes. You'll know it is done when Zarf exits and you get the
 1. Buckets -> Create Bucket
    - Bucket Name: `postgres-operator-backups`
 
-&nbsp;
-
 ### Open the UI
 
-The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
+The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and `pgadmin` will be available by running `./zarf connect pgadmin`
 
 :::note
 
@@ -73,19 +62,16 @@ If you want to run other commands after/during the browsing of the postgres tool
 
 :::
 
-&nbsp;
+### Set up a server in PGAdmin
 
-### Set up a server in PGAdmin:
-  - General // Name: `acid-zarf-test`
-  - General // Server group: `Servers`
-  - Connection // Host: (the URL in the table below)
-  - Connection // Port: `5432`
-  - Connection // Maintenance database: `postgres`
-  - Connection // Username: `zarf`
-  - Connection // Password: (run the command in the table below)
-  - SSL // SSL mode: `Require`
-
-&nbsp;
+- General // Name: `acid-zarf-test`
+- General // Server group: `Servers`
+- Connection // Host: (the URL in the table below)
+- Connection // Port: `5432`
+- Connection // Maintenance database: `postgres`
+- Connection // Username: `zarf`
+- Connection // Password: (run the command in the table below)
+- SSL // SSL mode: `Require`
 
 ## Logins
 
@@ -97,5 +83,6 @@ If you want to run other commands after/during the browsing of the postgres tool
 | Minio Console             | `zarf connect minio`               | `minio`              | `minio123`                                                                                                                                                 |
 
 ## References
-- https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/
-- https://blog.flant.com/our-experience-with-postgres-operator-for-kubernetes-by-zalando/
+
+- <https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/>
+- <https://blog.flant.com/our-experience-with-postgres-operator-for-kubernetes-by-zalando/>

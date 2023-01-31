@@ -24,31 +24,25 @@ zarf package create .     # Run the command to create the zarf package
 This set of commands will create a zarf package in the current directory. In this case, the package name should look something like `zarf-init-amd64-v0.24.0.tar.zst`, although it might be slightly different depending on your system architecture.
 
 :::note
-
 If you continue without entering an agent image, package create will fail. The Zarf Agent is required to rewrite Kubernetes objects in the air gap via what is known as a Mutating Webhook. More technical information about it can be found [here](../6-developer-guide/3-nerd-notes.md).
-
 :::
-
-<br />
 
 When you execute the `zarf package create` command, Zarf will prompt you to confirm that you want to create the package by displaying the package definition and asking you to respond with either `y` or `n`.
 
 ![Confirm Package Creation](../.images/walkthroughs/package_create_confirm.png)
 
 :::info
-
 You can skip this confirmation by adding the `--confirm` flag when running the command. This will look like: `zarf package create . --confirm`
-
 :::
 
 Congratulations! You've just created your first Zarf package!
 
 ## Building the game package
 
-Creating the game package is just as simple as creating the init-package! Once again, we will be using the `zarf package create` command to create the package. Since the game package definition lives in `examples/game` within the Zarf repository, the only thing we need to do differently is specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save a bit of time.
+Creating the game package is just as simple as creating the init package! Once again, we will be using the `zarf package create` command to create the package. Since the game package definition lives in `examples/dos-games` within the Zarf repository, the only thing we need to do differently is to specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save a bit of time.
 
 ```bash
-zarf package create examples/game --confirm
+zarf package create examples/dos-games --confirm
 ```
 
 This will create a zarf package in the current directory with a package name that looks something like `zarf-package-dos-games-amd64.tar.zst`, although it might be slightly different depending on your system architecture.

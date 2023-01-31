@@ -1,4 +1,5 @@
 # YOLO Mode
+
 This example demonstrates YOLO mode, an optional mode for using Zarf in a fully connected environment where users can bring their own external container registry and Git server.
 
 :::info
@@ -7,19 +8,21 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-
 ## Prerequisites
+
 - A running K8s cluster. _Note that the cluster does not need to have the Zarf init package installed or any other Zarf-related bootstrapping._
 
 ## Instructions
+
 Create the package:
-```sh
+
+``` bash
 zarf package create
 ```
 
 ### Deploy the package
 
-```sh
+``` bash
 # Run the following command to deploy the created package to the cluster
 zarf package deploy
 

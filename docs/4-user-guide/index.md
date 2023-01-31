@@ -41,9 +41,7 @@ Find some detailed uses of the `zarf.yaml` file in [our examples](../../examples
 
 Making a Zarf package out of a `zarf.yaml` file is a matter of calling a single, simple command: `zarf package create`. You'll see a `zarf-package-*.tar.zst` file pop into existence afterward. That's your package.
 
-Find out more about that by calling the CLI for help, or check out an example package build in [our game example](../../examples/game#package-the-game).
-
-&nbsp;
+Find out more about that by calling the CLI for help, or check out an example package build in [our game example](../../examples/dos-games#package-the-game).
 
 ### Ship Package
 
@@ -62,8 +60,6 @@ Can you make a direct network connection? Even better.
 Consider the art of the possible and use what you can. Zarf will work, regardless.
 
 ### Deploy Package
-
-&nbsp;
 
 ## Other Resources
 

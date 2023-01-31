@@ -40,6 +40,9 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
