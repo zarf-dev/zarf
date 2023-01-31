@@ -9,11 +9,12 @@
 	import { Hero, Spinner } from '$lib/components';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { Packages } from '$lib/api';
+	import PackageErrNotFound from '$lib/components/package-err-not-found.svelte';
 
 	const getInitPath = async () => {
 		const res = await Packages.findInit();
 		if (Array.isArray(res)) {
-			return res[0];
+			return encodeURIComponent(res[0]);
 		} else {
 			throw new Error('No init package found');
 		}
@@ -44,13 +45,7 @@
 				</Typography>
 			{/if}
 			{#await getInitPath()}
-				<Button
-					variant="raised"
-					color="secondary"
-					disabled
-				>
-					Initialize Cluster
-				</Button>
+				<Button variant="raised" color="secondary" disabled>Initialize Cluster</Button>
 			{:then path}
 				<Button
 					variant="raised"
@@ -60,6 +55,8 @@
 				>
 					Initialize Cluster
 				</Button>
+			{:catch err}
+				<PackageErrNotFound message={err.message} />
 			{/await}
 		</Hero>
 	{/if}
