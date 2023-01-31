@@ -1,7 +1,7 @@
 # Zarf - DevSecOps for Air Gap
 
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
-[![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
+[![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://communityinviter.com/apps/kubernetes/community)
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
