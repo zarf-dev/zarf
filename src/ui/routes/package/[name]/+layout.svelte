@@ -75,13 +75,6 @@
 		margin: 0 auto;
 		width: 100%;
 	}
-	/* remove when UnicornUI updates w/ fix */
-	:global(.deploy-stepper-container ol) {
-		padding-inline: 0;
-	}
-	:global(.deploy-stepper-container li:last-child) {
-		flex-grow: 0;
-	}
 	.warning-banner {
 		width: 100%;
 		display: flex;
