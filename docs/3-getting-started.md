@@ -4,7 +4,11 @@ Welcome to the documentation about Zarf, the air-gap tool! Let's get you started
 
 ## Installing Zarf
 
-There are multiple ways to get the Zarf CLI onto your machine including installing the Defense Unicorns Homebrew Tap, downloading a prebuilt binary from our GitHub releases, or even building the CLI from scratch yourself.
+There are multiple ways to get the Zarf CLI onto your machine:
+
+- Install from [Homebrew](getting-started#installing-from-the-defense-unicorns-homebrew-tap)
+- [Download a binary](https://github.com/defenseunicorns/zarf/tags)
+- [Build the CLI](#building-the-cli-from-scratch) from scratch
 
 ### Installing from the Defense Unicorns Homebrew Tap
 
@@ -29,7 +33,7 @@ mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
 
 If you want to build the CLI from scratch, you can do that too! Our local builds depend on [Go 1.19.x](https://golang.org/doc/install) and are built using [make](https://www.gnu.org/software/make/).
 
-:::note 
+:::note
 The `make` build-cli` command builds a binary for each combination of OS and architecture. If you want to shorten the build time, you can use an alternative command to only build the binary you need:
 
 - `make build-cli-mac-intel`

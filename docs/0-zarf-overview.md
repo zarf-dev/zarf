@@ -122,22 +122,22 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 ### 📦 Out of the Box Features
 
-- Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
-- Provide a [web dashboard](https://docs.zarf.dev/docs/dashboard-ui/sbom-dashboard) for viewing SBOM output
-- Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [Kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
-- Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
-- Builtin git server with [Gitea](https://gitea.com/)
-- Builtin docker registry
-- Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
+- Automates Kubernetes deployments in disconnected environments
+- Automates [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
+- Provides an [SBOM dashboard UI](dashboard-ui/sbom-dashboard)
+- Deploys a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [Kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
+- Built-in logging stack with [Loki](https://grafana.com/oss/loki/)
+- Built-in git server with [Gitea](https://gitea.com/)
+- Built-in docker registry
+- Built-in [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
-- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS, or Ingress configuration required
+- Built-in [command to find images](user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
+- Tunneling capability to [connect to Kubernetes resources](user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS, or Ingress configuration required
 
 ### 🛠️ Configurable Features
 
 - Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting
-- [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
+- [Composable packages](user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Filters to select the correct architectures/operating systems for packages
 
 ## Quick Start
