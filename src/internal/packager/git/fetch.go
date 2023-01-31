@@ -31,10 +31,13 @@ func (g *Git) fetchRef(ref string) error {
 // fetchTag performs a `git fetch` of _only_ the provided tag.
 func (g *Git) fetchTag(tag string) error {
 	message.Debugf("git.fetchTag(%s)", tag)
+	fetchOptions := &git.FetchOptions{
+		RemoteName: onlineRemoteName,
+		RefSpecs:   []goConfig.RefSpec{goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)},
+		Tags:       git.NoTags,
+	}
 
-	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
-
-	err := g.fetch(g.GitPath, refspec)
+	err := g.fetch(g.GitPath, fetchOptions)
 	return err
 }
 
@@ -42,15 +45,19 @@ func (g *Git) fetchTag(tag string) error {
 func (g *Git) fetchHash(hash string) error {
 	message.Debugf("git.fetchHash(%s)", hash)
 
-	refspec := goConfig.RefSpec(hash + ":" + hash)
+	fetchOptions := &git.FetchOptions{
+		RemoteName: onlineRemoteName,
+		RefSpecs:   []goConfig.RefSpec{goConfig.RefSpec(hash + ":" + hash)},
+		Tags:       git.NoTags,
+	}
 
-	err := g.fetch(g.GitPath, refspec)
+	err := g.fetch(g.GitPath, fetchOptions)
 	return err
 }
 
-// fetch performs a `git fetch` of _only_ the provided git refspec(s).
-func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
-	message.Debugf("git.fetch(%#v)", refspecs)
+// fetch performs a `git fetch` of _only_ the provided git refspec(s) within the fetchOptions.
+func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
+	message.Debugf("git.fetch(%#v)", fetchOptions)
 
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
@@ -65,15 +72,9 @@ func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 	}
 
 	gitURL := remotes[0].Config().URLs[0]
-	message.Debugf("Attempting to find ref: %#v for %s", refspecs, gitURL)
+	message.Debugf("Attempting to find ref: %#v for %s", fetchOptions.RefSpecs, gitURL)
 
 	gitCred := utils.FindAuthForHost(gitURL)
-
-	fetchOptions := &git.FetchOptions{
-		RemoteName: onlineRemoteName,
-		RefSpecs:   refspecs,
-		Tags:       git.NoTags,
-	}
 
 	if gitCred.Auth.Username != "" {
 		fetchOptions.Auth = &gitCred.Auth
@@ -90,7 +91,7 @@ func (g *Git) fetch(gitDirectory string, refspecs ...goConfig.RefSpec) error {
 		// If we can't fetch with go-git, fallback to the host fetch
 		// Only support "all tags" due to the azure fetch url format including a username
 		cmdArgs := []string{"fetch", onlineRemoteName}
-		for _, refspec := range refspecs {
+		for _, refspec := range fetchOptions.RefSpecs {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
 		execCfg := exec.Config{

@@ -23,6 +23,32 @@ func (g *Git) removeLocalBranchRefs() ([]*plumbing.Reference, error) {
 	)
 }
 
+// removeLocalTagRefs removes all tags in the local repo.
+// It returns a slice of tags deleted.
+func (g *Git) removeLocalTagRefs() ([]string, error) {
+	removedTags := []string{}
+	repo, err := git.PlainOpen(g.GitPath)
+	if err != nil {
+		return removedTags, fmt.Errorf("not a valid git repo or unable to open: %w", err)
+	}
+
+	allTags, err := repo.Tags()
+	if err != nil {
+		return removedTags, fmt.Errorf("failed to get the tags for the repo: %w", err)
+	}
+
+	allTags.ForEach(func(t *plumbing.Reference) error {
+		removedTags = append(removedTags, t.Name().Short())
+		err := repo.DeleteTag(string(t.Name().Short()))
+		if err != nil {
+			message.Debugf("got an error when deleting tag %s", err.Error())
+		}
+		return nil
+	})
+
+	return removedTags, nil
+}
+
 // removeOnlineRemoteRefs removes all refs pointing to the online-upstream
 // It returns a slice of references deleted.
 func (g *Git) removeOnlineRemoteRefs() ([]*plumbing.Reference, error) {

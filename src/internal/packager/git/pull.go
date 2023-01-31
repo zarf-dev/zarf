@@ -7,6 +7,7 @@ package git
 import (
 	"errors"
 	"fmt"
+
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -67,14 +68,14 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		message.Debug("Repo already cloned, pulling any upstream changes...")
 
+		// Pull the latest changes from the online repo
+		message.Debug("Repo already cloned, pulling any upstream changes...")
 		gitCred := utils.FindAuthForHost(gitURL)
 		pullOptions := &git.PullOptions{
 			RemoteName: onlineRemoteName,
 			Auth:       &gitCred.Auth,
 		}
-
 		worktree, err := repo.Worktree()
 		if err != nil {
 			message.Debugf("unable to get the worktree for the repo: %s", gitURL)
@@ -87,6 +88,13 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			g.Spinner.Warnf("Not a valid git repo or unable to pull: %s", gitURL)
 			return err
 		}
+
+		// NOTE: Since pull doesn't pull any new tags, we need to fetch them
+		fetchOptions := git.FetchOptions{RemoteName: onlineRemoteName, Tags: git.AllTags}
+		if err := g.fetch(gitCachePath, &fetchOptions); err != nil {
+			return err
+		}
+
 	} else if err != nil {
 		g.Spinner.Warnf("Not a valid git repo or unable to clone: %s", gitURL)
 		return err
@@ -117,6 +125,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
+		_, _ = g.removeLocalTagRefs()
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()
 
