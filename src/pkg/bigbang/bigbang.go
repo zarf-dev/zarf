@@ -36,8 +36,8 @@ type bbImageYamlChartDef struct {
 	Images  []string
 }
 
-// would love for this to move to OCI soon so we can pull it from there
-const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/platform-one/big-bang/bigbang.git"
+// Default location for pulling BigBang
+const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/big-bang/bigbang.git"
 
 func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int) (fluxComponent types.ZarfComponent, err error) {
 	fluxComponent.Name = "flux"
@@ -67,7 +67,7 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 
 	// use the default repo unless overridden
 	if component.BigBang.Repo == "" {
-		repos = append(repos, "https://repo1.dso.mil/platform-one/big-bang/bigbang.git")
+		repos = append(repos, DEFAULT_BIGBANG_REPO)
 		component.BigBang.Repo = repos[0]
 	} else {
 		repos = append(repos, fmt.Sprintf("%s@%s", component.BigBang.Repo, component.BigBang.Version))
@@ -298,6 +298,7 @@ func bbChartNameFix(chartName string) string {
 	}
 }
 
+// GetFluxManifest creates the manifests for deploying the particular version of BigBang
 func GetFluxManifest(version string) types.ZarfManifest {
 	return types.ZarfManifest{
 		Name:      "flux-system",
@@ -308,6 +309,7 @@ func GetFluxManifest(version string) types.ZarfManifest {
 	}
 }
 
+// GetBigBangManifests creates the manifests for deploying BigBang
 func GetBigBangManifests(manifestDir string, component types.ZarfComponent) (types.ZarfManifest, error) {
 	// here or in
 
