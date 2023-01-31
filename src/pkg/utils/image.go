@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/reference"
 )
 
 // Image represents a config for an OCI image.
