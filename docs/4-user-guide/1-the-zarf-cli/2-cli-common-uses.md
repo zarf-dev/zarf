@@ -8,7 +8,7 @@ Zarf optimizes the delivery of applications and capabilities into any environmen
 
 ## Initializing a Cluster: `zarf init`
 
-<!-- TODO: Find a good place to talk about what the init command is actually doing (there's a lot of special magic sauce going on with that command) -->
+<!-- TODO: Find a good place to talk about what the init command is doing (there's a lot of special magic sauce going on with that command) -->
 <!-- TODO: Should we talk about the 'Zarf Agent - A Mutating Webhook' here? -->
 
 Before you can deploy a package to a cluster, Zarf needs to initialize the cluster. This is done with [`zarf init`](./100-cli-commands/zarf_init.md). This command creates and bootstraps an in-cluster container registry. It also provides the ability to install optional tools and services into the cluster that future packages will need.
@@ -17,7 +17,7 @@ For Windows and macOS environments, A cluster needs to exist before Zarf can ini
 
 For Linux, Zarf makes it even easier. If you don't have a cluster running, Zarf can take care of that for you. The init package used by `zarf init` also contains all the resources necessary to create a local [k3s](https://k3s.io/) cluster on your machine. The init package can be located in your current working directory, in the directory where the Zarf CLI binary lives, or be downloaded from the GitHub releases as the command is running. More information about the init package can be found on the [init package](../2-zarf-packages/3-the-zarf-init-package.md) page.
 
-::: note
+:::note
 Depending on the permissions of your user, if you are installing k3s with `zarf init`, you may need to run it as a privileged user. This can be done by either:
 
 1. Becoming a privileged user via the command `sudo su` and then running all the Zarf commands as you normally would.
@@ -27,7 +27,7 @@ Depending on the permissions of your user, if you are installing k3s with `zarf 
 
 ## Deploying Packages: `zarf package deploy`
 
-<!-- TODO: Write some docs (or reddirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
+<!-- TODO: Write some docs (or redirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
 
 The [`zarf package deploy`](./100-cli-commands/zarf_package_deploy.md) command is where the air-gapped magic happens. It deploys our packaged capabilities into our target environment. It is usually assumed that the `zarf init` command has already been run on the machine you are deploying to but there are a few cases where this doesn't apply such as [YOLO Mode](../../9-faq.md#what-is-yolo-mode-and-why-would-i-use-it)
 
