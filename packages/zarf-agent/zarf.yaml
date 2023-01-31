@@ -11,9 +11,9 @@ components:
   - name: zarf-agent
     description: |
       A Kubernetes mutating webhook to enable automated URL rewriting for container
-      images and git repository references in Kubernetes manifests. This prevents 
+      images and git repository references in Kubernetes manifests. This prevents
       the need to manually update URLs from their original sources to the Zarf-managed
-      docker registry and git server.    
+      docker registry and git server.
     required: true
     images:
       - "ghcr.io/defenseunicorns/zarf/###ZARF_PKG_VAR_AGENT_IMAGE###"
@@ -25,3 +25,7 @@ components:
           - manifests/secret.yaml
           - manifests/deployment.yaml
           - manifests/webhook.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: "make init-package-local-agent AGENT_IMAGE=\"###ZARF_PKG_VAR_AGENT_IMAGE###\""

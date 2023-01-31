@@ -5,8 +5,5 @@ runs:
   using: composite
   steps:
     - run: |
-        make build-cli-linux-amd
-        cp build/zarf build/zarf-linux-amd64
-        docker buildx build --platform linux/amd64 --tag ghcr.io/defenseunicorns/zarf/dev-agent:$GITHUB_SHA .
-        make init-package build-examples ARCH=amd64 AGENT_IMAGE="dev-agent:$GITHUB_SHA"
+        make build-cli-linux-amd init-package build-examples ARCH=amd64
       shell: bash

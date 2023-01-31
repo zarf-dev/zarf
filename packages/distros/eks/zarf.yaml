@@ -4,17 +4,22 @@ metadata:
   description: "Deploy a EKS K8s cluster"
   architecture: multi
 
+variables:
+  - name: CLUSTER_NAME
+    prompt: true
+
 components:
   - name: load-eksctl
     required: true
-    scripts:
-      after:
-        # Remove existing eksctl
-        - "rm -f eksctl"
-        # Extract the correct linux or mac binary from the tarball
-        - "./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz ."
-        # Cleanup temp files
-        - "rm -fr archives"
+    actions:
+      onDeploy:
+        after:
+          # Remove existing eksctl
+          - cmd: rm -f eksctl
+          # Extract the correct linux or mac binary from the tarball
+          - cmd: ./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz .
+          # Cleanup temp files
+          - cmd: rm -fr archives
     files:
       - source: eks.yaml
         target: eks.yaml
@@ -29,14 +34,11 @@ components:
         shasum: 7f27988d6aa4fb8041d95d6de270b9657f605a79edd317cc044dc80c49a512e8
 
   - name: deploy-eks-cluster
-    scripts:
-      # Set timeout to 1 hr
-      timeoutSeconds: 3600
-      # Show the output while the scripts run
-      showOutput: true
-      before:
-        - "./eksctl create cluster --dry-run -f eks.yaml"
-        - "sleep 15"
-        - "./eksctl create cluster -f eks.yaml"
-      after:
-        - "./eksctl utils write-kubeconfig -c CHANGE_ME"
+    actions:
+      onDeploy:
+        before:
+          - cmd: ./eksctl create cluster --dry-run -f eks.yaml
+          - cmd: sleep 15
+          - cmd: ./eksctl create cluster -f eks.yaml
+        after:
+          - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
