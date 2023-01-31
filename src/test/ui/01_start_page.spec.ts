@@ -28,7 +28,7 @@ test.describe('start page', () => {
 
 		await page.locator('span:has-text("Initialize Cluster")').click();
 
-		await page.waitForURL('**/initialize/configure');
+		await page.waitForURL('/package/init/configure');
 	});
 	test('page redirects to /packages @post-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure');

@@ -46,7 +46,7 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 
 	files, err := utils.RecursiveFileList(targetDir, pattern)
 	if err != nil || len(files) == 0 {
-		pkgNotFoundMsg := fmt.Sprintf("Package not found: %s", pattern.String())
+		pkgNotFoundMsg := fmt.Sprintf("Unable to locate the package: %s", pattern.String())
 		message.ErrorWebf(err, w, pkgNotFoundMsg)
 		return
 	}
