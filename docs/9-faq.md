@@ -8,6 +8,11 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 
 Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and root access.
 
+## What liscense is Zarf under?
+
+Zarf is under the [Apache License 2.0](Apache License 2.0) This is one of the most commonly used liscnese for open source software.
+
+
 ## What is the Zarf Agent?
 
 The Zarf Agent is a [Kubernetes Mutating Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) that is installed into the cluster during the `zarf init` operation. The Agent is responsible for modifying [Kubernetes PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec) objects [Image](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#Container.Image) fields to point to the Zarf Registry. This allows the cluster to pull images from the Zarf Registry instead of the internet without having to modify the original image references. The Agent also modifies [Flux GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/) objects to point to the local Git Server.
