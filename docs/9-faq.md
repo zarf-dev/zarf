@@ -1,6 +1,6 @@
 # FAQ
 
-## Do I have to use [Homebrew](https://brew.sh/) to install Zarf?
+## Do I have to use Homebrew to install Zarf?
 
 No, the Zarf binary and init package can be downloaded from the [Releases Page](https://github.com/defenseunicorns/zarf/releases). Zarf does not need to be installed or available to all users on the system, but it does need to be executable for the current user (i.e. `chmod +x zarf` for Linux/Mac).
 
