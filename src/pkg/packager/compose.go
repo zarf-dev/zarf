@@ -151,7 +151,11 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(valuesFile, parent.Import.Path)
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
-			child.Charts[chartIdx].LocalPath = p.getComposedFilePath(child.Charts[chartIdx].LocalPath, parent.Import.Path)
+			// Check if the localPath is relative to the parent Zarf package
+            if _, err := os.Stat(child.Charts[chartIdx].LocalPath); os.IsNotExist(err) {
+                // Since the chart localPath is not relative to the parent Zarf package, get the relative path from the composed child
+                child.Charts[chartIdx].LocalPath = p.getComposedFilePath(child.Charts[chartIdx].LocalPath, parent.Import.path)
+            }
 		}
 	}
 
