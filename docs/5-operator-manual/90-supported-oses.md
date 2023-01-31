@@ -5,9 +5,7 @@ sidebar_position: 8
 
 Zarf is intended to install & run on a multitude of 64-bit Linux distributions.
 
-Check the table below to understand which distros which we test against & if there are any known issues / usage caveats.
-
-&nbsp;
+Check the table below to understand which distros which we test against & if there are any known issues or usage caveats.
 
 <!-- TODO: @JPERRY this support matrix could probably just go into a FAQ?  -->
 ## Support Matrix
@@ -22,8 +20,6 @@ Check the table below to understand which distros which we test against & if the
 |Debian 11      |debian     ||
 |Rocky 8.4      |rocky      ||
 
-&nbsp;
-
 <!-- TODO: @JPERRY Is any of the content below this comment actually useful? -->
 ## Demo Environments
 
@@ -32,8 +28,6 @@ We support running an instance of Zarf _inside a local VM_ (of any of the [suppo
 > _**Take note**_
 >
 > Run the following commands from  _**the project root directory**_.
-
-&nbsp;
 
 ### Startup
 
@@ -46,9 +40,6 @@ make vm-init OS=[VM_ID]     # e.g. make vm-init OS=ubuntu
 > _**Warning!**_
 >
 > Besure to pass a VM_ID or you'll start a VM instance for _every one of the supported OS types_. Yikes!
-
-&nbsp;
-
 
 ### Work in the VM
 
@@ -72,9 +63,6 @@ When you're done with the VM, you can exit back to the host terminal by running:
 exit                        # de-escalate permissions (back to "vagrant" user)
 exit                        # exits VM shel & drops you back on the host
 ```
-
-&nbsp;
-
 
 ### Shutdown
 

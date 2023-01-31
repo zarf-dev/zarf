@@ -8,8 +8,6 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-&nbsp;
-
 ## Prerequisites
 
 Before the magic can happen you have to do a few things:
@@ -24,11 +22,7 @@ Before the magic can happen you have to do a few things:
 
 1. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)
 
-&nbsp;
-
 ## Instructions
-
-&nbsp;
 
 ### Deploy the package
 
@@ -39,8 +33,6 @@ zarf package deploy zarf-package-tiny-kafka-amd64.tar.zst --confirm
 ```
 
 Wait a few seconds for the cluster to deploy the package.
-
-&nbsp;
 
 ### Access Kafka
 
