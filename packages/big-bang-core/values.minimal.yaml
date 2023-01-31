@@ -1,5 +1,3 @@
-domain: bigbang.dev
-
 istio:
   enabled: true
 

@@ -35,12 +35,6 @@ Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-thro
 
 Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
 
-(Optional) Alternatively, build the zarf components from the repo
-```shell
-# Create the deploy package and move it to the 'examples/sync' folder
-go run ../../main.go package create
-```
-
 ### Deploy an EKS cluster
 
 ```shell
@@ -59,11 +53,39 @@ go run ../../main.go init -a amd64 --confirm --components git-server
 zarf tools k9s
 ```
 
+
+### Configure and Package BigBang
+
+Look at the values files provided to BigBang in the Zarf.yaml:
+
+```yaml
+components:
+  - name: bigbang
+    required: true
+    bigbang:
+      version: 1.52.0
+      skipFlux: false
+      valuesFrom:
+      - values.minimal.yaml #turns on just istio
+      - ingress-certs.yaml # adds istio certs for *.bigbang.dev
+      - values.kyverno.yaml # turns on kyverno
+      - loki.yaml # turns on loki and monitoring
+```
+
+And adjust them to how you want BigBang to be deployed.  When you're ready, package BigBang:
+
+```shell
+
+zarf package create
+
+```
+
+
 ### Deploy Big Bang
 
 ```shell
 # Deploy Big Bang
-./zarf package deploy zarf-package-big-bang-core-demo-arm64-1.47.0.tar.zst --confirm
+./zarf package deploy zarf-package-big-bang-core-demo-arm64-1.52.0.tar.zst --confirm
 
 # (Optional) Inspect the results
 zarf tools k9s

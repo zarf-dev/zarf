@@ -1,5 +1,3 @@
-domain: bigbang.dev
-
 # Policy
 gatekeeper:
   enabled: false
@@ -27,36 +25,3 @@ kyvernopolicies:
         validationFailureAction: audit
       restrict-host-path-mount-pv:
         validationFailureAction: audit
-
-
-kiali:
-  enabled: false
-
-# logging
-logging:
-  enabled: false
-  engine: plg
-
-loki:
-  enabled: true
-
-promtail:
-  enabled: true
-  values:
-    serviceMonitor:
-      enabled: true
-
-eckoperator:
-  enabled: false
-  
-fluentbit:
-  enabled: false
-
-
-# Tracing
-jaeger:
-  enabled: false
-
-
-twistlock:
-  enabled: false

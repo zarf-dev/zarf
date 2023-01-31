@@ -23,6 +23,5 @@ components:
       valuesFrom:
       - values.minimal.yaml
       - ingress-certs.yaml
+      - values.kyverno.yaml
       - loki.yaml
-      # - values.gatekeeper.yaml
-      # - values.kyverno.yaml
