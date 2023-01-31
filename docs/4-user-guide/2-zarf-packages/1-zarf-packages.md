@@ -6,21 +6,19 @@ sidebar_position: 1
 
 A Zarf package is a single tarball archive that contains everything you need to deploy a system or capability while fully disconnected. Zarf packages are defined by a `zarf.yaml` file.
 
-Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are downloaded and stored within the archive. Because all the dependencies are now within the tarball, the package can be deployed on to disconnected systems that don't have a connection to the outside world.
+Zarf packages are built while 'online' and connected to whatever is hosting the dependencies your package definition defined. When being built, all these defined dependencies are downloaded and stored within the archive. Because all the dependencies are now within the tarball, the package can be deployed to disconnected systems that don't have a connection to the outside world.
 
 The `zarf.yaml` file, which the package builds from, defines declarative instructions on how the capabilities of the package should be deployed. The declarative nature of the package means everything is represented by code and automatically runs as it is configured, instead of having to give manual steps that might not be reproducible on all systems.
 
-Zarf Packages are made up of functionality blocks called components which are described more in the [Zarf Components page](./2-zarf-components.md). These components can be optional, giving more flexibility to how packages can be used.
-
-<!-- TODO: @JPERRY This feels out of place here.. -->
+Zarf Packages are made up of functionality blocks called components which are described more on the [Zarf](./2-zarf-components.md) Components page](./2-zarf-components.md). These components can be optional, giving more flexibility to how packages can be used.
 
 ## Deploying on to Airgapped Systems
 
-Zarf packages are built with all the dependencies necessary being included within the package itself, this is important when deploying on to systems. Since there is no need for an outbound connection to the internet, these packages become highly distributable and can be run on edge, embedded systems, secure cloud, data centers, or even in a local environment. When deploying a package onto a cluster, the dependencies of the cluster (which were included in the package itself when it was created) are pushed into a docker registry and git server that Zarf stands up on the air-gapped system. This way later steps can use the dependencies as they are needed.
+Zarf packages are built with all the dependencies necessary being included within the package itself, this is important when deploying to air-gapped systems. Since there is no need for an outbound connection to the internet, these packages become highly distributable and can be run on the edge, embedded systems, secure cloud, data centers, or even in a local environment. When deploying a package onto a cluster, the dependencies of the cluster (which were included in the package itself when it was created) are pushed into a docker registry and git server that Zarf stands up on the air-gapped system. This way later steps can use the dependencies as they are needed.
 
 ## Types of Zarf Packages
 
-There are two types of Zarf packages, a `ZarfInitConfig` and a `ZarfPackageConfig`. The package type is defined by the `kind:` field in the zarf.yaml file.
+There are two types of Zarf packages, a `ZarfInitConfig` and a `ZarfPackageConfig`. The package type is defined by the `kind:` field in the `zarf.yaml` file.
 
 For the remainder of the docs, we will often refer to the `ZarfInitConfig` as an `init config` package or `init` package and the `ZarfPackageConfig` as any package.
 
@@ -32,9 +30,9 @@ The init package is the package you use to initialize your cluster to be ready t
 
 If you don't have a cluster running yet, the init package can help with that too! The init package has a deployable k3s cluster as a component that can optionally be deployed onto your machine. An init package will almost always be the first Zarf package you deploy onto a cluster since other packages will often depend on the services the package installs onto your cluster.
 
-> Note: The only exception where you wouldn't deploy an init package first is when you don't have a k8s cluster yet, you don't want to deploy with the k3s distro built into the init package and you have a package that deploys your preferred distro. In those situations, you can deploy the distro package first, then the init package, and then whatever other packages you want.)
+> Note: The only exception where you wouldn't deploy an init package first is when you don't have a k8s cluster yet, you don't want to deploy with the k3s distribution built into the init package and you have a package that deploys your preferred distribution. In those situations, you can deploy the distribution package first, then the init package, and then whatever other packages you want.)
 
-While initializing, Zarf will seed your cluster with a container registry so it can have a place to push images that other packages will need. The init package will also optionally deploy other functionality to your cluster, such as a git server to push git repositories to, or a simple PLG logging stack so you can monitor the things running on your cluster.
+While initializing, Zarf will seed your cluster with a container registry so it can have a place to push images that other packages will need. The init package will also optionally deploy other functionality to your cluster, such as a git server for your repositories, or a simple PLG logging stack so you can monitor the things running on your cluster.
 
 #### Using the init-package
 
@@ -50,15 +48,15 @@ Init configs are not something you will have to create yourself unless you want 
 
 You can deploy a Zarf package with the command `zarf package deploy` which will bring up a prompt listing all of the files in your current path that match the name `zarf-package-*.tar.zst` so that you can select which package you want to deploy. If you already know which package you want to deploy, you can do that easily with the command `zarf package deploy {PACKAGE_NAME}`.
 
-When Zarf is deploying the package, it will use the infrastructure that was created when doing the 'init' process (such as the docker registry and git server) to push all of the images and repos that the package needs to operate.
+When Zarf is deploying the package, it will use the infrastructure that was created when doing the 'init' process (such as the docker registry and git server) to push all of the images and repositories that the package needs to operate.
 
 ## What Makes Up A Package
 
-Zarf packages are split into smaller chunks called 'components'. These components are defined more in the [Zarf Components page](./2-zarf-components.md) but a quick way to understand components are as the actual named capabilities that packages provide. The schema of a zarf.yaml package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
+Zarf packages are split into smaller chunks called 'components'. These components are defined more on the [Zarf](./2-zarf-components.md) Components page](./2-zarf-components.md) but, in short, components are the named capabilities that packages provide. The schema of a `zarf.yaml` package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
 
 ## Building A Zarf Package
 
-::: info
+:::info
 
 **Dependencies** for Building a Zarf Package
 
@@ -68,10 +66,10 @@ Zarf packages are split into smaller chunks called 'components'. These component
 
 :::
 
-The process of defining a package is covered in the [Creating a Package](../../13-walkthroughs/0-using-zarf-package-create.md) page. Assuming you have a package already defined, building the package itself is fairly simple.
+The process of defining a package is covered on the [Creating](../../13-walkthroughs/0-using-zarf-package-create.md) a Package](../../13-walkthroughs/0-using-zarf-package-create.md) page. Assuming you have a package already defined, building the package itself is fairly simple.
 
 `zarf package create` will look for a `zarf.yaml` file in the current directory and build the package from that file. Behind the scenes, this is pulling down all the resources it needs from the internet and placing them in a temporary directory, once all the necessary resources of retrieved, Zarf will create the tarball of the temp directory and clean up the temp directory.
 
 ## Inspecting a Built Package
 
-`zarf package inspect ./path/to/package.tar.zst` will look at the contents of the package and print out the contents of the zarf.yaml file that defined it.
+`zarf package inspect ./path/to/package.tar.zst` will look at the contents of the package and print out the contents of the `zarf.yaml` file that defined it.
