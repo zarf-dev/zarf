@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -213,6 +215,11 @@ func (p *Packager) loadZarfPkg() error {
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
 
+	// Handle component configuration deprecations
+	for idx, component := range p.cfg.Pkg.Components {
+		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+	}
+
 	spinner.Success()
 	return nil
 }
@@ -292,7 +299,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	}
 
 	var shasum string
-	if shasum, err = utils.GetSha256Sum(destination); err != nil {
+	if shasum, err = utils.GetCryptoHash(destination, crypto.SHA256); err != nil {
 		return fmt.Errorf("unable to get sha256sum of package: %w", err)
 	}
 

@@ -5,8 +5,6 @@
 package cmd
 
 import (
-	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/anchore/syft/cmd/syft/cli"
@@ -15,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -75,9 +74,10 @@ var registryCmd = &cobra.Command{
 }
 
 var readCredsCmd = &cobra.Command{
-	Use:   "get-git-password",
-	Short: lang.CmdToolsGetGitPasswdShort,
-	Long:  lang.CmdToolsGetGitPasswdLong,
+	Use:    "get-git-password",
+	Hidden: true,
+	Short:  lang.CmdToolsGetGitPasswdShort,
+	Long:   lang.CmdToolsGetGitPasswdLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil || state.Distro == "" {
@@ -86,7 +86,30 @@ var readCredsCmd = &cobra.Command{
 		}
 
 		message.Note(lang.CmdToolsGetGitPasswdInfo)
-		fmt.Println(state.GitServer.PushPassword)
+		message.Warn(lang.CmdToolGetGitDeprecation)
+		utils.PrintComponentCredential(state, "git")
+	},
+}
+
+var readAllCredsCmd = &cobra.Command{
+	Use:     "get-creds",
+	Short:   lang.CmdToolsGetCredsShort,
+	Long:    lang.CmdToolsGetCredsLong,
+	Aliases: []string{"gc"},
+	Args:    cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		state, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil || state.Distro == "" {
+			// If no distro the zarf secret did not load properly
+			message.Fatalf(nil, lang.ErrLoadState)
+		}
+
+		if len(args) > 0 {
+			// If a component name is provided, only show that component's credentials
+			utils.PrintComponentCredential(state, args[0])
+		} else {
+			utils.PrintCredentialTable(state, nil)
+		}
 	},
 }
 
@@ -140,6 +163,7 @@ func init() {
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(k9sCmd)
 	toolsCmd.AddCommand(registryCmd)
+	toolsCmd.AddCommand(readAllCredsCmd)
 
 	toolsCmd.AddCommand(clearCacheCmd)
 	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
@@ -209,16 +233,13 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 		tunnelReg.Connect(cluster.ZarfRegistry, false)
-		registryURL, err := url.Parse(tunnelReg.HTTPEndpoint())
-		if err != nil {
-			return err
-		}
 
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+		registryEndpoint := tunnelReg.Endpoint()
 
-		return originalCatalogFn(cmd, []string{registryURL.Host})
+		return originalCatalogFn(cmd, []string{registryEndpoint})
 	}
 
 	return craneCatalog

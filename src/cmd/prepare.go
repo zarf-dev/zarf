@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"crypto"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -73,7 +75,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
-		hash, err := utils.GetSha256Sum(fileName)
+		hash, err := utils.GetCryptoHash(fileName, crypto.SHA256)
 		if err != nil {
 			message.Fatal(err, "Unable to compute the hash")
 		} else {
@@ -96,6 +98,10 @@ var prepareFindImages = &cobra.Command{
 		if len(args) > 0 {
 			baseDir = args[0]
 		}
+
+		// Ensure uppercase keys from viper
+		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

@@ -5,9 +5,6 @@
 <script lang="ts">
 	import YamlCode from './yaml-code.svelte';
 
-	import 'prismjs/components/prism-yaml';
-	import 'prismjs/themes/prism-okaidia.css';
-
 	import type { ZarfComponent } from '$lib/api-types';
 	import { pkgComponentDeployStore } from '$lib/store';
 	import { Accordion, IconButton, Typography } from '@ui';
@@ -52,7 +49,7 @@
 			</Typography>
 		</div>
 		{#if !readOnly}
-			<div style={`gap: 5px; visibility: ${component.required ? "hidden": "initial"}`}>
+			<div style={`gap: 5px; visibility: ${component.required ? 'hidden' : 'initial'}`}>
 				<IconButton
 					toggleable
 					class="deploy-component-toggle"
@@ -79,7 +76,7 @@
 			</div>
 		{/if}
 	</div>
-	<YamlCode slot="content" {component} />
+	<YamlCode slot="content" code={component} />
 </Accordion>
 
 <style>

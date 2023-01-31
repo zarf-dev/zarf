@@ -64,7 +64,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
-	containerRegistryURL := config.GetRegistry(zarfState)
+	containerRegistryURL := zarfState.RegistryInfo.Address
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {

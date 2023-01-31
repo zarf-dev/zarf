@@ -52,12 +52,13 @@ jobs:
       # Builds init packages since GoReleaser won't handle this for us
       - name: Build init-packages For Release
         run: |
-          make init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
-          make init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
+          make release-init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
+          make release-init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
 
       - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo rm -rf zarf-sbom
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
@@ -70,7 +71,7 @@ jobs:
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
@@ -86,7 +87,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
           version: latest

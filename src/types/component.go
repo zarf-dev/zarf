@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package // Package types contains all the types used by Zarf.
+// Package types contains all the types used by Zarf.
 package types
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -31,8 +31,11 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// Scripts are custom commands that run before or after package deployment
-	Scripts ZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=Custom commands to run before or after package deployment"`
+	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=(Deprecated--use actions instead) Custom commands to run before or after package deployment,deprecated=true"`
+
+	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
+	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files to place on disk during package deployment"`
@@ -108,8 +111,8 @@ type ZarfManifest struct {
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`
 }
 
-// ZarfComponentScripts are scripts that run before or after a component is deployed.
-type ZarfComponentScripts struct {
+// DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed
+type DeprecatedZarfComponentScripts struct {
 	ShowOutput     bool     `json:"showOutput,omitempty" jsonschema:"description=Show the output of the script during package deployment"`
 	TimeoutSeconds int      `json:"timeoutSeconds,omitempty" jsonschema:"description=Timeout in seconds for the script"`
 	Retry          bool     `json:"retry,omitempty" jsonschema:"description=Retry the script if it fails"`
@@ -118,13 +121,48 @@ type ZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
-// ZarfContainerTarget defines the destination info for a ZarfData target.
+// ZarfComponentActions are actionsets that map to different zarf package operations
+type ZarfComponentActions struct {
+	OnCreate ZarfComponentActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
+	OnDeploy ZarfComponentActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
+	OnRemove ZarfComponentActionSet `json:"onRemove,omitempty" jsonschema:"description=Actions to run during package removal"`
+}
+
+// ZarfComponentActionSet is a set of actions to run during a zarf package operation
+type ZarfComponentActionSet struct {
+	Defaults  ZarfComponentActionDefaults `json:"defaults,omitempty" jsonschema:"description=Default configuration for all actions in this set"`
+	Before    []ZarfComponentAction       `json:"before,omitempty" jsonschema:"description=Actions to run at the start of an operation"`
+	After     []ZarfComponentAction       `json:"after,omitempty" jsonschema:"description=Actions to run at the end of an operation"`
+	OnSuccess []ZarfComponentAction       `json:"onSuccess,omitempty" jsonschema:"description=Actions to run if all operations succeed"`
+	OnFailure []ZarfComponentAction       `json:"onFailure,omitempty" jsonschema:"description=Actions to run if all operations fail"`
+}
+
+// ZarfComponentActionDefaults sets the default configs for child actions
+type ZarfComponentActionDefaults struct {
+	Mute            bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
+	MaxTotalSeconds int      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
+	MaxRetries      int      `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
+	Dir             string   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
+	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+}
+
+// ZarfComponentAction represents a single action to run during a zarf package operation
+type ZarfComponentAction struct {
+	Mute            *bool    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxTotalSeconds *int     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
+	MaxRetries      *int     `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
+	Dir             *string  `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
+	Cmd             string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
+	SetVariable     string   `json:"setVariable,omitempty" jsonschema:"description=The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
+}
+
+// ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-
-	Path string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
 }
 
 // ZarfDataInjection is a data-injection definition.

@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -131,8 +132,21 @@ func (p *Packager) Create(baseDir string) error {
 	componentSBOMs := map[string]*types.ComponentSBOM{}
 	for _, component := range p.cfg.Pkg.Components {
 		componentSBOM, err := p.addComponent(component)
+		onCreate := component.Actions.OnCreate
+		onFailure := func() {
+			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+				message.Debugf("unable to run component failure action: %s", err.Error())
+			}
+		}
+
 		if err != nil {
+			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
+		}
+
+		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+			onFailure()
+			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		if componentSBOM != nil && len(componentSBOM.Files) > 0 {
@@ -267,9 +281,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		ComponentPath: componentPath,
 	}
 
-	// Loop through each component prepare script and execute it.
-	for _, script := range component.Scripts.Prepare {
-		p.loopScriptUntilSuccess(script, component.Scripts)
+	onCreate := component.Actions.OnCreate
+
+	if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	// If any helm charts are defined, process them.
@@ -323,7 +338,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 			// Abort packaging on invalid shasum (if one is specified)
 			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetSha256Sum(destinationFile); actualShasum != file.Shasum {
+				if actualShasum, _ := utils.GetCryptoHash(destinationFile, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 				}
 			}
@@ -408,6 +423,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
+	}
+
+	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+		return nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	return &componentSBOM, nil

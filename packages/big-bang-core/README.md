@@ -18,7 +18,7 @@ Lots of new things
 
 ### Pull down the code and binaries
 
-```shell
+``` bash
 # Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
@@ -27,32 +27,55 @@ cd zarf/examples/big-bang-core
 
 ```
 
-### Get K3d components
+### Deploy a Kubernetes Cluster
 
-Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli
+Either deploy k3d locally, or use the provided eksctl config to launch an EKS cluster
+
+#### Deploy k3d Cluster
+
+Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli.
+
+#### Deploy EKS Cluster
+
+```shell
+eksctl create cluster -f eksctl/demo.yaml
+```
 
 ### Get Zarf components
 
 Follow instructions on  https://zarf.dev/install/ to get the `zarf` cli
 
-### Deploy an EKS cluster
+### Build the deploy package
 
-```shell
-eksctl create cluster -f eksctl/demo.yaml
+``` bash
+# Authenticate to the registry with Big Bang artifacts, https://registry1.dso.mil/
+set +o history
+export REGISTRY1_USERNAME=<REPLACE_ME>
+export REGISTRY1_PASSWORD=<REPLACE_ME>
+echo $REGISTRY1_PASSWORD | zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
+set -o history
+
+# Run zarf package command
+zarf package create . --confirm
 ```
 
 Now wait 20 min :face_palm:
 
 ### Initialize Zarf
 
-```shell
-# Initialize Zarf
-go run ../../main.go init -a amd64 --confirm --components git-server
+``` bash
+# Initialize Zarf (interactively)
+zarf init
+# Make these choices at the prompt
+# ? Do you want to download this init package? Yes
+# ? Deploy this Zarf package? Yes
+# ? Deploy the k3s component? No
+# ? Deploy the logging component? No
+# ? Deploy the git-server component? Yes
 
 # (Optional) Inspect the results
 zarf tools k9s
 ```
-
 
 ### Configure and Package BigBang
 
@@ -102,24 +125,24 @@ kubectl get pods -A
 
 ### Clean Up
 
+
+#### K3d
+
 ```shell
-# Inside the VM
-eksctl delete cluster -f eksctl/demo.yaml --disable-nodegroup-eviction --wait
+# Destroy the k3d cluster
+k3d cluster delete
+
 ```
 
-## Services
 
-| URL                                                   | Username  | Password                                                                                                                                                                                   | Notes                                                               |
-| ----------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| [AlertManager](https://alertmanager.bigbang.dev:8443) | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Grafana](https://grafana.bigbang.dev:8443)           | `admin`   | `prom-operator`                                                                                                                                                                            |                                                                     |
-| [Kiali](https://kiali.bigbang.dev:8443)               | n/a       | `kubectl get secret -n kiali -o=json \| jq -r '.items[] \| select(.metadata.annotations."kubernetes.io/service-account.name"=="kiali-service-account") \| .data.token' \| base64 -d; echo` |                                                                     |
-| [Kibana](https://kibana.bigbang.dev:8443)             | `elastic` | `kubectl get secret -n logging logging-ek-es-elastic-user -o=jsonpath='{.data.elastic}' \| base64 -d; echo`                                                                                |                                                                     |
-| [Prometheus](https://prometheus.bigbang.dev:8443)     | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Jaeger](https://tracing.bigbang.dev:8443)            | n/a       | n/a                                                                                                                                                                                        | Unauthenticated                                                     |
-| [Twistlock](https://twistlock.bigbang.dev:8443)       | n/a       | n/a                                                                                                                                                                                        | Twistlock has you create an admin account the first time you log in |
+#### EKS
+
+```shell
+eksctl delete cluster -f eksctl/demo.yaml --disable-nodegroup-eviction --wait
+
+```
 
 ## Troubleshooting
 
 ### My computer crashed!
-Close all those hundreds of chrome tabs, shut down all non-essential programs, and try again. Big Bang is a HOG. If you have less than 32GB of RAM you're in for a rough time.
+Close all those hundreds of chrome tabs, shut down all non-essential programs, and try again. Big Bang is a HOG. If you have less than 32GB of RAM you're in for a rough time and should use the EKS cluster in the example

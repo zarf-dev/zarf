@@ -80,7 +80,7 @@ func TestUseCLI(t *testing.T) {
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 
 	_ = os.Mkdir(otherTmpPath, 0750)
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/game", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/dos-games", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 

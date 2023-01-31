@@ -2,6 +2,45 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$ref": "#/definitions/ZarfPackage",
   "definitions": {
+    "DeprecatedZarfComponentScripts": {
+      "properties": {
+        "showOutput": {
+          "type": "boolean",
+          "description": "Show the output of the script during package deployment"
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "description": "Timeout in seconds for the script"
+        },
+        "retry": {
+          "type": "boolean",
+          "description": "Retry the script if it fails"
+        },
+        "prepare": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Scripts to run before the component is added during package create"
+        },
+        "before": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Scripts to run before the component is deployed"
+        },
+        "after": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Scripts to run after the component successfully deploys"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfBigBang": {
       "required": [
         "version"
@@ -36,7 +75,8 @@
         "user",
         "architecture",
         "timestamp",
-        "version"
+        "version",
+        "migrations"
       ],
       "properties": {
         "terminal": {
@@ -53,6 +93,12 @@
         },
         "version": {
           "type": "string"
+        },
+        "migrations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -164,8 +210,13 @@
         },
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentScripts",
-          "description": "Custom commands to run before or after package deployment"
+          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
+          "description": "(Deprecated--use actions instead) Custom commands to run before or after package deployment"
+        },
+        "actions": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActions",
+          "description": "Custom commands to run at various stages of a package lifecycle"
         },
         "files": {
           "items": {
@@ -216,6 +267,132 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfBigBang",
           "description": "Configurations for installing BigBang and Flux in the cluster"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentAction": {
+      "properties": {
+        "mute": {
+          "type": "boolean",
+          "description": "Hide the output of the command during package deployment (default false)"
+        },
+        "maxTotalSeconds": {
+          "type": "integer",
+          "description": "Timeout in seconds for the command (default to 0"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "description": "Retry the command if it fails up to given number of times (default 0)"
+        },
+        "dir": {
+          "type": "string",
+          "description": "The working directory to run the command in (default is CWD)"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Additional environment variables to set for the command"
+        },
+        "cmd": {
+          "type": "string",
+          "description": "The command to run"
+        },
+        "setVariable": {
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string",
+          "description": "The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionDefaults": {
+      "properties": {
+        "mute": {
+          "type": "boolean",
+          "description": "Hide the output of commands during execution (default false)"
+        },
+        "maxTotalSeconds": {
+          "type": "integer",
+          "description": "Default timeout in seconds for commands (default to 0"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "description": "Retry commands given number of times if they fail (default 0)"
+        },
+        "dir": {
+          "type": "string",
+          "description": "Working directory for commands (default CWD)"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Additional environment variables for commands"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionSet": {
+      "properties": {
+        "defaults": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionDefaults",
+          "description": "Default configuration for all actions in this set"
+        },
+        "before": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfComponentAction"
+          },
+          "type": "array",
+          "description": "Actions to run at the start of an operation"
+        },
+        "after": {
+          "items": {
+            "$ref": "#/definitions/ZarfComponentAction"
+          },
+          "type": "array",
+          "description": "Actions to run at the end of an operation"
+        },
+        "onSuccess": {
+          "items": {
+            "$ref": "#/definitions/ZarfComponentAction"
+          },
+          "type": "array",
+          "description": "Actions to run if all operations succeed"
+        },
+        "onFailure": {
+          "items": {
+            "$ref": "#/definitions/ZarfComponentAction"
+          },
+          "type": "array",
+          "description": "Actions to run if all operations fail"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActions": {
+      "properties": {
+        "onCreate": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionSet",
+          "description": "Actions to run during package creation"
+        },
+        "onDeploy": {
+          "$ref": "#/definitions/ZarfComponentActionSet",
+          "description": "Actions to run during package deployment"
+        },
+        "onRemove": {
+          "$ref": "#/definitions/ZarfComponentActionSet",
+          "description": "Actions to run during package removal"
         }
       },
       "additionalProperties": false,
@@ -273,45 +450,6 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentOnlyCluster",
           "description": "Only deploy component to specified clusters"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "ZarfComponentScripts": {
-      "properties": {
-        "showOutput": {
-          "type": "boolean",
-          "description": "Show the output of the script during package deployment"
-        },
-        "timeoutSeconds": {
-          "type": "integer",
-          "description": "Timeout in seconds for the script"
-        },
-        "retry": {
-          "type": "boolean",
-          "description": "Retry the script if it fails"
-        },
-        "prepare": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Scripts to run before the component is added during package create"
-        },
-        "before": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Scripts to run before the component is deployed"
-        },
-        "after": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Scripts to run after the component successfully deploys"
         }
       },
       "additionalProperties": false,

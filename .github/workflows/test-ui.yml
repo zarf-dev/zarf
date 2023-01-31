@@ -39,11 +39,17 @@ jobs:
       - name: Cache browsers
         uses: actions/cache@v3
         with:
-          path: "~/Library/Caches/ms-playwright/"
+          path: "~/.cache/ms-playwright/"
           key: ${{ runner.os }}-browsers
 
+      - name: Ensure playright is installed
+        run: npx playwright install
+
       - name: Run UI tests
-        run: npm test
+        run: >
+          npm run test:pre-init &&
+          npm run test:init &&
+          npm run test:post-init
 
       - name: Save logs
         if: always()
