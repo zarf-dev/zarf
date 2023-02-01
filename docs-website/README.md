@@ -29,31 +29,6 @@ To install the required dependencies run the following:
 npm ci
 ```
 
-### Updating Zarf `docs` Files
-
-The markdown files for Zarf are held in the main Zarf repo and are pulled into this repo using a submodule. The current versions will be cloned as part of the `postinstall` script. To update the reference to those docs run the following command:
-
-``` bash
-git submodule update --remote --recursive main
-```
-
-To checkout a specific tag within the submodule you can do the following after updating:
-
-``` bash
-cd main
-git checkout <tag>
-cd ..
-```
-
-You may also find it useful to switch to a different branch for the submodule.  You can do this by adding a `branch` to `.gitmodules`:
-
-``` toml
-[submodule "main"]
- path = main
- url = https://github.com/defenseunicorns/zarf.git
-    branch = <your-branch-here>
-```
-
 ### Running
 
 There are two ways to run the site locally, the simplest being the following:
