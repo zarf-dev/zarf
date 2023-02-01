@@ -3,6 +3,9 @@
     "config:base",
     "group:allNonMajor"
   ],
+  "ignoreDeps": [
+    "sigs.k8s.io/kustomize/kyaml"
+  ],
   "packageRules": [
     {
       "matchUpdateTypes": [
