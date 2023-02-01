@@ -1,5 +1,5 @@
 [build]
-  base = "docs-modules/"
+  base = "docs-website/"
   command = "npm run build"
   publish = "build/"
 
