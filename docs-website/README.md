@@ -21,7 +21,7 @@ $ sudo apt install npm
 $ brew install nodejs
 ```
 
-### Installation
+## Installation
 
 To install the required dependencies run the following:
 
@@ -29,7 +29,7 @@ To install the required dependencies run the following:
 npm ci
 ```
 
-### Running
+## Running
 
 There are two ways to run the site locally, the simplest being the following:
 
@@ -48,6 +48,6 @@ npm run build
 npm run serve
 ```
 
-### Deployment
+## Deployment
 
 To deploy the site, push your changes into a branch and open a PR.  [Netlify](https://www.netlify.com/) will generate a preview for you and a PR approver to see your changes.  Once the approver is happy with the changes they can approve and merge the PR and it will be pushed to production.
