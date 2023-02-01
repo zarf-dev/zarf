@@ -219,7 +219,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
+		}
 
+		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
+		if hasImages && !hpaModified {
 			if err := p.cluster.EnableRegistryHPAScaleDown(false); err != nil {
 				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
 			} else {
