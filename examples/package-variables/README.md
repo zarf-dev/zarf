@@ -2,9 +2,9 @@
 
 This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts that your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###` respectively. It also shows how package-level variables can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_VAR_*###`.
 
-With this templating feature, you can define values in the zarf.yaml file without having to define them in every manifest and chart, and can prompt the deployer for certain information that may be dynamic on `zarf package deploy`.
+With this templating feature, you can define values in the `zarf.yaml` file without having to define them in every manifest and chart, and can prompt the deployer for certain information that may be dynamic on `zarf package deploy`.
 
-This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your zarf.yaml file.
+This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your `zarf.yaml` file.
 
 Text files are also templated during `zarf package deploy` so you can use these variables in any text file that you want to be templated.
 
@@ -24,7 +24,7 @@ The 'placeholder' text in the manifest or chart yaml should have your desired ke
 
 For example, if I wanted to create a template for a database username (using the variable `name`: `DATABASE_USERNAME`) I would do something like `###ZARF_VAR_DATABASE_USERNAME###` in the manifest or chart yaml.
 
-In the zarf.yaml you would add the name of the variable in the `variables` section, or the name of the constant in the `constants` section (which both must match the regex pattern `[A-Z_]*` [Test](https://regex101.com/?regex=%5BA-Z_%5D%2A)). For the same example as above, I would have:
+In the `zarf.yaml` you would add the name of the variable in the `variables` section, or the name of the constant in the `constants` section (which both must match the regex pattern `[A-Z_]*` [Test](https://regex101.com/?regex=%5BA-Z_%5D%2A)). For the same example as above, I would have:
 
 ```yaml
 variables:
@@ -69,7 +69,7 @@ constants:
 
 ::note
 
-`zarf package create` only templates the zarf.yaml file, and `zarf package deploy` only templates other manifests and charts
+`zarf package create` only templates the `zarf.yaml` file, and `zarf package deploy` only templates other manifests and charts
 
 :::
 
