@@ -45,6 +45,8 @@ func TestGitAndFlux(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	testRemovingTagsOnCreate(t, path)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -143,4 +145,24 @@ timer:
 	}
 
 	assert.Contains(t, string(kubectlOut), "condition met")
+}
+
+func testRemovingTagsOnCreate(t *testing.T, packagePath string) {
+	// Extract the built package so we can inspect the repositories that are included
+	extractedDirPath := "tmp-extraction"
+	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", packagePath, extractedDirPath, "-l=trace")
+	defer e2e.cleanFiles(extractedDirPath)
+	require.NoError(t, err, stdOut, stdErr)
+
+	// verify the component has multiple tags (in this case, we want to make sure it includes something we didn't specifically ask for)
+	gitDirFlag := fmt.Sprintf("--git-dir=%s/components/full-repo/repos/zarf-1211668992/.git", extractedDirPath)
+	gitTagOut, err := exec.Command("git", gitDirFlag, "tag", "-l").Output()
+	require.NoError(t, err)
+	require.Contains(t, string(gitTagOut), "v0.16.0")
+
+	// verify the component has only a single tag
+	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-tag/repos/zarf-1211668992/.git", extractedDirPath)
+	gitTagOut, err = exec.Command("git", gitDirFlag, "tag", "-l").Output()
+	require.NoError(t, err)
+	require.Equal(t, "v0.15.0\n", string(gitTagOut))
 }
