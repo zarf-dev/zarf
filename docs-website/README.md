@@ -11,7 +11,7 @@ This is the docs site for [Zarf](https://github.com/defenseunicorns/zarf), a dec
 
 This site requires `nodejs` and `npm` so install it if you haven't already.
 
-``` bash
+```bash
 # FOR LINUX (Ubuntu)
 $ sudo apt update
 $ sudo apt install nodejs
@@ -25,7 +25,7 @@ $ brew install nodejs
 
 To install the required dependencies run the following:
 
-``` bash
+```bash
 npm ci
 ```
 
@@ -33,7 +33,7 @@ npm ci
 
 There are two ways to run the site locally, the simplest being the following:
 
-``` bash
+```bash
 npm run start
 ```
 
@@ -43,7 +43,7 @@ This will open a browser window that will let you see the built site.
 
 To perform a full build and to run it locally you should run the following:
 
-``` bash
+```bash
 npm run build
 npm run serve
 ```
