@@ -85,8 +85,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
 		} else if err != nil {
-			g.Spinner.Warnf("Not a valid git repo or unable to pull: %s", gitURL)
-			return err
+			return fmt.Errorf("not a valid git repo or unable to pull (%s): %w", gitURL, err)
 		}
 
 		// NOTE: Since pull doesn't pull any new tags, we need to fetch them

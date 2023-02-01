@@ -7,6 +7,7 @@ package git
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -30,10 +31,10 @@ func (g *Git) fetchRef(ref string) error {
 
 // fetchTag performs a `git fetch` of _only_ the provided tag.
 func (g *Git) fetchTag(tag string) error {
-	message.Debugf("git.fetchTag(%s)", tag)
+	refSpec := goConfig.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
-		RefSpecs:   []goConfig.RefSpec{goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)},
+		RefSpecs:   []goConfig.RefSpec{refSpec},
 		Tags:       git.NoTags,
 	}
 
@@ -43,11 +44,10 @@ func (g *Git) fetchTag(tag string) error {
 
 // fetchHash performs a `git fetch` of _only_ the provided commit hash.
 func (g *Git) fetchHash(hash string) error {
-	message.Debugf("git.fetchHash(%s)", hash)
-
+	refSpec := goConfig.RefSpec(fmt.Sprintf("%s:%s", hash, hash))
 	fetchOptions := &git.FetchOptions{
 		RemoteName: onlineRemoteName,
-		RefSpecs:   []goConfig.RefSpec{goConfig.RefSpec(hash + ":" + hash)},
+		RefSpecs:   []goConfig.RefSpec{refSpec},
 		Tags:       git.NoTags,
 	}
 
@@ -57,8 +57,6 @@ func (g *Git) fetchHash(hash string) error {
 
 // fetch performs a `git fetch` of _only_ the provided git refspec(s) within the fetchOptions.
 func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
-	message.Debugf("git.fetch(%#v)", fetchOptions)
-
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
 		message.Fatal(err, "Unable to load the git repo")

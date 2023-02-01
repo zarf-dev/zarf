@@ -5,6 +5,8 @@
 package git
 
 import (
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -41,8 +43,7 @@ func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) err
 
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
-		message.Warnf("Not a valid git repo or unable to open")
-		return err
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	tagRef, err := repo.Tag(tag)
