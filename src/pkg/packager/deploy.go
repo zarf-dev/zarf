@@ -28,8 +28,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var valueTemplate template.Values
-var connectStrings = make(types.ConnectStrings)
+var (
+	hpaModified    bool
+	valueTemplate  template.Values
+	connectStrings = make(types.ConnectStrings)
+)
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
@@ -68,6 +71,9 @@ func (p *Packager) Deploy() error {
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 	if p.cluster != nil {
 		p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents)
+		if hpaModified {
+			p.cluster.EnableRegistryHPAScaleDown(true)
+		}
 	}
 
 	return nil
@@ -212,6 +218,12 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+
+			if err := p.cluster.EnableRegistryHPAScaleDown(false); err != nil {
+				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
+			} else {
+				hpaModified = true
 			}
 		}
 
