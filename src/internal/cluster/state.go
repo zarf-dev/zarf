@@ -30,8 +30,6 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.ZarfInitOptions) error {
-	message.Debugf("package.preSeedRegistry(%#v)", tempPath)
-
 	var (
 		clusterArch string
 		distro      string
