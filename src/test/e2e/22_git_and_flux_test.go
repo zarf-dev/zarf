@@ -25,27 +25,27 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	// path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
 
-	// // Deploy the gitops example
-	// stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	// require.NoError(t, err, stdOut, stdErr)
+	// Deploy the gitops example
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
-	// tunnel, err := cluster.NewZarfTunnel()
-	// require.NoError(t, err)
-	// tunnel.Connect(cluster.ZarfGit, false)
-	// defer tunnel.Close()
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
+	tunnel.Connect(cluster.ZarfGit, false)
+	defer tunnel.Close()
 
-	// testGitServerConnect(t, tunnel.HTTPEndpoint())
-	// testGitServerReadOnly(t, tunnel.HTTPEndpoint())
-	// testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
-	// waitFluxPodInfoDeployment(t)
+	testGitServerConnect(t, tunnel.HTTPEndpoint())
+	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
+	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
+	waitFluxPodInfoDeployment(t)
 
-	// stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
-	// require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
-	// stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
-	// require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	testRemovingTagsOnCreate(t)
 }
