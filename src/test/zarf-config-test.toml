@@ -4,6 +4,7 @@ no_log_file = true
 no_progress = true
 tmp_dir = 'tmp_dir: c457359e'
 zarf_cache = 'zarf_cache: 978499a5'
+insecure = true
 
 [init]
 components = 'components: 359049b9'
@@ -27,7 +28,6 @@ url = 'registry.url: c0ac2e47'
 
 [package]
 [package.create]
-insecure = true
 output_directory = 'create.output_directory: 52d061d5'
 skip_sbom = true
 max_package_size = 42
@@ -37,7 +37,6 @@ thing1 = '1a2b3c4d'
 
 [package.deploy]
 components = 'deploy.components: 8d6fde37'
-insecure = true
 sget = 'deploy.sget: ee7905de'
 shasum = 'deploy.shasum: 7606fe19'
 

@@ -32,10 +32,6 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
-     * Allow insecure connections for remote packages
-     */
-    insecure: boolean;
-    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -743,6 +739,10 @@ export interface ZarfCommonOptions {
      */
     confirm: boolean;
     /**
+     * Allow insecure connections for remote packages
+     */
+    insecure: boolean;
+    /**
      * Location Zarf should use as a staging ground when managing files and images for package
      * creation and deployment
      */
@@ -750,10 +750,6 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
-    /**
-     * Disable the need for shasum validations when pulling down files from the internet
-     */
-    insecure: boolean;
     /**
      * Size of chunks to use when splitting a zarf package into multiple files in megabytes
      */
@@ -969,7 +965,6 @@ const typeMap: any = {
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
-        { json: "insecure", js: "insecure", typ: true },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
@@ -1185,10 +1180,10 @@ const typeMap: any = {
     "ZarfCommonOptions": o([
         { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
+        { json: "insecure", js: "insecure", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "insecure", js: "insecure", typ: true },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "noLocalImages", js: "noLocalImages", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
