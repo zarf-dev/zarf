@@ -66,6 +66,7 @@ func configFileDefaultTests(t *testing.T) {
 		"Disable log file creation (default true)",
 		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
+		"Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"tmp_dir: c457359e",
 	}
 
@@ -87,7 +88,6 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	packageCreateFlags := []string{
-		"Allow insecure registry connections when pulling OCI images (default true)",
 		"create.output_directory: 52d061d5",
 		"Skip generating SBOM for this package (default true)",
 		"[thing1=1a2b3c4d]",
@@ -96,7 +96,6 @@ func configFileDefaultTests(t *testing.T) {
 
 	packageDeployFlags := []string{
 		"deploy.components: 8d6fde37",
-		"Required if deploying a remote package and --shasum is not provided (default true)",
 		"deploy.sget: ee7905de",
 		"deploy.shasum: 7606fe19",
 		"[thing2=2b3c4d5e]",
