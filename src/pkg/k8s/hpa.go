@@ -29,8 +29,8 @@ func (k *K8s) GetHPA(namespace, name string) (*v2beta2.HorizontalPodAutoscaler, 
 	return k.Clientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(context.TODO(), name, metaOptions)
 }
 
-// SaveHPA updates the given horizontal pod autoscaler in the cluster.
-func (k *K8s) SaveHPA(hpa *v2beta2.HorizontalPodAutoscaler) (*v2beta2.HorizontalPodAutoscaler, error) {
+// UpdateHPA updates the given horizontal pod autoscaler in the cluster.
+func (k *K8s) UpdateHPA(hpa *v2beta2.HorizontalPodAutoscaler) (*v2beta2.HorizontalPodAutoscaler, error) {
 	metaOptions := metav1.UpdateOptions{}
 	return k.Clientset.AutoscalingV2beta2().HorizontalPodAutoscalers(hpa.Namespace).Update(context.TODO(), hpa, metaOptions)
 }

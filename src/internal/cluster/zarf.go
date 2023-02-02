@@ -120,7 +120,7 @@ func (c *Cluster) EnableRegistryHPAScaleDown(enable bool) error {
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
-	if _, err = c.Kube.SaveHPA(hpa); err != nil {
+	if _, err = c.Kube.UpdateHPA(hpa); err != nil {
 		return err
 	}
 
