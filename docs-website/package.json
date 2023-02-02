@@ -16,6 +16,7 @@
   "dependencies": {
     "@docusaurus/core": "2.3.0",
     "@docusaurus/preset-classic": "2.3.0",
+    "@docusaurus/theme-mermaid": "^2.3.0",
     "@easyops-cn/docusaurus-search-local": "0.33.6",
     "@mdx-js/react": "1.6.22",
     "clsx": "1.2.1",

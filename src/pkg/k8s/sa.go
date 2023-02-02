@@ -6,8 +6,11 @@ package k8s
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +31,32 @@ func (k *K8s) GetServiceAccount(namespace, name string) (*corev1.ServiceAccount,
 	return k.Clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metaOptions)
 }
 
-// SaveServiceAccount updates the given service account in the cluster.
-func (k *K8s) SaveServiceAccount(svcAccount *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
+// UpdateServiceAccount updates the given service account in the cluster.
+func (k *K8s) UpdateServiceAccount(svcAccount *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
 	metaOptions := metav1.UpdateOptions{}
 	return k.Clientset.CoreV1().ServiceAccounts(svcAccount.Namespace).Update(context.TODO(), svcAccount, metaOptions)
+}
+
+// WaitForServiceAccount waits for a service account to be created in the cluster.
+func (k *K8s) WaitForServiceAccount(ns, name string, timeout time.Duration) (*corev1.ServiceAccount, error) {
+	expired := time.After(timeout)
+
+	for {
+		select {
+		case <-expired:
+			return nil, fmt.Errorf("timed out waiting for service account %s/%s to exist", ns, name)
+
+		default:
+			sa, err := k.Clientset.CoreV1().ServiceAccounts(ns).Get(context.TODO(), name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				return nil, fmt.Errorf("error getting service account %s/%s: %w", ns, name, err)
+			}
+
+			return sa, nil
+		}
+	}
 }
