@@ -5,7 +5,6 @@
 package cluster
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
