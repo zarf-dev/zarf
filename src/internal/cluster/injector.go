@@ -95,8 +95,6 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 		// if no error, try and wait for a seed image to be present, return if successful
 		if c.injectorIsReady(spinner) {
 			return
-		} else {
-			time.Sleep(5 * time.Second)
 		}
 
 		// Otherwise just continue to try next image

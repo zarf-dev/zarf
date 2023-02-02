@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -90,6 +91,19 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 		spinner.Updatef("Creating the Zarf namespace")
 		if _, err := c.Kube.CreateNamespace(ZarfNamespace, nil); err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
+		}
+		// Wait for serviceAccount creation in new namespace
+		for attempts := 0; attempts < 20; attempts++ {
+			serviceAccounts, err := c.Kube.GetServiceAccounts(ZarfNamespace)
+			if err != nil {
+				message.Debug(err)
+			}
+			if len(serviceAccounts.Items) > 0 {
+				break
+			} else if (len(serviceAccounts.Items) == 0) && (attempts == 20) {
+				spinner.Fatalf(err, "serviceAccount in zarf namespace not created in reasonable time")
+			}
+			time.Sleep(3 * time.Second)
 		}
 	}
 
