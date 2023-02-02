@@ -1,8 +1,9 @@
 # Zarf Package Lifecycle
 
-The following diagrams show the order of operations for the `zarf package` commands and the hook locations for [actions](../../examples/component-actions/README.md). 
+The following diagrams show the order of operations for the `zarf package` commands and the hook locations for [actions](../../examples/component-actions/README.md).
 
-### `zarf package create`
+## `zarf package create`
+
 ```mermaid
 graph TD
     A1(set working directory)-->A2
@@ -53,7 +54,8 @@ graph TD
     classDef fail fill:#aa0000
 ```
 
-### `zarf package deploy`
+## `zarf package deploy`
+
 ```mermaid
 graph TD
     B1(load package archive)-->B2
