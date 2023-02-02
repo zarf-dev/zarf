@@ -150,7 +150,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.RunInjectionMadness(p.tmp)
+		p.cluster.StartInjectionMadness(p.tmp)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
@@ -160,7 +160,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		err := p.cluster.PostSeedRegistry(p.tmp)
+		err := p.cluster.StopInjectionMadness()
 		if err != nil {
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
