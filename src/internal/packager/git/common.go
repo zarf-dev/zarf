@@ -25,7 +25,9 @@ const onlineRemoteName = "online-upstream"
 const offlineRemoteName = "offline-downstream"
 const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
-var IsHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
+// isHash checks if a string is a valid git hash.
+// https://regex101.com/r/jm9bdk/1
+var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
 
 // New creates a new git instance with the provided server config.
 func New(server types.GitServerInfo) *Git {

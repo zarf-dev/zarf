@@ -20,7 +20,7 @@ import (
 func (g *Git) fetchRef(ref string) error {
 	var err error
 
-	if IsHash(ref) {
+	if isHash(ref) {
 		err = g.fetchHash(ref)
 	} else {
 		err = g.fetchTag(ref)

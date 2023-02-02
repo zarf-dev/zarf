@@ -26,7 +26,7 @@ func (g *Git) CheckoutTag(tag string) {
 func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) error {
 	var err error
 
-	if IsHash(ref) {
+	if isHash(ref) {
 		err = g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	} else {
 		err = g.checkoutTagAsBranch(ref, branch)
