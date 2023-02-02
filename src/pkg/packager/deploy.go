@@ -134,7 +134,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
-		p.cluster.InitZarfState(p.tmp, p.cfg.InitOpts)
+		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
