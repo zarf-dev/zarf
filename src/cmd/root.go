@@ -71,6 +71,7 @@ func init() {
 	v.SetDefault(V_ARCHITECTURE, "")
 	v.SetDefault(V_NO_LOG_FILE, false)
 	v.SetDefault(V_NO_PROGRESS, false)
+	v.SetDefault(V_INSECURE, false)
 	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_TMP_DIR, "")
 
@@ -80,6 +81,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(V_INSECURE), lang.RootCmdFlagInseure)
 }
 
 func cliSetup() {
