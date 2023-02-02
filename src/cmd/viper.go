@@ -20,6 +20,7 @@ const (
 	V_NO_PROGRESS  = "no_progress"
 	V_ZARF_CACHE   = "zarf_cache"
 	V_TMP_DIR      = "tmp_dir"
+	V_INSECURE     = "insecure"
 
 	// Init config keys
 	V_INIT_COMPONENTS    = "init.components"
@@ -52,14 +53,12 @@ const (
 	V_PKG_CREATE_SBOM             = "package.create.sbom"
 	V_PKG_CREATE_SBOM_OUTPUT      = "package.create.sbom_output"
 	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
-	V_PKG_CREATE_INSECURE         = "package.create.insecure"
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
 	V_PKG_CREATE_NO_LOCAL_IMAGES  = "package.create.no_local_images"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
 	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
-	V_PKG_DEPLOY_INSECURE   = "package.deploy.insecure"
 	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
 )

@@ -20,8 +20,6 @@ zarf package deploy       # Deploy the games package
                           # Type `y` when prompted and then hit the enter key
 ```
 
-<br />
-
 ### Selecting the Games Package
 
 Since we did not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. There is a useful tab-suggestions feature that makes selecting between different packages in your directories easier.
@@ -29,19 +27,13 @@ Since we did not provide the path to the package as an argument to the `zarf pac
 ![Package Deploy Selection Tab](../.images/walkthroughs/package_deploy_tab.png)
 By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the games package in this walkthrough, we will select that package and hit 'enter'.
 
-<br />
-
 ![Package Deploy Tab Selection](../.images/walkthroughs/package_deploy_tab_selection.png)
 As we have seen a few times now, we are going to be prompted with a confirmation dialog asking us to confirm that we want to deploy this package onto our cluster.v
-
-<br />
 
 ### Connecting to the Games
 
 When the games package finishes deploying, you should get an output that lists a couple of new commands that you can use to connect to the games. These new commands were defined by the creators of the games package to make it easier to access the games. By typing the new command, your browser should automatically open up and connect to the application we just deployed into the cluster.
 ![Connecting to the Games](../.images/walkthroughs/game_connect_commands.png)
-
-<br />
 
 ``` bash
 zarf connect games
@@ -49,15 +41,13 @@ zarf connect games
 
 ![Connected to the Games](../.images/walkthroughs/games_connected.png)
 
-::: note
+:::note
 If your browser doesn't automatically open up, you can manually go to your browser and copy the IP address that the command printed out into the URL bar.
 :::
 
-::: note
-The `zarf connect games` will continue running in the background until you close the connection by clicking onto your terminal and pressing the `control + c` keys on your keyboard at the same time.
+:::note
+The `zarf connect games` will continue running in the background until you close the connection by pressing the `control + c` in your terminal to terminate the process.
 :::
-
-<br />
 
 ## Credits
 

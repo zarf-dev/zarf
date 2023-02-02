@@ -5,8 +5,10 @@
 package config
 
 import (
+	"crypto/tls"
 	"embed"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -120,7 +122,11 @@ func GetCraneOptions(insecure bool) []crane.Option {
 
 	// Handle insecure registry option
 	if insecure {
-		options = append(options, crane.Insecure)
+		roundTripper := http.DefaultTransport.(*http.Transport).Clone()
+		roundTripper.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+		options = append(options, crane.Insecure, crane.WithTransport(roundTripper))
 	}
 
 	// Add the image platform info

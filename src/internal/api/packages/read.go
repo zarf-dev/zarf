@@ -27,7 +27,7 @@ func Read(w http.ResponseWriter, r *http.Request) {
 	path := chi.URLParam(r, "path")
 
 	if pkg, err := readPackage(path); err != nil {
-		message.ErrorWebf(err, w, "Unable to read the package")
+		message.ErrorWebf(err, w, "Unable to read the package at: `%s`", path)
 	} else {
 		common.WriteJSONResponse(w, pkg, http.StatusOK)
 	}

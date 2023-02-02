@@ -56,6 +56,13 @@ export const ZarfTypography: ThemeTypography = {
 		lineHeight: '166%',
 		letterSpacing: '0.4px'
 	},
+	code: {
+		fontSize: '14px',
+		fontWeight: '400',
+		lineHeight: '143%',
+		letterSpacing: '0.17px',
+		fontFamily: 'monospace, monospace'
+	},
 	overline: {
 		fontSize: '12px',
 		fontWeight: '400',
