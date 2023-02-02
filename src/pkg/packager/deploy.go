@@ -165,6 +165,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 			ImgList:     []string{seedImage},
 			NoChecksum:  true,
 			RegInfo:     p.cfg.State.RegistryInfo,
+			Insecure:    config.CommonOptions.Insecure,
 		}
 
 		// Push the seed images into to Zarf registry
@@ -386,6 +387,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		ImgList:     componentImages,
 		NoChecksum:  noImgChecksum,
 		RegInfo:     p.cfg.State.RegistryInfo,
+		Insecure:    config.CommonOptions.Insecure,
 	}
 
 	return utils.Retry(func() error {
