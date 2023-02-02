@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -64,8 +65,14 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 	// https://regex101.com/r/eLS3at/1
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
+	imagesLength := len(images)
+	index := 0
+
 	// Try to create an injector pod using an existing image in the cluster
 	for image, node := range images {
+		// Keep track of the index of the image we're on
+		index++
+
 		// Don't try to run against the seed image if this is a secondary zarf init run
 		if zarfImageRegex.MatchString(image) {
 			continue
@@ -95,6 +102,8 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 		// if no error, try and wait for a seed image to be present, return if successful
 		if c.injectorIsReady(spinner) {
 			return
+		} else {
+			time.Sleep(5 * time.Second)
 		}
 
 		// Otherwise just continue to try next image
