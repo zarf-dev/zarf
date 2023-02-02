@@ -93,7 +93,7 @@ func (c *Cluster) InitZarfState(tempPath types.TempPaths, initOptions types.Zarf
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 		// Wait for serviceAccount creation in new namespace
-		for attempts := 0; attempts < 20; attempts++ {
+		for attempts := 0; attempts <= 20; attempts++ {
 			serviceAccounts, err := c.Kube.GetServiceAccounts(ZarfNamespace)
 			if err != nil {
 				message.Debug(err)
