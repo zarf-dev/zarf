@@ -78,8 +78,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		}
 		worktree, err := repo.Worktree()
 		if err != nil {
-			message.Debugf("unable to get the worktree for the repo: %s", gitURL)
-			return err
+			return fmt.Errorf("unable to get the worktree for the repo (%s): %w", gitURL, err)
 		}
 		err = worktree.Pull(pullOptions)
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
@@ -95,8 +94,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		}
 
 	} else if err != nil {
-		g.Spinner.Warnf("Not a valid git repo or unable to clone: %s", gitURL)
-		return err
+		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
 	if gitCachePath != targetFolder {
@@ -124,7 +122,10 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
-		_, _ = g.removeLocalTagRefs()
+		_, err = g.removeLocalTagRefs()
+		if err != nil {
+			return fmt.Errorf("Unable to remove unneeded local tag refs: %w", err)
+		}
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()
 

@@ -37,16 +37,16 @@ func (g *Git) removeLocalTagRefs() ([]string, error) {
 		return removedTags, fmt.Errorf("failed to get the tags for the repo: %w", err)
 	}
 
-	allTags.ForEach(func(t *plumbing.Reference) error {
+	err = allTags.ForEach(func(t *plumbing.Reference) error {
 		removedTags = append(removedTags, t.Name().Short())
-		err := repo.DeleteTag(string(t.Name().Short()))
-		if err != nil {
-			message.Debugf("got an error when deleting tag %s", err.Error())
+		tagErr := repo.DeleteTag(string(t.Name().Short()))
+		if tagErr != nil {
+			return fmt.Errorf("failed to delete tag %s: %w", t.Name().Short(), tagErr)
 		}
 		return nil
 	})
 
-	return removedTags, nil
+	return removedTags, err
 }
 
 // removeOnlineRemoteRefs removes all refs pointing to the online-upstream

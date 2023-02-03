@@ -48,9 +48,9 @@ func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) err
 
 	tagRef, err := repo.Tag(tag)
 	if err != nil {
-		message.Warnf("Failed to located tag (%s) in repository.", tag)
-		return err
+		return fmt.Errorf("failed to locate tag (%s) in repository: %w", tag, err)
 	}
+
 	return g.checkoutHashAsBranch(tagRef.Hash(), branch)
 }
 
@@ -69,8 +69,7 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 
 	objRef, err := repo.Object(plumbing.AnyObject, hash)
 	if err != nil {
-		message.Warnf("An error occurred when getting the repo's object reference")
-		return err
+		return fmt.Errorf("an error occurred when getting the repo's object reference: %w", err)
 	}
 
 	var commitHash plumbing.Hash
@@ -103,15 +102,13 @@ func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) error {
 	// Open the given repo
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
-		message.Warnf("Not a valid git repo or unable to open")
-		return err
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	// Get the working tree so we can change refs
 	tree, err := repo.Worktree()
 	if err != nil {
-		message.Warnf("Unable to load the git repo")
-		return err
+		return fmt.Errorf("unable to load the git repo: %w", err)
 	}
 
 	// Perform the checkout

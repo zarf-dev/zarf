@@ -180,6 +180,7 @@ func testRemovingTagsOnCreate(t *testing.T) {
 	require.Equal(t, "v0.16.0\n", string(gitTagOut))
 
 	/* Test to make sure we are pulling the latest upstream changes when building a package */
+	// Force our cache to be 'old' by resetting the HEAD of the cached Zarf repo
 	cachedRepoGitDirFlag := fmt.Sprintf("--git-dir=%s/.zarf-cache/repos/zarf-1211668992/.git", homeDir)
 	cachedRepoWorkTreeFlag := fmt.Sprintf("--work-tree=%s/.zarf-cache/repos/zarf-1211668992", homeDir)
 	_, err = exec.Command("git", cachedRepoGitDirFlag, cachedRepoWorkTreeFlag, "reset", "HEAD~3", "--hard").Output()
