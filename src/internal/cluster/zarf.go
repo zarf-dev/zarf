@@ -100,23 +100,34 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
 }
 
-// ToggleRegHPAScaleDown enables or disables the HPA scale down for the Zarf Registry.
-func (c *Cluster) ToggleRegHPAScaleDown(setEnabled bool) error {
+// SetRegHPAScaleDown enables or disables the HPA scale down for the Zarf Registry.
+func (c *Cluster) EnableRegHPAScaleDown() error {
 	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
 
-	var policy autoscalingV2.ScalingPolicySelect
+	// Enable HPA scale down.
+	policy := autoscalingV2.MinChangePolicySelect
+	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
-	if setEnabled {
-		// Enable HPA scale down.
-		policy = autoscalingV2.MinChangePolicySelect
-	} else {
-		// Disable HPA scale down.
-		policy = autoscalingV2.DisabledPolicySelect
+	// Save the HPA changes.
+	if _, err = c.Kube.UpdateHPA(hpa); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+// SetRegHPAScaleDown enables or disables the HPA scale down for the Zarf Registry.
+func (c *Cluster) DisableRegHPAScaleDown() error {
+	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
+	if err != nil {
+		return err
+	}
+
+	// Disable HPA scale down.
+	policy := autoscalingV2.DisabledPolicySelect
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
