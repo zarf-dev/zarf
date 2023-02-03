@@ -57,6 +57,13 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
+	// Reset registry HPA scale down whether an error occurs or not
+	defer func() {
+		if p.cluster != nil && hpaModified {
+			p.cluster.EnableRegistryHPAScaleDown(true)
+		}
+	}()
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
@@ -71,9 +78,6 @@ func (p *Packager) Deploy() error {
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 	if p.cluster != nil {
 		p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents)
-		if hpaModified {
-			p.cluster.EnableRegistryHPAScaleDown(true)
-		}
 	}
 
 	return nil
