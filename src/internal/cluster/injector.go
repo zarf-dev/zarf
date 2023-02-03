@@ -26,8 +26,8 @@ import (
 // The chunk size for the tarball chunks.
 var payloadChunkSize = 1024 * 768
 
-// RunInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
+// StartInjectionMadness initializes a Zarf injection into the cluster.
+func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
@@ -102,6 +102,23 @@ func (c *Cluster) RunInjectionMadness(tempPath types.TempPaths) {
 
 	// All images were exhausted and still no happiness
 	spinner.Fatalf(nil, "Unable to perform the injection")
+}
+
+// StopInjectionMadness handles cleanup once the seed registry is up.
+func (c *Cluster) StopInjectionMadness() error {
+	// Try to kill the injector pod now
+	if err := c.Kube.DeletePod(ZarfNamespace, "injector"); err != nil {
+		return err
+	}
+
+	// Remove the configmaps
+	labelMatch := map[string]string{"zarf-injector": "payload"}
+	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespace, labelMatch); err != nil {
+		return err
+	}
+
+	// Remove the injector service
+	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
 }
 
 func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
