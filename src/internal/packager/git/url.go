@@ -41,7 +41,7 @@ func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	repoName := matches[idx("repo")]
 	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
 	// resolve to the same repp (as they would in real life)
-	sanitizedURL := fmt.Sprintf("%s/%s%s", matches[idx("hostPath")], repoName, matches[idx("atRef")])
+	sanitizedURL := fmt.Sprintf("%s/%s", matches[idx("hostPath")], repoName)
 
 	// Add crc32 hash of the repoName to the end of the repo
 	table := crc32.MakeTable(crc32.IEEE)
