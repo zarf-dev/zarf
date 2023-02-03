@@ -100,7 +100,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
 }
 
-// SetRegHPAScaleDown enables or disables the HPA scale down for the Zarf Registry.
+// EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown() error {
 	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 	return nil
 }
 
-// SetRegHPAScaleDown enables or disables the HPA scale down for the Zarf Registry.
+// DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown() error {
 	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
 	if err != nil {
