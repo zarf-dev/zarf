@@ -18,15 +18,11 @@ import (
 
 // fetchRef performs a `git fetch` of _only_ the provided git reference (tag or hash).
 func (g *Git) fetchRef(ref string) error {
-	var err error
-
 	if isHash(ref) {
-		err = g.fetchHash(ref)
-	} else {
-		err = g.fetchTag(ref)
+		return g.fetchHash(ref)
 	}
 
-	return err
+	return g.fetchTag(ref)
 }
 
 // fetchTag performs a `git fetch` of _only_ the provided tag.
@@ -38,8 +34,7 @@ func (g *Git) fetchTag(tag string) error {
 		Tags:       git.NoTags,
 	}
 
-	err := g.fetch(g.GitPath, fetchOptions)
-	return err
+	return g.fetch(g.GitPath, fetchOptions)
 }
 
 // fetchHash performs a `git fetch` of _only_ the provided commit hash.
@@ -51,22 +46,21 @@ func (g *Git) fetchHash(hash string) error {
 		Tags:       git.NoTags,
 	}
 
-	err := g.fetch(g.GitPath, fetchOptions)
-	return err
+	return g.fetch(g.GitPath, fetchOptions)
 }
 
 // fetch performs a `git fetch` of _only_ the provided git refspec(s) within the fetchOptions.
 func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
 	repo, err := git.PlainOpen(gitDirectory)
 	if err != nil {
-		message.Fatal(err, "Unable to load the git repo")
+		return fmt.Errorf("unable to load the git repo: %w", err)
 	}
 
 	remotes, err := repo.Remotes()
 	// There should never be no remotes, but it's easier to account for than
 	// let be a bug later
 	if err != nil || len(remotes) == 0 {
-		message.Fatal(err, "Failed to identify remotes.")
+		return fmt.Errorf("unable to identify remotes: %w", err)
 	}
 
 	gitURL := remotes[0].Config().URLs[0]
