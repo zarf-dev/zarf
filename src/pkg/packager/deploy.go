@@ -60,7 +60,7 @@ func (p *Packager) Deploy() error {
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
 		if p.cluster != nil && hpaModified {
-			p.cluster.EnableRegistryHPAScaleDown(true)
+			p.cluster.ToggleRegHPAScaleDown(true)
 		}
 	}()
 
@@ -228,7 +228,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
-			if err := p.cluster.EnableRegistryHPAScaleDown(false); err != nil {
+			if err := p.cluster.ToggleRegHPAScaleDown(false); err != nil {
 				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
 			} else {
 				hpaModified = true
