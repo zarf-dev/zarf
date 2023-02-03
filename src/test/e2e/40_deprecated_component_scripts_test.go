@@ -33,8 +33,8 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-component-scripts-%s.tar.zst", testPackageDirPath, e2e.arch)
 	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(testPackagePath)
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Test for package create prepare artifact
 	require.FileExists(t, prepareArtifact)
