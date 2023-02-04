@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -23,8 +24,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-
-	dockerTypes "github.com/docker/docker/api/types"
 )
 
 var ErrNoDockerClient = errors.New("no docker client available")
@@ -37,15 +36,23 @@ func (i *ImgConfig) PullAll() error {
 		imageMap = map[string]v1.Image{}
 	)
 
-	// Try to load the docker client.
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	// Docker client is available.
-	if err == nil && cli.ClientVersion() != "" {
-		if err := i.pullImagesWithDocker(cli); err != nil {
-			message.Debugf("Failed to pull images with docker: %s", err)
-		} else {
-			return nil
+	// If docker is permitted, try to pull images with docker first.
+	if !i.NoDockerPull {
+		// Try to load the docker client.
+		cli, err := client.NewClientWithOpts(client.FromEnv)
+
+		// If Docker client is available, try to pull images with docker.
+		if err == nil && cli.ClientVersion() != "" {
+			// If the pull fails, continue with crane.
+			if err := i.pullImagesWithDocker(cli); err != nil {
+				message.Debugf("Failed to pull images with docker: %s", err)
+			} else {
+				// Otherwise, return nil as the pull was successful.
+				return nil
+			}
 		}
+
+		// Otherwise, continue with crane.
 	}
 
 	// Give some additional user feedback on larger image sets
@@ -78,18 +85,9 @@ func (i *ImgConfig) PullAll() error {
 	tagToImage := map[name.Tag]v1.Image{}
 
 	for src, img := range imageMap {
-		ref, err := name.ParseReference(src)
+		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", src, err)
-		}
-
-		tag, ok := ref.(name.Tag)
-		if !ok {
-			d, ok := ref.(name.Digest)
-			if !ok {
-				return fmt.Errorf("image reference %s wasn't a tag or digest", src)
-			}
-			tag = d.Repository.Tag("digest-only")
+			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
 		tagToImage[tag] = img
 	}
@@ -152,25 +150,25 @@ func (i *ImgConfig) PullImage(src string) (v1.Image, error) {
 	return img, nil
 }
 
+// TODO: (@jeff-mccoy) enable --inescure flag support for pullImagesWithDocker (will work with local images, but not remote).
 func (i *ImgConfig) pullImagesWithDocker(cli *client.Client) error {
 	spinner := message.NewProgressSpinner("Pulling %d images via Docker.", len(i.ImgList))
 	defer spinner.Stop()
 
-	dockerCfg := dockerTypes.ImagePullOptions{
-		Platform: fmt.Sprintf("linux/%s", config.GetArch()),
-	}
+	platform := fmt.Sprintf("--platform=linux/%s", config.GetArch())
 
 	// Try to pull all images with docker.
 	for _, img := range i.ImgList {
-		spinner.Updatef("Pulling image with docker: %s", img)
-		respBody, err := cli.ImagePull(context.Background(), img, dockerCfg)
+		spinner.SetWriterPrefixf("Docker pull %s:  ", img)
+		execCfg := exec.Config{
+			Stdout: spinner,
+			Stderr: spinner,
+		}
+		_, _, err := exec.CmdWithContext(context.TODO(), execCfg, "docker", "pull", img, platform)
 		if err != nil {
 			message.Debugf("image pull with Docker failed: %s", err.Error())
 			continue
 		}
-		defer respBody.Close()
-
-		io.Copy(spinner, respBody)
 	}
 
 	var totalSize int64
