@@ -47,6 +47,11 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 		termWidth: pterm.GetTerminalWidth(),
 	}
 
+	// Make sure the terminal width is at least 120 characters (some headless systems are 80).
+	if activeSpinner.termWidth < 120 {
+		activeSpinner.termWidth = 120
+	}
+
 	return activeSpinner
 }
 
@@ -66,10 +71,10 @@ func (p *Spinner) Write(text []byte) (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(text))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		content := p.writerPrefix + scanner.Text()
+		content := p.writerPrefix + pterm.FgCyan.Sprint(scanner.Text())
 		// Truncate the text if it's too long.
-		if len(content) > p.termWidth-20 {
-			content = content[:p.termWidth-23] + "..."
+		if len(content) > p.termWidth-10 {
+			content = content[:p.termWidth-15] + "..."
 		}
 		p.spinner.UpdateText(content)
 	}

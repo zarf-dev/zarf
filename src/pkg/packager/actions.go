@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 )
 
 func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
@@ -31,7 +32,6 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
 	spinner := message.NewProgressSpinner("Running command \"%s\"", action.Cmd)
-	defer spinner.Success()
 
 	var (
 		ctx    context.Context
@@ -61,22 +61,33 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	// Keep trying until the max retries is reached.
 	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
 
-		// If no timeout is set, run the command and return or continue retrying.
-		if cfg.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
-
+		// Perform the action run.
+		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(context.TODO(), cfg, cmd, spinner); err != nil {
-				message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
-				continue
+			if out, err = actionRun(ctx, cfg, cmd, spinner); err != nil {
+				return err
 			}
+
+			out = strings.TrimSpace(out)
 
 			// If an output variable is defined, set it.
 			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, strings.TrimSpace(out))
+				p.setVariable(action.SetVariable, out)
 			}
 
 			// If the command ran successfully, continue to the next action.
+			spinner.Successf("%s ┃ %s", cmd, pterm.FgWhite.Sprint(out))
+
+			return nil
+		}
+
+		// If no timeout is set, run the command and return or continue retrying.
+		if cfg.MaxTotalSeconds < 1 {
+			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+			if err := tryCmd(context.TODO()); err != nil {
+				continue
+			}
+
 			return nil
 		}
 
@@ -92,20 +103,9 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
 			defer cancel()
-
-			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd, spinner); err != nil {
-				message.Debug(err)
-				continue
+			if err := tryCmd(ctx); err == nil {
+				return nil
 			}
-
-			// If an output variable is defined, set it.
-			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, strings.TrimSpace(out))
-			}
-
-			// If the command ran successfully, continue to the next action.
-			return nil
 		}
 	}
 
@@ -199,16 +199,16 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	if !cfg.Mute {
-		spinner.SetWriterPrefixf("Running \"%s\":  ", cmd)
+		spinner.SetWriterPrefixf("%s ┃ ", cmd)
 		execCfg.Stdout = spinner
 		execCfg.Stderr = spinner
 	}
 
-	output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
+	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
 	// Dump the command output in debug if output not already streamed.
 	if cfg.Mute {
-		message.Debug(output, errOut)
+		message.Debug(out, errOut)
 	}
 
-	return output, err
+	return out, err
 }
