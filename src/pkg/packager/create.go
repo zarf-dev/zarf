@@ -27,8 +27,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -226,21 +224,6 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	return nil
-}
-
-func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Image, error) {
-	var pulledImages map[name.Tag]v1.Image
-
-	return pulledImages, utils.Retry(func() error {
-		imgConfig := images.ImgConfig{
-			TarballPath:  path,
-			ImgList:      imgList,
-			Insecure:     config.CommonOptions.Insecure,
-			NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
-		}
-
-		return imgConfig.PullAll()
-	}, 3, 5*time.Second)
 }
 
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
