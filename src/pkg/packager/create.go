@@ -79,19 +79,20 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.IsInitConfig {
 		// Load seed images into their own happy little tarball for ease of import on init
 		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		pulledImages, err := p.pullImages([]string{seedImage}, p.tmp.SeedImage)
-		if err != nil {
-			return fmt.Errorf("unable to pull the seed image after 3 attempts: %w", err)
-		}
+
 		ociPath := path.Join(p.tmp.Base, "seed-image")
-		for _, image := range pulledImages {
-			if err := crane.SaveOCI(image, ociPath); err != nil {
-				return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
-			}
+		imgConfig := images.ImgConfig{
+			Insecure:      p.cfg.CreateOpts.Insecure,
+			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
 		}
 
-		if err := images.FormatCraneOCILayout(ociPath); err != nil {
-			return fmt.Errorf("unable to format OCI layout: %w", err)
+		image, err := imgConfig.PullImage(seedImage)
+		if err != nil {
+			return fmt.Errorf("unable to pull seed image: %w", err)
+		}
+
+		if err := crane.SaveOCI(image, ociPath); err != nil {
+			return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
 		}
 	}
 
@@ -128,9 +129,18 @@ func (p *Packager) Create(baseDir string) error {
 	// Images are handled separately from other component assets
 	if len(combinedImageList) > 0 {
 		uniqueList := utils.Unique(combinedImageList)
+		doPull := func() error {
+			imgConfig := images.ImgConfig{
+				TarballPath:   p.tmp.Images,
+				ImgList:       uniqueList,
+				Insecure:      p.cfg.CreateOpts.Insecure,
+				NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
+			}
 
-		var err error
-		if pulledImages, err = p.pullImages(uniqueList, p.tmp.Images); err != nil {
+			return imgConfig.PullAll()
+		}
+
+		if err := utils.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}

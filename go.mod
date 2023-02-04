@@ -12,6 +12,7 @@ require (
 	github.com/anchore/syft v0.69.1
 	github.com/derailed/k9s v0.27.2
 	github.com/distribution/distribution v2.8.1+incompatible
+	github.com/docker/docker v20.10.23+incompatible
 	github.com/fatih/color v1.14.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.2
@@ -134,7 +135,6 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v20.10.21+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v20.10.23+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
