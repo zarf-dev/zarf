@@ -132,6 +132,12 @@ func (b *Builder) createImageSBOM(src string) ([]byte, error) {
 
 	// Create the sbom.
 	imageCachePath := filepath.Join(b.cachePath, config.ZarfImageCacheDir)
+
+	// Ensure the image cache directory exists.
+	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {
+		return nil, err
+	}
+
 	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
