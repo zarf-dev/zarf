@@ -82,8 +82,8 @@ func (p *Packager) Create(baseDir string) error {
 
 		ociPath := path.Join(p.tmp.Base, "seed-image")
 		imgConfig := images.ImgConfig{
-			Insecure:      p.cfg.CreateOpts.Insecure,
-			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
+			Insecure:     config.CommonOptions.Insecure,
+			NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
 		}
 
 		image, err := imgConfig.PullImage(seedImage)
@@ -125,16 +125,18 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 	}
 
-	pulledImages := map[name.Tag]v1.Image{}
+	imgList := utils.Unique(combinedImageList)
+
 	// Images are handled separately from other component assets
-	if len(combinedImageList) > 0 {
-		uniqueList := utils.Unique(combinedImageList)
+	if len(imgList) > 0 {
+		message.HeaderInfof("📦 COMPONENT IMAGES")
+
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				TarballPath:   p.tmp.Images,
-				ImgList:       uniqueList,
-				Insecure:      p.cfg.CreateOpts.Insecure,
-				NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
+				TarballPath:  p.tmp.Images,
+				ImgList:      imgList,
+				Insecure:     config.CommonOptions.Insecure,
+				NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
 			}
 
 			return imgConfig.PullAll()
@@ -149,7 +151,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		sbom.Catalog(componentSBOMs, pulledImages, p.tmp.Images, p.tmp.Sboms)
+		sbom.Catalog(componentSBOMs, imgList, p.tmp.Images, p.tmp.Sboms)
 	}
 
 	// In case the directory was changed, reset to prevent breaking relative target paths
@@ -228,19 +230,16 @@ func (p *Packager) Create(baseDir string) error {
 
 func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Image, error) {
 	var pulledImages map[name.Tag]v1.Image
-	var err error
 
 	return pulledImages, utils.Retry(func() error {
 		imgConfig := images.ImgConfig{
-			TarballPath:   path,
-			ImgList:       imgList,
-			Insecure:      config.CommonOptions.Insecure,
-			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
+			TarballPath:  path,
+			ImgList:      imgList,
+			Insecure:     config.CommonOptions.Insecure,
+			NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
 		}
 
-		pulledImages, err = imgConfig.PullAll()
-
-		return err
+		return imgConfig.PullAll()
 	}, 3, 5*time.Second)
 }
 

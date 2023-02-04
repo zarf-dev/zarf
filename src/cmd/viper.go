@@ -49,7 +49,7 @@ const (
 	V_PKG_CREATE_SBOM_OUTPUT      = "package.create.sbom_output"
 	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
-	V_PKG_CREATE_NO_LOCAL_IMAGES  = "package.create.no_local_images"
+	V_PKG_CREATE_NO_DOCKER_PULL   = "package.create.no_docker_pull"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
