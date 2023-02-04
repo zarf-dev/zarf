@@ -5,6 +5,8 @@
 package message
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 
 	"github.com/pterm/pterm"
@@ -14,8 +16,10 @@ var activeSpinner *Spinner
 
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
-	spinner   *pterm.SpinnerPrinter
-	startText string
+	spinner      *pterm.SpinnerPrinter
+	startText    string
+	writerPrefix string
+	termWidth    int
 }
 
 // NewProgressSpinner creates a new progress spinner.
@@ -40,9 +44,15 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	activeSpinner = &Spinner{
 		spinner:   spinner,
 		startText: text,
+		termWidth: pterm.GetTerminalWidth(),
 	}
 
 	return activeSpinner
+}
+
+// SetWriterPrefixf sets the prefix for the spinner writer.
+func (p *Spinner) SetWriterPrefixf(format string, a ...any) {
+	p.writerPrefix = fmt.Sprintf(format, a...)
 }
 
 // Write the given text to the spinner.
@@ -51,7 +61,19 @@ func (p *Spinner) Write(text []byte) (int, error) {
 	if NoProgress {
 		return size, nil
 	}
-	Debug(string(text))
+
+	// Split the text into lines and update the spinner for each line.
+	scanner := bufio.NewScanner(bytes.NewReader(text))
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		content := p.writerPrefix + scanner.Text()
+		// Truncate the text if it's too long.
+		if len(content) > p.termWidth-20 {
+			content = content[:p.termWidth-23] + "..."
+		}
+		p.spinner.UpdateText(content)
+	}
+
 	return len(text), nil
 }
 
