@@ -66,7 +66,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
 
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
+			if out, err = actionRun(context.TODO(), cfg, cmd, spinner); err != nil {
 				message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
 				continue
 			}
@@ -94,7 +94,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			defer cancel()
 
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd); err != nil {
+			if out, err = actionRun(ctx, cfg, cmd, spinner); err != nil {
 				message.Debug(err)
 				continue
 			}
@@ -181,7 +181,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) (string, error) {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, error) {
 	var shell string
 	var shellArgs string
 
@@ -194,10 +194,16 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	execCfg := exec.Config{
-		Print: !cfg.Mute,
-		Env:   cfg.Env,
-		Dir:   cfg.Dir,
+		Env: cfg.Env,
+		Dir: cfg.Dir,
 	}
+
+	if !cfg.Mute {
+		spinner.SetWriterPrefixf("Running \"%s\":  ", cmd)
+		execCfg.Stdout = spinner
+		execCfg.Stderr = spinner
+	}
+
 	output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
 	// Dump the command output in debug if output not already streamed.
 	if cfg.Mute {
