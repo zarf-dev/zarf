@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/pterm/pterm"
 )
@@ -44,7 +45,8 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	activeSpinner = &Spinner{
 		spinner:   spinner,
 		startText: text,
-		termWidth: pterm.GetTerminalWidth(),
+		// Subtract 10 characters to account for the spinner and padding.
+		termWidth: pterm.GetTerminalWidth() - 10,
 	}
 
 	// Make sure the terminal width is at least 120 characters (some headless systems are 80).
@@ -61,25 +63,27 @@ func (p *Spinner) SetWriterPrefixf(format string, a ...any) {
 }
 
 // Write the given text to the spinner.
-func (p *Spinner) Write(text []byte) (int, error) {
-	size := len(text)
+func (p *Spinner) Write(raw []byte) (int, error) {
+	size := len(raw)
 	if NoProgress {
 		return size, nil
 	}
 
 	// Split the text into lines and update the spinner for each line.
-	scanner := bufio.NewScanner(bytes.NewReader(text))
+	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		content := p.writerPrefix + pterm.FgCyan.Sprint(scanner.Text())
+		text := strings.TrimSpace(scanner.Text())
+		excess := len(p.writerPrefix+text) - p.termWidth
 		// Truncate the text if it's too long.
-		if len(content) > p.termWidth-10 {
-			content = content[:p.termWidth-15] + "..."
+		if excess > 0 {
+			text = text[:len(text)-excess] + "..."
 		}
+		content := p.writerPrefix + pterm.FgCyan.Sprintf(text)
 		p.spinner.UpdateText(content)
 	}
 
-	return len(text), nil
+	return len(raw), nil
 }
 
 // Updatef updates the spinner text.
