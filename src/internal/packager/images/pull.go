@@ -26,8 +26,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-var errNoDockerClient = errors.New("no docker client available")
-
 // PullAll pulls all of the images in the provided tag map.
 func (i *ImgConfig) PullAll() error {
 	var (
