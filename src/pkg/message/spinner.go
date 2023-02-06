@@ -77,13 +77,14 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 		excess := len(p.writerPrefix+text) - p.termWidth
 		// Truncate the text if it's too long.
 		if excess > 0 {
+			Debugf("Truncating text: %s", text)
 			text = text[:len(text)-excess] + "..."
 		}
 		content := p.writerPrefix + pterm.FgCyan.Sprintf(text)
 		p.spinner.UpdateText(content)
 	}
 
-	return len(raw), nil
+	return size, nil
 }
 
 // Updatef updates the spinner text.
