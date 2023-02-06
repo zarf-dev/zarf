@@ -204,7 +204,7 @@ var packagePublishCmd = &cobra.Command{
 		"specified in the package's zarf.yaml file.",
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -251,6 +251,7 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
+	packageCmd.AddCommand(packagePublishCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()

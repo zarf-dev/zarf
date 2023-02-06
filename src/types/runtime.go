@@ -21,6 +21,13 @@ type ZarfDeployOptions struct {
 	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
+// ZarfPublishOptions tracks the user-defined preferences during a package publish.
+type ZarfPublishOptions struct {
+	PackagePath string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	Insecure    bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote registries"`
+	Concurrency int    `json:"concurrency" jsonschema:"description=Number of concurrent uploads to perform"`
+}
+
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
 	// Zarf init is installing the k3s component

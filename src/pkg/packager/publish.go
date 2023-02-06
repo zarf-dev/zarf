@@ -24,15 +24,18 @@ import (
 // replace comments w/ CLI args where appropriate
 // replace fmt.Printf w/ message.Debug
 
-// replace w/ CLI arg
-var ref = "localhost:666/zarf-oci:v1"
-
-// grab from packager
-var pathRoot = "init"
-
 var zarfMediaType = "application/vnd.zarf.layer.v1+tar.zst"
 
 func (p *Packager) Publish() error {
+	registry := "localhost:666"
+	
+	name := p.cfg.Pkg.Metadata.Name
+	ver := p.cfg.Pkg.Metadata.Version
+	arch := p.cfg.Pkg.Metadata.Architecture
+	ref := fmt.Sprintf("%s/%s:%s-%s", registry, name, ver, arch)
+
+	pathRoot := p.tmp.Base
+
 	ctx := context.Background()
 
 	glob := func(path string) []string {
@@ -75,11 +78,13 @@ func (p *Packager) Publish() error {
 		panic(err)
 	}
 
-	// grab from CLI arg (--insecure)?
-	dst.PlainHTTP = true
+	if p.cfg.PublishOpts.Insecure {
+		dst.PlainHTTP = true
+	}
 	copyOpts := oras.DefaultCopyOptions
-	// cli arg?
-	copyOpts.Concurrency = 5
+	if p.cfg.PublishOpts.Concurrency > copyOpts.Concurrency {
+		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
+	}
 	copy := func(root ocispec.Descriptor) error {
 		fmt.Printf("%v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
