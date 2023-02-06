@@ -45,8 +45,6 @@ zarf package deploy
 
 Wait a couple of minutes. You'll know it is done when Zarf exits and you get the 3 connect commands.
 
-&nbsp;
-
 ### Create the backups bucket in MinIO (TODO: Figure out how to create the bucket automatically)
 
 1. Run `zarf connect minio` to navigate to the web console.
@@ -54,11 +52,9 @@ Wait a couple of minutes. You'll know it is done when Zarf exits and you get the
 1. Buckets -> Create Bucket
    - Bucket Name: `postgres-operator-backups`
 
-&nbsp;
-
 ### Open the UI
 
-The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and pgadmin will be available by running `./zarf connect pgadmin`
+The Postgres Operator UI will be available by running `./zarf connect postgres-operator-ui` and `pgadmin` will be available by running `./zarf connect pgadmin`
 
 :::note
 

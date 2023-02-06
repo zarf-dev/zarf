@@ -9,7 +9,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// Display credentials in a table
+// PrintCredentialTable displays credentials in a table
 func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.DeployedComponent) {
 	if len(componentsToDeploy) == 0 {
 		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
@@ -45,7 +45,7 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 	}
 }
 
-// Display credentials for a single component
+// PrintComponentCredential displays credentials for a single component
 func PrintComponentCredential(state types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
 	case "logging":

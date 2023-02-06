@@ -8,9 +8,6 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-&nbsp;
-
-
 ## Tag-Provided Git Repository Clone
 
 Tag-provided `git` repository cloning is the recommended way of cloning a `git` repository for air-gapped deployments because it wraps meaning around a specific point in git history that can easily be traced back to the online world. Tag-provided clones are defined using the `url.git@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).
