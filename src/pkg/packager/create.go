@@ -60,6 +60,17 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
 	}
 
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+
+	// Add the seed image to the registry component if this is an init config.
+	if p.cfg.IsInitConfig {
+		for idx, c := range p.cfg.Pkg.Components {
+			if c.Name == "zarf-registry" {
+				p.cfg.Pkg.Components[idx].Images = append(c.Images, seedImage)
+			}
+		}
+	}
+
 	// Save the transformed config
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
@@ -74,16 +85,17 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
+	// Save the seed image as an OCI image if this is an init config.
 	if p.cfg.IsInitConfig {
-		// Load seed images into their own happy little tarball for ease of import on init
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+		spinner := message.NewProgressSpinner("Loading Zarf Registry Seed Image")
+		defer spinner.Stop()
 
 		ociPath := path.Join(p.tmp.Base, "seed-image")
 		imgConfig := images.ImgConfig{
 			Insecure: config.CommonOptions.Insecure,
 		}
 
-		image, err := imgConfig.PullImage(seedImage, &message.Spinner{})
+		image, err := imgConfig.PullImage(seedImage, spinner)
 		if err != nil {
 			return fmt.Errorf("unable to pull seed image: %w", err)
 		}
@@ -91,6 +103,8 @@ func (p *Packager) Create(baseDir string) error {
 		if err := crane.SaveOCI(image, ociPath); err != nil {
 			return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
 		}
+
+		spinner.Success()
 	}
 
 	var combinedImageList []string
