@@ -110,6 +110,8 @@ func cliSetup() {
 		message.NoProgress = true
 		// Force terminal size to 150x100 to prevent CI from being weird with spinners and progress bars.
 		pterm.SetForcedTerminalSize(150, 100)
+		// Print terminal size for debugging.
+		message.Debugf("Terminal width: %d", pterm.GetTerminalWidth())
 	}
 
 	if !skipLogFile {

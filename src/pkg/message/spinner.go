@@ -47,6 +47,9 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 		startText: text,
 	}
 
+	// Print terminal size for debugging.
+	Debugf("Terminal width: %d", pterm.GetTerminalWidth())
+
 	return activeSpinner
 }
 
