@@ -101,10 +101,10 @@ func (p *Spinner) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	if p.spinner != nil {
 		p.spinner.Success(text)
-		activeSpinner = nil
 	} else {
 		Info(text)
 	}
+	p.Stop()
 }
 
 // Warnf prints a warning message with the spinner.
