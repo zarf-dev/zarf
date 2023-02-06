@@ -90,7 +90,7 @@ components:
           # this action will have access to the variables set within this component
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
           # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
-          - cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
+          - cmd: echo "the snake still says ${TF_VAR_snake_sound}"
 
   - name: on-deploy-with-template-use-of-variable
     files:
