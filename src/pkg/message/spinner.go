@@ -6,6 +6,7 @@ package message
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pterm/pterm"
 )
@@ -65,6 +66,17 @@ func (p *Spinner) Updatef(format string, a ...any) {
 	p.spinner.UpdateText(text)
 }
 
+// Println prints a line of text to the spinner.
+func (p *Spinner) Println(text string) {
+	if NoProgress {
+		fmt.Println(text)
+		return
+	}
+
+	pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
+	pterm.Fprintln(p.spinner.Writer, text)
+}
+
 // Stop the spinner.
 func (p *Spinner) Stop() {
 	if p.spinner != nil && p.spinner.IsActive {
@@ -83,10 +95,11 @@ func (p *Spinner) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	if p.spinner != nil {
 		p.spinner.Success(text)
-		activeSpinner = nil
 	} else {
 		Info(text)
 	}
+
+	activeSpinner = nil
 }
 
 // Warnf prints a warning message with the spinner.

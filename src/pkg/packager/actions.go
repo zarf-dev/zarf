@@ -31,7 +31,7 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
 	spinner := message.NewProgressSpinner("Running command \"%s\"", action.Cmd)
-	defer spinner.Success()
+	defer spinner.Successf("Completed command \"%s\"", action.Cmd)
 
 	var (
 		ctx    context.Context
@@ -60,13 +60,14 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	// Keep trying until the max retries is reached.
 	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
+		cmdEscaped := escapeCmdForPrint(cmd)
 
 		// If no timeout is set, run the command and return or continue retrying.
 		if cfg.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmdEscaped)
 
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
+			if out, err = actionRun(context.TODO(), cfg, spinner, cmd); err != nil {
 				message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
 				continue
 			}
@@ -81,7 +82,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
 		// On timeout abort.
 		case <-timeout:
@@ -94,7 +95,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			defer cancel()
 
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd); err != nil {
+			if out, err = actionRun(ctx, cfg, spinner, cmd); err != nil {
 				message.Debug(err)
 				continue
 			}
@@ -181,7 +182,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) (string, error) {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, spinner *message.Spinner, cmd string) (string, error) {
 	var shell string
 	var shellArgs string
 
@@ -194,9 +195,10 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	execCfg := exec.Config{
-		Print: !cfg.Mute,
-		Env:   cfg.Env,
-		Dir:   cfg.Dir,
+		Print:   !cfg.Mute,
+		Env:     cfg.Env,
+		Dir:     cfg.Dir,
+		Spinner: spinner,
 	}
 	output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
 	// Dump the command output in debug if output not already streamed.
@@ -205,4 +207,12 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	return output, err
+}
+
+func escapeCmdForPrint(cmd string) string {
+	cmdEscaped := strings.ReplaceAll(cmd, "\n", "\\n")
+	if len(cmdEscaped) > 20 {
+		cmdEscaped = cmdEscaped[:17] + "..."
+	}
+	return cmdEscaped
 }
