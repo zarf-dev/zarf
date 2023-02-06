@@ -8,6 +8,8 @@
 	import { onMount } from 'svelte';
 	import { Typography } from '@ui';
 
+	export let title = '';
+
 	export let msg = 'Loading...';
 
 	// Need this to force-enable first onload animation to avoid ugly flash on very fast REST calls
@@ -22,7 +24,7 @@
 		<div class="spinner-wrapper" in:fade={{ duration: 1000 }}>
 			<span class="spinner" />
 		</div>
-		<Typography variant="h5">Checking for Cluster</Typography>
+		<Typography variant="h5">{title}</Typography>
 		<Typography variant="body2" element="span" class="label">{msg}</Typography>
 	{/if}
 </Hero>

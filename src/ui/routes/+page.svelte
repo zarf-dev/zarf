@@ -8,6 +8,17 @@
 	import { clusterStore } from '$lib/store';
 	import { Hero, Spinner } from '$lib/components';
 	import bigZarf from '@images/zarf-bubbles-right.png';
+	import { Packages } from '$lib/api';
+	import PackageErrNotFound from '$lib/components/package-err-not-found.svelte';
+
+	const getInitPath = async () => {
+		const res = await Packages.findInit();
+		if (Array.isArray(res)) {
+			return encodeURIComponent(res[0]);
+		} else {
+			throw new Error('No init package found');
+		}
+	};
 </script>
 
 <svelte:head>
@@ -33,14 +44,25 @@
 					Click initialize cluster to install the Init Package and deploy a new cluster.
 				</Typography>
 			{/if}
-
-			<Button variant="raised" color="secondary" href="/initialize/configure" id="init-cluster">
-				Initialize Cluster
-			</Button>
+			{#await getInitPath()}
+				<Button variant="raised" color="secondary" disabled>Initialize Cluster</Button>
+			{:then path}
+				<Button
+					variant="raised"
+					color="secondary"
+					href={`/package/deploy?path=${path}`}
+					id="init-cluster"
+				>
+					Initialize Cluster
+				</Button>
+			{:catch err}
+				<PackageErrNotFound message={err.message} />
+			{/await}
 		</Hero>
 	{/if}
 {:else}
 	<Spinner
+		title="Checking for cluster"
 		msg="Checking if a Kubernetes cluster is available and initialized by Zarf. This may take a few seconds."
 	/>
 {/if}

@@ -18,22 +18,14 @@ Specifically:
 :key: == Required by automation
 
 1. Look at the next due [release milestone](https://github.com/defenseunicorns/zarf/milestones) and pick an issue that you want to work on. If you don't see anything that interests you, create an issue and assign it to yourself.
-
-1. Assign yourself to the issue and drop a comment in the issue to let everyone know you're working on it.
-
-1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
-
-1. Create a Draft Pull Request as soon as you can, even if it is just 5 minutes after you started working on it. We lean towards working in the open as much as we can. If you're not sure what to put in the PR description, just put a link to the issue you're working on. If you're not sure what to put in the PR title, just put "WIP" (Work In Progress) and we'll help you out with the rest.
-
-1. :key: Automated tests will begin based on the paths you have edited in your Pull Request. More information on these tests can be found [here](https://docs.zarf.dev/docs/developer-guide/testing).
-
+2. Assign yourself to the issue and drop a comment in the issue to let everyone know you're working on it.
+3. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
+4. Create a Draft Pull Request as soon as you can, even if it is just 5 minutes after you started working on it. We lean towards working in the open as much as we can. If you're not sure what to put in the PR description, just put a link to the issue you're working on. If you're not sure what to put in the PR title, just put "WIP" (Work In Progress) and we'll help you out with the rest.
+5. :key: Automated tests will begin based on the paths you have edited in your Pull Request.
    > ⚠️ **NOTE:** _If you are an external third-party contributor, the pipelines won't run until a [CODEOWNER](https://github.com/defenseunicorns/zarf/blob/main/CODEOWNERS) approves the pipeline run._
-
-1. :key: Be sure to use the [needs-adr,needs-docs,needs-tests](https://github.com/defenseunicorns/zarf/labels?q=needs) labels as appropriate for the PR. Once you have addressed all of the needs, remove the label.
-
-1. Once review is complete and approved, a core member of the zarf project will merge your PR. If you are an external third-party contributor, two core members of the zarf project will be required to approve the PR.
-
-1. Close the issue if it is fully resolved by your PR. _Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged._
+6. :key: Be sure to use the [needs-adr,needs-docs,needs-tests](https://github.com/defenseunicorns/zarf/labels?q=needs) labels as appropriate for the PR. Once you have addressed all of the needs, remove the label.
+7. Once the review is complete and approved, a core member of the zarf project will merge your PR. If you are an external third-party contributor, two core members of the zarf project will be required to approve the PR.
+8. Close the issue if it is fully resolved by your PR. _Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged._
 
 ## Testing
 
@@ -50,7 +42,7 @@ Our E2E tests can be found in the `/test` folder and follow the journey of someo
 Our Unit tests can be found as `*_test.go` files inside the package that they are designed to test. These are also run in CI and are designed to test small functions with clear interfaces that would be difficult to test otherwise. As a general rule, we are limiting unit tests to the `src/pkg/*` folder.
 
 All of our tests should be able to be run locally or in CI.
-You can learn more about the testing of Zarf [here](https://docs.zarf.dev/docs/developer-guide/testing).
+You can learn more about the testing of Zarf [here](docs/6-developer-guide/2-testing.md).
 
 ## Documentation
 

@@ -37,6 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
+	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
@@ -90,15 +91,12 @@ const (
 	CmdInitLong  = "Injects a docker registry as well as other optional useful things (such as a git server " +
 		"and a logging stack) into a k8s cluster under the 'zarf' namespace " +
 		"to support future application deployments. \n" +
-
 		"If you do not have a k8s cluster already configured, this command will give you " +
 		"the ability to install a cluster locally.\n\n" +
-
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
 		"that the Zarf binary is located in.\n\n\n\n" +
-
 		"Example Usage:\n" +
 		"# Initializing without any optional components:\nzarf init\n\n" +
 		"# Initializing w/ Zarfs internal git server:\nzarf init --components=git-server\n\n" +
