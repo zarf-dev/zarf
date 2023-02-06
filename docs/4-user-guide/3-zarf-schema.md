@@ -343,11 +343,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
 <details>
-<summary><strong> <a name="components_items_name"></a>name</strong>
+<summary><strong> <a name="components_items_name"></a>name *</strong>
 
 </summary>
 &nbsp;
 <blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the component
 
