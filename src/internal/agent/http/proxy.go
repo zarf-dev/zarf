@@ -98,6 +98,7 @@ func proxyRequestTransform(r *http.Request) error {
 
 	r.Host = targetURL.Host
 	r.URL = targetURL
+	r.RequestURI = getRequestURI(targetURL.Path, targetURL.RawQuery, targetURL.Fragment)
 
 	message.Debugf("After Req %#v", r)
 	message.Debugf("After Req URL%#v", r.URL)
@@ -178,6 +179,20 @@ func getTLSScheme(tls *tls.ConnectionState) string {
 	}
 
 	return scheme
+}
+
+func getRequestURI(path, query, fragment string) string {
+	uri := path
+
+	if query != "" {
+		uri += "?" + query
+	}
+
+	if fragment != "" {
+		uri += "#" + fragment
+	}
+
+	return uri
 }
 
 func isGitUserAgent(userAgent string) bool {

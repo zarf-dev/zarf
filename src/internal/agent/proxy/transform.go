@@ -76,11 +76,19 @@ func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
 		version = matches[idx("package")]
 	}
 
-	// TODO: (@WSTARR) %s/api/packages/%s is very Gitea specific but with a config option this could be adapted to GitLab easily
-	// transformedURL := fmt.Sprintf("%s/api/v4/projects/39799997/packages/generic/%s%s%s", baseURL, packageName, version, matches[idx("package")])
+	// Rebuild the generic URL
 	transformedURL := fmt.Sprintf("%s/generic/%s%s%s", packagesBaseURL, packageName, version, matches[idx("package")])
 
-	return url.Parse(transformedURL)
+	url, err := url.Parse(transformedURL)
+	if err != nil {
+		return url, err
+	}
+
+	// Drop the RawQuery and Fragment to avoid them being interpreted for generic packages
+	url.RawQuery = ""
+	url.Fragment = ""
+
+	return url, err
 }
 
 // transformRegistryPath transforms a given request path using a new base URL and regex.
@@ -94,8 +102,7 @@ func transformRegistryPath(packagesBaseURL string, reqURL string, regex *regexp.
 		return nil, fmt.Errorf("unable to extract the %s from the url %s", pathGroup, reqURL)
 	}
 
-	// TODO: (@WSTARR) %s/api/packages/%s is very Gitea specific but with a config option this could be adapted to GitLab easily
-	// transformedURL := fmt.Sprintf("%s/api/v4/projects/39799997/packages/%s%s", baseURL, regType, matches[idx("pipPath")])
+	// Rebuild the URL based on registry type
 	transformedURL := fmt.Sprintf("%s/%s%s", packagesBaseURL, registryType, matches[idx(pathGroup)])
 
 	return url.Parse(transformedURL)
