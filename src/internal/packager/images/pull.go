@@ -30,7 +30,6 @@ func (i *ImgConfig) PullAll() error {
 		imgCount   = len(i.ImgList)
 		imageMap   = map[string]v1.Image{}
 		tagToImage = map[name.Tag]v1.Image{}
-		totalSize  int64
 	)
 
 	// Give some additional user feedback on larger image sets
@@ -63,8 +62,6 @@ func (i *ImgConfig) PullAll() error {
 		if err != nil {
 			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
-		size, _ := img.Size()
-		totalSize += size
 		tagToImage[tag] = img
 	}
 	spinner.Success()
