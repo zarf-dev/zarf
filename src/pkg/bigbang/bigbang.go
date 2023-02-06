@@ -2,24 +2,19 @@ package bigbang
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	helmv2beta1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
-	goyaml "github.com/goccy/go-yaml"
-	"github.com/xanzy/go-gitlab"
-	kustypes "sigs.k8s.io/kustomize/api/types"
 
 	"sigs.k8s.io/yaml"
 
@@ -46,13 +41,12 @@ func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int) (fluxComp
 
 	fluxManifest := GetFluxManifest(bbComponent.BigBang.Version)
 	fluxComponent.Manifests = []types.ZarfManifest{fluxManifest}
-
-	err = importBigBangFluxImageList(bbComponent.BigBang.Version)
-	if err != nil {
-		return fluxComponent, fmt.Errorf("unable to import BigBang Flux image list: %w", err)
+	repo := DEFAULT_BIGBANG_REPO
+	if bbComponent.BigBang.Repo != "" {
+		repo = bbComponent.BigBang.Repo
 	}
-
-	fluxComponent.Images = append(fluxComponent.Images, FluxImages[bbComponent.BigBang.Version]...)
+	images, err := helm.FindFluxImages(repo, bbComponent.BigBang.Version)
+	fluxComponent.Images = images
 
 	return fluxComponent, nil
 }
@@ -109,15 +103,6 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 	// Save the list of repos to be pulled down by Zarf
 	component.Repos = repos
 
-	// Get all the images.  This might be omitted here once https://github.com/defenseunicorns/zarf/issues/337
-	// is implemented
-
-	// seed the list of repos --> images
-	err = importBigbangImageList(component.BigBang.Version)
-	if err != nil {
-		return component, fmt.Errorf("unable to import bigbang image list: %w", err)
-	}
-
 	// just select the images needed to suppor the repos this configuration of BigBang will need
 	images, err := GetImages(repos)
 	if err != nil {
@@ -167,135 +152,19 @@ func GetImages(repos []string) ([]string, error) {
 
 	images := make([]string, 0)
 	for _, r := range repos {
-		// Don't try to get images for the bigbang repo
-		parts := strings.Split(r, "@")
-		if len(parts) != 2 {
+		is, err := helm.FindImagesForChartRepo(r, "chart")
+		if err != nil {
+			message.Warn(fmt.Sprintf("Could not pull images for chart %s: %s", r, err))
 			continue
 		}
-
-		url := parts[0]
-		version := parts[1]
-
-		parts = strings.Split(url, "/")
-		packageRepo := parts[len(parts)-1]
-		packageRepo = strings.TrimSuffix(packageRepo, ".git")
-
-		images = append(images, BigBangImages[packageRepo][version]...)
-
+		images = append(images, is...)
 	}
 
 	return images, nil
 }
 
-// importBigBangFluxImageList populates an internal map of the images
-// needed for the version of flux that is defined within the provided version
-// of BigBang
-func importBigBangFluxImageList(version string) error {
-	repo1, err := gitlab.NewClient("", gitlab.WithBaseURL("https://repo1.dso.mil/api/v4"))
-	if err != nil {
-		return fmt.Errorf("unable to create gitlab client: %w", err)
-	}
-
-	var rawFileOptions gitlab.GetRawFileOptions
-	rawFileOptions.Ref = &version
-
-	kustFile, _, err := repo1.RepositoryFiles.GetRawFile("2872", "base/flux/kustomization.yaml", &rawFileOptions, nil)
-	if err != nil {
-		return fmt.Errorf("unable to get flux kustomization file: %w", err)
-	}
-
-	var fluxKustomize kustypes.Kustomization
-
-	goyaml.Unmarshal(kustFile, &fluxKustomize)
-
-	if FluxImages[version] == nil {
-		FluxImages[version] = make([]string, 0)
-	}
-
-	for _, image := range fluxKustomize.Images {
-		FluxImages[version] = utils.Unique(append(FluxImages[version], fmt.Sprintf("%s:%s", image.NewName, image.NewTag)))
-	}
-	return nil
-}
-
-// importBigbangImageList  populates an internal map of the images
-// needed for the version of flux that is defined within the provided version
-// of BigBang
-func importBigbangImageList(version string) error {
-	repo1, err := gitlab.NewClient("", gitlab.WithBaseURL("https://repo1.dso.mil/api/v4"))
-	if err != nil {
-		return fmt.Errorf("unable to create gitlab client: %w", err)
-	}
-
-	release, _, err := repo1.Releases.GetRelease("2872", version, nil)
-	if err != nil {
-		return fmt.Errorf("unable to get release: %w", err)
-	}
-
-	var imagesUrl string
-
-	for _, link := range release.Assets.Links {
-		if link.Name == "package-images.yaml" {
-			imagesUrl = link.URL
-			break
-		}
-	}
-
-	resp, err := http.Get(imagesUrl)
-	if err != nil {
-		return fmt.Errorf("unable to get package-images.yaml: %w", err)
-	}
-	defer resp.Body.Close()
-
-	imageYamlBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("unable to read package-images.yaml: %w", err)
-	}
-
-	var imageYaml bbImageYaml
-
-	goyaml.Unmarshal(imageYamlBytes, &imageYaml)
-
-	for chartName, versionAndImages := range imageYaml.ChartList {
-		fixedChartName := bbChartNameFix(chartName)
-
-		if BigBangImages[fixedChartName] == nil {
-			BigBangImages[fixedChartName] = make(map[string][]string)
-		}
-
-		BigBangImages[fixedChartName][versionAndImages.Version] =
-			utils.Unique(
-				append(BigBangImages[fixedChartName][versionAndImages.Version], versionAndImages.Images...))
-	}
-	return nil
-}
-
 func printObject(filename string, o runtime.Object) error {
 	return nil
-
-}
-
-func bbChartNameFix(chartName string) string {
-	switch chartName {
-	case "istio":
-		return "istio-controlplane"
-	case "istiooperator":
-		return "istio-operator"
-	case "kyvernopolicies":
-		return "kyverno-policies"
-	case "gatekeeper":
-		return "policy"
-	case "clusterAuditor":
-		return "cluster-auditor"
-	case "eckoperator":
-		return "eck-operator"
-	case "logging":
-		return "elasticsearch-kibana"
-	case "metricsServer":
-		return "metrics-server"
-	default:
-		return chartName
-	}
 }
 
 // GetFluxManifest creates the manifests for deploying the particular version of BigBang
@@ -491,12 +360,4 @@ git:
 	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/helmrepository.yaml", manifestDir))
 
 	return manifest, nil
-}
-
-var BigBangImages map[string]map[string][]string
-var FluxImages map[string][]string
-
-func init() {
-	BigBangImages = make(map[string]map[string][]string)
-	FluxImages = make(map[string][]string)
 }
