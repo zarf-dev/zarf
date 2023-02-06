@@ -108,6 +108,8 @@ func cliSetup() {
 	if os.Getenv("CI") == "true" {
 		message.Debug("CI environment detected, disabling progress bars")
 		message.NoProgress = true
+		// Force terminal size to 150x100 to prevent CI from being weird with spinners and progress bars.
+		pterm.SetForcedTerminalSize(150, 100)
 	}
 
 	if !skipLogFile {
