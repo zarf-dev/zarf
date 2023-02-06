@@ -195,6 +195,28 @@ var packageRemoveCmd = &cobra.Command{
 	},
 }
 
+var packagePublishCmd = &cobra.Command{
+	Use:     "publish [PACKAGE]",
+	Short:   "Publish a Zarf package to a remote registry",
+	Long: "Publish a Zarf package to a remote registry\n" +
+		"Publishes a compiled package file to a remote registry. " +
+		"By default, the package will be published to the registry " +
+		"specified in the package's zarf.yaml file.",
+	Args: cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Publish the package
+		if err := pkgClient.Publish(); err != nil {
+			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+		}
+	},
+}
+
 func choosePackage(args []string) string {
 	if len(args) > 0 {
 		return args[0]
