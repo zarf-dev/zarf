@@ -42,7 +42,6 @@ type ZarfCreateOptions struct {
 	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
-	NoDockerPull     bool              `json:"noDockerPull" jsonschema:"description=Do not attempt to use docker to pull images"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.

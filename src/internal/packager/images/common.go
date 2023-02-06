@@ -19,6 +19,4 @@ type ImgConfig struct {
 	NoChecksum bool
 
 	Insecure bool
-
-	NoDockerPull bool
 }

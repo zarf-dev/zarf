@@ -45,13 +45,6 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	activeSpinner = &Spinner{
 		spinner:   spinner,
 		startText: text,
-		// Subtract 10 characters to account for the spinner and padding.
-		termWidth: pterm.GetTerminalWidth() - 10,
-	}
-
-	// Make sure the terminal width is at least 120 characters (some headless systems are 80).
-	if activeSpinner.termWidth < 120 {
-		activeSpinner.termWidth = 120
 	}
 
 	return activeSpinner
@@ -74,12 +67,6 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		excess := len(p.writerPrefix+text) - p.termWidth
-		// Truncate the text if it's too long.
-		if excess > 0 {
-			Debugf("Truncating text: %s", text)
-			text = text[:len(text)-excess] + "..."
-		}
 		content := p.writerPrefix + pterm.FgCyan.Sprintf(text)
 		p.spinner.UpdateText(content)
 	}

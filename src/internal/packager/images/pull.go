@@ -5,53 +5,33 @@
 package images
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
 // PullAll pulls all of the images in the provided tag map.
 func (i *ImgConfig) PullAll() error {
 	var (
-		longer   string
-		imgCount = len(i.ImgList)
-		imageMap = map[string]v1.Image{}
+		longer     string
+		imgCount   = len(i.ImgList)
+		imageMap   = map[string]v1.Image{}
+		tagToImage = map[name.Tag]v1.Image{}
+		totalSize  int64
 	)
-
-	// If docker is permitted, try to pull images with docker first.
-	if !i.NoDockerPull {
-		// Try to load the docker client.
-		cli, err := client.NewClientWithOpts(client.FromEnv)
-
-		// If Docker client is available, try to pull images with docker.
-		if err == nil && cli.ClientVersion() != "" {
-			// If the pull fails, continue with crane.
-			if err := i.pullImagesWithDocker(cli); err != nil {
-				message.Debugf("Failed to pull images with docker: %s", err)
-			} else {
-				// Otherwise, return nil as the pull was successful.
-				return nil
-			}
-		}
-
-		// Otherwise, continue with crane.
-	}
 
 	// Give some additional user feedback on larger image sets
 	if imgCount > 15 {
@@ -71,22 +51,20 @@ func (i *ImgConfig) PullAll() error {
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
 
-		img, err := i.PullImage(src)
+		img, err := i.PullImage(src, spinner)
 		if err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
 		imageMap[src] = img
 	}
 
-	spinner.Updatef("Creating image tarball (this will take a while)")
-
-	tagToImage := map[name.Tag]v1.Image{}
-
 	for src, img := range imageMap {
 		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
 			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
+		size, _ := img.Size()
+		totalSize += size
 		tagToImage[tag] = img
 	}
 	spinner.Success()
@@ -127,83 +105,42 @@ func (i *ImgConfig) PullAll() error {
 	return nil
 }
 
-// PullImage returns a v1.Image either by loading a local tarball or the wider internet
-func (i *ImgConfig) PullImage(src string) (v1.Image, error) {
-	// Load image tarballs from the local filesystem
+// PullImage returns a v1.Image either by loading a local tarball or the wider internet.
+func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
+	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
-		message.Debugf("loading image tarball: %s", src)
+		spinner.Updatef("Reading image tarball: %s", src)
 		return crane.Load(src, config.GetCraneOptions(true)...)
 	}
 
+	// If crane is unable to pull the image, try to load it from the local docker daemon.
+	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...); err != nil {
+		message.Debugf("crane unable to pull image %s: %s", src, err)
+		spinner.Updatef("%s not found, trying with docker instead. This may take some time.", src)
+
+		reference, err := name.ParseReference(src)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+		}
+
+		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
+		// This will also take for ever to load large images.
+		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
+			return nil, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
+		}
+
+		// If we were able to pull from the local daemon, return the image.
+		return img, err
+	}
+
 	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
-	img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
-	if err != nil {
+	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure)...); err != nil {
 		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 	}
 
-	message.Debugf("loading image with cache: %s", src)
+	spinner.Updatef("Preparing imagce %s", src)
 	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil
-}
-
-// TODO: (@jeff-mccoy) enable --inescure flag support for pullImagesWithDocker (will work with local images, but not remote).
-func (i *ImgConfig) pullImagesWithDocker(cli *client.Client) error {
-	spinner := message.NewProgressSpinner("Pulling %d images via Docker.", len(i.ImgList))
-	defer spinner.Stop()
-
-	platform := fmt.Sprintf("--platform=linux/%s", config.GetArch())
-
-	// Try to pull all images with docker.
-	for _, img := range i.ImgList {
-		spinner.SetWriterPrefixf("Docker pull %s:  ", img)
-		execCfg := exec.Config{
-			Stdout: spinner,
-			Stderr: spinner,
-		}
-		_, _, err := exec.CmdWithContext(context.TODO(), execCfg, "docker", "pull", img, platform)
-		if err != nil {
-			message.Debugf("image pull with Docker failed: %s", err.Error())
-			continue
-		}
-	}
-
-	var totalSize int64
-
-	// Get the total size of all images.
-	for _, img := range i.ImgList {
-		spinner.Updatef("Reading image size: %s", img)
-		imgInfo, _, err := cli.ImageInspectWithRaw(context.Background(), img)
-		if err != nil {
-			message.Debugf("image inspect with Docker failed: %s", err.Error())
-		}
-		message.Debug(message.JSONValue(imgInfo))
-		totalSize += imgInfo.Size
-	}
-	spinner.Success()
-
-	prettySize := utils.ByteFormat(float64(totalSize), 2)
-	progressBar := message.NewProgressBar(totalSize, "Storing %d images via Docker (%s)", len(i.ImgList), prettySize)
-	defer progressBar.Stop()
-
-	respBody, err := cli.ImageSave(context.Background(), i.ImgList)
-	if err != nil {
-		return fmt.Errorf("image save with Docker failed: %w", err)
-	}
-	defer respBody.Close()
-
-	// Create a new tarball
-	tarball, err := os.Create(i.TarballPath)
-	if err != nil {
-		return fmt.Errorf("unable to create tarball: %w", err)
-	}
-	defer tarball.Close()
-
-	// Copy the tarball from the docker daemon to disk
-	if _, err = io.Copy(tarball, io.TeeReader(respBody, progressBar)); err != nil {
-		return fmt.Errorf("unable to save tarball: %w", err)
-	}
-
-	return nil
 }

@@ -80,11 +80,10 @@ func (p *Packager) Create(baseDir string) error {
 
 		ociPath := path.Join(p.tmp.Base, "seed-image")
 		imgConfig := images.ImgConfig{
-			Insecure:     config.CommonOptions.Insecure,
-			NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
+			Insecure: config.CommonOptions.Insecure,
 		}
 
-		image, err := imgConfig.PullImage(seedImage)
+		image, err := imgConfig.PullImage(seedImage, &message.Spinner{})
 		if err != nil {
 			return fmt.Errorf("unable to pull seed image: %w", err)
 		}
@@ -131,10 +130,9 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				TarballPath:  p.tmp.Images,
-				ImgList:      imgList,
-				Insecure:     config.CommonOptions.Insecure,
-				NoDockerPull: p.cfg.CreateOpts.NoDockerPull,
+				TarballPath: p.tmp.Images,
+				ImgList:     imgList,
+				Insecure:    config.CommonOptions.Insecure,
 			}
 
 			return imgConfig.PullAll()

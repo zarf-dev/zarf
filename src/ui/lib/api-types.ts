@@ -755,10 +755,6 @@ export interface ZarfCreateOptions {
      */
     maxPackageSizeMB: number;
     /**
-     * Do not attempt to use docker to pull images
-     */
-    noDockerPull: boolean;
-    /**
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
@@ -1185,7 +1181,6 @@ const typeMap: any = {
     ], false),
     "ZarfCreateOptions": o([
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
-        { json: "noDockerPull", js: "noDockerPull", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
