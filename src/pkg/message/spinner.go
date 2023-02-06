@@ -20,7 +20,6 @@ type Spinner struct {
 	spinner      *pterm.SpinnerPrinter
 	startText    string
 	writerPrefix string
-	termWidth    int
 }
 
 // NewProgressSpinner creates a new progress spinner.

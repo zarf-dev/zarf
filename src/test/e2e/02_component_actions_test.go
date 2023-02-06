@@ -76,7 +76,7 @@ func TestComponentActions(t *testing.T) {
 	require.Contains(t, stdErr, "the cat says meow")
 	require.Contains(t, stdErr, "the dog says ruff")
 	require.Contains(t, stdErr, "the snake says hiss")
-	require.Contains(t, stdErr, "the snake still says hiss")
+	require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
 
 	// Test using environment variables
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-env-var")

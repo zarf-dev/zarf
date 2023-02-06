@@ -4,9 +4,7 @@
 // Package images provides functions for building and pushing images.
 package images
 
-import (
-	"github.com/defenseunicorns/zarf/src/types"
-)
+import "github.com/defenseunicorns/zarf/src/types"
 
 // ImgConfig is the main struct for managing container images.
 type ImgConfig struct {

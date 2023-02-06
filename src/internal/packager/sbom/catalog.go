@@ -118,7 +118,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
 func (b *Builder) createImageSBOM(src string) ([]byte, error) {
-	// Get the image tag/
+	// Get the image reference.
 	tag, err := name.NewTag(src, name.WeakValidation)
 	if err != nil {
 		return nil, err
