@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 )
 
 func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
@@ -75,7 +76,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			}
 
 			// If the command ran successfully, continue to the next action.
-			spinner.Successf("%s ┃ %s", cmd, out)
+			spinner.Successf("%s ┃ %s", cmd, pterm.FgWhite.Sprint(out))
 
 			return nil
 		}
