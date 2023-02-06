@@ -24,6 +24,7 @@ type ZarfDeployOptions struct {
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	PackagePath string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	RegistryURL string `json:"registryURL" jsonschema:"description=URL of the registry to publish the package to"`
 	Insecure    bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote registries"`
 	Concurrency int    `json:"concurrency" jsonschema:"description=Number of concurrent uploads to perform"`
 }

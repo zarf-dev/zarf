@@ -257,6 +257,7 @@ func init() {
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
+	bindPublishFlags()
 }
 
 func bindCreateFlags() {
@@ -310,4 +311,11 @@ func bindRemoveFlags() {
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
 	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
+}
+
+func bindPublishFlags() {
+	publishFlags := packagePublishCmd.Flags()
+	publishFlags.StringVar(&pkgConfig.PublishOpts.RegistryURL, "registry", "", "URL of the registry to publish the package to")
+	publishFlags.BoolVar(&pkgConfig.PublishOpts.Insecure, "insecure", false, "Allow insecure connections to the registry")
+	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
 }
