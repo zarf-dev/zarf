@@ -19,12 +19,12 @@ import (
 )
 
 // NOTES:
-// - This is a WIP, not yet functional
+// - This is a WIP, not yet functional w/ authentication
 // - This is a copy of the oras example code, with some modifications
-//
-// replace comments w/ CLI args where appropriate
 
-var zarfMediaType = "application/vnd.zarf.layer.v1+tar.zst"
+// currently every "layer" is labeled as a .tar.zst in the manifest, but
+// we should use the correct media type for each layer
+var zarfMediaType = "application/vnd.zarf.package.layer.v1.tar+zstd"
 
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
