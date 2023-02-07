@@ -37,9 +37,18 @@ func (p *Packager) Publish() error {
 	name := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
-	ref := fmt.Sprintf("%s/%s:%s-%s", registry, name, ver, arch)
+	ns := p.cfg.PublishOpts.Namespace
+	ref := fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch)
+	message.Infof("Publishing: %s", ref)
 
-	message.Infof("Publishing package to %s", ref)
+	dst, err := remote.NewRepository(ref)
+	if err != nil {
+		return err
+	}
+
+	if p.cfg.PublishOpts.Insecure {
+		dst.PlainHTTP = true
+	}
 
 	pathRoot := p.tmp.Base
 
@@ -62,7 +71,19 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	defer store.Close()
-	descs, err := loadFiles(ctx, store, nil, paths)
+	var descs []ocispec.Descriptor
+	for _, path := range paths {
+		name, err := filepath.Rel(pathRoot, path)
+		message.Debugf("Preparing %s", name)
+		if err != nil {
+			return err
+		}
+		desc, err := store.Add(ctx, name, zarfMediaType, path)
+		if err != nil {
+			return err
+		}
+		descs = append(descs, desc)
+	}
 	if err != nil {
 		return err
 	}
@@ -80,20 +101,12 @@ func (p *Packager) Publish() error {
 	}
 
 	// prepare push
-	dst, err := remote.NewRepository(ref)
-	if err != nil {
-		return err
-	}
-
-	if p.cfg.PublishOpts.Insecure {
-		dst.PlainHTTP = true
-	}
 	copyOpts := oras.DefaultCopyOptions
 	if p.cfg.PublishOpts.Concurrency > copyOpts.Concurrency {
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
 	copy := func(root ocispec.Descriptor) error {
-		message.Debug("%v\n", root)
+		message.Debugf("%v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
 			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
 		} else {
@@ -107,7 +120,7 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
-	message.Debugf("Pushed %v to %v", root.Digest, dst.Reference.String())
+	message.Infof("Digest: %s", root.Digest)
 	return nil
 }
 
@@ -177,38 +190,6 @@ func pushArtifact(dst oras.Target, pack packFunc, packOpts *oras.PackOptions, co
 		return ocispec.Descriptor{}, err
 	}
 	return root, nil
-}
-
-// taken from https://github.com/oras-project/oras/blob/main/cmd/oras/file.go
-func loadFiles(ctx context.Context, store *file.Store, annotations map[string]map[string]string, fileRefs []string) ([]ocispec.Descriptor, error) {
-	var files []ocispec.Descriptor
-	for _, filename := range fileRefs {
-		// get shortest absolute path as unique name
-		name := filepath.Clean(filename)
-		if !filepath.IsAbs(name) {
-			name = filepath.ToSlash(name)
-		}
-
-		message.Debugf("Preparing %s", name)
-		file, err := store.Add(ctx, name, zarfMediaType, filename)
-		if err != nil {
-			return nil, err
-		}
-		if value, ok := annotations[filename]; ok {
-			if file.Annotations == nil {
-				file.Annotations = value
-			} else {
-				for k, v := range value {
-					file.Annotations[k] = v
-				}
-			}
-		}
-		files = append(files, file)
-	}
-	if len(files) == 0 {
-		message.Debug("Uploading empty artifact")
-	}
-	return files, nil
 }
 
 func isManifestUnsupported(err error) bool {

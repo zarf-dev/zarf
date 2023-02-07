@@ -196,15 +196,30 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:     "publish [PACKAGE]",
-	Short:   "Publish a Zarf package to a remote registry",
+	Use:   "publish [PACKAGE] [REGISTRY]",
+	Short: "Publish a Zarf package to a remote registry",
 	Long: "Publish a Zarf package to a remote registry\n" +
 		"Publishes a compiled package file to a remote registry. " +
 		"By default, the package will be published to the registry " +
 		"specified in the package's zarf.yaml file.",
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
+
+		if len(args) == 1 {
+			message.Fatalf(nil, "No registry provided")
+		} else if !strings.HasPrefix(args[1], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+
+		registry := args[1]
+		parts := strings.Split(strings.TrimPrefix(registry, "oci://"), "/")
+		pkgConfig.PublishOpts.RegistryURL = parts[0]
+		pkgConfig.PublishOpts.Namespace = strings.Join(parts[1:], "/")
+
+		if pkgConfig.PublishOpts.Namespace == "" {
+			message.Fatalf(nil, "No namespace provided")
+		}
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -315,7 +330,6 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVar(&pkgConfig.PublishOpts.RegistryURL, "registry", "https://index.docker.io/v1/", "URL of the registry to publish the package to")
 	publishFlags.BoolVar(&pkgConfig.PublishOpts.Insecure, "insecure", false, "Allow insecure connections to the registry")
 	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
 }
