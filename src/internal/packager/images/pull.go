@@ -153,11 +153,11 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 			return nil, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
 		}
 
-		// If we were able to pull from the local daemon, return the image.
+		// The pull from the docker daemon was successful, return the image.
 		return img, err
 	}
 
-	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
+	// Manifest was found, so use crane to pull the image.
 	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure)...); err != nil {
 		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 	}

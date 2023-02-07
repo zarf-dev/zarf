@@ -45,7 +45,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 		return repo, git.ErrRepositoryAlreadyExists
 	} else if err != nil {
-		message.Debugf("Failed to clone repo: %s", err.Error())
+		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
 		g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
 		// If we can't clone with go-git, fallback to the host clone

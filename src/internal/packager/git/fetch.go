@@ -77,7 +77,7 @@ func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
 	if errors.Is(err, git.ErrTagExists) || errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debug("Already fetched requested ref")
 	} else if err != nil {
-		message.Debugf("Failed to fetch repo: %s", err)
+		message.Debugf("Failed to fetch repo %s: %s", gitURL, err.Error())
 		g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
 		// If we can't fetch with go-git, fallback to the host fetch

@@ -1071,7 +1071,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Description of the action to be displayed during package deployment instead of the command
+**Description:** Description of the action to be displayed during package execution instead of the command
 
 |          |          |
 | -------- | -------- |

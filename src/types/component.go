@@ -144,7 +144,7 @@ type ZarfComponentAction struct {
 	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd             string   `json:"cmd,omitempty" jsonschema:"description=The command to run"`
 	SetVariable     string   `json:"setVariable,omitempty" jsonschema:"description=The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
-	Description     string   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package deployment instead of the command"`
+	Description     string   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

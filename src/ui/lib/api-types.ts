@@ -309,7 +309,7 @@ export interface ZarfComponentAction {
      */
     cmd?: string;
     /**
-     * Description of the action to be displayed during package deployment instead of the command
+     * Description of the action to be displayed during package execution instead of the command
      */
     description?: string;
     /**
