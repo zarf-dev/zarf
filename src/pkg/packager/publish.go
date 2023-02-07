@@ -33,13 +33,14 @@ func (p *Packager) Publish() error {
 	}
 
 	registry := p.cfg.PublishOpts.RegistryURL
-
 	name := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
 	ns := p.cfg.PublishOpts.Namespace
 	ref := fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch)
-	message.Infof("Publishing: %s", ref)
+
+	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
+	defer spinner.Successf("Published: %s", ref)
 
 	dst, err := remote.NewRepository(ref)
 	if err != nil {
