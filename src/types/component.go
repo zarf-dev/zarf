@@ -95,6 +95,7 @@ type ZarfManifest struct {
 	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
 	Namespace                  string   `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the manifests to"`
 	Files                      []string `json:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
+	KustomizeNoHelmWrap        bool     `json:"kustomizeNoHelmWrap,omitempty" jsonschema:"description=Allow kustomize to run without being wrapped in a helm chart"`
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
 	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`

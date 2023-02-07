@@ -41,3 +41,4 @@ func BuildKustomization(path string, destination string, kustomizeAllowAnyDirect
 
 	return utils.WriteFile(destination, yaml)
 }
+
