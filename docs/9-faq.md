@@ -54,7 +54,7 @@ components:
       onCreate:
         # runs before the component is created
         before:
-          - cmd: 'docker tag ###ZARF_PKG_VAR_IMG### localhost:5000/###ZARF_PKG_VAR_IMG###'¬
+          - cmd: 'docker tag ###ZARF_PKG_VAR_IMG### localhost:5000/###ZARF_PKG_VAR_IMG###'
           - cmd: 'docker push localhost:5000/###ZARF_PKG_VAR_IMG###'
 
     images:
