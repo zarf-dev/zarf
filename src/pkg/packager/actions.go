@@ -39,6 +39,8 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	}
 
 	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
+	// Persist the spinner output so it doesn't get overwritten by the command output.
+	spinner.EnablePreserveWrites()
 
 	var (
 		ctx    context.Context

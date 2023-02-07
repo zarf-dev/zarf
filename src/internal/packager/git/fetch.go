@@ -78,7 +78,7 @@ func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
 		message.Debug("Already fetched requested ref")
 	} else if err != nil {
 		message.Debugf("Failed to fetch repo: %s", err)
-		message.Infof("Falling back to host git for %s", gitURL)
+		g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
 		// If we can't fetch with go-git, fallback to the host fetch
 		// Only support "all tags" due to the azure fetch url format including a username
@@ -87,7 +87,9 @@ func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
 			cmdArgs = append(cmdArgs, refspec.String())
 		}
 		execCfg := exec.Config{
-			Dir: gitDirectory,
+			Dir:    gitDirectory,
+			Stdout: g.Spinner,
+			Stderr: g.Spinner,
 		}
 		_, _, err := exec.CmdWithContext(context.TODO(), execCfg, "git", cmdArgs...)
 		return err

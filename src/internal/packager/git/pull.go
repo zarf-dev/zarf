@@ -124,7 +124,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 
 		_, err = g.removeLocalTagRefs()
 		if err != nil {
-			return fmt.Errorf("Unable to remove unneeded local tag refs: %w", err)
+			return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
 		}
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()

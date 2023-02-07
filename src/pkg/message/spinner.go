@@ -16,9 +16,10 @@ var activeSpinner *Spinner
 
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
-	spinner   *pterm.SpinnerPrinter
-	startText string
-	termWidth int
+	spinner        *pterm.SpinnerPrinter
+	startText      string
+	termWidth      int
+	preserveWrites bool
 }
 
 // NewProgressSpinner creates a new progress spinner.
@@ -49,6 +50,16 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	return activeSpinner
 }
 
+// EnablePreserveWrites enables preserving writes to the terminal.
+func (p *Spinner) EnablePreserveWrites() {
+	p.preserveWrites = true
+}
+
+// DisablePreserveWrites disables preserving writes to the terminal.
+func (p *Spinner) DisablePreserveWrites() {
+	p.preserveWrites = false
+}
+
 // Write the given text to the spinner.
 func (p *Spinner) Write(raw []byte) (int, error) {
 	size := len(raw)
@@ -61,9 +72,15 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		text := pterm.Sprintf("     %s", scanner.Text())
-		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", p.termWidth))
-		pterm.Fprintln(p.spinner.Writer, text)
+		// Only be fancy if preserve writes is enabled.
+		if p.preserveWrites {
+			text := pterm.Sprintf("     %s", scanner.Text())
+			pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", p.termWidth))
+			pterm.Fprintln(p.spinner.Writer, text)
+		} else {
+			// Otherwise just update the spinner text.
+			p.spinner.UpdateText(scanner.Text())
+		}
 	}
 
 	return size, nil
