@@ -189,9 +189,11 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	if runtime.GOOS == "windows" {
 		shell = "powershell"
 		shellArgs = "-Command"
+		message.Debug("Running command in PowerShell: %s", cmd)
 	} else {
 		shell = "sh"
 		shellArgs = "-c"
+		message.Debug("Running command in shell: %s", cmd)
 	}
 
 	execCfg := exec.Config{
