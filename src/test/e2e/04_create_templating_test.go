@@ -36,7 +36,7 @@ func TestCreateTemplating(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--set", "ACTION=template", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all")
+	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the configmap exists and is readable
