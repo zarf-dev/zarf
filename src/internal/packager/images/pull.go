@@ -5,6 +5,7 @@
 package images
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/moby/moby/client"
+	"github.com/pterm/pterm"
 )
 
 // PullAll pulls all of the images in the provided tag map.
@@ -64,7 +67,7 @@ func (i *ImgConfig) PullAll() error {
 		}
 		tagToImage[tag] = img
 	}
-	spinner.Success()
+	spinner.Updatef("Preparing image sources and cache for image pulling")
 
 	var (
 		progress    = make(chan v1.Update, 200)
@@ -93,6 +96,7 @@ func (i *ImgConfig) PullAll() error {
 				utils.ByteFormat(float64(update.Total), 2),
 			)
 			if progressBar == nil {
+				spinner.Success()
 				progressBar = message.NewProgressBar(update.Total, title)
 			}
 			progressBar.Update(update.Complete, title)
@@ -115,9 +119,32 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 		message.Debugf("crane unable to pull image %s: %s", src, err)
 		spinner.Updatef("%s not found, trying with docker instead. This may take some time.", src)
 
+		// Parse the image reference to get the image name.
 		reference, err := name.ParseReference(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+		}
+
+		// Attempt to connect to the local docker daemon.
+		ctx := context.TODO()
+		cli, err := client.NewClientWithOpts(client.FromEnv)
+		if err != nil {
+			return nil, fmt.Errorf("docker not available: %w", err)
+		}
+		cli.NegotiateAPIVersion(ctx)
+
+		// Inspect the image to get the size.
+		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
+		}
+
+		// Warn the user if the image is large.
+		if rawImg.Size > 750*1000*1000 {
+			warn := pterm.DefaultParagraph.WithMaxWidth(80).Sprintf("%s is %s and may take a very long time to load via docker. "+
+				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
+				src, utils.ByteFormat(float64(rawImg.Size), 2))
+			spinner.Warnf(warn)
 		}
 
 		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
