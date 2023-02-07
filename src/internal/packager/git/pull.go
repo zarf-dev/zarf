@@ -27,7 +27,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) string {
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
 
-	err = g.pull(gitURL, path, "")
+	_ = g.pull(gitURL, path, "")
 	return path
 }
 
