@@ -121,7 +121,7 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
-	message.Infof("Digest: %s", root.Digest)
+	message.SuccessF("Digest: %s", root.Digest)
 	return nil
 }
 
