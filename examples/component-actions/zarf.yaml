@@ -38,15 +38,7 @@ components:
             setVariable: BLEH
         # runs after the component is deployed
         after:
-          - cmd: echo test-create-after.txt
-          - cmd: sleep 3
-          - cmd: echo test-create-after.txt1
-          - cmd: sleep 3
-          - cmd: echo test-create-after.txt2
-          - cmd: |
-              echo "multiline!"
-              sleep 3
-          - cmd: for i in $(seq 1 10); do echo "The current number is $i. This is a really long line that will overflow"; done
+          - cmd: touch test-create-after.txt
 
   - name: on-deploy
     actions:
