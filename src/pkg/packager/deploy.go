@@ -512,22 +512,25 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			manifest.Namespace = corev1.NamespaceDefault
 		}
 
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
-		if err != nil {
-			return installedCharts, err
-		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
+		// Issue 1337 manually apply kustomize here without generating a chart
+		if !manifest.KustomizeNoHelmWrap {
+			// Iterate over any connectStrings and add to the main map
+			helmCfg := helm.Helm{
+				BasePath:  componentPath.Manifests,
+				Component: component,
+				Cfg:       p.cfg,
+				Cluster:   p.cluster,
+			}
+			addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+			if err != nil {
+				return installedCharts, err
+			}
+			installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
+			// erate over any connectStrings and add to the main map
+			for name, description := range addedConnectStrings {
+				connectStrings[name] = description
+			}
 		}
 	}
 
