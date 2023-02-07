@@ -60,7 +60,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		text := strings.TrimSpace(scanner.Text())
+		text := scanner.Text()
 		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
 		pterm.Fprintln(p.spinner.Writer, text)
 	}

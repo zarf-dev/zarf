@@ -96,7 +96,7 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	stderr := io.MultiWriter(stdErrWriters...)
 
 	// Print the command before execution.
-	cmdString := fmt.Sprintf("\n   %s%s %s%v%s%s\n",
+	cmdString := fmt.Sprintf("\n%s%s %s%v%s%s\n",
 		colorGreen, command, colorCyan, args, colorWhite, colorReset)
 	stdout.Write([]byte(cmdString))
 
