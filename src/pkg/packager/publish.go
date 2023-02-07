@@ -23,7 +23,6 @@ import (
 // - This is a copy of the oras example code, with some modifications
 //
 // replace comments w/ CLI args where appropriate
-// replace fmt.Printf w/ message.Debug
 
 var zarfMediaType = "application/vnd.zarf.layer.v1+tar.zst"
 
@@ -190,7 +189,7 @@ func loadFiles(ctx context.Context, store *file.Store, annotations map[string]ma
 			name = filepath.ToSlash(name)
 		}
 
-		// fmt.Println("Preparing", name)
+		message.Debugf("Preparing %s", name)
 		file, err := store.Add(ctx, name, zarfMediaType, filename)
 		if err != nil {
 			return nil, err
@@ -207,7 +206,7 @@ func loadFiles(ctx context.Context, store *file.Store, annotations map[string]ma
 		files = append(files, file)
 	}
 	if len(files) == 0 {
-		fmt.Println("Uploading empty artifact")
+		message.Debug("Uploading empty artifact")
 	}
 	return files, nil
 }
