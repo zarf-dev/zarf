@@ -64,7 +64,7 @@ func (p *Spinner) DisablePreserveWrites() {
 func (p *Spinner) Write(raw []byte) (int, error) {
 	size := len(raw)
 	if NoProgress {
-		pterm.Println(string(raw))
+		pterm.Printfln("     %s", string(raw))
 		return size, nil
 	}
 

@@ -53,7 +53,6 @@ components:
               sleep 1
             description: multiline & description demo
           - cmd: sleep 1
-          - cmd: for i in $(seq 1 10); do echo "The current number is $i. I can loop and evaluate expressions too!"; done
 
   - name: on-deploy
     actions:
