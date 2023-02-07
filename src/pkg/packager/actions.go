@@ -92,7 +92,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 		// If no timeout is set, run the command and return or continue retrying.
 		if cfg.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmdEscaped)
+			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			if err := tryCmd(context.TODO()); err != nil {
 				continue
 			}
@@ -101,7 +101,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
 		// On timeout abort.
 		case <-timeout:
@@ -223,7 +223,8 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 
 func escapeCmdForPrint(cmd string) string {
 	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
-	// Truncate the command if it is longer than 60 characters (to fit well in 80 chars)
+	// Truncate the command if it is longer than 60 characters so it isn't too long.
+	// Also so it doesn't upset King Wayne, that would be a bad day for all of us.
 	if len(cmdEscaped) > 60 {
 		cmdEscaped = cmdEscaped[:57] + "..."
 	}

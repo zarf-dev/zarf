@@ -117,7 +117,7 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	// If crane is unable to pull the image, try to load it from the local docker daemon.
 	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...); err != nil {
 		message.Debugf("crane unable to pull image %s: %s", src, err)
-		spinner.Updatef("%s not found, trying with docker instead. This may take some time.", src)
+		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
 
 		// Parse the image reference to get the image name.
 		reference, err := name.ParseReference(src)
