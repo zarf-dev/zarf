@@ -7,7 +7,6 @@ package message
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -60,7 +59,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		text := fmt.Sprintf("     %s", scanner.Text())
+		text := pterm.Sprintf("     %s", scanner.Text())
 		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
 		pterm.Fprintln(p.spinner.Writer, text)
 	}
