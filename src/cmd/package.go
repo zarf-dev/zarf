@@ -315,7 +315,7 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVar(&pkgConfig.PublishOpts.RegistryURL, "registry", "", "URL of the registry to publish the package to")
+	publishFlags.StringVar(&pkgConfig.PublishOpts.RegistryURL, "registry", "https://index.docker.io/v1/", "URL of the registry to publish the package to")
 	publishFlags.BoolVar(&pkgConfig.PublishOpts.Insecure, "insecure", false, "Allow insecure connections to the registry")
 	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
 }

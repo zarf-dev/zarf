@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"oras.land/oras-go/v2"
@@ -27,12 +28,19 @@ import (
 var zarfMediaType = "application/vnd.zarf.layer.v1+tar.zst"
 
 func (p *Packager) Publish() error {
-	registry := "localhost:666"
-	
+	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
+	if err := p.loadZarfPkg(); err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	registry := p.cfg.PublishOpts.RegistryURL
+
 	name := p.cfg.Pkg.Metadata.Name
-	ver := p.cfg.Pkg.Metadata.Version
-	arch := p.cfg.Pkg.Metadata.Architecture
+	ver := p.cfg.Pkg.Build.Version
+	arch := p.cfg.Pkg.Build.Architecture
 	ref := fmt.Sprintf("%s/%s:%s-%s", registry, name, ver, arch)
+
+	message.Infof("Publishing package to %s", ref)
 
 	pathRoot := p.tmp.Base
 
@@ -52,12 +60,12 @@ func (p *Packager) Publish() error {
 
 	store, err := file.New("")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer store.Close()
 	descs, err := loadFiles(ctx, store, nil, paths)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	packOpts := oras.PackOptions{}
 	pack := func() (ocispec.Descriptor, error) {
@@ -75,7 +83,7 @@ func (p *Packager) Publish() error {
 	// prepare push
 	dst, err := remote.NewRepository(ref)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if p.cfg.PublishOpts.Insecure {
@@ -86,7 +94,7 @@ func (p *Packager) Publish() error {
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
 	copy := func(root ocispec.Descriptor) error {
-		fmt.Printf("%v\n", root)
+		message.Debug("%v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
 			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
 		} else {
@@ -98,9 +106,9 @@ func (p *Packager) Publish() error {
 	// push
 	root, err := pushArtifact(dst, pack, &packOpts, copy, &copyOpts.CopyGraphOptions)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	fmt.Println("Pushed", root.Digest, "to", dst.Reference.String())
+	message.Debugf("Pushed %v to %v", root.Digest, dst.Reference.String())
 	return nil
 }
 
@@ -223,4 +231,3 @@ func isManifestUnsupported(err error) bool {
 	}
 	return false
 }
-
