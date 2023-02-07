@@ -95,10 +95,12 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	stdout := io.MultiWriter(stdoutWriters...)
 	stderr := io.MultiWriter(stdErrWriters...)
 
-	// Print the command before execution.
-	cmdString := fmt.Sprintf("\n%s%s %s%v%s%s\n",
-		colorGreen, command, colorCyan, args, colorWhite, colorReset)
-	stdout.Write([]byte(cmdString))
+	// If we're printing, print the command.
+	if config.Print {
+		cmdString := fmt.Sprintf("%s%s %s%v%s%s",
+			colorGreen, command, colorCyan, args, colorWhite, colorReset)
+		fmt.Println(cmdString)
+	}
 
 	// Start the command.
 	if err := cmd.Start(); err != nil {

@@ -46,7 +46,7 @@ components:
               echo "multiline!"
               sleep 1
               echo "updates!"
-              sleep 1
+              sleep 3
               echo "in!"
               sleep 1
               echo "realtime!"

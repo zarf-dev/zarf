@@ -93,7 +93,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmdEscaped, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
 		// On timeout abort.
 		case <-timeout:
@@ -212,10 +212,10 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 }
 
 func escapeCmdForPrint(cmd string) string {
-	cmdEscaped := strings.ReplaceAll(cmd, "\n", "\\n")
-	// Truncate the command if it is longer than 30 characters (to fit well in 80 chars)
-	if len(cmdEscaped) > 30 {
-		cmdEscaped = cmdEscaped[:27] + "..."
+	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
+	// Truncate the command if it is longer than 60 characters (to fit well in 80 chars)
+	if len(cmdEscaped) > 60 {
+		cmdEscaped = cmdEscaped[:57] + "..."
 	}
 	return cmdEscaped
 }
