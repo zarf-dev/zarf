@@ -15,6 +15,7 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
@@ -40,11 +41,22 @@ func (p *Packager) Publish() error {
 	ref := fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch)
 
 	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
-	defer spinner.Successf("Published: %s", ref)
+	scopes := []string{
+		fmt.Sprintf("repository:%s/%s:pull,push", ns, name),
+	}
+	ctx := auth.WithScopes(context.Background(), scopes...)
 
 	dst, err := remote.NewRepository(ref)
 	if err != nil {
 		return err
+	}
+	dst.Client = &auth.Client{
+		Credential: auth.StaticCredential(registry, auth.Credential{
+			Username: p.cfg.PublishOpts.Username,
+			Password: p.cfg.PublishOpts.Password,
+		}),
+		Cache:              auth.NewCache(),
+		ForceAttemptOAuth2: true,
 	}
 
 	if p.cfg.PublishOpts.Insecure {
@@ -52,8 +64,6 @@ func (p *Packager) Publish() error {
 	}
 
 	pathRoot := p.tmp.Base
-
-	ctx := context.Background()
 
 	glob := func(path string) []string {
 		paths, _ := filepath.Glob(filepath.Join(pathRoot, path))
@@ -121,6 +131,7 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
+	spinner.Successf("Published: %s", ref)
 	message.SuccessF("Digest: %s", root.Digest)
 	return nil
 }

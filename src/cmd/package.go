@@ -332,4 +332,6 @@ func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 	publishFlags.BoolVar(&pkgConfig.PublishOpts.Insecure, "insecure", false, "Allow insecure connections to the registry")
 	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
+	publishFlags.StringVar(&pkgConfig.PublishOpts.Username, "username", "", "Username for the registry")
+	publishFlags.StringVar(&pkgConfig.PublishOpts.Password, "password", "", "Password for the registry")
 }
