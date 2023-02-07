@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 )
 
 func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
@@ -31,7 +30,9 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
-	spinner := message.NewProgressSpinner("Running command \"%s\"", action.Cmd)
+	cmdEscaped := escapeCmdForPrint(action.Cmd)
+
+	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
 
 	var (
 		ctx    context.Context
@@ -76,14 +77,14 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			}
 
 			// If the command ran successfully, continue to the next action.
-			spinner.Successf("%s ┃ %s", cmd, pterm.FgWhite.Sprint(out))
+			spinner.Successf("Completed command \"%s\"", cmdEscaped)
 
 			return nil
 		}
 
 		// If no timeout is set, run the command and return or continue retrying.
 		if cfg.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
+			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmdEscaped)
 			if err := tryCmd(context.TODO()); err != nil {
 				continue
 			}
@@ -92,7 +93,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for command \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
 		// On timeout abort.
 		case <-timeout:
@@ -188,9 +189,11 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	if runtime.GOOS == "windows" {
 		shell = "powershell"
 		shellArgs = "-Command"
+		message.Debug("Running command in PowerShell: %s", cmd)
 	} else {
 		shell = "sh"
 		shellArgs = "-c"
+		message.Debug("Running command in shell: %s", cmd)
 	}
 
 	execCfg := exec.Config{
@@ -199,7 +202,6 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	if !cfg.Mute {
-		spinner.SetWriterPrefixf("%s ┃ ", cmd)
 		execCfg.Stdout = spinner
 		execCfg.Stderr = spinner
 	}
@@ -209,4 +211,13 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	message.Debug(cmd, out, errOut)
 
 	return out, err
+}
+
+func escapeCmdForPrint(cmd string) string {
+	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
+	// Truncate the command if it is longer than 60 characters (to fit well in 80 chars)
+	if len(cmdEscaped) > 60 {
+		cmdEscaped = cmdEscaped[:57] + "..."
+	}
+	return cmdEscaped
 }

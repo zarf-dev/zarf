@@ -39,6 +39,20 @@ components:
         # runs after the component is deployed
         after:
           - cmd: touch test-create-after.txt
+          - cmd: sleep 1
+          - cmd: echo "I can print!"
+          - cmd: sleep 1
+          - cmd: |
+              echo "multiline!"
+              sleep 1
+              echo "updates!"
+              sleep 3
+              echo "in!"
+              sleep 1
+              echo "realtime!"
+              sleep 1
+          - cmd: sleep 1
+          - cmd: for i in $(seq 1 10); do echo "The current number is $i. I can loop and evaluate expressions too!"; done
 
   - name: on-deploy
     actions:

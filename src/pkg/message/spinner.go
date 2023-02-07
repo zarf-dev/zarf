@@ -7,7 +7,6 @@ package message
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -17,9 +16,8 @@ var activeSpinner *Spinner
 
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
-	spinner      *pterm.SpinnerPrinter
-	startText    string
-	writerPrefix string
+	spinner   *pterm.SpinnerPrinter
+	startText string
 }
 
 // NewProgressSpinner creates a new progress spinner.
@@ -30,7 +28,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	}
 
 	var spinner *pterm.SpinnerPrinter
-	text := fmt.Sprintf(format, a...)
+	text := pterm.Sprintf(format, a...)
 	if NoProgress {
 		Info(text)
 	} else {
@@ -49,15 +47,11 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	return activeSpinner
 }
 
-// SetWriterPrefixf sets the prefix for the spinner writer.
-func (p *Spinner) SetWriterPrefixf(format string, a ...any) {
-	p.writerPrefix = fmt.Sprintf(format, a...)
-}
-
 // Write the given text to the spinner.
 func (p *Spinner) Write(raw []byte) (int, error) {
 	size := len(raw)
 	if NoProgress {
+		pterm.Println(string(raw))
 		return size, nil
 	}
 
@@ -65,9 +59,9 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		text := strings.TrimSpace(scanner.Text())
-		content := p.writerPrefix + pterm.FgCyan.Sprintf(text)
-		p.spinner.UpdateText(content)
+		text := pterm.Sprintf("     %s", scanner.Text())
+		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
+		pterm.Fprintln(p.spinner.Writer, text)
 	}
 
 	return size, nil
@@ -79,7 +73,7 @@ func (p *Spinner) Updatef(format string, a ...any) {
 		return
 	}
 
-	text := fmt.Sprintf(format, a...)
+	text := pterm.Sprintf(format, a...)
 	p.spinner.UpdateText(text)
 }
 
@@ -98,7 +92,7 @@ func (p *Spinner) Success() {
 
 // Successf prints a success message with the spinner and stops it.
 func (p *Spinner) Successf(format string, a ...any) {
-	text := fmt.Sprintf(format, a...)
+	text := pterm.Sprintf(format, a...)
 	if p.spinner != nil {
 		p.spinner.Success(text)
 	} else {
@@ -109,7 +103,7 @@ func (p *Spinner) Successf(format string, a ...any) {
 
 // Warnf prints a warning message with the spinner.
 func (p *Spinner) Warnf(format string, a ...any) {
-	text := fmt.Sprintf(format, a...)
+	text := pterm.Sprintf(format, a...)
 	if p.spinner != nil {
 		p.spinner.Warning(text)
 	} else {
