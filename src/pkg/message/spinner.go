@@ -17,9 +17,8 @@ var activeSpinner *Spinner
 
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
-	spinner      *pterm.SpinnerPrinter
-	startText    string
-	writerPrefix string
+	spinner   *pterm.SpinnerPrinter
+	startText string
 }
 
 // NewProgressSpinner creates a new progress spinner.
@@ -49,15 +48,11 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	return activeSpinner
 }
 
-// SetWriterPrefixf sets the prefix for the spinner writer.
-func (p *Spinner) SetWriterPrefixf(format string, a ...any) {
-	p.writerPrefix = fmt.Sprintf(format, a...)
-}
-
 // Write the given text to the spinner.
 func (p *Spinner) Write(raw []byte) (int, error) {
 	size := len(raw)
 	if NoProgress {
+		fmt.Println(raw)
 		return size, nil
 	}
 
@@ -66,8 +61,8 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		content := p.writerPrefix + pterm.FgCyan.Sprintf(text)
-		p.spinner.UpdateText(content)
+		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
+		pterm.Fprintln(p.spinner.Writer, text)
 	}
 
 	return size, nil

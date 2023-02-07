@@ -53,18 +53,6 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		return "", "", errors.New("command is required")
 	}
 
-	// Print the command if requested.
-	if config.Print {
-		fmt.Println()
-		fmt.Printf("   %s", colorGreen)
-		fmt.Print(command + " ")
-		fmt.Printf("%s", colorCyan)
-		fmt.Printf("%v", args)
-		fmt.Printf("%s", colorWhite)
-		fmt.Printf("%s", colorReset)
-		fmt.Println("")
-	}
-
 	// Set up the command.
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = config.Dir
@@ -106,6 +94,11 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	// Bind all the writers.
 	stdout := io.MultiWriter(stdoutWriters...)
 	stderr := io.MultiWriter(stdErrWriters...)
+
+	// Print the command before execution.
+	cmdString := fmt.Sprintf("\n   %s%s %s%v%s%s\n",
+		colorGreen, command, colorCyan, args, colorWhite, colorReset)
+	stdout.Write([]byte(cmdString))
 
 	// Start the command.
 	if err := cmd.Start(); err != nil {
