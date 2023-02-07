@@ -18,6 +18,7 @@ var activeSpinner *Spinner
 type Spinner struct {
 	spinner   *pterm.SpinnerPrinter
 	startText string
+	termWidth int
 }
 
 // NewProgressSpinner creates a new progress spinner.
@@ -42,6 +43,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	activeSpinner = &Spinner{
 		spinner:   spinner,
 		startText: text,
+		termWidth: pterm.GetTerminalWidth(),
 	}
 
 	return activeSpinner
@@ -60,7 +62,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		text := pterm.Sprintf("     %s", scanner.Text())
-		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
+		pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", p.termWidth))
 		pterm.Fprintln(p.spinner.Writer, text)
 	}
 
