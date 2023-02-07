@@ -309,6 +309,10 @@ export interface ZarfComponentAction {
      */
     cmd?: string;
     /**
+     * Description of the action to be displayed during package deployment instead of the command
+     */
+    description?: string;
+    /**
      * The working directory to run the command in (default is CWD)
      */
     dir?: string;
@@ -1042,6 +1046,7 @@ const typeMap: any = {
     ], false),
     "ZarfComponentAction": o([
         { json: "cmd", js: "cmd", typ: u(undefined, "") },
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },

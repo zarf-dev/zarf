@@ -30,7 +30,13 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
-	cmdEscaped := escapeCmdForPrint(action.Cmd)
+	var cmdEscaped string
+
+	if action.Description != "" {
+		cmdEscaped = action.Description
+	} else {
+		cmdEscaped = escapeCmdForPrint(action.Cmd)
+	}
 
 	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
 
@@ -53,7 +59,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	cfg := actionGetCfg(defaultCfg, action, vars)
 
 	if cmd, err = actionCmdMutation(action.Cmd); err != nil {
-		spinner.Errorf(err, "Error mutating command: %s", cmd)
+		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
 	duration := time.Duration(cfg.MaxTotalSeconds) * time.Second
@@ -98,7 +104,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		// On timeout abort.
 		case <-timeout:
 			cancel()
-			return fmt.Errorf("command \"%s\" timed out", cmd)
+			return fmt.Errorf("command \"%s\" timed out", cmdEscaped)
 
 		// Otherwise, try running the command.
 		default:
@@ -111,7 +117,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	}
 
 	// If we've reached this point, the retry limit has been reached.
-	return fmt.Errorf("command \"%s\" failed after %d retries", cmd, cfg.MaxRetries)
+	return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, cfg.MaxRetries)
 }
 
 // Perform some basic string mutations to make commands more useful.
