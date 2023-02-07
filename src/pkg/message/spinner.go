@@ -52,7 +52,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 func (p *Spinner) Write(raw []byte) (int, error) {
 	size := len(raw)
 	if NoProgress {
-		fmt.Println(raw)
+		fmt.Println(string(raw))
 		return size, nil
 	}
 
