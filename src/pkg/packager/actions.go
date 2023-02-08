@@ -224,7 +224,6 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 func escapeCmdForPrint(cmd string) string {
 	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
 	// Truncate the command if it is longer than 60 characters so it isn't too long.
-	// Also so it doesn't upset King Wayne, that would be a bad day for all of us.
 	if len(cmdEscaped) > 60 {
 		cmdEscaped = cmdEscaped[:57] + "..."
 	}
