@@ -54,23 +54,25 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.URL)
+	tempPath, err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	defer os.RemoveAll(tempPath)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to download the git repo %s", h.Chart.URL)
+	}
 	gitCfg.GitPath = tempPath
 
 	// Switch to the correct tag
 	gitCfg.CheckoutTag(h.Chart.Version)
 
 	// Validate the chart
-	_, err := loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
-	if err != nil {
+	chartPath := filepath.Join(tempPath, h.Chart.GitPath)
+	if _, err = loader.LoadDir(chartPath); err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 	}
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	name, err := client.Run(filepath.Join(tempPath, h.Chart.GitPath), nil)
-
+	name, err := client.Run(chartPath, nil)
 	if err != nil {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
 	}
