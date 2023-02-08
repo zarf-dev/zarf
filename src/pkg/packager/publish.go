@@ -68,17 +68,14 @@ func (p *Packager) Publish() error {
 
 	configs := []*configfile.ConfigFile{cfg}
 
-	var key string
+	var key = registry
 	if registry == "registry-1.docker.io" {
 		key = "https://index.docker.io/v1/"
 	}
 
 	authConf, err := configs[0].GetCredentialsStore(key).Get(key)
 	if err != nil {
-		return err
-	}
-	if authConf.ServerAddress == "" {
-		return fmt.Errorf("no docker config entry found for %s", key)
+		return fmt.Errorf("unable to get credentials for %s: %w", key, err)
 	}
 
 	cred := auth.Credential{
