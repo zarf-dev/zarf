@@ -59,10 +59,13 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	gitCfg.GitPath = tempPath
 
 	// Switch to the correct tag
-	gitCfg.CheckoutTag(h.Chart.Version)
+	err := gitCfg.Checkout(h.Chart.Version)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to download provided git refrence: %v@%v", h.Chart.URL, h.Chart.Version)
+	}
 
 	// Validate the chart
-	_, err := loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
+	_, err = loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
 	if err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 	}

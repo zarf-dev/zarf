@@ -16,7 +16,7 @@ import (
 )
 
 // fetchTag performs a `git fetch` of _only_ the provided tag.
-func (g *Git) fetchTag(tag string) {
+func (g *Git) fetchTag(tag string) error {
 	message.Debugf("git.fetchTag(%s)", tag)
 
 	refspec := goConfig.RefSpec("refs/tags/" + tag + ":refs/tags/" + tag)
@@ -24,8 +24,23 @@ func (g *Git) fetchTag(tag string) {
 	err := g.fetch(g.GitPath, refspec)
 
 	if err != nil {
-		message.Fatal(err, "Not a valid tag or unable to fetch")
+		message.Errorf(err, "Not a valid tag or unable to fetch")
 	}
+	return err
+}
+
+// fetchBranch performs a `git fetch` of _only_ the provided branch.
+func (g *Git) fetchBranch(branch string) error {
+	message.Debugf("git.fetchBranch(%s)", branch)
+
+	refspec := goConfig.RefSpec("refs/heads/" + branch + ":refs/remotes/" + onlineRemoteName + "/" + branch)
+
+	err := g.fetch(g.GitPath, refspec)
+
+	if err != nil {
+		message.Errorf(err, "Not a valid branch or unable to fetch")
+	}
+	return err
 }
 
 // fetchHash performs a `git fetch` of _only_ the provided commit hash.

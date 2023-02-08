@@ -5,11 +5,66 @@
 package git
 
 import (
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
+
+// Checkout the git repository for the provided refrence. In order of precidence
+// to match the preceidence order of flux GitRepository objects
+// 1. commit hash
+// 2. tag
+// 3. branch
+func (g *Git) Checkout(refrence string) error {
+	message.Debugf("git.Checkout(%s)", refrence)
+	repo, err := git.PlainOpen(g.GitPath)
+	if err != nil {
+		return err
+	}
+	// Get the working tree so we can change refs
+	tree, err := repo.Worktree()
+	if err != nil {
+		message.Fatal(err, "Unable to load the git repo")
+	}
+
+	// Commit Hash
+	options := &git.CheckoutOptions{
+		Hash: plumbing.NewHash(refrence),
+		// Branch: plumbing.ReferenceName("refs/tags/" + tag),
+	}
+
+	// Perform the checkout
+	err = tree.Checkout(options)
+	if err == nil {
+		return nil
+	}
+	// not a git commit
+	message.Debugf("git.Checkout(%s): not a git commit: %v", refrence, err)
+
+	options.Hash = plumbing.ZeroHash
+	options.Branch = plumbing.ReferenceName("refs/tags/" + refrence)
+	// Perform the checkout
+	err = tree.Checkout(options)
+	if err == nil {
+		return nil
+	}
+	// not a git commit
+	message.Debugf("git.Checkout(%s): not a tag.: %v", refrence, err)
+
+	options.Branch = plumbing.ReferenceName(fmt.Sprintf("refs/remotes/%s/%s", onlineRemoteName, refrence))
+	// Perform the checkout
+	err = tree.Checkout(options)
+	if err == nil {
+		return nil
+	}
+	// not a git commit
+	message.Debugf("git.Checkout(%s): not a branch.: %v", refrence, err)
+	return err
+
+}
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
 func (g *Git) CheckoutTag(tag string) {

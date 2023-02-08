@@ -138,8 +138,19 @@ func findURLs(t string) []string {
 		// see if its a GitRepository
 		if y.GetKind() == "GitRepository" {
 			url := y.Object["spec"].(map[string]interface{})["url"].(string)
-			tag := y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
-			urls = append(urls, fmt.Sprintf("%v@%v", url, tag))
+			var ref string
+			ref, ok := y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["commit"].(string)
+			if !ok {
+				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["semver"].(string)
+			}
+			if !ok {
+				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
+			}
+			if !ok {
+				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["branch"].(string)
+			}
+
+			urls = append(urls, fmt.Sprintf("%v@%v", url, ref))
 		}
 	}
 

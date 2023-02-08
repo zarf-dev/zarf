@@ -113,8 +113,18 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 			g.fetchHash(ref)
 			g.checkoutHashAsBranch(plumbing.NewHash(ref), trunkBranchName)
 		} else {
-			g.fetchTag(ref)
-			g.checkoutTagAsBranch(ref, trunkBranchName)
+			// Try to fetch as tag first
+			err = g.fetchTag(ref)
+			if err != nil {
+				// Try to checkout ref as branch instead
+				err = g.fetchBranch(ref)
+				if err != nil {
+					message.Fatalf(err, "Could not checkout repo as branch or tag")
+				}
+			} else {
+				// Convert tag checkout to branch
+				g.checkoutTagAsBranch(ref, trunkBranchName)
+			}
 		}
 	}
 }
