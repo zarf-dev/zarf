@@ -11,6 +11,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -34,12 +36,17 @@ func (p *Packager) Publish() error {
 	}
 
 	registry := p.cfg.PublishOpts.RegistryURL
+
+	if registry == "docker.io" {
+		registry = "registry-1.docker.io"
+	}
 	name := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
 	ns := p.cfg.PublishOpts.Namespace
 	ref := fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch)
 
+	message.Debugf("Publishing package to %s", ref)
 	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
 	scopes := []string{
 		fmt.Sprintf("repository:%s/%s:pull,push", ns, name),
@@ -50,11 +57,39 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
+	// load default docker config file
+	cfg, err := config.Load(config.Dir())
+	if err != nil {
+		return err
+	}
+	if !cfg.ContainsAuth() {
+		return errors.New("no docker config file found")
+	}
+
+	configs := []*configfile.ConfigFile{cfg}
+
+	var key string
+	if registry == "registry-1.docker.io" {
+		key = "https://index.docker.io/v1/"
+	}
+
+	authConf, err := configs[0].GetCredentialsStore(key).Get(key)
+	if err != nil {
+		return err
+	}
+	if authConf.ServerAddress == "" {
+		return fmt.Errorf("no docker config entry found for %s", key)
+	}
+
+	cred := auth.Credential{
+		Username:     authConf.Username,
+		Password:     authConf.Password,
+		AccessToken:  authConf.RegistryToken,
+		RefreshToken: authConf.IdentityToken,
+	}
+
 	dst.Client = &auth.Client{
-		Credential: auth.StaticCredential(registry, auth.Credential{
-			Username: p.cfg.PublishOpts.Username,
-			Password: p.cfg.PublishOpts.Password,
-		}),
+		Credential:         auth.StaticCredential(registry, cred),
 		Cache:              auth.NewCache(),
 		ForceAttemptOAuth2: true,
 	}
