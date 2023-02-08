@@ -117,18 +117,15 @@ func (p *Packager) Publish() error {
 	var descs []ocispec.Descriptor
 	for _, path := range paths {
 		name, err := filepath.Rel(pathRoot, path)
-		message.Debugf("Preparing %s", name)
 		if err != nil {
 			return err
 		}
+		message.Debugf("Preparing %s", name)
 		desc, err := store.Add(ctx, name, zarfMediaType, path)
 		if err != nil {
 			return err
 		}
 		descs = append(descs, desc)
-	}
-	if err != nil {
-		return err
 	}
 	packOpts := oras.PackOptions{}
 	pack := func() (ocispec.Descriptor, error) {
