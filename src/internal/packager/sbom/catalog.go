@@ -24,7 +24,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
@@ -44,8 +43,8 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image, imagesPath, sbomPath string) {
-	imageCount := len(tagToImage)
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) {
+	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
@@ -59,7 +58,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 	_ = utils.CreateDirectory(builder.sbomPath, 0700)
 
 	// Generate a list of images and files for the sbom viewer
-	if json, err := builder.generateJSONList(componentSBOMs, tagToImage); err != nil {
+	if json, err := builder.generateJSONList(componentSBOMs, imgList); err != nil {
 		builder.spinner.Fatalf(err, "Unable to generate the SBOM image list")
 	} else {
 		builder.jsonList = json
@@ -68,7 +67,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 	currImage := 1
 
 	// Generate SBOM for each image
-	for tag := range tagToImage {
+	for _, tag := range imgList {
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		jsonData, err := builder.createImageSBOM(tag)
@@ -76,7 +75,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 			builder.spinner.Fatalf(err, "Unable to create SBOM for image %s", tag)
 		}
 
-		if err = builder.createSBOMViewerAsset(tag.String(), jsonData); err != nil {
+		if err = builder.createSBOMViewerAsset(tag, jsonData); err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM viewer for image %s", tag)
 		}
 
@@ -107,7 +106,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	if len(componentSBOMs) > 0 || len(tagToImage) > 0 {
+	if len(componentSBOMs) > 0 || len(imgList) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM compare tool")
 		}
@@ -118,15 +117,27 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, tagToImage map[name
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
-func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
-	// Get the image
+func (b *Builder) createImageSBOM(src string) ([]byte, error) {
+	// Get the image reference.
+	tag, err := name.NewTag(src, name.WeakValidation)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the image tarball.
 	tarballImg, err := tarball.ImageFromPath(b.imagesPath, &tag)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create the sbom
+	// Create the sbom.
 	imageCachePath := filepath.Join(b.cachePath, config.ZarfImageCacheDir)
+
+	// Ensure the image cache directory exists.
+	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {
+		return nil, err
+	}
+
 	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
@@ -160,7 +171,7 @@ func (b *Builder) createImageSBOM(tag name.Tag) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image tag as the filename
-	filename := fmt.Sprintf("%s.json", tag.String())
+	filename := fmt.Sprintf("%s.json", tag)
 	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err

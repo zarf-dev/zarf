@@ -18,17 +18,19 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string) string {
-	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
+	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
+
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
+	if err = g.pull(gitURL, path, ""); err != nil {
+		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
+	}
 
-	err = g.pull(gitURL, path, "")
-	return path
+	return path, nil
 }
 
 // Pull clones or updates a git repository into the target folder.
@@ -124,7 +126,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 
 		_, err = g.removeLocalTagRefs()
 		if err != nil {
-			return fmt.Errorf("Unable to remove unneeded local tag refs: %w", err)
+			return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
 		}
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()
