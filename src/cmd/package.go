@@ -330,6 +330,6 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.BoolVar(&pkgConfig.PublishOpts.Insecure, "insecure", false, "Allow insecure connections to the registry")
+	publishFlags.BoolVar(&pkgConfig.PublishOpts.PlainHTTP, "http-only", false, "Allow insecure connections to the registry")
 	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
 }

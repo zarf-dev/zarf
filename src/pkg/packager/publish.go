@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,14 +21,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
-
-// NOTES:
-// - This is a WIP, not yet functional w/ authentication
-// - This is a copy of the oras example code, with some modifications
-
-// currently every "layer" is labeled as a .tar.zst in the manifest, but
-// we should use the correct media type for each layer
-var zarfMediaType = "application/vnd.zarf.package.layer.v1.tar+zstd"
 
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
@@ -63,7 +56,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	if !cfg.ContainsAuth() {
-		return errors.New("no docker config file found")
+		return errors.New("no docker config file found, run 'docker login'")
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
@@ -86,12 +79,12 @@ func (p *Packager) Publish() error {
 	}
 
 	dst.Client = &auth.Client{
-		Credential:         auth.StaticCredential(registry, cred),
-		Cache:              auth.NewCache(),
+		Credential: auth.StaticCredential(registry, cred),
+		Cache:      auth.NewCache(),
 		// ForceAttemptOAuth2: true,
 	}
 
-	if p.cfg.PublishOpts.Insecure {
+	if p.cfg.PublishOpts.PlainHTTP {
 		dst.PlainHTTP = true
 	}
 
@@ -121,7 +114,23 @@ func (p *Packager) Publish() error {
 			return err
 		}
 		message.Debugf("Preparing %s", name)
-		desc, err := store.Add(ctx, name, zarfMediaType, path)
+
+		var mediaType string
+		if strings.HasSuffix(name, ".tar.zst") {
+			mediaType = "application/vnd.zarf.package.layer.v1.tar+zstd"
+		} else if strings.HasSuffix(name, ".tar.gz") {
+			mediaType = "application/vnd.zarf.package.layer.v1.tar+gzip"
+		} else if strings.HasSuffix(name, ".yaml") {
+			mediaType = "application/vnd.zarf.package.layer.v1.yaml"
+		} else if strings.HasSuffix(name, ".txt") {
+			mediaType = "application/vnd.zarf.package.layer.v1.txt"
+		} else if strings.HasSuffix(name, ".json") {
+			mediaType = "application/vnd.zarf.package.layer.v1.json"
+		} else {
+			mediaType = "application/vnd.zarf.package.layer.v1.unknown"
+		}
+
+		desc, err := store.Add(ctx, name, mediaType, path)
 		if err != nil {
 			return err
 		}

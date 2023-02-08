@@ -26,7 +26,7 @@ type ZarfPublishOptions struct {
 	PackagePath string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	Namespace   string `json:"namespace" jsonschema:"description=Namespace to publish the package to"`
 	RegistryURL string `json:"registryURL" jsonschema:"description=URL of the registry to publish the package to"`
-	Insecure    bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote registries"`
+	PlainHTTP    bool   `json:"plainHTTP" jsonschema:"description=PlainHTTP signals the transport to access the remote repository via HTTP instead of HTTPS"`
 	Concurrency int    `json:"concurrency" jsonschema:"description=Number of concurrent uploads to perform"`
 }
 
