@@ -88,7 +88,7 @@ func (p *Packager) Publish() error {
 	dst.Client = &auth.Client{
 		Credential:         auth.StaticCredential(registry, cred),
 		Cache:              auth.NewCache(),
-		ForceAttemptOAuth2: true,
+		// ForceAttemptOAuth2: true,
 	}
 
 	if p.cfg.PublishOpts.Insecure {
