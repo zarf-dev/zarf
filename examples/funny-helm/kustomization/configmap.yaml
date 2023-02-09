@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-helmrelease-values-cm
+data:
+  values.yaml: |
+    monitoring:
+      values:
+        additionalPrometheusRulesMap:
+          custom-rules:
+            groups:
+              - name: OOMKilled
+                rules:
+                  - alert: OOMKilled
+                    expr: sum_over_time(kube_pod_container_status_terminated_reason{reason="OOMKilled"}[5m])>0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled

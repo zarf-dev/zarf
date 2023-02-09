@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: funny-helm
+  yolo: true
+
+components:
+  - name: funny-helm
+    required: true
+    manifests:
+      - name: funny-helm
+#        kustomizeNoHelmWrap: true
+        kustomizations:
+          - ./kustomization

@@ -48,3 +48,31 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func TestKustomizeNoHelmWrap(t *testing.T) {
+	t.Log("E2E: KustomizeNoHelmWrap + YOLO Mode")
+
+	// Don't run this test in appliance mode
+	if e2e.applianceMode {
+		return
+	}
+
+	e2e.setupWithCluster(t)
+	defer e2e.teardown(t)
+
+	// Destroy the cluster to test Zarf cleaning up after itself
+	// todo: zarf destroy should not error out when run on an empty cluster
+	//stdOut, stdErr, err := e2e.execZarfCommand("destroy", "--confirm", "--remove-components")
+	//require.NoError(t, err, stdOut, stdErr)
+
+	path := fmt.Sprintf("build/zarf-package-funny-helm-%s.tar.zst", e2e.arch)
+
+	// Deploy the YOLO package
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// todo: test that configmap exists
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "funny-helm", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
