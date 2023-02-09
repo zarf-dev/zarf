@@ -24,9 +24,11 @@ const colorWhite = "\x1b[37;1m"
 
 // Config is a struct for configuring the Cmd function.
 type Config struct {
-	Print bool
-	Dir   string
-	Env   []string
+	Print  bool
+	Dir    string
+	Env    []string
+	Stdout io.Writer
+	Stderr io.Writer
 }
 
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
@@ -51,18 +53,6 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		return "", "", errors.New("command is required")
 	}
 
-	// Print the command if requested.
-	if config.Print {
-		fmt.Println()
-		fmt.Printf("   %s", colorGreen)
-		fmt.Print(command + " ")
-		fmt.Printf("%s", colorCyan)
-		fmt.Printf("%v", args)
-		fmt.Printf("%s", colorWhite)
-		fmt.Printf("%s", colorReset)
-		fmt.Println("")
-	}
-
 	// Set up the command.
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = config.Dir
@@ -72,45 +62,75 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	cmdStdout, _ := cmd.StdoutPipe()
 	cmdStderr, _ := cmd.StderrPipe()
 
-	var stdoutBuf, stderrBuf bytes.Buffer
-	stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
-	stderr := io.MultiWriter(os.Stderr, &stderrBuf)
+	var (
+		stdoutBuf, stderrBuf bytes.Buffer
+		errStdout, errStderr error
+		wg                   sync.WaitGroup
+	)
+
+	stdoutWriters := []io.Writer{
+		&stdoutBuf,
+	}
+
+	stdErrWriters := []io.Writer{
+		&stderrBuf,
+	}
+
+	// Add the writers if requested.
+	if config.Stdout != nil {
+		stdoutWriters = append(stdoutWriters, config.Stdout)
+	}
+
+	if config.Stderr != nil {
+		stdErrWriters = append(stdErrWriters, config.Stderr)
+	}
+
+	// Print to stdout if requested.
+	if config.Print {
+		stdoutWriters = append(stdoutWriters, os.Stdout)
+		stdErrWriters = append(stdErrWriters, os.Stderr)
+	}
+
+	// Bind all the writers.
+	stdout := io.MultiWriter(stdoutWriters...)
+	stderr := io.MultiWriter(stdErrWriters...)
+
+	// If we're printing, print the command.
+	if config.Print {
+		cmdString := fmt.Sprintf("%s%s %s%v%s%s",
+			colorGreen, command, colorCyan, args, colorWhite, colorReset)
+		fmt.Println(cmdString)
+	}
 
 	// Start the command.
 	if err := cmd.Start(); err != nil {
 		return "", "", err
 	}
 
-	// If printing live output, copy the command outputs to stdout/stderr.
-	if config.Print {
-		var errStdout, errStderr error
-		var wg sync.WaitGroup
+	// Add to waitgroup for each goroutine.
+	wg.Add(2)
 
-		// Set the wait group to 2 so we wait for both stdout and stderr.
-		wg.Add(2)
+	// Run a goroutine to capture the command's stdout live.
+	go func() {
+		_, errStdout = io.Copy(stdout, cmdStdout)
+		wg.Done()
+	}()
 
-		// Run a goroutine to capture the command's stdout live.
-		go func() {
-			_, errStdout = io.Copy(stdout, cmdStdout)
-			wg.Done()
-		}()
+	// Run a goroutine to capture the command's stderr live.
+	go func() {
+		_, errStderr = io.Copy(stderr, cmdStderr)
+		wg.Done()
+	}()
 
-		// Run a goroutine to capture the command's stderr live.
-		go func() {
-			_, errStderr = io.Copy(stderr, cmdStderr)
-			wg.Done()
-		}()
+	// Wait for the goroutines to finish (if any).
+	wg.Wait()
 
-		// Wait for the goroutines to finish.
-		wg.Wait()
-
-		// Abort if there was an error capturing the command's outputs.
-		if errStdout != nil {
-			return "", "", fmt.Errorf("failed to capture the stdout command output: %w", errStdout)
-		}
-		if errStderr != nil {
-			return "", "", fmt.Errorf("failed to capture the stderr command output: %w", errStderr)
-		}
+	// Abort if there was an error capturing the command's outputs.
+	if errStdout != nil {
+		return "", "", fmt.Errorf("failed to capture the stdout command output: %w", errStdout)
+	}
+	if errStderr != nil {
+		return "", "", fmt.Errorf("failed to capture the stderr command output: %w", errStderr)
 	}
 
 	// Wait for the command to finish and return the buffered outputs, regardless of whether we printed them.
