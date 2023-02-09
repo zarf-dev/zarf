@@ -3,13 +3,14 @@
 
 Publish a Zarf package to a remote registry
 
-## Synopsis
-
-Publish a Zarf package to a remote registry
-Publishes a compiled package file to a remote registry. By default, the package will be published to the registry specified in the package's zarf.yaml file.
-
 ```
 zarf package publish [PACKAGE] [REGISTRY] [flags]
+```
+
+## Examples
+
+```
+  zarf package publish my-package.tar oci://my-registry.com/my-namespace
 ```
 
 ## Options
