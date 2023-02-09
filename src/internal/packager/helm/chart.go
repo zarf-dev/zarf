@@ -139,6 +139,8 @@ func (h *Helm) TemplateChart() (string, error) {
 	client.Replace = true // Skip the name check
 	client.ClientOnly = true
 	client.IncludeCRDs = true
+	client.Verify = false
+	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
 
 	client.ReleaseName = h.Chart.ReleaseName
 
