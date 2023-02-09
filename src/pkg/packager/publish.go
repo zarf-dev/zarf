@@ -37,23 +37,64 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	registry := p.cfg.PublishOpts.RegistryURL
-
-	if registry == "docker.io" {
+	if p.cfg.PublishOpts.RegistryURL == "docker.io" {
 		// docker.io is commonly used, but not a valid registry URL
-		registry = "registry-1.docker.io"
+		p.cfg.PublishOpts.RegistryURL = "registry-1.docker.io"
 	}
-	name := p.cfg.Pkg.Metadata.Name
-	ver := p.cfg.Pkg.Build.Version
-	arch := p.cfg.Pkg.Build.Architecture
-	ns := p.cfg.PublishOpts.Namespace
-	ref, err := v1name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch), v1name.StrictValidation)
+	ref, err := p.ref("")
+	if err != nil {
+		return fmt.Errorf("unable to create reference: %w", err)
+	}
+
+	paths := []string{
+		filepath.Join(p.tmp.Base, "checksums.txt"),
+		filepath.Join(p.tmp.Base, "zarf.yaml"),
+		filepath.Join(p.tmp.Base, "sboms.tar.zst"),
+	}
+	componentTarballs, err := filepath.Glob(filepath.Join(p.tmp.Base, "components", "*.tar.zst"))
 	if err != nil {
 		return err
 	}
+	paths = append(paths, componentTarballs...)
+	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
+	if err != nil {
+		return err
+	}
+	paths = append(paths, imagesLayers...)
 
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
+	err = p.publish(ref, paths, spinner)
+	if err != nil {
+		return fmt.Errorf("unable to publish package %s: %w", ref, err)
+	}
+	skeletonRef, err := p.ref("skeleton")
+	if err != nil {
+		return fmt.Errorf("unable to create reference: %w", err)
+	}
+	skeletonPaths := []string{}
+	for idx, path := range paths {
+		// remove paths from the images dir
+		if !strings.HasPrefix(path, filepath.Join(p.tmp.Base, "images")) {
+			skeletonPaths = append(skeletonPaths, paths[idx])
+		}
+	}
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s", skeletonRef.Name())
+	err = p.publish(skeletonRef, skeletonPaths, spinner)
+	if err != nil {
+		return fmt.Errorf("unable to publish package %s: %w", skeletonRef, err)
+	}
+
+	return nil
+}
+
+func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
 	message.Debugf("Publishing package to %s", ref)
-	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
+	spinner.Updatef("Publishing package to: %s", ref)
+	ns := p.cfg.PublishOpts.Namespace
+	name := ref.Context().Name()
+	registry := ref.Context().RegistryStr()
 
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
@@ -104,24 +145,6 @@ func (p *Packager) Publish() error {
 		dst.PlainHTTP = true
 	}
 
-	pathRoot := p.tmp.Base
-
-	paths := []string{
-		filepath.Join(pathRoot, "checksums.txt"),
-		filepath.Join(pathRoot, "zarf.yaml"),
-		filepath.Join(pathRoot, "sboms.tar.zst"),
-	}
-	componentTarballs, err := filepath.Glob(filepath.Join(pathRoot, "components", "*.tar.zst"))
-	if err != nil {
-		return err
-	}
-	imagesLayers , err := filepath.Glob(filepath.Join(pathRoot, "images", "*"))
-	if err != nil {
-		return err
-	}
-	paths = append(paths, componentTarballs...)
-	paths = append(paths, imagesLayers...)
-
 	store, err := file.New("")
 	if err != nil {
 		return err
@@ -132,7 +155,7 @@ func (p *Packager) Publish() error {
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
 	manifestConfig := v1.ConfigFile{
-		Architecture: arch,
+		Architecture: p.cfg.Pkg.Build.Architecture,
 		Author:       p.cfg.Pkg.Build.User,
 		Variant:      "zarf-package",
 	}
@@ -153,7 +176,7 @@ func (p *Packager) Publish() error {
 	var descs []ocispec.Descriptor
 
 	for _, path := range paths {
-		name, err := filepath.Rel(pathRoot, path)
+		name, err := filepath.Rel(p.tmp.Base, path)
 		if err != nil {
 			return err
 		}
@@ -239,7 +262,8 @@ func (p *Packager) Publish() error {
 
 	// attempt to push the artifact manifest
 	if err = push(root); err == nil {
-		spinner.Successf("Published: %s [%s]", ref, root.MediaType)
+		spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
+		message.SuccessF("Published: %s [%s]", ref, root.MediaType)
 		message.SuccessF("Digest: %s", root.Digest)
 		return nil
 	}
@@ -287,9 +311,26 @@ func (p *Packager) Publish() error {
 	if err = push(root); err != nil {
 		return err
 	}
-	spinner.Successf("Published: %s [%s]", ref, root.MediaType)
+	spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
+	message.SuccessF("Published: %s [%s]", ref, root.MediaType)
 	message.SuccessF("Digest: %s", root.Digest)
 	return nil
+}
+
+func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
+	name := p.cfg.Pkg.Metadata.Name
+	ver := p.cfg.Pkg.Build.Version
+	arch := p.cfg.Pkg.Build.Architecture
+	if len(skeleton) > 0 {
+		arch = skeleton
+	}
+	ns := p.cfg.PublishOpts.Namespace
+	registry := p.cfg.PublishOpts.RegistryURL
+	ref, err := v1name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch), v1name.StrictValidation)
+	if err != nil {
+		return nil, err
+	}
+	return ref, nil
 }
 
 // isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
