@@ -96,47 +96,35 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
-func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
-	if len(paths) > ociLayerLimit {
-		return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
-	}
-
-	message.Debugf("Publishing package to %s", ref)
-	spinner.Updatef("Publishing package to: %s", ref)
-	ns := p.cfg.PublishOpts.Namespace
-	name := ref.Context().Name()
-	registry := ref.Context().RegistryStr()
-
+func ctxWithScopes(fullname string) (context.Context, error) {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
-		fmt.Sprintf("repository:%s/%s:pull,push", ns, name),
+		fmt.Sprintf("repository:%s:pull,push", fullname),
 	}
-	ctx := auth.WithScopes(context.Background(), scopes...)
+	return auth.WithScopes(context.Background(), scopes...), nil
+}
 
-	dst, err := remote.NewRepository(ref.String())
-	if err != nil {
-		return err
-	}
+func authClient(ref v1name.Reference) (*auth.Client, error) {
 	// load default Docker config file
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
-		return err
+		return &auth.Client{}, err
 	}
 	if !cfg.ContainsAuth() {
-		return errors.New("no docker config file found, run 'docker login'")
+		return &auth.Client{}, errors.New("no docker config file found, run 'docker login'")
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
 
-	var key = registry
-	if registry == "registry-1.docker.io" {
+	var key = ref.Context().RegistryStr()
+	if key == "registry-1.docker.io" {
 		// Docker stores its credentials under the following key, otherwise credentials use the registry URL
 		key = "https://index.docker.io/v1/"
 	}
 
 	authConf, err := configs[0].GetCredentialsStore(key).Get(key)
 	if err != nil {
-		return fmt.Errorf("unable to get credentials for %s: %w", key, err)
+		return &auth.Client{}, fmt.Errorf("unable to get credentials for %s: %w", key, err)
 	}
 
 	cred := auth.Credential{
@@ -146,12 +134,62 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		RefreshToken: authConf.IdentityToken,
 	}
 
-	dst.Client = &auth.Client{
-		Credential: auth.StaticCredential(registry, cred),
+	return &auth.Client{
+		Credential: auth.StaticCredential(ref.Context().RegistryStr(), cred),
 		Cache:      auth.NewCache(),
 		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
 		// ForceAttemptOAuth2: true,
+	}, nil
+}
+
+func (p *Packager) generateManifestConfigFile(ctx context.Context,  store *file.Store) (ocispec.Descriptor, error){
+	// Unless specified, an empty manifest config will be used: `{}`
+	// which causes an error on Google Artifact Registry
+	// to negate this, we create a simple manifest config with some build metadata
+	manifestConfig := v1.ConfigFile{
+		Architecture: p.cfg.Pkg.Build.Architecture,
+		Author:       p.cfg.Pkg.Build.User,
+		Variant:      "zarf-package",
 	}
+	manifestConfigBytes, err := json.Marshal(manifestConfig)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	err = os.WriteFile(filepath.Join(p.tmp.Base, "config.json"), manifestConfigBytes, 0600)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	manifestConfigPath := filepath.Join(p.tmp.Base, "config.json")
+	manifestConfigDesc, err := store.Add(ctx, "config.json", ocispec.MediaTypeImageConfig, manifestConfigPath)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	return manifestConfigDesc, nil
+}
+
+func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
+	if len(paths) > ociLayerLimit {
+		return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
+	}
+
+	message.Debugf("Publishing package to %s", ref)
+	spinner.Updatef("Publishing package to: %s", ref)
+	
+	fullname := fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Namespace, p.cfg.Pkg.Metadata.Name)
+	ctx, err := ctxWithScopes(fullname)
+	if err != nil {
+		return err
+	}
+
+	dst, err := remote.NewRepository(ref.String())
+	if err != nil {
+		return err
+	}
+	authClient, err := authClient(ref)
+	if err != nil {
+		return err
+	}
+	dst.Client = authClient
 
 	if p.cfg.PublishOpts.PlainHTTP {
 		dst.PlainHTTP = true
@@ -163,24 +201,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 	defer store.Close()
 
-	// Unless specified, an empty manifest config will be used: `{}`
-	// which causes an error on Google Artifact Registry
-	// to negate this, we create a simple manifest config with some build metadata
-	manifestConfig := v1.ConfigFile{
-		Architecture: p.cfg.Pkg.Build.Architecture,
-		Author:       p.cfg.Pkg.Build.User,
-		Variant:      "zarf-package",
-	}
-	manifestConfigBytes, err := json.Marshal(manifestConfig)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(filepath.Join(p.tmp.Base, "config.json"), manifestConfigBytes, 0600)
-	if err != nil {
-		return err
-	}
-	manifestConfigPath := filepath.Join(p.tmp.Base, "config.json")
-	manifestConfigDesc, err := store.Add(ctx, "config.json", ocispec.MediaTypeImageConfig, manifestConfigPath)
+	manifestConfigDesc, err := p.generateManifestConfigFile(ctx, store)
 	if err != nil {
 		return err
 	}
