@@ -27,8 +27,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -62,6 +60,17 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
 	}
 
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+
+	// Add the seed image to the registry component if this is an init config.
+	if p.cfg.IsInitConfig {
+		for idx, c := range p.cfg.Pkg.Components {
+			if c.Name == "zarf-registry" {
+				p.cfg.Pkg.Components[idx].Images = append(c.Images, seedImage)
+			}
+		}
+	}
+
 	// Save the transformed config
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
@@ -76,23 +85,26 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
+	// Save the seed image as an OCI image if this is an init config.
 	if p.cfg.IsInitConfig {
-		// Load seed images into their own happy little tarball for ease of import on init
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		pulledImages, err := p.pullImages([]string{seedImage}, p.tmp.SeedImage)
-		if err != nil {
-			return fmt.Errorf("unable to pull the seed image after 3 attempts: %w", err)
-		}
+		spinner := message.NewProgressSpinner("Loading Zarf Registry Seed Image")
+		defer spinner.Stop()
+
 		ociPath := path.Join(p.tmp.Base, "seed-image")
-		for _, image := range pulledImages {
-			if err := crane.SaveOCI(image, ociPath); err != nil {
-				return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
-			}
+		imgConfig := images.ImgConfig{
+			Insecure: config.CommonOptions.Insecure,
 		}
 
-		if err := images.FormatCraneOCILayout(ociPath); err != nil {
-			return fmt.Errorf("unable to format OCI layout: %w", err)
+		image, err := imgConfig.PullImage(seedImage, spinner)
+		if err != nil {
+			return fmt.Errorf("unable to pull seed image: %w", err)
 		}
+
+		if err := crane.SaveOCI(image, ociPath); err != nil {
+			return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
+		}
+
+		spinner.Success()
 	}
 
 	var combinedImageList []string
@@ -124,13 +136,23 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 	}
 
-	pulledImages := map[name.Tag]v1.Image{}
-	// Images are handled separately from other component assets
-	if len(combinedImageList) > 0 {
-		uniqueList := utils.Unique(combinedImageList)
+	imgList := utils.Unique(combinedImageList)
 
-		var err error
-		if pulledImages, err = p.pullImages(uniqueList, p.tmp.Images); err != nil {
+	// Images are handled separately from other component assets
+	if len(imgList) > 0 {
+		message.HeaderInfof("📦 COMPONENT IMAGES")
+
+		doPull := func() error {
+			imgConfig := images.ImgConfig{
+				TarballPath: p.tmp.Images,
+				ImgList:     imgList,
+				Insecure:    config.CommonOptions.Insecure,
+			}
+
+			return imgConfig.PullAll()
+		}
+
+		if err := utils.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}
@@ -139,7 +161,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		sbom.Catalog(componentSBOMs, pulledImages, p.tmp.Images, p.tmp.Sboms)
+		sbom.Catalog(componentSBOMs, imgList, p.tmp.Images, p.tmp.Sboms)
 	}
 
 	// In case the directory was changed, reset to prevent breaking relative target paths
@@ -214,24 +236,6 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	return nil
-}
-
-func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Image, error) {
-	var pulledImages map[name.Tag]v1.Image
-	var err error
-
-	return pulledImages, utils.Retry(func() error {
-		imgConfig := images.ImgConfig{
-			TarballPath:   path,
-			ImgList:       imgList,
-			Insecure:      p.cfg.CreateOpts.Insecure,
-			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
-		}
-
-		pulledImages, err = imgConfig.PullAll()
-
-		return err
-	}, 3, 5*time.Second)
 }
 
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {

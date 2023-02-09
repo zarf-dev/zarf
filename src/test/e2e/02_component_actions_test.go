@@ -38,6 +38,11 @@ func TestComponentActions(t *testing.T) {
 	// Try creating the package to test the onCreate actions.
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Completed command \"touch test-create-before.txt\"")
+	require.Contains(t, stdErr, "multiline!")
+	require.Contains(t, stdErr, "updates!")
+	require.Contains(t, stdErr, "realtime!")
+	require.Contains(t, stdErr, "Completed command \"multiline & description demo\"")
 
 	// Test for package create prepare artifacts.
 	for _, artifact := range createArtifacts {
@@ -63,20 +68,20 @@ func TestComponentActions(t *testing.T) {
 	// Deploy the simple action that should fail the timeout.
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-timeout")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
+	require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 
 	// Test using a Zarf Variable within the action
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-variable", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "the dog says ruff")
+	require.Contains(t, stdErr, "the dog says ruff")
 
 	// Test using dynamic and multiple-variables
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "the cat says meow")
-	require.Contains(t, stdOut, "the dog says ruff")
-	require.Contains(t, stdOut, "the snake says hiss")
-	require.Contains(t, stdOut, "with a TF_VAR, the snake also says hiss")
+	require.Contains(t, stdErr, "the cat says meow")
+	require.Contains(t, stdErr, "the dog says ruff")
+	require.Contains(t, stdErr, "the snake says hiss")
+	require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
 
 	// Test using environment variables
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-with-env-var")

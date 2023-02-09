@@ -7,13 +7,13 @@ package types
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
+	Insecure      bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	CachePath     string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.
 type ZarfDeployOptions struct {
-	Insecure     bool              `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
 	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
 	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
@@ -37,13 +37,11 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM         bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	Insecure         bool              `json:"insecure" jsonschema:"description=Disable the need for shasum validations when pulling down files from the internet"`
 	OutputDirectory  string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM         bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
 	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
-	NoLocalImages    bool              `json:"noLocalImages" jsonschema:"description=Disable the use of local container images during package creation"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.

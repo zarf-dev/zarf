@@ -28,8 +28,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var valueTemplate template.Values
-var connectStrings = make(types.ConnectStrings)
+var (
+	hpaModified    bool
+	valueTemplate  template.Values
+	connectStrings = make(types.ConnectStrings)
+)
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
@@ -53,6 +56,13 @@ func (p *Packager) Deploy() error {
 	if err := p.setActiveVariables(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
+
+	// Reset registry HPA scale down whether an error occurs or not
+	defer func() {
+		if p.cluster != nil && hpaModified {
+			p.cluster.EnableRegHPAScaleDown()
+		}
+	}()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -134,7 +144,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
-		p.cluster.InitZarfState(p.tmp, p.cfg.InitOpts)
+		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -144,7 +154,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.RunInjectionMadness(p.tmp)
+		p.cluster.StartInjectionMadness(p.tmp)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
@@ -154,22 +164,8 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		err := p.cluster.PostSeedRegistry(p.tmp)
-		if err != nil {
+		if err := p.cluster.StopInjectionMadness(); err != nil {
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
-		}
-
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		imgConfig := images.ImgConfig{
-			TarballPath: p.tmp.SeedImage,
-			ImgList:     []string{seedImage},
-			NoChecksum:  true,
-			RegInfo:     p.cfg.State.RegistryInfo,
-		}
-
-		// Push the seed images into to Zarf registry
-		if err = imgConfig.PushToZarfRegistry(); err != nil {
-			return charts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
 		}
 	}
 
@@ -212,6 +208,15 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
+		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
+		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
+			} else {
+				hpaModified = true
 			}
 		}
 
@@ -386,6 +391,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		ImgList:     componentImages,
 		NoChecksum:  noImgChecksum,
 		RegInfo:     p.cfg.State.RegistryInfo,
+		Insecure:    config.CommonOptions.Insecure,
 	}
 
 	return utils.Retry(func() error {
