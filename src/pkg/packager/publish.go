@@ -36,16 +36,15 @@ func (p *Packager) Publish() error {
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
 
 	if p.cfg.PublishOpts.RegistryURL == "docker.io" {
-		// docker.io is commonly used, but not a valid registry URL
+		// docker.io is commonly used, but is not a valid registry URL
 		p.cfg.PublishOpts.RegistryURL = "registry-1.docker.io"
 	}
-	ref, err := p.ref("")
-	if err != nil {
-		return fmt.Errorf("unable to create reference: %w", err)
-	}
 
+	// push everything
 	paths := []string{
 		filepath.Join(p.tmp.Base, "checksums.txt"),
 		filepath.Join(p.tmp.Base, "zarf.yaml"),
@@ -61,14 +60,17 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	paths = append(paths, imagesLayers...)
-
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
+	ref, err := p.ref("")
+	if err != nil {
+		return fmt.Errorf("unable to create reference: %w", err)
+	}
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
 	err = p.publish(ref, paths, spinner)
 	if err != nil {
 		return fmt.Errorf("unable to publish package %s: %w", ref, err)
 	}
+
+	// push the skeleton package (package w/o the images)
 	skeletonRef, err := p.ref("skeleton")
 	if err != nil {
 		return fmt.Errorf("unable to create reference: %w", err)
@@ -138,6 +140,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	dst.Client = &auth.Client{
 		Credential: auth.StaticCredential(registry, cred),
 		Cache:      auth.NewCache(),
+		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
 		// ForceAttemptOAuth2: true,
 	}
 
@@ -206,6 +209,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	packOpts.ConfigDescriptor = &manifestConfigDesc
 	pack := func() (ocispec.Descriptor, error) {
 		// note the empty string for the artifactType
+		// this is because oras handles this type under the hood if left blank
 		root, err := oras.Pack(ctx, store, "", descs, packOpts)
 		if err != nil {
 			return ocispec.Descriptor{}, err
@@ -321,6 +325,7 @@ func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
 	name := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
+	// changes package ref from "name:version-arch" to "name:version-skeleton"
 	if len(skeleton) > 0 {
 		arch = skeleton
 	}
