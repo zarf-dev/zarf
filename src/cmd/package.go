@@ -198,17 +198,12 @@ var packageRemoveCmd = &cobra.Command{
 var packagePublishCmd = &cobra.Command{
 	Use:   "publish [PACKAGE] [REGISTRY]",
 	Short: "Publish a Zarf package to a remote registry",
-	Long: "Publish a Zarf package to a remote registry\n" +
-		"Publishes a compiled package file to a remote registry. " +
-		"By default, the package will be published to the registry " +
-		"specified in the package's zarf.yaml file.",
-	Args: cobra.MaximumNArgs(2),
+	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
-		if len(args) == 1 {
-			message.Fatalf(nil, "No registry provided")
-		} else if !strings.HasPrefix(args[1], "oci://") {
+		if !strings.HasPrefix(args[1], "oci://") {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
 
