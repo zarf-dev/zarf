@@ -1064,6 +1064,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Description of the action to be displayed during package execution instead of the command
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

@@ -30,8 +30,17 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
-	spinner := message.NewProgressSpinner("Running command \"%s\"", action.Cmd)
-	defer spinner.Success()
+	var cmdEscaped string
+
+	if action.Description != "" {
+		cmdEscaped = action.Description
+	} else {
+		cmdEscaped = escapeCmdForPrint(action.Cmd)
+	}
+
+	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
+	// Persist the spinner output so it doesn't get overwritten by the command output.
+	spinner.EnablePreserveWrites()
 
 	var (
 		ctx    context.Context
@@ -52,7 +61,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	cfg := actionGetCfg(defaultCfg, action, vars)
 
 	if cmd, err = actionCmdMutation(action.Cmd); err != nil {
-		spinner.Errorf(err, "Error mutating command: %s", cmd)
+		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
 	duration := time.Duration(cfg.MaxTotalSeconds) * time.Second
@@ -61,56 +70,56 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	// Keep trying until the max retries is reached.
 	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
 
-		// If no timeout is set, run the command and return or continue retrying.
-		if cfg.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for command \"%s\" (no timeout)", cmd)
-
+		// Perform the action run.
+		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(context.TODO(), cfg, cmd); err != nil {
-				message.Debugf("command \"%s\" failed: %s", cmd, err.Error())
-				continue
+			if out, err = actionRun(ctx, cfg, cmd, spinner); err != nil {
+				return err
 			}
+
+			out = strings.TrimSpace(out)
 
 			// If an output variable is defined, set it.
 			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, strings.TrimSpace(out))
+				p.setVariable(action.SetVariable, out)
 			}
 
 			// If the command ran successfully, continue to the next action.
+			spinner.Successf("Completed command \"%s\"", cmdEscaped)
+
+			return nil
+		}
+
+		// If no timeout is set, run the command and return or continue retrying.
+		if cfg.MaxTotalSeconds < 1 {
+			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
+			if err := tryCmd(context.TODO()); err != nil {
+				continue
+			}
+
 			return nil
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for command \"%s\" (timeout: %d seconds)", cmd, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
 		// On timeout abort.
 		case <-timeout:
 			cancel()
-			return fmt.Errorf("command \"%s\" timed out", cmd)
+			return fmt.Errorf("command \"%s\" timed out", cmdEscaped)
 
 		// Otherwise, try running the command.
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
 			defer cancel()
-
-			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd); err != nil {
-				message.Debug(err)
-				continue
+			if err := tryCmd(ctx); err == nil {
+				return nil
 			}
-
-			// If an output variable is defined, set it.
-			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, strings.TrimSpace(out))
-			}
-
-			// If the command ran successfully, continue to the next action.
-			return nil
 		}
 	}
 
 	// If we've reached this point, the retry limit has been reached.
-	return fmt.Errorf("command \"%s\" failed after %d retries", cmd, cfg.MaxRetries)
+	return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, cfg.MaxRetries)
 }
 
 // Perform some basic string mutations to make commands more useful.
@@ -181,28 +190,42 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string) (string, error) {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, error) {
 	var shell string
 	var shellArgs string
 
 	if runtime.GOOS == "windows" {
 		shell = "powershell"
 		shellArgs = "-Command"
+		message.Debug("Running command in PowerShell: %s", cmd)
 	} else {
 		shell = "sh"
 		shellArgs = "-c"
+		message.Debug("Running command in shell: %s", cmd)
 	}
 
 	execCfg := exec.Config{
-		Print: !cfg.Mute,
-		Env:   cfg.Env,
-		Dir:   cfg.Dir,
-	}
-	output, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
-	// Dump the command output in debug if output not already streamed.
-	if cfg.Mute {
-		message.Debug(output, errOut)
+		Env: cfg.Env,
+		Dir: cfg.Dir,
 	}
 
-	return output, err
+	if !cfg.Mute {
+		execCfg.Stdout = spinner
+		execCfg.Stderr = spinner
+	}
+
+	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
+	// Dump final complete output.
+	message.Debug(cmd, out, errOut)
+
+	return out, err
+}
+
+func escapeCmdForPrint(cmd string) string {
+	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
+	// Truncate the command if it is longer than 60 characters so it isn't too long.
+	if len(cmdEscaped) > 60 {
+		cmdEscaped = cmdEscaped[:57] + "..."
+	}
+	return cmdEscaped
 }

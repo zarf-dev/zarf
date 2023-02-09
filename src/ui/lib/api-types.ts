@@ -309,6 +309,10 @@ export interface ZarfComponentAction {
      */
     cmd?: string;
     /**
+     * Description of the action to be displayed during package execution instead of the command
+     */
+    description?: string;
+    /**
      * The working directory to run the command in (default is CWD)
      */
     dir?: string;
@@ -755,10 +759,6 @@ export interface ZarfCreateOptions {
      */
     maxPackageSizeMB: number;
     /**
-     * Disable the use of local container images during package creation
-     */
-    noLocalImages: boolean;
-    /**
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
@@ -1046,6 +1046,7 @@ const typeMap: any = {
     ], false),
     "ZarfComponentAction": o([
         { json: "cmd", js: "cmd", typ: u(undefined, "") },
+        { json: "description", js: "description", typ: u(undefined, "") },
         { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
@@ -1185,7 +1186,6 @@ const typeMap: any = {
     ], false),
     "ZarfCreateOptions": o([
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
-        { json: "noLocalImages", js: "noLocalImages", typ: true },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },

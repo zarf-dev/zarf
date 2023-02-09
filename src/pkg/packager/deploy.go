@@ -164,23 +164,8 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		err := p.cluster.StopInjectionMadness()
-		if err != nil {
+		if err := p.cluster.StopInjectionMadness(); err != nil {
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
-		}
-
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		imgConfig := images.ImgConfig{
-			TarballPath: p.tmp.SeedImage,
-			ImgList:     []string{seedImage},
-			NoChecksum:  true,
-			RegInfo:     p.cfg.State.RegistryInfo,
-			Insecure:    config.CommonOptions.Insecure,
-		}
-
-		// Push the seed images into to Zarf registry
-		if err = imgConfig.PushToZarfRegistry(); err != nil {
-			return charts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
 		}
 	}
 

@@ -12,6 +12,7 @@ require (
 	github.com/anchore/syft v0.69.1
 	github.com/derailed/k9s v0.27.2
 	github.com/distribution/distribution v2.8.1+incompatible
+	github.com/docker/cli v20.10.21+incompatible
 	github.com/fatih/color v1.14.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.2
@@ -19,6 +20,7 @@ require (
 	github.com/goccy/go-yaml v1.9.8
 	github.com/google/go-containerregistry v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
+	github.com/moby/moby v20.10.23+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
@@ -134,7 +136,6 @@ require (
 	github.com/derailed/tcell/v2 v2.3.1-rc.3 // indirect
 	github.com/derailed/tview v0.8.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v20.10.21+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v20.10.23+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
