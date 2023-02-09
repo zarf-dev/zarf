@@ -15,6 +15,7 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	v1name "github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
@@ -41,7 +42,10 @@ func (p *Packager) Publish() error {
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
 	ns := p.cfg.PublishOpts.Namespace
-	ref := fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch)
+	ref, err := v1name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch), v1name.StrictValidation)
+	if err != nil {
+		return err
+	}
 
 	message.Debugf("Publishing package to %s", ref)
 	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
@@ -50,7 +54,7 @@ func (p *Packager) Publish() error {
 	}
 	ctx := auth.WithScopes(context.Background(), scopes...)
 
-	dst, err := remote.NewRepository(ref)
+	dst, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return err
 	}
@@ -199,9 +203,6 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	// push
-	// root, err := pushArtifact(dst, pack, &packOpts, copy, &copyOpts.CopyGraphOptions)
-
 	// first attempt to do a MediaTypeArtifactManifest push
 	root, err := pack()
 	if err != nil {
@@ -246,29 +247,29 @@ func (p *Packager) Publish() error {
 	// media type is not supported
 	dst.SetReferrersCapability(false)
 
+	// fallback to a MediaTypeImageManifest push
 	packOpts.PackImageManifest = true
 	root, err = pack()
 	if err != nil {
 		return err
 	}
 
-	// potentially dead/useless code from oras cmd
-	// copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-	// 	if content.Equal(node, root) {
-	// 		// skip non-config
-	// 		content, err := content.FetchAll(ctx, fetcher, root)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		var manifest ocispec.Manifest
-	// 		if err := json.Unmarshal(content, &manifest); err != nil {
-	// 			return nil, err
-	// 		}
-	// 		return []ocispec.Descriptor{manifest.Config}, nil
-	// 	}
-	// 	// config has no successors
-	// 	return nil, nil
-	// }
+	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		if content.Equal(node, root) {
+			// skip non-config
+			content, err := content.FetchAll(ctx, fetcher, root)
+			if err != nil {
+				return nil, err
+			}
+			var manifest ocispec.Manifest
+			if err := json.Unmarshal(content, &manifest); err != nil {
+				return nil, err
+			}
+			return []ocispec.Descriptor{manifest.Config}, nil
+		}
+		// config has no successors
+		return nil, nil
+	}
 
 	if err = copy(root); err != nil {
 		return err
