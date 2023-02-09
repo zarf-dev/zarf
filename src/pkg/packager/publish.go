@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -107,13 +109,33 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	defer store.Close()
+
+	manifestConfig := v1.ConfigFile{
+		Architecture: arch,
+		Author:       p.cfg.Pkg.Build.User,
+		Variant:      "zarf-package",
+	}
+	manifestConfigBytes, err := json.Marshal(manifestConfig)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filepath.Join(p.tmp.Base, "config.json"), manifestConfigBytes, 0600)
+	if err != nil {
+		return err
+	}
+	manifestConfigPath := filepath.Join(p.tmp.Base, "config.json")
+	manifestConfigDesc, err := store.Add(ctx, "config.json", ocispec.MediaTypeImageConfig, manifestConfigPath)
+	if err != nil {
+		return err
+	}
+
 	var descs []ocispec.Descriptor
+
 	for _, path := range paths {
 		name, err := filepath.Rel(pathRoot, path)
 		if err != nil {
 			return err
 		}
-		message.Debugf("Preparing %s", name)
 
 		var mediaType string
 		if strings.HasSuffix(name, ".tar.zst") {
@@ -137,6 +159,7 @@ func (p *Packager) Publish() error {
 		descs = append(descs, desc)
 	}
 	packOpts := oras.PackOptions{}
+	packOpts.ConfigDescriptor = &manifestConfigDesc
 	pack := func() (ocispec.Descriptor, error) {
 		// note the empty string for the artifactType
 		root, err := oras.Pack(ctx, store, "", descs, packOpts)
@@ -154,6 +177,15 @@ func (p *Packager) Publish() error {
 	if p.cfg.PublishOpts.Concurrency > copyOpts.Concurrency {
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
+	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
+		message.SuccessF(desc.Digest.Hex()[:12])
+		return nil
+	}
+	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		message.SuccessF(desc.Digest.Hex()[:12])
+		return nil
+	}
+
 	copy := func(root ocispec.Descriptor) error {
 		message.Debugf("%v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
@@ -187,6 +219,7 @@ func pushArtifact(dst oras.Target, pack packFunc, packOpts *oras.PackOptions, co
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		message.Infof(desc.Digest.Hex()[:12])
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
@@ -201,6 +234,8 @@ func pushArtifact(dst oras.Target, pack packFunc, packOpts *oras.PackOptions, co
 	// push
 	if err = copy(root); err == nil {
 		return root, nil
+	} else {
+		message.Debug(err)
 	}
 
 	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
