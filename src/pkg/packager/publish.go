@@ -25,8 +25,12 @@ import (
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
-// much taken from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-
+// Publish publishes the package to a registry
+//
+// This is a wrapper around the oras library
+// and much of the code was adapted from the oras CLI - https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
+//
+// Authentication is handled via the Docker config file created w/ `docker login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
 	if err := p.loadZarfPkg(); err != nil {
@@ -36,6 +40,7 @@ func (p *Packager) Publish() error {
 	registry := p.cfg.PublishOpts.RegistryURL
 
 	if registry == "docker.io" {
+		// docker.io is commonly used, but not a valid registry URL
 		registry = "registry-1.docker.io"
 	}
 	name := p.cfg.Pkg.Metadata.Name
@@ -49,6 +54,8 @@ func (p *Packager) Publish() error {
 
 	message.Debugf("Publishing package to %s", ref)
 	spinner := message.NewProgressSpinner(fmt.Sprintf("Publishing: %s", ref))
+
+	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s/%s:pull,push", ns, name),
 	}
@@ -58,7 +65,7 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
-	// load default docker config file
+	// load default Docker config file
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return err
@@ -71,6 +78,7 @@ func (p *Packager) Publish() error {
 
 	var key = registry
 	if registry == "registry-1.docker.io" {
+		// Docker stores its credentials under the following key, otherwise credentials use the registry URL
 		key = "https://index.docker.io/v1/"
 	}
 
@@ -116,6 +124,9 @@ func (p *Packager) Publish() error {
 	}
 	defer store.Close()
 
+	// Unless specified, an emtpy manifest config will be used: `{}`
+	// which causes an error on Google Artifact Registry
+	// to negate this, we create a simple manifest config with some build metadata
 	manifestConfig := v1.ConfigFile{
 		Architecture: arch,
 		Author:       p.cfg.Pkg.Build.User,
@@ -178,13 +189,11 @@ func (p *Packager) Publish() error {
 		return root, nil
 	}
 
-	// prepare push
 	copyOpts := oras.DefaultCopyOptions
 	if p.cfg.PublishOpts.Concurrency > copyOpts.Concurrency {
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		// message.SuccessF(desc.Digest.Hex()[:12])
 		message.Debug("layer", desc.Digest.Hex()[:12], "exists")
 		return nil
 	}
@@ -194,7 +203,7 @@ func (p *Packager) Publish() error {
 	}
 
 	copy := func(root ocispec.Descriptor) error {
-		message.Debugf("%v\n", root)
+		message.Debugf("root descriptor: %v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
 			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
 		} else {
@@ -203,7 +212,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	// first attempt to do a MediaTypeArtifactManifest push
+	// first attempt to do a ArtifactManifest push
 	root, err := pack()
 	if err != nil {
 		return err
@@ -230,6 +239,7 @@ func (p *Packager) Publish() error {
 		message.SuccessF("Digest: %s", root.Digest)
 		return nil
 	} else {
+		// log the error, the expected error is a 400 manifest invalid
 		message.Debug(err)
 	}
 
@@ -247,7 +257,7 @@ func (p *Packager) Publish() error {
 	// media type is not supported
 	dst.SetReferrersCapability(false)
 
-	// fallback to a MediaTypeImageManifest push
+	// fallback to an ImageManifest push
 	packOpts.PackImageManifest = true
 	root, err = pack()
 	if err != nil {
@@ -279,6 +289,7 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
+// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
 func isManifestUnsupported(err error) bool {
 	var errResp *errcode.ErrorResponse
 	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
