@@ -24,6 +24,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
+// much taken from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
+
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
 	if err := p.loadZarfPkg(); err != nil {
@@ -178,7 +180,8 @@ func (p *Packager) Publish() error {
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.SuccessF(desc.Digest.Hex()[:12])
+		// message.SuccessF(desc.Digest.Hex()[:12])
+		message.Debug("layer", desc.Digest.Hex()[:12], "exists")
 		return nil
 	}
 	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
@@ -197,23 +200,12 @@ func (p *Packager) Publish() error {
 	}
 
 	// push
-	root, err := pushArtifact(dst, pack, &packOpts, copy, &copyOpts.CopyGraphOptions)
-	if err != nil {
-		return err
-	}
-	spinner.Successf("Published: %s", ref)
-	message.SuccessF("Digest: %s", root.Digest)
-	return nil
-}
+	// root, err := pushArtifact(dst, pack, &packOpts, copy, &copyOpts.CopyGraphOptions)
 
-type packFunc func() (ocispec.Descriptor, error)
-type copyFunc func(desc ocispec.Descriptor) error
-
-// taken from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-func pushArtifact(dst oras.Target, pack packFunc, packOpts *oras.PackOptions, copy copyFunc, copyOpts *oras.CopyGraphOptions) (ocispec.Descriptor, error) {
+	// first attempt to do a MediaTypeArtifactManifest push
 	root, err := pack()
 	if err != nil {
-		return ocispec.Descriptor{}, err
+		return err
 	}
 
 	copyRootAttempted := false
@@ -231,50 +223,58 @@ func pushArtifact(dst oras.Target, pack packFunc, packOpts *oras.PackOptions, co
 		return nil
 	}
 
-	// push
+	// attempt to push the artifact manifest
 	if err = copy(root); err == nil {
-		return root, nil
+		spinner.Successf("Published: %s", ref)
+		message.SuccessF("Digest: %s", root.Digest)
+		return nil
 	} else {
 		message.Debug(err)
 	}
 
 	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
 		!isManifestUnsupported(err) {
-		return ocispec.Descriptor{}, err
+		return fmt.Errorf(fmt.Sprintf(`failed to push artifact manifest, 
+		was it during the copying of root? (%t)
+		was the root mediaType an artifact manifest? (%t)
+		was it because the registry does not support the artifact manifest mediaType? (%t)
+		`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !isManifestUnsupported(err)), err)
 	}
 
-	if repo, ok := dst.(*remote.Repository); ok {
-		// assumes referrers API is not supported since OCI artifact
-		// media type is not supported
-		repo.SetReferrersCapability(false)
-	}
+	// assumes referrers API is not supported since OCI artifact
+	// media type is not supported
+	dst.SetReferrersCapability(false)
+
 	packOpts.PackImageManifest = true
 	root, err = pack()
 	if err != nil {
-		return ocispec.Descriptor{}, err
+		return err
 	}
 
-	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if content.Equal(node, root) {
-			// skip non-config
-			content, err := content.FetchAll(ctx, fetcher, root)
-			if err != nil {
-				return nil, err
-			}
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(content, &manifest); err != nil {
-				return nil, err
-			}
-			return []ocispec.Descriptor{manifest.Config}, nil
-		}
+	// potentially dead/useless code from oras cmd
+	// copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	// 	if content.Equal(node, root) {
+	// 		// skip non-config
+	// 		content, err := content.FetchAll(ctx, fetcher, root)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		var manifest ocispec.Manifest
+	// 		if err := json.Unmarshal(content, &manifest); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return []ocispec.Descriptor{manifest.Config}, nil
+	// 	}
+	// 	// config has no successors
+	// 	return nil, nil
+	// }
 
-		// config has no successors
-		return nil, nil
-	}
 	if err = copy(root); err != nil {
-		return ocispec.Descriptor{}, err
+		return err
 	}
-	return root, nil
+	spinner.Successf("Published: %s", ref)
+	message.SuccessF("Digest: %s", root.Digest)
+	return nil
 }
 
 func isManifestUnsupported(err error) bool {
