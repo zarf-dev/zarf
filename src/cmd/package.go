@@ -325,6 +325,12 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.BoolVar(&pkgConfig.PublishOpts.PlainHTTP, "http-only", false, "Allow insecure connections to the registry")
-	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", 3, "Number of concurrent uploads to the registry")
+
+	v.SetDefault(V_PKG_PUBLISH_HTTP_ONLY, false)
+	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 5)
+	v.SetDefault(V_PKG_PUBLISH_INCLUDE_IMAGES, false)
+
+	publishFlags.BoolVar(&pkgConfig.PublishOpts.PlainHTTP, "http-only", v.GetBool(V_PKG_PUBLISH_HTTP_ONLY), "Allow insecure connections to the registry")
+	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
+	publishFlags.BoolVar(&pkgConfig.PublishOpts.IncludeImages, "include-images", v.GetBool(V_PKG_PUBLISH_INCLUDE_IMAGES), "Include container images in the published package")
 }

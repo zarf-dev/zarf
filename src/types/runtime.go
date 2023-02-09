@@ -28,6 +28,7 @@ type ZarfPublishOptions struct {
 	RegistryURL string `json:"registryURL" jsonschema:"description=URL of the registry to publish the package to"`
 	PlainHTTP    bool   `json:"plainHTTP" jsonschema:"description=PlainHTTP signals the transport to access the remote repository via HTTP instead of HTTPS"`
 	Concurrency int    `json:"concurrency" jsonschema:"description=Number of concurrent uploads to perform"`
+	IncludeImages bool  `json:"includeImages" jsonschema:"description=Whether or not to include images in the published package"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

@@ -25,6 +25,9 @@ import (
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
+// https://github.com/docker/docs/issues/8230
+const ociLayerLimit = 127
+
 // Publish publishes the package to a registry
 //
 // This is a wrapper around the oras library
@@ -55,29 +58,31 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	paths = append(paths, componentTarballs...)
-	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
-	if err != nil {
-		return err
-	}
-	paths = append(paths, imagesLayers...)
-	ref, err := p.ref("")
-	if err != nil {
-		return fmt.Errorf("unable to create reference: %w", err)
-	}
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
-	err = p.publish(ref, paths, spinner)
-	if err != nil {
-		return fmt.Errorf("unable to publish package %s: %w", ref, err)
+	if p.cfg.PublishOpts.IncludeImages {
+		imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
+		if err != nil {
+			return err
+		}
+		paths = append(paths, imagesLayers...)
+		ref, err := p.ref("")
+		if err != nil {
+			return fmt.Errorf("unable to create reference: %w", err)
+		}
+		message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
+		err = p.publish(ref, paths, spinner)
+		if err != nil {
+			return fmt.Errorf("unable to publish package %s: %w", ref, err)
+		}
 	}
 
-	// push the skeleton package (package w/o the images)
+	// push the skeleton (package w/o the images)
 	skeletonRef, err := p.ref("skeleton")
 	if err != nil {
 		return fmt.Errorf("unable to create reference: %w", err)
 	}
 	skeletonPaths := []string{}
 	for idx, path := range paths {
-		// remove paths from the images dir
+		// remove images if they exist
 		if !strings.HasPrefix(path, filepath.Join(p.tmp.Base, "images")) {
 			skeletonPaths = append(skeletonPaths, paths[idx])
 		}
@@ -92,6 +97,10 @@ func (p *Packager) Publish() error {
 }
 
 func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
+	if len(paths) > ociLayerLimit {
+		return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
+	}
+
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 	ns := p.cfg.PublishOpts.Namespace
