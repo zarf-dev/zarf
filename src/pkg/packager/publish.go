@@ -234,11 +234,12 @@ func (p *Packager) Publish() error {
 
 	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
 		!isManifestUnsupported(err) {
-		return fmt.Errorf(fmt.Sprintf(`failed to push artifact manifest, 
+		return fmt.Errorf(`failed to push artifact manifest, 
 		was it during the copying of root? (%t)
 		was the root mediaType an artifact manifest? (%t)
 		was it because the registry does not support the artifact manifest mediaType? (%t)
-		`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !isManifestUnsupported(err)), err)
+		
+		%w`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !isManifestUnsupported(err), err)
 	}
 
 	// assumes referrers API is not supported since OCI artifact
