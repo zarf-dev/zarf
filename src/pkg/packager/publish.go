@@ -106,17 +106,21 @@ func (p *Packager) Publish() error {
 
 	pathRoot := p.tmp.Base
 
-	glob := func(path string) []string {
-		paths, _ := filepath.Glob(filepath.Join(pathRoot, path))
-		return paths
-	}
 	paths := []string{
 		filepath.Join(pathRoot, "checksums.txt"),
 		filepath.Join(pathRoot, "zarf.yaml"),
 		filepath.Join(pathRoot, "sboms.tar.zst"),
 	}
-	paths = append(paths, glob("components/*.tar.zst")...)
-	paths = append(paths, glob("images/*")...)
+	componentTarballs, err := filepath.Glob(filepath.Join(pathRoot, "components", "*.tar.zst"))
+	if err != nil {
+		return err
+	}
+	imagesLayers , err := filepath.Glob(filepath.Join(pathRoot, "images", "*"))
+	if err != nil {
+		return err
+	}
+	paths = append(paths, componentTarballs...)
+	paths = append(paths, imagesLayers...)
 
 	store, err := file.New("")
 	if err != nil {
@@ -124,7 +128,7 @@ func (p *Packager) Publish() error {
 	}
 	defer store.Close()
 
-	// Unless specified, an emtpy manifest config will be used: `{}`
+	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
 	manifestConfig := v1.ConfigFile{
