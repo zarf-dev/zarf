@@ -202,7 +202,7 @@ func (p *Packager) Publish() error {
 		return nil
 	}
 
-	copy := func(root ocispec.Descriptor) error {
+	push := func(root ocispec.Descriptor) error {
 		message.Debugf("root descriptor: %v\n", root)
 		if tag := dst.Reference.Reference; tag == "" {
 			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
@@ -234,14 +234,13 @@ func (p *Packager) Publish() error {
 	}
 
 	// attempt to push the artifact manifest
-	if err = copy(root); err == nil {
+	if err = push(root); err == nil {
 		spinner.Successf("Published: %s [%s]", ref, root.MediaType)
 		message.SuccessF("Digest: %s", root.Digest)
 		return nil
-	} else {
-		// log the error, the expected error is a 400 manifest invalid
-		message.Debug(err)
 	}
+	// log the error, the expected error is a 400 manifest invalid
+	message.Debug(err)
 
 	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
 		!isManifestUnsupported(err) {
@@ -281,7 +280,7 @@ func (p *Packager) Publish() error {
 		return nil, nil
 	}
 
-	if err = copy(root); err != nil {
+	if err = push(root); err != nil {
 		return err
 	}
 	spinner.Successf("Published: %s [%s]", ref, root.MediaType)
