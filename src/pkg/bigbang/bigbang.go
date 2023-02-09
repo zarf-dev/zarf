@@ -248,6 +248,13 @@ git:
   # -- HTTP git credentials, both username and password must be provided
     username: "###ZARF_GIT_PUSH###"
     password: "###ZARF_GIT_AUTH_PUSH###"
+kyvernopolicies:
+  values:
+    exclude:
+      any:
+      - resources:
+          namespaces: 
+          - zarf
 `
 	secretData := make(map[string]string)
 	secretData["values.yaml"] = creds
