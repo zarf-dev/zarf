@@ -225,7 +225,7 @@ func (p *Packager) Publish() error {
 
 	// attempt to push the artifact manifest
 	if err = copy(root); err == nil {
-		spinner.Successf("Published: %s", ref)
+		spinner.Successf("Published: %s [%s]", ref, root.MediaType)
 		message.SuccessF("Digest: %s", root.Digest)
 		return nil
 	} else {
@@ -273,7 +273,7 @@ func (p *Packager) Publish() error {
 	if err = copy(root); err != nil {
 		return err
 	}
-	spinner.Successf("Published: %s", ref)
+	spinner.Successf("Published: %s [%s]", ref, root.MediaType)
 	message.SuccessF("Digest: %s", root.Digest)
 	return nil
 }
