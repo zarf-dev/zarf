@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -84,6 +85,7 @@ func (p *Packager) setActiveVariables() error {
 }
 
 func (p *Packager) setVariable(name, value string) {
+	message.Debugf("Setting variable '%s' to '%s'", name, value)
 	p.cfg.SetVariableMap[name] = value
 }
 
