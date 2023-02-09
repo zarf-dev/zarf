@@ -203,11 +203,11 @@ var packagePublishCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
-		if !strings.HasPrefix(args[1], "oci://") {
+		registry := args[1]
+		
+		if !strings.HasPrefix(registry, "oci://") {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
-
-		registry := args[1]
 		parts := strings.Split(strings.TrimPrefix(registry, "oci://"), "/")
 		pkgConfig.PublishOpts.RegistryURL = parts[0]
 		pkgConfig.PublishOpts.Namespace = strings.Join(parts[1:], "/")
