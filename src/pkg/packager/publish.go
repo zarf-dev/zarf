@@ -64,7 +64,7 @@ func (p *Packager) Publish() error {
 		paths = append(paths, imagesLayers...)
 		ref, err := p.ref("")
 		if err != nil {
-			return fmt.Errorf("unable to create reference: %w", err)
+			return err
 		}
 		message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
 		err = p.publish(ref, paths, spinner)
@@ -76,7 +76,7 @@ func (p *Packager) Publish() error {
 	// push the skeleton (package w/o the images)
 	skeletonRef, err := p.ref("skeleton")
 	if err != nil {
-		return fmt.Errorf("unable to create reference: %w", err)
+		return err
 	}
 	skeletonPaths := []string{}
 	for idx, path := range paths {
