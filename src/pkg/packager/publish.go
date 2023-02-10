@@ -65,7 +65,7 @@ func (p *Packager) Publish() error {
 		if err != nil {
 			return err
 		}
-		message.HeaderInfof("📦 PACKAGE PUBLISH %s", ref.Name())
+		message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Identifier())
 		err = p.publish(ref, paths, spinner)
 		if err != nil {
 			return fmt.Errorf("unable to publish package %s: %w", ref, err)
@@ -84,7 +84,7 @@ func (p *Packager) Publish() error {
 			skeletonPaths = append(skeletonPaths, paths[idx])
 		}
 	}
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s", skeletonRef.Name())
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, skeletonRef.Identifier())
 	err = p.publish(skeletonRef, skeletonPaths, spinner)
 	if err != nil {
 		return fmt.Errorf("unable to publish package %s: %w", skeletonRef, err)
