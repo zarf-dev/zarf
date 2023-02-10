@@ -119,10 +119,6 @@ func (p *Packager) generateManifestConfigFile(ctx context.Context, store *file.S
 }
 
 func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
-	// if len(paths) > utils.OCILayerLimit {
-	// 	return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
-	// }
-
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 
@@ -238,7 +234,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		return nil
 	}
 	// log the error, the expected error is a 400 manifest invalid
-	message.Debug(err)
+	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
 	// if copyRootAttempted is false here, then there was an error generated before
 	// the root was copied. This is unexpected, so return the error.

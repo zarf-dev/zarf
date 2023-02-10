@@ -19,9 +19,6 @@ import (
 )
 
 const (
-	// https://github.com/docker/docs/issues/8230
-	OCILayerLimit = 127
-
 	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.package.layer.v1.tar+zstd"
 	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.package.layer.v1.tar+gzip"
 	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.package.layer.v1.yaml"
