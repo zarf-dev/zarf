@@ -103,8 +103,14 @@ func AuthClient(ref v1name.Reference) (*auth.Client, error) {
 // This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
 func IsManifestUnsupported(err error) bool {
 	var errResp *errcode.ErrorResponse
-	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
+	if !errors.As(err, &errResp) {
 		return false
+	}
+
+	// @Noxsios Feb 2022, ECR returns a 405 when putting an OCI artifact manifest.
+	switch errResp.StatusCode {
+	case http.StatusMethodNotAllowed, http.StatusNotFound:
+		return true
 	}
 
 	var errCode errcode.Error

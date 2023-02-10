@@ -168,10 +168,10 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 	packOpts := oras.PackOptions{}
 	packOpts.ConfigDescriptor = &manifestConfigDesc
-	pack := func() (ocispec.Descriptor, error) {
+	pack := func(artifactType string) (ocispec.Descriptor, error) {
 		// note the empty string for the artifactType
 		// this is because oras handles this type under the hood if left blank
-		root, err := oras.Pack(ctx, store, "", descs, packOpts)
+		root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 		if err != nil {
 			return ocispec.Descriptor{}, err
 		}
@@ -186,7 +186,11 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
 	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.Debug("layer", desc.Digest.Hex()[:12], "exists")
+		if desc.Annotations[ocispec.AnnotationTitle] != "" {
+			message.SuccessF("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+		} else {
+			message.SuccessF("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+		}
 		return nil
 	}
 	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
@@ -206,7 +210,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 
 	// first attempt to do a ArtifactManifest push
-	root, err := pack()
+	root, err := pack("application/vnd.oci.artifact.manifest.v1+json")
 	if err != nil {
 		return err
 	}
@@ -264,7 +268,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 
 	// fallback to an ImageManifest push
 	packOpts.PackImageManifest = true
-	root, err = pack()
+	root, err = pack(ocispec.MediaTypeImageManifest)
 	if err != nil {
 		return err
 	}
