@@ -1,0 +1,45 @@
+name: Test Minikube (Docker) Cluster
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "package.json"
+      - "package-lock.json"
+      - "CODEOWNERS"
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-minikube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
+      - name: Setup Minikube
+        run: minikube start --driver=docker
+
+      - name: Run tests
+        run: make test-e2e ARCH=amd64
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs
