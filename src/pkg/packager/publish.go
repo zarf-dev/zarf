@@ -15,22 +15,17 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
 	v1name "github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
-
-// https://github.com/docker/docs/issues/8230
-const ociLayerLimit = 127
 
 // Publish publishes the package to a registry
 //
@@ -100,52 +95,6 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
-func ctxWithScopes(fullname string) (context.Context, error) {
-	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
-	scopes := []string{
-		fmt.Sprintf("repository:%s:pull,push", fullname),
-	}
-	return auth.WithScopes(context.Background(), scopes...), nil
-}
-
-func authClient(ref v1name.Reference) (*auth.Client, error) {
-	// load default Docker config file
-	cfg, err := config.Load(config.Dir())
-	if err != nil {
-		return &auth.Client{}, err
-	}
-	if !cfg.ContainsAuth() {
-		return &auth.Client{}, errors.New("no docker config file found, run 'docker login'")
-	}
-
-	configs := []*configfile.ConfigFile{cfg}
-
-	var key = ref.Context().RegistryStr()
-	if key == "registry-1.docker.io" {
-		// Docker stores its credentials under the following key, otherwise credentials use the registry URL
-		key = "https://index.docker.io/v1/"
-	}
-
-	authConf, err := configs[0].GetCredentialsStore(key).Get(key)
-	if err != nil {
-		return &auth.Client{}, fmt.Errorf("unable to get credentials for %s: %w", key, err)
-	}
-
-	cred := auth.Credential{
-		Username:     authConf.Username,
-		Password:     authConf.Password,
-		AccessToken:  authConf.RegistryToken,
-		RefreshToken: authConf.IdentityToken,
-	}
-
-	return &auth.Client{
-		Credential: auth.StaticCredential(ref.Context().RegistryStr(), cred),
-		Cache:      auth.NewCache(),
-		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
-		// ForceAttemptOAuth2: true,
-	}, nil
-}
-
 func (p *Packager) generateManifestConfigFile(ctx context.Context,  store *file.Store) (ocispec.Descriptor, error){
 	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
@@ -172,7 +121,7 @@ func (p *Packager) generateManifestConfigFile(ctx context.Context,  store *file.
 }
 
 func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
-	if len(paths) > ociLayerLimit {
+	if len(paths) > utils.OCILayerLimit {
 		return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
 	}
 
@@ -180,7 +129,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	spinner.Updatef("Publishing package to: %s", ref)
 	
 	fullname := fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Namespace, p.cfg.Pkg.Metadata.Name)
-	ctx, err := ctxWithScopes(fullname)
+	ctx, err := utils.CtxWithScopes(fullname)
 	if err != nil {
 		return err
 	}
@@ -189,7 +138,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	if err != nil {
 		return err
 	}
-	authClient, err := authClient(ref)
+	authClient, err := utils.AuthClient(ref)
 	if err != nil {
 		return err
 	}
