@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
@@ -17,9 +18,36 @@ import (
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
-// https://github.com/docker/docs/issues/8230
-const OCILayerLimit = 127
+const (
+	// https://github.com/docker/docs/issues/8230
+	OCILayerLimit = 127
 
+	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.package.layer.v1.tar+zstd"
+	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.package.layer.v1.tar+gzip"
+	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.package.layer.v1.yaml"
+	ZarfLayerMediaTypeJson    = "application/vnd.zarf.package.layer.v1.json"
+	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.package.layer.v1.txt"
+	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.package.layer.v1.unknown"
+)
+
+// ParseZarfLayerMediaType returns the Zarf layer media type for the given filename.
+func ParseZarfLayerMediaType(filename string) string {
+	// since we are controlling the filenames, we can just use the extension
+	switch filepath.Ext(filename) {
+	case ".tar.zst":
+		return ZarfLayerMediaTypeTarZstd
+	case ".tar.gz":
+		return ZarfLayerMediaTypeTarGzip
+	case ".yaml":
+		return ZarfLayerMediaTypeYaml
+	case ".json":
+		return ZarfLayerMediaTypeJson
+	case ".txt":
+		return ZarfLayerMediaTypeTxt
+	default:
+		return ZarfLayerMediaTypeUnknown
+	}
+}
 
 // CtxWithScopes returns a context with the given scopes.
 //

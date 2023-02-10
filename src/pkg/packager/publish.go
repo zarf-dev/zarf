@@ -94,7 +94,7 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
-func (p *Packager) generateManifestConfigFile(ctx context.Context,  store *file.Store) (ocispec.Descriptor, error){
+func (p *Packager) generateManifestConfigFile(ctx context.Context, store *file.Store) (ocispec.Descriptor, error) {
 	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
@@ -126,7 +126,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
-	
+
 	fullname := fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Namespace, p.cfg.Pkg.Metadata.Name)
 	ctx := utils.CtxWithScopes(fullname)
 
@@ -163,20 +163,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 			return err
 		}
 
-		var mediaType string
-		if strings.HasSuffix(name, ".tar.zst") {
-			mediaType = "application/vnd.zarf.package.layer.v1.tar+zstd"
-		} else if strings.HasSuffix(name, ".tar.gz") {
-			mediaType = "application/vnd.zarf.package.layer.v1.tar+gzip"
-		} else if strings.HasSuffix(name, ".yaml") {
-			mediaType = "application/vnd.zarf.package.layer.v1.yaml"
-		} else if strings.HasSuffix(name, ".txt") {
-			mediaType = "application/vnd.zarf.package.layer.v1.txt"
-		} else if strings.HasSuffix(name, ".json") {
-			mediaType = "application/vnd.zarf.package.layer.v1.json"
-		} else {
-			mediaType = "application/vnd.zarf.package.layer.v1.unknown"
-		}
+		mediaType := utils.ParseZarfLayerMediaType(name)
 
 		desc, err := store.Add(ctx, name, mediaType, path)
 		if err != nil {
