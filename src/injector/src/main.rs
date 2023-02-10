@@ -118,7 +118,7 @@ fn start_seed_registry() {
                     // on Content-Length, we respond the same as a GET
                     accept!(
                         request,
-                        "application/vnd.oci.image.manifest.v1+json" => {
+                        "application/vnd.docker.distribution.manifest.v2+json" => {
                             handle_get_manifest(&root)
                         },
                         "*/*" => Response::empty_406()
@@ -130,7 +130,7 @@ fn start_seed_registry() {
                     // on Content-Length, we respond the same as a GET
                     accept!(
                         request,
-                        "application/vnd.oci.image.manifest.v1+json" => {
+                        "application/vnd.docker.distribution.manifest.v2+json" => {
                             handle_get_manifest(&root)
                         },
                         "*/*" => Response::empty_406()
@@ -164,7 +164,7 @@ fn handle_get_manifest(root: &Path) -> Response {
         .unwrap()
         .to_owned();
     let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
-    Response::from_file("application/vnd.oci.image.manifest.v1+json", file)
+    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
         .with_additional_header(
             "Docker-Content-Digest",
             format!("sha256:{}", sha_manifest.to_owned()),
