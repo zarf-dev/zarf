@@ -28,4 +28,4 @@ components:
     repos:
       - https://github.com/stefanprodan/podinfo.git
     images:
-      - ghcr.io/stefanprodan/podinfo:6.1.6
+      - ghcr.io/stefanprodan/podinfo:6.3.3
