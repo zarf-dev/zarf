@@ -343,11 +343,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
 <details>
-<summary><strong> <a name="components_items_name"></a>name</strong>
+<summary><strong> <a name="components_items_name"></a>name *</strong>
 
 </summary>
 &nbsp;
 <blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the component
 
@@ -1058,6 +1060,22 @@ Must be one of:
 | Restrictions                      |                                                                               |
 | --------------------------------- | ----------------------------------------------------------------------------- |
 | **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Description of the action to be displayed during package execution instead of the command
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>

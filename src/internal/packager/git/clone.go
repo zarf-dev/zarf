@@ -45,8 +45,8 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 		return repo, git.ErrRepositoryAlreadyExists
 	} else if err != nil {
-		message.Debugf("Failed to clone repo: %s", err.Error())
-		message.Infof("Falling back to host git for %s", gitURL)
+		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
+		g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
 		// If we can't clone with go-git, fallback to the host clone
 		// Only support "all tags" due to the azure clone url format including a username
@@ -56,10 +56,11 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 			cmdArgs = append(cmdArgs, "--no-tags")
 		}
 
-		stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.Config{}, "git", cmdArgs...)
-		g.Spinner.Updatef(stdOut)
-		message.Debug(stdErr)
-
+		execConfig := exec.Config{
+			Stdout: g.Spinner,
+			Stderr: g.Spinner,
+		}
+		_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
 		if err != nil {
 			return nil, err
 		}

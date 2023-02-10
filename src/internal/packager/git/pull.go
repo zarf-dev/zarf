@@ -7,8 +7,8 @@ package git
 import (
 	"errors"
 	"fmt"
+
 	"path/filepath"
-	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -18,16 +18,19 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string) string {
-	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
+	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
+
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them
-	g.pull(gitURL, path, "")
-	return path
+	if err = g.pull(gitURL, path, ""); err != nil {
+		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
+	}
+
+	return path, nil
 }
 
 // Pull clones or updates a git repository into the target folder.
@@ -40,11 +43,12 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 
 	path = targetFolder + "/" + repoName
 	g.GitPath = path
-	g.pull(gitURL, path, repoName)
-	return path, nil
+	err = g.pull(gitURL, path, repoName)
+	return path, err
 }
 
-func (g *Git) pull(gitURL, targetFolder string, repoName string) {
+// internal pull function that will clone/pull the latest changes from the git repo
+func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
@@ -57,7 +61,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
-		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
+		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
 	}
 
 	onlyFetchRef := matches[idx("atRef")] != ""
@@ -66,23 +70,39 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-		message.Debug("Repo already cloned, fetching upstream changes...")
 
-		err = g.fetch(gitCachePath)
-
+		// Pull the latest changes from the online repo
+		message.Debug("Repo already cloned, pulling any upstream changes...")
+		gitCred := utils.FindAuthForHost(gitURL)
+		pullOptions := &git.PullOptions{
+			RemoteName: onlineRemoteName,
+			Auth:       &gitCred.Auth,
+		}
+		worktree, err := repo.Worktree()
+		if err != nil {
+			return fmt.Errorf("unable to get the worktree for the repo (%s): %w", gitURL, err)
+		}
+		err = worktree.Pull(pullOptions)
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
 		} else if err != nil {
-			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
+			return fmt.Errorf("not a valid git repo or unable to pull (%s): %w", gitURL, err)
 		}
+
+		// NOTE: Since pull doesn't pull any new tags, we need to fetch them
+		fetchOptions := git.FetchOptions{RemoteName: onlineRemoteName, Tags: git.AllTags}
+		if err := g.fetch(gitCachePath, &fetchOptions); err != nil {
+			return err
+		}
+
 	} else if err != nil {
-		g.Spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
 	if gitCachePath != targetFolder {
 		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
 		if err != nil {
-			message.Fatalf(err, "Unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
+			return fmt.Errorf("unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
 		}
 	}
 
@@ -104,27 +124,21 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) {
 			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
+		_, err = g.removeLocalTagRefs()
+		if err != nil {
+			return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
+		}
 		_, _ = g.removeLocalBranchRefs()
 		_, _ = g.removeOnlineRemoteRefs()
 
-		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
-
-		if isHash(ref) {
-			g.fetchHash(ref)
-			g.checkoutHashAsBranch(plumbing.NewHash(ref), trunkBranchName)
-		} else {
-			// Try to fetch as tag first
-			err = g.fetchTag(ref)
-			if err != nil {
-				// Try to checkout ref as branch instead
-				err = g.fetchBranch(ref)
-				if err != nil {
-					message.Fatalf(err, "Could not checkout repo as branch or tag")
-				}
-			} else {
-				// Convert tag checkout to branch
-				g.checkoutTagAsBranch(ref, trunkBranchName)
-			}
+		err = g.fetchRef(ref)
+		if err != nil {
+			return fmt.Errorf("not a valid reference or unable to fetch (%s): %#v", ref, err)
 		}
+
+		err = g.checkoutRefAsBranch(ref, trunkBranchName)
+		return err
 	}
+
+	return nil
 }
