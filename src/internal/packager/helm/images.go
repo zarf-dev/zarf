@@ -19,7 +19,7 @@ import (
 func FindFluxImages(bigbangrepo, version string) ([]string, error) {
 	images := make([]string, 0)
 	bigbangrepo = strings.TrimSuffix(bigbangrepo, ".git")
-	rawFile := fmt.Sprintf("%v/-/raw/%s/base/flux/kustomization.yaml", bigbangrepo, version)
+	rawFile := fmt.Sprintf("%s/-/raw/%s/base/flux/kustomization.yaml", bigbangrepo, version)
 
 	// load this file
 	client := http.Client{}
@@ -68,8 +68,7 @@ func FindImagesForChartRepo(repo, path string) ([]string, error) {
 	tmpDir := filepath.Join(os.TempDir(), repo)
 	os.Mkdir(tmpDir, 0700)
 	defer os.RemoveAll(tmpDir)
-	// gitURLRegex := regexp.MustCompile(`\.git$`)
-	// isGitURL := gitURLRegex.MatchString(matches[0])
+
 	helmCfg := Helm{
 		Chart:    component.Charts[0],
 		BasePath: path,
@@ -78,8 +77,9 @@ func FindImagesForChartRepo(repo, path string) ([]string, error) {
 
 	helmCfg.Cfg.State = types.ZarfState{}
 
-	//TODO expand this to work for regular charts for
-	// more generic capability
+	// TODO expand this to work for regular charts for
+	// more generic capability and pull it out from
+	// just being used by BigBang
 	downloadPath := helmCfg.DownloadChartFromGit(tmpDir)
 
 	// Generate a new chart

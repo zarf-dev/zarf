@@ -150,7 +150,7 @@ func findURLs(t string) []string {
 				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["branch"].(string)
 			}
 
-			urls = append(urls, fmt.Sprintf("%v@%v", url, ref))
+			urls = append(urls, fmt.Sprintf("%s@%s", url, ref))
 		}
 	}
 
@@ -184,23 +184,18 @@ func GetFluxManifest(version string) types.ZarfManifest {
 		Name:      "flux-system",
 		Namespace: "flux-system",
 		Kustomizations: []string{
-			fmt.Sprintf("https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=%v", version),
+			fmt.Sprintf("https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=%s", version),
 		},
 	}
 }
 
-// GetBigBangManifests creates the manifests for deploying BigBang
+// GetBigBangManifests creates the manifests component for deploying BigBang
 func GetBigBangManifests(manifestDir string, component types.ZarfComponent) (types.ZarfManifest, error) {
-	// here or in
-
-	// componentPath, err := p.createOrGetComponentPaths(baseComponent)
+	//create a manifest component that we add to the zarf package for bigbang
 	manifest := types.ZarfManifest{
 		Name:      "bigbang",
 		Namespace: "bigbang",
 		Files:     []string{},
-		// Kustomizations: []string{
-		// 	destination,
-		// },
 	}
 
 	gitIgnore := `# exclude file extensions
@@ -229,11 +224,9 @@ func GetBigBangManifests(manifestDir string, component types.ZarfComponent) (typ
 			},
 		},
 	}
-	// printObject(fmt.Sprintf("%s/gitrepository.yaml", kDir), &source)
-	// utils.WriteYaml(fmt.Sprintf("%s/gitrepository.yaml", kDir), source, 0644)
+
 	data, _ := yaml.Marshal(source)
 	utils.WriteFile(fmt.Sprintf("%s/gitrepository.yaml", manifestDir), data)
-	// manifest.Files = append(manifest.Files, fmt.Sprintf("%s/gitrepository.yaml", manifestDir))
 	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/gitrepository.yaml", manifestDir))
 
 	//imagepull secret
@@ -254,7 +247,7 @@ kyvernopolicies:
       any:
       - resources:
           namespaces: 
-          - zarf
+          - zarf # don't have kyverno prevent zarf from doing zarf things
 `
 	secretData := make(map[string]string)
 	secretData["values.yaml"] = creds
@@ -269,10 +262,9 @@ kyvernopolicies:
 		},
 		StringData: secretData,
 	}
-	// credentialsSecretName := foobar
+
 	data, _ = yaml.Marshal(zarfSecret)
 	ioutil.WriteFile(fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir), []byte(data), 0644)
-	// manifest.Files = append(manifest.Files, fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir))
 	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir))
 
 	hrValues := make([]helmv2beta1.ValuesReference, len(component.BigBang.ValuesFrom)+1)
@@ -281,8 +273,6 @@ kyvernopolicies:
 		Name: "zarf-credentials",
 	}
 
-	// zarf magic for the value files to put them in the right directory
-	// This might only assume that values files are in the same folder as the zarf.yaml.  Maybe that's okay.
 	for idx, path := range component.BigBang.ValuesFrom {
 		//load the values file.
 		file, err := os.ReadFile(path)
@@ -306,7 +296,6 @@ kyvernopolicies:
 		data, _ = yaml.Marshal(zarfSecret)
 		ioutil.WriteFile(fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir, strconv.Itoa(idx)), []byte(data), 0644)
 		//add it to the manifests
-		// manifest.Files = append(manifest.Files, fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir))
 		manifest.Files = append(manifest.Files, fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir, strconv.Itoa(idx)))
 
 		// Add it to the list of valuesFrom for the HelmRelease
@@ -371,8 +360,6 @@ kyvernopolicies:
 		},
 	}
 
-	// printObject(fmt.Sprintf("%s/helmrepository.yaml", kDir), &release)
-	// utils.WriteYaml(fmt.Sprintf("%s/helmrepository.yaml", kDir), release, 0644)
 	data, _ = yaml.Marshal(release)
 	utils.WriteFile(fmt.Sprintf("%s/helmrepository.yaml", manifestDir), data)
 	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/helmrepository.yaml", manifestDir))
