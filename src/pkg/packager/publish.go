@@ -195,19 +195,20 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		return nil
 	}
 	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.SuccessF(desc.Digest.Hex()[:12])
+		if desc.Annotations[ocispec.AnnotationTitle] != "" {
+			message.SuccessF("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+		} else {
+			message.SuccessF("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+		}
 		return nil
 	}
 
 	push := func(root ocispec.Descriptor) error {
 		message.Debugf("root descriptor: %v\n", root)
-		// this code was copied from oras, but does not fully fit our use case
-		// as dst.Reference.Reference always has a value
-		// I have left this code in place in case we need to revert to the original
-		if tag := dst.Reference.Reference; tag == "" {
-			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
-		} else {
-			_, err = oras.Copy(ctx, store, root.Digest.String(), dst, tag, copyOpts)
+		tag := dst.Reference.Reference
+		desc, err := oras.Copy(ctx, store, root.Digest.String(), dst, tag, copyOpts)
+		if desc.Digest.String() != root.Digest.String() {
+			return fmt.Errorf("pushed descriptor does not match root descriptor: %v != %v", desc, root)
 		}
 		return err
 	}
@@ -221,7 +222,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.Infof(desc.Digest.Hex()[:12])
+		message.Debugf("layer", desc.Digest.Hex()[:12], "is being pushed")
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
@@ -243,14 +244,21 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug(err)
 
-	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
-		!utils.IsManifestUnsupported(err) {
-		return fmt.Errorf(`failed to push artifact manifest, 
-		was it during the copying of root? (%t)
-		was the root mediaType an artifact manifest? (%t)
-		was it because the registry does not support the artifact manifest mediaType? (%t)
-		
-		%w`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !utils.IsManifestUnsupported(err), err)
+	// if copyRootAttempted is false here, then there was an error generated before
+	// the root was copied. This is unexpected, so return the error.
+	if !copyRootAttempted {
+		return err
+	}
+
+	// due to oras handling of the root descriptor, if the code reaches this point then
+	// the root.MediaType cannot be an artifact manifest.
+	if root.MediaType != ocispec.MediaTypeArtifactManifest {
+		return fmt.Errorf("artifact manifest push already failed, yet the root media type is still an artifact manifest %w", err)
+	}
+
+	// if the error returned from the push is not an expected error, then return the error
+	if !utils.IsManifestUnsupported(err) {
+		return err
 	}
 
 	// assumes referrers API is not supported since OCI artifact
