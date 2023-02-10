@@ -217,6 +217,9 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 
 	push := func(root ocispec.Descriptor) error {
 		message.Debugf("root descriptor: %v\n", root)
+		// this code was copied from oras, but does not fully fit our use case
+		// as dst.Reference.Reference always has a value
+		// I have left this code in place in case we need to revert to the original
 		if tag := dst.Reference.Reference; tag == "" {
 			err = oras.CopyGraph(ctx, store, dst, root, copyOpts.CopyGraphOptions)
 		} else {
