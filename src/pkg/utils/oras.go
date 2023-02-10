@@ -24,12 +24,12 @@ const OCILayerLimit = 127
 // CtxWithScopes returns a context with the given scopes.
 //
 // This is needed for pushing to Docker Hub.
-func CtxWithScopes(fullname string) (context.Context, error) {
+func CtxWithScopes(fullname string) context.Context {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", fullname),
 	}
-	return auth.WithScopes(context.Background(), scopes...), nil
+	return auth.WithScopes(context.Background(), scopes...)
 }
 
 // AuthClient returns an auth client for the given reference.
@@ -74,6 +74,8 @@ func AuthClient(ref v1name.Reference) (*auth.Client, error) {
 }
 
 // isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
+//
+// This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
 func IsManifestUnsupported(err error) bool {
 	var errResp *errcode.ErrorResponse
 	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {

@@ -128,10 +128,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	spinner.Updatef("Publishing package to: %s", ref)
 	
 	fullname := fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Namespace, p.cfg.Pkg.Metadata.Name)
-	ctx, err := utils.CtxWithScopes(fullname)
-	if err != nil {
-		return err
-	}
+	ctx := utils.CtxWithScopes(fullname)
 
 	dst, err := remote.NewRepository(ref.String())
 	if err != nil {
@@ -306,6 +303,9 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	return nil
 }
 
+// ref returns a v1name.Reference using metadata from the package's build config and the PublishOpts
+//
+// if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
 func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
 	name := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
