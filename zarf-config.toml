@@ -3,4 +3,4 @@
 agent_image = 'agent:local'
 
 # Tag for the zarf injector binary to use
-injector_version = 'pr-948-e699899'
+injector_version = '2023-02-09'
