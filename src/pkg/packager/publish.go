@@ -7,7 +7,6 @@ package packager
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -120,9 +119,9 @@ func (p *Packager) generateManifestConfigFile(ctx context.Context, store *file.S
 }
 
 func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
-	if len(paths) > utils.OCILayerLimit {
-		return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
-	}
+	// if len(paths) > utils.OCILayerLimit {
+	// 	return fmt.Errorf("unable to publish package %s: %w", ref, errors.New("package exceeds the maximum number of layers allowed by OCI"))
+	// }
 
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
@@ -206,10 +205,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	push := func(root ocispec.Descriptor) error {
 		message.Debugf("root descriptor: %v\n", root)
 		tag := dst.Reference.Reference
-		desc, err := oras.Copy(ctx, store, root.Digest.String(), dst, tag, copyOpts)
-		if desc.Digest.String() != root.Digest.String() {
-			return fmt.Errorf("pushed descriptor does not match root descriptor: %v != %v", desc, root)
-		}
+		_, err := oras.Copy(ctx, store, root.Digest.String(), dst, tag, copyOpts)
 		return err
 	}
 
@@ -222,7 +218,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.Debugf("layer", desc.Digest.Hex()[:12], "is being pushed")
+		message.Debug("layer", desc.Digest.Hex()[:12], "is being pushed")
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
