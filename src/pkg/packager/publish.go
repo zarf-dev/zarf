@@ -215,6 +215,11 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		message.Debug("layer", desc.Digest.Hex()[:12], "is being pushed")
+		if desc.Annotations[ocispec.AnnotationTitle] != "" {
+			spinner.Updatef("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+		} else {
+			spinner.Updatef("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+		}
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
