@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +23,6 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // Publish publishes the package to a registry
@@ -43,10 +41,11 @@ func (p *Packager) Publish() error {
 
 	if p.cfg.PublishOpts.RegistryURL == "docker.io" {
 		// docker.io is commonly used, but is not a valid registry URL
+		// registry-1.docker.io is Docker's default public registry URL
+		// https://github.com/docker/cli/blob/master/man/src/image/pull.md
 		p.cfg.PublishOpts.RegistryURL = "registry-1.docker.io"
 	}
 
-	// push everything
 	paths := []string{
 		filepath.Join(p.tmp.Base, "checksums.txt"),
 		filepath.Join(p.tmp.Base, "zarf.yaml"),
@@ -258,13 +257,13 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	message.Debug(err)
 
 	if !copyRootAttempted || root.MediaType != ocispec.MediaTypeArtifactManifest ||
-		!isManifestUnsupported(err) {
+		!utils.IsManifestUnsupported(err) {
 		return fmt.Errorf(`failed to push artifact manifest, 
 		was it during the copying of root? (%t)
 		was the root mediaType an artifact manifest? (%t)
 		was it because the registry does not support the artifact manifest mediaType? (%t)
 		
-		%w`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !isManifestUnsupported(err), err)
+		%w`, !copyRootAttempted, root.MediaType == ocispec.MediaTypeArtifactManifest, !utils.IsManifestUnsupported(err), err)
 	}
 
 	// assumes referrers API is not supported since OCI artifact
@@ -319,25 +318,4 @@ func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
 		return nil, err
 	}
 	return ref, nil
-}
-
-// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
-func isManifestUnsupported(err error) bool {
-	var errResp *errcode.ErrorResponse
-	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
-		return false
-	}
-
-	var errCode errcode.Error
-	if !errors.As(errResp, &errCode) {
-		return false
-	}
-
-	// As of November 2022, ECR is known to return UNSUPPORTED error when
-	// putting an OCI artifact manifest.
-	switch errCode.Code {
-	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
-		return true
-	}
-	return false
 }

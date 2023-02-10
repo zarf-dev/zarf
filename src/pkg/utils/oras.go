@@ -8,11 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	v1name "github.com/google/go-containerregistry/pkg/name"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // https://github.com/docker/docs/issues/8230
@@ -69,4 +71,25 @@ func AuthClient(ref v1name.Reference) (*auth.Client, error) {
 		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
 		// ForceAttemptOAuth2: true,
 	}, nil
+}
+
+// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
+func IsManifestUnsupported(err error) bool {
+	var errResp *errcode.ErrorResponse
+	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
+		return false
+	}
+
+	var errCode errcode.Error
+	if !errors.As(errResp, &errCode) {
+		return false
+	}
+
+	// As of November 2022, ECR is known to return UNSUPPORTED error when
+	// putting an OCI artifact manifest.
+	switch errCode.Code {
+	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
+		return true
+	}
+	return false
 }
