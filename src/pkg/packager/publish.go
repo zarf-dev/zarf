@@ -5,10 +5,10 @@
 package packager
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -17,7 +17,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	v1name "github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -93,29 +92,32 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
-func (p *Packager) generateManifestConfigFile(ctx context.Context, store *file.Store) (ocispec.Descriptor, error) {
+func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, error) {
 	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
-	manifestConfig := v1.ConfigFile{
+	type OCIConfigPartial struct {
+		Architecture string `json:"architecture"`
+		OCIVersion   string `json:"ociVersion"`
+		Annotations map[string]string `json:"annotations,omitempty"`
+	}
+
+	annotations := map[string]string{
+		"org.opencontainers.image.title": p.cfg.Pkg.Metadata.Name,
+		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
+	}
+
+	manifestConfig := OCIConfigPartial{
 		Architecture: p.cfg.Pkg.Build.Architecture,
-		Author:       p.cfg.Pkg.Build.User,
-		Variant:      "zarf-package",
+		OCIVersion:   "1.0.1",
+		Annotations: annotations,
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
-		return ocispec.Descriptor{}, err
+		return ocispec.Descriptor{}, nil, err
 	}
-	err = os.WriteFile(filepath.Join(p.tmp.Base, "config.json"), manifestConfigBytes, 0600)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-	manifestConfigPath := filepath.Join(p.tmp.Base, "config.json")
-	manifestConfigDesc, err := store.Add(ctx, "config.json", ocispec.MediaTypeImageConfig, manifestConfigPath)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-	return manifestConfigDesc, nil
+	manifestConfigDesc := content.NewDescriptorFromBytes("application/vnd.unknown.config.v1+json", manifestConfigBytes)
+	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
 func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
@@ -139,16 +141,11 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		dst.PlainHTTP = true
 	}
 
-	store, err := file.New("")
+	store, err := file.New(p.tmp.Base)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
-
-	manifestConfigDesc, err := p.generateManifestConfigFile(ctx, store)
-	if err != nil {
-		return err
-	}
 
 	var descs []ocispec.Descriptor
 
@@ -167,7 +164,6 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		descs = append(descs, desc)
 	}
 	packOpts := oras.PackOptions{}
-	packOpts.ConfigDescriptor = &manifestConfigDesc
 	pack := func(artifactType string) (ocispec.Descriptor, error) {
 		root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 		if err != nil {
@@ -249,12 +245,6 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 		return err
 	}
 
-	// due to oras handling of the root descriptor, if the code reaches this point then
-	// the root.MediaType cannot be an artifact manifest.
-	if root.MediaType != ocispec.MediaTypeArtifactManifest {
-		return fmt.Errorf("artifact manifest push already failed, yet the root media type is still an artifact manifest %w", err)
-	}
-
 	// if the error returned from the push is not an expected error, then return the error
 	if !utils.IsManifestUnsupported(err) {
 		return err
@@ -265,6 +255,15 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	dst.SetReferrersCapability(false)
 
 	// fallback to an ImageManifest push
+	manifestConfigDesc, manifestConfigContent, err := p.generateManifestConfigFile()
+	if err != nil {
+		return err
+	}
+	err = dst.Push(ctx, manifestConfigDesc, bytes.NewReader(manifestConfigContent))
+	if err != nil {
+		return err
+	}
+	packOpts.ConfigDescriptor = &manifestConfigDesc
 	packOpts.PackImageManifest = true
 	root, err = pack(ocispec.MediaTypeImageManifest)
 	if err != nil {

@@ -19,21 +19,21 @@ import (
 )
 
 const (
-	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.package.layer.v1.tar+zstd"
-	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.package.layer.v1.tar+gzip"
-	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.package.layer.v1.yaml"
-	ZarfLayerMediaTypeJson    = "application/vnd.zarf.package.layer.v1.json"
-	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.package.layer.v1.txt"
-	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.package.layer.v1.unknown"
+	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
+	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
+	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
+	ZarfLayerMediaTypeJson    = "application/vnd.zarf.layer.v1.json"
+	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
+	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
 )
 
 // ParseZarfLayerMediaType returns the Zarf layer media type for the given filename.
 func ParseZarfLayerMediaType(filename string) string {
 	// since we are controlling the filenames, we can just use the extension
 	switch filepath.Ext(filename) {
-	case ".tar.zst":
+	case ".zst":
 		return ZarfLayerMediaTypeTarZstd
-	case ".tar.gz":
+	case ".gz":
 		return ZarfLayerMediaTypeTarGzip
 	case ".yaml":
 		return ZarfLayerMediaTypeYaml
@@ -110,7 +110,7 @@ func IsManifestUnsupported(err error) bool {
 	// @Noxsios Feb 2022, ECR returns a 405 when putting an OCI artifact manifest.
 	switch errResp.StatusCode {
 	case http.StatusMethodNotAllowed, http.StatusNotFound:
-		return true
+		return false
 	}
 
 	var errCode errcode.Error
