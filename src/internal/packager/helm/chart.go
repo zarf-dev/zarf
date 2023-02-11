@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -188,6 +189,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
 
 	var (
+		match  = []byte("{{")
 		prefix = []byte("{{`")
 		suffix = []byte("`}}")
 	)
@@ -201,9 +203,11 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 			return nil, "", fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
-		// If the file is a template, we need to wrap it in {{` and `}} to prevent helm from trying to parse it.
-		data = append(prefix, data...)
-		data = append(data, suffix...)
+		// If the template contains the match "{{", wrap it in {{` and `}} to prevent helm from trying to parse it.
+		if bytes.Contains(data, match) {
+			data = append(prefix, data...)
+			data = append(data, suffix...)
+		}
 
 		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
 	}
