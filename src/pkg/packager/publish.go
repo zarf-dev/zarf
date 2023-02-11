@@ -169,8 +169,6 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	packOpts := oras.PackOptions{}
 	packOpts.ConfigDescriptor = &manifestConfigDesc
 	pack := func(artifactType string) (ocispec.Descriptor, error) {
-		// note the empty string for the artifactType
-		// this is because oras handles this type under the hood if left blank
 		root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 		if err != nil {
 			return ocispec.Descriptor{}, err
@@ -210,7 +208,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 
 	// first attempt to do a ArtifactManifest push
-	root, err := pack("application/vnd.oci.artifact.manifest.v1+json")
+	root, err := pack(ocispec.MediaTypeArtifactManifest)
 	if err != nil {
 		return err
 	}
