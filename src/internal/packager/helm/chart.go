@@ -140,6 +140,9 @@ func (h *Helm) TemplateChart() (string, error) {
 	client.Replace = true // Skip the name check.
 	client.ClientOnly = true
 	client.IncludeCRDs = true
+	// TODO: Further research this with regular/OCI charts
+	client.Verify = false
+	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
 
 	client.ReleaseName = h.Chart.ReleaseName
 
