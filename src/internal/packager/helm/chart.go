@@ -5,11 +5,11 @@
 package helm
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -188,14 +188,6 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
 
-	var (
-		backtick        = []byte("`")
-		backtickReplace = []byte("`}}`{{`")
-		match           = []byte("{{")
-		prefix          = []byte("{{`")
-		suffix          = []byte("`}}")
-	)
-
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
@@ -205,13 +197,9 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 			return nil, "", fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
-		// If the template contains the match "{{", wrap it in {{` and `}} to prevent helm from trying to parse it.
-		if bytes.Contains(data, match) {
-			// Replace backticks before wrapping in {{` and `}}.
-			data = bytes.ReplaceAll(data, backtick, backtickReplace)
-			data = append(prefix, data...)
-			data = append(data, suffix...)
-		}
+		// Escape all chars and then wrap in {{ }}.
+		txt := strconv.Quote(string(data))
+		data = []byte("{{" + txt + "}}")
 
 		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
 	}
