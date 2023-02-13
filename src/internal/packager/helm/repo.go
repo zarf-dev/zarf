@@ -118,8 +118,9 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	chartDownloader := downloader.ChartDownloader{
 		Out:            spinner,
 		RegistryClient: regClient,
-		Verify:         downloader.VerifyNever,
-		Getters:        getter.All(pull.Settings),
+		// TODO: Further research this with regular/OCI charts
+		Verify:  downloader.VerifyNever,
+		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
 		},
