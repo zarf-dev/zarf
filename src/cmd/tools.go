@@ -6,6 +6,8 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -22,6 +24,7 @@ import (
 )
 
 var subAltNames []string
+var decompressLayers bool
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -63,6 +66,23 @@ var archiverDecompressCmd = &cobra.Command{
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
 			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
+		}
+
+		// Decompress component layers in the destination path
+		if decompressLayers {
+			layersDir := filepath.Join(destinationPath, "components")
+
+			files, err := os.ReadDir(layersDir)
+			if err != nil {
+				message.Fatalf(err, "failed to read the layers of components")
+			}
+			for _, file := range files {
+				if strings.HasSuffix(file.Name(), "tar.zst") {
+					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
+						message.Fatalf(err, "failed to decompress the component layer")
+					}
+				}
+			}
 		}
 	},
 }
@@ -173,6 +193,7 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverDecompressCmd.Flags().BoolVar(&decompressLayers, "decompress-all", false, "Decompress all layers in the archive")
 
 	cranePlatformOptions := config.GetCraneOptions(false)
 

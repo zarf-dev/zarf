@@ -10,7 +10,8 @@ zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 ## Options
 
 ```
-  -h, --help   help for decompress
+      --decompress-all   Decompress all layers in the archive
+  -h, --help             help for decompress
 ```
 
 ## Options inherited from parent commands
