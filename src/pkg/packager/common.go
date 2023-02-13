@@ -214,6 +214,24 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
+	// Get a list of paths for the components of the package
+	components, err := os.ReadDir(p.tmp.Components)
+	if err != nil {
+		return fmt.Errorf("unable to get a list of components... %w", err)
+	}
+	for _, component := range components {
+		// If the components are compressed tarballs, un-compress them
+		componentPath := filepath.Join(p.tmp.Components, component.Name())
+		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar.zst") {
+			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
+				return fmt.Errorf("unable to extract the component: %w", err)
+			}
+
+			// After extracting the component, remove the compressed tarball to release disk space
+			_ = os.Remove(filepath.Join(p.tmp.Components, component.Name()))
+		}
+	}
+
 	// If SBOM files exist, temporarily place them in the deploy directory
 	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {

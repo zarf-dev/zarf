@@ -177,7 +177,28 @@ func (p *Packager) Create(baseDir string) error {
 		sbom.Catalog(componentSBOMs, imgList, p.tmp.Images, p.tmp.Sboms)
 	}
 
+<<<<<<< HEAD
 	// In case the directory was changed, reset to prevent breaking relative target paths.
+=======
+	// Process the component directories into compressed tarballs
+	// NOTE: This is purposefully being done after the SBOM cataloging
+	for _, component := range p.cfg.Pkg.Components {
+		// Make the component a tar.zst archive
+		componentPaths, _ := p.createComponentPaths(component)
+		componentName := fmt.Sprintf("%s.%s", component.Name, "tar.zst")
+		componentTarPath := filepath.Join(p.tmp.Components, componentName)
+		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
+			return fmt.Errorf("unable to create package: %w", err)
+		}
+
+		// Remove the deflated component directory
+		if err := os.RemoveAll(componentPaths.Base); err != nil {
+			message.Debugf("unable to remove the component directory (%s): %s", componentPaths.Base, err.Error())
+		}
+	}
+
+	// In case the directory was changed, reset to prevent breaking relative target paths
+>>>>>>> 5086a4b0 (1322 component tarballs (#1331))
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
 	}
