@@ -162,7 +162,7 @@ func testRemovingTagsOnCreate(t *testing.T) {
 
 	// Extract the built package so we can inspect the repositories that are included
 	extractedDirPath := "tmp-extraction"
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", testPackagePath, extractedDirPath, "-l=trace")
+	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", testPackagePath, extractedDirPath, "-l=trace", "--decompress-all")
 	defer e2e.cleanFiles(extractedDirPath)
 	require.NoError(t, err, stdOut, stdErr)
 
