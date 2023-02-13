@@ -18,6 +18,16 @@ func TestHelm(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
+	testHelmReleaseName(t)
+
+	testHelmLocalChart(t)
+
+	testHelmEscaping(t)
+}
+
+func testHelmReleaseName(t *testing.T) {
+	t.Log("E2E: Helm chart releasename")
+
 	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.arch)
 
 	// Deploy the charts
@@ -29,5 +39,43 @@ func TestHelm(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), "cool-name-podinfo")
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmLocalChart(t *testing.T) {
+	t.Log("E2E: Local Helm chart")
+
+	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.arch)
+
+	// Deploy the charts
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmEscaping(t *testing.T) {
+	t.Log("E2E: Helm chart escaping")
+
+	// Create the package
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "src/test/test-packages/evil-templates/", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	path := fmt.Sprintf("zarf-package-evil-templates-%s.tar.zst", e2e.arch)
+
+	// Deploy the package
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify the configmap was deployed and escaped
+	kubectlOut, _ := exec.Command("kubectl", "describe", "cm", "dont-template-me").Output()
+	assert.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
+	assert.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
+	assert.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
+	assert.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
+
+	// Remove the package
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "evil-templates", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
