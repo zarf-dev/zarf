@@ -75,6 +75,8 @@ func testHelmEscaping(t *testing.T) {
 	// Verify the configmap was deployed and escaped.
 	kubectlOut, _ := exec.Command("kubectl", "describe", "cm", "dont-template-me").Output()
 	assert.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
+	assert.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
+	assert.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
 	assert.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
 
 	// Remove the package.
