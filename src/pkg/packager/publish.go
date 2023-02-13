@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -140,7 +141,7 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 	}
 	dst.Client = authClient
 
-	dst.PlainHTTP = p.cfg.PublishOpts.RepositoryOptions.PlainHTTP
+	dst.PlainHTTP = config.CommonOptions.Insecure
 
 	store, err := file.New(p.tmp.Base)
 	if err != nil {
