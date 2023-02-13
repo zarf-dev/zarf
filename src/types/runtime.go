@@ -4,6 +4,11 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import (
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry/remote"
+)
+
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
@@ -23,11 +28,12 @@ type ZarfDeployOptions struct {
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
+	RepositoryOptions remote.Repository `jsonschema:"description=Options for the remote repository"`
+	CopyOptions oras.CopyOptions `jsonschema:"description=Options for the copy operation"`
+	PackOptions oras.PackOptions `jsonschema:"description=Options for the pack operation"`
 	PackagePath string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	Namespace   string `json:"namespace" jsonschema:"description=Namespace to publish the package to"`
 	RegistryURL string `json:"registryURL" jsonschema:"description=URL of the registry to publish the package to"`
-	PlainHTTP    bool   `json:"plainHTTP" jsonschema:"description=PlainHTTP signals the transport to access the remote repository via HTTP instead of HTTPS"`
-	Concurrency int    `json:"concurrency" jsonschema:"description=Number of concurrent uploads to perform"`
 	IncludeImages bool  `json:"includeImages" jsonschema:"description=Whether or not to include images in the published package"`
 }
 

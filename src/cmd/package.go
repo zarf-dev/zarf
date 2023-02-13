@@ -325,10 +325,10 @@ func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 
 	v.SetDefault(V_PKG_PUBLISH_HTTP_ONLY, false)
-	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 5)
-	v.SetDefault(V_PKG_PUBLISH_INCLUDE_IMAGES, false)
+	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
+	v.SetDefault(V_PKG_PUBLISH_INCLUDE_IMAGES, true)
 
-	publishFlags.BoolVar(&pkgConfig.PublishOpts.PlainHTTP, "http-only", v.GetBool(V_PKG_PUBLISH_HTTP_ONLY), "Allow insecure connections to the registry")
-	publishFlags.IntVar(&pkgConfig.PublishOpts.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
+	publishFlags.BoolVar(&pkgConfig.PublishOpts.RepositoryOptions.PlainHTTP, "http-only", v.GetBool(V_PKG_PUBLISH_HTTP_ONLY), "Allow insecure connections to the registry")
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
 	publishFlags.BoolVar(&pkgConfig.PublishOpts.IncludeImages, "include-images", v.GetBool(V_PKG_PUBLISH_INCLUDE_IMAGES), "Include container images in the published package")
 }

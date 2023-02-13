@@ -14,9 +14,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	v1name "github.com/google/go-containerregistry/pkg/name"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -97,20 +97,20 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
 	type OCIConfigPartial struct {
-		Architecture string `json:"architecture"`
-		OCIVersion   string `json:"ociVersion"`
-		Annotations map[string]string `json:"annotations,omitempty"`
+		Architecture string            `json:"architecture"`
+		OCIVersion   string            `json:"ociVersion"`
+		Annotations  map[string]string `json:"annotations,omitempty"`
 	}
 
 	annotations := map[string]string{
-		"org.opencontainers.image.title": p.cfg.Pkg.Metadata.Name,
+		"org.opencontainers.image.title":       p.cfg.Pkg.Metadata.Name,
 		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
 	}
 
 	manifestConfig := OCIConfigPartial{
 		Architecture: p.cfg.Pkg.Build.Architecture,
 		OCIVersion:   "1.0.1",
-		Annotations: annotations,
+		Annotations:  annotations,
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
@@ -120,12 +120,11 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
-func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *message.Spinner) error {
+func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.Spinner) error {
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 
-	fullname := fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Namespace, p.cfg.Pkg.Metadata.Name)
-	ctx := utils.CtxWithScopes(fullname)
+	ctx := utils.CtxWithScopes(ref.Context().RepositoryStr())
 
 	dst, err := remote.NewRepository(ref.String())
 	if err != nil {
@@ -137,9 +136,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 	dst.Client = authClient
 
-	if p.cfg.PublishOpts.PlainHTTP {
-		dst.PlainHTTP = true
-	}
+	dst.PlainHTTP = p.cfg.PublishOpts.RepositoryOptions.PlainHTTP
 
 	store, err := file.New(p.tmp.Base)
 	if err != nil {
@@ -176,9 +173,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	}
 
 	copyOpts := oras.DefaultCopyOptions
-	if p.cfg.PublishOpts.Concurrency > copyOpts.Concurrency {
-		copyOpts.Concurrency = p.cfg.PublishOpts.Concurrency
-	}
+	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		if desc.Annotations[ocispec.AnnotationTitle] != "" {
 			message.SuccessF("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
@@ -242,6 +237,7 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 	// if copyRootAttempted is false here, then there was an error generated before
 	// the root was copied. This is unexpected, so return the error.
 	if !copyRootAttempted {
+		message.Debug("Push failed before the manifest was pushed, returning the error")
 		return err
 	}
 
@@ -299,8 +295,8 @@ func (p *Packager) publish(ref v1name.Reference, paths []string, spinner *messag
 // ref returns a v1name.Reference using metadata from the package's build config and the PublishOpts
 //
 // if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
-func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
-	name := p.cfg.Pkg.Metadata.Name
+func (p *Packager) ref(skeleton string) (name.Reference, error) {
+	pkgName := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
@@ -309,7 +305,7 @@ func (p *Packager) ref(skeleton string) (v1name.Reference, error) {
 	}
 	ns := p.cfg.PublishOpts.Namespace
 	registry := p.cfg.PublishOpts.RegistryURL
-	ref, err := v1name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, name, ver, arch), v1name.StrictValidation)
+	ref, err := name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, pkgName, ver, arch), name.StrictValidation)
 	if err != nil {
 		return nil, err
 	}
