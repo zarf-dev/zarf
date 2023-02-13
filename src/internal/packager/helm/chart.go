@@ -189,9 +189,11 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	tmpChart.Metadata.APIVersion = chart.APIVersionV1
 
 	var (
-		match  = []byte("{{")
-		prefix = []byte("{{`")
-		suffix = []byte("`}}")
+		backtick        = []byte("`")
+		backtickReplace = []byte("`}}`{{`")
+		match           = []byte("{{")
+		prefix          = []byte("{{`")
+		suffix          = []byte("`}}")
 	)
 
 	// Add the manifest files so helm does its thing.
@@ -205,6 +207,8 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 
 		// If the template contains the match "{{", wrap it in {{` and `}} to prevent helm from trying to parse it.
 		if bytes.Contains(data, match) {
+			// Replace backticks before wrapping in {{` and `}}.
+			data = bytes.ReplaceAll(data, backtick, backtickReplace)
 			data = append(prefix, data...)
 			data = append(data, suffix...)
 		}
