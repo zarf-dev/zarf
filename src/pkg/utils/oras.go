@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -130,10 +131,12 @@ type PullOpts struct {
 	remote.Repository
 	ref name.Reference
 	outdir string
+	spinner *message.Spinner
 }
 
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
 func PullOCIZarfPackage(pullOpts PullOpts) error {
+	spinner := pullOpts.spinner
 	ref := pullOpts.ref
 	outdir := pullOpts.outdir
 	_ = os.Mkdir(pullOpts.outdir, 0755)
@@ -188,10 +191,10 @@ func PullOCIZarfPackage(pullOpts PullOpts) error {
 		// if the file exists and the size matches, skip it
 		info, err := os.Stat(path)
 		if err == nil && info.Size() == layer.Size {
-			fmt.Println("skipping", path)
+			message.SuccessF("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
 			continue
 		}
-		fmt.Println("pulling", path)
+		spinner.Updatef("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
 
 		layerContent, err := content.FetchAll(ctx, repo, layer)
 		if err != nil {
@@ -212,6 +215,7 @@ func PullOCIZarfPackage(pullOpts PullOpts) error {
 		if err != nil {
 			return err
 		}
+		message.SuccessF("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
 	}
 
 	return nil
