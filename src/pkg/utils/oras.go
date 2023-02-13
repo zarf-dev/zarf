@@ -6,14 +6,19 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
-	v1name "github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/name"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
@@ -60,7 +65,7 @@ func CtxWithScopes(fullname string) context.Context {
 // AuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func AuthClient(ref v1name.Reference) (*auth.Client, error) {
+func AuthClient(ref name.Reference) (*auth.Client, error) {
 	// load default Docker config file
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
@@ -119,4 +124,95 @@ func IsManifestUnsupported(err error) bool {
 		return true
 	}
 	return false
+}
+
+type PullOpts struct {
+	remote.Repository
+	ref name.Reference
+	outdir string
+}
+
+// PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
+func PullOCIZarfPackage(pullOpts PullOpts) error {
+	ref := pullOpts.ref
+	outdir := pullOpts.outdir
+	_ = os.Mkdir(pullOpts.outdir, 0755)
+	ctx := CtxWithScopes(ref.Context().RepositoryStr())
+	repo, err := remote.NewRepository(fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr()))
+	if err != nil {
+		return err
+	}
+	repo.PlainHTTP = pullOpts.PlainHTTP
+
+	authClient, err := AuthClient(ref)
+	if err != nil {
+		return err
+	}
+	repo.Client = authClient
+
+	if err != nil {
+		return err
+	}
+	// get the manifest descriptor
+	// ref.Identifier() can be a tag or a digest
+	descriptor, err := repo.Resolve(ctx, ref.Identifier())
+	if err != nil {
+		return err
+	}
+
+	// get the manifest itself
+	pulled, err := content.FetchAll(ctx, repo, descriptor)
+	if err != nil {
+		return err
+	}
+	manifest := ocispec.Manifest{}
+	artifact := ocispec.Artifact{}
+	var layers []ocispec.Descriptor
+	// if the manifest is an artifact, unmarshal it as an artifact
+	// otherwise, unmarshal it as a manifest
+	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
+		if err = json.Unmarshal(pulled, &artifact); err != nil {
+			return err
+		}
+		layers = artifact.Blobs
+	} else {
+		if err = json.Unmarshal(pulled, &manifest); err != nil {
+			return err
+		}
+		layers = manifest.Layers
+	}
+
+	// get the layers
+	for _, layer := range layers {
+		path := filepath.Join(outdir, layer.Annotations[ocispec.AnnotationTitle])
+		// if the file exists and the size matches, skip it
+		info, err := os.Stat(path)
+		if err == nil && info.Size() == layer.Size {
+			fmt.Println("skipping", path)
+			continue
+		}
+		fmt.Println("pulling", path)
+
+		layerContent, err := content.FetchAll(ctx, repo, layer)
+		if err != nil {
+			return err
+		}
+
+		parent := filepath.Dir(path)
+		if parent != "." {
+			_ = os.MkdirAll(parent, 0755)
+		}
+
+		file, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = file.Write(layerContent)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
