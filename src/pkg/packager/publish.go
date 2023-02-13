@@ -160,7 +160,7 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 		}
 		descs = append(descs, desc)
 	}
-	packOpts := oras.PackOptions{}
+	packOpts := p.cfg.PublishOpts.PackOptions
 	pack := func(artifactType string) (ocispec.Descriptor, error) {
 		root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 		if err != nil {
