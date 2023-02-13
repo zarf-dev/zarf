@@ -80,6 +80,10 @@ var archiverDecompressCmd = &cobra.Command{
 				if strings.HasSuffix(file.Name(), "tar.zst") {
 					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
 						message.Fatalf(err, "failed to decompress the component layer")
+					} else {
+						// Without unarchive error, delete original tar.zst in component folder
+						// This will leave the tar.zst if their is a failure for post mortem check 
+						os.Remove(filepath.Join(layersDir, file.Name()))
 					}
 				}
 			}
