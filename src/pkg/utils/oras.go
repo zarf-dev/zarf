@@ -153,9 +153,6 @@ func PullOCIZarfPackage(pullOpts PullOpts) error {
 	}
 	repo.Client = authClient
 
-	if err != nil {
-		return err
-	}
 	// get the manifest descriptor
 	// ref.Identifier() can be a tag or a digest
 	descriptor, err := repo.Resolve(ctx, ref.Identifier())

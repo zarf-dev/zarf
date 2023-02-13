@@ -79,9 +79,13 @@ func (p *Packager) Publish() error {
 	skeletonPaths := []string{}
 	for idx, path := range paths {
 		// remove images if they exist
-		if !strings.HasPrefix(path, filepath.Join(p.tmp.Base, "images")) {
-			skeletonPaths = append(skeletonPaths, paths[idx])
+		if strings.HasPrefix(path, filepath.Join(p.tmp.Base, "images")) {
+			continue
 		}
+		if path == filepath.Join(p.tmp.Base, "sboms.tar.zst") {
+			continue
+		}
+		skeletonPaths = append(skeletonPaths, paths[idx])
 	}
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, skeletonRef.Identifier())
 	err = p.publish(skeletonRef, skeletonPaths, spinner)
