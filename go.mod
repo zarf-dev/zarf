@@ -2,8 +2,11 @@ module github.com/defenseunicorns/zarf
 
 go 1.19
 
-// not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
+// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
 replace sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
+
+// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
+replace oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -37,9 +40,6 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
-
-// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
-replace oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 
 require (
 	atomicgo.dev/cursor v0.1.1 // indirect
