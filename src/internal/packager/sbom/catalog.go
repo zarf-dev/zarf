@@ -24,7 +24,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
@@ -67,10 +69,20 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 	currImage := 1
 
 	// Generate SBOM for each image
+	layoutPath := layout.Path(imagesPath)
+	imgIndex, _ := layoutPath.ImageIndex()
+	idxManifest, _ := imgIndex.IndexManifest()
 	for _, tag := range imgList {
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
-		jsonData, err := builder.createImageSBOM(tag)
+		var img v1.Image
+		for _, manifest := range idxManifest.Manifests {
+			if manifest.Annotations[ocispec.AnnotationBaseImageName] == tag {
+				img, _ = imgIndex.Image(manifest.Digest)
+			}
+		}
+
+		jsonData, err := builder.createImageSBOM(img, tag)
 		if err != nil {
 			builder.spinner.Fatalf(err, "Unable to create SBOM for image %s", tag)
 		}
@@ -117,15 +129,9 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
-func (b *Builder) createImageSBOM(src string) ([]byte, error) {
+func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	// Get the image reference.
-	tag, err := name.NewTag(src, name.WeakValidation)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load the image tarball.
-	tarballImg, err := tarball.ImageFromPath(b.imagesPath, &tag)
+	tag, err := name.NewTag(tagStr, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +144,7 @@ func (b *Builder) createImageSBOM(src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.NewImage(tarballImg, imageCachePath, image.WithTags(tag.String()))
+	syftImage := image.NewImage(img, imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}

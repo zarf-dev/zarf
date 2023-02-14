@@ -5,11 +5,16 @@
 package images
 
 import (
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
@@ -56,11 +61,30 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 
 	message.Debugf("crane pushOptions = %#v", pushOptions)
+	layoutPath := layout.Path(i.ImagesPath)
+	imgIdx, err := layoutPath.ImageIndex()
+	if err != nil {
+		return err
+	}
+
+	idxManifest, err := imgIdx.IndexManifest()
+	if err != nil {
+		return err
+	}
+
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(i.ImagesPath, src, config.GetCraneOptions(i.Insecure)...)
-		if err != nil {
-			return err
+		// Load the v1.Image
+		var img v1.Image
+		for _, manifest := range idxManifest.Manifests {
+			if manifest.Annotations[ocispec.AnnotationBaseImageName] == src {
+				// This is the image we are looking for, load it and then break out of the loop
+				img, err = layoutPath.Image(manifest.Digest)
+				break
+			}
+		}
+		if img == nil || err != nil {
+			return fmt.Errorf("unable to find image %s in the package: %v", src, err)
 		}
 
 		// If this is not a no checksum image push it for use with the Zarf agent
