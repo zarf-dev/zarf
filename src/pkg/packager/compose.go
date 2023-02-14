@@ -87,7 +87,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			parent.Import.OCI = "registry-1.docker.io/" + strings.TrimPrefix(parent.Import.OCI, "docker.io/")
 		}
 
-		parent.Import.OCI = parent.Import.OCI + "-skeleton"
+		if !strings.HasSuffix(parent.Import.OCI, "-skeleton") {
+			parent.Import.OCI = parent.Import.OCI + "-skeleton"
+		}
 
 		message.Debugf("Pulling %s at %s", parent.Name, parent.Import.OCI)
 		out := filepath.Join(p.tmp.Base, "remote", pathAncestry, parent.Name)
