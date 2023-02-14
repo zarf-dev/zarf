@@ -1962,7 +1962,22 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang"></a>bigbang</strong>
+<summary><strong> <a name="components_items_extensions"></a>extensions</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Extend component functionality with additional features
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentExtensions                                                                    |
+
+<details>
+<summary><strong> <a name="components_items_extensions_bigbang"></a>bigbang</strong>
 
 </summary>
 &nbsp;
@@ -1974,10 +1989,10 @@ Must be one of:
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
-| **Defined in**            | #/definitions/ZarfBigBang                                                                                |
+| **Defined in**            | #/definitions/BigBang                                                                                    |
 
 <details>
-<summary><strong> <a name="components_items_bigbang_version"></a>version *</strong>
+<summary><strong> <a name="components_items_extensions_bigbang_version"></a>version *</strong>
 
 </summary>
 &nbsp;
@@ -1995,7 +2010,7 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang_repo"></a>repo</strong>
+<summary><strong> <a name="components_items_extensions_bigbang_repo"></a>repo</strong>
 
 </summary>
 &nbsp;
@@ -2011,7 +2026,7 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang_valuesFrom"></a>valuesFrom</strong>
+<summary><strong> <a name="components_items_extensions_bigbang_valuesFrom"></a>valuesFrom</strong>
 
 </summary>
 &nbsp;
@@ -2041,7 +2056,7 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_bigbang_skipFlux"></a>skipFlux</strong>
+<summary><strong> <a name="components_items_extensions_bigbang_skipFlux"></a>skipFlux</strong>
 
 </summary>
 &nbsp;
@@ -2052,6 +2067,9 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>

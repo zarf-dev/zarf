@@ -17,11 +17,12 @@ variables:
 components:
   - name: bigbang
     required: true
-    bigbang:
-      version: 1.52.0
-      skipFlux: false
-      valuesFrom:
-      - values.minimal.yaml
-      - ingress-certs.yaml
-      - values.kyverno.yaml
-      - loki.yaml
+    extensions:
+      bigbang:
+        version: 1.52.0
+        skipFlux: false
+        valuesFrom:
+          - values.minimal.yaml
+          - ingress-certs.yaml
+          - values.kyverno.yaml
+          - loki.yaml

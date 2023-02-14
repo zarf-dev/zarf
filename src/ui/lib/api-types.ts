@@ -196,10 +196,6 @@ export interface ZarfComponent {
      */
     actions?: ZarfComponentActions;
     /**
-     * Configurations for installing BigBang and Flux in the cluster
-     */
-    bigbang?: ZarfBigBang;
-    /**
      * Helm charts to install during package deploy
      */
     charts?: ZarfChart[];
@@ -219,6 +215,10 @@ export interface ZarfComponent {
      * Message to include during package deploy describing the purpose of this component
      */
     description?: string;
+    /**
+     * Extend component functionality with additional features
+     */
+    extensions?: ZarfComponentExtensions;
     /**
      * Files to place on disk during package deployment
      */
@@ -369,28 +369,6 @@ export interface ZarfComponentActionDefaults {
     mute?: boolean;
 }
 
-/**
- * Configurations for installing BigBang and Flux in the cluster
- */
-export interface ZarfBigBang {
-    /**
-     * Override of repo to pull big bang from
-     */
-    repo?: string;
-    /**
-     * Should we skip deploying flux? Defaults to false
-     */
-    skipFlux?: boolean;
-    /**
-     * list of values files to pass to BigBang; these will be merged together
-     */
-    valuesFrom?: string[];
-    /**
-     * The version of Big Bang you'd like to use
-     */
-    version: string;
-}
-
 export interface ZarfChart {
     /**
      * The path to the chart in the repo if using a git repo instead of a helm repo
@@ -469,6 +447,38 @@ export interface ZarfContainerTarget {
      * The K8s selector to target for data injection
      */
     selector: string;
+}
+
+/**
+ * Extend component functionality with additional features
+ */
+export interface ZarfComponentExtensions {
+    /**
+     * Configurations for installing BigBang and Flux in the cluster
+     */
+    bigbang?: BigBang;
+}
+
+/**
+ * Configurations for installing BigBang and Flux in the cluster
+ */
+export interface BigBang {
+    /**
+     * Override of repo to pull big bang from
+     */
+    repo?: string;
+    /**
+     * Should we skip deploying flux? Defaults to false
+     */
+    skipFlux?: boolean;
+    /**
+     * list of values files to pass to BigBang; these will be merged together
+     */
+    valuesFrom?: string[];
+    /**
+     * The version of Big Bang you'd like to use
+     */
+    version: string;
 }
 
 export interface ZarfFile {
@@ -922,7 +932,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
         return invalidValue(typ, val, key, parent);
     }
     if (typ === false) return invalidValue(typ, val, key, parent);
-    let ref = undefined;
+    let ref: any = undefined;
     while (typeof typ === "object" && typ.ref !== undefined) {
         ref = typ.ref;
         typ = typeMap[typ.ref];
@@ -1042,12 +1052,12 @@ const typeMap: any = {
     ], false),
     "ZarfComponent": o([
         { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
-        { json: "bigbang", js: "bigbang", typ: u(undefined, r("ZarfBigBang")) },
         { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "extensions", js: "extensions", typ: u(undefined, r("ZarfComponentExtensions")) },
         { json: "files", js: "files", typ: u(undefined, a(r("ZarfFile"))) },
         { json: "group", js: "group", typ: u(undefined, "") },
         { json: "images", js: "images", typ: u(undefined, a("")) },
@@ -1088,12 +1098,6 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
     ], false),
-    "ZarfBigBang": o([
-        { json: "repo", js: "repo", typ: u(undefined, "") },
-        { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
-        { json: "valuesFrom", js: "valuesFrom", typ: u(undefined, a("")) },
-        { json: "version", js: "version", typ: "" },
-    ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
         { json: "localPath", js: "localPath", typ: u(undefined, "") },
@@ -1115,6 +1119,15 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
         { json: "path", js: "path", typ: "" },
         { json: "selector", js: "selector", typ: "" },
+    ], false),
+    "ZarfComponentExtensions": o([
+        { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+    ], false),
+    "BigBang": o([
+        { json: "repo", js: "repo", typ: u(undefined, "") },
+        { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
+        { json: "valuesFrom", js: "valuesFrom", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },

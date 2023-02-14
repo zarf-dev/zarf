@@ -2,6 +2,34 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$ref": "#/definitions/ZarfPackage",
   "definitions": {
+    "BigBang": {
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The version of Big Bang you'd like to use"
+        },
+        "repo": {
+          "type": "string",
+          "description": "Override of repo to pull big bang from"
+        },
+        "valuesFrom": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "list of values files to pass to BigBang; these will be merged together"
+        },
+        "skipFlux": {
+          "type": "boolean",
+          "description": "Should we skip deploying flux? Defaults to false"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "DeprecatedZarfComponentScripts": {
       "properties": {
         "showOutput": {
@@ -36,34 +64,6 @@
           },
           "type": "array",
           "description": "Scripts to run after the component successfully deploys"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "ZarfBigBang": {
-      "required": [
-        "version"
-      ],
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "The version of Big Bang you'd like to use"
-        },
-        "repo": {
-          "type": "string",
-          "description": "Override of repo to pull big bang from"
-        },
-        "valuesFrom": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "list of values files to pass to BigBang; these will be merged together"
-        },
-        "skipFlux": {
-          "type": "boolean",
-          "description": "Should we skip deploying flux? Defaults to false"
         }
       },
       "additionalProperties": false,
@@ -263,10 +263,10 @@
           "type": "array",
           "description": "Datasets to inject into a pod in the target cluster"
         },
-        "bigbang": {
+        "extensions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfBigBang",
-          "description": "Configurations for installing BigBang and Flux in the cluster"
+          "$ref": "#/definitions/ZarfComponentExtensions",
+          "description": "Extend component functionality with additional features"
         }
       },
       "additionalProperties": false,
@@ -397,6 +397,17 @@
         "onRemove": {
           "$ref": "#/definitions/ZarfComponentActionSet",
           "description": "Actions to run during package removal"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentExtensions": {
+      "properties": {
+        "bigbang": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/BigBang",
+          "description": "Configurations for installing BigBang and Flux in the cluster"
         }
       },
       "additionalProperties": false,

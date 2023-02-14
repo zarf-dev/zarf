@@ -17,13 +17,13 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/bigbang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -65,8 +65,8 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return err
 		}
-		if baseComponent.BigBang.Version != "" {
-			if !baseComponent.BigBang.SkipFlux {
+		if baseComponent.Extensions.BigBang.Version != "" {
+			if !baseComponent.Extensions.BigBang.SkipFlux {
 				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
 			}
 			mutatedComponent, err := bigbang.MutateBigbangComponent(componentPath, baseComponent)
