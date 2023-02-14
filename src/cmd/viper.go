@@ -57,7 +57,6 @@ const (
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_HTTP_ONLY = "package.publish.http_only"
 	V_PKG_PUBLISH_CONCURRENCY = "package.publish.concurrency"
 	V_PKG_PUBLISH_INCLUDE_IMAGES = "package.publish.include_images"
 )

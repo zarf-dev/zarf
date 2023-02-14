@@ -324,7 +324,6 @@ func bindRemoveFlags() {
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 
-	v.SetDefault(V_PKG_PUBLISH_HTTP_ONLY, false)
 	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
 	v.SetDefault(V_PKG_PUBLISH_INCLUDE_IMAGES, true)
 
