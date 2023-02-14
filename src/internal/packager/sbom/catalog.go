@@ -71,11 +71,11 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 	// Generate SBOM for each image
 	layoutPath := layout.Path(imagesPath)
 	imgIndex, _ := layoutPath.ImageIndex()
-	idxManifest, _ := imgIndex.IndexManifest()
 	for _, tag := range imgList {
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		var img v1.Image
+		idxManifest, _ := imgIndex.IndexManifest()
 		for _, manifest := range idxManifest.Manifests {
 			if manifest.Annotations[ocispec.AnnotationBaseImageName] == tag {
 				img, _ = imgIndex.Image(manifest.Digest)
