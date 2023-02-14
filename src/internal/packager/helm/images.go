@@ -3,11 +3,12 @@ package helm
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -18,24 +19,35 @@ import (
 // Will not work for private/offline/nongitlab based hostings
 func FindFluxImages(bigbangrepo, version string) ([]string, error) {
 	images := make([]string, 0)
+	spinner := message.NewProgressSpinner("Finding Flux Images")
+	defer spinner.Stop()
+
 	bigbangrepo = strings.TrimSuffix(bigbangrepo, ".git")
-	rawFile := fmt.Sprintf("%s/-/raw/%s/base/flux/kustomization.yaml", bigbangrepo, version)
+	// Get the git repo
+	gitCfg := git.NewWithSpinner(types.ZarfState{}.GitServer, spinner)
 
-	// load this file
-	client := http.Client{}
-
-	resp, err := client.Get(rawFile)
+	path, err := gitCfg.DownloadRepoToTemp(bigbangrepo)
 	if err != nil {
+		spinner.Fatalf(err, "Error cloning bigbang repo")
 		return images, err
 	}
-	defer resp.Body.Close()
-	fluxRawKustomization, err := ioutil.ReadAll(resp.Body)
+	gitCfg.GitPath = path
+
+	// Switch to the correct tag
+	err = gitCfg.Checkout(version)
 	if err != nil {
+		spinner.Fatalf(err, "Unable to download provided git refrence: %v@%v", bigbangrepo, version)
+	}
+
+	fluxRawKustomization, err := ioutil.ReadFile(filepath.Join(path, "base/flux/kustomization.yaml"))
+	if err != nil {
+		spinner.Fatalf(err, "Error reading kustomization object in flux directory")
 		return images, err
 	}
 	fluxKustomization := kustypes.Kustomization{}
 	err = yaml.Unmarshal([]byte(fluxRawKustomization), &fluxKustomization)
 	if err != nil {
+		spinner.Fatalf(err, "Error unmarshalling kustomization object in flux directory")
 		return images, err
 	}
 	for _, i := range fluxKustomization.Images {
@@ -104,6 +116,7 @@ func FindImagesForChartRepo(repo, path string) ([]string, error) {
 
 const IMAGE_KEY = "helm.sh/images"
 
+// ChartImages captures the structure of the helm.sh/images annotaiton within the Helm chart
 type ChartImages []struct {
 	// name of the image
 	Name string `yaml:"name"`

@@ -22,15 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type bbImageYaml struct {
-	ChartList map[string]bbImageYamlChartDef `json:"package-image-list"`
-}
-
-type bbImageYamlChartDef struct {
-	Version string
-	Images  []string
-}
-
 // Default location for pulling BigBang
 const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/big-bang/bigbang.git"
 
@@ -77,7 +68,7 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 		GitPath:     "./chart",
 	}
 
-	zarfHelmInstance := helm.Helm{
+	helmCfg := helm.Helm{
 		Chart: chart,
 		Cfg: &types.PackagerConfig{
 			State: types.ZarfState{},
@@ -85,13 +76,13 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 		BasePath: componentPath.Charts,
 	}
 
-	bb := zarfHelmInstance.DownloadChartFromGit("bigbang")
+	bb := helmCfg.DownloadChartFromGit("bigbang")
 
-	zarfHelmInstance.ChartLoadOverride = bb
+	helmCfg.ChartLoadOverride = bb
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm
-	template, err := zarfHelmInstance.TemplateChart()
+	template, err := helmCfg.TemplateChart()
 	if err != nil {
 		return component, fmt.Errorf("unable to template BigBang Chart: %w", err)
 	}

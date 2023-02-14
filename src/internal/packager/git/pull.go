@@ -17,6 +17,24 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+// updateMessage updates the spinner if set, otherwise sends to debug logs
+func (g *Git) updateMessage(format string, args any) {
+	if g.Spinner != nil {
+		g.Spinner.Updatef(format, args)
+	} else {
+		message.Debugf(format, args)
+	}
+}
+
+// errorMessage updates the spinner if set, otherwise sends to error logs
+func (g *Git) errorMessage(err error, format string, args ...any) {
+	if g.Spinner != nil {
+		g.Spinner.Errorf(err, format, args)
+	} else {
+		message.Errorf(err, format, args)
+	}
+}
+
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
 func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
@@ -49,7 +67,7 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 
 // internal pull function that will clone/pull the latest changes from the git repo
 func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
-	g.Spinner.Updatef("Processing git repo %s", gitURL)
+	g.updateMessage("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
 	if repoName != "" {
@@ -115,13 +133,13 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 
 		if err != nil {
 			// No repo head available
-			g.Spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
+			g.errorMessage(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
 			// Valid repo head and it is a branch
 			trunkBranchName = head.Name()
 		} else {
 			// Valid repo head but not a branch
-			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
+			g.errorMessage(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
 		_, err = g.removeLocalTagRefs()
