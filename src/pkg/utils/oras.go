@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
@@ -127,19 +128,20 @@ func IsManifestUnsupported(err error) bool {
 	return false
 }
 
-type PullOpts struct {
+type PullOCIZarfPackageOpts struct {
 	remote.Repository
-	ref name.Reference
-	outdir string
-	spinner *message.Spinner
+	Ref     name.Reference
+	Outdir  string
+	Spinner *message.Spinner
+	// used for pulling a single component out of a Zarf package stored in a registry
+	ComponentDesired string
 }
 
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
-func PullOCIZarfPackage(pullOpts PullOpts) error {
-	spinner := pullOpts.spinner
-	ref := pullOpts.ref
-	outdir := pullOpts.outdir
-	_ = os.Mkdir(pullOpts.outdir, 0755)
+func PullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
+	spinner := pullOpts.Spinner
+	ref := pullOpts.Ref
+	_ = os.Mkdir(pullOpts.Outdir, 0755)
 	ctx := CtxWithScopes(ref.Context().RepositoryStr())
 	repo, err := remote.NewRepository(fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr()))
 	if err != nil {
@@ -182,9 +184,20 @@ func PullOCIZarfPackage(pullOpts PullOpts) error {
 		layers = manifest.Layers
 	}
 
+	// if a component is specified, only pull that component and the zarf.yaml
+	if pullOpts.ComponentDesired != "" {
+		componentAndZarfYaml := []ocispec.Descriptor{}
+		for _, layer := range layers {
+			if filepath.Base(layer.Annotations[ocispec.AnnotationTitle]) == pullOpts.ComponentDesired+".tar.zst" || layer.Annotations[ocispec.AnnotationTitle] == zarfconfig.ZarfYAML {
+				componentAndZarfYaml = append(componentAndZarfYaml, layer)
+			}
+		}
+		layers = componentAndZarfYaml
+	}
+
 	// get the layers
 	for _, layer := range layers {
-		path := filepath.Join(outdir, layer.Annotations[ocispec.AnnotationTitle])
+		path := filepath.Join(pullOpts.Outdir, layer.Annotations[ocispec.AnnotationTitle])
 		// if the file exists and the size matches, skip it
 		info, err := os.Stat(path)
 		if err == nil && info.Size() == layer.Size {
