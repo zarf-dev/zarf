@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package bigbang contains the logic for installing BigBang and Flux
 package bigbang
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
@@ -19,24 +22,28 @@ import (
 	"sigs.k8s.io/yaml"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Default location for pulling BigBang
+// Default location for pulling BigBang.
 const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/big-bang/bigbang.git"
 
+// CreateFluxComponent Creates a component to deploy Flux.
 func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int) (fluxComponent types.ZarfComponent, err error) {
 	fluxComponent.Name = "flux"
 
 	fluxComponent.Required = bbComponent.Required
 
-	fluxManifest := GetFluxManifest(bbComponent.BigBang.Version)
+	fluxManifest := GetFluxManifest(bbComponent.Extensions.BigBang.Version)
 	fluxComponent.Manifests = []types.ZarfManifest{fluxManifest}
 	repo := DEFAULT_BIGBANG_REPO
-	if bbComponent.BigBang.Repo != "" {
-		repo = bbComponent.BigBang.Repo
+	if bbComponent.Extensions.BigBang.Repo != "" {
+		repo = bbComponent.Extensions.BigBang.Repo
 	}
-	images, err := helm.FindFluxImages(repo, bbComponent.BigBang.Version)
+	images, err := helm.FindFluxImages(repo, bbComponent.Extensions.BigBang.Version)
+	if err != nil {
+		return fluxComponent, fmt.Errorf("unable to get flux images: %w", err)
+	}
+
 	fluxComponent.Images = images
 
 	return fluxComponent, nil
@@ -49,13 +56,14 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 	_ = utils.CreateDirectory(componentPath.Manifests, 0700)
 
 	repos := make([]string, 0)
+	cfg := component.Extensions.BigBang
 
 	// use the default repo unless overridden
-	if component.BigBang.Repo == "" {
+	if cfg.Repo == "" {
 		repos = append(repos, DEFAULT_BIGBANG_REPO)
-		component.BigBang.Repo = repos[0]
+		cfg.Repo = repos[0]
 	} else {
-		repos = append(repos, fmt.Sprintf("%s@%s", component.BigBang.Repo, component.BigBang.Version))
+		repos = append(repos, fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version))
 	}
 
 	// download bigbang so we can peek inside
@@ -63,8 +71,8 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 		Name:        "bigbang",
 		Namespace:   "bigbang",
 		URL:         repos[0],
-		Version:     component.BigBang.Version,
-		ValuesFiles: component.BigBang.ValuesFrom,
+		Version:     cfg.Version,
+		ValuesFiles: cfg.ValuesFrom,
 		GitPath:     "./chart",
 	}
 
@@ -88,7 +96,7 @@ func MutateBigbangComponent(componentPath types.ComponentPaths, component types.
 	}
 
 	subPackageURLS := findURLs(template)
-	repos[0] = fmt.Sprintf("%s@%s", repos[0], component.BigBang.Version)
+	repos[0] = fmt.Sprintf("%s@%s", repos[0], cfg.Version)
 	repos = append(repos, subPackageURLS...)
 
 	// Save the list of repos to be pulled down by Zarf
@@ -138,7 +146,7 @@ func findURLs(t string) []string {
 				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["tag"].(string)
 			}
 			if !ok {
-				ref, ok = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["branch"].(string)
+				ref, _ = y.Object["spec"].(map[string]interface{})["ref"].(map[string]interface{})["branch"].(string)
 			}
 
 			urls = append(urls, fmt.Sprintf("%s@%s", url, ref))
@@ -148,10 +156,8 @@ func findURLs(t string) []string {
 	return urls
 }
 
-// GetImages identifies the list of images needed for the list
-// of repos provided.
+// GetImages identifies the list of images needed for the list of repos provided.
 func GetImages(repos []string) ([]string, error) {
-
 	images := make([]string, 0)
 	for _, r := range repos {
 		is, err := helm.FindImagesForChartRepo(r, "chart")
@@ -165,17 +171,13 @@ func GetImages(repos []string) ([]string, error) {
 	return images, nil
 }
 
-func printObject(filename string, o runtime.Object) error {
-	return nil
-}
-
-// GetFluxManifest creates the manifests for deploying the particular version of BigBang
+// GetFluxManifest creates the manifests for deploying the specified version of BigBang via Kustomize.
 func GetFluxManifest(version string) types.ZarfManifest {
 	return types.ZarfManifest{
 		Name:      "flux-system",
 		Namespace: "flux-system",
 		Kustomizations: []string{
-			fmt.Sprintf("https://repo1.dso.mil/platform-one/big-bang/bigbang.git//base/flux?ref=%s", version),
+			fmt.Sprintf("%s//base/flux?ref=%s", DEFAULT_BIGBANG_REPO, version),
 		},
 	}
 }
@@ -205,13 +207,13 @@ func GetBigBangManifests(manifestDir string, component types.ZarfComponent) (typ
 			Namespace: "bigbang",
 		},
 		Spec: sourcev1beta2.GitRepositorySpec{
-			URL:    component.BigBang.Repo,
+			URL:    component.Extensions.BigBang.Repo,
 			Ignore: &gitIgnore,
 			Interval: metav1.Duration{
 				Duration: time.Minute,
 			},
 			Reference: &sourcev1beta2.GitRepositoryRef{
-				Tag: component.BigBang.Version,
+				Tag: component.Extensions.BigBang.Version,
 			},
 		},
 	}
@@ -255,22 +257,22 @@ kyvernopolicies:
 	}
 
 	data, _ = yaml.Marshal(zarfSecret)
-	ioutil.WriteFile(fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir), []byte(data), 0644)
+	os.WriteFile(fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir), []byte(data), 0644)
 	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/zarf-credentials.yaml", manifestDir))
 
-	hrValues := make([]helmv2beta1.ValuesReference, len(component.BigBang.ValuesFrom)+1)
+	hrValues := make([]helmv2beta1.ValuesReference, len(component.Extensions.BigBang.ValuesFrom)+1)
 	hrValues[0] = helmv2beta1.ValuesReference{
 		Kind: "Secret",
 		Name: "zarf-credentials",
 	}
 
-	for idx, path := range component.BigBang.ValuesFrom {
-		//load the values file.
+	for idx, path := range component.Extensions.BigBang.ValuesFrom {
+		// Load the values file.
 		file, err := os.ReadFile(path)
 		if err != nil {
 			return manifest, err
 		}
-		//make a secret
+		// Make a secret
 		secretData["values.yaml"] = string(file)
 		zarfSecret := corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
@@ -285,7 +287,7 @@ kyvernopolicies:
 		}
 		// write the secet down
 		data, _ = yaml.Marshal(zarfSecret)
-		ioutil.WriteFile(fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir, strconv.Itoa(idx)), []byte(data), 0644)
+		os.WriteFile(fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir, strconv.Itoa(idx)), []byte(data), 0644)
 		//add it to the manifests
 		manifest.Files = append(manifest.Files, fmt.Sprintf("%s/bigbang-values-%s.yaml", manifestDir, strconv.Itoa(idx)))
 
@@ -295,18 +297,6 @@ kyvernopolicies:
 			Name: zarfSecret.Name,
 		}
 	}
-
-	namespace := corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "bigbang",
-		},
-	}
-	utils.WriteYaml(fmt.Sprintf("%s/namespace.yaml", manifestDir), namespace, 0644)
-	manifest.Files = append(manifest.Files, fmt.Sprintf("%s/namespace.yaml", manifestDir))
 
 	t := true
 	release := helmv2beta1.HelmRelease{

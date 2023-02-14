@@ -210,6 +210,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If SBOM files exist, temporarily place them in the deploy directory
+	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")

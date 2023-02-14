@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "github.com/defenseunicorns/zarf/src/types/extensions"
+
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
@@ -55,8 +57,8 @@ type ZarfComponent struct {
 	// Data packages to push into a running cluster
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
 
-	// Big Bang Configurations
-	BigBang ZarfBigBang `json:"bigbang,omitempty" jsonschema:"description=Configurations for installing BigBang and Flux in the cluster"`
+	// Extensions provide additional functionality to a component
+	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -78,14 +80,6 @@ type ZarfFile struct {
 	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
-}
-
-// ZarfBigBang defines a file to deploy.
-type ZarfBigBang struct {
-	Version    string   `json:"version" jsonschema:"description=The version of Big Bang you'd like to use"`
-	Repo       string   `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
-	ValuesFrom []string `json:"valuesFrom,omitempty" jsonschema:"description=list of values files to pass to BigBang; these will be merged together"`
-	SkipFlux   bool     `json:"skipFlux,omitempty" jsonschema:"description=Should we skip deploying flux? Defaults to false"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
