@@ -76,7 +76,7 @@ func (i *ImgConfig) PullAll() error {
 	)
 
 	go func() {
-		_ = tarball.MultiWriteToFile(i.TarballPath, tagToImage, tarball.WithProgress(progress))
+		_ = tarball.MultiWriteToFile(i.ImagesPath, tagToImage, tarball.WithProgress(progress))
 	}()
 
 	for update := range progress {

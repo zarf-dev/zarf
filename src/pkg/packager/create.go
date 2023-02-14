@@ -144,9 +144,9 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				TarballPath: p.tmp.Images,
-				ImgList:     imgList,
-				Insecure:    config.CommonOptions.Insecure,
+				ImagesPath: p.tmp.Images,
+				ImgList:    imgList,
+				Insecure:   config.CommonOptions.Insecure,
 			}
 
 			return imgConfig.PullAll()
