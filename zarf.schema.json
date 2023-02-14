@@ -370,14 +370,15 @@
       "type": "object"
     },
     "ZarfComponentImport": {
-      "required": [
-        "path"
-      ],
       "properties": {
         "name": {
           "type": "string"
         },
         "path": {
+          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
+          "type": "string"
+        },
+        "oci": {
           "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
           "type": "string"
         }
