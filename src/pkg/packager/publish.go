@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"oras.land/oras-go/v2"
@@ -50,9 +51,22 @@ func (p *Packager) Publish() error {
 		filepath.Join(p.tmp.Base, "zarf.yaml"),
 		filepath.Join(p.tmp.Base, "sboms.tar.zst"),
 	}
-	componentTarballs, err := filepath.Glob(filepath.Join(p.tmp.Base, "components", "*.tar.zst"))
+	componentDirs, err := filepath.Glob(filepath.Join(p.tmp.Base, "components", "*"))
 	if err != nil {
 		return err
+	}
+	componentTarballs := []string{}
+	for _, componentDir := range componentDirs {
+		all, err := filepath.Glob(filepath.Join(componentDir, "*"))
+		if err != nil {
+			return err
+		}
+		dst := filepath.Join(p.tmp.Base, "components", filepath.Base(componentDir) + ".tar.zst")
+		err = archiver.Archive(all, dst)
+		if err != nil {
+			return err
+		}
+		componentTarballs = append(componentTarballs, dst)
 	}
 	paths = append(paths, componentTarballs...)
 	if p.cfg.PublishOpts.IncludeImages {
