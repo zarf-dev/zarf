@@ -78,13 +78,23 @@ func (i *ImgConfig) PullAll() error {
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
 
+	spinner.Success()
+	title := fmt.Sprintf("Pulling %d images (%s of %d)", imgCount, "0", imgCount)
+	progressBar := message.NewProgressBar(int64(imgCount), title)
+
 	for tag, img := range tagToImage {
+		// Update the progress bar
+		title = fmt.Sprintf("Pulling %d images (%d of %d)", imgCount, len(digestToTag)+1, imgCount)
+		progressBar.Update(int64(len(digestToTag)), title)
+
+		// Save the image
 		err := crane.SaveOCI(img, i.ImagesPath)
 		if err != nil {
 			fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
 		}
 
 		// Get the image digest
+		// NOTE: This digest/tag map is used to set an annotation on the image index.json later
 		imgDigest, _ := img.Digest()
 		digestToTag[imgDigest.String()] = tag.String()
 	}
