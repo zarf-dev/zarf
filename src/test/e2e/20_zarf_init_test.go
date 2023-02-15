@@ -28,7 +28,8 @@ func TestZarfInit(t *testing.T) {
 	defer cancel()
 
 	// run `zarf init`
-	_, _, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
+	_, stdErr, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.zarfBinPath, "init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
+	require.Contains(t, stdErr, "artifacts with software bill-of-materials (SBOM) included")
 	require.NoError(t, err)
 
 	// Check that gitea is actually running and healthy
