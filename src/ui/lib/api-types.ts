@@ -695,7 +695,7 @@ export interface ZarfMetadata {
      */
     name: string;
     /**
-     * Disable compression of this package
+     * Disable compression of the components of the Zarf package
      */
     uncompressed?: boolean;
     /**
