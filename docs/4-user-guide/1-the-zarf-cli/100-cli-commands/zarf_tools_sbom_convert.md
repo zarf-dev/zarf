@@ -19,7 +19,7 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
       --file string              file to write the default report output to (default is STDOUT)
   -h, --help                     help for convert
       --name string              set the name of the target being analyzed
-  -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github github-json spdx-tag-value spdx-json table text template] (default [table])
+  -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github-json spdx-tag-value spdx-json syft-table syft-text template] (default [syft-table])
       --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
   -s, --scope string             selection of layers to catalog, options=[Squashed AllLayers] (default "Squashed")
   -t, --template string          specify the path to a Go template file
