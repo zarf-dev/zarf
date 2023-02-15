@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -93,9 +92,11 @@ func (i *ImgConfig) PullAll() error {
 			fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
 		}
 
-		// Get the image digest
-		// NOTE: This digest/tag map is used to set an annotation on the image index.json later
-		imgDigest, _ := img.Digest()
+		// Get the image digest so we can set an annotation in the image.json later
+		imgDigest, err := img.Digest()
+		if err != nil {
+			return err
+		}
 		digestToTag[imgDigest.String()] = tag.String()
 	}
 
@@ -182,17 +183,25 @@ type IndexJSON struct {
 
 // addImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
 func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error {
+	indexPath := filepath.Join(ociPath, "index.json")
+
 	// Add an 'org.opencontainers.image.base.name' annotation so we can figure out what the image tag/digest shasum will be during deploy time
-	indexJSON, err := os.Open(path.Join(ociPath, "index.json"))
+	indexJSON, err := os.Open(indexPath)
 	if err != nil {
 		message.Errorf(err, "Unable to open %s/index.json", ociPath)
 		return err
 	}
 
+	// Read the file contents and turn it into a useable struct that we can manipulate
 	var index IndexJSON
-	byteValue, _ := io.ReadAll(indexJSON)
+	byteValue, err := io.ReadAll(indexJSON)
+	if err != nil {
+		return fmt.Errorf("unable to read the contents of the file (%s) so we can add an annotation: %w", indexPath, err)
+	}
 	indexJSON.Close()
-	_ = json.Unmarshal(byteValue, &index)
+	if err = json.Unmarshal(byteValue, &index); err != nil {
+		return fmt.Errorf("unable to process the conents of the file (%s): %w", indexPath, err)
+	}
 	for idx, manifest := range index.Manifests {
 		if manifest.Annotations == nil {
 			manifest.Annotations = make(map[string]string)
@@ -200,8 +209,6 @@ func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error
 		manifest.Annotations[ocispec.AnnotationBaseImageName] = digestToTag[manifest.Digest]
 		index.Manifests[idx] = manifest
 	}
-
-	indexPath := filepath.Join(ociPath, "index.json")
 
 	// Remove any file that might already exist
 	_ = os.Remove(indexPath)
@@ -211,12 +218,10 @@ func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error
 	if err != nil {
 		return err
 	}
-
 	indexJSONBytes, err := json.Marshal(index)
 	if err != nil {
 		return err
 	}
-
 	_, err = indexJSON.Write(indexJSONBytes)
 	if err != nil {
 		return err
