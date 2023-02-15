@@ -37,7 +37,8 @@ const config = {
             'packages/**/*.{md,mdx}',
           ],
           sidebarPath: require.resolve('./src/sidebars.js'),
-          editUrl: 'https://github.com/defenseunicorns/zarf/tree/',
+          // The '/x/' at the end if the editUrl is patching a defect in the plugin URL rendering. Removing it will break the base path for editing the docs.
+          editUrl: 'https://github.com/defenseunicorns/zarf/tree/main/x/',
           routeBasePath: '/',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
