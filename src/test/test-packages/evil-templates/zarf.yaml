@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: evil-templates
+
+components:
+  - name: test
+    required: true
+    manifests:
+      - name: configmap
+        files:
+          - "configmap.yaml"

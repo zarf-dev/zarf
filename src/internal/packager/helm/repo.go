@@ -8,10 +8,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/registry"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -54,23 +56,25 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	// Get the git repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	tempPath := gitCfg.DownloadRepoToTemp(h.Chart.URL)
+	tempPath, err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	defer os.RemoveAll(tempPath)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to download the git repo %s", h.Chart.URL)
+	}
 	gitCfg.GitPath = tempPath
 
 	// Switch to the correct tag
 	gitCfg.CheckoutTag(h.Chart.Version)
 
 	// Validate the chart
-	_, err := loader.LoadDir(filepath.Join(tempPath, h.Chart.GitPath))
-	if err != nil {
+	chartPath := filepath.Join(tempPath, h.Chart.GitPath)
+	if _, err = loader.LoadDir(chartPath); err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 	}
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	name, err := client.Run(filepath.Join(tempPath, h.Chart.GitPath), nil)
-
+	name, err := client.Run(chartPath, nil)
 	if err != nil {
 		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
 	}
@@ -89,19 +93,37 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	pull := action.NewPull()
 	pull.Settings = cli.New()
 
-	// Set up the chart chartDownloader
-	chartDownloader := downloader.ChartDownloader{
-		Out:     spinner,
-		Verify:  downloader.VerifyNever,
-		Getters: getter.All(pull.Settings),
+	var (
+		regClient *registry.Client
+		chartURL  string
+		err       error
+	)
+
+	// Handle OCI registries
+	if registry.IsOCI(h.Chart.URL) {
+		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
+		if err != nil {
+			spinner.Fatalf(err, "Unable to create a new registry client")
+		}
+		chartURL = h.Chart.URL
+	} else {
+		// Perform simple chart download
+		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		if err != nil {
+			spinner.Fatalf(err, "Unable to pull the helm chart")
+		}
 	}
 
-	// @todo: process OCI-based charts
-
-	// Perform simple chart download
-	chartURL, err := repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
-	if err != nil {
-		spinner.Fatalf(err, "Unable to pull the helm chart")
+	// Set up the chart chartDownloader
+	chartDownloader := downloader.ChartDownloader{
+		Out:            spinner,
+		RegistryClient: regClient,
+		// TODO: Further research this with regular/OCI charts
+		Verify:  downloader.VerifyNever,
+		Getters: getter.All(pull.Settings),
+		Options: []getter.Option{
+			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+		},
 	}
 
 	// Download the file (we don't control what name helm creates here)

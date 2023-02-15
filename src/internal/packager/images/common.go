@@ -17,6 +17,4 @@ type ImgConfig struct {
 	NoChecksum bool
 
 	Insecure bool
-
-	NoLocalImages bool
 }

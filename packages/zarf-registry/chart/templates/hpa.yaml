@@ -1,5 +1,5 @@
 {{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ template "docker-registry.fullname" . }}
@@ -15,5 +15,28 @@ spec:
     name: {{ template "docker-registry.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-  targetCPUUtilizationPercentage: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      # Use 60 second stabilization window becuase zarf will freeze scale down during deploys
+      stabilizationWindowSeconds: 60
+      # Scale down one pod per minute
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60      
+    scaleUp:
+      # Delay initial checks by 30 seconds
+      stabilizationWindowSeconds: 30
+      # Scale up one pod per minute
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
 {{- end }}

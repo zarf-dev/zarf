@@ -10,8 +10,6 @@ import (
 	"html/template"
 
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
@@ -74,11 +72,11 @@ func (b *Builder) loadFileJS(name string) template.JS {
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files.
-func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, tagToImage map[name.Tag]v1.Image) ([]byte, error) {
+func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imgList []string) ([]byte, error) {
 	var jsonList []string
 
-	for tag := range tagToImage {
-		normalized := b.getNormalizedFileName(tag.String())
+	for _, tag := range imgList {
+		normalized := b.getNormalizedFileName(tag)
 		jsonList = append(jsonList, normalized)
 	}
 
