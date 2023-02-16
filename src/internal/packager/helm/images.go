@@ -17,16 +17,15 @@ import (
 
 // FindFluxImages pulls the raw file from the https repo hosting bigbang
 // Will not work for private/offline/nongitlab based hostings
-func FindFluxImages(bigbangrepo, version string) ([]string, error) {
+func FindFluxImages(bigbangrepo, version string, gitCfg *git.Git) ([]string, error) {
 	images := make([]string, 0)
 	spinner := message.NewProgressSpinner("Finding Flux Images")
 	defer spinner.Stop()
 
 	bigbangrepo = strings.TrimSuffix(bigbangrepo, ".git")
-	// Get the git repo
-	gitCfg := git.NewWithSpinner(types.ZarfState{}.GitServer, spinner)
 
 	path, err := gitCfg.DownloadRepoToTemp(bigbangrepo)
+	defer os.RemoveAll(path)
 	if err != nil {
 		spinner.Fatalf(err, "Error cloning bigbang repo")
 		return images, err

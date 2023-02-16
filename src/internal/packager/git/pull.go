@@ -37,6 +37,7 @@ func (g *Git) errorMessage(err error, format string, args ...any) {
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
 func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
+	g.updateMessage("g.DownloadRepoToTemp(%s)", gitURL)
 	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
 		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
@@ -53,6 +54,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 
 // Pull clones or updates a git repository into the target folder.
 func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
+	g.updateMessage("g.Pull(%s)", gitURL)
 	repoName, err := g.TransformURLtoRepoName(gitURL)
 	if err != nil {
 		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
@@ -84,9 +86,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 
 	onlyFetchRef := matches[idx("atRef")] != ""
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
-
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
-
 	if err == git.ErrRepositoryAlreadyExists {
 
 		// Pull the latest changes from the online repo
@@ -94,8 +94,11 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		gitCred := utils.FindAuthForHost(gitURL)
 		pullOptions := &git.PullOptions{
 			RemoteName: onlineRemoteName,
-			Auth:       &gitCred.Auth,
 		}
+		if gitCred.Auth.Username != "" {
+			pullOptions.Auth = &gitCred.Auth
+		}
+
 		worktree, err := repo.Worktree()
 		if err != nil {
 			return fmt.Errorf("unable to get the worktree for the repo (%s): %w", gitURL, err)

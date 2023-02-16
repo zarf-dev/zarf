@@ -24,6 +24,7 @@ func (g *Git) Checkout(refrence string) error {
 	if err != nil {
 		return err
 	}
+
 	// Get the working tree so we can change refs
 	tree, err := repo.Worktree()
 	if err != nil {
@@ -33,7 +34,6 @@ func (g *Git) Checkout(refrence string) error {
 	// Commit Hash
 	options := &git.CheckoutOptions{
 		Hash: plumbing.NewHash(refrence),
-		// Branch: plumbing.ReferenceName("refs/tags/" + tag),
 	}
 
 	// Perform the checkout
@@ -41,11 +41,11 @@ func (g *Git) Checkout(refrence string) error {
 	if err == nil {
 		return nil
 	}
-	// not a git commit
 	message.Debugf("git.Checkout(%s): not a git commit: %v", refrence, err)
 
 	options.Hash = plumbing.ZeroHash
 	options.Branch = plumbing.ReferenceName("refs/tags/" + refrence)
+
 	// Perform the checkout
 	err = tree.Checkout(options)
 	if err == nil {
@@ -55,6 +55,7 @@ func (g *Git) Checkout(refrence string) error {
 	message.Debugf("git.Checkout(%s): not a tag.: %v", refrence, err)
 
 	options.Branch = plumbing.ReferenceName(fmt.Sprintf("refs/remotes/%s/%s", onlineRemoteName, refrence))
+
 	// Perform the checkout
 	err = tree.Checkout(options)
 	if err == nil {
@@ -82,9 +83,9 @@ func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) err
 	if isHash(ref) {
 		err = g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	} else {
-		err = g.checkoutTagAsBranch(ref, branch)
+		// tries both tags and branches
+		err = g.Checkout(ref)
 	}
-
 	return err
 }
 

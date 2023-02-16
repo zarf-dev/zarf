@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -28,7 +29,7 @@ import (
 const DEFAULT_BIGBANG_REPO = "https://repo1.dso.mil/big-bang/bigbang.git"
 
 // CreateFluxComponent Creates a component to deploy Flux.
-func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int) (fluxComponent types.ZarfComponent, err error) {
+func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int, gitCfg *git.Git) (fluxComponent types.ZarfComponent, err error) {
 	fluxComponent.Name = "flux"
 
 	fluxComponent.Required = bbComponent.Required
@@ -39,7 +40,7 @@ func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int) (fluxComp
 	if bbComponent.Extensions.BigBang.Repo != "" {
 		repo = bbComponent.Extensions.BigBang.Repo
 	}
-	images, err := helm.FindFluxImages(repo, bbComponent.Extensions.BigBang.Version)
+	images, err := helm.FindFluxImages(repo, bbComponent.Extensions.BigBang.Version, gitCfg)
 	if err != nil {
 		return fluxComponent, fmt.Errorf("unable to get flux images: %w", err)
 	}
