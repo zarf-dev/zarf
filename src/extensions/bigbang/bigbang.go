@@ -6,8 +6,6 @@ package bigbang
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -17,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -200,37 +197,22 @@ func getBigBangManifests(manifestDir string, bbCfg extensions.BigBang) (types.Za
 		Name: "zarf-credentials",
 	}}
 
-	for idx, path := range bbCfg.ValuesFrom {
-		// Load the values file.
-		file, err := os.ReadFile(path)
+	// Loop through the valuesFrom list and create a manifest for each.
+	for _, path := range bbCfg.ValuesFrom {
+		data, err := manifestValuesFile(path)
 		if err != nil {
 			return manifest, err
 		}
 
-		// Make a secret
-		name := fmt.Sprintf("bigbang-values-%s", strconv.Itoa(idx))
-		data := corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: _BB,
-				Name:      name,
-			},
-			StringData: map[string]string{
-				"values.yaml": string(file),
-			},
-		}
-
-		if err := addManifest(name, data); err != nil {
+		path := fmt.Sprintf("%s.yaml", data.Name)
+		if err := addManifest(path, data); err != nil {
 			return manifest, err
 		}
 
 		// Add it to the list of valuesFrom for the HelmRelease
 		hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
 			Kind: "Secret",
-			Name: name,
+			Name: data.Name,
 		})
 	}
 

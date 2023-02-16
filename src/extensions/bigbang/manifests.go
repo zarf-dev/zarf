@@ -5,12 +5,20 @@
 package bigbang
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var nonAlphnumeric = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func manifestZarfCredentials() corev1.Secret {
 	return corev1.Secret{
@@ -65,6 +73,41 @@ func manifestGitRepo(bbCfg extensions.BigBang) fluxSrcCtrl.GitRepository {
 			},
 		},
 	}
+}
+
+// manifestValuesFile generates a Secret object for the BigBang umbrella repo.
+func manifestValuesFile(path string) (secret corev1.Secret, err error) {
+	// Read the file from the path.
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return secret, err
+	}
+
+	// Define the name as the file name without the extension.
+	baseName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+
+	// Replace non-alphanumeric characters with a dash.
+	baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+
+	// Add the name prefix.
+	name := fmt.Sprintf("bigbang-values-%s", baseName)
+
+	// Create a secret with the file contents.
+	secret = corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: _BB,
+			Name:      name,
+		},
+		StringData: map[string]string{
+			"values.yaml": string(file),
+		},
+	}
+
+	return secret, nil
 }
 
 // manifestHelmRelease generates a HelmRelease object for the BigBang umbrella repo.
