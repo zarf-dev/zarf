@@ -18,7 +18,6 @@ components:
     extensions:
       bigbang:
         version: 1.52.0
-        skipFlux: false
         valuesFrom:
           - config/minimal.yaml
           - config/ingress.yaml
