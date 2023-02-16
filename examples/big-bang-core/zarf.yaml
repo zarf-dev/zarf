@@ -20,7 +20,8 @@ components:
         version: 1.52.0
         skipFlux: false
         valuesFrom:
-          - values.minimal.yaml
-          - ingress-certs.yaml
-          - values.kyverno.yaml
-          - loki.yaml
+          - config/minimal.yaml
+          - config/ingress.yaml
+          - config/kyverno.yaml
+          - config/loki.yaml
+          - config/patch-images.yaml

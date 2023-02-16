@@ -55,7 +55,7 @@ kyvernopolicies:
 }
 
 // manifestGitRepo generates a GitRepository object for the BigBang umbrella repo.
-func manifestGitRepo(bbCfg extensions.BigBang) fluxSrcCtrl.GitRepository {
+func manifestGitRepo(cfg extensions.BigBang) fluxSrcCtrl.GitRepository {
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       fluxSrcCtrl.GitRepositoryKind,
@@ -66,10 +66,10 @@ func manifestGitRepo(bbCfg extensions.BigBang) fluxSrcCtrl.GitRepository {
 			Namespace: _BB,
 		},
 		Spec: fluxSrcCtrl.GitRepositorySpec{
-			URL:      bbCfg.Repo,
+			URL:      cfg.Repo,
 			Interval: tenMins,
 			Reference: &fluxSrcCtrl.GitRepositoryRef{
-				Tag: bbCfg.Version,
+				Tag: cfg.Version,
 			},
 		},
 	}

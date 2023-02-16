@@ -6,10 +6,11 @@ package bigbang
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
@@ -31,75 +32,80 @@ var tenMins = metav1.Duration{
 
 // MutateBigbangComponent Mutates a component that should deploy BigBang to a set of manifests
 // that contain the flux deployment of BigBang
-func MutateBigbangComponent(componentPath types.ComponentPaths, component types.ZarfComponent) (types.ZarfComponent, error) {
-	_ = utils.CreateDirectory(componentPath.Charts, 0700)
-	_ = utils.CreateDirectory(componentPath.Manifests, 0700)
+func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	if err := utils.CreateDirectory(tmpPaths.Charts, 0700); err != nil {
+		return c, fmt.Errorf("unable to create charts directory: %w", err)
+	}
 
-	repos := make([]string, 0)
-	cfg := component.Extensions.BigBang
+	if err := utils.CreateDirectory(tmpPaths.Manifests, 0700); err != nil {
+		return c, fmt.Errorf("unable to create manifests directory: %w", err)
+	}
 
-	// use the default repo unless overridden
+	cfg := c.Extensions.BigBang
+
+	// If no repo is provided, use the default.
 	if cfg.Repo == "" {
-		repos = append(repos, _BB_REPO)
-		cfg.Repo = repos[0]
-	} else {
-		repos = append(repos, fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version))
+		cfg.Repo = _BB_REPO
 	}
 
-	// download bigbang so we can peek inside
-	chart := types.ZarfChart{
-		Name:        _BB,
-		Namespace:   _BB,
-		URL:         repos[0],
-		Version:     cfg.Version,
-		ValuesFiles: cfg.ValuesFrom,
-		GitPath:     "./chart",
-	}
-
+	// Configure helm to pull down the BigBang chart.
 	helmCfg := helm.Helm{
-		Chart: chart,
+		Chart: types.ZarfChart{
+			Name:        _BB,
+			Namespace:   _BB,
+			URL:         cfg.Repo,
+			Version:     cfg.Version,
+			ValuesFiles: cfg.ValuesFrom,
+			GitPath:     "./chart",
+		},
 		Cfg: &types.PackagerConfig{
 			State: types.ZarfState{},
 		},
-		BasePath: componentPath.Charts,
+		BasePath: tmpPaths.Charts,
 	}
 
-	helmCfg.ChartLoadOverride = helmCfg.DownloadChartFromGit(_BB)
+	// Download the chart from Git and save it to a temporary directory.
+	chartPath := path.Join(tmpPaths.Base, _BB)
+	helmCfg.ChartLoadOverride = helmCfg.DownloadChartFromGit(chartPath)
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
-	// manifests created with the provided Helm
+	// manifests created with the provided Helm.
 	template, err := helmCfg.TemplateChart()
+	// Clean up the chart directory after we're done with it.
+	_ = os.RemoveAll(chartPath)
 	if err != nil {
-		return component, fmt.Errorf("unable to template BigBang Chart: %w", err)
+		return c, fmt.Errorf("unable to template BigBang Chart: %w", err)
 	}
 
-	subPackageURLS := findURLs(template)
-	repos[0] = fmt.Sprintf("%s@%s", repos[0], cfg.Version)
-	repos = append(repos, subPackageURLS...)
+	// Add the BigBang repo to the list of repos to be pulled down by Zarf.
+	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
+	c.Repos = append(c.Repos, bbRepo)
 
-	// Save the list of repos to be pulled down by Zarf
-	component.Repos = repos
+	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
+	c.Repos = append(c.Repos, findURLs(template)...)
 
-	// just select the images needed to support the repos this configuration of BigBang will need
-	images, err := getImages(repos)
-	if err != nil {
-		return component, fmt.Errorf("unable to get bb images: %w", err)
+	// Select the images needed to support the repos for this configuration of BigBang.
+	for _, r := range c.Repos {
+		if images, err := helm.FindImagesForChartRepo(r, "chart"); err != nil {
+			return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+		} else {
+			c.Images = append(c.Images, images...)
+		}
 	}
 
-	// dedupe the list o fimages
-	uniqueList := utils.Unique(images)
+	// Make sure the list of images is unique.
+	c.Images = utils.Unique(c.Images)
 
-	// add the images to the component for Zarf to download
-	component.Images = append(component.Images, uniqueList...)
-
-	//Create the flux wrapper around BigBang for deployment
-	manifest, err := getBigBangManifests(componentPath.Manifests, component.Extensions.BigBang)
+	// Create the flux wrapper around BigBang for deployment.
+	manifest, err := addBigBangManifests(tmpPaths.Manifests, cfg)
 	if err != nil {
-		return component, err
+		return c, err
 	}
 
-	component.Manifests = []types.ZarfManifest{manifest}
-	return component, nil
+	// Add the manifest as the first manifest to be deployed in the component.
+	c.Manifests = append([]types.ZarfManifest{manifest}, c.Manifests...)
+
+	return c, nil
 }
 
 // findURLs takes a list of yaml objects (as a string) and
@@ -142,24 +148,9 @@ func findURLs(t string) (urls []string) {
 	return urls
 }
 
-// getImages identifies the list of images needed for the list of repos provided.
-func getImages(repos []string) ([]string, error) {
-	images := make([]string, 0)
-	for _, r := range repos {
-		is, err := helm.FindImagesForChartRepo(r, "chart")
-		if err != nil {
-			message.Warn(fmt.Sprintf("Could not pull images for chart %s: %s", r, err))
-			continue
-		}
-		images = append(images, is...)
-	}
-
-	return images, nil
-}
-
-// getBigBangManifests creates the manifests component for deploying BigBang.
-func getBigBangManifests(manifestDir string, bbCfg extensions.BigBang) (types.ZarfManifest, error) {
-	//create a manifest component that we add to the zarf package for bigbang.
+// addBigBangManifests creates the manifests component for deploying BigBang.
+func addBigBangManifests(manifestDir string, cfg extensions.BigBang) (types.ZarfManifest, error) {
+	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := types.ZarfManifest{
 		Name:      _BB,
 		Namespace: _BB,
@@ -167,7 +158,7 @@ func getBigBangManifests(manifestDir string, bbCfg extensions.BigBang) (types.Za
 
 	// Helper function to marshal and write a manifest and add it to the component.
 	addManifest := func(name string, data any) error {
-		path := fmt.Sprintf("%s/%s", manifestDir, name)
+		path := path.Join(manifestDir, name)
 		out, err := yaml.Marshal(data)
 		if err != nil {
 			return err
@@ -182,7 +173,7 @@ func getBigBangManifests(manifestDir string, bbCfg extensions.BigBang) (types.Za
 	}
 
 	// Create the GitRepository manifest.
-	if err := addManifest("/gitrepository.yaml", manifestGitRepo(bbCfg)); err != nil {
+	if err := addManifest("gitrepository.yaml", manifestGitRepo(cfg)); err != nil {
 		return manifest, err
 	}
 
@@ -198,7 +189,7 @@ func getBigBangManifests(manifestDir string, bbCfg extensions.BigBang) (types.Za
 	}}
 
 	// Loop through the valuesFrom list and create a manifest for each.
-	for _, path := range bbCfg.ValuesFrom {
+	for _, path := range cfg.ValuesFrom {
 		data, err := manifestValuesFile(path)
 		if err != nil {
 			return manifest, err
