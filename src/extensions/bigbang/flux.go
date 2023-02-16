@@ -7,83 +7,85 @@ package bigbang
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
+	"path"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	kustypes "sigs.k8s.io/kustomize/api/types"
-	"sigs.k8s.io/yaml"
+	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CreateFluxComponent Creates a component to deploy Flux.
-func CreateFluxComponent(bbComponent types.ZarfComponent, bbCount int, gitCfg *git.Git) (fluxComponent types.ZarfComponent, err error) {
+func CreateFluxComponent(bbComponent types.ZarfComponent) (fluxComponent types.ZarfComponent, err error) {
 	fluxComponent.Name = "flux"
 	fluxComponent.Required = bbComponent.Required
 
-	fluxManifest := GetFluxManifest(bbComponent.Extensions.BigBang.Version)
-	fluxComponent.Manifests = []types.ZarfManifest{fluxManifest}
-	repo := _BB_REPO
-	if bbComponent.Extensions.BigBang.Repo != "" {
-		repo = bbComponent.Extensions.BigBang.Repo
-	}
-	images, err := findFluxImages(repo, bbComponent.Extensions.BigBang.Version, gitCfg)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return fluxComponent, fmt.Errorf("unable to get flux images: %w", err)
+		return fluxComponent, fmt.Errorf("unable to create temp directory: %w", err)
 	}
 
-	fluxComponent.Images = images
+	localPath := path.Join(tmpDir, "flux.yaml")
+	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", _BB_REPO, bbComponent.Extensions.BigBang.Version)
+
+	// Perform Kustomzation now to get the flux.yaml file.
+	if err := kustomize.BuildKustomization(remotePath, localPath, true); err != nil {
+		return fluxComponent, fmt.Errorf("unable to build kustomization: %w", err)
+	}
+
+	// Add the flux.yaml file to the component manifests.
+	fluxComponent.Manifests = []types.ZarfManifest{{
+		Name:      "flux-system",
+		Namespace: "flux-system",
+		Files:     []string{localPath},
+	}}
+
+	// Read the flux.yaml file to get the images.
+	if fluxComponent.Images, err = readFluxImages(localPath); err != nil {
+		return fluxComponent, fmt.Errorf("unable to read flux images: %w", err)
+	}
 
 	return fluxComponent, nil
 }
 
-// GetFluxManifest creates the manifests for deploying the specified version of BigBang via Kustomize.
-func GetFluxManifest(version string) types.ZarfManifest {
-	return types.ZarfManifest{
-		Name:      "flux-system",
-		Namespace: "flux-system",
-		Kustomizations: []string{
-			fmt.Sprintf("%s//base/flux?ref=%s", _BB_REPO, version),
-		},
-	}
-}
-
-// findFluxImages pulls the raw file from the https repo hosting bigbang.
-// Will not work for private/offline/nongitlab based hostingsl
-func findFluxImages(bigbangrepo, version string, gitCfg *git.Git) (images []string, err error) {
-	spinner := message.NewProgressSpinner("Finding Flux Images")
-	defer spinner.Stop()
-
-	bigbangrepo = strings.TrimSuffix(bigbangrepo, ".git")
-
-	path, err := gitCfg.DownloadRepoToTemp(bigbangrepo)
+func readFluxImages(localPath string) (images []string, err error) {
+	contents, err := os.ReadFile(localPath)
 	if err != nil {
-		spinner.Fatalf(err, "Error cloning bigbang repo")
-		return images, err
-	}
-	defer os.RemoveAll(path)
-	gitCfg.GitPath = path
-
-	// Switch to the correct tag
-	err = gitCfg.Checkout(version)
-	if err != nil {
-		spinner.Fatalf(err, "Unable to download provided git refrence: %v@%v", bigbangrepo, version)
+		return images, fmt.Errorf("unable to read flux manifest: %w", err)
 	}
 
-	fluxRawKustomization, err := os.ReadFile(filepath.Join(path, "base/flux/kustomization.yaml"))
-	if err != nil {
-		spinner.Fatalf(err, "Error reading kustomization object in flux directory")
-		return images, err
+	// Break the manifest into separate resources.
+	yamls, _ := utils.SplitYAML(contents)
+
+	// Loop through each resource and find the images.
+	for _, yaml := range yamls {
+		// Flux controllers are Deployments.
+		if yaml.GetKind() == "Deployment" {
+			deployment := v1.Deployment{}
+			content := yaml.UnstructuredContent()
+
+			// Convert the unstructured content into a Deployment.
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(content, &deployment); err != nil {
+				return nil, fmt.Errorf("could not parse deployment: %w", err)
+			}
+
+			// Get the pod spec.
+			pod := deployment.Spec.Template.Spec
+
+			// Flux controllers do not have init containers today, but this is future proofing.
+			for _, container := range pod.InitContainers {
+				images = append(images, container.Image)
+			}
+
+			// Add the main containers.
+			for _, container := range pod.Containers {
+				images = append(images, container.Image)
+			}
+
+		}
 	}
-	fluxKustomization := kustypes.Kustomization{}
-	err = yaml.Unmarshal([]byte(fluxRawKustomization), &fluxKustomization)
-	if err != nil {
-		spinner.Fatalf(err, "Error unmarshalling kustomization object in flux directory")
-		return images, err
-	}
-	for _, i := range fluxKustomization.Images {
-		images = append(images, fmt.Sprintf("%s:%s", i.NewName, i.NewTag))
-	}
+
 	return images, nil
 }

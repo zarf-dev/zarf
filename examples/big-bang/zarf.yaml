@@ -19,9 +19,10 @@ components:
       bigbang:
         version: 1.53.0
         valuesFrom:
-          # - config/minimal.yaml
           - config/ingress.yaml
           - config/kyverno.yaml
           - config/loki.yaml
           - config/neuvector.yaml
           - config/patch-images.yaml
+          # Values are merged in order, so this will override the above and disable everything
+          - config/disable-all.yaml

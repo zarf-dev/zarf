@@ -82,15 +82,11 @@ func (p *Packager) Create(baseDir string) error {
 		computedIndex := i + componentIndex
 		bbComponent := p.cfg.Pkg.Components[computedIndex]
 		// Pull all the references if there is no `@` in the string
-		spinner := message.NewProgressSpinner("Finding Flux images")
-		gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent, i+1, gitCfg)
+		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent)
 		if err != nil {
-			spinner.Stop()
 			return fmt.Errorf("unable to create flux component: %w", err)
 		}
 		p.cfg.Pkg.Components = utils.Insert(p.cfg.Pkg.Components, computedIndex, fluxComponent)
-		spinner.Success()
 	}
 
 	// After components are composed, template the active package
