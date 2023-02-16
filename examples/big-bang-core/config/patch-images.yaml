@@ -1,0 +1,15 @@
+# Hotfix some images until they are fixed upstream
+
+# https://repo1.dso.mil/big-bang/product/packages/monitoring/-/merge_requests/191
+monitoring:
+  git:
+    commit: "95f142fc451d4a371f23dce6a9f90c7cac3de625"
+# loki:
+#   git:
+#     tag: ""
+#     branch: "update-loki-tag-annotations"
+
+# promtail:
+#   git:
+#     tag: ""
+#     branch: "main"
