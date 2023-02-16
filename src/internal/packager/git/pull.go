@@ -17,24 +17,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
-// updateMessage updates the spinner if set, otherwise sends to debug logs
-func (g *Git) updateMessage(format string, args any) {
-	if g.Spinner != nil {
-		g.Spinner.Updatef(format, args)
-	} else {
-		message.Debugf(format, args)
-	}
-}
-
-// errorMessage updates the spinner if set, otherwise sends to error logs
-func (g *Git) errorMessage(err error, format string, args ...any) {
-	if g.Spinner != nil {
-		g.Spinner.Errorf(err, format, args)
-	} else {
-		message.Errorf(err, format, args)
-	}
-}
-
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
 func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
@@ -88,14 +70,18 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
 
 	if err == git.ErrRepositoryAlreadyExists {
-
-		// Pull the latest changes from the online repo
+		// Pull the latest changes from the online repo.
 		message.Debug("Repo already cloned, pulling any upstream changes...")
 		gitCred := utils.FindAuthForHost(gitURL)
 		pullOptions := &git.PullOptions{
 			RemoteName: onlineRemoteName,
-			Auth:       &gitCred.Auth,
 		}
+
+		// If we have credentials for this host, use them.
+		if gitCred != nil {
+			pullOptions.Auth = &gitCred.Auth
+		}
+
 		worktree, err := repo.Worktree()
 		if err != nil {
 			return fmt.Errorf("unable to get the worktree for the repo (%s): %w", gitURL, err)
@@ -107,7 +93,7 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			return fmt.Errorf("not a valid git repo or unable to pull (%s): %w", gitURL, err)
 		}
 
-		// NOTE: Since pull doesn't pull any new tags, we need to fetch them
+		// NOTE: Since pull doesn't pull any new tags, we need to fetch them.
 		fetchOptions := git.FetchOptions{RemoteName: onlineRemoteName, Tags: git.AllTags}
 		if err := g.fetch(gitCachePath, &fetchOptions); err != nil {
 			return err
@@ -127,18 +113,18 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	if onlyFetchRef {
 		ref := matches[idx("ref")]
 
-		// Identify the remote trunk branch name
+		// Identify the remote trunk branch name.
 		trunkBranchName := plumbing.NewBranchReferenceName("master")
 		head, err := repo.Head()
 
+		// No repo head available.
 		if err != nil {
-			// No repo head available
 			g.errorMessage(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
-			// Valid repo head and it is a branch
+			// Valid repo head and it is a branch.
 			trunkBranchName = head.Name()
 		} else {
-			// Valid repo head but not a branch
+			// Valid repo head but not a branch.
 			g.errorMessage(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
@@ -159,4 +145,22 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	}
 
 	return nil
+}
+
+// updateMessage updates the spinner if set, otherwise sends to debug logs
+func (g *Git) updateMessage(format string, args any) {
+	if g.Spinner != nil {
+		g.Spinner.Updatef(format, args)
+	} else {
+		message.Debugf(format, args)
+	}
+}
+
+// errorMessage updates the spinner if set, otherwise sends to error logs
+func (g *Git) errorMessage(err error, format string, args ...any) {
+	if g.Spinner != nil {
+		g.Spinner.Errorf(err, format, args)
+	} else {
+		message.Errorf(err, format, args)
+	}
 }

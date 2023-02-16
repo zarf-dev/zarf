@@ -91,7 +91,7 @@ func (g *Git) fetch(gitDirectory string, fetchOptions *git.FetchOptions) error {
 
 	gitCred := utils.FindAuthForHost(gitURL)
 
-	if gitCred.Auth.Username != "" {
+	if gitCred != nil {
 		fetchOptions.Auth = &gitCred.Auth
 	}
 

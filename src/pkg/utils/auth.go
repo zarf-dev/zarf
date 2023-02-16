@@ -23,7 +23,7 @@ type Credential struct {
 }
 
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc.
-func FindAuthForHost(baseURL string) Credential {
+func FindAuthForHost(baseURL string) *Credential {
 	homePath, _ := os.UserHomeDir()
 
 	// Read the ~/.git-credentials file
@@ -41,20 +41,16 @@ func FindAuthForHost(baseURL string) Credential {
 	// Combine the creds together (.netrc second because it could have a default)
 	creds := append(gitCreds, netrcCreds...)
 
-	// Will be nil unless a match is found
-	var matchedCred Credential
-
 	// Look for a match for the given host path in the creds file
 	for _, cred := range creds {
 		// An empty credPath means that we have reached the default from the .netrc
 		hasPath := strings.Contains(baseURL, cred.Path) || cred.Path == ""
 		if hasPath {
-			matchedCred = cred
-			break
+			return &cred
 		}
 	}
 
-	return matchedCred
+	return nil
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts.
