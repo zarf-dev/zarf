@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-core-demo
   description: "Deploy Big Bang Core"
-  version: 1.52.0
+  version: 1.53.0
   url: https://p1.dso.mil/products/big-bang
   # Big Bang / Iron Bank are only amd64
   architecture: amd64
@@ -17,7 +17,7 @@ components:
     required: true
     extensions:
       bigbang:
-        version: 1.52.0
+        version: 1.53.0
         valuesFrom:
           - config/minimal.yaml
           - config/ingress.yaml
