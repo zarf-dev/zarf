@@ -150,7 +150,7 @@ func FindYamlTemplates(config any, prefix string, suffix string) (map[string]str
 // Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L286.
 func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	var objs []*unstructured.Unstructured
-	ymls, err := splitYAMLToString(yamlData)
+	ymls, err := SplitYAMLToString(yamlData)
 	if err != nil {
 		return nil, err
 	}
@@ -164,10 +164,10 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	return objs, nil
 }
 
-// splitYAMLToString splits a YAML file into strings. Returns list of yamls
+// SplitYAMLToString splits a YAML file into strings. Returns list of yamls
 // found in the yaml. If an error occurs, returns objects that have been parsed so far too.
 // Source: https://github.com/argoproj/gitops-engine/blob/v0.5.2/pkg/utils/kube/kube.go#L304.
-func splitYAMLToString(yamlData []byte) ([]string, error) {
+func SplitYAMLToString(yamlData []byte) ([]string, error) {
 	// Similar way to what kubectl does
 	// https://github.com/kubernetes/cli-runtime/blob/master/pkg/resource/visitor.go#L573-L600
 	// Ideally k8s.io/cli-runtime/pkg/resource.Builder should be used instead of this method.

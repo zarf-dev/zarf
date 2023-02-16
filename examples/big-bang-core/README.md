@@ -1,45 +1,33 @@
 # Big Bang Core
 
-This package deploys [Big Bang Core](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
-
-![pods](./images/pods.png)
-
-![helmreleases](./images/helmreleases.png)
+This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using Zarf.
 
 ## Known Issues
 
 Lots of new things
 * dynamic finding of images
 * Hard coding patches
-* can only use one values.yaml file
-* update docs here to use a binary instead of the go function.
 
 ## Instructions
 
-### Pull down the code and binaries
+### Clone this repo or download this folder
 
 ``` bash
 # Clone the binaries
 git clone https://github.com/defenseunicorns/zarf.git
 
 # change to the examples folder
-cd zarf/examples/big-bang-core
+cd zarf/examples/big-bang
 
 ```
 
 ### Deploy a Kubernetes Cluster
 
-Either deploy k3d locally, or use the provided eksctl config to launch an EKS cluster
+Any Kubernetes cluster that supports AMD64 architecture will work (Big Bang uses Iron Bank, which has no support for ARM). The following instructions are for deploying a cluster on your local machine using `k3d`.
 
 #### Deploy k3d Cluster
 
 Follow instructions on [this page](../../docs/13-walkthroughs/index.md#walk-through-prerequisites) for docker and the `k3d` cli.
-
-#### Deploy EKS Cluster
-
-```shell
-eksctl create cluster -f eksctl/demo.yaml
-```
 
 ### Get Zarf components
 
@@ -55,11 +43,11 @@ export REGISTRY1_PASSWORD=<REPLACE_ME>
 echo $REGISTRY1_PASSWORD | zarf tools registry login registry1.dso.mil --username $REGISTRY1_USERNAME --password-stdin
 set -o history
 
-# Run zarf package command
-zarf package create . --confirm
+# Run zarf package command and follow the prompts
+zarf package create .
 ```
 
-Now wait 20 min :face_palm:
+Now wait a while... 😩
 
 ### Initialize Zarf
 
@@ -85,14 +73,17 @@ Look at the values files provided to BigBang in the Zarf.yaml:
 components:
   - name: bigbang
     required: true
-    bigbang:
-      version: 1.52.0
-      skipFlux: false
-      valuesFrom:
-      - values.minimal.yaml #turns on just istio
-      - ingress-certs.yaml # adds istio certs for *.bigbang.dev
-      - values.kyverno.yaml # turns on kyverno
-      - loki.yaml # turns on loki and monitoring
+    extensions:
+      bigbang:
+        version: 1.52.0
+        skipFlux: false
+        valuesFrom:
+          - config/minimal.yaml #turns on just istio
+          - config/ingress.yaml # adds istio certs for *.bigbang.dev
+          - config/kyverno.yaml # turns on kyverno
+          - config/loki.yaml # turns on loki and monitoring
+          - config/patch-images.yaml # fixes upstream bug in BB
+
 ```
 
 And adjust them to how you want BigBang to be deployed.  When you're ready, package BigBang:
@@ -107,8 +98,8 @@ zarf package create
 ### Deploy Big Bang
 
 ```shell
-# Deploy Big Bang
-./zarf package deploy zarf-package-big-bang-core-demo-arm64-1.52.0.tar.zst --confirm
+# Deploy Big Bang (interactively)
+./zarf package deploy 
 
 # (Optional) Inspect the results
 zarf tools k9s
@@ -134,15 +125,7 @@ k3d cluster delete
 
 ```
 
-
-#### EKS
-
-```shell
-eksctl delete cluster -f eksctl/demo.yaml --disable-nodegroup-eviction --wait
-
-```
-
 ## Troubleshooting
 
 ### My computer crashed!
-Close all those hundreds of chrome tabs, shut down all non-essential programs, and try again. Big Bang is a HOG. If you have less than 32GB of RAM you're in for a rough time and should use the EKS cluster in the example
+Close all those hundreds of chrome tabs, shut down all non-essential programs, and try again. Big Bang is a HOG. If you have less than 32GB of RAM you're in for a rough time and should use a remote cluster.

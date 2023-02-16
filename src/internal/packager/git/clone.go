@@ -29,7 +29,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 	gitCred := utils.FindAuthForHost(gitURL)
 
 	// Gracefully handle no git creds on the system (like our CI/CD)
-	if gitCred.Auth.Username != "" {
+	if gitCred != nil {
 		cloneOptions.Auth = &gitCred.Auth
 	}
 
