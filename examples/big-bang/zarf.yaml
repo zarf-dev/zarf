@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: big-bang-core-demo
+  name: big-bang-example
   description: "Deploy Big Bang Core"
   version: 1.53.0
   url: https://p1.dso.mil/products/big-bang
@@ -19,8 +19,9 @@ components:
       bigbang:
         version: 1.53.0
         valuesFrom:
-          - config/minimal.yaml
+          # - config/minimal.yaml
           - config/ingress.yaml
           - config/kyverno.yaml
           - config/loki.yaml
+          - config/neuvector.yaml
           - config/patch-images.yaml

@@ -1,4 +1,4 @@
-# Policy
+# Use Kyverno instead of Gatekeeper
 gatekeeper:
   enabled: false
 clusterAuditor:
@@ -11,7 +11,7 @@ kyvernopolicies:
     policies:
       disallow-shared-subpath-volume-writes:
         validationFailureAction: audit
-      restrict-host-ports: 
+      restrict-host-ports:
         validationFailureAction: audit
       restrict-capabilities:
         validationFailureAction: audit

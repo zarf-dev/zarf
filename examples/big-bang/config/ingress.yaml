@@ -1,9 +1,7 @@
+# Configure Istio
 domain: "###ZARF_VAR_DOMAIN###"
 
-istiooperator:
-  enabled: true
 istio:
-  enabled: true
   gateways:
     public:
       tls: # certs for *.bigbang.dev

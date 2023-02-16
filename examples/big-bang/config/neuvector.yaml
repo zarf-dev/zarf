@@ -1,0 +1,6 @@
+# Use Neuvector instead of Twistlock
+twistlock:
+  enabled: false
+
+neuvector:
+  enabled: true

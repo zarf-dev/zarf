@@ -1,0 +1,12 @@
+# Hotfix some images until they are fixed upstream
+
+# https://repo1.dso.mil/big-bang/product/packages/monitoring/-/merge_requests/191
+monitoring:
+  git:
+    tag: ""
+    branch: "main"
+
+loki:
+  git:
+    tag: ""
+    branch: main

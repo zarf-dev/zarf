@@ -1,0 +1,6 @@
+kiali:
+  enabled: false
+
+jaeger:
+  enabled: false
+
