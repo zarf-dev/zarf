@@ -2,11 +2,12 @@
 
 # https://repo1.dso.mil/big-bang/product/packages/monitoring/-/merge_requests/191
 monitoring:
+  enabled: true
   git:
     # BB Upstream requires a branch with a commit hash for some reason... 
     # https://repo1.dso.mil/big-bang/bigbang/-/commit/f0175279cc65ce5095ac687f98b4133fabf96d67
-    commit: "95f142fc451d4a371f23dce6a9f90c7cac3de625"
-    branch: "thanos-image-fix"
+    tag: ""
+    branch: "main"
 
 # loki:
 #   git:
