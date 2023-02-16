@@ -1,5 +1,10 @@
 istio:
   enabled: true
+  git:
+    tag: ""
+    branch: main
+
+
 
 istiooperator:
   enabled: true

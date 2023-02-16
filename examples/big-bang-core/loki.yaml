@@ -1,10 +1,15 @@
 
 
 monitoring:
-  enabled: true
+  git:
+    tag: ""
+    branch: thanos-image-fix
 
 loki:
   enabled: true
+  git:
+    tag: ""
+    branch: main
 
 promtail:
   enabled: true
