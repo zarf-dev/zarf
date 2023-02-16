@@ -1,10 +1,18 @@
----
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: stack-demo
+  name: bb-demo
   region: us-west-2
+
+iam:
+  withOIDC: true
+
+addons:
+  - name: aws-ebs-csi-driver
+    version: v1.5.2-eksbuild.1
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
 
 managedNodeGroups:
   - name: ng-1
