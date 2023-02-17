@@ -22,30 +22,7 @@ func (g *Git) fetchRef(ref string) error {
 		return g.fetchHash(ref)
 	}
 
-	err := g.fetchTag(ref)
-	if err == nil {
-		return nil
-	}
-
-	return g.fetchBranch(ref)
-}
-
-// fetchBranch performs a `git fetch` of _only_ the provided branch.
-func (g *Git) fetchBranch(branch string) error {
-	message.Debugf("git.fetchBranch(%s)", branch)
-
-	refspec := goConfig.RefSpec("refs/heads/" + branch + ":refs/remotes/" + onlineRemoteName + "/" + branch)
-	fetchOptions := &git.FetchOptions{
-		RemoteName: onlineRemoteName,
-		RefSpecs:   []goConfig.RefSpec{refspec},
-		Tags:       git.NoTags,
-	}
-	err := g.fetch(g.GitPath, fetchOptions)
-
-	if err != nil {
-		message.Errorf(err, "Not a valid branch or unable to fetch")
-	}
-	return err
+	return g.fetchTag(ref)
 }
 
 // fetchTag performs a `git fetch` of _only_ the provided tag.

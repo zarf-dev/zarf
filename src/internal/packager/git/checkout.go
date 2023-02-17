@@ -13,80 +13,23 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-// Checkout the git repository for the provided refrence. In order of precidence
-// to match the preceidence order of flux GitRepository objects
-// 1. commit hash
-// 2. tag
-// 3. branch
-func (g *Git) Checkout(refrence string) error {
-	message.Debugf("git.Checkout(%s)", refrence)
-	repo, err := git.PlainOpen(g.GitPath)
-	if err != nil {
-		return err
-	}
-
-	// Get the working tree so we can change refs
-	tree, err := repo.Worktree()
-	if err != nil {
-		message.Fatal(err, "Unable to load the git repo")
-	}
-
-	// Commit Hash
-	options := &git.CheckoutOptions{
-		Hash: plumbing.NewHash(refrence),
-	}
-
-	// Perform the checkout
-	err = tree.Checkout(options)
-	if err == nil {
-		return nil
-	}
-	message.Debugf("git.Checkout(%s): not a git commit: %v", refrence, err)
-
-	options.Hash = plumbing.ZeroHash
-	options.Branch = plumbing.ReferenceName("refs/tags/" + refrence)
-
-	// Perform the checkout
-	err = tree.Checkout(options)
-	if err == nil {
-		return nil
-	}
-	// not a git commit
-	message.Debugf("git.Checkout(%s): not a tag.: %v", refrence, err)
-
-	options.Branch = plumbing.ReferenceName(fmt.Sprintf("refs/remotes/%s/%s", onlineRemoteName, refrence))
-
-	// Perform the checkout
-	err = tree.Checkout(options)
-	if err == nil {
-		return nil
-	}
-	// not a git commit
-	message.Debugf("git.Checkout(%s): not a branch.: %v", refrence, err)
-	return err
-
-}
-
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
-func (g *Git) CheckoutTag(tag string) {
+func (g *Git) CheckoutTag(tag string) error {
 	message.Debugf("git.CheckoutTag(%s)", tag)
 
 	options := &git.CheckoutOptions{
 		Branch: plumbing.ReferenceName("refs/tags/" + tag),
 	}
-	g.checkout(options)
+	return g.checkout(options)
 }
 
 func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) error {
-	var err error
-
 	if isHash(ref) {
-		err = g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
-	} else {
-		// tries both tags and branches
-		err = g.Checkout(ref)
+		return g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	}
-	return err
+
+	// tries both tags and branches
+	return g.checkoutTagAsBranch(ref, branch)
 }
 
 // checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
@@ -118,7 +61,7 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
-		message.Fatal(err, "Not a valid git repo or unable to open")
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	objRef, err := repo.Object(plumbing.AnyObject, hash)
@@ -166,7 +109,5 @@ func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) error {
 	}
 
 	// Perform the checkout
-	err = tree.Checkout(checkoutOptions)
-
-	return err
+	return tree.Checkout(checkoutOptions)
 }

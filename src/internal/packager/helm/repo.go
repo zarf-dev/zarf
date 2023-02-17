@@ -64,8 +64,7 @@ func (h *Helm) DownloadChartFromGit(destination string) string {
 	gitCfg.GitPath = tempPath
 
 	// Switch to the correct tag
-	err = gitCfg.Checkout(h.Chart.Version)
-	if err != nil {
+	if err = gitCfg.CheckoutTag(h.Chart.Version); err != nil {
 		spinner.Fatalf(err, "Unable to download provided git refrence: %v@%v", h.Chart.URL, h.Chart.Version)
 	}
 
