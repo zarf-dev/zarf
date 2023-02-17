@@ -2,11 +2,12 @@ module github.com/defenseunicorns/zarf
 
 go 1.19
 
-// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
-replace sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
-
-// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
-replace oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
+replace (
+	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
+	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
+	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
+	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
+)
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -16,6 +17,8 @@ require (
 	github.com/derailed/k9s v0.27.2
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/fatih/color v1.14.1
+	github.com/fluxcd/helm-controller/api v0.28.1
+	github.com/fluxcd/source-controller/api v0.33.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/go-logr/logr v1.2.3
@@ -39,11 +42,6 @@ require (
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
-)
-
-require (
-	github.com/fluxcd/helm-controller/api v0.28.1
-	github.com/fluxcd/source-controller/api v0.33.0
 )
 
 require (

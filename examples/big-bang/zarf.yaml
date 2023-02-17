@@ -22,7 +22,6 @@ components:
           - config/ingress.yaml
           - config/kyverno.yaml
           - config/loki.yaml
-          - config/neuvector.yaml
           - config/patch-images.yaml
-          # Values are merged in order, so this will override the above and disable everything
-          - config/disable-all.yaml
+          # Values are merged in order, so this would override the above and disable everything if uncommented
+          # - config/disable-all.yaml
