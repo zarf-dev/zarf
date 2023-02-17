@@ -507,7 +507,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		}
 
 		// Generate the chart.
-		if err := helmCfg.GenerateChart(manifest, ""); err != nil {
+		if err := helmCfg.GenerateChart(manifest); err != nil {
 			return installedCharts, err
 		}
 
