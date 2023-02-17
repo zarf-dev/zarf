@@ -3,10 +3,8 @@
 # https://repo1.dso.mil/big-bang/product/packages/monitoring/-/merge_requests/191
 monitoring:
   git:
-    tag: ""
-    branch: "main"
+    tag: "43.1.2-bb.2"
 
 loki:
   git:
-    tag: ""
-    branch: main
+    tag: "3.7.0-bb.2"
