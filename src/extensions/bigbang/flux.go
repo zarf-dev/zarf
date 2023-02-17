@@ -13,41 +13,39 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/types/extensions"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// CreateFluxComponent Creates a component to deploy Flux.
-func CreateFluxComponent(bbComponent types.ZarfComponent) (fluxComponent types.ZarfComponent, err error) {
-	fluxComponent.Name = "flux"
-	fluxComponent.Required = bbComponent.Required
-
+// getFlux Creates a component to deploy Flux.
+func getFlux(cfg extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return fluxComponent, fmt.Errorf("unable to create temp directory: %w", err)
+		return manifest, images, fmt.Errorf("unable to create temp directory: %w", err)
 	}
 
 	localPath := path.Join(tmpDir, "flux.yaml")
-	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", _BB_REPO, bbComponent.Extensions.BigBang.Version)
+	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", _BB_REPO, cfg.Version)
 
 	// Perform Kustomzation now to get the flux.yaml file.
 	if err := kustomize.BuildKustomization(remotePath, localPath, true); err != nil {
-		return fluxComponent, fmt.Errorf("unable to build kustomization: %w", err)
+		return manifest, images, fmt.Errorf("unable to build kustomization: %w", err)
 	}
 
 	// Add the flux.yaml file to the component manifests.
-	fluxComponent.Manifests = []types.ZarfManifest{{
+	manifest = types.ZarfManifest{
 		Name:      "flux-system",
 		Namespace: "flux-system",
 		Files:     []string{localPath},
-	}}
-
-	// Read the flux.yaml file to get the images.
-	if fluxComponent.Images, err = readFluxImages(localPath); err != nil {
-		return fluxComponent, fmt.Errorf("unable to read flux images: %w", err)
 	}
 
-	return fluxComponent, nil
+	// Read the flux.yaml file to get the images.
+	if images, err = readFluxImages(localPath); err != nil {
+		return manifest, images, fmt.Errorf("unable to read flux images: %w", err)
+	}
+
+	return manifest, images, nil
 }
 
 func readFluxImages(localPath string) (images []string, err error) {

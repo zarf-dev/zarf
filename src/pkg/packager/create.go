@@ -56,37 +56,19 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
-	indexesToInsertFluxComponent := []int{}
-
 	// If the component has a BigBang entry then mutate the component to be a BigBang component.
 	// Additionally if the BigBang entry requires flux then save the indexes of where to insert flux.
-	for i, baseComponent := range p.cfg.Pkg.Components {
-		componentPath, err := p.createOrGetComponentPaths(baseComponent)
+	for i, c := range p.cfg.Pkg.Components {
+		componentPath, err := p.createOrGetComponentPaths(c)
 		if err != nil {
 			return err
 		}
-		if baseComponent.Extensions.BigBang.Version != "" {
-			if !baseComponent.Extensions.BigBang.SkipFlux {
-				indexesToInsertFluxComponent = append(indexesToInsertFluxComponent, i)
-			}
-			mutatedComponent, err := bigbang.MutateBigbangComponent(componentPath, baseComponent)
+		if c.Extensions.BigBang.Version != "" {
+			p.cfg.Pkg.Components[i], err = bigbang.MutateBigbangComponent(componentPath, c)
 			if err != nil {
 				return err
 			}
-			p.cfg.Pkg.Components[i] = mutatedComponent
 		}
-	}
-
-	for i, componentIndex := range indexesToInsertFluxComponent {
-		// Get index of where to insert keeping in mind how many times we've inserted into the slice.
-		computedIndex := i + componentIndex
-		bbComponent := p.cfg.Pkg.Components[computedIndex]
-		// Pull all the references if there is no `@` in the string
-		fluxComponent, err := bigbang.CreateFluxComponent(bbComponent)
-		if err != nil {
-			return fmt.Errorf("unable to create flux component: %w", err)
-		}
-		p.cfg.Pkg.Components = utils.Insert(p.cfg.Pkg.Components, computedIndex, fluxComponent)
 	}
 
 	// After components are composed, template the active package

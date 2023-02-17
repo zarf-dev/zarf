@@ -505,10 +505,18 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			Cfg:       p.cfg,
 			Cluster:   p.cluster,
 		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+
+		// Generate the chart.
+		if err := helmCfg.GenerateChart(manifest, ""); err != nil {
+			return installedCharts, err
+		}
+
+		// Install the chart.
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
 			return installedCharts, err
 		}
+
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map

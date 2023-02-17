@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
@@ -46,6 +47,18 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 	// If no repo is provided, use the default.
 	if cfg.Repo == "" {
 		cfg.Repo = _BB_REPO
+	}
+
+	if !cfg.SkipFlux {
+		if fluxManifest, images, err := getFlux(cfg); err != nil {
+			return c, err
+		} else {
+			// Add the flux manifests to the list of manifests to be pulled down by Zarf.
+			c.Manifests = append(c.Manifests, fluxManifest)
+
+			// Add the images to the list of images to be pulled down by Zarf.
+			c.Images = append(c.Images, images...)
+		}
 	}
 
 	// Configure helm to pull down the BigBang chart.
@@ -102,8 +115,8 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 		return c, err
 	}
 
-	// Add the manifest as the first manifest to be deployed in the component.
-	c.Manifests = append([]types.ZarfManifest{manifest}, c.Manifests...)
+	// AAdd the BigBang manifests to the list of manifests to be pulled down by Zarf.
+	c.Manifests = append(c.Manifests, manifest)
 
 	return c, nil
 }
