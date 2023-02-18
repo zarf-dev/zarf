@@ -57,15 +57,16 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// By default, we want to deploy flux.
 	if !cfg.SkipFlux {
-		if fluxManifest, images, err := getFlux(cfg); err != nil {
+		fluxManifest, images, err := getFlux(cfg)
+		if err != nil {
 			return c, err
-		} else {
-			// Add the flux manifests to the list of manifests to be pulled down by Zarf.
-			c.Manifests = append(c.Manifests, fluxManifest)
-
-			// Add the images to the list of images to be pulled down by Zarf.
-			c.Images = append(c.Images, images...)
 		}
+
+		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
+		c.Manifests = append(c.Manifests, fluxManifest)
+
+		// Add the images to the list of images to be pulled down by Zarf.
+		c.Images = append(c.Images, images...)
 	}
 
 	// Configure helm to pull down the BigBang chart.
@@ -106,11 +107,12 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Select the images needed to support the repos for this configuration of BigBang.
 	for _, r := range c.Repos {
-		if images, err := helm.FindImagesForChartRepo(r, "chart"); err != nil {
+		images, err := helm.FindImagesForChartRepo(r, "chart")
+		if err != nil {
 			return c, fmt.Errorf("unable to find images for chart repo: %w", err)
-		} else {
-			c.Images = append(c.Images, images...)
 		}
+
+		c.Images = append(c.Images, images...)
 	}
 
 	// Make sure the list of images is unique.
