@@ -15,7 +15,7 @@
           "type": "string",
           "description": "Override of repo to pull big bang from"
         },
-        "valuesFrom": {
+        "valuesFiles": {
           "items": {
             "type": "string"
           },

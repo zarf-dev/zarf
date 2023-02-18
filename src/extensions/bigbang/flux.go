@@ -19,14 +19,14 @@ import (
 )
 
 // getFlux Creates a component to deploy Flux.
-func getFlux(cfg extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
+func getFlux(cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return manifest, images, fmt.Errorf("unable to create temp directory: %w", err)
 	}
 
 	localPath := path.Join(tmpDir, "flux.yaml")
-	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", _BB_REPO, cfg.Version)
+	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", bbRepo, cfg.Version)
 
 	// Perform Kustomzation now to get the flux.yaml file.
 	if err := kustomize.BuildKustomization(remotePath, localPath, true); err != nil {

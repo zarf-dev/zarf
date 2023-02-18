@@ -474,7 +474,7 @@ export interface BigBang {
     /**
      * list of values files to pass to BigBang; these will be merged together
      */
-    valuesFrom?: string[];
+    valuesFiles?: string[];
     /**
      * The version of Big Bang you'd like to use
      */
@@ -1126,7 +1126,7 @@ const typeMap: any = {
     "BigBang": o([
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
-        { json: "valuesFrom", js: "valuesFrom", typ: u(undefined, a("")) },
+        { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([

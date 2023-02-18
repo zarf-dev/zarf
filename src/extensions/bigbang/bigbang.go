@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -22,17 +24,17 @@ import (
 
 // Default location for pulling BigBang.
 const (
-	_BB      = "bigbang"
-	_BB_REPO = "https://repo1.dso.mil/big-bang/bigbang.git"
+	bb     = "bigbang"
+	bbRepo = "https://repo1.dso.mil/big-bang/bigbang.git"
 )
 
 var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
-// MutateBigbangComponent Mutates a component that should deploy BigBang to a set of manifests
+// Run Mutates a component that should deploy BigBang to a set of manifests
 // that contain the flux deployment of BigBang
-func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	if err := utils.CreateDirectory(tmpPaths.Charts, 0700); err != nil {
 		return c, fmt.Errorf("unable to create charts directory: %w", err)
 	}
@@ -43,11 +45,17 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 
 	cfg := c.Extensions.BigBang
 
-	// If no repo is provided, use the default.
-	if cfg.Repo == "" {
-		cfg.Repo = _BB_REPO
+	// Make sure the version is valid.
+	if !isValidVersion(cfg.Version) {
+		return c, fmt.Errorf("invalid version: %s, must be at least 1.52.0", cfg.Version)
 	}
 
+	// If no repo is provided, use the default.
+	if cfg.Repo == "" {
+		cfg.Repo = bbRepo
+	}
+
+	// By default, we want to deploy flux.
 	if !cfg.SkipFlux {
 		if fluxManifest, images, err := getFlux(cfg); err != nil {
 			return c, err
@@ -63,11 +71,11 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 	// Configure helm to pull down the BigBang chart.
 	helmCfg := helm.Helm{
 		Chart: types.ZarfChart{
-			Name:        _BB,
-			Namespace:   _BB,
+			Name:        bb,
+			Namespace:   bb,
 			URL:         cfg.Repo,
 			Version:     cfg.Version,
-			ValuesFiles: cfg.ValuesFrom,
+			ValuesFiles: cfg.ValuesFiles,
 			GitPath:     "./chart",
 		},
 		Cfg: &types.PackagerConfig{
@@ -77,7 +85,7 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 	}
 
 	// Download the chart from Git and save it to a temporary directory.
-	chartPath := path.Join(tmpPaths.Base, _BB)
+	chartPath := path.Join(tmpPaths.Base, bb)
 	helmCfg.ChartLoadOverride = helmCfg.DownloadChartFromGit(chartPath)
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
@@ -118,6 +126,23 @@ func MutateBigbangComponent(tmpPaths types.ComponentPaths, c types.ZarfComponent
 	c.Manifests = append(c.Manifests, manifest)
 
 	return c, nil
+}
+
+// isValidVesion check if the version is 1.52.0 or greater.
+func isValidVersion(version string) bool {
+	// Split the version string into its major, minor, and patch components
+	parts := strings.Split(version, ".")
+	if len(parts) != 3 {
+		return false
+	}
+
+	// Parse the major and minor components as integers.
+	// Ignore errors because we are checking the values later.
+	major, _ := strconv.Atoi(parts[0])
+	minor, _ := strconv.Atoi(parts[1])
+
+	// @todo(runyontr) This should be changed to 1.54.0 once it is released.
+	return major >= 1 && minor >= 52
 }
 
 // findURLs takes a list of yaml objects (as a string) and
@@ -161,11 +186,11 @@ func findURLs(t string) (urls []string) {
 }
 
 // addBigBangManifests creates the manifests component for deploying BigBang.
-func addBigBangManifests(manifestDir string, cfg extensions.BigBang) (types.ZarfManifest, error) {
+func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := types.ZarfManifest{
-		Name:      _BB,
-		Namespace: _BB,
+		Name:      bb,
+		Namespace: bb,
 	}
 
 	// Helper function to marshal and write a manifest and add it to the component.
@@ -201,7 +226,7 @@ func addBigBangManifests(manifestDir string, cfg extensions.BigBang) (types.Zarf
 	}}
 
 	// Loop through the valuesFrom list and create a manifest for each.
-	for _, path := range cfg.ValuesFrom {
+	for _, path := range cfg.ValuesFiles {
 		data, err := manifestValuesFile(path)
 		if err != nil {
 			return manifest, err

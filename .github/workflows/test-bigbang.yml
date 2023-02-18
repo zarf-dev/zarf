@@ -1,0 +1,62 @@
+name: Test Big Bang extension
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "package.json"
+      - "package-lock.json"
+      - "CODEOWNERS"
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-bb-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
+      - name: Setup K3d
+        uses: ./.github/actions/k3d
+
+      - name: Run tests
+        run: |
+          # Get the Big Bang release versions
+          project="2872"
+          releases=$(curl -s https://repo1.dso.mil/api/v4/projects/$project/repository/tags | jq -r '[.[] | select(.name | test("^[^-]+$")) | .name][0:2] | .[]')
+          latest=$(echo "$releases" | awk 'NR==1')
+          previous=$(echo "$releases" | awk 'NR==2')
+
+          echo "Latest: $latest"
+          echo "Previous: $previous"
+
+          alias z=$(pwd)/build/zarf
+
+          z package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
+          z package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
+
+          z init --confirm --components git-server
+          z package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
+          z package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs

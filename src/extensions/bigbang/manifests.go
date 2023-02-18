@@ -27,7 +27,7 @@ func manifestZarfCredentials() corev1.Secret {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: _BB,
+			Namespace: bb,
 			Name:      "zarf-credentials",
 		},
 		StringData: map[string]string{
@@ -55,15 +55,15 @@ kyvernopolicies:
 }
 
 // manifestGitRepo generates a GitRepository object for the BigBang umbrella repo.
-func manifestGitRepo(cfg extensions.BigBang) fluxSrcCtrl.GitRepository {
+func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       fluxSrcCtrl.GitRepositoryKind,
 			APIVersion: "source.toolkit.fluxcd.io/v1beta2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      _BB,
-			Namespace: _BB,
+			Name:      bb,
+			Namespace: bb,
 		},
 		Spec: fluxSrcCtrl.GitRepositorySpec{
 			URL:      cfg.Repo,
@@ -99,7 +99,7 @@ func manifestValuesFile(path string) (secret corev1.Secret, err error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: _BB,
+			Namespace: bb,
 			Name:      name,
 		},
 		StringData: map[string]string{
@@ -118,8 +118,8 @@ func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.Hel
 			APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      _BB,
-			Namespace: _BB,
+			Name:      bb,
+			Namespace: bb,
 		},
 		Spec: fluxHelmCtrl.HelmReleaseSpec{
 			Timeout: &tenMins,
@@ -128,7 +128,7 @@ func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.Hel
 					Chart: "./chart",
 					SourceRef: fluxHelmCtrl.CrossNamespaceObjectReference{
 						Kind: fluxSrcCtrl.GitRepositoryKind,
-						Name: _BB,
+						Name: bb,
 					},
 				},
 			},
