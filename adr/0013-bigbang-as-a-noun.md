@@ -29,7 +29,7 @@ The `bigbang` section will provide the following configurations for managing a b
 
 ## Implementation
 
-The BigBang component in the origional zarf.yaml will be split into up to two different zarf components for packaging and deployment. The first is the flux component, which will only be included if `skipFlux` is set to false (the default). The flux deployment is just a remote Kustomizatoin pointing at the [suggested installation of flux](https://repo1.dso.mil/big-bang/bigbang/-/tree/master/base/flux): The BigBang component will be the following objects deployed as manifests:
+The BigBang component in the original zarf.yaml will update the component to install Flux and Big Bang, unless the `skipFlux` flag is set to true. The flux deployment is just a remote Kustomization pointing at the [corresponding version of flux](https://repo1.dso.mil/big-bang/bigbang/-/tree/master/base/flux): The BigBang component will be the following objects deployed as manifests:
 
 1. The `bigbang` `Namespace`
 2. One `Secret` for each file provided in `valuesFiles`
@@ -39,4 +39,4 @@ The BigBang component in the origional zarf.yaml will be split into up to two di
 ## Consequences
 
 - By doing package time rendering and discovery of images for inclusion into the zarf package, the flexibility for deploy time configuration is limited since new parts of BigBang can't be added arbitrarily, since the necessary artifacts to deploy those BigBang packages won't be present in the zarf package
-- BigBang is every changing and improving, and while it is available as open source, we do not control the change in how the deployment is handled as [BigBang 2.0](https://repo1.dso.mil/groups/big-bang/-/epics/217) is progressing. This creates a burden on the Zarf team to ensure new changes in Big Bang do not break how BigBang is deployed, and a burden to ensure as the way BigBang gets deployed is changed, it does not break older versions of deploying BigBang.
+- BigBang is ever changing and improving, and while it is available as open source, we do not control the change in how the deployment is handled as [BigBang 2.0](https://repo1.dso.mil/groups/big-bang/-/epics/217) is progressing. This creates a burden on the Zarf team to ensure new changes in Big Bang do not break how BigBang is deployed, and a burden to ensure as the way BigBang gets deployed is changed, it does not break older versions of deploying BigBang.
