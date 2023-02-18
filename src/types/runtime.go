@@ -87,11 +87,3 @@ type TempPaths struct {
 	Sboms        string
 	ZarfYaml     string
 }
-
-// ExtensionBinding is the interface that all extensions must implement.
-type ExtensionBinding interface {
-	BeforeCreate(ZarfComponent) error
-	OnCreate(ZarfComponent) error
-	OnDeploy(ZarfComponent) error
-	OnRemove(ZarfComponent) error
-}
