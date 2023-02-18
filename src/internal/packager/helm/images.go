@@ -3,7 +3,6 @@ package helm
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
