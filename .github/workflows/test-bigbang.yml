@@ -42,7 +42,7 @@ jobs:
         with:
           registry: registry1.dso.mil
           username: ${{ secrets.IRONBANK_USERNAME }}
-          password: ${{ secrets.IRONBANK_PASSWORD }}        
+          password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Run tests
         run: |
@@ -55,14 +55,14 @@ jobs:
           echo "Latest: $latest"
           echo "Previous: $previous"
 
-          alias z=$(pwd)/build/zarf
+          export PATH=$(pwd)/build:$PATH
 
-          z package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
-          z package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
+          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
+          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
 
-          z init --confirm --components git-server
-          z package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
-          z package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm
+          zarf init --confirm --components git-server
+          zarf package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
+          zarf package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm
 
       - name: Save logs
         if: always()
