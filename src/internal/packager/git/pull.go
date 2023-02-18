@@ -5,6 +5,7 @@
 package git
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -13,13 +14,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
 func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
-	g.updateMessage("g.DownloadRepoToTemp(%s)", gitURL)
+	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
 	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
 		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
@@ -36,7 +38,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 
 // Pull clones or updates a git repository into the target folder.
 func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
-	g.updateMessage("g.Pull(%s)", gitURL)
+	g.Spinner.Updatef("g.Pull(%s)", gitURL)
 	repoName, err := g.TransformURLtoRepoName(gitURL)
 	if err != nil {
 		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
@@ -51,7 +53,7 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 
 // internal pull function that will clone/pull the latest changes from the git repo
 func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
-	g.updateMessage("Processing git repo %s", gitURL)
+	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	gitCachePath := targetFolder
 	if repoName != "" {
@@ -90,7 +92,16 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			message.Debug("Repo already up to date")
 		} else if err != nil {
-			return fmt.Errorf("not a valid git repo or unable to pull (%s): %w", gitURL, err)
+			g.Spinner.Updatef("Falling back to host git for %s", gitURL)
+			execCfg := exec.Config{
+				Dir:    gitCachePath,
+				Stdout: g.Spinner,
+				Stderr: g.Spinner,
+			}
+			_, _, err := exec.CmdWithContext(context.TODO(), execCfg, "git", "pull")
+			if err != nil {
+				return fmt.Errorf("unable to pull the repo (%s): %w", gitURL, err)
+			}
 		}
 
 		// NOTE: Since pull doesn't pull any new tags, we need to fetch them.
@@ -119,13 +130,13 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 
 		// No repo head available.
 		if err != nil {
-			g.errorMessage(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
+			g.Spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
 		} else if head.Name().IsBranch() {
 			// Valid repo head and it is a branch.
 			trunkBranchName = head.Name()
 		} else {
 			// Valid repo head but not a branch.
-			g.errorMessage(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
+			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
 		_, err = g.removeLocalTagRefs()
@@ -145,22 +156,4 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	}
 
 	return nil
-}
-
-// updateMessage updates the spinner if set, otherwise sends to debug logs
-func (g *Git) updateMessage(format string, args any) {
-	if g.Spinner != nil {
-		g.Spinner.Updatef(format, args)
-	} else {
-		message.Debugf(format, args)
-	}
-}
-
-// errorMessage updates the spinner if set, otherwise sends to error logs
-func (g *Git) errorMessage(err error, format string, args ...any) {
-	if g.Spinner != nil {
-		g.Spinner.Errorf(err, format, args)
-	} else {
-		message.Errorf(err, format, args)
-	}
 }
