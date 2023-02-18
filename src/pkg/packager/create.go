@@ -85,11 +85,6 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Save the transformed config.
-	if err := p.writeYaml(); err != nil {
-		return fmt.Errorf("unable to write zarf.yaml: %w", err)
-	}
-
 	// Perform early package validation.
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
@@ -148,6 +143,10 @@ func (p *Packager) Create(baseDir string) error {
 
 		// Combine all component images into a single entry for efficient layer reuse.
 		combinedImageList = append(combinedImageList, component.Images...)
+
+		// Remove the temp directory for this component before archiving.
+		tmpPath := path.Join(p.getComponentBasePath(component), "temp")
+		_ = os.RemoveAll(tmpPath)
 	}
 
 	imgList := utils.Unique(combinedImageList)
@@ -188,6 +187,11 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Try to remove the package if it already exists.
 	_ = os.RemoveAll(packageName)
+
+	// Save the transformed config.
+	if err := p.writeYaml(); err != nil {
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
 
 	// Make the archive
 	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
@@ -376,13 +380,18 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
-			for _, f := range manifest.Files {
+			for idx, f := range manifest.Files {
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
+				// If using a temp directory, trim the temp directory from the path.
+				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
+				destination := path.Join(componentPath.Manifests, trimmedPath)
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
+
+				// Update the manifest path to the new location.
+				manifest.Files[idx] = trimmedPath
 			}
 
 			for idx, k := range manifest.Kustomizations {

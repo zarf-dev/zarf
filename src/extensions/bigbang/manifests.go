@@ -90,7 +90,7 @@ func manifestValuesFile(path string) (secret corev1.Secret, err error) {
 	baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
 
 	// Add the name prefix.
-	name := fmt.Sprintf("bigbang-values-%s", baseName)
+	name := fmt.Sprintf("bb-ext-user-values-%s", baseName)
 
 	// Create a secret with the file contents.
 	secret = corev1.Secret{

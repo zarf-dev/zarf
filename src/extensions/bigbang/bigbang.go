@@ -6,7 +6,6 @@ package bigbang
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -35,12 +34,8 @@ var tenMins = metav1.Duration{
 // Run Mutates a component that should deploy BigBang to a set of manifests
 // that contain the flux deployment of BigBang
 func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
-	if err := utils.CreateDirectory(tmpPaths.Charts, 0700); err != nil {
-		return c, fmt.Errorf("unable to create charts directory: %w", err)
-	}
-
-	if err := utils.CreateDirectory(tmpPaths.Manifests, 0700); err != nil {
-		return c, fmt.Errorf("unable to create manifests directory: %w", err)
+	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
+		return c, fmt.Errorf("unable to component temp directory: %w", err)
 	}
 
 	cfg := c.Extensions.BigBang
@@ -57,7 +52,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// By default, we want to deploy flux.
 	if !cfg.SkipFlux {
-		fluxManifest, images, err := getFlux(cfg)
+		fluxManifest, images, err := getFlux(tmpPaths.Temp, cfg)
 		if err != nil {
 			return c, err
 		}
@@ -82,18 +77,16 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		Cfg: &types.PackagerConfig{
 			State: types.ZarfState{},
 		},
-		BasePath: tmpPaths.Charts,
+		BasePath: tmpPaths.Temp,
 	}
 
 	// Download the chart from Git and save it to a temporary directory.
-	chartPath := path.Join(tmpPaths.Base, bb)
+	chartPath := path.Join(tmpPaths.Temp, bb)
 	helmCfg.ChartLoadOverride = helmCfg.DownloadChartFromGit(chartPath)
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
 	template, err := helmCfg.TemplateChart()
-	// Clean up the chart directory after we're done with it.
-	_ = os.RemoveAll(chartPath)
 	if err != nil {
 		return c, fmt.Errorf("unable to template BigBang Chart: %w", err)
 	}
@@ -119,7 +112,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Images = utils.Unique(c.Images)
 
 	// Create the flux wrapper around BigBang for deployment.
-	manifest, err := addBigBangManifests(tmpPaths.Manifests, cfg)
+	manifest, err := addBigBangManifests(tmpPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
@@ -212,12 +205,12 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 	}
 
 	// Create the GitRepository manifest.
-	if err := addManifest("gitrepository.yaml", manifestGitRepo(cfg)); err != nil {
+	if err := addManifest("bb-ext-gitrepository.yaml", manifestGitRepo(cfg)); err != nil {
 		return manifest, err
 	}
 
 	// Create the zarf-credentials secret manifest.
-	if err := addManifest("zarf-credentials.yaml", manifestZarfCredentials()); err != nil {
+	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials()); err != nil {
 		return manifest, err
 	}
 
@@ -246,7 +239,7 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 		})
 	}
 
-	if err := addManifest("helmrepository.yaml", manifestHelmRelease(hrValues)); err != nil {
+	if err := addManifest("bb-ext-helmrepository.yaml", manifestHelmRelease(hrValues)); err != nil {
 		return manifest, err
 	}
 

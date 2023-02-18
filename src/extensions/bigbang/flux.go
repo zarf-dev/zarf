@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -19,13 +18,8 @@ import (
 )
 
 // getFlux Creates a component to deploy Flux.
-func getFlux(cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return manifest, images, fmt.Errorf("unable to create temp directory: %w", err)
-	}
-
-	localPath := path.Join(tmpDir, "flux.yaml")
+func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
+	localPath := path.Join(baseDir, "bb-ext-flux.yaml")
 	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", bbRepo, cfg.Version)
 
 	// Perform Kustomzation now to get the flux.yaml file.
