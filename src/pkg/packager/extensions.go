@@ -12,13 +12,15 @@ import (
 )
 
 // Check for any extensions in use and runs the appropriate functions.
-func (p *Packager) processExtensions(cPaths types.ComponentPaths, c types.ZarfComponent) (out types.ZarfComponent, err error) {
+func (p *Packager) processExtensions(cPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	var err error
+
 	// BigBang
 	if c.Extensions.BigBang != nil {
-		if out, err = bigbang.Run(cPaths, c); err != nil {
-			return out, fmt.Errorf("unable to process bigbang extension: %w", err)
+		if c, err = bigbang.Run(cPaths, c); err != nil {
+			return c, fmt.Errorf("unable to process bigbang extension: %w", err)
 		}
 	}
 
-	return out, nil
+	return c, nil
 }
