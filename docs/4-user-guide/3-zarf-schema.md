@@ -1983,7 +1983,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Configurations for installing BigBang and Flux in the cluster
+**Description:** Configurations for installing Big Bang and Flux in the cluster
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |

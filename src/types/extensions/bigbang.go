@@ -6,8 +6,8 @@ package extensions
 
 // BigBang defines a file to deploy.
 type BigBang struct {
-	Version     string   `json:"version" jsonschema:"description=The version of Big Bang you'd like to use"`
-	Repo        string   `json:"repo,omitempty" jsonschema:"description=Override of repo to pull big bang from"`
-	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=list of values files to pass to BigBang; these will be merged together"`
-	SkipFlux    bool     `json:"skipFlux,omitempty" jsonschema:"description=Should we skip deploying flux? Defaults to false"`
+	Version     string   `json:"version" jsonschema:"description=The version of Big Bang to use"`
+	Repo        string   `json:"repo,omitempty" jsonschema:"description=Override repo to pull Big Bang from instead of Repo One"`
+	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=The list of values files to pass to Big Bang; these will be merged together"`
+	SkipFlux    bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
 }

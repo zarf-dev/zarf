@@ -15,7 +15,7 @@ import (
 func (p *Packager) processExtensions(cPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
 
-	// BigBang
+	// Big Bang
 	if c.Extensions.BigBang != nil {
 		if c, err = bigbang.Run(cPaths, c); err != nil {
 			return c, fmt.Errorf("unable to process bigbang extension: %w", err)

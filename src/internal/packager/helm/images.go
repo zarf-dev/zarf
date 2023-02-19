@@ -59,7 +59,7 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 	}
 
 	// TODO (@runyontr) expand this to work for regular charts for more generic
-	// capability and pull it out from just being used by BigBang.
+	// capability and pull it out from just being used by Big Bang.
 	downloadPath := helmCfg.DownloadChartFromGit(tmpDir)
 
 	// Generate a new chart.

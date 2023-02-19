@@ -407,7 +407,7 @@
         "bigbang": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/BigBang",
-          "description": "Configurations for installing BigBang and Flux in the cluster"
+          "description": "Configurations for installing Big Bang and Flux in the cluster"
         }
       },
       "additionalProperties": false,

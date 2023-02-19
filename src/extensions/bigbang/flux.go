@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package bigbang contains the logic for installing BigBang and Flux
+// Package bigbang contains the logic for installing Big Bang and Flux
 package bigbang
 
 import (

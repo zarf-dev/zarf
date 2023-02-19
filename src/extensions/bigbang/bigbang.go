@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package bigbang contains the logic for installing BigBang and Flux
+// Package bigbang contains the logic for installing Big Bang and Flux
 package bigbang
 
 import (
@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// Default location for pulling BigBang.
+// Default location for pulling Big Bang.
 const (
 	bb     = "bigbang"
 	bbRepo = "https://repo1.dso.mil/big-bang/bigbang.git"
@@ -31,8 +31,8 @@ var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
-// Run Mutates a component that should deploy BigBang to a set of manifests
-// that contain the flux deployment of BigBang
+// Run Mutates a component that should deploy Big Bang to a set of manifests
+// that contain the flux deployment of Big Bang
 func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
@@ -64,7 +64,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		c.Images = append(c.Images, images...)
 	}
 
-	// Configure helm to pull down the BigBang chart.
+	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.Helm{
 		Chart: types.ZarfChart{
 			Name:        bb,
@@ -88,17 +88,17 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	// manifests created with the provided Helm.
 	template, err := helmCfg.TemplateChart()
 	if err != nil {
-		return c, fmt.Errorf("unable to template BigBang Chart: %w", err)
+		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
 
-	// Add the BigBang repo to the list of repos to be pulled down by Zarf.
+	// Add the Big Bang repo to the list of repos to be pulled down by Zarf.
 	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 	c.Repos = append(c.Repos, bbRepo)
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
 	c.Repos = append(c.Repos, findURLs(template)...)
 
-	// Select the images needed to support the repos for this configuration of BigBang.
+	// Select the images needed to support the repos for this configuration of Big Bang.
 	for _, r := range c.Repos {
 		images, err := helm.FindImagesForChartRepo(r, "chart")
 		if err != nil {
@@ -111,13 +111,13 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	// Make sure the list of images is unique.
 	c.Images = utils.Unique(c.Images)
 
-	// Create the flux wrapper around BigBang for deployment.
+	// Create the flux wrapper around Big Bang for deployment.
 	manifest, err := addBigBangManifests(tmpPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
 
-	// AAdd the BigBang manifests to the list of manifests to be pulled down by Zarf.
+	// AAdd the Big Bang manifests to the list of manifests to be pulled down by Zarf.
 	c.Manifests = append(c.Manifests, manifest)
 
 	return c, nil
@@ -180,7 +180,7 @@ func findURLs(t string) (urls []string) {
 	return urls
 }
 
-// addBigBangManifests creates the manifests component for deploying BigBang.
+// addBigBangManifests creates the manifests component for deploying Big Bang.
 func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := types.ZarfManifest{

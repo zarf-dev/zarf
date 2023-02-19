@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package bigbang contains the logic for installing BigBang and Flux
+// Package bigbang contains the logic for installing Big Bang and Flux
 package bigbang
 
 import (
@@ -47,14 +47,14 @@ kyvernopolicies:
     exclude:
       any:
       - resources:
-          namespaces: 
+          namespaces:
           - zarf # don't have kyverno prevent zarf from doing zarf things
             `,
 		},
 	}
 }
 
-// manifestGitRepo generates a GitRepository object for the BigBang umbrella repo.
+// manifestGitRepo generates a GitRepository object for the Big Bang umbrella repo.
 func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
@@ -75,7 +75,7 @@ func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 	}
 }
 
-// manifestValuesFile generates a Secret object for the BigBang umbrella repo.
+// manifestValuesFile generates a Secret object for the Big Bang umbrella repo.
 func manifestValuesFile(path string) (secret corev1.Secret, err error) {
 	// Read the file from the path.
 	file, err := os.ReadFile(path)
@@ -110,7 +110,7 @@ func manifestValuesFile(path string) (secret corev1.Secret, err error) {
 	return secret, nil
 }
 
-// manifestHelmRelease generates a HelmRelease object for the BigBang umbrella repo.
+// manifestHelmRelease generates a HelmRelease object for the Big Bang umbrella repo.
 func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.HelmRelease {
 	return fluxHelmCtrl.HelmRelease{
 		TypeMeta: metav1.TypeMeta{

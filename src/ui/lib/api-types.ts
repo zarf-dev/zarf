@@ -454,13 +454,13 @@ export interface ZarfContainerTarget {
  */
 export interface ZarfComponentExtensions {
     /**
-     * Configurations for installing BigBang and Flux in the cluster
+     * Configurations for installing Big Bang and Flux in the cluster
      */
     bigbang?: BigBang;
 }
 
 /**
- * Configurations for installing BigBang and Flux in the cluster
+ * Configurations for installing Big Bang and Flux in the cluster
  */
 export interface BigBang {
     /**
