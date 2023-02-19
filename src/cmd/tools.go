@@ -270,19 +270,20 @@ func init() {
 
 	toolsCmd.AddCommand(syftCmd)
 
-	// Add the kubectl command to the tools command
-	kubectlCmd := kubeCmd.NewDefaultKubectlCommand()
-
-	if err := kubeCLI.RunNoErrOutput(kubectlCmd); err != nil {
-		// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand
-		message.Debug(err)
+	// Kubectl stub command.
+	kubectlCmd := &cobra.Command{
+		Short: lang.CmdToolsKubectlDocs,
+		Run:   func(cmd *cobra.Command, args []string) {},
 	}
 
-	// If the generate-cli-docs flag is set, just add a stub command
-	if len(os.Args) > 2 && os.Args[2] == "generate-cli-docs" {
-		kubectlCmd = &cobra.Command{
-			Short: lang.CmdToolsKubectlDocs,
-			Run:   func(cmd *cobra.Command, args []string) {},
+	// Only load this command if it is being called directly.
+	if isVendorCmd([]string{"kubectl", "k"}) {
+		// Add the kubectl command to the tools command.
+		kubectlCmd = kubeCmd.NewDefaultKubectlCommand()
+
+		if err := kubeCLI.RunNoErrOutput(kubectlCmd); err != nil {
+			// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand.
+			message.Debug(err)
 		}
 	}
 
@@ -337,4 +338,37 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	}
 
 	return craneCatalog
+}
+
+// isVendorCmd checks if the command is a vendor command.
+func isVendorCmd(cmd []string) bool {
+	a := os.Args
+	if len(a) > 2 {
+		if a[1] == "tools" || a[1] == "t" {
+			if utils.SliceContains(cmd, a[2]) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// Check if the command is being run as a vendor-only command
+func checkVendorOnly() bool {
+	vendorCmd := []string{
+		"kubectl",
+		"k",
+		"syft",
+		"sbom",
+		"s",
+		"k9s",
+		"monitor",
+		"wait-for",
+		"wait",
+		"w",
+	}
+
+	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
+	return isVendorCmd(vendorCmd)
 }
