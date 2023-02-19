@@ -8,7 +8,7 @@ Zarf integrates with Big Bang through the use of an extension that simplifies th
 
 ### Known Issues
 
-The current version of this extension requires [some patches](../../examples/big-bang/config/patch-images.yaml) to the Big Bang values to function correctly.  We will be looking to remove this limitation in a future release.
+The current version of this extension requires [some patches](../../examples/big-bang/config/patch-images.yaml) to the Big Bang values to function correctly, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.
 
 ## System Requirements
 
@@ -167,14 +167,7 @@ zarf tools k9s
 
 ## Package Removal
 
-To remove the Big Bang package you can simply run the following in the `examples/big-bang` folder:
-
-<!-- TODO (@WSTARR): Confirm if this actually is supposed to work -->
-```bash
-zarf package remove zarf-package-big-bang-example-amd64-x.x.x.tar.zst --confirm
-```
-
-If you want to destroy the entire `k3d` cluster you can also run the following:
+The Big Bang package is not fully integrated into the Zarf package remove lifecycle (see [known issues](#known-issues)), but for the purposes of this walkthrough you can simply remove your k3d cluster:
 
 ```bash
 k3d cluster delete
@@ -184,6 +177,6 @@ k3d cluster delete
 
 See the Troubleshooting section of the Big Bang Quick Start for help troubleshooting the Big Bang deployment: https://repo1.dso.mil/big-bang/bigbang/-/blob/master/docs/guides/deployment-scenarios/quickstart.md#troubleshooting
 
-Also, ensure that you have followed all of the steps required in the [pre-requisites](#pre-requisites) section.
+Also, ensure that you have followed all of the steps required in the [pre-requisites](#pre-requisites) section and have reviewed the [known issues](#known-issues).
 
 If you feel that the error you are encountering is one with Zarf feel free to [open an issue](https://github.com/defenseunicorns/zarf/issues/new/choose) or reach out via [slack](https://kubernetes.slack.com/archives/C03B6BJAUJ3).
