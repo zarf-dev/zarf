@@ -64,6 +64,12 @@ func initViper() {
 	}
 
 	v = viper.New()
+
+	// Skip for vendor-only commands
+	if checkVendorOnly() {
+		return
+	}
+
 	// Specify an alternate config file
 	cfgFile := os.Getenv("ZARF_CONFIG")
 

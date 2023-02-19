@@ -262,6 +262,16 @@ const (
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
+	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of component during deployment. \n" +
+		"This command can be used to wait for a specific resource to exist and be ready that may be created by a Gitops tool or Operator."
+	CmdToolsWaitForFlagTimeout      = "Specify the timeout duration for the wait command."
+	CmdToolsWaitForErrTimeoutString = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeout       = "Wait timed out."
+	CmdToolsWaitForErrZarfPath      = "Could not locate the current Zarf binary path."
+
+	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
+
 	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
 

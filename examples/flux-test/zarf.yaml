@@ -29,3 +29,9 @@ components:
       - https://github.com/stefanprodan/podinfo.git
     images:
       - ghcr.io/stefanprodan/podinfo:6.3.3
+    actions:
+      onDeploy:
+        after:
+          - cmd: "./zarf tools wait-for podinfo deployment podinfo available"
+            description: "Podinfo deployment to be ready"
+            mute: true

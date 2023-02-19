@@ -5,7 +5,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/anchore/syft/cmd/syft/cli"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -14,14 +16,23 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	k9s "github.com/derailed/k9s/cmd"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
+	kubeCLI "k8s.io/component-base/cli"
+	kubeCmd "k8s.io/kubectl/pkg/cmd"
+
+	// Import to initialize client auth plugins.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-var subAltNames []string
+var (
+	subAltNames []string
+	waitTimeout string
+)
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -157,6 +168,65 @@ var generatePKICmd = &cobra.Command{
 	},
 }
 
+var waitForCmd = &cobra.Command{
+	Use:     "wait-for {NAMESPACE} {RESOURCE} {NAME} {CONDITION}",
+	Aliases: []string{"w", "wait"},
+	Short:   lang.CmdToolsWaitForShort,
+	Long:    lang.CmdToolsWaitForLong,
+	Example: `zarf tools wait-for default pod my-pod-name ready`,
+	Args:    cobra.ExactArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		// Parse the timeout string
+		timeout, err := time.ParseDuration(waitTimeout)
+		if err != nil {
+			message.Fatalf(err, lang.CmdToolsWaitForErrTimeoutString, waitTimeout)
+		}
+
+		namespace, resource, name, condition := args[0], args[1], args[2], args[3]
+		zarf, err := utils.GetFinalExecutablePath()
+		if err != nil {
+			message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
+		}
+
+		expired := time.After(timeout)
+
+		conditionMsg := fmt.Sprintf("Waiting for %s/%s in namespace %s to be %s.", resource, name, namespace, condition)
+		existMsg := fmt.Sprintf("Waiting for %s/%s in namespace %s to exist.", resource, name, namespace)
+		spinner := message.NewProgressSpinner(existMsg)
+		defer spinner.Stop()
+
+		for {
+			// Delay the check for 1 second
+			time.Sleep(time.Second)
+
+			select {
+			case <-expired:
+				message.Fatal(nil, lang.CmdToolsWaitForErrTimeout)
+
+			default:
+				spinner.Updatef(existMsg)
+				// Check if the resource exists.
+				args := []string{"tools", "kubectl", "get", "-n", namespace, resource, name}
+				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
+					message.Debug(stdout, stderr, err)
+					continue
+				}
+
+				spinner.Updatef(conditionMsg)
+				// Wait for the resource to meet the given condition.
+				args = []string{"tools", "kubectl", "wait", "-n", namespace, resource, name, "--for", "condition=" + condition, "--timeout=" + waitTimeout}
+				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
+					message.Debug(stdout, stderr, err)
+					continue
+				}
+
+				spinner.Successf(conditionMsg)
+				os.Exit(0)
+			}
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(toolsCmd)
 	toolsCmd.AddCommand(archiverCmd)
@@ -199,6 +269,30 @@ func init() {
 	}
 
 	toolsCmd.AddCommand(syftCmd)
+
+	// Add the kubectl command to the tools command
+	kubectlCmd := kubeCmd.NewDefaultKubectlCommand()
+
+	if err := kubeCLI.RunNoErrOutput(kubectlCmd); err != nil {
+		// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand
+		message.Debug(err)
+	}
+
+	// If the generate-cli-docs flag is set, just add a stub command
+	if len(os.Args) > 2 && os.Args[2] == "generate-cli-docs" {
+		kubectlCmd = &cobra.Command{
+			Short: lang.CmdToolsKubectlDocs,
+			Run:   func(cmd *cobra.Command, args []string) {},
+		}
+	}
+
+	kubectlCmd.Use = "kubectl"
+	kubectlCmd.Aliases = []string{"k"}
+
+	toolsCmd.AddCommand(kubectlCmd)
+
+	toolsCmd.AddCommand(waitForCmd)
+	waitForCmd.Flags().StringVar(&waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 }
 
 // Wrap the original crane catalog with a zarf specific version

@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -33,6 +34,11 @@ var (
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Skip for vendor-only commands
+		if checkVendorOnly() {
+			return
+		}
+
 		// Don't add the logo to the help command
 		if cmd.Parent() == nil {
 			skipLogFile = true
@@ -65,6 +71,11 @@ func Execute() {
 }
 
 func init() {
+	// Skip for vendor-only commands
+	if checkVendorOnly() {
+		return
+	}
+
 	initViper()
 
 	v.SetDefault(V_LOG_LEVEL, "info")
@@ -82,6 +93,32 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(V_INSECURE), lang.RootCmdFlagInseure)
+}
+
+// Check if the command is being run as a vendor-only command
+func checkVendorOnly() bool {
+	vendorCmd := []string{
+		"kubectl",
+		"k",
+		"syft",
+		"sbom",
+		"s",
+		"k9s",
+		"monitor",
+		"wait-for",
+		"wait",
+		"w",
+	}
+
+	// Check for "zarf tools <cmd>" where <cmd> is in the vendorCmd list
+	if len(os.Args) > 2 && os.Args[1] == "tools" || os.Args[1] == "t" {
+		if utils.SliceContains(vendorCmd, os.Args[2]) {
+			return true
+		}
+	}
+
+	// Not a vendor-only command
+	return false
 }
 
 func cliSetup() {
