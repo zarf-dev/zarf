@@ -34,5 +34,4 @@ zarf
 zarf-pki
 zarf-sbom/
 *.part*
-
 __debug_bin
