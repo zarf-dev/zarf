@@ -113,13 +113,13 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 				helmCfg.Cfg.State = types.ZarfState{}
 				if isGitURL {
-					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
+					path := helmCfg.PackageChartFromGit(componentPath.Charts)
 					// track the actual chart path
 					chartNames[chart.Name] = path
 				} else if chart.URL != "" {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				} else {
-					helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
+					helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {

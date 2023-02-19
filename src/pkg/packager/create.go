@@ -290,11 +290,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			if isGitURL {
-				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
+				_ = helmCfg.PackageChartFromGit(componentPath.Charts)
 			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
-				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
+				path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 				if !strings.HasSuffix(path, zarfFilename) {
 					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")

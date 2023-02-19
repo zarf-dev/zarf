@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/goccy/go-yaml"
@@ -30,6 +31,9 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 	if len(matches) < 2 {
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
 	}
+
+	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
+	defer spinner.Stop()
 
 	// Trim the first char to match how the packager expects it, this is messy,need to clean up better
 	repoHelmChartPath := strings.TrimPrefix(path, "/")
@@ -60,10 +64,11 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 
 	// TODO (@runyontr) expand this to work for regular charts for more generic
 	// capability and pull it out from just being used by Big Bang.
-	downloadPath := helmCfg.DownloadChartFromGit(tmpDir)
+	tempPath := helmCfg.downloadChartFromGitToTemp(spinner)
+	defer os.RemoveAll(tempPath)
 
-	// Generate a new chart.
-	chart, err := loader.LoadFile(downloadPath)
+	// Load a new chart.
+	chart, err := loader.LoadDir(tempPath)
 	if err != nil {
 		return images, err
 	}
@@ -80,6 +85,8 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 	for _, i := range chartImages {
 		images = append(images, i.Image)
 	}
+
+	spinner.Success()
 
 	return images, nil
 }

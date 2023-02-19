@@ -82,7 +82,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Download the chart from Git and save it to a temporary directory.
 	chartPath := path.Join(tmpPaths.Temp, bb)
-	helmCfg.ChartLoadOverride = helmCfg.DownloadChartFromGit(chartPath)
+	helmCfg.ChartLoadOverride = helmCfg.PackageChartFromGit(chartPath)
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
