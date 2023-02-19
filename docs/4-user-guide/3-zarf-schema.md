@@ -2000,7 +2000,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The version of Big Bang you'd like to use
+**Description:** The version of Big Bang to use
 
 |          |          |
 | -------- | -------- |
@@ -2016,7 +2016,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Override of repo to pull big bang from
+**Description:** Override repo to pull Big Bang from instead of Repo One
 
 |          |          |
 | -------- | -------- |
@@ -2032,7 +2032,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** list of values files to pass to BigBang; these will be merged together
+**Description:** The list of values files to pass to Big Bang; these will be merged together
 
 |          |                   |
 | -------- | ----------------- |
@@ -2062,7 +2062,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Should we skip deploying flux? Defaults to false
+**Description:** Whether to skip deploying flux; Defaults to false
 
 |          |           |
 | -------- | --------- |

@@ -464,19 +464,19 @@ export interface ZarfComponentExtensions {
  */
 export interface BigBang {
     /**
-     * Override of repo to pull big bang from
+     * Override repo to pull Big Bang from instead of Repo One
      */
     repo?: string;
     /**
-     * Should we skip deploying flux? Defaults to false
+     * Whether to skip deploying flux; Defaults to false
      */
     skipFlux?: boolean;
     /**
-     * list of values files to pass to BigBang; these will be merged together
+     * The list of values files to pass to Big Bang; these will be merged together
      */
     valuesFiles?: string[];
     /**
-     * The version of Big Bang you'd like to use
+     * The version of Big Bang to use
      */
     version: string;
 }
