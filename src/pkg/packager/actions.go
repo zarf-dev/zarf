@@ -35,10 +35,11 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		ctx        context.Context
 		cancel     context.CancelFunc
 		cmdEscaped string
-		cmd        string
 		out        string
 		err        error
 		vars       map[string]string
+
+		cmd = action.Cmd
 	)
 
 	// If the action is a wait, convert it to a command.
