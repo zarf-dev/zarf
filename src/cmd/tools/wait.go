@@ -36,7 +36,7 @@ var waitForCmd = &cobra.Command{
         zarf tools wait-for pod my-pod-name ready -n default                    wait for pod my-pod-name in namespace default to be ready
         zarf tools wait-for p cool-pod-name ready -n cool                       wait for pod (using p alias) cool-pod-name in namespace cool to be ready
         zarf tools wait-for deployment podinfo available -n podinfo             wait for deployment podinfo in namespace podinfo to be available
-		zarf tools wait-for pod app=podinfo ready -n podinfo                    wait for pod with label app=podinfo in namespace podinfo to be ready
+        zarf tools wait-for pod app=podinfo ready -n podinfo                    wait for pod with label app=podinfo in namespace podinfo to be ready
         zarf tools wait-for svc zarf-docker-registry exists -n zarf             wait for service zarf-docker-registry in namespace zarf to exist
         zarf tools wait-for svc zarf-docker-registry -n zarf                    same as above, except exists is the default condition
         zarf tools wati-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
