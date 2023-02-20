@@ -32,6 +32,6 @@ components:
     actions:
       onDeploy:
         after:
-          - cmd: "./zarf tools wait-for podinfo deployment podinfo available"
+          - cmd: "./zarf tools wait-for deployment podinfo available -n podinfo"
             description: "Podinfo deployment to be ready"
             mute: true
