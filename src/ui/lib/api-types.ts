@@ -305,7 +305,7 @@ export interface ZarfComponentActionSet {
 
 export interface ZarfComponentAction {
     /**
-     * The command to run
+     * The command to run. Must specify either cmd or wait for the action to do anything.
      */
     cmd?: string;
     /**
@@ -337,6 +337,76 @@ export interface ZarfComponentAction {
      * available to all remaining actions and components in the package.
      */
     setVariable?: string;
+    /**
+     * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
+     * action to do anything. If both are specified
+     */
+    wait?: ZarfComponentActionWait;
+}
+
+/**
+ * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
+ * action to do anything. If both are specified
+ */
+export interface ZarfComponentActionWait {
+    /**
+     * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
+     * network can be specified.
+     */
+    cluster?: ZarfComponentActionWaitCluster;
+    /**
+     * Wait for a condition to be met on the network before continuing. Only one of cluster or
+     * network can be specified.
+     */
+    network?: ZarfComponentActionWaitNetwork;
+}
+
+/**
+ * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
+ * network can be specified.
+ */
+export interface ZarfComponentActionWaitCluster {
+    /**
+     * The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist
+     */
+    condition?: string;
+    /**
+     * The kind of resource to wait for (e.g. Pod; Deployment; etc.)
+     */
+    kind: string;
+    name: string;
+    /**
+     * The namespace of the resource to wait for
+     */
+    namespace?: string;
+}
+
+/**
+ * Wait for a condition to be met on the network before continuing. Only one of cluster or
+ * network can be specified.
+ */
+export interface ZarfComponentActionWaitNetwork {
+    /**
+     * The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
+     */
+    address: string;
+    /**
+     * The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
+     */
+    code?: number;
+    /**
+     * The protocol to wait for (e.g. tcp; http; etc.).
+     */
+    protocol: Protocol;
+}
+
+/**
+ * The protocol to wait for (e.g. tcp; http; etc.).
+ */
+export enum Protocol {
+    HTTP = "http",
+    HTTPS = "https",
+    TCP = "tcp",
 }
 
 /**
@@ -1053,6 +1123,22 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+        { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+    ], false),
+    "ZarfComponentActionWait": o([
+        { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
+        { json: "network", js: "network", typ: u(undefined, r("ZarfComponentActionWaitNetwork")) },
+    ], false),
+    "ZarfComponentActionWaitCluster": o([
+        { json: "condition", js: "condition", typ: u(undefined, "") },
+        { json: "kind", js: "kind", typ: "" },
+        { json: "name", js: "name", typ: "" },
+        { json: "namespace", js: "namespace", typ: u(undefined, "") },
+    ], false),
+    "ZarfComponentActionWaitNetwork": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "code", js: "code", typ: u(undefined, 0) },
+        { json: "protocol", js: "protocol", typ: r("Protocol") },
     ], false),
     "ZarfComponentActionDefaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },
@@ -1192,6 +1278,11 @@ const typeMap: any = {
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
+    "Protocol": [
+        "http",
+        "https",
+        "tcp",
+    ],
     "Architecture": [
         "amd64",
         "arm64",

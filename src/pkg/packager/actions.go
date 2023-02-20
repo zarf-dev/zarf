@@ -30,26 +30,33 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
-	var cmdEscaped string
+
+	var (
+		ctx        context.Context
+		cancel     context.CancelFunc
+		cmdEscaped string
+		cmd        string
+		out        string
+		err        error
+		vars       map[string]string
+	)
+
+	// If the action is a wait, convert it to a command.
+	if action.Wait != nil {
+		if cmd, err = convertWaitToCmd(*action.Wait); err != nil {
+			return err
+		}
+	}
 
 	if action.Description != "" {
 		cmdEscaped = action.Description
 	} else {
-		cmdEscaped = escapeCmdForPrint(action.Cmd)
+		cmdEscaped = escapeCmdForPrint(cmd)
 	}
 
 	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
 	// Persist the spinner output so it doesn't get overwritten by the command output.
 	spinner.EnablePreserveWrites()
-
-	var (
-		ctx    context.Context
-		cancel context.CancelFunc
-		cmd    string
-		out    string
-		err    error
-		vars   map[string]string
-	)
 
 	// If the value template is not nil, get the variables for the action.
 	// No special variables or deprecations will be used in the action.
@@ -60,7 +67,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	cfg := actionGetCfg(defaultCfg, action, vars)
 
-	if cmd, err = actionCmdMutation(action.Cmd); err != nil {
+	if cmd, err = actionCmdMutation(cmd); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
@@ -120,6 +127,29 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	// If we've reached this point, the retry limit has been reached.
 	return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, cfg.MaxRetries)
+}
+
+// convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
+func convertWaitToCmd(wait types.ZarfComponentActionWait) (string, error) {
+	// If the action has a wait, build a cmd from that instead.
+	cluster := wait.Cluster
+	if cluster != nil {
+		ns := cluster.Namespace
+		if ns != "" {
+			ns = fmt.Sprintf("-n %s", ns)
+		}
+
+		// Build a call to the zarf tools wait-for command.
+		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s", cluster.Kind, cluster.Identifier, cluster.Condition, ns), nil
+	}
+
+	network := wait.Network
+	if network != nil {
+		// Build a call to the zarf tools wait-for command.
+		return fmt.Sprintf("./zarf tools wait-for %s %s %d", network.Protocol, network.Address, network.Code), nil
+	}
+
+	return "", fmt.Errorf("wait action is missing a cluster or network")
 }
 
 // Perform some basic string mutations to make commands more useful.

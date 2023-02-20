@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -27,7 +28,7 @@ var (
 )
 
 var waitForCmd = &cobra.Command{
-	Use:     "wait-for {RESOURCE|PROTOCOL} {NAME|URI} {CONDITION}",
+	Use:     "wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE}",
 	Aliases: []string{"w", "wait"},
 	Short:   lang.CmdToolsWaitForShort,
 	Long:    lang.CmdToolsWaitForLong,
@@ -35,6 +36,7 @@ var waitForCmd = &cobra.Command{
         zarf tools wait-for pod my-pod-name ready -n default                    wait for pod my-pod-name in namespace default to be ready
         zarf tools wait-for p cool-pod-name ready -n cool                       wait for pod (using p alias) cool-pod-name in namespace cool to be ready
         zarf tools wait-for deployment podinfo available -n podinfo             wait for deployment podinfo in namespace podinfo to be available
+		zarf tools wait-for pod app=podinfo ready -n podinfo                    wait for pod with label app=podinfo in namespace podinfo to be ready
         zarf tools wait-for svc zarf-docker-registry exists -n zarf             wait for service zarf-docker-registry in namespace zarf to exist
         zarf tools wait-for svc zarf-docker-registry -n zarf                    same as above, except exists is the default condition
         zarf tools wati-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
@@ -52,8 +54,8 @@ var waitForCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdToolsWaitForErrTimeoutString, waitTimeout)
 		}
 
-		// Parse the resource type and name.
-		resource, name := args[0], args[1]
+		// Parse the kind type and identifier.
+		kind, identifier := args[0], args[1]
 
 		// Condition is optional, default to "exists".
 		condition := ""
@@ -62,9 +64,9 @@ var waitForCmd = &cobra.Command{
 		}
 
 		// Handle network endpoints.
-		switch resource {
+		switch kind {
 		case "http", "https", "tcp":
-			waitForNetworkEndpoint(resource, name, condition, timeout)
+			waitForNetworkEndpoint(kind, identifier, condition, timeout)
 			return
 		}
 
@@ -72,6 +74,13 @@ var waitForCmd = &cobra.Command{
 		zarf, err := utils.GetFinalExecutablePath()
 		if err != nil {
 			message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
+		}
+
+		// If the identifier contains an equals sign, convert to a label selector.
+		identifierMsg := fmt.Sprintf("/%s", identifier)
+		if strings.ContainsRune(identifier, '=') {
+			identifierMsg = fmt.Sprintf(" with label `%s`", identifier)
+			identifier = fmt.Sprintf("-l %s", identifier)
 		}
 
 		// Set the timeout for the wait-for command.
@@ -84,8 +93,8 @@ var waitForCmd = &cobra.Command{
 		}
 
 		// Setup the spinner messages.
-		conditionMsg := fmt.Sprintf("Waiting for %s/%s%s to be %s.", resource, name, namespaceMsg, condition)
-		existMsg := fmt.Sprintf("Waiting for %s/%s%s to exist.", resource, name, namespaceMsg)
+		conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
+		existMsg := fmt.Sprintf("Waiting for %s%s%s to exist.", kind, identifierMsg, namespaceMsg)
 		spinner := message.NewProgressSpinner(existMsg)
 		defer spinner.Stop()
 
@@ -100,7 +109,7 @@ var waitForCmd = &cobra.Command{
 			default:
 				spinner.Updatef(existMsg)
 				// Check if the resource exists.
-				args := []string{"tools", "kubectl", "get", "-n", waitNamespace, resource, name}
+				args := []string{"tools", "kubectl", "get", "-n", waitNamespace, kind, identifier}
 				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
 					message.Debug(stdout, stderr, err)
 					continue
@@ -116,7 +125,7 @@ var waitForCmd = &cobra.Command{
 				spinner.Updatef(conditionMsg)
 				// Wait for the resource to meet the given condition.
 				args = []string{"tools", "kubectl", "wait", "-n", waitNamespace,
-					resource, name, "--for", "condition=" + condition,
+					kind, identifier, "--for", "condition=" + condition,
 					"--timeout=" + waitTimeout}
 				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
 					message.Debug(stdout, stderr, err)
@@ -182,7 +191,6 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 			spinner.Success()
 			return
 		}
-
 	}
 }
 
