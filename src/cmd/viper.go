@@ -7,6 +7,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
@@ -66,7 +67,7 @@ func initViper() {
 	v = viper.New()
 
 	// Skip for vendor-only commands
-	if checkVendorOnly() {
+	if tools.CheckVendorOnly() {
 		return
 	}
 

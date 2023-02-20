@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package tools contains the CLI commands for Zarf.
+package tools
+
+import (
+	"fmt"
+	"net"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/spf13/cobra"
+
+	// Import to initialize client auth plugins.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+)
+
+var (
+	waitTimeout   string
+	waitNamespace string
+)
+
+var waitForCmd = &cobra.Command{
+	Use:     "wait-for {RESOURCE|PROTOCOL} {NAME|URI} {CONDITION}",
+	Aliases: []string{"w", "wait"},
+	Short:   lang.CmdToolsWaitForShort,
+	Long:    lang.CmdToolsWaitForLong,
+	Example: `    Wait for Kubernetes resources:
+        zarf tools wait-for pod my-pod-name ready -n default                    wait for pod my-pod-name in namespace default to be ready
+        zarf tools wait-for p cool-pod-name ready -n cool                       wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+        zarf tools wait-for deployment podinfo available -n podinfo             wait for deployment podinfo in namespace podinfo to be available
+        zarf tools wait-for svc zarf-docker-registry exists -n zarf             wait for service zarf-docker-registry in namespace zarf to exist
+        zarf tools wait-for svc zarf-docker-registry -n zarf                    same as above, except exists is the default condition
+        zarf tools wati-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
+
+    Wait for network endpoints:
+        zarf tools wait-for http localhost:8080 200                             wait for a 200 response from http://localhost:8080
+        zarf tools wait-for tcp localhost:8080                                  wait for a connection to be established on localhost:8080
+        zarf tools wait-for https 1.1.1.1 200                                   wait for a 200 response from https://1.1.1.1
+  `,
+	Args: cobra.MinimumNArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		// Parse the timeout string
+		timeout, err := time.ParseDuration(waitTimeout)
+		if err != nil {
+			message.Fatalf(err, lang.CmdToolsWaitForErrTimeoutString, waitTimeout)
+		}
+
+		// Parse the resource type and name.
+		resource, name := args[0], args[1]
+
+		// Condition is optional, default to "exists".
+		condition := ""
+		if len(args) > 2 {
+			condition = args[2]
+		}
+
+		// Handle network endpoints.
+		switch resource {
+		case "http", "https", "tcp":
+			waitForNetworkEndpoint(resource, name, condition, timeout)
+			return
+		}
+
+		// Get the Zarf executable path.
+		zarf, err := utils.GetFinalExecutablePath()
+		if err != nil {
+			message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
+		}
+
+		// Set the timeout for the wait-for command.
+		expired := time.After(timeout)
+
+		// Set the custom message for optional namespace.
+		namespaceMsg := ""
+		if waitNamespace != "" {
+			namespaceMsg = fmt.Sprintf(" in namespace %s", waitNamespace)
+		}
+
+		// Setup the spinner messages.
+		conditionMsg := fmt.Sprintf("Waiting for %s/%s%s to be %s.", resource, name, namespaceMsg, condition)
+		existMsg := fmt.Sprintf("Waiting for %s/%s%s to exist.", resource, name, namespaceMsg)
+		spinner := message.NewProgressSpinner(existMsg)
+		defer spinner.Stop()
+
+		for {
+			// Delay the check for 1 second
+			time.Sleep(time.Second)
+
+			select {
+			case <-expired:
+				message.Fatal(nil, lang.CmdToolsWaitForErrTimeout)
+
+			default:
+				spinner.Updatef(existMsg)
+				// Check if the resource exists.
+				args := []string{"tools", "kubectl", "get", "-n", waitNamespace, resource, name}
+				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
+					message.Debug(stdout, stderr, err)
+					continue
+				}
+
+				// If only checking for existence, exit here
+				switch condition {
+				case "", "exist", "exists":
+					spinner.Success()
+					return
+				}
+
+				spinner.Updatef(conditionMsg)
+				// Wait for the resource to meet the given condition.
+				args = []string{"tools", "kubectl", "wait", "-n", waitNamespace,
+					resource, name, "--for", "condition=" + condition,
+					"--timeout=" + waitTimeout}
+				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
+					message.Debug(stdout, stderr, err)
+					continue
+				}
+
+				spinner.Successf(conditionMsg)
+				return
+			}
+		}
+	},
+}
+
+func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) {
+	// Set the timeout for the wait-for command.
+	expired := time.After(timeout)
+
+	// Setup the spinner messages.
+	if condition == "" {
+		condition = "available"
+	}
+	spinner := message.NewProgressSpinner("Waiting for network endpoint %s://%s to be %s.", resource, name, condition)
+	defer spinner.Stop()
+
+	for {
+		// Delay the check for 1 second
+		time.Sleep(time.Second)
+
+		select {
+		case <-expired:
+			message.Fatal(nil, lang.CmdToolsWaitForErrTimeout)
+
+		default:
+			switch resource {
+
+			case "http", "https":
+				// Handle HTTP and HTTPS endpoints.
+				url := fmt.Sprintf("%s://%s", resource, name)
+
+				// Convert the condition to an int and check if it's a valid HTTP status code.
+				code, err := strconv.Atoi(condition)
+				if err != nil || http.StatusText(code) == "" {
+					message.Fatalf(err, lang.CmdToolsWaitForErrConditionString, condition)
+				}
+
+				// Try to get the URL and check the status code.
+				resp, err := http.Get(url)
+				if err != nil || resp.StatusCode != code {
+					message.Debug(err)
+					continue
+				}
+
+			default:
+				// Fallback to any generic protocol using net.Dial
+				conn, err := net.Dial(resource, name)
+				if err != nil {
+					message.Debug(err)
+					continue
+				}
+				defer conn.Close()
+			}
+
+			spinner.Success()
+			return
+		}
+
+	}
+}
+
+func init() {
+	toolsCmd.AddCommand(waitForCmd)
+	waitForCmd.Flags().StringVar(&waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
+	waitForCmd.Flags().StringVarP(&waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
+}

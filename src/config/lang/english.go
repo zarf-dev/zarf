@@ -263,12 +263,15 @@ const (
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
-	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of component during deployment. \n" +
-		"This command can be used to wait for a specific resource to exist and be ready that may be created by a Gitops tool or Operator."
-	CmdToolsWaitForFlagTimeout      = "Specify the timeout duration for the wait command."
-	CmdToolsWaitForErrTimeoutString = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
-	CmdToolsWaitForErrTimeout       = "Wait timed out."
-	CmdToolsWaitForErrZarfPath      = "Could not locate the current Zarf binary path."
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. \n" +
+		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. \n" +
+		"You can also wait for aribtrary network endpoints using REST or TCP checks. \n\n"
+	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
+	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeout         = "Wait timed out."
+	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
+	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
+	CmdToolsWaitForFlagNamespace      = "Specify the namespace of the resources to wait for."
 
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
