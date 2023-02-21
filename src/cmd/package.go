@@ -196,15 +196,15 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:   "publish [PACKAGE] [REGISTRY]",
-	Short: "Publish a Zarf package to a remote registry",
+	Use:     "publish [PACKAGE] [REGISTRY]",
+	Short:   "Publish a Zarf package to a remote registry",
 	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
-	Args: cobra.ExactArgs(2),
+	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
 		registry := args[1]
-		
+
 		if !strings.HasPrefix(registry, "oci://") {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
