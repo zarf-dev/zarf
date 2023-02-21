@@ -473,8 +473,7 @@ export interface ZarfFile {
  */
 export interface ZarfComponentImport {
     name?: string;
-    oci?:  string;
-    path?: string;
+    path:  string;
 }
 
 export interface ZarfManifest {
@@ -1093,8 +1092,7 @@ const typeMap: any = {
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
-        { json: "oci", js: "oci", typ: u(undefined, "") },
-        { json: "path", js: "path", typ: u(undefined, "") },
+        { json: "path", js: "path", typ: "" },
     ], false),
     "ZarfManifest": o([
         { json: "files", js: "files", typ: u(undefined, a("")) },
