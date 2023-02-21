@@ -154,7 +154,7 @@ type ZarfComponentActionWait struct {
 	Network *ZarfComponentActionWaitNetwork `json:"network,omitempty" jsonschema:"description=Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."`
 }
 
-// ZarfComponenatActionWaitCluster specifies a condition to wait for before continuing
+// ZarfComponentActionWaitCluster specifies a condition to wait for before continuing
 type ZarfComponentActionWaitCluster struct {
 	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for (e.g. Pod; Deployment; etc.)"`
 	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for (e.g. podinfo; app=podinfo; etc.)"`

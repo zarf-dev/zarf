@@ -22,11 +22,12 @@ var toolsCmd = &cobra.Command{
 	Short: lang.CmdToolsShort,
 }
 
+// Include adds the tools command to the root command.
 func Include(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(toolsCmd)
 }
 
-// Check if the command is being run as a vendor-only command
+// CheckVendorOnly checks if the command is being run as a vendor-only command
 func CheckVendorOnly() bool {
 	vendorCmd := []string{
 		"kubectl",

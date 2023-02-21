@@ -151,8 +151,8 @@ const (
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
 
-	CmdInternalApiSchemaShort       = "Generates a JSON schema from the API types"
-	CmdInternalApiSchemaGenerateErr = "Unable to generate the zarf api schema"
+	CmdInternalAPISchemaShort       = "Generates a JSON schema from the API types"
+	CmdInternalAPISchemaGenerateErr = "Unable to generate the zarf api schema"
 
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
@@ -160,7 +160,7 @@ const (
 	CmdInternalCreateReadOnlyGiteaUserLoadErr = "Unable to load the Zarf state"
 	CmdInternalCreateReadOnlyGiteaUserErr     = "Unable to create a read-only user in the Gitea service."
 
-	CmdInternalUiShort = "Launch the experimental Zarf UI"
+	CmdInternalUIShort = "Launch the experimental Zarf UI"
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 
