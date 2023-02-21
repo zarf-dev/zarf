@@ -6,7 +6,6 @@ package helm
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -64,12 +63,12 @@ func (h *Helm) parseChartValues() (map[string]any, error) {
 }
 
 func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
-	// OMG THIS IS SOOOO GROSS PPL... https://github.com/helm/helm/issues/8780
-	_ = os.Setenv("HELM_NAMESPACE", namespace)
-
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	settings := cli.New()
+
+	// Set the namespace for helm
+	settings.SetNamespace(namespace)
 
 	// Setup K8s connection
 	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", spinner.Updatef)
