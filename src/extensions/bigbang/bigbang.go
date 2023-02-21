@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
@@ -96,7 +97,27 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, bbRepo)
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
-	c.Repos = append(c.Repos, findURLs(template)...)
+	urls, helmReleases := findURLs(template)
+	c.Repos = append(c.Repos, urls...)
+
+	// @todo (jeff-mccoy) remove / update once https://github.com/defenseunicorns/zarf/pull/1373 is merged
+	type placeholderWaitAction struct {
+		Kind       string
+		Identifier string
+		Namespace  string
+		Condition  string
+	}
+
+	// Add wait actions for each of the helm releases.
+	for _, hr := range helmReleases {
+		action := placeholderWaitAction{
+			Kind:       "HelmRelease",
+			Identifier: hr,
+			Namespace:  bb,
+			Condition:  "ready",
+		}
+		message.Debug(action)
+	}
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
 	for _, r := range c.Repos {
@@ -143,7 +164,7 @@ func isValidVersion(version string) bool {
 // findURLs takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findURLs(t string) (urls []string) {
+func findURLs(t string) (urls []string, helmReleases []string) {
 	// Break the template into separate resources.
 	yamls, _ := utils.SplitYAMLToString([]byte(t))
 
@@ -152,6 +173,10 @@ func findURLs(t string) (urls []string) {
 		var s fluxSrcCtrl.GitRepository
 		if err := yaml.Unmarshal([]byte(y), &s); err != nil {
 			continue
+		}
+
+		if s.Kind == "HelmRelease" {
+			helmReleases = append(helmReleases, s.Name)
 		}
 
 		// If the resource is a GitRepository, parse it for the URL and tag.
@@ -177,7 +202,7 @@ func findURLs(t string) (urls []string) {
 		}
 	}
 
-	return urls
+	return urls, helmReleases
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
