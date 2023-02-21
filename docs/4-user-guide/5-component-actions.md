@@ -107,7 +107,7 @@ actions:
 
 The following keys are common to all action configurations (wait or command):
 
-- `description` - a description of the action that will replace the text the users sees when the action is running, e.g. `description: "File to be created"` would show `Waiting for "File to be created"` instead of `Waiting for "touch test-create-before.txt"`
+- `description` - a description of the action that will replace the text the user sees when the action is running, e.g. `description: "File to be created"` would show `Waiting for "File to be created"` instead of `Waiting for "touch test-create-before.txt"`
 - `maxTotalSeconds` - the maximum total time to allow the command to run (default: `0` - no limit for command actions, `300` - 5 minutes for wait actions)
 
 ## Command Action Configuration
@@ -123,7 +123,7 @@ A command action executes arbitrary commands or scripts in a shell wrapper. Use 
 
 ## Wait Action Configuration
 
-A wait action holds the component stage it is triggered in until the condition is met, or triggers a failure if the timeout is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait paramaters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
+A wait action pauses the component stage it is triggered in until the condition is met, or triggers a failure if maxTotalSeconds is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait paramaters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
 
 - `wait` - (required if not a cmd action) the wait parameters
   - `cluster` - perform a wait operation on a Kubernetes resource (kubectl wait)
