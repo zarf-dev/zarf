@@ -1087,7 +1087,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action to do anything. If both are specified
+**Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |

@@ -145,7 +145,7 @@ type ZarfComponentAction struct {
 	Cmd             string                   `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
 	SetVariable     string                   `json:"setVariable,omitempty" jsonschema:"description=(Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
 	Description     string                   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
-	Wait            *ZarfComponentActionWait `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action to do anything. If both are specified, the command will be run first, then the wait condition will be checked. See the 'zarf tools wait-for' command for more info."`
+	Wait            *ZarfComponentActionWait `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing

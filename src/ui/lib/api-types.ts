@@ -339,14 +339,14 @@ export interface ZarfComponentAction {
     setVariable?: string;
     /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
-     * action to do anything. If both are specified
+     * action. See the 'zarf tools wait-for' command for more info.
      */
     wait?: ZarfComponentActionWait;
 }
 
 /**
  * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
- * action to do anything. If both are specified
+ * action. See the 'zarf tools wait-for' command for more info.
  */
 export interface ZarfComponentActionWait {
     /**

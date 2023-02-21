@@ -280,7 +280,7 @@
         "wait": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentActionWait",
-          "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action to do anything. If both are specified"
+          "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
         }
       },
       "additionalProperties": false,
