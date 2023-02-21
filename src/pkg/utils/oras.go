@@ -53,10 +53,10 @@ func ParseZarfLayerMediaType(filename string) string {
 	}
 }
 
-// CtxWithScopes returns a context with the given scopes.
+// OrasCtxWithScopes returns a context with the given scopes.
 //
 // This is needed for pushing to Docker Hub.
-func CtxWithScopes(fullname string) context.Context {
+func OrasCtxWithScopes(fullname string) context.Context {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", fullname),
@@ -64,10 +64,10 @@ func CtxWithScopes(fullname string) context.Context {
 	return auth.WithScopes(context.Background(), scopes...)
 }
 
-// AuthClient returns an auth client for the given reference.
+// OrasAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func AuthClient(ref name.Reference) (*auth.Client, error) {
+func OrasAuthClient(ref name.Reference) (*auth.Client, error) {
 	// load default Docker config file
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
@@ -128,12 +128,13 @@ func IsManifestUnsupported(err error) bool {
 	return false
 }
 
+// PullOCIZarfPackageOpts are the options for pulling a Zarf package from a registry.
 type PullOCIZarfPackageOpts struct {
 	remote.Repository
 	Ref     name.Reference
 	Outdir  string
 	Spinner *message.Spinner
-	// used for pulling a single component out of a Zarf package stored in a registry
+	// 👇 used for pulling a single component out of a Zarf package stored in a registry
 	ComponentDesired string
 }
 
@@ -142,14 +143,14 @@ func PullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 	spinner := pullOpts.Spinner
 	ref := pullOpts.Ref
 	_ = os.Mkdir(pullOpts.Outdir, 0755)
-	ctx := CtxWithScopes(ref.Context().RepositoryStr())
+	ctx := OrasCtxWithScopes(ref.Context().RepositoryStr())
 	repo, err := remote.NewRepository(fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr()))
 	if err != nil {
 		return err
 	}
 	repo.PlainHTTP = pullOpts.PlainHTTP
 
-	authClient, err := AuthClient(ref)
+	authClient, err := OrasAuthClient(ref)
 	if err != nil {
 		return err
 	}

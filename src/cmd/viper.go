@@ -58,7 +58,6 @@ const (
 
 	// Package publish config keys
 	V_PKG_PUBLISH_CONCURRENCY = "package.publish.concurrency"
-	V_PKG_PUBLISH_INCLUDE_IMAGES = "package.publish.include_images"
 )
 
 func initViper() {

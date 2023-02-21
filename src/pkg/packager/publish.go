@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -56,12 +55,13 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	componentTarballs := []string{}
+	// repackage the component directories into tarballs
 	for _, componentDir := range componentDirs {
 		all, err := filepath.Glob(filepath.Join(componentDir, "*"))
 		if err != nil {
 			return err
 		}
-		dst := filepath.Join(p.tmp.Base, "components", filepath.Base(componentDir) + ".tar.zst")
+		dst := filepath.Join(p.tmp.Base, "components", filepath.Base(componentDir)+".tar.zst")
 		err = archiver.Archive(all, dst)
 		if err != nil {
 			return err
@@ -69,45 +69,20 @@ func (p *Packager) Publish() error {
 		componentTarballs = append(componentTarballs, dst)
 	}
 	paths = append(paths, componentTarballs...)
-	if p.cfg.PublishOpts.IncludeImages {
-		imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
-		if err != nil {
-			return err
-		}
-		paths = append(paths, imagesLayers...)
-		ref, err := p.ref("")
-		if err != nil {
-			return err
-		}
-		message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Identifier())
-		err = p.publish(ref, paths, spinner)
-		if err != nil {
-			return fmt.Errorf("unable to publish package %s: %w", ref, err)
-		}
-	}
-
-	// push the skeleton (package w/o the images)
-	skeletonRef, err := p.ref("skeleton")
+	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
 	if err != nil {
 		return err
 	}
-	skeletonPaths := []string{}
-	for idx, path := range paths {
-		// remove images if they exist
-		if strings.HasPrefix(path, filepath.Join(p.tmp.Base, "images")) {
-			continue
-		}
-		if path == filepath.Join(p.tmp.Base, "sboms.tar.zst") {
-			continue
-		}
-		skeletonPaths = append(skeletonPaths, paths[idx])
-	}
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, skeletonRef.Identifier())
-	err = p.publish(skeletonRef, skeletonPaths, spinner)
+	paths = append(paths, imagesLayers...)
+	ref, err := p.ref("")
 	if err != nil {
-		return fmt.Errorf("unable to publish package %s: %w", skeletonRef, err)
+		return err
 	}
-
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Identifier())
+	err = p.publish(ref, paths, spinner)
+	if err != nil {
+		return fmt.Errorf("unable to publish package %s: %w", ref, err)
+	}
 	return nil
 }
 
@@ -115,6 +90,7 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
 	// to negate this, we create a simple manifest config with some build metadata
+	// the contents of this file are not used by Zarf
 	type OCIConfigPartial struct {
 		Architecture string            `json:"architecture"`
 		OCIVersion   string            `json:"ociVersion"`
@@ -143,13 +119,13 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 
-	ctx := utils.CtxWithScopes(ref.Context().RepositoryStr())
+	ctx := utils.OrasCtxWithScopes(ref.Context().RepositoryStr())
 
 	dst, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return err
 	}
-	authClient, err := utils.AuthClient(ref)
+	authClient, err := utils.OrasAuthClient(ref)
 	if err != nil {
 		return err
 	}
