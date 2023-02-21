@@ -75,12 +75,12 @@ var configSchemaCmd = &cobra.Command{
 
 var apiSchemaCmd = &cobra.Command{
 	Use:   "api-schema",
-	Short: lang.CmdInternalApiSchemaShort,
+	Short: lang.CmdInternalAPISchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.RestAPI{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, lang.CmdInternalApiSchemaGenerateErr)
+			message.Fatal(err, lang.CmdInternalAPISchemaGenerateErr)
 		}
 		fmt.Print(string(output) + "\n")
 	},
@@ -106,7 +106,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 
 var uiCmd = &cobra.Command{
 	Use:   "ui",
-	Short: lang.CmdInternalUiShort,
+	Short: lang.CmdInternalUIShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		api.LaunchAPIServer()
 	},

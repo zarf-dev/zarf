@@ -38,11 +38,11 @@ func TestComponentActions(t *testing.T) {
 	// Try creating the package to test the onCreate actions.
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Completed command \"touch test-create-before.txt\"")
+	require.Contains(t, stdErr, "Completed \"touch test-create-before.txt\"")
 	require.Contains(t, stdErr, "multiline!")
 	require.Contains(t, stdErr, "updates!")
 	require.Contains(t, stdErr, "realtime!")
-	require.Contains(t, stdErr, "Completed command \"multiline & description demo\"")
+	require.Contains(t, stdErr, "Completed \"multiline & description demo\"")
 
 	// Test for package create prepare artifacts.
 	for _, artifact := range createArtifacts {
