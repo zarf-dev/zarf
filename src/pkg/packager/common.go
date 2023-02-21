@@ -192,10 +192,13 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to process partial package: %w", err)
 	}
 
-	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-		return fmt.Errorf("unable to extract the package: %w", err)
+	// If the package is from OCI, there is no need to extract it since it is unpacked already
+	if _, err := os.Stat(p.tmp.ZarfYaml); os.IsExist(err) {
+		// Extract the archive
+		spinner.Updatef("Extracting the package, this may take a few moments")
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
+		}
 	}
 
 	// Load the config from the extracted archive zarf.yaml

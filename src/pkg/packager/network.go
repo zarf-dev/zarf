@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -33,6 +34,11 @@ func (p *Packager) handlePackagePath() error {
 	// Handle case where deploying remote package validated via sget
 	if strings.HasPrefix(opts.PackagePath, "sget://") {
 		return p.handleSgetPackage()
+	}
+
+	// Handle case where deploying remote package stored in an OCI registry
+	if strings.HasPrefix(opts.PackagePath, "oci://") {
+		return p.handleOciPackage()
 	}
 
 	if !config.CommonOptions.Insecure && opts.Shasum == "" {
@@ -109,5 +115,37 @@ func (p *Packager) handleSgetPackage() error {
 
 	p.cfg.DeployOpts.PackagePath = localPath
 
+	return nil
+}
+
+func (p *Packager) handleOciPackage() error {
+	ref, err := name.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"), name.StrictValidation)
+	if err != nil {
+		return fmt.Errorf("failed to parse OCI reference: %w", err)
+	}
+	// patch docker.io to registry-1.docker.io
+	if ref.Context().RegistryStr() == "docker.io" {
+		ref, err = name.ParseReference(fmt.Sprintf("registry-1.docker.io/%s", ref.Context().RepositoryStr()), name.StrictValidation)
+		if err != nil {
+			return fmt.Errorf("failed to parse OCI reference: %w", err)
+		}
+	}
+
+	out := p.tmp.Base
+	message.Debugf("Pulling %s", ref.String())
+	spinner := message.NewProgressSpinner("")
+	pullOpts := utils.PullOCIZarfPackageOpts{
+		Outdir:  out,
+		Ref:     ref,
+		Spinner: spinner,
+	}
+	err = utils.PullOCIZarfPackage(pullOpts)
+	if err != nil {
+		return fmt.Errorf("failed to pull package from OCI: %w", err)
+	}
+	message.Debugf("Pulled %s", ref.String())
+	spinner.Successf("Pulled %s", ref.String())
+
+	p.cfg.DeployOpts.PackagePath = out
 	return nil
 }
