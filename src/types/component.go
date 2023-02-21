@@ -166,7 +166,5 @@ type ZarfDataInjection struct {
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path,omitempty" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
-	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	OCI string `json:"oci,omitempty" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	Path string `json:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
 }
