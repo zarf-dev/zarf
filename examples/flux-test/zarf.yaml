@@ -32,14 +32,8 @@ components:
     actions:
       onDeploy:
         after:
-          # Waiting using the wait-for command
-          - description: "Podinfo deployment to be available via cmd action"
-            cmd: "./zarf tools wait-for deployment podinfo available -n podinfo"
-            mute: true
-
-          # Waiting using the wait action
+          # This will use a wait action to wait for the podinfo pods to be ready
           - description: "Podinfo pods to be ready via wait action"
-            mute: true
             wait:
               cluster:
                 kind: pod
