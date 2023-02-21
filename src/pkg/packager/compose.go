@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -15,6 +16,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mholt/archiver/v3"
 )
 
 // composeComponents builds the composed components list for the current config.
@@ -24,7 +27,7 @@ func (p *Packager) composeComponents() error {
 	components := []types.ZarfComponent{}
 
 	for _, component := range p.cfg.Pkg.Components {
-		if component.Import.Path == "" {
+		if component.Import.Path == "" && component.Import.OCI == "" {
 			// Migrate any deprecated component configurations now
 			component = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 			components = append(components, component)
@@ -44,6 +47,10 @@ func (p *Packager) composeComponents() error {
 	return nil
 }
 
+func isRemoteOCI(component types.ZarfComponent) bool {
+	return component.Import.OCI != ""
+}
+
 // getComposedComponent recursively retrieves a composed Zarf component
 // --------------------------------------------------------------------
 // For composed components, we build the tree of components starting at the root and adding children as we go;
@@ -52,9 +59,11 @@ func (p *Packager) composeComponents() error {
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
-	// Make sure the component we're trying to import can't be accessed.
-	if err := validate.ImportPackage(&parentComponent); err != nil {
-		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
+	if parentComponent.Import.OCI == "" {
+		// Make sure the component we're trying to import can't be accessed.
+		if err := validate.ImportPackage(&parentComponent); err != nil {
+			return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
+		}
 	}
 
 	// Keep track of the composed components import path to build nested composed components.
@@ -75,6 +84,44 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
+
+	if isRemoteOCI(parent) {
+		// Handle docker.io --> registry-1.docker.io
+		if strings.HasPrefix(parent.Import.OCI, "docker.io/") {
+			parent.Import.OCI = "registry-1.docker.io/" + strings.TrimPrefix(parent.Import.OCI, "docker.io/")
+		}
+
+		if !strings.HasSuffix(parent.Import.OCI, "-skeleton") {
+			parent.Import.OCI = parent.Import.OCI + "-skeleton"
+		}
+
+		message.Debugf("Pulling %s from %s", parent.Name, parent.Import.OCI)
+		out := filepath.Join(p.tmp.Base, parent.Name)
+		pullOpts := utils.PullOCIZarfPackageOpts{}
+		pullOpts.Outdir = out
+		pullOpts.PlainHTTP = config.CommonOptions.Insecure
+		pullOpts.Spinner = message.NewProgressSpinner("")
+		pullOpts.ComponentDesired = parent.Name
+		ref, err := name.ParseReference(parent.Import.OCI, name.StrictValidation)
+		if err != nil {
+			return child, fmt.Errorf("unable to parse reference %s: %w", parent.Import.OCI, err)
+		}
+		pullOpts.Ref = ref
+		if err = utils.PullOCIZarfPackage(pullOpts); err != nil {
+			return child, fmt.Errorf("unable to pull component %s at %s: %w", parent.Name, parent.Import.OCI, err)
+		}
+		pullOpts.Spinner.Successf("Pulled %s from %s", parent.Name, parent.Import.OCI)
+
+		// decompress the component
+		compressedComponent := filepath.Join(out, "components", parent.Name+".tar.zst")
+		err = archiver.Unarchive(compressedComponent, out)
+		if err != nil {
+			return child, fmt.Errorf("unable to unarchive component %s: %w", compressedComponent, err)
+		}
+		_ = os.RemoveAll(filepath.Join(out, "components"))
+
+		parent.Import.Path = out
+	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
 	if err != nil {
@@ -112,7 +159,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	// Check if we need to get more of children.
-	if child.Import.Path != "" {
+	if child.Import.Path != "" || child.Import.OCI != "" {
 		// Set a temporary composePath so we can get future children/grandchildren from our current location.
 		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
 
@@ -143,7 +190,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 
 	// Prefix composed component file paths.
 	for fileIdx, file := range child.Files {
-		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent.Import.Path)
+		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent)
 	}
 
 	// Prefix non-url composed component chart values files and localPath.
