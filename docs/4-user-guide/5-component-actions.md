@@ -123,7 +123,7 @@ A command action executes arbitrary commands or scripts in a shell wrapper. Use 
 
 ## Wait Action Configuration
 
-A wait action holds the component stage it is triggered in until the condition is met, or triggers a failure if the timeout is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait paramaters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
+A wait action pauses the component stage it is triggered in until the condition is met, or triggers a failure if maxTotalSeconds is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait paramaters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
 
 - `wait` - (required if not a cmd action) the wait parameters
   - `cluster` - perform a wait operation on a Kubernetes resource (kubectl wait)
