@@ -266,16 +266,21 @@
         },
         "cmd": {
           "type": "string",
-          "description": "The command to run"
+          "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "setVariable": {
           "pattern": "^[A-Z0-9_]+$",
           "type": "string",
-          "description": "The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
+          "description": "(Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
         },
         "description": {
           "type": "string",
           "description": "Description of the action to be displayed during package execution instead of the command"
+        },
+        "wait": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionWait",
+          "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
         }
       },
       "additionalProperties": false,
@@ -345,6 +350,74 @@
           },
           "type": "array",
           "description": "Actions to run if all operations fail"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionWait": {
+      "properties": {
+        "cluster": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionWaitCluster",
+          "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+        },
+        "network": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionWaitNetwork",
+          "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionWaitCluster": {
+      "required": [
+        "kind",
+        "name"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "The kind of resource to wait for (e.g. Pod; Deployment; etc.)"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "The namespace of the resource to wait for"
+        },
+        "condition": {
+          "type": "string",
+          "description": "The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionWaitNetwork": {
+      "required": [
+        "protocol",
+        "address"
+      ],
+      "properties": {
+        "protocol": {
+          "enum": [
+            "tcp",
+            "http",
+            "https"
+          ],
+          "type": "string",
+          "description": "The protocol to wait for (e.g. tcp; http; etc.)."
+        },
+        "address": {
+          "type": "string",
+          "description": "The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)"
+        },
+        "code": {
+          "type": "integer",
+          "description": "The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)"
         }
       },
       "additionalProperties": false,

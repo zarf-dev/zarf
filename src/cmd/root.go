@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -19,9 +20,8 @@ import (
 )
 
 var (
-	skipLogFile bool
-	logLevel    string
-	arch        string
+	logLevel string
+	arch     string
 
 	// Default global config for the CLI
 	pkgConfig = types.PackagerConfig{}
@@ -33,9 +33,14 @@ var (
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Skip for vendor-only commands
+		if tools.CheckVendorOnly() {
+			return
+		}
+
 		// Don't add the logo to the help command
 		if cmd.Parent() == nil {
-			skipLogFile = true
+			config.SkipLogFile = true
 		}
 		cliSetup()
 	},
@@ -65,6 +70,14 @@ func Execute() {
 }
 
 func init() {
+	// Add the tools commands
+	tools.Include(rootCmd)
+
+	// Skip for vendor-only commands
+	if tools.CheckVendorOnly() {
+		return
+	}
+
 	initViper()
 
 	v.SetDefault(V_LOG_LEVEL, "info")
@@ -77,7 +90,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().BoolVar(&skipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
@@ -110,7 +123,7 @@ func cliSetup() {
 		message.NoProgress = true
 	}
 
-	if !skipLogFile {
+	if !config.SkipLogFile {
 		message.UseLogFile()
 	}
 }
