@@ -585,29 +585,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_import_path"></a>path</strong>
+<summary><strong> <a name="components_items_import_path"></a>path *</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-| Restrictions                      |                                                                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
-
-</blockquote>
-</details>
-
-<details>
-<summary><strong> <a name="components_items_import_oci"></a>oci</strong>
-
-</summary>
-&nbsp;
-<blockquote>
+![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
 | -------- | -------- |
