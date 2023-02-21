@@ -30,7 +30,6 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 
 // Run commands that a component has provided.
 func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
-
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -47,6 +46,10 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		if cmd, err = convertWaitToCmd(*action.Wait); err != nil {
 			return err
 		}
+
+		// If the action is a wait, mute the output becuase it will be noisy.
+		t := true
+		action.Mute = &t
 	}
 
 	if action.Description != "" {
@@ -55,7 +58,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		cmdEscaped = escapeCmdForPrint(cmd)
 	}
 
-	spinner := message.NewProgressSpinner("Running command \"%s\"", cmdEscaped)
+	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
 	// Persist the spinner output so it doesn't get overwritten by the command output.
 	spinner.EnablePreserveWrites()
 
@@ -92,9 +95,14 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 				p.setVariable(action.SetVariable, out)
 			}
 
-			// If the command ran successfully, continue to the next action.
-			spinner.Successf("Completed command \"%s\"", cmdEscaped)
+			// If the action has a wait, change the spinner message to reflect that on success.
+			if action.Wait != nil {
+				spinner.Successf("Wait for \"%s\" succeeded", cmdEscaped)
+			} else {
+				spinner.Successf("Completed \"%s\"", cmdEscaped)
+			}
 
+			// If the command ran successfully, continue to the next action.
 			return nil
 		}
 
