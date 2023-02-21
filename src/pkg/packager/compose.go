@@ -47,6 +47,10 @@ func (p *Packager) composeComponents() error {
 	return nil
 }
 
+func isRemoteOCI(component types.ZarfComponent) bool {
+	return component.Import.OCI != ""
+}
+
 // getComposedComponent recursively retrieves a composed Zarf component
 // --------------------------------------------------------------------
 // For composed components, we build the tree of components starting at the root and adding children as we go;
@@ -81,7 +85,7 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
 
-	if parent.Import.OCI != "" {
+	if isRemoteOCI(parent) {
 		// Handle docker.io --> registry-1.docker.io
 		if strings.HasPrefix(parent.Import.OCI, "docker.io/") {
 			parent.Import.OCI = "registry-1.docker.io/" + strings.TrimPrefix(parent.Import.OCI, "docker.io/")
@@ -91,8 +95,8 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			parent.Import.OCI = parent.Import.OCI + "-skeleton"
 		}
 
-		message.Debugf("Pulling %s at %s", parent.Name, parent.Import.OCI)
-		out := filepath.Join(p.tmp.Base, "remote", pathAncestry, parent.Name)
+		message.Debugf("Pulling %s from %s", parent.Name, parent.Import.OCI)
+		out := filepath.Join(p.tmp.Base, parent.Name)
 		pullOpts := utils.PullOCIZarfPackageOpts{}
 		pullOpts.Outdir = out
 		pullOpts.PlainHTTP = config.CommonOptions.Insecure
@@ -110,15 +114,13 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 		// decompress the component
 		compressedComponent := filepath.Join(out, "components", parent.Name+".tar.zst")
-
 		err = archiver.Unarchive(compressedComponent, out)
 		if err != nil {
 			return child, fmt.Errorf("unable to unarchive component %s: %w", compressedComponent, err)
 		}
-		_ = os.Remove(compressedComponent)
+		_ = os.RemoveAll(filepath.Join(out, "components"))
 
 		parent.Import.Path = out
-		defer os.Remove(out)
 	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
@@ -157,7 +159,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	// Check if we need to get more of children.
-	if child.Import.Path != "" {
+	if child.Import.Path != "" || child.Import.OCI != "" {
 		// Set a temporary composePath so we can get future children/grandchildren from our current location.
 		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
 
@@ -188,7 +190,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 
 	// Prefix composed component file paths.
 	for fileIdx, file := range child.Files {
-		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent.Import.Path)
+		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent)
 	}
 
 	// Prefix non-url composed component chart values files and localPath.
