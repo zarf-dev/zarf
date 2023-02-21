@@ -138,12 +138,12 @@ type ZarfComponentActionDefaults struct {
 // ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
 	Mute            *bool                    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxTotalSeconds *int                     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout)"`
+	MaxTotalSeconds *int                     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
 	MaxRetries      *int                     `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
 	Dir             *string                  `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env             []string                 `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd             string                   `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
-	SetVariable     string                   `json:"setVariable,omitempty" jsonschema:"description=The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
+	SetVariable     string                   `json:"setVariable,omitempty" jsonschema:"description=(Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
 	Description     string                   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
 	Wait            *ZarfComponentActionWait `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action to do anything. If both are specified, the command will be run first, then the wait condition will be checked. See the 'zarf tools wait-for' command for more info."`
 }
@@ -154,7 +154,7 @@ type ZarfComponentActionWait struct {
 	Network *ZarfComponentActionWaitNetwork `json:"network,omitempty" jsonschema:"description=Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."`
 }
 
-// ZarfComponentActionWaitCluster specifies a condition to wait for before continuing
+// ZarfComponenatActionWaitCluster specifies a condition to wait for before continuing
 type ZarfComponentActionWaitCluster struct {
 	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for (e.g. Pod; Deployment; etc.)"`
 	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for (e.g. podinfo; app=podinfo; etc.)"`

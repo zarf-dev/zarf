@@ -45,6 +45,8 @@ var waitForCmd = &cobra.Command{
         zarf tools wait-for http localhost:8080 200                             wait for a 200 response from http://localhost:8080
         zarf tools wait-for tcp localhost:8080                                  wait for a connection to be established on localhost:8080
         zarf tools wait-for https 1.1.1.1 200                                   wait for a 200 response from https://1.1.1.1
+        zarf tools wait-for http google.com                                     wait for any 2xx response from http://google.com
+        zarf tools wait-for http google.com success                             wait for any 2xx response from http://google.com
   `,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -115,7 +117,7 @@ var waitForCmd = &cobra.Command{
 					continue
 				}
 
-				// If only checking for existence, exit here
+				// If only checking for existence, exit here.
 				switch condition {
 				case "", "exist", "exists":
 					spinner.Success()
@@ -127,11 +129,14 @@ var waitForCmd = &cobra.Command{
 				args = []string{"tools", "kubectl", "wait", "-n", waitNamespace,
 					kind, identifier, "--for", "condition=" + condition,
 					"--timeout=" + waitTimeout}
+
+				// If there is an error, log it and try again.
 				if stdout, stderr, err := exec.Cmd(zarf, args...); err != nil {
 					message.Debug(stdout, stderr, err)
 					continue
 				}
 
+				// And just like that, success!
 				spinner.Successf(conditionMsg)
 				return
 			}
@@ -144,15 +149,19 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 	expired := time.After(timeout)
 
 	// Setup the spinner messages.
+	condition = strings.ToLower(condition)
 	if condition == "" {
-		condition = "available"
+		condition = "success"
 	}
-	spinner := message.NewProgressSpinner("Waiting for network endpoint %s://%s to be %s.", resource, name, condition)
+	spinner := message.NewProgressSpinner("Waiting for network endpoint %s://%s to respond %s.", resource, name, condition)
 	defer spinner.Stop()
 
+	delay := 100 * time.Millisecond
+
 	for {
-		// Delay the check for 1 second
-		time.Sleep(time.Second)
+		// Delay the check for 100ms the first time and then 1 second after that.
+		time.Sleep(delay)
+		delay = time.Second
 
 		select {
 		case <-expired:
@@ -164,6 +173,21 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 			case "http", "https":
 				// Handle HTTP and HTTPS endpoints.
 				url := fmt.Sprintf("%s://%s", resource, name)
+
+				// Default to checking for a 2xx response.
+				if condition == "success" {
+					// Try to get the URL and check the status code.
+					resp, err := http.Get(url)
+
+					// If the status code is not in the 2xx range, try again.
+					if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+						message.Debug(err)
+						continue
+					}
+
+					// Success, break out of the swtich statement.
+					break
+				}
 
 				// Convert the condition to an int and check if it's a valid HTTP status code.
 				code, err := strconv.Atoi(condition)
@@ -188,6 +212,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 				defer conn.Close()
 			}
 
+			// Yay, we made it!
 			spinner.Success()
 			return
 		}

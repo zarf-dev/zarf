@@ -43,13 +43,30 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {
-		if cmd, err = convertWaitToCmd(*action.Wait); err != nil {
+		// If the wait has no timeout, set a default of 5 minutes.
+		if action.MaxTotalSeconds == nil {
+			fiveMin := 300
+			action.MaxTotalSeconds = &fiveMin
+		}
+
+		// Convert the wait to a command.
+		if cmd, err = convertWaitToCmd(*action.Wait, action.MaxTotalSeconds); err != nil {
 			return err
 		}
 
-		// If the action is a wait, mute the output becuase it will be noisy.
+		// Mute the output becuase it will be noisy.
 		t := true
 		action.Mute = &t
+
+		// Set the max retries to 0.
+		z := 0
+		action.MaxRetries = &z
+
+		// Not used for wait actions.
+		d := ""
+		action.Dir = &d
+		action.Env = []string{}
+		action.SetVariable = ""
 	}
 
 	if action.Description != "" {
@@ -139,7 +156,10 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(wait types.ZarfComponentActionWait) (string, error) {
+func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string, error) {
+	// Build the timeout string.
+	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
+
 	// If the action has a wait, build a cmd from that instead.
 	cluster := wait.Cluster
 	if cluster != nil {
@@ -149,13 +169,23 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait) (string, error) {
 		}
 
 		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s", cluster.Kind, cluster.Identifier, cluster.Condition, ns), nil
+		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
+			cluster.Kind, cluster.Identifier, cluster.Condition, ns, timeoutString), nil
 	}
 
 	network := wait.Network
 	if network != nil {
+		// Make sure the protocol is lower case.
+		network.Protocol = strings.ToLower(network.Protocol)
+
+		// If the protocol is http and no code is set, default to 200.
+		if strings.HasPrefix(network.Protocol, "http") && network.Code == 0 {
+			network.Code = 200
+		}
+
 		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %d", network.Protocol, network.Address, network.Code), nil
+		return fmt.Sprintf("./zarf tools wait-for %s %s %d %s",
+			network.Protocol, network.Address, network.Code, timeoutString), nil
 	}
 
 	return "", fmt.Errorf("wait action is missing a cluster or network")

@@ -333,8 +333,8 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * The name of a variable to update with the output of the command. This variable will be
-     * available to all remaining actions and components in the package.
+     * (Cmd only) The name of a variable to update with the output of the command. This variable
+     * will be available to all remaining actions and components in the package.
      */
     setVariable?: string;
     /**

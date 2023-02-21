@@ -271,7 +271,7 @@
         "setVariable": {
           "pattern": "^[A-Z0-9_]+$",
           "type": "string",
-          "description": "The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
+          "description": "(Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
         },
         "description": {
           "type": "string",

@@ -1051,7 +1051,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
+**Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
 
 |          |          |
 | -------- | -------- |
