@@ -107,7 +107,7 @@ actions:
 
 The following keys are common to all action configurations (wait or command):
 
-- `description` - a description of the action that will replace the text the users sees when the action is running, e.g. `description: "File to be created"` would show `Waiting for "File to be created"` instead of `Waiting for "touch test-create-before.txt"`
+- `description` - a description of the action that will replace the text the user sees when the action is running, e.g. `description: "File to be created"` would show `Waiting for "File to be created"` instead of `Waiting for "touch test-create-before.txt"`
 - `maxTotalSeconds` - the maximum total time to allow the command to run (default: `0` - no limit for command actions, `300` - 5 minutes for wait actions)
 
 ## Command Action Configuration
