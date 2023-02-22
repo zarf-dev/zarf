@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
@@ -23,15 +24,14 @@ var repoHelmChartPath string
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
 	Aliases: []string{"prep"},
-	Short:   "Tools to help prepare assets for packaging",
+	Short:   lang.CmdPrepareShort,
 }
 
 var prepareTransformGitLinks = &cobra.Command{
 	Use:     "patch-git [HOST] [FILE]",
 	Aliases: []string{"p"},
-	Short: "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: \n" +
-		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.",
-	Args: cobra.ExactArgs(2),
+	Short:   lang.CmdPreparePatchGitShort,
+	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		host, fileName := args[0], args[1]
 
@@ -61,7 +61,7 @@ var prepareTransformGitLinks = &cobra.Command{
 			// Overwrite the file
 			err = os.WriteFile(fileName, []byte(processedText), 0640)
 			if err != nil {
-				message.Fatal(err, "Unable to write the changes back to the file")
+				message.Fatal(err, lang.CmdPreparePatchGitFileWriteErr)
 			}
 		}
 
@@ -71,13 +71,13 @@ var prepareTransformGitLinks = &cobra.Command{
 var prepareComputeFileSha256sum = &cobra.Command{
 	Use:     "sha256sum [FILE|URL]",
 	Aliases: []string{"s"},
-	Short:   "Generate a SHA256SUM for the given file",
+	Short:   lang.CmdPrepareSha256sumShort,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
 		hash, err := utils.GetCryptoHash(fileName, crypto.SHA256)
 		if err != nil {
-			message.Fatal(err, "Unable to compute the hash")
+			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
 		} else {
 			fmt.Println(hash)
 		}
@@ -88,9 +88,8 @@ var prepareFindImages = &cobra.Command{
 	Use:     "find-images [PACKAGE]",
 	Aliases: []string{"f"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Evaluates components in a zarf file to identify images specified in their helm charts and manifests",
-	Long: "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
-		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path.",
+	Short:   lang.CmdPrepareFindImagesShort,
+	Long:    lang.CmdPrepareFindImagesLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		var baseDir string
 
@@ -118,11 +117,8 @@ var prepareGenerateConfigFile = &cobra.Command{
 	Use:     "generate-config [FILENAME]",
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Generates a config file for Zarf",
-	Long: "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
-		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. \n" +
-		"Accepted extensions are json, toml, yaml.\n\n" +
-		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml.",
+	Short:   lang.CmdPrepareGenerateConfigShort,
+	Long:    lang.CmdPrepareGenerateConfigLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := "zarf-config.toml"
 
@@ -148,9 +144,9 @@ func init() {
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`)
+	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set].")
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
 
-	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, "User or organization name for the git account that the repos are created under.")
+	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }

@@ -28,7 +28,9 @@ Collection of additional tools to make airgap easier
 * [zarf tools clear-cache](zarf_tools_clear-cache.md)	 - Clears the configured git and image cache directory.
 * [zarf tools gen-pki](zarf_tools_gen-pki.md)	 - Generates a Certificate Authority and PKI chain of trust for the given host
 * [zarf tools get-creds](zarf_tools_get-creds.md)	 - Display a Table of credentials for deployed components. Pass a component name to get a single credential.
+* [zarf tools kubectl](zarf_tools_kubectl.md)	 - Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
 * [zarf tools monitor](zarf_tools_monitor.md)	 - Launch a terminal UI to monitor the connected cluster using K9s.
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
 * [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools wait-for](zarf_tools_wait-for.md)	 - Waits for a given Kubernetes resource to be ready
 
