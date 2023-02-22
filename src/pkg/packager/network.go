@@ -122,10 +122,7 @@ func (p *Packager) handleSgetPackage() error {
 
 func (p *Packager) handleOciPackage() error {
 	message.Debug("packager.handleOciPackage()")
-	// ref, err := name.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"), name.StrictValidation)
-	ref := registry.Reference{}
-	ref.Reference = strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://")
-	err := ref.Validate()
+	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
