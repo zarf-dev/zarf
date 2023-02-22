@@ -45,8 +45,7 @@ func (p *Packager) Publish() error {
 	}
 
 	paths := []string{
-		filepath.Join(p.tmp.Base, "checksums.txt"),
-		filepath.Join(p.tmp.Base, "zarf.yaml"),
+		p.tmp.ZarfYaml,
 		filepath.Join(p.tmp.Base, "sboms.tar.zst"),
 	}
 	componentDirs, err := filepath.Glob(filepath.Join(p.tmp.Base, "components", "*"))
