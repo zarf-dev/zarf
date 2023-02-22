@@ -96,7 +96,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, bbRepo)
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
-	urls, hrDependencies := findURLs(template)
+	urls, hrDependencies := findBBResources(template)
 	c.Repos = append(c.Repos, urls...)
 
 	// Generate a list of HelmReleases that need to be deployed in order.
@@ -106,8 +106,8 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hr := range helmReleases {
-		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Waiting for Big Bang Helm Release `%s` to be ready", hr),
+		action := types.ZarfComponentAction{
+			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr),
 			MaxTotalSeconds: &twentyMinsInSecs,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
@@ -117,7 +117,22 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 					Condition:  "ready",
 				},
 			},
-		})
+		}
+
+		// In Big Bang the metrics-server is a special case that only deploy if needed.
+		// The check it, we need to look for the APIService to be exist instead of the HelmRelease, which
+		// may not ever be created. See links below for more details.
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.53.0/chart/templates/metrics-server/helmrelease.yaml
+		if hr == "metrics-server" {
+			action.Description = "K8s metric server to exist or be deployed by Big Bang"
+			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
+				Kind: "APIService",
+				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
+				Identifier: "v1beta1.metrics.k8s.io",
+			}
+		}
+
+		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, action)
 	}
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
@@ -162,10 +177,10 @@ func isValidVersion(version string) bool {
 	return major >= 1 && minor >= 52
 }
 
-// findURLs takes a list of yaml objects (as a string) and
+// findBBResources takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findURLs(t string) (urls []string, dependencies map[string][]string) {
+func findBBResources(t string) (urls []string, dependencies map[string][]string) {
 	// Break the template into separate resources.
 	yamls, _ := utils.SplitYAMLToString([]byte(t))
 	dependencies = map[string][]string{}
