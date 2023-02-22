@@ -141,7 +141,7 @@ Now you are ready to deploy Big Bang, and can do so with the following in the `e
 # ? Deploy this Zarf package? Yes
 ```
 
-### See the results
+### See The Results
 
 Once the install completes you can inspect the results and watch the Big Bang components deploy using the following:
 
