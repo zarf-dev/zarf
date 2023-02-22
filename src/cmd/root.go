@@ -87,6 +87,7 @@ func init() {
 	v.SetDefault(V_INSECURE, false)
 	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_TMP_DIR, "")
+	v.SetDefault(V_DOCKER_CONFIG, "")
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
@@ -95,6 +96,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(V_INSECURE), lang.RootCmdFlagInseure)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.DockerConfig, "docker-config", v.GetString(V_DOCKER_CONFIG), lang.RootCmdFlagDockerConfig)
 }
 
 func cliSetup() {

@@ -14,25 +14,25 @@ zarf package deploy [PACKAGE] [flags]
 ## Options
 
 ```
-      --components string           Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --confirm                     Confirm package deployment without prompting
-      --credentials-config string   Path to directory containing a Docker compatible credentials config file
-  -h, --help                        help for deploy
-      --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
-      --sget string                 Path to public sget key file for remote packages signed via cosign
-      --shasum string               Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
+      --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --confirm              Confirm package deployment without prompting
+  -h, --help                 help for deploy
+      --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --sget string          Path to public sget key file for remote packages signed via cosign
+      --shasum string        Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
 ## Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
-      --tmpdir string         Specify the temporary directory to use for intermediate files
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+  -a, --architecture string    Architecture for OCI images
+      --docker-config string   Path to directory containing a Docker compatible credentials config file
+      --insecure               Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -l, --log-level string       Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-log-file            Disable log file creation
+      --no-progress            Disable fancy UI progress bars, spinners, logos, etc
+      --tmpdir string          Specify the temporary directory to use for intermediate files
+      --zarf-cache string      Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ## SEE ALSO

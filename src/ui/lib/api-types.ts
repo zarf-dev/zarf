@@ -32,10 +32,6 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
-     * Directory where the Docker style credentials config file can be found
-     */
-    credentialsConfig: string;
-    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -817,6 +813,10 @@ export interface ZarfCommonOptions {
      */
     confirm: boolean;
     /**
+     * Directory where the Docker style credentials config file can be found
+     */
+    dockerConfig: string;
+    /**
      * Allow insecure connections for remote packages
      */
     insecure: boolean;
@@ -1039,7 +1039,6 @@ const typeMap: any = {
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
-        { json: "credentialsConfig", js: "credentialsConfig", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
@@ -1272,6 +1271,7 @@ const typeMap: any = {
     "ZarfCommonOptions": o([
         { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
+        { json: "dockerConfig", js: "dockerConfig", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),

@@ -22,6 +22,7 @@ const (
 	V_ZARF_CACHE   = "zarf_cache"
 	V_TMP_DIR      = "tmp_dir"
 	V_INSECURE     = "insecure"
+	V_DOCKER_CONFIG = "docker_config"
 
 	// Init config keys
 	V_INIT_COMPONENTS    = "init.components"
@@ -56,11 +57,9 @@ const (
 	V_PKG_DEPLOY_COMPONENTS         = "package.deploy.components"
 	V_PKG_DEPLOY_SHASUM             = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET               = "package.deploy.sget"
-	V_PKG_DEPLOY_CREDENTIALS_CONFIG = "package.deploy.credentials_config"
 
 	// Package publish config keys
 	V_PKG_PUBLISH_CONCURRENCY        = "package.publish.concurrency"
-	V_PKG_PUBLISH_CREDENTIALS_CONFIG = "package.publish.credentials_config"
 )
 
 func initViper() {

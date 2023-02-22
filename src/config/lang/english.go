@@ -31,13 +31,14 @@ const (
 	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
-	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
-	RootCmdFlagArch        = "Architecture for OCI images"
-	RootCmdFlagSkipLogFile = "Disable log file creation"
-	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
-	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
-	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagLogLevel     = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
+	RootCmdFlagArch         = "Architecture for OCI images"
+	RootCmdFlagSkipLogFile  = "Disable log file creation"
+	RootCmdFlagNoProgress   = "Disable fancy UI progress bars, spinners, logos, etc"
+	RootCmdFlagCachePath    = "Specify the location of the Zarf cache directory"
+	RootCmdFlagTempDir      = "Specify the temporary directory to use for intermediate files"
+	RootCmdFlagInseure      = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagDockerConfig = "Path to directory containing a Docker compatible credentials config file"
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."

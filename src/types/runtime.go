@@ -15,16 +15,16 @@ type ZarfCommonOptions struct {
 	Insecure      bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	CachePath     string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
+	DockerConfig  string `json:"dockerConfig" jsonschema:"description=Directory where the Docker style credentials config file can be found"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.
 type ZarfDeployOptions struct {
-	Shasum            string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
-	PackagePath       string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
-	Components        string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
-	SGetKeyPath       string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables      map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	CredentialsConfig string            `json:"credentialsConfig" jsonschema:"description=Directory where the Docker style credentials config file can be found"`
+	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
+	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
+	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
+	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
@@ -33,7 +33,6 @@ type ZarfPublishOptions struct {
 	CopyOptions       oras.CopyOptions  `jsonschema:"description=Options for the copy operation"`
 	PackOptions       oras.PackOptions  `jsonschema:"description=Options for the pack operation"`
 	PackagePath       string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	CredentialsConfig string            `json:"credentialsConfig" jsonschema:"description=Directory where the Docker style credentials config file can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

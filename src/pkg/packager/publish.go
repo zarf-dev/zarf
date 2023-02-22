@@ -123,7 +123,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	if err != nil {
 		return err
 	}
-	authClient, err := p.orasAuthClient(ref, p.cfg.PublishOpts.CredentialsConfig)
+	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
 		return err
 	}

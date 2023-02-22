@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
@@ -64,13 +65,14 @@ func (p *Packager) orasCtxWithScopes(ref registry.Reference) context.Context {
 // orasAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store if a file path is not provided to a valid Docker `config.json`.
-func (p *Packager) orasAuthClient(ref registry.Reference, credentialsConfigDir string) (*auth.Client, error) {
-	if len(credentialsConfigDir) == 0 {
+func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) {
+	configDir := zarfconfig.CommonOptions.DockerConfig
+	if len(configDir) == 0 {
 		// load default Docker config file
-		credentialsConfigDir = config.Dir()
+		configDir = config.Dir()
 	}
-	message.Debugf("Using Docker config file: %s/config.json", credentialsConfigDir)
-	cfg, err := config.Load(credentialsConfigDir)
+	message.Debugf("Using Docker config dir: %s", configDir)
+	cfg, err := config.Load(configDir)
 	if err != nil {
 		return &auth.Client{}, err
 	}
@@ -114,6 +116,7 @@ type PullOCIZarfPackageOpts struct {
 	Spinner *message.Spinner
 }
 
+// refactor to use oras.Copy
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
 func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 	spinner := pullOpts.Spinner
@@ -126,7 +129,7 @@ func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 	}
 	repo.PlainHTTP = pullOpts.PlainHTTP
 
-	authClient, err := p.orasAuthClient(ref,  p.cfg.DeployOpts.CredentialsConfig)
+	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
 		return err
 	}

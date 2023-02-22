@@ -108,9 +108,15 @@ var packageInspectCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
-			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+		if strings.HasPrefix(args[0], "oci://") {
+			if err := pkgClient.InspectOCI(); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
+		} else {
+			// Inspect the local package
+			if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
 		}
 	},
 }
@@ -295,13 +301,11 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_DEPLOY_CREDENTIALS_CONFIG, "")
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.CredentialsConfig, "credentials-config", v.GetString(V_PKG_DEPLOY_CREDENTIALS_CONFIG), "Path to directory containing a Docker compatible credentials config file")
 }
 
 func bindInspectFlags() {
@@ -321,8 +325,6 @@ func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 
 	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
-	v.SetDefault(V_PKG_PUBLISH_CREDENTIALS_CONFIG, "")
 
 	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
-	publishFlags.StringVar(&pkgConfig.PublishOpts.CredentialsConfig, "credentials-config", v.GetString(V_PKG_PUBLISH_CREDENTIALS_CONFIG), "Path to directory containing a Docker compatible credentials config file")
 }
