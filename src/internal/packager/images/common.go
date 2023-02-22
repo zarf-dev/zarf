@@ -36,15 +36,19 @@ func (i *ImgConfig) GetLegacyImgTarballPath() string {
 
 // LoadImageFromPackage returns a v1.Image from the image tag specified, or an error if the image cannot be found.
 func (i ImgConfig) LoadImageFromPackage(imgTag string) (v1.Image, error) {
-	var err error
-
-	// The package still has a images.tar that contains all of the images, use crane to load the specific tag we want
+	// If the package still has a images.tar that contains all of the images, use crane to load the specific tag we want
 	if _, statErr := os.Stat(i.GetLegacyImgTarballPath()); statErr == nil {
 		return crane.LoadTag(i.GetLegacyImgTarballPath(), imgTag, config.GetCraneOptions(i.Insecure)...)
 	}
 
+	// Load the image from the OCI formatted images directory
+	return LoadImage(i.ImagesPath, imgTag)
+}
+
+// LoadImage returns a v1.Image with the image tag specified from a location provided, or an error if the image cannot be found.
+func LoadImage(imgPath, imgTag string) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
-	layoutPath := layout.Path(i.ImagesPath)
+	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
 	if err != nil {
 		return nil, err
@@ -62,5 +66,5 @@ func (i ImgConfig) LoadImageFromPackage(imgTag string) (v1.Image, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find image %s in the package: %v", imgTag, err)
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgTag, imgPath)
 }

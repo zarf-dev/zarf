@@ -20,13 +20,12 @@ import (
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/layout"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
@@ -60,40 +59,23 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 	_ = utils.CreateDirectory(builder.sbomPath, 0700)
 
 	// Generate a list of images and files for the sbom viewer
-	if json, err := builder.generateJSONList(componentSBOMs, imgList); err != nil {
+	json, err := builder.generateJSONList(componentSBOMs, imgList)
+	if err != nil {
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
 		return err
-	} else {
-		builder.jsonList = json
 	}
-
-	currImage := 1
+	builder.jsonList = json
 
 	// Generate SBOM for each image
-	layoutPath := layout.Path(imagesPath)
+	currImage := 1
 	for _, tag := range imgList {
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
-		var img v1.Image
-		imgIndex, err := layoutPath.ImageIndex()
+		// Get the image that we are creating an SBOM for
+		img, err := images.LoadImage(imagesPath, tag)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to get the image index file")
+			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
-		}
-
-		idxManifest, err := imgIndex.IndexManifest()
-		if err != nil {
-			builder.spinner.Errorf(err, "Unable to load the index manifest for the images")
-			return err
-		}
-
-		for _, manifest := range idxManifest.Manifests {
-			if manifest.Annotations[ocispec.AnnotationBaseImageName] == tag {
-				if img, err = imgIndex.Image(manifest.Digest); err != nil {
-					builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
-					return err
-				}
-			}
 		}
 
 		jsonData, err := builder.createImageSBOM(img, tag)
