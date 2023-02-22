@@ -206,7 +206,7 @@ var packagePublishCmd = &cobra.Command{
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
 		pkgConfig.PublishOpts.RepositoryOptions.Reference = registry.Reference{
-			Registry: parts[0],
+			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
 		}
 
@@ -322,5 +322,5 @@ func bindPublishFlags() {
 	v.SetDefault(V_PKG_PUBLISH_CREDENTIALS_CONFIG, "")
 
 	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
-	publishFlags.StringVar(&pkgConfig.PublishOpts.CredentialsConfig, "credentials-config", v.GetString(V_PKG_PUBLISH_CREDENTIALS_CONFIG), "Path to the credentials config file")
+	publishFlags.StringVar(&pkgConfig.PublishOpts.CredentialsConfig, "credentials-config", v.GetString(V_PKG_PUBLISH_CREDENTIALS_CONFIG), "Path to directory containing a Docker compatible credentials config file")
 }

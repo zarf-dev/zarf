@@ -17,7 +17,7 @@ zarf package publish [PACKAGE] [REGISTRY] [flags]
 
 ```
       --concurrency int             Number of concurrent uploads to the registry (default 3)
-      --credentials-config string   Path to the credentials config file
+      --credentials-config string   Path to directory containing a Docker compatible credentials config file
   -h, --help                        help for publish
 ```
 
