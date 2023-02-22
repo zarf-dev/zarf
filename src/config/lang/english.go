@@ -137,6 +137,101 @@ const (
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
 
+	// zarf internal
+	CmdInternalShort = "Internal tools used by zarf"
+
+	CmdInternalAgentShort = "Runs the zarf agent"
+	CmdInternalAgentLong  = "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
+		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
+		"with the Zarf container registry and Gitea server URLs."
+
+	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
+	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
+
+	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
+	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
+
+	CmdInternalAPISchemaShort       = "Generates a JSON schema from the API types"
+	CmdInternalAPISchemaGenerateErr = "Unable to generate the zarf api schema"
+
+	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
+	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
+		"This is called internally by the supported Gitea package component."
+	CmdInternalCreateReadOnlyGiteaUserLoadErr = "Unable to load the Zarf state"
+	CmdInternalCreateReadOnlyGiteaUserErr     = "Unable to create a read-only user in the Gitea service."
+
+	CmdInternalUIShort = "Launch the experimental Zarf UI"
+
+	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
+
+	// zarf package
+	CmdPackageShort = "Zarf package commands for creating, deploying, and inspecting packages"
+
+	CmdPackageCreateShort = "Use to create a Zarf package from a given directory or the current directory"
+	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
+		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
+		"'~/.git-credentials' and '~/.netrc'.\n"
+
+	CmdPackageDeployShort = "Use to deploy a Zarf package from a local file or URL (runs offline)"
+	CmdPackageDeployLong  = "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster."
+
+	CmdPackageInspectShort = "Lists the payload of a Zarf package (runs offline)"
+	CmdPackageInspectLong  = "Lists the payload of a compiled package file (runs offline)\n" +
+		"Unpacks the package tarball into a temp directory and displays the " +
+		"contents of the archive."
+
+	CmdPackageListShort         = "List out all of the packages that have been deployed to the cluster"
+	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
+
+	CmdPackageRemoveShort       = "Use to remove a Zarf package that has been deployed already"
+	CmdPackageRemoveTarballErr  = "Invalid tarball path provided"
+	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
+	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
+
+	CmdPackageCreateFlagConfirm         = "Confirm package creation without prompting"
+	CmdPackageCreateFlagSet             = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagOutputDirectory = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagSbom            = "View SBOM contents after creating the package"
+	CmdPackageCreateFlagSbomOut         = "Specify an output directory for the SBOMs from the created Zarf package"
+	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
+	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+
+	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
+	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
+
+	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+
+	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
+	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
+
+	// zarf prepare
+	CmdPrepareShort = "Tools to help prepare assets for packaging"
+
+	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: \n" +
+		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
+	CmdPreparePatchGitFileWriteErr = "Unable to write the changes back to the file"
+
+	CmdPrepareSha256sumShort   = "Generate a SHA256SUM for the given file"
+	CmdPrepareSha256sumHashErr = "Unable to compute the hash"
+
+	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
+	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
+		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
+
+	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
+	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
+		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. \n" +
+		"Accepted extensions are json, toml, yaml.\n\n" +
+		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
+
+	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
+
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
 
@@ -166,6 +261,19 @@ const (
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
+
+	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. \n" +
+		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. \n" +
+		"You can also wait for aribtrary network endpoints using REST or TCP checks. \n\n"
+	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
+	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeout         = "Wait timed out."
+	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
+	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
+	CmdToolsWaitForFlagNamespace      = "Specify the namespace of the resources to wait for."
+
+	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
@@ -206,6 +314,8 @@ const (
 const (
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionCmdWait           = "action %s cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"

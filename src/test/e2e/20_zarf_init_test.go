@@ -33,27 +33,27 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check that gitea is actually running and healthy
-	stdOut, _, err := exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	stdOut, _, err := e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
 
 	// Check that the logging stack is actually running and healthy
-	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "pods", "-l", "app in (loki)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	stdOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (loki)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
-	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (grafana)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	stdOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (grafana)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
-	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (promtail)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	stdOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (promtail)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
 
 	// Check that the registry is running on the correct NodePort
-	stdOut, _, err = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
+	stdOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
-	_, _, _ = exec.CmdWithContext(ctx, exec.PrintCfg(), "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
+	_, _, _ = e2e.execZarfCommand("tools", "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
+	_, _, _ = e2e.execZarfCommand("tools", "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
 }
