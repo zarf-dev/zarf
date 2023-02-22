@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,7 +16,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/google/go-containerregistry/pkg/name"
+	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -120,27 +122,27 @@ func (p *Packager) handleSgetPackage() error {
 
 func (p *Packager) handleOciPackage() error {
 	message.Debug("packager.handleOciPackage()")
-	ref, err := name.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"), name.StrictValidation)
+	// ref, err := name.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"), name.StrictValidation)
+	ref := registry.Reference{}
+	ref.Reference = strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://")
+	err := ref.Validate()
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 	// patch docker.io to registry-1.docker.io
-	if ref.Context().RegistryStr() == "docker.io" {
-		ref, err = name.ParseReference(fmt.Sprintf("registry-1.docker.io/%s", ref.Context().RepositoryStr()), name.StrictValidation)
-		if err != nil {
-			return fmt.Errorf("failed to parse OCI reference: %w", err)
-		}
+	if ref.Registry == "docker.io" {
+		ref.Registry = "registry-1.docker.io"
 	}
 
 	out := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
 	spinner := message.NewProgressSpinner("")
-	pullOpts := utils.PullOCIZarfPackageOpts{
-		Outdir:  out,
-		Ref:     ref,
-		Spinner: spinner,
+	pullOpts := PullOCIZarfPackageOpts{
+		Outdir:    out,
+		Reference: ref,
+		Spinner:   spinner,
 	}
-	err = utils.PullOCIZarfPackage(pullOpts)
+	err = p.pullOCIZarfPackage(pullOpts)
 	if err != nil {
 		return fmt.Errorf("failed to pull package from OCI: %w", err)
 	}
@@ -149,4 +151,27 @@ func (p *Packager) handleOciPackage() error {
 
 	p.cfg.DeployOpts.PackagePath = out
 	return nil
+}
+
+// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
+//
+// This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
+func isManifestUnsupported(err error) bool {
+	var errResp *errcode.ErrorResponse
+	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
+		return false
+	}
+
+	var errCode errcode.Error
+	if !errors.As(errResp, &errCode) {
+		return false
+	}
+
+	// As of November 2022, ECR is known to return UNSUPPORTED error when
+	// putting an OCI artifact manifest.
+	switch errCode.Code {
+	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
+		return true
+	}
+	return false
 }

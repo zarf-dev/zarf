@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -200,17 +201,13 @@ var packagePublishCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
-		registry := args[1]
-
-		if !strings.HasPrefix(registry, "oci://") {
+		if !strings.HasPrefix(args[1], "oci://") {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
-		parts := strings.Split(strings.TrimPrefix(registry, "oci://"), "/")
-		pkgConfig.PublishOpts.RegistryURL = parts[0]
-		pkgConfig.PublishOpts.Namespace = strings.Join(parts[1:], "/")
-
-		if pkgConfig.PublishOpts.Namespace == "" {
-			message.Fatalf(nil, "No namespace provided")
+		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
+		pkgConfig.PublishOpts.RepositoryOptions.Reference = registry.Reference{
+			Registry: parts[0],
+			Repository: strings.Join(parts[1:], "/"),
 		}
 
 		// Configure the packager
@@ -322,6 +319,8 @@ func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 
 	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
+	v.SetDefault(V_PKG_PUBLISH_CREDENTIALS_CONFIG, "")
 
 	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
+	publishFlags.StringVar(&pkgConfig.PublishOpts.CredentialsConfig, "credentials-config", v.GetString(V_PKG_PUBLISH_CREDENTIALS_CONFIG), "Path to the credentials config file")
 }

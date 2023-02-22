@@ -13,14 +13,13 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
@@ -38,11 +37,11 @@ func (p *Packager) Publish() error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	if p.cfg.PublishOpts.RegistryURL == "docker.io" {
+	if p.cfg.PublishOpts.RepositoryOptions.Reference.Registry == "docker.io" {
 		// docker.io is commonly used, but is not a valid registry URL
 		// registry-1.docker.io is Docker's default public registry URL
 		// https://github.com/docker/cli/blob/master/man/src/image/pull.md
-		p.cfg.PublishOpts.RegistryURL = "registry-1.docker.io"
+		p.cfg.PublishOpts.RepositoryOptions.Reference.Registry = "registry-1.docker.io"
 	}
 
 	paths := []string{
@@ -78,7 +77,7 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return err
 	}
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Identifier())
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
 	err = p.publish(ref, paths, spinner)
 	if err != nil {
 		return fmt.Errorf("unable to publish package %s: %w", ref, err)
@@ -115,17 +114,17 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
-func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.Spinner) error {
+func (p *Packager) publish(ref registry.Reference, paths []string, spinner *message.Spinner) error {
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 
-	ctx := utils.OrasCtxWithScopes(ref.Context().RepositoryStr())
+	ctx := p.orasCtxWithScopes(ref)
 
 	dst, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return err
 	}
-	authClient, err := utils.OrasAuthClient(ref)
+	authClient, err := p.orasAuthClient(ref, p.cfg.PublishOpts.CredentialsConfig)
 	if err != nil {
 		return err
 	}
@@ -147,7 +146,7 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 			return err
 		}
 
-		mediaType := utils.ParseZarfLayerMediaType(name)
+		mediaType := p.parseZarfLayerMediaType(name)
 
 		desc, err := store.Add(ctx, name, mediaType, path)
 		if err != nil {
@@ -237,7 +236,7 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 	}
 
 	// if the error returned from the push is not an expected error, then return the error
-	if !utils.IsManifestUnsupported(err) {
+	if !isManifestUnsupported(err) {
 		return err
 	}
 
@@ -287,10 +286,10 @@ func (p *Packager) publish(ref name.Reference, paths []string, spinner *message.
 	return nil
 }
 
-// ref returns a v1name.Reference using metadata from the package's build config and the PublishOpts
+// ref returns a registry.Reference using metadata from the package's build config and the PublishOpts
 //
 // if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
-func (p *Packager) ref(skeleton string) (name.Reference, error) {
+func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	pkgName := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
@@ -298,11 +297,14 @@ func (p *Packager) ref(skeleton string) (name.Reference, error) {
 	if len(skeleton) > 0 {
 		arch = skeleton
 	}
-	ns := p.cfg.PublishOpts.Namespace
-	registry := p.cfg.PublishOpts.RegistryURL
-	ref, err := name.ParseReference(fmt.Sprintf("%s/%s/%s:%s-%s", registry, ns, pkgName, ver, arch), name.StrictValidation)
+	ref := registry.Reference{
+		Registry: p.cfg.PublishOpts.RepositoryOptions.Reference.Registry,
+		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.RepositoryOptions.Reference.Repository, pkgName),
+		Reference: fmt.Sprintf("%s-%s", ver, arch),
+	}
+	err := ref.Validate()
 	if err != nil {
-		return nil, err
+		return registry.Reference{}, err
 	}
 	return ref, nil
 }

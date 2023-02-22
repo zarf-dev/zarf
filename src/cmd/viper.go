@@ -59,6 +59,7 @@ const (
 
 	// Package publish config keys
 	V_PKG_PUBLISH_CONCURRENCY = "package.publish.concurrency"
+	V_PKG_PUBLISH_CREDENTIALS_CONFIG = "package.publish.credentials_config"
 )
 
 func initViper() {
