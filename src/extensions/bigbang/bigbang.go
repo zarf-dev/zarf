@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
@@ -97,26 +96,28 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, bbRepo)
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
-	urls, helmReleases := findURLs(template)
+	urls, hrDependencies := findURLs(template)
 	c.Repos = append(c.Repos, urls...)
 
-	// @todo (jeff-mccoy) remove / update once https://github.com/defenseunicorns/zarf/pull/1373 is merged
-	type placeholderWaitAction struct {
-		Kind       string
-		Identifier string
-		Namespace  string
-		Condition  string
-	}
+	// Generate a list of HelmReleases that need to be deployed in order.
+	helmReleases := sortDependencies(hrDependencies)
 
-	// Add wait actions for each of the helm releases.
+	twentyMinsInSecs := 20 * 60
+
+	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hr := range helmReleases {
-		action := placeholderWaitAction{
-			Kind:       "HelmRelease",
-			Identifier: hr,
-			Namespace:  bb,
-			Condition:  "ready",
-		}
-		message.Debug(action)
+		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, types.ZarfComponentAction{
+			Description:     fmt.Sprintf("Waiting for Big Bang Helm Release `%s` to be ready", hr),
+			MaxTotalSeconds: &twentyMinsInSecs,
+			Wait: &types.ZarfComponentActionWait{
+				Cluster: &types.ZarfComponentActionWaitCluster{
+					Kind:       "HelmRelease",
+					Identifier: hr,
+					Namespace:  bb,
+					Condition:  "ready",
+				},
+			},
+		})
 	}
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
@@ -164,23 +165,39 @@ func isValidVersion(version string) bool {
 // findURLs takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findURLs(t string) (urls []string, helmReleases []string) {
+func findURLs(t string) (urls []string, dependencies map[string][]string) {
 	// Break the template into separate resources.
 	yamls, _ := utils.SplitYAMLToString([]byte(t))
+	dependencies = map[string][]string{}
 
 	for _, y := range yamls {
-		// Parse the resource into a shallow GitRepository object.
-		var s fluxSrcCtrl.GitRepository
+		var (
+			h fluxHelmCtrl.HelmRelease
+			s fluxSrcCtrl.GitRepository
+		)
+
+		if err := yaml.Unmarshal([]byte(y), &h); err != nil {
+			continue
+		}
+
+		// If the resource is a HelmRelease, parse it for the dependencies.
+		if h.Kind == fluxHelmCtrl.HelmReleaseKind {
+			name := h.ObjectMeta.Name
+			dependencies[name] = []string{}
+			for _, d := range h.Spec.DependsOn {
+				dependencies[name] = append(dependencies[name], d.Name)
+			}
+
+			// Skip the rest as this is not a GitRepository.
+			continue
+		}
+
 		if err := yaml.Unmarshal([]byte(y), &s); err != nil {
 			continue
 		}
 
-		if s.Kind == "HelmRelease" {
-			helmReleases = append(helmReleases, s.Name)
-		}
-
 		// If the resource is a GitRepository, parse it for the URL and tag.
-		if s.Kind == "GitRepository" && s.Spec.URL != "" {
+		if s.Kind == fluxSrcCtrl.GitRepositoryKind && s.Spec.URL != "" {
 			ref := "master"
 
 			switch {
@@ -202,7 +219,7 @@ func findURLs(t string) (urls []string, helmReleases []string) {
 		}
 	}
 
-	return urls, helmReleases
+	return urls, dependencies
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
