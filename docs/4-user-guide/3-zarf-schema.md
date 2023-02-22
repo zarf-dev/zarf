@@ -1035,7 +1035,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The command to run
+**Description:** The command to run. Must specify either cmd or wait for the action to do anything.
 
 |          |          |
 | -------- | -------- |
@@ -1051,7 +1051,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
+**Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
 
 |          |          |
 | -------- | -------- |
@@ -1076,6 +1076,185 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionWait                                                                    |
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionWaitCluster                                                             |
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The kind of resource to wait for (e.g. Pod; Deployment; etc.)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The namespace of the resource to wait for
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionWaitNetwork                                                             |
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The protocol to wait for (e.g. tcp; http; etc.).
+
+|          |                    |
+| -------- | ------------------ |
+| **Type** | `enum (of string)` |
+
+:::note
+Must be one of:
+* "tcp"
+* "http"
+* "https"
+:::
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
+
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
+
+|          |           |
+| -------- | --------- |
+| **Type** | `integer` |
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>

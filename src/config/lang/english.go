@@ -151,8 +151,8 @@ const (
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
 
-	CmdInternalApiSchemaShort       = "Generates a JSON schema from the API types"
-	CmdInternalApiSchemaGenerateErr = "Unable to generate the zarf api schema"
+	CmdInternalAPISchemaShort       = "Generates a JSON schema from the API types"
+	CmdInternalAPISchemaGenerateErr = "Unable to generate the zarf api schema"
 
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
@@ -160,7 +160,7 @@ const (
 	CmdInternalCreateReadOnlyGiteaUserLoadErr = "Unable to load the Zarf state"
 	CmdInternalCreateReadOnlyGiteaUserErr     = "Unable to create a read-only user in the Gitea service."
 
-	CmdInternalUiShort = "Launch the experimental Zarf UI"
+	CmdInternalUIShort = "Launch the experimental Zarf UI"
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 
@@ -262,6 +262,19 @@ const (
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
+	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. \n" +
+		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. \n" +
+		"You can also wait for aribtrary network endpoints using REST or TCP checks. \n\n"
+	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
+	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeout         = "Wait timed out."
+	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
+	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
+	CmdToolsWaitForFlagNamespace      = "Specify the namespace of the resources to wait for."
+
+	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
+
 	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
 
@@ -301,6 +314,8 @@ const (
 const (
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionCmdWait           = "action %s cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"

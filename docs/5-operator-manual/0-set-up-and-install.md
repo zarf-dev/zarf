@@ -49,7 +49,7 @@ During the initialization process, Zarf will create a `zarf` namespace and deplo
 
 You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) on the GitHub releases page. Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the optional component, you can type `y` or `n` depending on your use case and needs.
 
-Once the init command is finished, you can run `kubectl get pods -n zarf` to verify that the pods have come up healthy. You should expect to see two `agent-hook` pods, a `zarf-docker-registry` pod, and optionally a `zarf-gitea` pod.
+Once the init command is finished, you can run `zarf tools kubectl get pods -n zarf` to verify that the pods have come up healthy. You should expect to see two `agent-hook` pods, a `zarf-docker-registry` pod, and optionally a `zarf-gitea` pod.
 
 ## Setup Complete
 
