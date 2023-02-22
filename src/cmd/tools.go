@@ -83,7 +83,7 @@ var archiverDecompressCmd = &cobra.Command{
 					} else {
 						// Without unarchive error, delete original tar.zst in component folder
 						// This will leave the tar.zst if their is a failure for post mortem check 
-						os.Remove(filepath.Join(layersDir, file.Name()))
+						_ = os.Remove(filepath.Join(layersDir, file.Name()))
 					}
 				}
 			}
