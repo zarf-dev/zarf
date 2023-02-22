@@ -102,13 +102,13 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	// Generate a list of HelmReleases that need to be deployed in order.
 	helmReleases := sortDependencies(hrDependencies)
 
-	twentyMinsInSecs := 20 * 60
+	tenMinsInSecs := 10 * 60
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hr := range helmReleases {
 		action := types.ZarfComponentAction{
 			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr),
-			MaxTotalSeconds: &twentyMinsInSecs,
+			MaxTotalSeconds: &tenMinsInSecs,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:       "HelmRelease",
