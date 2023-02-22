@@ -101,9 +101,6 @@ func (p *Packager) GetPackageName() string {
 
 	packageName := p.cfg.Pkg.Metadata.Name
 	suffix := "tar.zst"
-	// if p.cfg.Pkg.Metadata.Uncompressed { // removing for #1323
-	// 	suffix = "tar"
-	// }
 
 	if p.cfg.Pkg.Metadata.Version == "" {
 		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
