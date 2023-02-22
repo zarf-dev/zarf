@@ -32,6 +32,10 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
+     * Directory where the Docker style credentials config file can be found
+     */
+    credentialsConfig: string;
+    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -1035,6 +1039,7 @@ const typeMap: any = {
     ], false),
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
+        { json: "credentialsConfig", js: "credentialsConfig", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },

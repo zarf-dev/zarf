@@ -16,9 +16,9 @@ zarf package publish [PACKAGE] [REGISTRY] [flags]
 ## Options
 
 ```
-      --concurrency int   Number of concurrent uploads to the registry (default 3)
-  -h, --help              help for publish
-      --include-images    Include container images in the published package (default true)
+      --concurrency int             Number of concurrent uploads to the registry (default 3)
+      --credentials-config string   Path to the credentials config file
+  -h, --help                        help for publish
 ```
 
 ## Options inherited from parent commands
