@@ -14,12 +14,13 @@ zarf package deploy [PACKAGE] [flags]
 ## Options
 
 ```
-      --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --confirm              Confirm package deployment without prompting
-  -h, --help                 help for deploy
-      --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-      --sget string          Path to public sget key file for remote packages signed via cosign
-      --shasum string        Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
+      --components string           Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --confirm                     Confirm package deployment without prompting
+      --credentials-config string   Path to directory containing a Docker compatible credentials config file
+  -h, --help                        help for deploy
+      --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
+      --sget string                 Path to public sget key file for remote packages signed via cosign
+      --shasum string               Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
 ## Options inherited from parent commands
