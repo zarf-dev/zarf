@@ -84,7 +84,8 @@ $ zarf package publish zarf-package-helm-oci-chart-arm64.tar.zst oci://$REGISTRY
 :::note
 
 The name and reference of this OCI artifact is derived from the package metadata, e.g.: `helm-oci-chart:0.0.1-arm64`
-# To modify, edit `zarf.yaml` and re-run `zarf package create .`
+
+To modify, edit `zarf.yaml` and re-run `zarf package create .`
 
 :::
 

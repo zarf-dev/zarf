@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -130,7 +129,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	}
 	dst.Client = authClient
 
-	dst.PlainHTTP = config.CommonOptions.Insecure
+	dst.PlainHTTP = isPlainHTTP(ref.Registry)
 
 	store, err := file.New(p.tmp.Base)
 	if err != nil {

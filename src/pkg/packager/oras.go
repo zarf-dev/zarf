@@ -119,7 +119,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinne
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
+	repo.PlainHTTP = isPlainHTTP(ref.Registry)
 
 	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
