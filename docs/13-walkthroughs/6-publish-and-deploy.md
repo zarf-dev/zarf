@@ -17,7 +17,7 @@ For following along locally, please ensure the following prerequisites are met:
 $ REGISTRY=docker.io
 $ set +o history
 $ REGISTRY_USERNAME=<username> # <-- replace with your username
-$ REGISTRY_PASSWORD=<password> # <-- replace with your password or auth token
+$ REGISTRY_SECRET=<secret> # <-- replace with your password or auth token
 $ set -o history
 
 # Make a new directory to work in
@@ -45,11 +45,11 @@ components:
       - "ghcr.io/stefanprodan/podinfo:6.3.3"
 EOF
 
-# (Optional) Authenticate with your registry using the Docker CLI
-$ echo $REGISTRY_PASSWORD | docker login $REGISTRY -u $REGISTRY_USERNAME --password-stdin
+# Authenticate with your registry using Zarf
+$ echo $REGISTRY_SECRET | zarf tools registry login $REGISTRY --username $REGISTRY_USERNAME --password-stdin
 # (Optional) Otherwise, create a Docker compliant auth config file if the Docker CLI is not installed
 $ mkdir -p ~/.docker
-$ AUTH=$(echo -n "$REGISTRY_USERNAME:$REGISTRY_PASSWORD" | base64)
+$ AUTH=$(echo -n "$REGISTRY_USERNAME:$REGISTRY_SECRET" | base64)
 # Note: If using Docker Hub, the registry URL is `https://index.docker.io/v1/` for the auth config
 $ cat <<EOF > ~/.docker/config.json
 {

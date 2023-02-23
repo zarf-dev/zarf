@@ -99,10 +99,10 @@ Sleep 3s
 Ctrl+C
 Enter
 
-Type "docker login"
+Type "echo $REGISTRY_SECRET | zarf tools registry login --username $REGISTRY_USERNAME --password-stdin"
 Sleep 1s
-Enter
-Sleep 5s
+Ctrl+C
+Sleep 3s
 
 # temporarily here while package structure is being updated, this is a manually modified package
 Hide
