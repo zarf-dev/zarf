@@ -43,6 +43,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 	return nil
 }
 
+// InspectOCIOutput is the output of the InspectOCI command
 type InspectOCIOutput struct {
 	Tags   []string `yaml:"tags"`
 	Latest struct {
@@ -51,6 +52,7 @@ type InspectOCIOutput struct {
 	} `yaml:"latest"`
 }
 
+// InspectOCI inspects an OCI image and returns the tags and latest tag with descriptor
 func (p *Packager) InspectOCI() error {
 	message.Debug("packager.InspectOCI()")
 	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))

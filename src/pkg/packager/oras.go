@@ -25,11 +25,12 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
+// ZarfLayerMediaType<Extension> is the media type for Zarf layers.
 const (
 	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
 	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
 	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
-	ZarfLayerMediaTypeJson    = "application/vnd.zarf.layer.v1.json"
+	ZarfLayerMediaTypeJSON    = "application/vnd.zarf.layer.v1.json"
 	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
 	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
 )
@@ -45,7 +46,7 @@ func (p *Packager) parseZarfLayerMediaType(filename string) string {
 	case ".yaml":
 		return ZarfLayerMediaTypeYaml
 	case ".json":
-		return ZarfLayerMediaTypeJson
+		return ZarfLayerMediaTypeJSON
 	case ".txt":
 		return ZarfLayerMediaTypeTxt
 	default:
