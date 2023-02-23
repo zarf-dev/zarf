@@ -289,7 +289,6 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 //
 // if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
-	pkgName := p.cfg.Pkg.Metadata.Name
 	ver := p.cfg.Pkg.Build.Version
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
@@ -298,8 +297,11 @@ func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	}
 	ref := registry.Reference{
 		Registry: p.cfg.PublishOpts.RepositoryOptions.Reference.Registry,
-		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.RepositoryOptions.Reference.Repository, pkgName),
+		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.RepositoryOptions.Reference.Repository, p.cfg.Pkg.Metadata.Name),
 		Reference: fmt.Sprintf("%s-%s", ver, arch),
+	}
+	if len(p.cfg.PublishOpts.RepositoryOptions.Reference.Repository) == 0 {
+		ref.Repository = p.cfg.Pkg.Metadata.Name
 	}
 	err := ref.Validate()
 	if err != nil {

@@ -116,8 +116,10 @@ type PullOCIZarfPackageOpts struct {
 	Spinner *message.Spinner
 }
 
-// refactor to use oras.Copy
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
+//
+// If the current implementation causes memory issues, we can
+// refactor to use oras.Copy which uses a memory buffer.
 func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 	spinner := pullOpts.Spinner
 	ref := pullOpts.Reference
@@ -127,7 +129,7 @@ func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = pullOpts.PlainHTTP
+	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
 
 	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
