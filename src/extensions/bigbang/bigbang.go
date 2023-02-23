@@ -39,11 +39,15 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	}
 
 	cfg := c.Extensions.BigBang
+	manifests := []types.ZarfManifest{}
 
 	// Make sure the version is valid.
 	if !isValidVersion(cfg.Version) {
 		return c, fmt.Errorf("invalid version: %s, must be at least 1.52.0", cfg.Version)
 	}
+
+	// Print the banner for Big Bang.
+	printBanner()
 
 	// If no repo is provided, use the default.
 	if cfg.Repo == "" {
@@ -58,7 +62,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		}
 
 		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
-		c.Manifests = append(c.Manifests, fluxManifest)
+		manifests = append(manifests, fluxManifest)
 
 		// Add the images to the list of images to be pulled down by Zarf.
 		c.Images = append(c.Images, images...)
@@ -154,8 +158,12 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		return c, err
 	}
 
-	// AAdd the Big Bang manifests to the list of manifests to be pulled down by Zarf.
-	c.Manifests = append(c.Manifests, manifest)
+	// Add the Big Bang manifests to the list of manifests to be pulled down by Zarf.
+	manifests = append(manifests, manifest)
+
+	// Prepend the Big Bang manifests to the list of manifests to be pulled down by Zarf.
+	// This is done so that the Big Bang manifests are deployed first.
+	c.Manifests = append(manifests, c.Manifests...)
 
 	return c, nil
 }
