@@ -28,7 +28,7 @@ import (
 // This is a wrapper around the oras library
 // and much of the code was adapted from the oras CLI - https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
 //
-// Authentication is handled via the Docker config file created w/ `docker login`
+// Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
 	if err := p.loadZarfPkg(); err != nil {

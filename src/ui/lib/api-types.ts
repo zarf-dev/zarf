@@ -813,10 +813,6 @@ export interface ZarfCommonOptions {
      */
     confirm: boolean;
     /**
-     * Directory where the Docker style credentials config file can be found
-     */
-    dockerConfig: string;
-    /**
      * Allow insecure connections for remote packages
      */
     insecure: boolean;
@@ -1271,7 +1267,6 @@ const typeMap: any = {
     "ZarfCommonOptions": o([
         { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
-        { json: "dockerConfig", js: "dockerConfig", typ: "" },
         { json: "insecure", js: "insecure", typ: true },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),

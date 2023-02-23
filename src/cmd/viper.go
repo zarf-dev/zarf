@@ -22,7 +22,6 @@ const (
 	V_ZARF_CACHE   = "zarf_cache"
 	V_TMP_DIR      = "tmp_dir"
 	V_INSECURE     = "insecure"
-	V_DOCKER_CONFIG = "docker_config"
 
 	// Init config keys
 	V_INIT_COMPONENTS    = "init.components"

@@ -15,7 +15,6 @@ type ZarfCommonOptions struct {
 	Insecure      bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
 	CachePath     string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
 	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
-	DockerConfig  string `json:"dockerConfig" jsonschema:"description=Directory where the Docker style credentials config file can be found"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.

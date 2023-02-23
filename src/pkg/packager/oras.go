@@ -66,20 +66,14 @@ func (p *Packager) orasCtxWithScopes(ref registry.Reference) context.Context {
 
 // orasAuthClient returns an auth client for the given reference.
 //
-// The credentials are pulled using Docker's default credential store if a file path is not provided to a valid Docker `config.json`.
+// The credentials are pulled using Docker's default credential store.
 func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) {
-	configDir := zarfconfig.CommonOptions.DockerConfig
-	if len(configDir) == 0 {
-		// load default Docker config file
-		configDir = config.Dir()
-	}
-	message.Debugf("Using Docker config dir: %s", configDir)
-	cfg, err := config.Load(configDir)
+	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err
 	}
 	if !cfg.ContainsAuth() {
-		return &auth.Client{}, errors.New("no docker config file found, run 'docker login'")
+		return &auth.Client{}, errors.New("no docker config file found, run 'zarf tools registry login --help'")
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
