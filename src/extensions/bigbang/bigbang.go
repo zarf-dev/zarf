@@ -139,6 +139,35 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, action)
 	}
 
+	t := true
+	failureGeneral := []string{
+		"get nodes -o wide",
+		"get hr -n bigbang",
+		"get gitrepo -n bigbang",
+		"get pods -A",
+	}
+	failureDebug := []string{
+		"describe hr -n bigbang",
+		"describe gitrepo -n bigbang",
+		"describe pods -A",
+		"get events -A",
+	}
+
+	// Add onFailure actions with additional troubleshooting information.
+	for _, cmd := range failureGeneral {
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		})
+	}
+
+	for _, cmd := range failureDebug {
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+			Mute:        &t,
+			Description: "Storing debug information to the log for troubleshooting.",
+			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		})
+	}
+
 	// Select the images needed to support the repos for this configuration of Big Bang.
 	for _, r := range c.Repos {
 		images, err := helm.FindImagesForChartRepo(r, "chart")
