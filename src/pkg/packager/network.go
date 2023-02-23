@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -164,17 +163,6 @@ func isManifestUnsupported(err error) bool {
 	// putting an OCI artifact manifest.
 	switch errCode.Code {
 	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
-		return true
-	}
-	return false
-}
-
-// isPlainHttp returns the plain http flag for a given registry.
-//
-// This function was copied (near) verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/internal/option/remote.go
-func isPlainHTTP(registry string) bool {
-	host, _, _ := net.SplitHostPort(registry)
-	if host == "localhost" || registry == "localhost" {
 		return true
 	}
 	return false

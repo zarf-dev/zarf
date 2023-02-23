@@ -199,7 +199,7 @@ func (p *Packager) orasRemote(ref registry.Reference) (*remote.Repository, conte
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}
-	repo.PlainHTTP = isPlainHTTP(ref.Registry)
+	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
 		return &remote.Repository{}, ctx, err
