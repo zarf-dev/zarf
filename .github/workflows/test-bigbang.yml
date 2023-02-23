@@ -67,16 +67,8 @@ jobs:
           # Deploy the previous version
           zarf package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
 
-          # Connect to the Twistlock console
-          zarf connect --cli-only --name=twistlock-console --namespace=twistlock --remote-port=8081 --local-port 42000 &
-          zarf tools wait-for http localhost:42000
-
           # Deploy the latest version
           zarf package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm
-
-          # Connect to the Twistlock console again
-          zarf connect --cli-only --name=twistlock-console --namespace=twistlock --remote-port=8081 --local-port 42001 &
-          zarf tools wait-for http localhost:42001
 
       - name: Save logs
         if: always()
