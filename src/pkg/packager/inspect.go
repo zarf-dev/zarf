@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -69,7 +68,7 @@ func (p *Packager) InspectOCI() error {
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = config.CommonOptions.Insecure
+	repo.PlainHTTP = isPlainHTTP(ref.Registry)
 	authClient, err := p.orasAuthClient(ref)
 	if err != nil {
 		return err

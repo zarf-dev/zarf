@@ -6,9 +6,11 @@ package packager
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -100,11 +102,20 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 		RefreshToken: authConf.IdentityToken,
 	}
 
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: zarfconfig.CommonOptions.Insecure,
+	}
+	// TODO:(@RAZZLE) https://github.com/oras-project/oras/blob/e8bc5acd9b7be47f2f9f387af6a963b14ae49eda/cmd/oras/internal/option/remote.go#L183
+
 	return &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
 		// ForceAttemptOAuth2: true,
+		Client: &http.Client{
+			Transport: transport,
+		},
 	}, nil
 }
 
