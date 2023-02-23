@@ -110,5 +110,4 @@ latest:
 $ zarf package deploy oci://$REGISTRY_URL/$USERNAME/helm-oci-chart:0.0.1-arm64
 # zarf package deploy oci://REGISTRY/NAMESPACE/NAME:VERSION
 # zarf package deploy oci://docker.io/defenseunicorns/strimzi:v0.24.0-arm64
-# zarf package deploy oci://docker.io/defenseunicorns/strimzi:v0.24.0-arm64 --docker-config /tmp/docker-temp-creds
 ```
