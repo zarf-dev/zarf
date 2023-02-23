@@ -91,7 +91,7 @@ func (p *Packager) InspectOCI() error {
 	if err != nil {
 		return err
 	}
-	payload.Latest.Tag = payload.Tags[0]
+	payload.Latest.Tag = payload.Tags[len(payload.Tags)-1]
 	// get the manifest descriptor
 	payload.Latest.Descriptor, err = repo.Resolve(ctx, payload.Latest.Tag)
 	if err != nil {
@@ -101,4 +101,4 @@ func (p *Packager) InspectOCI() error {
 	utils.ColorPrintYAML(payload)
 
 	return nil
-}	
+}
