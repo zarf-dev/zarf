@@ -80,7 +80,7 @@ Then publish the package to the registry:
 
 ```bash
 # Your package tarball may be named differently based on your machine's architecture
-$ zarf package publish zarf-package-helm-oci-chart-arm64.tar.zst oci://$REGISTRY_URL/$USERNAME
+$ zarf package publish zarf-package-helm-oci-chart-arm64.tar.zst oci://$REGISTRY/$USERNAME
 ```
 
 :::note
@@ -109,7 +109,7 @@ latest:
 ## Deploying A Zarf Package From The Registry
 
 ```bash
-$ zarf package deploy oci://$REGISTRY_URL/$USERNAME/helm-oci-chart:0.0.1-arm64
+$ zarf package deploy oci://$REGISTRY/$USERNAME/helm-oci-chart:0.0.1-arm64
 # zarf package deploy oci://REGISTRY/NAMESPACE/NAME:VERSION
 # zarf package deploy oci://docker.io/defenseunicorns/strimzi:v0.24.0-arm64
 ```
