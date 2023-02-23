@@ -14,7 +14,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 // Inspect list the contents of a package.
@@ -59,21 +58,10 @@ func (p *Packager) InspectOCI() error {
 		return err
 	}
 
-	// patch docker.io to registry-1.docker.io
-	if ref.Registry == "docker.io" {
-		ref.Registry = "registry-1.docker.io"
-	}
-	ctx := p.orasCtxWithScopes(ref)
-	repo, err := remote.NewRepository(ref.String())
+	repo, ctx, err := p.orasRemote(ref)
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = isPlainHTTP(ref.Registry)
-	authClient, err := p.orasAuthClient(ref)
-	if err != nil {
-		return err
-	}
-	repo.Client = authClient
 
 	payload := InspectOCIOutput{}
 	// get the tags
@@ -98,6 +86,7 @@ func (p *Packager) InspectOCI() error {
 	}
 
 	utils.ColorPrintYAML(payload)
+	pterm.Println()
 
 	return nil
 }

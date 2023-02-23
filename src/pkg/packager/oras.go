@@ -119,18 +119,10 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 // refactor to use oras.Copy which uses a memory buffer.
 func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinner *message.Spinner) error {
 	_ = os.Mkdir(out, 0755)
-	ctx := p.orasCtxWithScopes(ref)
-	repo, err := remote.NewRepository(ref.String())
+	repo, ctx, err := p.orasRemote(ref)
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = isPlainHTTP(ref.Registry)
-
-	authClient, err := p.orasAuthClient(ref)
-	if err != nil {
-		return err
-	}
-	repo.Client = authClient
 
 	// get the manifest descriptor
 	descriptor, err := repo.Resolve(ctx, ref.Reference)
@@ -194,4 +186,23 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinne
 	}
 
 	return nil
+}
+
+func (p *Packager) orasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
+	// patch docker.io to registry-1.docker.io
+	if ref.Registry == "docker.io" {
+		ref.Registry = "registry-1.docker.io"
+	}
+	ctx := p.orasCtxWithScopes(ref)
+	repo, err := remote.NewRepository(ref.String())
+	if err != nil {
+		return &remote.Repository{}, ctx, err
+	}
+	repo.PlainHTTP = isPlainHTTP(ref.Registry)
+	authClient, err := p.orasAuthClient(ref)
+	if err != nil {
+		return &remote.Repository{}, ctx, err
+	}
+	repo.Client = authClient
+	return repo, ctx, nil
 }

@@ -20,7 +20,6 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 // Publish publishes the package to a registry
@@ -117,19 +116,10 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	message.Debugf("Publishing package to %s", ref)
 	spinner.Updatef("Publishing package to: %s", ref)
 
-	ctx := p.orasCtxWithScopes(ref)
-
-	dst, err := remote.NewRepository(ref.String())
+	dst, ctx, err := p.orasRemote(ref)
 	if err != nil {
 		return err
 	}
-	authClient, err := p.orasAuthClient(ref)
-	if err != nil {
-		return err
-	}
-	dst.Client = authClient
-
-	dst.PlainHTTP = isPlainHTTP(ref.Registry)
 
 	store, err := file.New(p.tmp.Base)
 	if err != nil {
