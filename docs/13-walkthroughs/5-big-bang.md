@@ -135,13 +135,13 @@ Now you are ready to deploy Big Bang, and can do so with the following in the `e
 
 ```bash
 # Deploy Big Bang (interactively)
-./zarf package deploy
+zarf package deploy
 # Make these choices at the prompts
 # ? Choose or type the package file [tab for suggestions] zarf-package-big-bang-example-amd64-x.x.x.tar.zst
 # ? Deploy this Zarf package? Yes
 ```
 
-### See the results
+### See The Results
 
 Once the install completes you can inspect the results and watch the Big Bang components deploy using the following:
 
