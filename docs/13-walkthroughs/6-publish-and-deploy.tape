@@ -139,6 +139,7 @@ Sleep 3s
 Ctrl+C
 Enter
 
+# currently broken on final step until some file structure changes are made
 Type "zarf package deploy oci://docker.io/noxsios/helm-oci-chart:0.0.1-arm64"
 Sleep 1s
 Enter
