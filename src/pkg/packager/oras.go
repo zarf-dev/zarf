@@ -108,22 +108,12 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 	}, nil
 }
 
-// PullOCIZarfPackageOpts are the options for pulling a Zarf package from a registry.
-type PullOCIZarfPackageOpts struct {
-	remote.Repository
-	Reference     registry.Reference
-	Outdir  string
-	Spinner *message.Spinner
-}
-
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
 //
 // If the current implementation causes memory issues, we can
 // refactor to use oras.Copy which uses a memory buffer.
-func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
-	spinner := pullOpts.Spinner
-	ref := pullOpts.Reference
-	_ = os.Mkdir(pullOpts.Outdir, 0755)
+func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinner *message.Spinner) error {
+	_ = os.Mkdir(out, 0755)
 	ctx := p.orasCtxWithScopes(ref)
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
@@ -167,7 +157,7 @@ func (p *Packager) pullOCIZarfPackage(pullOpts PullOCIZarfPackageOpts) error {
 
 	// get the layers
 	for _, layer := range layers {
-		path := filepath.Join(pullOpts.Outdir, layer.Annotations[ocispec.AnnotationTitle])
+		path := filepath.Join(out, layer.Annotations[ocispec.AnnotationTitle])
 		// if the file exists and the size matches, skip it
 		info, err := os.Stat(path)
 		if err == nil && info.Size() == layer.Size {
