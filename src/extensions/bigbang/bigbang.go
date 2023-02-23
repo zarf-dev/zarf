@@ -150,6 +150,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		"describe hr -n bigbang",
 		"describe gitrepo -n bigbang",
 		"describe pods -A",
+		"describe nodes"
 		"get events -A",
 	}
 
