@@ -87,3 +87,27 @@ The name and reference of this OCI artifact is derived from the package metadata
 # To modify, edit `zarf.yaml` and re-run `zarf package create .`
 
 :::
+
+## Inspecting a Published Zarf Package
+
+```yaml
+$ zarf package inspect oci://$REGISTRY_URL/$USERNAME/helm-oci-chart
+
+tags:
+- 0.0.1-arm64
+latest:
+  tag: 0.0.1-arm64
+  descriptor:
+    mediaType: application/vnd.oci.artifact.manifest.v1+json
+    digest: sha256:624e97e9b235ebd8eab699238482eebd2f535683755323eb40c819e0efdcd959
+    size: 3338
+```
+
+## Deploying A Zarf Package From The Registry
+
+```bash
+$ zarf package deploy oci://$REGISTRY_URL/$USERNAME/helm-oci-chart:0.0.1-arm64
+# zarf package deploy oci://REGISTRY/NAMESPACE/NAME:VERSION
+# zarf package deploy oci://docker.io/defenseunicorns/strimzi:v0.24.0-arm64
+# zarf package deploy oci://docker.io/defenseunicorns/strimzi:v0.24.0-arm64 --docker-config /tmp/docker-temp-creds
+```
