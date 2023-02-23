@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -289,7 +290,10 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 //
 // if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
-	ver := p.cfg.Pkg.Build.Version
+	ver := p.cfg.Pkg.Metadata.Version
+	if len(ver) == 0 {
+		return registry.Reference{}, errors.New("version is required for publishing")
+	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
 	if len(skeleton) > 0 {
