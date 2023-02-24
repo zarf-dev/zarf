@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -118,7 +119,9 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 //
 // If the current implementation causes memory issues, we can
 // refactor to use oras.Copy which uses a memory buffer.
-func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinner *message.Spinner) error {
+func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error {
+	mSpinner := message.NewMultiSpinner().Start()
+	defer mSpinner.Stop()
 	_ = os.Mkdir(out, 0755)
 	repo, ctx, err := p.orasRemote(ref)
 	if err != nil {
@@ -153,16 +156,33 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinne
 		layers = manifest.Layers
 	}
 
+	data := []message.MultiSpinnerRow{}
+
+	first30last30 := func(s string) string {
+		if len(s) > 60 {
+			return s[0:27] + "..." + s[len(s)-26:]
+		}
+		return s
+	}
+
 	// get the layers
 	for _, layer := range layers {
 		path := filepath.Join(out, layer.Annotations[ocispec.AnnotationTitle])
 		// if the file exists and the size matches, skip it
 		info, err := os.Stat(path)
 		if err == nil && info.Size() == layer.Size {
-			message.SuccessF("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
+			data = append(data, message.MultiSpinnerRow{
+				Status: mSpinner.SuccessStatus,
+				Text:   fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle])),
+			})
+			mSpinner.Update(data)
 			continue
 		}
-		spinner.Updatef("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
+		data = append(data, message.MultiSpinnerRow{
+			Status: "",
+			Text:   fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle])),
+		})
+		mSpinner.Update(data)
 
 		layerContent, err := content.FetchAll(ctx, repo, layer)
 		if err != nil {
@@ -183,7 +203,13 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string, spinne
 		if err != nil {
 			return err
 		}
-		message.SuccessF("%s %s", layer.Digest.Hex()[:12], layer.Annotations[ocispec.AnnotationTitle])
+		for idx, d := range data {
+			if strings.HasPrefix(d.Text, layer.Digest.Hex()[:12]) {
+				mSpinner.RowSuccess(idx)
+				break
+			}
+		}
+		mSpinner.Update(data)
 	}
 
 	return nil

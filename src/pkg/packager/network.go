@@ -133,13 +133,12 @@ func (p *Packager) handleOciPackage() error {
 
 	out := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
-	spinner := message.NewProgressSpinner("")
-	err = p.pullOCIZarfPackage(ref, out, spinner)
+	err = p.pullOCIZarfPackage(ref, out)
 	if err != nil {
 		return fmt.Errorf("failed to pull package from OCI: %w", err)
 	}
 	message.Debugf("Pulled %s", ref.String())
-	spinner.Successf("Pulled %s", ref.String())
+	message.Successf("Pulled %s", ref.String())
 
 	p.cfg.DeployOpts.PackagePath = out
 	return nil

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -159,17 +158,17 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		if desc.Annotations[ocispec.AnnotationTitle] != "" {
-			message.SuccessF("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+			message.Successf("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
 		} else {
-			message.SuccessF("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+			message.Successf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
 		}
 		return nil
 	}
 	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		if desc.Annotations[ocispec.AnnotationTitle] != "" {
-			message.SuccessF("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+			message.Successf("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
 		} else {
-			message.SuccessF("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+			message.Successf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
 		}
 		return nil
 	}
@@ -210,8 +209,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	// attempt to push the artifact manifest
 	if err = push(root); err == nil {
 		spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
-		message.SuccessF("Published: %s [%s]", ref, root.MediaType)
-		message.SuccessF("Digest: %s", root.Digest)
+		message.Successf("Published: %s [%s]", ref, root.MediaType)
+		message.Successf("Digest: %s", root.Digest)
 		return nil
 	}
 	// log the error, the expected error is a 400 manifest invalid
@@ -270,8 +269,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 		return err
 	}
 	spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
-	message.SuccessF("Published: %s [%s]", ref, root.MediaType)
-	message.SuccessF("Digest: %s", root.Digest)
+	message.Successf("Published: %s [%s]", ref, root.MediaType)
+	message.Successf("Digest: %s", root.Digest)
 	return nil
 }
 
@@ -281,7 +280,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
-		return registry.Reference{}, errors.New("version is required for publishing")
+		ver = "0.0.1"
+		// return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"

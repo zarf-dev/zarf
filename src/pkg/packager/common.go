@@ -175,8 +175,8 @@ func getRequestedComponentList(requestedComponents string) []string {
 }
 
 func (p *Packager) loadZarfPkg() error {
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
-	defer spinner.Stop()
+	// spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	// defer spinner.Stop()
 
 	if err := p.handlePackagePath(); err != nil {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
@@ -195,14 +195,14 @@ func (p *Packager) loadZarfPkg() error {
 	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
 	if p.cfg.DeployOpts.PackagePath != p.tmp.Base {
 		// Extract the archive
-		spinner.Updatef("Extracting the package, this may take a few moments")
+		// spinner.Updatef("Extracting the package, this may take a few moments")
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
+	// spinner.Updatef("Loading the zarf package config")
 	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath, true); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
@@ -230,7 +230,7 @@ func (p *Packager) loadZarfPkg() error {
 	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment
-		spinner.Errorf(err, "Unable to process the SBOM files for this package")
+		// spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
 
 	// Handle component configuration deprecations
@@ -238,7 +238,7 @@ func (p *Packager) loadZarfPkg() error {
 		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 	}
 
-	spinner.Success()
+	// spinner.Success()
 	return nil
 }
 

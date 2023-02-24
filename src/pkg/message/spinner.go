@@ -7,12 +7,16 @@ package message
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pterm/pterm"
 )
 
 var activeSpinner *Spinner
+
+var sequence = []string{`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `}
 
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
@@ -37,7 +41,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 		spinner, _ = pterm.DefaultSpinner.
 			WithRemoveWhenDone(false).
 			// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
-			WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
+			WithSequence(sequence...).
 			Start(text)
 	}
 
@@ -149,4 +153,129 @@ func (p *Spinner) Fatalf(err error, format string, a ...any) {
 		activeSpinner = nil
 	}
 	Fatalf(err, format, a...)
+}
+
+type MultiSpinner struct {
+	area          *pterm.AreaPrinter
+	startedAt     time.Time
+	rows          []MultiSpinnerRow
+	SuccessStatus string
+	ErrorStatus   string
+}
+
+type MultiSpinnerRow struct {
+	Status string
+	Text   string
+}
+
+var activeMultiSpinner *MultiSpinner
+
+func NewMultiSpinner() *MultiSpinner {
+	if activeMultiSpinner != nil {
+		Debug("Active multi spinner already exists")
+		return activeMultiSpinner
+	}
+	var area *pterm.AreaPrinter
+	if NoProgress {
+		return &MultiSpinner{}
+	} else {
+		area, _ = pterm.DefaultArea.
+			WithRemoveWhenDone(false).Start()
+	}
+	return &MultiSpinner{
+		area:          area,
+		SuccessStatus: pterm.FgLightGreen.Sprint("  ✔ "),
+		ErrorStatus:   pterm.FgLightRed.Sprint("  ✖ "),
+	}
+}
+
+func (m MultiSpinner) Start() *MultiSpinner {
+	m.startedAt = time.Now()
+	activeMultiSpinner = &m
+	delay := 200 * time.Millisecond
+
+	go func() {
+		for activeMultiSpinner != nil {
+			text := m.renderText()
+			m.area.Update(text)
+			time.Sleep(delay)
+		}
+	}()
+	return &m
+}
+
+func(m *MultiSpinner) renderText() string {
+	var text string
+	for idx, row := range m.rows {
+		switch row.Status {
+		case "":
+			m.rows[idx].Status = sequence[0]
+		default:
+			for i, s := range sequence {
+				if s == row.Status {
+					m.rows[idx].Status = sequence[(i+1)%len(sequence)]
+					break
+				}
+			}
+		}
+		var timer string
+		if row.Status != m.SuccessStatus && row.Status != m.ErrorStatus {
+			timer = pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
+		}
+		text += fmt.Sprintf("%s %s%s\n", row.Status, row.Text, timer)
+	}
+	return text
+}
+
+func (m *MultiSpinner) Stop() {
+	if m.area != nil && activeMultiSpinner != nil {
+		m.area.Update(m.renderText())
+		_ = m.area.Stop()
+		activeMultiSpinner = nil
+	}
+}
+
+func (m *MultiSpinner) Update(rows []MultiSpinnerRow) {
+	if NoProgress {
+		// if row added, print it
+		// if row success, success
+		// if row error, error
+		for _, row := range rows {
+			if len(row.Text) > 0 {
+				switch row.Status {
+				case m.SuccessStatus:
+					Successf(row.Text)
+				case m.ErrorStatus:
+					Warn(row.Text)
+				default:
+					Info(row.Text)
+				}
+			}
+		}
+	} else {
+		m.rows = rows
+	}
+}
+
+func NewMultiSpinnerRow(text string) MultiSpinnerRow {
+	return MultiSpinnerRow{
+		Text: text,
+		Status: "",
+	}
+}
+
+func (m *MultiSpinner) RowSuccess(index int) {
+	if NoProgress {
+		return
+	}
+	m.rows[index].Status = m.SuccessStatus
+	m.rows[index].Text = pterm.FgLightGreen.Sprint(m.rows[index].Text)
+}
+
+func (m *MultiSpinner) RowError(index int) {
+	if NoProgress {
+		return
+	}
+	m.rows[index].Status = m.ErrorStatus
+	m.rows[index].Text = pterm.FgLightRed.Sprint(m.rows[index].Text)
 }

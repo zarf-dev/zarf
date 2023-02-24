@@ -35,7 +35,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
-		message.SuccessF("%s Zarf package confirmed", userMessage)
+		message.Successf("%s Zarf package confirmed", userMessage)
 		return config.CommonOptions.Confirm
 	}
 
