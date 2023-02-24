@@ -6,7 +6,7 @@
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackage                                                                                |
 
-<details>
+<details open>
 <summary><strong> <a name="kind"></a>kind *</strong>
 
 </summary>
@@ -31,7 +31,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata"></a>metadata</strong>
 
 </summary>
@@ -46,7 +46,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfMetadata                                                                               |
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_name"></a>name *</strong>
 
 </summary>
@@ -68,7 +68,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_description"></a>description</strong>
 
 </summary>
@@ -84,7 +84,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_version"></a>version</strong>
 
 </summary>
@@ -100,7 +100,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_url"></a>url</strong>
 
 </summary>
@@ -116,14 +116,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_image"></a>image</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** An image URL to embed in this package for future Zarf UI listing
+**Description:** An image URL to embed in this package (Reserved for future use in Zarf UI)
 
 |          |          |
 | -------- | -------- |
@@ -132,7 +132,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
 
 </summary>
@@ -148,7 +148,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_architecture"></a>architecture</strong>
 
 </summary>
@@ -161,10 +161,17 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Examples:** 
+
+<code>
+"arm64"
+"amd64"
+</code>
+
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="metadata_yolo"></a>yolo</strong>
 
 </summary>
@@ -183,7 +190,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build"></a>build</strong>
 
 </summary>
@@ -198,7 +205,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfBuildData                                                                              |
 
-<details>
+<details open>
 <summary><strong> <a name="build_terminal"></a>terminal *</strong>
 
 </summary>
@@ -214,7 +221,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build_user"></a>user *</strong>
 
 </summary>
@@ -230,7 +237,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build_architecture"></a>architecture *</strong>
 
 </summary>
@@ -246,7 +253,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build_timestamp"></a>timestamp *</strong>
 
 </summary>
@@ -262,7 +269,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build_version"></a>version *</strong>
 
 </summary>
@@ -278,7 +285,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="build_migrations"></a>migrations *</strong>
 
 </summary>
@@ -311,7 +318,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components"></a>components *</strong>
 
 </summary>
@@ -342,7 +349,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_name"></a>name *</strong>
 
 </summary>
@@ -364,7 +371,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_description"></a>description</strong>
 
 </summary>
@@ -380,7 +387,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_default"></a>default</strong>
 
 </summary>
@@ -396,7 +403,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_required"></a>required</strong>
 
 </summary>
@@ -412,7 +419,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_only"></a>only</strong>
 
 </summary>
@@ -427,7 +434,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyTarget                                                                    |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_only_localOS"></a>localOS</strong>
 
 </summary>
@@ -450,7 +457,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_only_cluster"></a>cluster</strong>
 
 </summary>
@@ -465,7 +472,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyCluster                                                                   |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
 
 </summary>
@@ -487,14 +494,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Future use
+**Description:** A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
 
 |          |                   |
 | -------- | ----------------- |
@@ -523,7 +530,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_group"></a>group</strong>
 
 </summary>
@@ -539,7 +546,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
 
 </summary>
@@ -555,7 +562,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_import"></a>import</strong>
 
 </summary>
@@ -570,7 +577,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentImport                                                                        |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_import_name"></a>name</strong>
 
 </summary>
@@ -584,7 +591,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_import_path"></a>path *</strong>
 
 </summary>
@@ -607,14 +614,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts"></a>scripts</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** (Deprecated--use actions instead) Custom commands to run before or after package deployment
+**Description:** [DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -622,7 +629,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/DeprecatedZarfComponentScripts                                                             |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
 
 </summary>
@@ -638,7 +645,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
 
 </summary>
@@ -654,7 +661,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_retry"></a>retry</strong>
 
 </summary>
@@ -670,7 +677,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
 
 </summary>
@@ -700,7 +707,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_before"></a>before</strong>
 
 </summary>
@@ -730,7 +737,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_scripts_after"></a>after</strong>
 
 </summary>
@@ -763,7 +770,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions"></a>actions</strong>
 
 </summary>
@@ -778,7 +785,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActions                                                                       |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate"></a>onCreate</strong>
 
 </summary>
@@ -793,7 +800,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionSet                                                                     |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults"></a>defaults</strong>
 
 </summary>
@@ -808,7 +815,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionDefaults                                                                |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
 
 </summary>
@@ -824,7 +831,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
 
 </summary>
@@ -840,7 +847,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
 
 </summary>
@@ -856,7 +863,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
 
 </summary>
@@ -872,7 +879,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
 
 </summary>
@@ -905,7 +912,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before"></a>before</strong>
 
 </summary>
@@ -934,7 +941,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentAction                                                                        |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
 
 </summary>
@@ -950,7 +957,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
 
 </summary>
@@ -966,7 +973,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
 
 </summary>
@@ -982,7 +989,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
 
 </summary>
@@ -998,7 +1005,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
 
 </summary>
@@ -1028,7 +1035,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
 
 </summary>
@@ -1044,7 +1051,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
 
 </summary>
@@ -1064,7 +1071,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
 
 </summary>
@@ -1080,7 +1087,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
 
 </summary>
@@ -1095,7 +1102,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWait                                                                    |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
 
 </summary>
@@ -1110,7 +1117,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWaitCluster                                                             |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
 
 </summary>
@@ -1128,7 +1135,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
 
 </summary>
@@ -1144,7 +1151,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
 
 </summary>
@@ -1160,14 +1167,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
 
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist
+**Description:** The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
 
 |          |          |
 | -------- | -------- |
@@ -1179,7 +1186,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
 
 </summary>
@@ -1194,7 +1201,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWaitNetwork                                                             |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
 
 </summary>
@@ -1219,7 +1226,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
 
 </summary>
@@ -1237,7 +1244,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
 
 </summary>
@@ -1262,7 +1269,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_after"></a>after</strong>
 
 </summary>
@@ -1294,7 +1301,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_onSuccess"></a>onSuccess</strong>
 
 </summary>
@@ -1326,7 +1333,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onCreate_onFailure"></a>onFailure</strong>
 
 </summary>
@@ -1361,7 +1368,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onDeploy"></a>onDeploy</strong>
 
 </summary>
@@ -1379,7 +1386,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_actions_onRemove"></a>onRemove</strong>
 
 </summary>
@@ -1400,7 +1407,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files"></a>files</strong>
 
 </summary>
@@ -1429,7 +1436,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfFile                                                                                   |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files_items_source"></a>source *</strong>
 
 </summary>
@@ -1447,7 +1454,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
 
 </summary>
@@ -1463,7 +1470,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files_items_target"></a>target *</strong>
 
 </summary>
@@ -1481,7 +1488,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files_items_executable"></a>executable</strong>
 
 </summary>
@@ -1497,7 +1504,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 
 </summary>
@@ -1530,7 +1537,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts"></a>charts</strong>
 
 </summary>
@@ -1599,7 +1606,7 @@ Must be one of:
 
 </blockquote>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_name"></a>name *</strong>
 
 </summary>
@@ -1617,7 +1624,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
 
 </summary>
@@ -1633,7 +1640,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_url"></a>url</strong>
 
 </summary>
@@ -1649,7 +1656,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_version"></a>version *</strong>
 
 </summary>
@@ -1667,7 +1674,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
 
 </summary>
@@ -1685,7 +1692,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
 
 </summary>
@@ -1715,7 +1722,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
 
 </summary>
@@ -1731,7 +1738,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
 
 </summary>
@@ -1747,7 +1754,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
 
 </summary>
@@ -1766,7 +1773,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests"></a>manifests</strong>
 
 </summary>
@@ -1793,7 +1800,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfManifest                                                                               |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_name"></a>name *</strong>
 
 </summary>
@@ -1811,7 +1818,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
 
 </summary>
@@ -1827,7 +1834,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_files"></a>files</strong>
 
 </summary>
@@ -1857,7 +1864,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
 
 </summary>
@@ -1873,7 +1880,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
 
 </summary>
@@ -1903,7 +1910,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
 
 </summary>
@@ -1922,7 +1929,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_images"></a>images</strong>
 
 </summary>
@@ -1952,7 +1959,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_repos"></a>repos</strong>
 
 </summary>
@@ -1982,7 +1989,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections"></a>dataInjections</strong>
 
 </summary>
@@ -2011,7 +2018,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfDataInjection                                                                          |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
 
 </summary>
@@ -2029,7 +2036,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_target"></a>target *</strong>
 
 </summary>
@@ -2046,7 +2053,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfContainerTarget                                                                        |
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
 
 </summary>
@@ -2064,7 +2071,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
 
 </summary>
@@ -2079,10 +2086,16 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Example:** 
+
+<code>
+"app&#61;data-injection"
+</code>
+
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 
 </summary>
@@ -2091,7 +2104,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The container to target for data injection
+**Description:** The container name to target for data injection
 
 |          |          |
 | -------- | -------- |
@@ -2100,7 +2113,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
 
 </summary>
@@ -2109,7 +2122,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The path to copy the data to in the container
+**Description:** The path within the container to copy the data into
 
 |          |          |
 | -------- | -------- |
@@ -2121,7 +2134,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
 
 </summary>
@@ -2143,7 +2156,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="variables"></a>variables</strong>
 
 </summary>
@@ -2172,7 +2185,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageVariable                                                                        |
 
-<details>
+<details open>
 <summary><strong> <a name="variables_items_name"></a>name *</strong>
 
 </summary>
@@ -2194,7 +2207,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="variables_items_description"></a>description</strong>
 
 </summary>
@@ -2210,7 +2223,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="variables_items_default"></a>default</strong>
 
 </summary>
@@ -2226,7 +2239,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="variables_items_prompt"></a>prompt</strong>
 
 </summary>
@@ -2245,7 +2258,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="constants"></a>constants</strong>
 
 </summary>
@@ -2274,7 +2287,7 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageConstant                                                                        |
 
-<details>
+<details open>
 <summary><strong> <a name="constants_items_name"></a>name *</strong>
 
 </summary>
@@ -2296,7 +2309,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="constants_items_value"></a>value *</strong>
 
 </summary>
@@ -2314,7 +2327,7 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary><strong> <a name="constants_items_description"></a>description</strong>
 
 </summary>

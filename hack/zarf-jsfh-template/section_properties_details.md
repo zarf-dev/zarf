@@ -6,7 +6,7 @@
   {% set html_id = sub_property.html_id %}
 
   {% set description = sub_property | get_description %}
-<details>
+<details open>
 <summary>{% filter md_heading(depth + 1, html_id, True) -%}
       {%- filter replace('\n', '') -%}
     {%- if sub_property is deprecated  -%}~~{%- endif -%}

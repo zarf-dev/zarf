@@ -32,7 +32,7 @@ type ZarfComponent struct {
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
 	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=(Deprecated--use actions instead) Custom commands to run before or after package deployment,deprecated=true"`
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
@@ -65,7 +65,7 @@ type ZarfComponentOnlyTarget struct {
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
 type ZarfComponentOnlyCluster struct {
 	Architecture string   `json:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
-	Distros      []string `json:"distros,omitempty" jsonschema:"description=Future use"`
+	Distros      []string `json:"distros,omitempty" jsonschema:"description=A list of kubernetes distros this package works with (Reserved for future use in Zarf UI),example=k3s,example=eks"`
 }
 
 // ZarfFile defines a file to deploy.
@@ -159,7 +159,7 @@ type ZarfComponentActionWaitCluster struct {
 	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for (e.g. Pod; Deployment; etc.)"`
 	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for (e.g. podinfo; app=podinfo; etc.)"`
 	Namespace  string `json:"namespace,omitempty" jsonschema:"description=The namespace of the resource to wait for"`
-	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist, a special condition that will wait for the resource to exist."`
+	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist, a special condition that will wait for the resource to exist."`
 }
 
 // ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing
@@ -172,9 +172,9 @@ type ZarfComponentActionWaitNetwork struct {
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
-	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
-	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection,example=app&#61;data-injection"`
+	Container string `json:"container" jsonschema:"description=The container name to target for data injection"`
+	Path      string `json:"path" jsonschema:"description=The path within the container to copy the data into"`
 }
 
 // ZarfDataInjection is a data-injection definition.

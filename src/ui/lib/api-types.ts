@@ -249,7 +249,7 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * (Deprecated--use actions instead) Custom commands to run before or after package
+     * [DEPRECATED] - (replaced by actions) Custom commands to run before or after package
      * deployment
      */
     scripts?: DeprecatedZarfComponentScripts;
@@ -367,7 +367,7 @@ export interface ZarfComponentActionWait {
  */
 export interface ZarfComponentActionWaitCluster {
     /**
-     * The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist
+     * The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
      */
     condition?: string;
     /**
@@ -498,7 +498,7 @@ export interface ZarfDataInjection {
  */
 export interface ZarfContainerTarget {
     /**
-     * The container to target for data injection
+     * The container name to target for data injection
      */
     container: string;
     /**
@@ -506,7 +506,7 @@ export interface ZarfContainerTarget {
      */
     namespace: string;
     /**
-     * The path to copy the data to in the container
+     * The path within the container to copy the data into
      */
     path: string;
     /**
@@ -597,7 +597,7 @@ export interface ZarfComponentOnlyCluster {
      */
     architecture?: Architecture;
     /**
-     * Future use
+     * A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
      */
     distros?: string[];
 }
@@ -620,7 +620,7 @@ export enum LocalOS {
 }
 
 /**
- * (Deprecated--use actions instead) Custom commands to run before or after package
+ * [DEPRECATED] - (replaced by actions) Custom commands to run before or after package
  * deployment
  */
 export interface DeprecatedZarfComponentScripts {
@@ -687,7 +687,7 @@ export interface ZarfMetadata {
      */
     description?: string;
     /**
-     * An image URL to embed in this package for future Zarf UI listing
+     * An image URL to embed in this package (Reserved for future use in Zarf UI)
      */
     image?: string;
     /**

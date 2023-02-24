@@ -20,9 +20,9 @@ type ZarfMetadata struct {
 	Description  string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
 	Version      string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
 	URL          string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
-	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package for future Zarf UI listing"`
+	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package"`
+	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package,example=arm64,example=amd64"`
 	YOLO         bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
 }
 

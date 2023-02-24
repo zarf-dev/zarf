@@ -183,7 +183,7 @@
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/DeprecatedZarfComponentScripts",
-          "description": "(Deprecated--use actions instead) Custom commands to run before or after package deployment"
+          "description": "[DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment"
         },
         "actions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -390,7 +390,7 @@
         },
         "condition": {
           "type": "string",
-          "description": "The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist"
+          "description": "The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist"
         }
       },
       "additionalProperties": false,
@@ -473,7 +473,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "Future use"
+          "description": "A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)"
         }
       },
       "additionalProperties": false,
@@ -513,15 +513,18 @@
         },
         "selector": {
           "type": "string",
-          "description": "The K8s selector to target for data injection"
+          "description": "The K8s selector to target for data injection",
+          "examples": [
+            "app\u0026#61;data-injection"
+          ]
         },
         "container": {
           "type": "string",
-          "description": "The container to target for data injection"
+          "description": "The container name to target for data injection"
         },
         "path": {
           "type": "string",
-          "description": "The path to copy the data to in the container"
+          "description": "The path within the container to copy the data into"
         }
       },
       "additionalProperties": false,
@@ -646,7 +649,7 @@
         },
         "image": {
           "type": "string",
-          "description": "An image URL to embed in this package for future Zarf UI listing"
+          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)"
         },
         "uncompressed": {
           "type": "boolean",
@@ -654,7 +657,11 @@
         },
         "architecture": {
           "type": "string",
-          "description": "The target cluster architecture of this package"
+          "description": "The target cluster architecture of this package",
+          "examples": [
+            "arm64",
+            "amd64"
+          ]
         },
         "yolo": {
           "type": "boolean",
