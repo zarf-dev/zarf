@@ -36,13 +36,6 @@ func (p *Packager) Publish() error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	if p.cfg.PublishOpts.RepositoryOptions.Reference.Registry == "docker.io" {
-		// docker.io is commonly used, but is not a valid registry URL
-		// registry-1.docker.io is Docker's default public registry URL
-		// https://github.com/docker/cli/blob/master/man/src/image/pull.md
-		p.cfg.PublishOpts.RepositoryOptions.Reference.Registry = "registry-1.docker.io"
-	}
-
 	paths := []string{
 		p.tmp.ZarfYaml,
 		filepath.Join(p.tmp.Base, "sboms.tar.zst"),
@@ -289,11 +282,11 @@ func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 		arch = skeleton
 	}
 	ref := registry.Reference{
-		Registry: p.cfg.PublishOpts.RepositoryOptions.Reference.Registry,
-		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.RepositoryOptions.Reference.Repository, p.cfg.Pkg.Metadata.Name),
+		Registry: p.cfg.PublishOpts.Reference.Registry,
+		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Reference.Repository, p.cfg.Pkg.Metadata.Name),
 		Reference: fmt.Sprintf("%s-%s", ver, arch),
 	}
-	if len(p.cfg.PublishOpts.RepositoryOptions.Reference.Repository) == 0 {
+	if len(p.cfg.PublishOpts.Reference.Repository) == 0 {
 		ref.Repository = p.cfg.Pkg.Metadata.Name
 	}
 	err := ref.Validate()

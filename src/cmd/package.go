@@ -211,7 +211,7 @@ var packagePublishCmd = &cobra.Command{
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
-		pkgConfig.PublishOpts.RepositoryOptions.Reference = registry.Reference{
+		pkgConfig.PublishOpts.Reference = registry.Reference{
 			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
 		}
