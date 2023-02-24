@@ -6,7 +6,7 @@ package types
 
 import (
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry"
 )
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -28,7 +28,7 @@ type ZarfDeployOptions struct {
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
-	RepositoryOptions remote.Repository `jsonschema:"description=Options for the remote repository"`
+	Reference         registry.Reference `jsonschema:"description=Remote registry reference"`
 	CopyOptions       oras.CopyOptions  `jsonschema:"description=Options for the copy operation"`
 	PackOptions       oras.PackOptions  `jsonschema:"description=Options for the pack operation"`
 	PackagePath       string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
