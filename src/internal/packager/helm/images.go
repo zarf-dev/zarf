@@ -48,7 +48,7 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 		}},
 	}
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.CachePath)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return images, err
 	}

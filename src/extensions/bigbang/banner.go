@@ -96,5 +96,4 @@ func printBanner() {
 `
 
 	pterm.Print(smokey)
-
 }
