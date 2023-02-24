@@ -29,7 +29,12 @@
 <blockquote>
 
   {% if sub_property.type_name == "object" or sub_property.type_name == "array" %}
-  ## {% with schema=sub_property %} {%- include "breadcrumbs.md" %} {% endwith %}
+  ## {% with schema=sub_property %}
+    {%- for node in schema.nodes_from_root -%}
+      {% if node.name_for_breadcrumbs == "root" %}{% continue %}{% endif %}
+      {{ node.name_for_breadcrumbs }}{%- if not loop.last %} > {% endif -%}
+    {%- endfor -%}
+  {% endwith %}
   {% endif %}
 
   {% with schema=sub_property, skip_headers=False %}

@@ -38,7 +38,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## metadata 
+  ##       metadata
 
 **Description:** Package metadata
 
@@ -157,7 +157,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The target cluster architecture of this package
+**Description:** The target cluster architecture for this package
 
 |          |          |
 | -------- | -------- |
@@ -166,9 +166,7 @@ Must be one of:
 **Examples:** 
 
 <code>
-"arm64"
-"amd64"
-</code>
+"arm64", "amd64"</code>
 
 </blockquote>
 </details>
@@ -199,7 +197,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## build 
+  ##       build
 
 **Description:** Zarf-generated package build data
 
@@ -218,6 +216,8 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The machine name that created this package
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -233,6 +233,8 @@ Must be one of:
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The username who created this package
 
 |          |          |
 | -------- | -------- |
@@ -250,6 +252,8 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The architecture this package was created on
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -265,6 +269,8 @@ Must be one of:
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The timestamp when this package was created
 
 |          |          |
 | -------- | -------- |
@@ -282,6 +288,8 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The version of Zarf used to build this package
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -297,6 +305,8 @@ Must be one of:
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** Any migrations that have been run on this package
 
 |          |                   |
 | -------- | ----------------- |
@@ -326,7 +336,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## components 
+  ##       components
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** List of components to deploy in this package
@@ -425,7 +435,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## only 
+  ##       components >       components items >       only
 
 **Description:** Filter when this component is included in package creation or deployment
 
@@ -465,7 +475,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## cluster 
+  ##       components >       components items >       only >       cluster
 
 **Description:** Only deploy component to specified clusters
 
@@ -504,7 +514,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
+**Description:** A list of kubernetes distros this package works with (Reserved for future use)
 
 |          |                   |
 | -------- | ----------------- |
@@ -569,7 +579,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## import 
+  ##       components >       components items >       import
 
 **Description:** Import a component from another Zarf package
 
@@ -586,6 +596,8 @@ Must be one of:
 &nbsp;
 <blockquote>
 
+**Description:** The name of the component to import from the referenced zarf.yaml
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -601,6 +613,8 @@ Must be one of:
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The relative path to a directory containing a zarf.yaml to import from
 
 |          |          |
 | -------- | -------- |
@@ -623,9 +637,9 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## scripts 
+  ##       components >       components items >       scripts
 
-**Description:** [DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment
+**Description:** [DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -772,7 +786,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## actions 
+  ##       components >       components items >       actions
 
 **Description:** Custom commands to run at various stages of a package lifecycle
 
@@ -789,7 +803,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## onCreate 
+  ##       components >       components items >       actions >       onCreate
 
 **Description:** Actions to run during package creation
 
@@ -806,7 +820,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## defaults 
+  ##       components >       components items >       actions >       onCreate >       defaults
 
 **Description:** Default configuration for all actions in this set
 
@@ -917,7 +931,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## before 
+  ##       components >       components items >       actions >       onCreate >       before
 
 **Description:** Actions to run at the start of an operation
 
@@ -1088,7 +1102,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## wait 
+  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait
 
 **Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
@@ -1105,7 +1119,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## cluster 
+  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait >       cluster
 
 **Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
 
@@ -1124,11 +1138,16 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The kind of resource to wait for (e.g. Pod; Deployment; etc.)
+**Description:** The kind of resource to wait for
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"Pod", "Deployment)"</code>
 
 </blockquote>
 </details>
@@ -1142,9 +1161,16 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The name of the resource or selector to wait for
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"podinfo", "app&#61;podinfo"</code>
 
 </blockquote>
 </details>
@@ -1172,11 +1198,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
+**Description:** The condition to wait for; defaults to exist
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"Ready", "Available"</code>
 
 </blockquote>
 </details>
@@ -1191,7 +1222,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## network 
+  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait >       network
 
 **Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
 
@@ -1210,7 +1241,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The protocol to wait for (e.g. tcp; http; etc.).
+**Description:** The protocol to wait for
 
 |          |                    |
 | -------- | ------------------ |
@@ -1235,11 +1266,16 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
+**Description:** The address to wait for
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"localhost:8080", "1.1.1.1"</code>
 
 </blockquote>
 </details>
@@ -1251,11 +1287,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
+**Description:** The HTTP status code to wait for if using http or https
 
 |          |           |
 | -------- | --------- |
 | **Type** | `integer` |
+
+**Examples:** 
+
+<code>
+200, 404</code>
 
 </blockquote>
 </details>
@@ -1276,7 +1317,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## after 
+  ##       components >       components items >       actions >       onCreate >       after
 
 **Description:** Actions to run at the end of an operation
 
@@ -1307,7 +1348,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## onSuccess 
+  ##       components >       components items >       actions >       onCreate >       onSuccess
 
 **Description:** Actions to run if all operations succeed
 
@@ -1338,7 +1379,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## onFailure 
+  ##       components >       components items >       actions >       onCreate >       onFailure
 
 **Description:** Actions to run if all operations fail
 
@@ -1372,7 +1413,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## onDeploy 
+  ##       components >       components items >       actions >       onDeploy
 
 **Description:** Actions to run during package deployment
 
@@ -1392,7 +1433,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## onRemove 
+  ##       components >       components items >       actions >       onRemove
 
 **Description:** Actions to run during package removal
 
@@ -1415,7 +1456,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## files 
+  ##       components >       components items >       files
 
 **Description:** Files to place on disk during package deployment
 
@@ -1445,7 +1486,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** Local file path or remote URL to add to the package
+**Description:** Local file path or remote URL to pull into the package
 
 |          |          |
 | -------- | -------- |
@@ -1461,7 +1502,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** SHA256 checksum of the file if the source is a URL
+**Description:** Optional SHA256 checksum of the file
 
 |          |          |
 | -------- | -------- |
@@ -1541,7 +1582,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## charts 
+  ##       components >       components items >       charts
 
 **Description:** Helm charts to install during package deploy
 
@@ -1728,6 +1769,11 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Example:** 
+
+<code>
+"charts/your-chart"</code>
+
 </blockquote>
 </details>
 
@@ -1754,7 +1800,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Wait for chart resources to be ready before continuing
+**Description:** Whether to not wait for chart resources to be ready before continuing
 
 |          |           |
 | -------- | --------- |
@@ -1773,7 +1819,9 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## manifests 
+  ##       components >       components items >       manifests
+
+**Description:** Kubernetes manifests to be included in a generated Helm chart on package deploy
 
 |          |         |
 | -------- | ------- |
@@ -1903,7 +1951,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Wait for manifest resources to be ready before continuing
+**Description:** Whether to not wait for manifest resources to be ready before continuing
 
 |          |           |
 | -------- | --------- |
@@ -1976,9 +2024,9 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## dataInjections 
+  ##       components >       components items >       dataInjections
 
-**Description:** Datasets to inject into a pod in the target cluster
+**Description:** Datasets to inject into a container in the target cluster
 
 |          |         |
 | -------- | ------- |
@@ -2022,7 +2070,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## target 
+  ##       components >       components items >       dataInjections >       dataInjections items >       target
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The target pod + container to inject the data into
@@ -2069,8 +2117,7 @@ Must be one of:
 **Example:** 
 
 <code>
-"app&#61;data-injection"
-</code>
+"app&#61;data-injection"</code>
 
 </blockquote>
 </details>
@@ -2143,7 +2190,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## variables 
+  ##       variables
 
 **Description:** Variable template values applied on deploy for K8s resources
 
@@ -2244,7 +2291,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ## constants 
+  ##       constants
 
 **Description:** Constant template values applied on deploy for K8s resources
 

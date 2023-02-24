@@ -3,6 +3,6 @@
 <code>
 {% for example in examples %}
 {% set example_id = schema.html_id ~ "_ex" ~ loop.index %}
-{{ example }}
+{{ example }}{%- if not loop.last %}, {% endif -%}
 {% endfor %}
 </code>
