@@ -2,7 +2,7 @@
     {% set first_property =  schema.kw_if | get_first_property %}
 
     {% if schema.kw_then %}
-        {%- filter md_heading(4) -%}If (
+        {%- filter md_heading(3) -%}If (
             {{- first_property.property_name | md_escape_for_table -}}
             {{- " = " -}}
             {{- first_property.kw_const.literal | python_to_json -}}
@@ -12,7 +12,7 @@
         {% endwith %}
     {% endif %}
     {% if schema.kw_else %}
-        {%- filter md_heading(4) -%}Else (i.e. {{ " " }}
+        {%- filter md_heading(3) -%}Else (i.e. {{ " " }}
             {{- first_property.property_name | md_escape_for_table -}}
             {{- " != " -}}
             {{- first_property.kw_const.literal | python_to_json -}}

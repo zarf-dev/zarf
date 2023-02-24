@@ -8,7 +8,7 @@
   {% set description = sub_property | get_description %}
 <details open>
 <summary>
-    {% filter md_heading(3, html_id, True) -%}
+    {% filter md_heading(2, html_id, True) -%}
       {%- filter replace('\n', '') -%}
         {%- if sub_property is deprecated  -%}~~{%- endif -%}
         {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
