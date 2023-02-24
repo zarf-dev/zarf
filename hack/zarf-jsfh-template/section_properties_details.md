@@ -13,7 +13,7 @@
 <details>
 {% endif %}
 <summary>
-    {% filter md_heading(2, html_id, True) -%}
+    {% filter md_heading(1, html_id, True) -%}
       {%- filter replace('\n', '') -%}
         {%- if sub_property is deprecated  -%}~~{%- endif -%}
         {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
@@ -29,7 +29,7 @@
 <blockquote>
 
   {% if sub_property.type_name == "object" or sub_property.type_name == "array" %}
-  ### {% with schema=sub_property %} {%- include "breadcrumbs.md" %} {% endwith %}
+  ## {% with schema=sub_property %} {%- include "breadcrumbs.md" %} {% endwith %}
   {% endif %}
 
   {% with schema=sub_property, skip_headers=False %}
