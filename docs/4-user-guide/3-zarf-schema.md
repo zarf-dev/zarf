@@ -7,11 +7,13 @@
 | **Defined in**            | #/definitions/ZarfPackage                                                                                |
 
 <details open>
-<summary><strong> <a name="kind"></a>kind *</strong>
-
+<summary>
+<strong> <a name="kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> kind </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -32,11 +34,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata"></a>metadata</strong>
-
+<summary>
+<strong> <a name="metadata"></a>metadata</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> metadata </h3>
 
 **Description:** Package metadata
 
@@ -47,11 +51,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfMetadata                                                                               |
 
 <details open>
-<summary><strong> <a name="metadata_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="metadata_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -69,11 +75,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_description"></a>description</strong>
-
+<summary>
+<strong> <a name="metadata_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> description </h3>
 
 **Description:** Additional information about this package
 
@@ -85,11 +93,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_version"></a>version</strong>
-
+<summary>
+<strong> <a name="metadata_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> version </h3>
 
 **Description:** Generic string to track the package version by a package author
 
@@ -101,11 +111,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_url"></a>url</strong>
-
+<summary>
+<strong> <a name="metadata_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> url </h3>
 
 **Description:** Link to package information when online
 
@@ -117,11 +129,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_image"></a>image</strong>
-
+<summary>
+<strong> <a name="metadata_image"></a>image</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> image </h3>
 
 **Description:** An image URL to embed in this package (Reserved for future use in Zarf UI)
 
@@ -133,11 +147,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
-
+<summary>
+<strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> uncompressed </h3>
 
 **Description:** Disable compression of this package
 
@@ -149,11 +165,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_architecture"></a>architecture</strong>
-
+<summary>
+<strong> <a name="metadata_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> architecture </h3>
 
 **Description:** The target cluster architecture of this package
 
@@ -172,11 +190,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="metadata_yolo"></a>yolo</strong>
-
+<summary>
+<strong> <a name="metadata_yolo"></a>yolo</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> yolo </h3>
 
 **Description:** Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 
@@ -191,11 +211,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build"></a>build</strong>
-
+<summary>
+<strong> <a name="build"></a>build</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> build </h3>
 
 **Description:** Zarf-generated package build data
 
@@ -206,11 +228,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfBuildData                                                                              |
 
 <details open>
-<summary><strong> <a name="build_terminal"></a>terminal *</strong>
-
+<summary>
+<strong> <a name="build_terminal"></a>terminal *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> terminal </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -222,11 +246,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build_user"></a>user *</strong>
-
+<summary>
+<strong> <a name="build_user"></a>user *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> user </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -238,11 +264,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build_architecture"></a>architecture *</strong>
-
+<summary>
+<strong> <a name="build_architecture"></a>architecture *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> architecture </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -254,11 +282,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build_timestamp"></a>timestamp *</strong>
-
+<summary>
+<strong> <a name="build_timestamp"></a>timestamp *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> timestamp </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -270,11 +300,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build_version"></a>version *</strong>
-
+<summary>
+<strong> <a name="build_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> version </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -286,11 +318,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="build_migrations"></a>migrations *</strong>
-
+<summary>
+<strong> <a name="build_migrations"></a>migrations *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> migrations </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -306,7 +340,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_2"></a>migrations items  
+ ##### <a name="autogenerated_heading_4"></a>migrations items  
 
 |          |          |
 | -------- | -------- |
@@ -319,11 +353,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components"></a>components *</strong>
-
+<summary>
+<strong> <a name="components"></a>components *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> components </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -341,7 +377,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_3"></a>ZarfComponent  
+ ##### <a name="autogenerated_heading_5"></a>ZarfComponent  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -350,11 +386,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
 <details open>
-<summary><strong> <a name="components_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -372,11 +410,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="components_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> description </h3>
 
 **Description:** Message to include during package deploy describing the purpose of this component
 
@@ -388,11 +428,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_default"></a>default</strong>
-
+<summary>
+<strong> <a name="components_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> default </h3>
 
 **Description:** Determines the default Y/N state for installing this component on package deploy
 
@@ -404,11 +446,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_required"></a>required</strong>
-
+<summary>
+<strong> <a name="components_items_required"></a>required</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> required </h3>
 
 **Description:** Do not prompt user to install this component
 
@@ -420,11 +464,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_only"></a>only</strong>
-
+<summary>
+<strong> <a name="components_items_only"></a>only</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> only </h3>
 
 **Description:** Filter when this component is included in package creation or deployment
 
@@ -435,11 +481,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentOnlyTarget                                                                    |
 
 <details open>
-<summary><strong> <a name="components_items_only_localOS"></a>localOS</strong>
-
+<summary>
+<strong> <a name="components_items_only_localOS"></a>localOS</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> localOS </h3>
 
 **Description:** Only deploy component to specified OS
 
@@ -458,11 +506,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_only_cluster"></a>cluster</strong>
-
+<summary>
+<strong> <a name="components_items_only_cluster"></a>cluster</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> cluster </h3>
 
 **Description:** Only deploy component to specified clusters
 
@@ -473,11 +523,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentOnlyCluster                                                                   |
 
 <details open>
-<summary><strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
-
+<summary>
+<strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> architecture </h3>
 
 **Description:** Only create and deploy to clusters of the given architecture
 
@@ -495,11 +547,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
-
+<summary>
+<strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> distros </h3>
 
 **Description:** A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
 
@@ -515,7 +569,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_4"></a>distros items  
+ ##### <a name="autogenerated_heading_6"></a>distros items  
 
 |          |          |
 | -------- | -------- |
@@ -531,11 +585,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_group"></a>group</strong>
-
+<summary>
+<strong> <a name="components_items_group"></a>group</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> group </h3>
 
 **Description:** Create a user selector field based on all components in the same group
 
@@ -547,11 +603,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
-
+<summary>
+<strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> cosignKeyPath </h3>
 
 **Description:** Specify a path to a public key to validate signed online resources
 
@@ -563,11 +621,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_import"></a>import</strong>
-
+<summary>
+<strong> <a name="components_items_import"></a>import</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> import </h3>
 
 **Description:** Import a component from another Zarf package
 
@@ -578,11 +638,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentImport                                                                        |
 
 <details open>
-<summary><strong> <a name="components_items_import_name"></a>name</strong>
-
+<summary>
+<strong> <a name="components_items_import_name"></a>name</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 |          |          |
 | -------- | -------- |
@@ -592,11 +654,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_import_path"></a>path *</strong>
-
+<summary>
+<strong> <a name="components_items_import_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> path </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -615,11 +679,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts"></a>scripts</strong>
-
+<summary>
+<strong> <a name="components_items_scripts"></a>scripts</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> scripts </h3>
 
 **Description:** [DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment
 
@@ -630,11 +696,13 @@ Must be one of:
 | **Defined in**            | #/definitions/DeprecatedZarfComponentScripts                                                             |
 
 <details open>
-<summary><strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> showOutput </h3>
 
 **Description:** Show the output of the script during package deployment
 
@@ -646,11 +714,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> timeoutSeconds </h3>
 
 **Description:** Timeout in seconds for the script
 
@@ -662,11 +732,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts_retry"></a>retry</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_retry"></a>retry</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> retry </h3>
 
 **Description:** Retry the script if it fails
 
@@ -678,11 +750,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> prepare </h3>
 
 **Description:** Scripts to run before the component is added during package create
 
@@ -698,7 +772,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_5"></a>prepare items  
+ ##### <a name="autogenerated_heading_7"></a>prepare items  
 
 |          |          |
 | -------- | -------- |
@@ -708,11 +782,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts_before"></a>before</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_before"></a>before</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> before </h3>
 
 **Description:** Scripts to run before the component is deployed
 
@@ -728,7 +804,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_6"></a>before items  
+ ##### <a name="autogenerated_heading_8"></a>before items  
 
 |          |          |
 | -------- | -------- |
@@ -738,11 +814,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_scripts_after"></a>after</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_after"></a>after</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> after </h3>
 
 **Description:** Scripts to run after the component successfully deploys
 
@@ -758,7 +836,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_7"></a>after items  
+ ##### <a name="autogenerated_heading_9"></a>after items  
 
 |          |          |
 | -------- | -------- |
@@ -771,11 +849,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions"></a>actions</strong>
-
+<summary>
+<strong> <a name="components_items_actions"></a>actions</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> actions </h3>
 
 **Description:** Custom commands to run at various stages of a package lifecycle
 
@@ -786,11 +866,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActions                                                                       |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate"></a>onCreate</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate"></a>onCreate</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> onCreate </h3>
 
 **Description:** Actions to run during package creation
 
@@ -801,11 +883,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionSet                                                                     |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults"></a>defaults</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults"></a>defaults</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> defaults </h3>
 
 **Description:** Default configuration for all actions in this set
 
@@ -816,11 +900,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionDefaults                                                                |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> mute </h3>
 
 **Description:** Hide the output of commands during execution (default false)
 
@@ -832,11 +918,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> maxTotalSeconds </h3>
 
 **Description:** Default timeout in seconds for commands (default to 0
 
@@ -848,11 +936,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> maxRetries </h3>
 
 **Description:** Retry commands given number of times if they fail (default 0)
 
@@ -864,11 +954,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> dir </h3>
 
 **Description:** Working directory for commands (default CWD)
 
@@ -880,11 +972,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> env </h3>
 
 **Description:** Additional environment variables for commands
 
@@ -900,7 +994,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_8"></a>env items  
+ ##### <a name="autogenerated_heading_10"></a>env items  
 
 |          |          |
 | -------- | -------- |
@@ -913,11 +1007,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before"></a>before</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before"></a>before</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> before </h3>
 
 **Description:** Actions to run at the start of an operation
 
@@ -933,7 +1029,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_9"></a>ZarfComponentAction  
+ ##### <a name="autogenerated_heading_11"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -942,11 +1038,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentAction                                                                        |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> mute </h3>
 
 **Description:** Hide the output of the command during package deployment (default false)
 
@@ -958,11 +1056,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> maxTotalSeconds </h3>
 
 **Description:** Timeout in seconds for the command (default to 0
 
@@ -974,11 +1074,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> maxRetries </h3>
 
 **Description:** Retry the command if it fails up to given number of times (default 0)
 
@@ -990,11 +1092,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> dir </h3>
 
 **Description:** The working directory to run the command in (default is CWD)
 
@@ -1006,11 +1110,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> env </h3>
 
 **Description:** Additional environment variables to set for the command
 
@@ -1026,7 +1132,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_10"></a>env items  
+ ##### <a name="autogenerated_heading_12"></a>env items  
 
 |          |          |
 | -------- | -------- |
@@ -1036,11 +1142,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> cmd </h3>
 
 **Description:** The command to run. Must specify either cmd or wait for the action to do anything.
 
@@ -1052,11 +1160,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> setVariable </h3>
 
 **Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
 
@@ -1072,11 +1182,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> description </h3>
 
 **Description:** Description of the action to be displayed during package execution instead of the command
 
@@ -1088,11 +1200,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> wait </h3>
 
 **Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
@@ -1103,11 +1217,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionWait                                                                    |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> cluster </h3>
 
 **Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
 
@@ -1118,11 +1234,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionWaitCluster                                                             |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> kind </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1136,11 +1254,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1152,11 +1272,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> namespace </h3>
 
 **Description:** The namespace of the resource to wait for
 
@@ -1168,11 +1290,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> condition </h3>
 
 **Description:** The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
 
@@ -1187,11 +1311,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> network </h3>
 
 **Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
 
@@ -1202,11 +1328,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionWaitNetwork                                                             |
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> protocol </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1227,11 +1355,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> address </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1245,11 +1375,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> code </h3>
 
 **Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
 
@@ -1270,11 +1402,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_after"></a>after</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_after"></a>after</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> after </h3>
 
 **Description:** Actions to run at the end of an operation
 
@@ -1290,7 +1424,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_11"></a>ZarfComponentAction  
+ ##### <a name="autogenerated_heading_13"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1302,11 +1436,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_onSuccess"></a>onSuccess</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_onSuccess"></a>onSuccess</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> onSuccess </h3>
 
 **Description:** Actions to run if all operations succeed
 
@@ -1322,7 +1458,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_12"></a>ZarfComponentAction  
+ ##### <a name="autogenerated_heading_14"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1334,11 +1470,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onCreate_onFailure"></a>onFailure</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_onFailure"></a>onFailure</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> onFailure </h3>
 
 **Description:** Actions to run if all operations fail
 
@@ -1354,7 +1492,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_13"></a>ZarfComponentAction  
+ ##### <a name="autogenerated_heading_15"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1369,11 +1507,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onDeploy"></a>onDeploy</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onDeploy"></a>onDeploy</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> onDeploy </h3>
 
 **Description:** Actions to run during package deployment
 
@@ -1387,11 +1527,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_actions_onRemove"></a>onRemove</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onRemove"></a>onRemove</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> onRemove </h3>
 
 **Description:** Actions to run during package removal
 
@@ -1408,11 +1550,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_files"></a>files</strong>
-
+<summary>
+<strong> <a name="components_items_files"></a>files</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> files </h3>
 
 **Description:** Files to place on disk during package deployment
 
@@ -1428,7 +1572,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_14"></a>ZarfFile  
+ ##### <a name="autogenerated_heading_16"></a>ZarfFile  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1437,11 +1581,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfFile                                                                                   |
 
 <details open>
-<summary><strong> <a name="components_items_files_items_source"></a>source *</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> source </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1455,11 +1601,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> shasum </h3>
 
 **Description:** SHA256 checksum of the file if the source is a URL
 
@@ -1471,11 +1619,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_files_items_target"></a>target *</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_target"></a>target *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> target </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1489,11 +1639,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_files_items_executable"></a>executable</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_executable"></a>executable</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> executable </h3>
 
 **Description:** Determines if the file should be made executable during package deploy
 
@@ -1505,11 +1657,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> symlinks </h3>
 
 **Description:** List of symlinks to create during package deploy
 
@@ -1525,7 +1679,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_15"></a>symlinks items  
+ ##### <a name="autogenerated_heading_17"></a>symlinks items  
 
 |          |          |
 | -------- | -------- |
@@ -1538,11 +1692,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts"></a>charts</strong>
-
+<summary>
+<strong> <a name="components_items_charts"></a>charts</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> charts </h3>
 
 **Description:** Helm charts to install during package deploy
 
@@ -1558,7 +1714,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_16"></a>ZarfChart  
+ ##### <a name="autogenerated_heading_18"></a>ZarfChart  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1575,7 +1731,7 @@ Must be one of:
 
 <blockquote>
 
-## <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
+##### <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
 
 **Title:** url
 
@@ -1584,13 +1740,13 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
-### <a name="autogenerated_heading_17"></a>The following properties are required
+##### <a name="autogenerated_heading_2"></a>The following properties are required
 * url
 
 </blockquote>
 <blockquote>
 
-## <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
+##### <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
 
 **Title:** localPath
 
@@ -1599,7 +1755,7 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
-### <a name="autogenerated_heading_18"></a>The following properties are required
+##### <a name="autogenerated_heading_2"></a>The following properties are required
 * localPath
 
 </blockquote>
@@ -1607,11 +1763,13 @@ Must be one of:
 </blockquote>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1625,11 +1783,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> releaseName </h3>
 
 **Description:** The name of the release to create; defaults to the name of the chart
 
@@ -1641,11 +1801,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_url"></a>url</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> url </h3>
 
 **Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
 
@@ -1657,11 +1819,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_version"></a>version *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> version </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1675,11 +1839,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> namespace </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1693,11 +1859,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> valuesFiles </h3>
 
 **Description:** List of values files to include in the package; these will be merged together
 
@@ -1713,7 +1881,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_19"></a>valuesFiles items  
+ ##### <a name="autogenerated_heading_19"></a>valuesFiles items  
 
 |          |          |
 | -------- | -------- |
@@ -1723,11 +1891,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> gitPath </h3>
 
 **Description:** The path to the chart in the repo if using a git repo instead of a helm repo
 
@@ -1739,11 +1909,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> localPath </h3>
 
 **Description:** The path to the chart folder
 
@@ -1755,11 +1927,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> noWait </h3>
 
 **Description:** Wait for chart resources to be ready before continuing
 
@@ -1774,11 +1948,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests"></a>manifests</strong>
-
+<summary>
+<strong> <a name="components_items_manifests"></a>manifests</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> manifests </h3>
 
 |          |         |
 | -------- | ------- |
@@ -1792,7 +1968,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_20"></a>ZarfManifest  
+ ##### <a name="autogenerated_heading_20"></a>ZarfManifest  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1801,11 +1977,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfManifest                                                                               |
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -1819,11 +1997,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> namespace </h3>
 
 **Description:** The namespace to deploy the manifests to
 
@@ -1835,11 +2015,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_files"></a>files</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_files"></a>files</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> files </h3>
 
 **Description:** List of individual K8s YAML files to deploy (in order)
 
@@ -1855,7 +2037,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_21"></a>files items  
+ ##### <a name="autogenerated_heading_21"></a>files items  
 
 |          |          |
 | -------- | -------- |
@@ -1865,11 +2047,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> kustomizeAllowAnyDirectory </h3>
 
 **Description:** Allow traversing directory above the current directory if needed for kustomization
 
@@ -1881,11 +2065,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> kustomizations </h3>
 
 **Description:** List of kustomization paths to include in the package
 
@@ -1901,7 +2087,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_22"></a>kustomizations items  
+ ##### <a name="autogenerated_heading_22"></a>kustomizations items  
 
 |          |          |
 | -------- | -------- |
@@ -1911,11 +2097,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> noWait </h3>
 
 **Description:** Wait for manifest resources to be ready before continuing
 
@@ -1930,11 +2118,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_images"></a>images</strong>
-
+<summary>
+<strong> <a name="components_items_images"></a>images</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> images </h3>
 
 **Description:** List of OCI images to include in the package
 
@@ -1950,7 +2140,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_23"></a>images items  
+ ##### <a name="autogenerated_heading_23"></a>images items  
 
 |          |          |
 | -------- | -------- |
@@ -1960,11 +2150,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_repos"></a>repos</strong>
-
+<summary>
+<strong> <a name="components_items_repos"></a>repos</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> repos </h3>
 
 **Description:** List of git repos to include in the package
 
@@ -1980,7 +2172,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_24"></a>repos items  
+ ##### <a name="autogenerated_heading_24"></a>repos items  
 
 |          |          |
 | -------- | -------- |
@@ -1990,11 +2182,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections"></a>dataInjections</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections"></a>dataInjections</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> dataInjections </h3>
 
 **Description:** Datasets to inject into a pod in the target cluster
 
@@ -2010,7 +2204,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_25"></a>ZarfDataInjection  
+ ##### <a name="autogenerated_heading_25"></a>ZarfDataInjection  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2019,11 +2213,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfDataInjection                                                                          |
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> source </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2037,11 +2233,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_target"></a>target *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target"></a>target *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> target </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2054,11 +2252,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfContainerTarget                                                                        |
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> namespace </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2072,11 +2272,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> selector </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2096,11 +2298,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> container </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2114,11 +2318,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> path </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2135,11 +2341,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> compress </h3>
 
 **Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
 
@@ -2157,11 +2365,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="variables"></a>variables</strong>
-
+<summary>
+<strong> <a name="variables"></a>variables</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> variables </h3>
 
 **Description:** Variable template values applied on deploy for K8s resources
 
@@ -2177,7 +2387,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_26"></a>ZarfPackageVariable  
+ ##### <a name="autogenerated_heading_26"></a>ZarfPackageVariable  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2186,11 +2396,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfPackageVariable                                                                        |
 
 <details open>
-<summary><strong> <a name="variables_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="variables_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2208,11 +2420,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="variables_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="variables_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> description </h3>
 
 **Description:** A description of the variable to be used when prompting the user a value
 
@@ -2224,11 +2438,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="variables_items_default"></a>default</strong>
-
+<summary>
+<strong> <a name="variables_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> default </h3>
 
 **Description:** The default value to use for the variable
 
@@ -2240,11 +2456,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="variables_items_prompt"></a>prompt</strong>
-
+<summary>
+<strong> <a name="variables_items_prompt"></a>prompt</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> prompt </h3>
 
 **Description:** Whether to prompt the user for input for this variable
 
@@ -2259,11 +2477,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="constants"></a>constants</strong>
-
+<summary>
+<strong> <a name="constants"></a>constants</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> constants </h3>
 
 **Description:** Constant template values applied on deploy for K8s resources
 
@@ -2279,7 +2499,7 @@ Must be one of:
 | **Additional items** | False              |
 | **Tuple validation** | See below          |
 
- ## <a name="autogenerated_heading_27"></a>ZarfPackageConstant  
+ ##### <a name="autogenerated_heading_27"></a>ZarfPackageConstant  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2288,11 +2508,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfPackageConstant                                                                        |
 
 <details open>
-<summary><strong> <a name="constants_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="constants_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> name </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2310,11 +2532,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="constants_items_value"></a>value *</strong>
-
+<summary>
+<strong> <a name="constants_items_value"></a>value *</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> value </h3>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
@@ -2328,11 +2552,13 @@ Must be one of:
 </details>
 
 <details open>
-<summary><strong> <a name="constants_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="constants_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3> description </h3>
 
 **Description:** A description of the constant to explain its purpose on package create or deploy confirmation prompts
 

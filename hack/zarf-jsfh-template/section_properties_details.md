@@ -7,21 +7,23 @@
 
   {% set description = sub_property | get_description %}
 <details open>
-<summary>{% filter md_heading(depth + 1, html_id, True) -%}
+<summary>
+    {% filter md_heading(3, html_id, True) -%}
       {%- filter replace('\n', '') -%}
-    {%- if sub_property is deprecated  -%}~~{%- endif -%}
-    {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
-    {%- if not skip_required and sub_property.property_name -%}
-        {{ "*" if sub_property.is_required_property else "" -}}
-    {%- endif -%}
-    {%- if sub_property is deprecated -%}~~{%- endif -%}
+        {%- if sub_property is deprecated  -%}~~{%- endif -%}
+        {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
+        {%- if not skip_required and sub_property.property_name -%}
+            {{ "*" if sub_property.is_required_property else "" -}}
+        {%- endif -%}
+        {%- if sub_property is deprecated -%}~~{%- endif -%}
+      {%- endfilter %}
     {%- endfilter %}
-  {%- endfilter %}
-
 
 </summary>
 &nbsp;
 <blockquote>
+
+  <h3>{%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}</h3>
 
   {% with schema=sub_property, skip_headers=False %}
     {% if sub_property.is_pattern_property %}
