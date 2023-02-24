@@ -3,6 +3,12 @@ metadata:
   name: longhorn-example
   description: "Example package for Longhorn cloud native distributed block storage for Kubernetes"
 components:
+  - name: longhorn-environment-check
+    required: true
+    files:
+      - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
+        target: environment_check.sh
+        executable: true
   - name: longhorn
     required: true
     description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
@@ -10,7 +16,7 @@ components:
       # Run the Longhorn Environment Check on this cluster's nodes.
       onDeploy:
         before:
-          - env: 
+          - env:
             - "PATH=$PATH:./"
           - cmd: alias kubectl="zarf tools kubectl"
           - cmd: ./environment_check.sh
@@ -19,15 +25,11 @@ components:
         before:
           - env:
             - "PATH=$PATH:./"
-          - cmd: "zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+          - cmd: alias kubectl="zarf tools kubectl"
+          - cmd: "kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
     files:
-      # jq
       - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         target: jq
-        executable: true
-      # Longhorn Environment Check
-      - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
-        target: environment_check.sh
         executable: true
     manifests:
       - name: longhorn-connect
@@ -55,3 +57,4 @@ components:
       - longhornio/longhorn-share-manager:v1.4.0
       - longhornio/longhorn-ui:v1.4.0
       - longhornio/support-bundle-kit:v0.0.17
+      
