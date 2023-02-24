@@ -23,7 +23,7 @@
 &nbsp;
 <blockquote>
 
-  <h3>{%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}</h3>
+  ### {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
 
   {% with schema=sub_property, skip_headers=False %}
     {% if sub_property.is_pattern_property %}

@@ -13,8 +13,7 @@
 &nbsp;
 <blockquote>
 
-  <h3> kind </h3>
-
+  ### kind 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The kind of Zarf package
@@ -40,7 +39,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> metadata </h3>
+  ### metadata 
 
 **Description:** Package metadata
 
@@ -57,8 +56,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Name to identify this Zarf package
@@ -81,7 +79,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> description </h3>
+  ### description 
 
 **Description:** Additional information about this package
 
@@ -99,7 +97,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> version </h3>
+  ### version 
 
 **Description:** Generic string to track the package version by a package author
 
@@ -117,7 +115,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> url </h3>
+  ### url 
 
 **Description:** Link to package information when online
 
@@ -135,7 +133,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> image </h3>
+  ### image 
 
 **Description:** An image URL to embed in this package (Reserved for future use in Zarf UI)
 
@@ -153,7 +151,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> uncompressed </h3>
+  ### uncompressed 
 
 **Description:** Disable compression of this package
 
@@ -171,7 +169,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> architecture </h3>
+  ### architecture 
 
 **Description:** The target cluster architecture of this package
 
@@ -196,7 +194,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> yolo </h3>
+  ### yolo 
 
 **Description:** Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 
@@ -217,7 +215,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> build </h3>
+  ### build 
 
 **Description:** Zarf-generated package build data
 
@@ -234,8 +232,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> terminal </h3>
-
+  ### terminal 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -252,8 +249,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> user </h3>
-
+  ### user 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -270,8 +266,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> architecture </h3>
-
+  ### architecture 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -288,8 +283,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> timestamp </h3>
-
+  ### timestamp 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -306,8 +300,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> version </h3>
-
+  ### version 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -324,8 +317,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> migrations </h3>
-
+  ### migrations 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |                   |
@@ -359,8 +351,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> components </h3>
-
+  ### components 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** List of components to deploy in this package
@@ -392,8 +383,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the component
@@ -416,7 +406,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> description </h3>
+  ### description 
 
 **Description:** Message to include during package deploy describing the purpose of this component
 
@@ -434,7 +424,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> default </h3>
+  ### default 
 
 **Description:** Determines the default Y/N state for installing this component on package deploy
 
@@ -452,7 +442,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> required </h3>
+  ### required 
 
 **Description:** Do not prompt user to install this component
 
@@ -470,7 +460,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> only </h3>
+  ### only 
 
 **Description:** Filter when this component is included in package creation or deployment
 
@@ -487,7 +477,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> localOS </h3>
+  ### localOS 
 
 **Description:** Only deploy component to specified OS
 
@@ -512,7 +502,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> cluster </h3>
+  ### cluster 
 
 **Description:** Only deploy component to specified clusters
 
@@ -529,7 +519,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> architecture </h3>
+  ### architecture 
 
 **Description:** Only create and deploy to clusters of the given architecture
 
@@ -553,7 +543,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> distros </h3>
+  ### distros 
 
 **Description:** A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
 
@@ -591,7 +581,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> group </h3>
+  ### group 
 
 **Description:** Create a user selector field based on all components in the same group
 
@@ -609,7 +599,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> cosignKeyPath </h3>
+  ### cosignKeyPath 
 
 **Description:** Specify a path to a public key to validate signed online resources
 
@@ -627,7 +617,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> import </h3>
+  ### import 
 
 **Description:** Import a component from another Zarf package
 
@@ -644,7 +634,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
+  ### name 
 
 |          |          |
 | -------- | -------- |
@@ -660,8 +650,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> path </h3>
-
+  ### path 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -685,7 +674,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> scripts </h3>
+  ### scripts 
 
 **Description:** [DEPRECATED] - (replaced by actions) Custom commands to run before or after package deployment
 
@@ -702,7 +691,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> showOutput </h3>
+  ### showOutput 
 
 **Description:** Show the output of the script during package deployment
 
@@ -720,7 +709,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> timeoutSeconds </h3>
+  ### timeoutSeconds 
 
 **Description:** Timeout in seconds for the script
 
@@ -738,7 +727,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> retry </h3>
+  ### retry 
 
 **Description:** Retry the script if it fails
 
@@ -756,7 +745,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> prepare </h3>
+  ### prepare 
 
 **Description:** Scripts to run before the component is added during package create
 
@@ -788,7 +777,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> before </h3>
+  ### before 
 
 **Description:** Scripts to run before the component is deployed
 
@@ -820,7 +809,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> after </h3>
+  ### after 
 
 **Description:** Scripts to run after the component successfully deploys
 
@@ -855,7 +844,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> actions </h3>
+  ### actions 
 
 **Description:** Custom commands to run at various stages of a package lifecycle
 
@@ -872,7 +861,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> onCreate </h3>
+  ### onCreate 
 
 **Description:** Actions to run during package creation
 
@@ -889,7 +878,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> defaults </h3>
+  ### defaults 
 
 **Description:** Default configuration for all actions in this set
 
@@ -906,7 +895,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> mute </h3>
+  ### mute 
 
 **Description:** Hide the output of commands during execution (default false)
 
@@ -924,7 +913,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> maxTotalSeconds </h3>
+  ### maxTotalSeconds 
 
 **Description:** Default timeout in seconds for commands (default to 0
 
@@ -942,7 +931,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> maxRetries </h3>
+  ### maxRetries 
 
 **Description:** Retry commands given number of times if they fail (default 0)
 
@@ -960,7 +949,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> dir </h3>
+  ### dir 
 
 **Description:** Working directory for commands (default CWD)
 
@@ -978,7 +967,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> env </h3>
+  ### env 
 
 **Description:** Additional environment variables for commands
 
@@ -1013,7 +1002,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> before </h3>
+  ### before 
 
 **Description:** Actions to run at the start of an operation
 
@@ -1044,7 +1033,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> mute </h3>
+  ### mute 
 
 **Description:** Hide the output of the command during package deployment (default false)
 
@@ -1062,7 +1051,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> maxTotalSeconds </h3>
+  ### maxTotalSeconds 
 
 **Description:** Timeout in seconds for the command (default to 0
 
@@ -1080,7 +1069,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> maxRetries </h3>
+  ### maxRetries 
 
 **Description:** Retry the command if it fails up to given number of times (default 0)
 
@@ -1098,7 +1087,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> dir </h3>
+  ### dir 
 
 **Description:** The working directory to run the command in (default is CWD)
 
@@ -1116,7 +1105,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> env </h3>
+  ### env 
 
 **Description:** Additional environment variables to set for the command
 
@@ -1148,7 +1137,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> cmd </h3>
+  ### cmd 
 
 **Description:** The command to run. Must specify either cmd or wait for the action to do anything.
 
@@ -1166,7 +1155,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> setVariable </h3>
+  ### setVariable 
 
 **Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
 
@@ -1188,7 +1177,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> description </h3>
+  ### description 
 
 **Description:** Description of the action to be displayed during package execution instead of the command
 
@@ -1206,7 +1195,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> wait </h3>
+  ### wait 
 
 **Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
@@ -1223,7 +1212,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> cluster </h3>
+  ### cluster 
 
 **Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
 
@@ -1240,8 +1229,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> kind </h3>
-
+  ### kind 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The kind of resource to wait for (e.g. Pod; Deployment; etc.)
@@ -1260,8 +1248,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -1278,7 +1265,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> namespace </h3>
+  ### namespace 
 
 **Description:** The namespace of the resource to wait for
 
@@ -1296,7 +1283,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> condition </h3>
+  ### condition 
 
 **Description:** The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
 
@@ -1317,7 +1304,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> network </h3>
+  ### network 
 
 **Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
 
@@ -1334,8 +1321,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> protocol </h3>
-
+  ### protocol 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The protocol to wait for (e.g. tcp; http; etc.).
@@ -1361,8 +1347,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> address </h3>
-
+  ### address 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
@@ -1381,7 +1366,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> code </h3>
+  ### code 
 
 **Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
 
@@ -1408,7 +1393,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> after </h3>
+  ### after 
 
 **Description:** Actions to run at the end of an operation
 
@@ -1442,7 +1427,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> onSuccess </h3>
+  ### onSuccess 
 
 **Description:** Actions to run if all operations succeed
 
@@ -1476,7 +1461,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> onFailure </h3>
+  ### onFailure 
 
 **Description:** Actions to run if all operations fail
 
@@ -1513,7 +1498,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> onDeploy </h3>
+  ### onDeploy 
 
 **Description:** Actions to run during package deployment
 
@@ -1533,7 +1518,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> onRemove </h3>
+  ### onRemove 
 
 **Description:** Actions to run during package removal
 
@@ -1556,7 +1541,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> files </h3>
+  ### files 
 
 **Description:** Files to place on disk during package deployment
 
@@ -1587,8 +1572,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> source </h3>
-
+  ### source 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Local file path or remote URL to add to the package
@@ -1607,7 +1591,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> shasum </h3>
+  ### shasum 
 
 **Description:** SHA256 checksum of the file if the source is a URL
 
@@ -1625,8 +1609,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> target </h3>
-
+  ### target 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The absolute or relative path where the file should be copied to during package deploy
@@ -1645,7 +1628,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> executable </h3>
+  ### executable 
 
 **Description:** Determines if the file should be made executable during package deploy
 
@@ -1663,7 +1646,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> symlinks </h3>
+  ### symlinks 
 
 **Description:** List of symlinks to create during package deploy
 
@@ -1698,7 +1681,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> charts </h3>
+  ### charts 
 
 **Description:** Helm charts to install during package deploy
 
@@ -1769,8 +1752,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo
@@ -1789,7 +1771,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> releaseName </h3>
+  ### releaseName 
 
 **Description:** The name of the release to create; defaults to the name of the chart
 
@@ -1807,7 +1789,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> url </h3>
+  ### url 
 
 **Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
 
@@ -1825,8 +1807,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> version </h3>
-
+  ### version 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
@@ -1845,8 +1826,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> namespace </h3>
-
+  ### namespace 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The namespace to deploy the chart to
@@ -1865,7 +1845,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> valuesFiles </h3>
+  ### valuesFiles 
 
 **Description:** List of values files to include in the package; these will be merged together
 
@@ -1897,7 +1877,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> gitPath </h3>
+  ### gitPath 
 
 **Description:** The path to the chart in the repo if using a git repo instead of a helm repo
 
@@ -1915,7 +1895,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> localPath </h3>
+  ### localPath 
 
 **Description:** The path to the chart folder
 
@@ -1933,7 +1913,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> noWait </h3>
+  ### noWait 
 
 **Description:** Wait for chart resources to be ready before continuing
 
@@ -1954,7 +1934,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> manifests </h3>
+  ### manifests 
 
 |          |         |
 | -------- | ------- |
@@ -1983,8 +1963,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** A name to give this collection of manifests; this will become the name of the dynamically-created helm chart
@@ -2003,7 +1982,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> namespace </h3>
+  ### namespace 
 
 **Description:** The namespace to deploy the manifests to
 
@@ -2021,7 +2000,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> files </h3>
+  ### files 
 
 **Description:** List of individual K8s YAML files to deploy (in order)
 
@@ -2053,7 +2032,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> kustomizeAllowAnyDirectory </h3>
+  ### kustomizeAllowAnyDirectory 
 
 **Description:** Allow traversing directory above the current directory if needed for kustomization
 
@@ -2071,7 +2050,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> kustomizations </h3>
+  ### kustomizations 
 
 **Description:** List of kustomization paths to include in the package
 
@@ -2103,7 +2082,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> noWait </h3>
+  ### noWait 
 
 **Description:** Wait for manifest resources to be ready before continuing
 
@@ -2124,7 +2103,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> images </h3>
+  ### images 
 
 **Description:** List of OCI images to include in the package
 
@@ -2156,7 +2135,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> repos </h3>
+  ### repos 
 
 **Description:** List of git repos to include in the package
 
@@ -2188,7 +2167,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> dataInjections </h3>
+  ### dataInjections 
 
 **Description:** Datasets to inject into a pod in the target cluster
 
@@ -2219,8 +2198,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> source </h3>
-
+  ### source 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** A path to a local folder or file to inject into the given target pod + container
@@ -2239,8 +2217,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> target </h3>
-
+  ### target 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The target pod + container to inject the data into
@@ -2258,8 +2235,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> namespace </h3>
-
+  ### namespace 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The namespace to target for data injection
@@ -2278,8 +2254,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> selector </h3>
-
+  ### selector 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The K8s selector to target for data injection
@@ -2304,8 +2279,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> container </h3>
-
+  ### container 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The container name to target for data injection
@@ -2324,8 +2298,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> path </h3>
-
+  ### path 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The path within the container to copy the data into
@@ -2347,7 +2320,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> compress </h3>
+  ### compress 
 
 **Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
 
@@ -2371,7 +2344,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> variables </h3>
+  ### variables 
 
 **Description:** Variable template values applied on deploy for K8s resources
 
@@ -2402,8 +2375,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name to be used for the variable
@@ -2426,7 +2398,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> description </h3>
+  ### description 
 
 **Description:** A description of the variable to be used when prompting the user a value
 
@@ -2444,7 +2416,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> default </h3>
+  ### default 
 
 **Description:** The default value to use for the variable
 
@@ -2462,7 +2434,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> prompt </h3>
+  ### prompt 
 
 **Description:** Whether to prompt the user for input for this variable
 
@@ -2483,7 +2455,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> constants </h3>
+  ### constants 
 
 **Description:** Constant template values applied on deploy for K8s resources
 
@@ -2514,8 +2486,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> name </h3>
-
+  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name to be used for the constant
@@ -2538,8 +2509,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> value </h3>
-
+  ### value 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The value to set for the constant during deploy
@@ -2558,7 +2528,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  <h3> description </h3>
+  ### description 
 
 **Description:** A description of the constant to explain its purpose on package create or deploy confirmation prompts
 
