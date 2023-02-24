@@ -12,21 +12,18 @@ components:
         before:
           - env: 
             - "PATH=$PATH:./"
+          - cmd: alias kubectl="zarf tools kubectl"
           - cmd: ./environment_check.sh
       # Set the delete confirmation flag for Longhorn
       onRemove:
         before:
           - env:
             - "PATH=$PATH:./"
-          - cmd: "kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+          - cmd: "zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
     files:
       # jq
       - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         target: jq
-        executable: true
-      # kubectl
-      - source: https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl
-        target: kubectl
         executable: true
       # Longhorn Environment Check
       - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
