@@ -6,7 +6,12 @@
   {% set html_id = sub_property.html_id %}
 
   {% set description = sub_property | get_description %}
+
+{% if sub_property.type_name == "object" or sub_property.type_name == "array" %}
 <details open>
+{% else %}
+<details>
+{% endif %}
 <summary>
     {% filter md_heading(2, html_id, True) -%}
       {%- filter replace('\n', '') -%}
@@ -23,7 +28,9 @@
 &nbsp;
 <blockquote>
 
-  ### {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
+  {% if sub_property.type_name == "object" or sub_property.type_name == "array" %}
+  ### {% with schema=sub_property %} {%- include "breadcrumbs.md" %} {% endwith %}
+  {% endif %}
 
   {% with schema=sub_property, skip_headers=False %}
     {% if sub_property.is_pattern_property %}

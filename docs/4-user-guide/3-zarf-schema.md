@@ -6,14 +6,13 @@
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackage                                                                                |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### kind 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The kind of Zarf package
@@ -49,14 +48,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfMetadata                                                                               |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Name to identify this Zarf package
@@ -72,14 +70,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### description 
 
 **Description:** Additional information about this package
 
@@ -90,14 +86,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### version 
 
 **Description:** Generic string to track the package version by a package author
 
@@ -108,14 +102,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### url 
 
 **Description:** Link to package information when online
 
@@ -126,14 +118,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_image"></a>image</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### image 
 
 **Description:** An image URL to embed in this package (Reserved for future use in Zarf UI)
 
@@ -144,14 +134,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### uncompressed 
 
 **Description:** Disable compression of this package
 
@@ -162,14 +150,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### architecture 
 
 **Description:** The target cluster architecture of this package
 
@@ -187,14 +173,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="metadata_yolo"></a>yolo</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### yolo 
 
 **Description:** Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 
@@ -225,14 +209,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfBuildData                                                                              |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_terminal"></a>terminal *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### terminal 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -242,14 +225,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_user"></a>user *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### user 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -259,14 +241,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_architecture"></a>architecture *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### architecture 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -276,14 +257,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_timestamp"></a>timestamp *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### timestamp 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -293,14 +273,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### version 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -310,14 +289,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="build_migrations"></a>migrations *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### migrations 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |                   |
@@ -376,14 +354,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the component
@@ -399,14 +376,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### description 
 
 **Description:** Message to include during package deploy describing the purpose of this component
 
@@ -417,14 +392,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### default 
 
 **Description:** Determines the default Y/N state for installing this component on package deploy
 
@@ -435,14 +408,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_required"></a>required</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### required 
 
 **Description:** Do not prompt user to install this component
 
@@ -470,14 +441,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyTarget                                                                    |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_only_localOS"></a>localOS</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### localOS 
 
 **Description:** Only deploy component to specified OS
 
@@ -512,14 +481,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentOnlyCluster                                                                   |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### architecture 
 
 **Description:** Only create and deploy to clusters of the given architecture
 
@@ -536,14 +503,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### distros 
 
 **Description:** A list of kubernetes distros this package works with (Reserved for future use in Zarf UI)
 
@@ -574,14 +539,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_group"></a>group</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### group 
 
 **Description:** Create a user selector field based on all components in the same group
 
@@ -592,14 +555,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### cosignKeyPath 
 
 **Description:** Specify a path to a public key to validate signed online resources
 
@@ -627,14 +588,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentImport                                                                        |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_import_name"></a>name</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### name 
 
 |          |          |
 | -------- | -------- |
@@ -643,14 +602,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_import_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### path 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -684,14 +642,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/DeprecatedZarfComponentScripts                                                             |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### showOutput 
 
 **Description:** Show the output of the script during package deployment
 
@@ -702,14 +658,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### timeoutSeconds 
 
 **Description:** Timeout in seconds for the script
 
@@ -720,14 +674,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_retry"></a>retry</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### retry 
 
 **Description:** Retry the script if it fails
 
@@ -738,14 +690,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### prepare 
 
 **Description:** Scripts to run before the component is added during package create
 
@@ -770,14 +720,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_before"></a>before</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### before 
 
 **Description:** Scripts to run before the component is deployed
 
@@ -802,14 +750,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_scripts_after"></a>after</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### after 
 
 **Description:** Scripts to run after the component successfully deploys
 
@@ -888,14 +834,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionDefaults                                                                |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### mute 
 
 **Description:** Hide the output of commands during execution (default false)
 
@@ -906,14 +850,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### maxTotalSeconds 
 
 **Description:** Default timeout in seconds for commands (default to 0
 
@@ -924,14 +866,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### maxRetries 
 
 **Description:** Retry commands given number of times if they fail (default 0)
 
@@ -942,14 +882,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### dir 
 
 **Description:** Working directory for commands (default CWD)
 
@@ -960,14 +898,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### env 
 
 **Description:** Additional environment variables for commands
 
@@ -1026,14 +962,12 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentAction                                                                        |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### mute 
 
 **Description:** Hide the output of the command during package deployment (default false)
 
@@ -1044,14 +978,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### maxTotalSeconds 
 
 **Description:** Timeout in seconds for the command (default to 0
 
@@ -1062,14 +994,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### maxRetries 
 
 **Description:** Retry the command if it fails up to given number of times (default 0)
 
@@ -1080,14 +1010,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### dir 
 
 **Description:** The working directory to run the command in (default is CWD)
 
@@ -1098,14 +1026,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### env 
 
 **Description:** Additional environment variables to set for the command
 
@@ -1130,14 +1056,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### cmd 
 
 **Description:** The command to run. Must specify either cmd or wait for the action to do anything.
 
@@ -1148,14 +1072,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### setVariable 
 
 **Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
 
@@ -1170,14 +1092,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### description 
 
 **Description:** Description of the action to be displayed during package execution instead of the command
 
@@ -1222,14 +1142,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWaitCluster                                                             |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### kind 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The kind of resource to wait for (e.g. Pod; Deployment; etc.)
@@ -1241,14 +1160,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 |          |          |
@@ -1258,14 +1176,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### namespace 
 
 **Description:** The namespace of the resource to wait for
 
@@ -1276,14 +1192,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### condition 
 
 **Description:** The condition to wait for (e.g. Ready; Available; etc.). Defaults to exist
 
@@ -1314,14 +1228,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWaitNetwork                                                             |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### protocol 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The protocol to wait for (e.g. tcp; http; etc.).
@@ -1340,14 +1253,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### address 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
@@ -1359,14 +1271,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### code 
 
 **Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
 
@@ -1565,14 +1475,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfFile                                                                                   |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_files_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### source 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Local file path or remote URL to add to the package
@@ -1584,14 +1493,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### shasum 
 
 **Description:** SHA256 checksum of the file if the source is a URL
 
@@ -1602,14 +1509,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_files_items_target"></a>target *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### target 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The absolute or relative path where the file should be copied to during package deploy
@@ -1621,14 +1527,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_files_items_executable"></a>executable</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### executable 
 
 **Description:** Determines if the file should be made executable during package deploy
 
@@ -1639,14 +1543,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### symlinks 
 
 **Description:** List of symlinks to create during package deploy
 
@@ -1745,14 +1647,13 @@ Must be one of:
 
 </blockquote>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo
@@ -1764,14 +1665,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### releaseName 
 
 **Description:** The name of the release to create; defaults to the name of the chart
 
@@ -1782,14 +1681,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### url 
 
 **Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
 
@@ -1800,14 +1697,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### version 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
@@ -1819,14 +1715,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### namespace 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The namespace to deploy the chart to
@@ -1838,14 +1733,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### valuesFiles 
 
 **Description:** List of values files to include in the package; these will be merged together
 
@@ -1870,14 +1763,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### gitPath 
 
 **Description:** The path to the chart in the repo if using a git repo instead of a helm repo
 
@@ -1888,14 +1779,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### localPath 
 
 **Description:** The path to the chart folder
 
@@ -1906,14 +1795,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### noWait 
 
 **Description:** Wait for chart resources to be ready before continuing
 
@@ -1956,14 +1843,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfManifest                                                                               |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** A name to give this collection of manifests; this will become the name of the dynamically-created helm chart
@@ -1975,14 +1861,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### namespace 
 
 **Description:** The namespace to deploy the manifests to
 
@@ -1993,14 +1877,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_files"></a>files</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### files 
 
 **Description:** List of individual K8s YAML files to deploy (in order)
 
@@ -2025,14 +1907,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### kustomizeAllowAnyDirectory 
 
 **Description:** Allow traversing directory above the current directory if needed for kustomization
 
@@ -2043,14 +1923,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### kustomizations 
 
 **Description:** List of kustomization paths to include in the package
 
@@ -2075,14 +1953,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### noWait 
 
 **Description:** Wait for manifest resources to be ready before continuing
 
@@ -2096,14 +1972,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_images"></a>images</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### images 
 
 **Description:** List of OCI images to include in the package
 
@@ -2128,14 +2002,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_repos"></a>repos</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### repos 
 
 **Description:** List of git repos to include in the package
 
@@ -2191,14 +2063,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfDataInjection                                                                          |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### source 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** A path to a local folder or file to inject into the given target pod + container
@@ -2228,14 +2099,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfContainerTarget                                                                        |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### namespace 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The namespace to target for data injection
@@ -2247,14 +2117,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### selector 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The K8s selector to target for data injection
@@ -2272,14 +2141,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### container 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The container name to target for data injection
@@ -2291,14 +2159,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### path 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The path within the container to copy the data into
@@ -2313,14 +2180,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### compress 
 
 **Description:** Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image.
 
@@ -2368,14 +2233,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageVariable                                                                        |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="variables_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name to be used for the variable
@@ -2391,14 +2255,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="variables_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### description 
 
 **Description:** A description of the variable to be used when prompting the user a value
 
@@ -2409,14 +2271,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="variables_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### default 
 
 **Description:** The default value to use for the variable
 
@@ -2427,14 +2287,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="variables_items_prompt"></a>prompt</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### prompt 
 
 **Description:** Whether to prompt the user for input for this variable
 
@@ -2479,14 +2337,13 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfPackageConstant                                                                        |
 
-<details open>
+<details>
 <summary>
 <strong> <a name="constants_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### name 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The name to be used for the constant
@@ -2502,14 +2359,13 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="constants_items_value"></a>value *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ### value 
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The value to set for the constant during deploy
@@ -2521,14 +2377,12 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
 <strong> <a name="constants_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-  ### description 
 
 **Description:** A description of the constant to explain its purpose on package create or deploy confirmation prompts
 
