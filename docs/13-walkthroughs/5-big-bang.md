@@ -14,7 +14,7 @@ The current version of this extension requires [some patches](../../examples/big
 
 Big Bang requires a reasonably powerful `amd64` system that scales up with the number of components deployed.  We recommend at least `32 GB` of RAM and a high-speed internet connection to complete this walkthrough.
 
-To learn more about Big Bang's requirements in general, see their documentation: https://docs-bigbang.dso.mil/1.52.0/docs/prerequisites/minimum-hardware-requirements/
+To learn more about Big Bang's requirements in general, see their documentation: https://docs-bigbang.dso.mil/latest/docs/prerequisites/minimum-hardware-requirements/
 
 ## Pre-requisites
 
@@ -74,7 +74,7 @@ components:
           - config/patch-images.yaml # fixes upstream bug in BB
 ```
 
-This component uses the `bigbang` extension to define the version of Big Bang to use and the values files to apply.  Feel free to inspect and configure the values.yaml files as you wish and to learn more about Big Bang's configuration see their values guide: https://docs-bigbang.dso.mil/1.53.0/docs/guides/using-bigbang/values-guide/
+This component uses the `bigbang` extension to define the version of Big Bang to use and the values files to apply.  Feel free to inspect and configure the values.yaml files as you wish and to learn more about Big Bang's configuration see their values guide: https://docs-bigbang.dso.mil/latest/docs/guides/using-bigbang/values-guide/
 
 :::note
 
