@@ -38,7 +38,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       metadata
+  ## metadata
 
 **Description:** Package metadata
 
@@ -197,7 +197,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       build
+  ## build
 
 **Description:** Zarf-generated package build data
 
@@ -336,7 +336,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components
+  ## components
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** List of components to deploy in this package
@@ -435,7 +435,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       only
+  ## components > only
 
 **Description:** Filter when this component is included in package creation or deployment
 
@@ -475,7 +475,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       only >       cluster
+  ## components > only > cluster
 
 **Description:** Only deploy component to specified clusters
 
@@ -579,7 +579,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       import
+  ## components > import
 
 **Description:** Import a component from another Zarf package
 
@@ -637,7 +637,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       scripts
+  ## components > scripts
 
 **Description:** [DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment
 
@@ -786,7 +786,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions
+  ## components > actions
 
 **Description:** Custom commands to run at various stages of a package lifecycle
 
@@ -803,7 +803,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate
+  ## components > actions > onCreate
 
 **Description:** Actions to run during package creation
 
@@ -820,7 +820,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       defaults
+  ## components > actions > onCreate > defaults
 
 **Description:** Default configuration for all actions in this set
 
@@ -931,7 +931,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       before
+  ## components > actions > onCreate > before
 
 **Description:** Actions to run at the start of an operation
 
@@ -1102,7 +1102,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait
+  ## components > actions > onCreate > before > wait
 
 **Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
@@ -1119,7 +1119,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait >       cluster
+  ## components > actions > onCreate > before > wait > cluster
 
 **Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
 
@@ -1222,7 +1222,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       before >       before items >       wait >       network
+  ## components > actions > onCreate > before > wait > network
 
 **Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
 
@@ -1317,7 +1317,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       after
+  ## components > actions > onCreate > after
 
 **Description:** Actions to run at the end of an operation
 
@@ -1348,7 +1348,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       onSuccess
+  ## components > actions > onCreate > onSuccess
 
 **Description:** Actions to run if all operations succeed
 
@@ -1379,7 +1379,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onCreate >       onFailure
+  ## components > actions > onCreate > onFailure
 
 **Description:** Actions to run if all operations fail
 
@@ -1413,7 +1413,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onDeploy
+  ## components > actions > onDeploy
 
 **Description:** Actions to run during package deployment
 
@@ -1433,7 +1433,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       actions >       onRemove
+  ## components > actions > onRemove
 
 **Description:** Actions to run during package removal
 
@@ -1456,7 +1456,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       files
+  ## components > files
 
 **Description:** Files to place on disk during package deployment
 
@@ -1582,7 +1582,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       charts
+  ## components > charts
 
 **Description:** Helm charts to install during package deploy
 
@@ -1819,7 +1819,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       manifests
+  ## components > manifests
 
 **Description:** Kubernetes manifests to be included in a generated Helm chart on package deploy
 
@@ -2024,7 +2024,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       dataInjections
+  ## components > dataInjections
 
 **Description:** Datasets to inject into a container in the target cluster
 
@@ -2070,7 +2070,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       components >       components items >       dataInjections >       dataInjections items >       target
+  ## components > dataInjections > target
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The target pod + container to inject the data into
@@ -2190,7 +2190,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       variables
+  ## variables
 
 **Description:** Variable template values applied on deploy for K8s resources
 
@@ -2291,7 +2291,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-  ##       constants
+  ## constants
 
 **Description:** Constant template values applied on deploy for K8s resources
 

@@ -31,7 +31,7 @@
   {% if sub_property.type_name == "object" or sub_property.type_name == "array" %}
   ## {% with schema=sub_property %}
     {%- for node in schema.nodes_from_root -%}
-      {% if node.name_for_breadcrumbs == "root" %}{% continue %}{% endif %}
+      {%- if node.name_for_breadcrumbs == "root" or node.name_for_breadcrumbs.endswith(" items") -%}{% continue %}{%- endif -%}
       {{ node.name_for_breadcrumbs }}{%- if not loop.last %} > {% endif -%}
     {%- endfor -%}
   {% endwith %}
