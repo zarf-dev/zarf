@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
+	"os"
 	"regexp"
-	"runtime"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -28,25 +27,25 @@ var (
 func TestMain(m *testing.M) {
 	var err error
 
+	// Change to the build dir
+	os.Chdir("../../../../build/")
+
 	// Get the latest and previous releases
 	latest, previous, err = getReleases()
 	if err != nil {
 		panic(err)
 	}
-	// Get the Zarf CLI path
-	zarf = path.Join("build", test.GetCLIName())
 
-	if runtime.GOARCH != "amd64" {
-		panic("Big Bang only supports AMD64")
-	}
+	// Get the Zarf CLI path
+	zarf = test.GetCLIName()
 
 	// Run the tests
 	m.Run()
 }
 
 func TestReleases(t *testing.T) {
-	// Initialize the cluster
-	zarfExec(t, "init", "--confirm", "--components", "git-server")
+	// Initialize the cluster with the Git server and AMD64 architecture
+	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64")
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
@@ -57,7 +56,7 @@ func TestReleases(t *testing.T) {
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
 
 	// Cluster info
-	_ = exec.CmdWithPrint("kubectl", "describe", "nodes")
+	zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
@@ -68,7 +67,7 @@ func TestReleases(t *testing.T) {
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
 
 	// Cluster info
-	_ = exec.CmdWithPrint("kubectl", "describe", "nodes")
+	zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
 	// Test connectivity to Twistlock
 	testConnection(t)
