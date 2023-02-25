@@ -58,6 +58,12 @@ func TestReleases(t *testing.T) {
 	// Remove the previous version package
 	_ = os.RemoveAll(pkgPath)
 
+	// HACK: scale down the flux deployments due to very-low CPU in the test runner
+	fluxControllers := []string{"helm-controller", "source-controller", "kustomize-controller", "notification-controller"}
+	for _, deployment := range fluxControllers {
+		zarfExec(t, "tools", "kubectl", "-n", "flux-system", "scale", "deployment", deployment, "--replicas=0")
+	}
+
 	// Cluster info
 	zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
