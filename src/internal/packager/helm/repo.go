@@ -53,8 +53,8 @@ func (h *Helm) PackageChartFromGit(destination string) string {
 
 	client := action.NewPackage()
 
-	tempPath := h.downloadChartFromGitToTemp(spinner)
-	defer os.RemoveAll(tempPath)
+	tempPath, cleanup := h.downloadChartFromGitToTemp(spinner)
+	defer cleanup()
 
 	// Validate the chart
 	if _, err := loader.LoadDir(tempPath); err != nil {
@@ -137,7 +137,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	spinner.Success()
 }
 
-func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) string {
+func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) (string, func()) {
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
@@ -152,5 +152,9 @@ func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) string {
 		spinner.Fatalf(err, "Unable to download provided git refrence: %v@%v", h.Chart.URL, h.Chart.Version)
 	}
 
-	return filepath.Join(tempPath, h.Chart.GitPath)
+	cleanup := func() {
+		_ = os.RemoveAll(tempPath)
+	}
+
+	return filepath.Join(tempPath, h.Chart.GitPath), cleanup
 }

@@ -2,12 +2,9 @@ package helm
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -48,12 +45,6 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 		}},
 	}
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return images, err
-	}
-	defer os.RemoveAll(tmpDir)
-
 	helmCfg := Helm{
 		Chart:    component.Charts[0],
 		BasePath: path,
@@ -64,8 +55,8 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 
 	// TODO (@runyontr) expand this to work for regular charts for more generic
 	// capability and pull it out from just being used by Big Bang.
-	tempPath := helmCfg.downloadChartFromGitToTemp(spinner)
-	defer os.RemoveAll(tempPath)
+	tempPath, cleanup := helmCfg.downloadChartFromGitToTemp(spinner)
+	defer cleanup()
 
 	// Load a new chart.
 	chart, err := loader.LoadDir(tempPath)
