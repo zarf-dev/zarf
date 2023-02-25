@@ -45,7 +45,7 @@ jobs:
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Run tests
-        run: cd src/extensions/bigbang/test/ && go test -failfast -v -timeout 30m
+        run: go test ./src/extensions/bigbang/test -failfast -v -timeout 30m
 
       - name: Save logs
         if: always()
