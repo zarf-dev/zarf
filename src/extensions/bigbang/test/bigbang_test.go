@@ -49,18 +49,24 @@ func TestReleases(t *testing.T) {
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
-	zarfExec(t, "package", "create", "src/extensions/bigbang/test/package", bbVersion, "--confirm")
+	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
 
 	// Deploy the previous version
 	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", previous)
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
+
+	// Remove the previous version package
+	_ = os.RemoveAll(pkgPath)
 
 	// Cluster info
 	zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
-	zarfExec(t, "package", "create", "src/extensions/bigbang/test/package", bbVersion, "--confirm")
+	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
+
+	// Clean up zarf cache now that all packages are built to reduce disk pressure
+	zarfExec(t, "tools", "clear-cache")
 
 	// Deploy the latest version
 	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", latest)
