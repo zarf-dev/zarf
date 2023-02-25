@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Get the Zarf CLI path
-	zarf = test.GetCLIName()
+	zarf = fmt.Sprintf("./%s", test.GetCLIName())
 
 	// Run the tests
 	m.Run()
