@@ -57,21 +57,29 @@ jobs:
           # Build the CLI and init-package
           make build-cli-linux-amd init-package
 
-          # Build the packages
-          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
-          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
-
-          # Cleanup to avoid any disk pressure issues on GH runners
-          zarf tools clear-cache
-
           # Initialize the cluster
           zarf init --confirm --components git-server
 
-          # Deploy the previous version
+          # Build and deploy the previous version
+          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
           zarf package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
+
+          # Debug data
+          kubectl describe nodes
+          df -h
+          ll /tmp/zarf*
+
+          # Build the latest version
+          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
 
           # Cleanup to avoid any disk pressure issues on GH runners
           rm -f zarf-package-big-bang-test-amd64-$previous.tar.zst 
+          zarf tools clear-cache
+
+          # Debug data
+          kubectl describe nodes
+          df -h
+          ll /tmp/zarf*
 
           # Deploy the latest version
           zarf package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm
