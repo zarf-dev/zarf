@@ -31,6 +31,9 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
@@ -42,7 +45,7 @@ jobs:
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Run tests
-        run: ./src/extensions/bigbang/test/e2e.sh
+        run: cd src/extensions/bigbang/test/ && go test -failfast -v -timeout 30m
 
       - name: Save logs
         if: always()
