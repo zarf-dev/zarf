@@ -31,9 +31,6 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
-      - name: Build binary and zarf packages
-        uses: ./.github/actions/packages
-
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
@@ -44,7 +41,6 @@ jobs:
           username: ${{ secrets.IRONBANK_USERNAME }}
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
-      # @todo(jeff-mccoy) - Add previous version test once CRD upgraade support is fixed in zarf and BB 1.55 is exists
       - name: Run tests
         run: |
           # Get the Big Bang release versions
@@ -58,11 +54,24 @@ jobs:
 
           export PATH=$(pwd)/build:$PATH
 
+          # Build the CLI and init-package
+          make build-cli-linux-amd init-package
+
           # Build the packages
+          zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$previous --confirm
           zarf package create src/extensions/bigbang/test/package --set=BB_VERSION=$latest --confirm
+
+          # Cleanup to avoid any disk pressure issues on GH runners
+          zarf tools clear-cache
 
           # Initialize the cluster
           zarf init --confirm --components git-server
+
+          # Deploy the previous version
+          zarf package deploy zarf-package-big-bang-test-amd64-$previous.tar.zst --confirm
+
+          # Cleanup to avoid any disk pressure issues on GH runners
+          rm -f zarf-package-big-bang-test-amd64-$previous.tar.zst 
 
           # Deploy the latest version
           zarf package deploy zarf-package-big-bang-test-amd64-$latest.tar.zst --confirm

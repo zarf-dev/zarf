@@ -43,7 +43,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Make sure the version is valid.
 	if !isValidVersion(cfg.Version) {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.54.0", cfg.Version)
+		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.53.0", cfg.Version)
 	}
 
 	// Print the banner for Big Bang.
@@ -211,8 +211,9 @@ func isValidVersion(version string) bool {
 	major, _ := strconv.Atoi(parts[0])
 	minor, _ := strconv.Atoi(parts[1])
 
-	// This extension requires BB 1.54.0 or greater.
-	return major >= 1 && minor >= 54
+	// This extension requires BB 1.53.0 or greater.
+	// @todo: This should be updated to 1.54.0 when 1.55.0 is released.
+	return major >= 1 && minor >= 53
 }
 
 // findBBResources takes a list of yaml objects (as a string) and
