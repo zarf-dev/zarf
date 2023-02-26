@@ -1,5 +1,5 @@
 {
-  "custom_template_path": "hack/zarf-jsfh-template/base.md",
+  "custom_template_path": "docs/.templates/jsonschemaforhumans/base.md",
   "template_md_options": { "badge_as_image": true, "show_heading_numbers": false },
   "show_toc": false,
   "show_breadcrumbs": false,

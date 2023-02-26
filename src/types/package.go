@@ -20,20 +20,20 @@ type ZarfMetadata struct {
 	Description  string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
 	Version      string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
 	URL          string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
-	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package for future Zarf UI listing"`
+	Image        string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture of this package"`
+	Architecture string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
 	YOLO         bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	Terminal     string   `json:"terminal"`
-	User         string   `json:"user"`
-	Architecture string   `json:"architecture"`
-	Timestamp    string   `json:"timestamp"`
-	Version      string   `json:"version"`
-	Migrations   []string `json:"migrations"`
+	Terminal     string   `json:"terminal" jsonschema:"description=The machine name that created this package"`
+	User         string   `json:"user" jsonschema:"description=The username who created this package"`
+	Architecture string   `json:"architecture" jsonschema:"description=The architecture this package was created on"`
+	Timestamp    string   `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
+	Version      string   `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
+	Migrations   []string `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.

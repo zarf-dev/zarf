@@ -6,7 +6,7 @@
 /examples/ @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159
 *.md @Madeline-UX @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159
 
-# Core code 
+# Core code
 /src/ @jeff-mccoy @YrrepNoj @Racer159
 /go.* @jeff-mccoy @YrrepNoj @Racer159
 main.go @jeff-mccoy @YrrepNoj @Racer159
@@ -15,14 +15,15 @@ main.go @jeff-mccoy @YrrepNoj @Racer159
 /packages/ @jeff-mccoy @YrrepNoj @Racer159
 /zarf.yaml @jeff-mccoy @YrrepNoj @Racer159
 
-# Web UI-specific 
-/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
-/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj 
+# Web UI-specific
+/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
 
 # Privileged pipeline files
 /.github/ @jeff-mccoy @YrrepNoj @Racer159
@@ -37,5 +38,5 @@ main.go @jeff-mccoy @YrrepNoj @Racer159
 
 # Additional privileged files
 /CODEOWNERS @jeff-mccoy @runyontr
-/cosign.pub @jeff-mccoy @runyontr 
-/LICENSE @jeff-mccoy @runyontr 
+/cosign.pub @jeff-mccoy @runyontr
+/LICENSE @jeff-mccoy @runyontr
