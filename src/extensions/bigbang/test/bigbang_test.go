@@ -16,7 +16,7 @@ import (
 )
 
 // The Big Bang project ID on Repo1
-const bbProjId = "2872"
+const bbProjID = "2872"
 
 var (
 	zarf     string
@@ -107,7 +107,7 @@ func zarfExec(t *testing.T, args ...string) {
 
 func getReleases() (latest, previous string, err error) {
 	// Create the URL for the API endpoint
-	url := fmt.Sprintf("https://repo1.dso.mil/api/v4/projects/%s/repository/tags", bbProjId)
+	url := fmt.Sprintf("https://repo1.dso.mil/api/v4/projects/%s/repository/tags", bbProjID)
 
 	// Send an HTTP GET request to the API endpoint
 	resp, err := http.Get(url)
