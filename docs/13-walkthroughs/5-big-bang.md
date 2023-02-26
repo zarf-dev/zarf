@@ -8,7 +8,7 @@ Zarf integrates with Big Bang through the use of an extension that simplifies th
 
 ### Known Issues
 
-The current version of this extension requires [some patches](../../examples/big-bang/config/patch-images.yaml) to the Big Bang values to function correctly, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.
+The current version of this extension works best with Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.
 
 ## System Requirements
 
