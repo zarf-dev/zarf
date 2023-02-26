@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -156,8 +155,6 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		layers = manifest.Layers
 	}
 
-	data := []message.MultiSpinnerRow{}
-
 	first30last30 := func(s string) string {
 		if len(s) > 60 {
 			return s[0:27] + "..." + s[len(s)-26:]
@@ -166,23 +163,17 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 	}
 
 	// get the layers
-	for _, layer := range layers {
+	for idx, layer := range layers {
+		rows := mSpinner.GetContent()
 		path := filepath.Join(out, layer.Annotations[ocispec.AnnotationTitle])
+		rows = append(rows, message.NewMultiSpinnerRow(fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle]))))
+		mSpinner.Update(rows)
 		// if the file exists and the size matches, skip it
 		info, err := os.Stat(path)
 		if err == nil && info.Size() == layer.Size {
-			data = append(data, message.MultiSpinnerRow{
-				Status: mSpinner.SuccessStatus,
-				Text:   fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle])),
-			})
-			mSpinner.Update(data)
+			mSpinner.RowSuccess(idx)
 			continue
 		}
-		data = append(data, message.MultiSpinnerRow{
-			Status: "",
-			Text:   fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle])),
-		})
-		mSpinner.Update(data)
 
 		layerContent, err := content.FetchAll(ctx, repo, layer)
 		if err != nil {
@@ -203,13 +194,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		if err != nil {
 			return err
 		}
-		for idx, d := range data {
-			if strings.HasPrefix(d.Text, layer.Digest.Hex()[:12]) {
-				mSpinner.RowSuccess(idx)
-				break
-			}
-		}
-		mSpinner.Update(data)
+		mSpinner.RowSuccess(idx)
 	}
 
 	return nil

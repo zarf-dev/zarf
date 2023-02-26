@@ -176,12 +176,8 @@ func NewMultiSpinner() *MultiSpinner {
 		return activeMultiSpinner
 	}
 	var area *pterm.AreaPrinter
-	if NoProgress {
-		return &MultiSpinner{}
-	} else {
-		area, _ = pterm.DefaultArea.
-			WithRemoveWhenDone(false).Start()
-	}
+	area, _ = pterm.DefaultArea.
+		WithRemoveWhenDone(false).Start()
 	return &MultiSpinner{
 		area:          area,
 		SuccessStatus: pterm.FgLightGreen.Sprint("  ✔ "),
@@ -192,7 +188,11 @@ func NewMultiSpinner() *MultiSpinner {
 func (m MultiSpinner) Start() *MultiSpinner {
 	m.startedAt = time.Now()
 	activeMultiSpinner = &m
-	delay := 200 * time.Millisecond
+	delay := pterm.DefaultSpinner.Delay
+
+	if NoProgress {
+		return &m
+	}
 
 	go func() {
 		for activeMultiSpinner != nil {
@@ -204,7 +204,7 @@ func (m MultiSpinner) Start() *MultiSpinner {
 	return &m
 }
 
-func(m *MultiSpinner) renderText() string {
+func (m *MultiSpinner) renderText() string {
 	var text string
 	for idx, row := range m.rows {
 		switch row.Status {
@@ -228,54 +228,55 @@ func(m *MultiSpinner) renderText() string {
 }
 
 func (m *MultiSpinner) Stop() {
-	if m.area != nil && activeMultiSpinner != nil {
+	if m.area != nil && activeMultiSpinner != nil && !NoProgress {
 		m.area.Update(m.renderText())
 		_ = m.area.Stop()
-		activeMultiSpinner = nil
 	}
+	activeMultiSpinner = nil
 }
 
 func (m *MultiSpinner) Update(rows []MultiSpinnerRow) {
 	if NoProgress {
-		// if row added, print it
-		// if row success, success
-		// if row error, error
-		for _, row := range rows {
-			if len(row.Text) > 0 {
-				switch row.Status {
+		for i, row := range m.rows {
+			if row.Status != rows[i].Status {
+				switch rows[i].Status {
 				case m.SuccessStatus:
-					Successf(row.Text)
+					Successf(rows[i].Text)
 				case m.ErrorStatus:
-					Warn(row.Text)
-				default:
-					Info(row.Text)
+					Warn(rows[i].Text)
 				}
 			}
 		}
-	} else {
-		m.rows = rows
+		for i := len(m.rows); i < len(rows); i++ {
+			Info(rows[i].Text)
+		}
 	}
+	m.rows = rows
 }
 
 func NewMultiSpinnerRow(text string) MultiSpinnerRow {
 	return MultiSpinnerRow{
-		Text: text,
+		Text:   text,
 		Status: "",
 	}
 }
 
 func (m *MultiSpinner) RowSuccess(index int) {
-	if NoProgress {
-		return
-	}
 	m.rows[index].Status = m.SuccessStatus
 	m.rows[index].Text = pterm.FgLightGreen.Sprint(m.rows[index].Text)
+	if NoProgress {
+		Successf(m.rows[index].Text)
+	}
 }
 
 func (m *MultiSpinner) RowError(index int) {
-	if NoProgress {
-		return
-	}
 	m.rows[index].Status = m.ErrorStatus
 	m.rows[index].Text = pterm.FgLightRed.Sprint(m.rows[index].Text)
+	if NoProgress {
+		Warnf(m.rows[index].Text)
+	}
+}
+
+func (m *MultiSpinner) GetContent() []MultiSpinnerRow {
+	return m.rows
 }
