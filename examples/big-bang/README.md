@@ -15,7 +15,6 @@ components:
           - config/ingress.yaml # adds istio certs for *.bigbang.dev
           - config/kyverno.yaml # turns on kyverno
           - config/loki.yaml # turns on loki and monitoring
-          - config/patch-images.yaml # fixes upstream bug in BB
 ```
 
 The `bigbang` noun sits within the `extensions` specification of Zarf and provides the following configuration:
