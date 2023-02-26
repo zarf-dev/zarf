@@ -64,14 +64,13 @@ components:
     required: true
     extensions:
       bigbang:
-        version: 1.52.0
+        version: 1.54.0
         skipFlux: false
         valuesFiles:
           - config/minimal.yaml #turns on just istio
           - config/ingress.yaml # adds istio certs for *.bigbang.dev
           - config/kyverno.yaml # turns on kyverno
           - config/loki.yaml # turns on loki and monitoring
-          - config/patch-images.yaml # fixes upstream bug in BB
 ```
 
 This component uses the `bigbang` extension to define the version of Big Bang to use and the values files to apply.  Feel free to inspect and configure the values.yaml files as you wish and to learn more about Big Bang's configuration see their values guide: https://docs-bigbang.dso.mil/latest/docs/guides/using-bigbang/values-guide/
