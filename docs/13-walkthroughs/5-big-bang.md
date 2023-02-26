@@ -83,7 +83,7 @@ The `valuesFiles` are applied from top to bottom and will apply the last value t
 
 :::note
 
-Versions of Big Bang prior to `1.54.0` require the `config/patch-images.yaml` values file to be included.
+This extension works best with Big Bang version `1.54.0` or later.  Version `1.53.0` requires manual patches to images to function correctly.
 
 :::
 
