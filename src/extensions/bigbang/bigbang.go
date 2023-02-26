@@ -198,7 +198,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	return c, nil
 }
 
-// isValidVesion check if the version is 1.52.0 or greater.
+// isValidVersion check if the version is 1.53.0 or greater.
 func isValidVersion(version string) bool {
 	// Split the version string into its major, minor, and patch components
 	parts := strings.Split(version, ".")
