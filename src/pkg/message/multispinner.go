@@ -64,6 +64,16 @@ func NewMultiSpinner() *MultiSpinner {
 // renderText renders the rows into a string to be used by pterm.AreaPrinter.
 func (m *MultiSpinner) renderText() string {
 	var outputRows []string
+	for i := len(m.rows) - 1; i >= 0; i-- {
+		if m.rows[i].Status == RowStatusSuccess || m.rows[i].Status == RowStatusError {
+			if m.rows[i].Status == RowStatusSuccess {
+				Successf(m.rows[i].Text)
+			} else {
+				Warnf(m.rows[i].Text)
+			}
+			m.rows = append(m.rows[:i], m.rows[i+1:]...)
+		}
+	}
 	for idx, row := range m.rows {
 		for i, s := range sequence {
 			if s == row.Status {
@@ -71,10 +81,7 @@ func (m *MultiSpinner) renderText() string {
 				break
 			}
 		}
-		var timer string
-		if row.Status != RowStatusSuccess && row.Status != RowStatusError {
-			timer = pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
-		}
+		timer := pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
 		outputRows = append(outputRows, fmt.Sprintf("%s %s%s", row.Status, row.Text, timer))
 	}
 	return strings.Join(outputRows, "\n")
