@@ -121,7 +121,7 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 // If the current implementation causes memory issues, we can
 // refactor to use oras.Copy which uses a memory buffer.
 func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error {
-	mSpinner := message.NewMultiSpinner().Start()
+	mSpinner := message.NewMultiSpinner()
 	defer mSpinner.Stop()
 	_ = os.Mkdir(out, 0755)
 	repo, ctx, err := p.orasRemote(ref)

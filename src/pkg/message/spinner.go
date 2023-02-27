@@ -181,24 +181,19 @@ func NewMultiSpinner() *MultiSpinner {
 	if activeMultiSpinner != nil {
 		return activeMultiSpinner
 	}
-	var area *pterm.AreaPrinter
-	area, _ = pterm.DefaultArea.
+	area, _ := pterm.DefaultArea.
 		WithRemoveWhenDone(false).Start()
-	return &MultiSpinner{
-		area: area,
+	m := &MultiSpinner{
+		area:      area,
+		startedAt: time.Now(),
 	}
-}
-
-// Start starts the multispinner and a goroutine to re-render the rows.
-func (m MultiSpinner) Start() *MultiSpinner {
-	m.startedAt = time.Now()
-	activeMultiSpinner = &m
+	activeMultiSpinner = m
 	delay := pterm.DefaultSpinner.Delay
-
 	if NoProgress {
-		return &m
+		_ = activeMultiSpinner.area.Stop()
+		activeMultiSpinner = nil
+		return m
 	}
-
 	go func() {
 		for activeMultiSpinner != nil {
 			text := m.renderText()
@@ -206,7 +201,7 @@ func (m MultiSpinner) Start() *MultiSpinner {
 			time.Sleep(delay)
 		}
 	}()
-	return &m
+	return m
 }
 
 // renderText renders the rows into a string to be used by pterm.AreaPrinter.

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -107,7 +106,7 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 
 func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	message.Infof("Publishing package to %s", ref)
-	mSpinner := message.NewMultiSpinner().Start()
+	mSpinner := message.NewMultiSpinner()
 	defer mSpinner.Stop()
 
 	dst, ctx, err := p.orasRemote(ref)
@@ -207,7 +206,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		}
 	}
 
-	// stop the spinner between push attempts
+	// kill the spinner, otherwise messages will get clobbered
 	mSpinner.Stop()
 
 	if err == nil {
@@ -215,7 +214,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		message.Successf("Digest: %s", root.Digest)
 		return nil
 	}
-	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.")
+	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.\n")
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
@@ -239,6 +238,9 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	if err != nil {
 		return err
 	}
+	// push the manifest config
+	// since this config is so tiny, and the content is not used again
+	// it is not logged to the multispinner, but will error if it fails
 	err = dst.Push(ctx, manifestConfigDesc, bytes.NewReader(manifestConfigContent))
 	if err != nil {
 		return err
@@ -268,6 +270,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	}
 
 	// attempt to push the image manifest
+	mSpinner = message.NewMultiSpinner()
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return err
@@ -295,7 +298,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
-		return registry.Reference{}, errors.New("version is required for publishing")
+		ver = "0.0.1"
+		// return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
