@@ -26,15 +26,17 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/mholt/archiver/v3"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
 type Builder struct {
-	spinner    *message.Spinner
-	cachePath  string
-	imagesPath string
-	sbomPath   string
-	jsonList   []byte
+	spinner     *message.Spinner
+	cachePath   string
+	imagesPath  string
+	tmpSBOMPath string
+	sbomTarPath string
+	jsonList    []byte
 }
 
 //go:embed viewer/*
@@ -44,19 +46,21 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
+// func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, tmpPaths types.TempPaths) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
-		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
-		cachePath:  config.GetAbsCachePath(),
-		imagesPath: imagesPath,
-		sbomPath:   sbomPath,
+		spinner:     message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
+		cachePath:   config.GetAbsCachePath(),
+		imagesPath:  tmpPaths.Images,
+		sbomTarPath: tmpPaths.SbomTar,
+		tmpSBOMPath: filepath.Join(tmpPaths.Base, "sboms"),
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(builder.sbomPath, 0700)
+	_ = utils.CreateDirectory(builder.tmpSBOMPath, 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)
@@ -64,6 +68,9 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
 		return err
 	}
+	// else {
+	// builder.jsonList = json
+	// }
 	builder.jsonList = json
 
 	// Generate SBOM for each image
@@ -72,14 +79,17 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := images.LoadImage(imagesPath, tag)
+		img, err := images.LoadImage(tmpPaths.Images, tag)
 		if err != nil {
+			// <<<<<<< HEAD
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
 
 		jsonData, err := builder.createImageSBOM(img, tag)
 		if err != nil {
+			// =======
+			// >>>>>>> 3ee26b04 (save sboms to a tar.zst file instead of keeping them in a directory)
 			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
 			return err
 		}
@@ -125,7 +135,21 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, i
 		}
 	}
 
+	allSBOMFiles, err := filepath.Glob(filepath.Join(builder.tmpSBOMPath, "*"))
+	if err != nil {
+		builder.spinner.Errorf(err, "Unable to get a list of all SBOM files")
+		return err
+	}
+
+	err = archiver.Archive(allSBOMFiles, builder.sbomTarPath)
+	if err != nil {
+		builder.spinner.Errorf(err, "Unable to create the sbom archive")
+		return err
+	}
+
+	_ = os.RemoveAll(builder.tmpSBOMPath)
 	builder.spinner.Success()
+
 	return nil
 }
 
@@ -266,6 +290,6 @@ func (b *Builder) getNormalizedFileName(identifier string) string {
 }
 
 func (b *Builder) createSBOMFile(filename string) (*os.File, error) {
-	path := filepath.Join(b.sbomPath, b.getNormalizedFileName(filename))
+	path := filepath.Join(b.tmpSBOMPath, b.getNormalizedFileName(filename))
 	return os.Create(path)
 }

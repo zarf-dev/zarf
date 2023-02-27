@@ -84,6 +84,6 @@ type TempPaths struct {
 	SeedImage    string
 	Images       string
 	Components   string
-	Sboms        string
+	SbomTar      string
 	ZarfYaml     string
 }
