@@ -5,12 +5,18 @@
 package bigbang
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/pterm/pterm"
 )
 
 func printBanner() {
+	// Don't print the banner if the user has disabled it.
+	if message.NoProgress {
+		return
+	}
 	// Only print the banner if the terminal is wide enough.
 	if pterm.GetTerminalWidth() < 125 {
+		message.Note("Loading Big Bang extension (this may take a few minutes)")
 		return
 	}
 

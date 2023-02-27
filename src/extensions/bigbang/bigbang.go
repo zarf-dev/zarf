@@ -104,7 +104,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, urls...)
 
 	// Generate a list of HelmReleases that need to be deployed in order.
-	helmReleases := sortDependencies(hrDependencies)
+	helmReleases := utils.SortDependencies(hrDependencies)
 
 	tenMinsInSecs := 10 * 60
 
@@ -219,10 +219,9 @@ func isValidVersion(version string) bool {
 // findBBResources takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findBBResources(t string) (urls []string, dependencies map[string][]string) {
+func findBBResources(t string) (urls []string, dependencies []utils.DependsOn) {
 	// Break the template into separate resources.
 	yamls, _ := utils.SplitYAMLToString([]byte(t))
-	dependencies = map[string][]string{}
 
 	for _, y := range yamls {
 		var (
@@ -236,11 +235,14 @@ func findBBResources(t string) (urls []string, dependencies map[string][]string)
 
 		// If the resource is a HelmRelease, parse it for the dependencies.
 		if h.Kind == fluxHelmCtrl.HelmReleaseKind {
-			name := h.ObjectMeta.Name
-			dependencies[name] = []string{}
+			var deps []string
 			for _, d := range h.Spec.DependsOn {
-				dependencies[name] = append(dependencies[name], d.Name)
+				deps = append(deps, d.Name)
 			}
+			dependencies = append(dependencies, utils.DependsOn{
+				Name:         h.ObjectMeta.Name,
+				Dependencies: deps,
+			})
 
 			// Skip the rest as this is not a GitRepository.
 			continue
