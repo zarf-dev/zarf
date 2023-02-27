@@ -104,7 +104,10 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, urls...)
 
 	// Generate a list of HelmReleases that need to be deployed in order.
-	helmReleases := utils.SortDependencies(hrDependencies)
+	helmReleases, err := utils.SortDependencies(hrDependencies)
+	if err != nil {
+		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
+	}
 
 	tenMinsInSecs := 10 * 60
 

@@ -7,6 +7,8 @@ package utils
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSortDependencies(t *testing.T) {
@@ -14,6 +16,7 @@ func TestSortDependencies(t *testing.T) {
 		name     string
 		data     []DependsOn // input data: a map of nodes to their dependencies
 		expected []string    // expected output: a slice of nodes in order of their precedence
+		success  bool        // whether the test should succeed or fail
 	}{
 		{
 			name: "simple graph",
@@ -32,6 +35,7 @@ func TestSortDependencies(t *testing.T) {
 			},
 			// C has no dependencies, B depends on C, and A depends on both B and C
 			expected: []string{"C", "B", "A"},
+			success:  true,
 		},
 		{
 			name: "complex graph",
@@ -57,6 +61,7 @@ func TestSortDependencies(t *testing.T) {
 				},
 			},
 			expected: []string{"E", "D", "C", "B", "A"},
+			success:  true,
 		},
 		{
 			name: "graph with multiple roots",
@@ -84,6 +89,7 @@ func TestSortDependencies(t *testing.T) {
 				},
 			},
 			expected: []string{"F", "B", "A", "E", "C", "D"},
+			success:  true,
 		},
 		{
 			name: "graph with multiple sinks",
@@ -115,12 +121,37 @@ func TestSortDependencies(t *testing.T) {
 				},
 			},
 			expected: []string{"F", "C", "E", "B", "G", "D", "A"},
+			success:  true,
+		},
+		{
+			name: "graph with circular dependencies",
+			data: []DependsOn{
+				{
+					Name:         "A",
+					Dependencies: []string{"B"},
+				},
+				{
+					Name:         "B",
+					Dependencies: []string{"C"},
+				},
+				{
+					Name:         "C",
+					Dependencies: []string{"A"},
+				},
+			},
+			expected: []string{},
+			success:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := SortDependencies(tt.data)
+			result, err := SortDependencies(tt.data)
+			if tt.success {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("expected %v but got %v", tt.expected, result)
 			}

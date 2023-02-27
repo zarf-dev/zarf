@@ -4,6 +4,8 @@
 // Package utils provides generic helper functions.
 package utils
 
+import "fmt"
+
 // DependsOn is a struct that represents a node in a list of dependencies.
 type DependsOn struct {
 	Name         string
@@ -20,7 +22,7 @@ type DependsOn struct {
 //
 // Note sort order is dependent on the slice order of the input data for
 // nodes with the same in-degree (i.e. the same number of dependencies).
-func SortDependencies(data []DependsOn) []string {
+func SortDependencies(data []DependsOn) ([]string, error) {
 	// Initialize the in-degree and out-degree maps.
 	inDegree := make(map[string]int)
 	outDegree := make(map[string][]string)
@@ -70,10 +72,10 @@ func SortDependencies(data []DependsOn) []string {
 	// Return an empty result list to indicate this.
 	for _, degree := range inDegree {
 		if degree > 0 {
-			return []string{}
+			return result, fmt.Errorf("dependency cycle detected")
 		}
 	}
 
 	// Return the result list.
-	return result
+	return result, nil
 }
