@@ -7,19 +7,20 @@ package packager
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -127,74 +128,48 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		return err
 	}
 
-	// get the manifest descriptor
-	descriptor, err := repo.Resolve(ctx, ref.Reference)
-	if err != nil {
-		return err
-	}
-
-	// get the manifest itself
-	pulled, err := content.FetchAll(ctx, repo, descriptor)
-	if err != nil {
-		return err
-	}
-	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
-	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return err
-		}
-		layers = manifest.Layers
-	}
-
 	first30last30 := func(s string) string {
 		if len(s) > 60 {
 			return s[0:27] + "..." + s[len(s)-26:]
 		}
 		return s
 	}
-
-	// get the layers
-	for idx, layer := range layers {
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = p.cfg.DeployOpts.CopyOptions.Concurrency
+	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		rows := mSpinner.GetContent()
-		path := filepath.Join(out, layer.Annotations[ocispec.AnnotationTitle])
-		rows = append(rows, message.NewMultiSpinnerRow(fmt.Sprintf("%s %s", layer.Digest.Hex()[:12], first30last30(layer.Annotations[ocispec.AnnotationTitle]))))
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Hex()[:12], first30last30(title))
+		} else {
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+		}
+		rows = append(rows, message.NewMultiSpinnerRow(format))
 		mSpinner.Update(rows)
-		// if the file exists and the size matches, skip it
-		info, err := os.Stat(path)
-		if err == nil && info.Size() == layer.Size {
-			mSpinner.RowSuccess(idx)
-			continue
+		return nil
+	}
+	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
+		rows := mSpinner.GetContent()
+		for idx, row := range rows {
+			if strings.HasPrefix(row.Text, desc.Digest.Hex()[:12]) {
+				mSpinner.RowSuccess(idx)
+				break
+			}
 		}
+		return nil
+	}
+	copyOpts.PostCopy = copyOpts.OnCopySkipped
 
-		layerContent, err := content.FetchAll(ctx, repo, layer)
-		if err != nil {
-			return err
-		}
+	dst, err := file.New(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
 
-		parent := filepath.Dir(path)
-		if parent != "." {
-			_ = os.MkdirAll(parent, 0755)
-		}
-
-		file, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		_, err = file.Write(layerContent)
-		if err != nil {
-			return err
-		}
-		mSpinner.RowSuccess(idx)
+	_, err = oras.Copy(ctx, repo,ref.Reference, dst, ref.Reference, copyOpts)
+	if err != nil {
+		return err
 	}
 
 	return nil

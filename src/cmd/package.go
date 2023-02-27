@@ -301,11 +301,13 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
+	v.SetDefault(V_PKG_DEPLOY_PULL_CONCURRENCY, 3)
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	deployFlags.IntVar(&pkgConfig.DeployOpts.CopyOptions.Concurrency, "pull-concurrency", v.GetInt(V_PKG_DEPLOY_PULL_CONCURRENCY), lang.CmdPackageDeployFlagPullConcurrency)
 }
 
 func bindInspectFlags() {
@@ -326,5 +328,5 @@ func bindPublishFlags() {
 
 	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
 
-	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), "Number of concurrent uploads to the registry")
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
