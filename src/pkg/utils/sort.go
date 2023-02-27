@@ -4,6 +4,7 @@
 // Package utils provides generic helper functions.
 package utils
 
+// DependsOn is a struct that represents a node in a list of dependencies.
 type DependsOn struct {
 	Name         string
 	Dependencies []string
