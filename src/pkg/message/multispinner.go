@@ -117,6 +117,10 @@ func NewMultiSpinnerRow(text string) MultiSpinnerRow {
 	}
 }
 
+func (m *MultiSpinner) AddRow(row MultiSpinnerRow) {
+	m.rows = append(m.rows, row)
+}
+
 // RowSuccess sets the status of a row to success.
 func (m *MultiSpinner) RowSuccess(index int) {
 	m.rows[index].Status = RowStatusSuccess

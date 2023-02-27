@@ -132,7 +132,6 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.DeployOpts.CopyOptions.Concurrency
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		rows := mSpinner.GetContent()
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
 		if title != "" {
@@ -140,8 +139,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		} else {
 			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
-		rows = append(rows, message.NewMultiSpinnerRow(format))
-		mSpinner.Update(rows)
+		mSpinner.AddRow(message.NewMultiSpinnerRow(format))
 		return nil
 	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {

@@ -171,7 +171,6 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		rows := mSpinner.GetContent()
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
 		if title != "" {
@@ -179,8 +178,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		} else {
 			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
-		rows = append(rows, message.NewMultiSpinnerRow(format))
-		mSpinner.Update(rows)
+		mSpinner.AddRow(message.NewMultiSpinnerRow(format))
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
