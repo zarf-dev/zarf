@@ -5,6 +5,10 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/mholt/archiver/v3"
@@ -41,6 +45,27 @@ var archiverDecompressCmd = &cobra.Command{
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
 			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
+		}
+
+		// Decompress component layers in the destination path
+		if decompressLayers {
+			layersDir := filepath.Join(destinationPath, "components")
+
+			files, err := os.ReadDir(layersDir)
+			if err != nil {
+				message.Fatalf(err, "failed to read the layers of components")
+			}
+			for _, file := range files {
+				if strings.HasSuffix(file.Name(), "tar.zst") {
+					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
+						message.Fatalf(err, "failed to decompress the component layer")
+					} else {
+						// Without unarchive error, delete original tar.zst in component folder
+						// This will leave the tar.zst if their is a failure for post mortem check
+						_ = os.Remove(filepath.Join(layersDir, file.Name()))
+					}
+				}
+			}
 		}
 	},
 }
