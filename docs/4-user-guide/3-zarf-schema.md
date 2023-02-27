@@ -139,7 +139,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Disable compression of this package
+**Description:** Disable compression of the components section of this package
 
 |          |           |
 | -------- | --------- |

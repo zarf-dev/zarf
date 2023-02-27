@@ -650,7 +650,7 @@
         },
         "uncompressed": {
           "type": "boolean",
-          "description": "Disable compression of this package"
+          "description": "Disable compression of the components section of this package"
         },
         "architecture": {
           "type": "string",
