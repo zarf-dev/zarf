@@ -172,6 +172,12 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		})
 	}
 
+	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
+	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, types.ZarfComponentAction{
+		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
+		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
+	})
+
 	// Select the images needed to support the repos for this configuration of Big Bang.
 	for _, r := range c.Repos {
 		images, err := helm.FindImagesForChartRepo(r, "chart")
