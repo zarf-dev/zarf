@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -212,7 +213,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		message.Successf("Digest: %s", root.Digest)
 		return nil
 	}
-	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.\n")
+	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.")
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
@@ -296,8 +297,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
-		ver = "0.0.1"
-		// return registry.Reference{}, errors.New("version is required for publishing")
+		return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
