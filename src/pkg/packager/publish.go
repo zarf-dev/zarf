@@ -11,8 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -33,8 +35,6 @@ func (p *Packager) Publish() error {
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
 
 	paths := []string{
 		p.tmp.ZarfYaml,
@@ -69,7 +69,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	err = p.publish(ref, paths, spinner)
+	err = p.publish(ref, paths)
 	if err != nil {
 		return fmt.Errorf("unable to publish package %s: %w", ref, err)
 	}
@@ -105,9 +105,10 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
-func (p *Packager) publish(ref registry.Reference, paths []string, spinner *message.Spinner) error {
-	message.Debugf("Publishing package to %s", ref)
-	spinner.Updatef("Publishing package to: %s", ref)
+func (p *Packager) publish(ref registry.Reference, paths []string) error {
+	message.Infof("Publishing package to %s", ref)
+	mSpinner := message.NewMultiSpinner().Start()
+	defer mSpinner.Stop()
 
 	dst, ctx, err := p.orasRemote(ref)
 	if err != nil {
@@ -151,28 +152,16 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if desc.Annotations[ocispec.AnnotationTitle] != "" {
-			message.Successf("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
-		} else {
-			message.Successf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+		rows := mSpinner.GetContent()
+		for idx, row := range rows {
+			if strings.HasPrefix(row.Text, desc.Digest.Encoded()[:12]) {
+				mSpinner.RowSuccess(idx)
+				break
+			}
 		}
 		return nil
 	}
-	copyOpts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if desc.Annotations[ocispec.AnnotationTitle] != "" {
-			message.Successf("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
-		} else {
-			message.Successf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
-		}
-		return nil
-	}
-
-	push := func(root ocispec.Descriptor) error {
-		message.Debugf("root descriptor: %v\n", root)
-		tag := dst.Reference.Reference
-		_, err := oras.Copy(ctx, store, root.Digest.String(), dst, tag, copyOpts)
-		return err
-	}
+	copyOpts.PostCopy = copyOpts.OnCopySkipped
 
 	// first attempt to do a ArtifactManifest push
 	root, err := pack(ocispec.MediaTypeArtifactManifest)
@@ -183,12 +172,16 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		message.Debug("layer", desc.Digest.Hex()[:12], "is being pushed")
-		if desc.Annotations[ocispec.AnnotationTitle] != "" {
-			spinner.Updatef("%s %s", desc.Digest.Hex()[:12], desc.Annotations[ocispec.AnnotationTitle])
+		rows := mSpinner.GetContent()
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
 		} else {
-			spinner.Updatef("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
+		rows = append(rows, message.NewMultiSpinnerRow(format))
+		mSpinner.Update(rows)
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
@@ -201,20 +194,35 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 	}
 
 	// attempt to push the artifact manifest
-	if err = push(root); err == nil {
-		spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
+	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	rows := mSpinner.GetContent()
+	for idx, row := range rows {
+		if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
+			if err != nil {
+				mSpinner.RowError(idx)
+			} else {
+				mSpinner.RowSuccess(idx)
+			}
+			break
+		}
+	}
+
+	// stop the spinner between push attempts
+	mSpinner.Stop()
+
+	if err == nil {
 		message.Successf("Published: %s [%s]", ref, root.MediaType)
 		message.Successf("Digest: %s", root.Digest)
 		return nil
 	}
+	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.")
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
 	// if copyRootAttempted is false here, then there was an error generated before
 	// the root was copied. This is unexpected, so return the error.
 	if !copyRootAttempted {
-		message.Debug("Push failed before the manifest was pushed, returning the error")
-		return err
+		return fmt.Errorf("push failed before the manifest was pushed, returning the error: %w", err)
 	}
 
 	// if the error returned from the push is not an expected error, then return the error
@@ -259,10 +267,23 @@ func (p *Packager) publish(ref registry.Reference, paths []string, spinner *mess
 		return nil, nil
 	}
 
-	if err = push(root); err != nil {
+	// attempt to push the image manifest
+	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	if err != nil {
 		return err
 	}
-	spinner.Updatef("Published: %s [%s]", ref, root.MediaType)
+	rows = mSpinner.GetContent()
+	for idx, row := range rows {
+		if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
+			if err != nil {
+				mSpinner.RowError(idx)
+			} else {
+				mSpinner.RowSuccess(idx)
+			}
+			break
+		}
+	}
+	mSpinner.Stop()
 	message.Successf("Published: %s [%s]", ref, root.MediaType)
 	message.Successf("Digest: %s", root.Digest)
 	return nil
@@ -282,9 +303,9 @@ func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 		arch = skeleton
 	}
 	ref := registry.Reference{
-		Registry: p.cfg.PublishOpts.Reference.Registry,
+		Registry:   p.cfg.PublishOpts.Reference.Registry,
 		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Reference.Repository, p.cfg.Pkg.Metadata.Name),
-		Reference: fmt.Sprintf("%s-%s", ver, arch),
+		Reference:  fmt.Sprintf("%s-%s", ver, arch),
 	}
 	if len(p.cfg.PublishOpts.Reference.Repository) == 0 {
 		ref.Repository = p.cfg.Pkg.Metadata.Name

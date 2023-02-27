@@ -16,6 +16,7 @@ import (
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -128,12 +129,6 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		return err
 	}
 
-	first30last30 := func(s string) string {
-		if len(s) > 60 {
-			return s[0:27] + "..." + s[len(s)-26:]
-		}
-		return s
-	}
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.DeployOpts.CopyOptions.Concurrency
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
@@ -141,9 +136,9 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
 		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Hex()[:12], first30last30(title))
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
 		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Hex()[:12], desc.MediaType)
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
 		rows = append(rows, message.NewMultiSpinnerRow(format))
 		mSpinner.Update(rows)
@@ -152,7 +147,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		rows := mSpinner.GetContent()
 		for idx, row := range rows {
-			if strings.HasPrefix(row.Text, desc.Digest.Hex()[:12]) {
+			if strings.HasPrefix(row.Text, desc.Digest.Encoded()[:12]) {
 				mSpinner.RowSuccess(idx)
 				break
 			}

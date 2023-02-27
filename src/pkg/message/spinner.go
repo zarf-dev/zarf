@@ -157,9 +157,9 @@ func (p *Spinner) Fatalf(err error, format string, a ...any) {
 
 // MultiSpinner is a wrapper around pterm.AreaPrinter and structures around rows to track the state of each spinner.
 type MultiSpinner struct {
-	area          *pterm.AreaPrinter
-	startedAt     time.Time
-	rows          []MultiSpinnerRow
+	area      *pterm.AreaPrinter
+	startedAt time.Time
+	rows      []MultiSpinnerRow
 }
 
 // MultiSpinnerRow is a row in a multispinner.
@@ -172,20 +172,20 @@ var activeMultiSpinner *MultiSpinner
 
 // RowStatusSuccess is the success status for a row.
 var RowStatusSuccess = pterm.FgLightGreen.Sprint("  ✔ ")
+
 // RowStatusError is the error status for a row.
 var RowStatusError = pterm.FgLightRed.Sprint("  ✖ ")
 
 // NewMultiSpinner creates a new multispinner instance if one does not exist.
 func NewMultiSpinner() *MultiSpinner {
 	if activeMultiSpinner != nil {
-		Debug("Active multi spinner already exists")
 		return activeMultiSpinner
 	}
 	var area *pterm.AreaPrinter
 	area, _ = pterm.DefaultArea.
 		WithRemoveWhenDone(false).Start()
 	return &MultiSpinner{
-		area:          area,
+		area: area,
 	}
 }
 
@@ -211,26 +211,21 @@ func (m MultiSpinner) Start() *MultiSpinner {
 
 // renderText renders the rows into a string to be used by pterm.AreaPrinter.
 func (m *MultiSpinner) renderText() string {
-	var text string
+	var outputRows []string
 	for idx, row := range m.rows {
-		switch row.Status {
-		case "":
-			m.rows[idx].Status = sequence[0]
-		default:
-			for i, s := range sequence {
-				if s == row.Status {
-					m.rows[idx].Status = sequence[(i+1)%len(sequence)]
-					break
-				}
+		for i, s := range sequence {
+			if s == row.Status {
+				m.rows[idx].Status = sequence[(i+1)%len(sequence)]
+				break
 			}
 		}
 		var timer string
 		if row.Status != RowStatusSuccess && row.Status != RowStatusError {
 			timer = pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
 		}
-		text += fmt.Sprintf("%s %s%s\n", row.Status, row.Text, timer)
+		outputRows = append(outputRows, fmt.Sprintf("%s %s%s", row.Status, row.Text, timer))
 	}
-	return text
+	return strings.Join(outputRows, "\n")
 }
 
 // Stop stops the multispinner.
@@ -266,7 +261,7 @@ func (m *MultiSpinner) Update(rows []MultiSpinnerRow) {
 func NewMultiSpinnerRow(text string) MultiSpinnerRow {
 	return MultiSpinnerRow{
 		Text:   text,
-		Status: "",
+		Status: sequence[0],
 	}
 }
 
