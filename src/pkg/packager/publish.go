@@ -75,12 +75,8 @@ func (p *Packager) Publish() error {
 	componentTarballs := []string{}
 	// repackage the component directories into tarballs
 	for _, componentDir := range componentDirs {
-		all, err := filepath.Glob(filepath.Join(componentDir, "*"))
-		if err != nil {
-			return err
-		}
 		dst := filepath.Join(p.tmp.Base, "components", filepath.Base(componentDir)+".tar.zst")
-		err = archiver.Archive(all, dst)
+		err = archiver.Archive([]string{componentDir}, dst)
 		if err != nil {
 			return err
 		}
