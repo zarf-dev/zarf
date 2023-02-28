@@ -125,7 +125,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 - Automates Kubernetes deployments in disconnected environments.
 - Automates [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation.
 - Provides an [SBOM dashboard UI](dashboard-ui/sbom-dashboard).
-- Convert SBOM JSON file into other formats (.xpdx or .cyclone.dx) to meet goverment compliance.
+- Convert SBOM JSON file into government compliant format (.xpdx or .cyclone.dx).
 - Deploys a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [Kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/).
 - Built-in logging stack with [Loki](https://grafana.com/oss/loki/).
 - Built-in git server with [Gitea](https://gitea.com/).
