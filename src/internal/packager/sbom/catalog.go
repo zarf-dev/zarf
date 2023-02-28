@@ -68,9 +68,6 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
 		return err
 	}
-	// else {
-	// builder.jsonList = json
-	// }
 	builder.jsonList = json
 
 	// Generate SBOM for each image
@@ -81,15 +78,12 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		// Get the image that we are creating an SBOM for
 		img, err := images.LoadImage(tmpPaths.Images, tag)
 		if err != nil {
-			// <<<<<<< HEAD
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
 
 		jsonData, err := builder.createImageSBOM(img, tag)
 		if err != nil {
-			// =======
-			// >>>>>>> 3ee26b04 (save sboms to a tar.zst file instead of keeping them in a directory)
 			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
 			return err
 		}
