@@ -115,10 +115,19 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 	}, nil
 }
 
+// Pull pulls a Zarf package and stores it in the cache.
+func (p *Packager) Pull() error {
+	err := p.loadZarfPkg()
+	if err != nil {
+		return err
+	}
+	name := fmt.Sprintf("zarf-package-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
+	message.Info(name)
+	// archiver.Archive([]string{p.tmp.Base}, )
+	return nil
+}
+
 // PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
-//
-// If the current implementation causes memory issues, we can
-// refactor to use oras.Copy which uses a memory buffer.
 func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error {
 	message.Infof("Pulling Zarf package from %s", ref)
 	spinner := message.NewProgressSpinner("")
@@ -130,7 +139,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 	}
 
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.DeployOpts.CopyOptions.Concurrency
+	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]

@@ -201,7 +201,6 @@ const (
 	CmdPackageDeployFlagComponents      = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum          = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget            = "Path to public sget key file for remote packages signed via cosign"
-	CmdPackageDeployFlagPullConcurrency = "Number of concurrent layer pulls to perform when deploying a package stored in an OCI registry."
 
 	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
@@ -209,7 +208,7 @@ const (
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
-	CmdPackagePublishFlagConcurrency = "Number of concurrent layer pushes to perform when publishing a package to an OCI registry."
+	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

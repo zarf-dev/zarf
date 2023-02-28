@@ -56,7 +56,6 @@ const (
 	V_PKG_DEPLOY_COMPONENTS         = "package.deploy.components"
 	V_PKG_DEPLOY_SHASUM             = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET               = "package.deploy.sget"
-	V_PKG_DEPLOY_PULL_CONCURRENCY   = "package.deploy.pull_concurrency"
 
 	// Package publish config keys
 	V_PKG_PUBLISH_CONCURRENCY        = "package.publish.concurrency"

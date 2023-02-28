@@ -24,7 +24,6 @@ type ZarfDeployOptions struct {
 	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	CopyOptions  oras.CopyOptions  `json:"copyOptions" jsonschema:"description=Options for the copy operation"`
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.

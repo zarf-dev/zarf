@@ -200,7 +200,7 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:     "publish [PACKAGE] [REGISTRY]",
+	Use:     "publish [PACKAGE] [REPOSITORY]",
 	Short:   "Publish a Zarf package to a remote registry",
 	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
 	Args:    cobra.ExactArgs(2),
@@ -223,6 +223,28 @@ var packagePublishCmd = &cobra.Command{
 		// Publish the package
 		if err := pkgClient.Publish(); err != nil {
 			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+		}
+	},
+}
+
+var packagePullCmd = &cobra.Command{
+	Use:     "pull [REFERENCE]",
+	Short:   "Pull a Zarf package from a remote registry and save to the local file system",
+	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !strings.HasPrefix(args[0], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Pull the package
+		if err := pkgClient.Pull(); err != nil {
+			message.Fatalf(err, "Failed to pull package: %s", err.Error())
 		}
 	},
 }
@@ -262,12 +284,14 @@ func init() {
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
 	packageCmd.AddCommand(packagePublishCmd)
+	packageCmd.AddCommand(packagePullCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
 	bindPublishFlags()
+	bindPullFlags()
 }
 
 func bindCreateFlags() {
@@ -301,13 +325,13 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_DEPLOY_PULL_CONCURRENCY, 3)
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	deployFlags.IntVar(&pkgConfig.DeployOpts.CopyOptions.Concurrency, "pull-concurrency", v.GetInt(V_PKG_DEPLOY_PULL_CONCURRENCY), lang.CmdPackageDeployFlagPullConcurrency)
+	// naming this flag "concurrency" is a bit confusing, as components do not deploy concurrently, but it's the same as the flag in the publish command
+	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
 
 func bindInspectFlags() {
@@ -329,4 +353,10 @@ func bindPublishFlags() {
 	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
 
 	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+}
+
+func bindPullFlags() {
+	pullFlags := packagePullCmd.Flags()
+
+	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
