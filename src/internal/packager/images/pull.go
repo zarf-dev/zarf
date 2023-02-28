@@ -79,12 +79,9 @@ func (i *ImgConfig) PullAll() error {
 
 	spinner.Success()
 	title := fmt.Sprintf("Pulling %d images (%s of %d)", imgCount, "0", imgCount)
-	progressBar := message.NewProgressBar(int64(imgCount), title)
+	spinner = message.NewProgressSpinner(title)
 
 	for tag, img := range tagToImage {
-		// Update the progress bar
-		title = fmt.Sprintf("Pulling %d images (%d of %d)", imgCount, len(digestToTag)+1, imgCount)
-		progressBar.Update(int64(len(digestToTag)), title)
 
 		// Save the image
 		err := crane.SaveOCI(img, i.ImagesPath)
@@ -98,11 +95,14 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 		digestToTag[imgDigest.String()] = tag.String()
+		spinner.Updatef("Pulling image (%d of %d): %s", len(digestToTag), imgCount, tag.Name())
 	}
 
 	if err := addImageNameAnnotation(i.ImagesPath, digestToTag); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
+
+	spinner.Successf("Finished pulling %d images", imgCount)
 
 	return nil
 }
