@@ -126,10 +126,6 @@ func (p *Packager) handleOciPackage() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
-	// patch docker.io to registry-1.docker.io
-	if ref.Registry == "docker.io" {
-		ref.Registry = "registry-1.docker.io"
-	}
 
 	out := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())

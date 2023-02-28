@@ -106,8 +106,8 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 
 func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	message.Infof("Publishing package to %s", ref)
-	mSpinner := message.NewMultiSpinner()
-	defer mSpinner.Stop()
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
 
 	dst, ctx, err := p.orasRemote(ref)
 	if err != nil {
@@ -150,6 +150,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
+	spinner.Updatef("Pushing %d layers concurrently", copyOpts.Concurrency)
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -158,7 +159,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		} else {
 			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
-		mSpinner.RowSuccess(format)
+		message.Successf(format)
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
@@ -172,14 +173,6 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	copyRootAttempted := false
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		title := desc.Annotations[ocispec.AnnotationTitle]
-		var format string
-		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-		}
-		mSpinner.AddRow(message.NewMultiSpinnerRow(format))
 		if content.Equal(root, desc) {
 			// copyRootAttempted helps track whether the returned error is
 			// generated from copying root.
@@ -193,28 +186,12 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	// rows := mSpinner.GetContent()
-	// I HATE THIS
-	// for _, row := range rows {
-	// 	if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
-	// 		if err != nil {
-	// 			mSpinner.RowError("")
-	// 		} else {
-	// 			mSpinner.RowSuccess("")
-	// 		}
-	// 		break
-	// 	}
-	// }
-
-	// kill the spinner, otherwise messages will get clobbered
-	mSpinner.Stop()
 
 	if err == nil {
-		message.Successf("Published: %s [%s]", ref, root.MediaType)
-		message.Successf("Digest: %s", root.Digest)
+		message.Infof("Published: %s [%s]", ref, root.MediaType)
+		message.Infof("Digest: %s", root.Digest)
 		return nil
 	}
-	message.Warn("Creation of an OCI artifact failed, falling back to an OCI image manifest.")
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
@@ -270,26 +247,12 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	}
 
 	// attempt to push the image manifest
-	// mSpinner = message.NewMultiSpinner()
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
-	// I HATE THIS 2 - WE ARE ONLY DOING ONE THING THIS SHOULD BE A REGULAR SPINNER
-	// rows = mSpinner.GetContent()
-	// for _, row := range rows {
-	// 	if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
-	// 		if err != nil {
-	// 			mSpinner.RowError("")
-	// 		} else {
-	// 			mSpinner.RowSuccess("")
-	// 		}
-	// 		break
-	// 	}
-	// }
-	// mSpinner.Stop()
-	message.Successf("Published: %s [%s]", ref, root.MediaType)
-	message.Successf("Digest: %s", root.Digest)
+	message.Infof("Published: %s [%s]", ref, root.MediaType)
+	message.Infof("Digest: %s", root.Digest)
 	return nil
 }
 

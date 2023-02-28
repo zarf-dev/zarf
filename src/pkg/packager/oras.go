@@ -120,8 +120,9 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 // If the current implementation causes memory issues, we can
 // refactor to use oras.Copy which uses a memory buffer.
 func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error {
-	mSpinner := message.NewMultiSpinner()
-	defer mSpinner.Stop()
+	message.Infof("Pulling Zarf package from %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
 	_ = os.Mkdir(out, 0755)
 	repo, ctx, err := p.orasRemote(ref)
 	if err != nil {
@@ -130,17 +131,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.DeployOpts.CopyOptions.Concurrency
-	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		title := desc.Annotations[ocispec.AnnotationTitle]
-		var format string
-		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-		}
-		mSpinner.AddRow(message.NewMultiSpinnerRow(format))
-		return nil
-	}
+	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -149,7 +140,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		} else {
 			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
-		mSpinner.RowSuccess(format)
+		message.Successf(format)
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
