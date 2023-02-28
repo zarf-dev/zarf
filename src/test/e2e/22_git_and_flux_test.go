@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -116,36 +115,8 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	var kubectlOut []byte
-	timeout := time.After(3 * time.Minute)
-
-timer:
-	for {
-		// delay check 3 seconds
-		time.Sleep(2 * time.Second)
-		select {
-
-		// on timeout abort
-		case <-timeout:
-			t.Error("Timeout waiting for flux podinfo deployment")
-
-			break timer
-
-		// after delay, try running
-		default:
-			// Check that flux deployed the podinfo example
-			kubectlOut, err = exec.Command("kubectl", "wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s").Output()
-			// Log error
-			if err != nil {
-				t.Log(string(kubectlOut), err)
-			} else {
-				// Otherwise, break the loop and continue
-				break timer
-			}
-		}
-	}
-
-	assert.Contains(t, string(kubectlOut), "condition met")
+	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
+	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 }
 
 func testRemovingTagsOnCreate(t *testing.T) {

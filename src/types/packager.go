@@ -15,6 +15,9 @@ type PackagerConfig struct {
 	// InitOpts tracks user-defined values for the active Zarf initialization.
 	InitOpts ZarfInitOptions
 
+	// PublishOpts tracks user-defined options used to publish the package
+	PublishOpts ZarfPublishOptions
+
 	// Track if CLI prompts should be generated
 	IsInteractive bool
 

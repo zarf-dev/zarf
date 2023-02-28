@@ -63,7 +63,16 @@ iterator:
 
 		// Inject into all the pods
 		for _, pod := range pods {
-			kubectlExec := fmt.Sprintf("kubectl exec -i -n %s %s -c %s ", data.Target.Namespace, pod, data.Target.Container)
+			// Try to use the embedded kubectl if we can
+			binPath, err := utils.GetFinalExecutablePath()
+			if err != nil {
+				message.Warnf("Unable to get the final executable path, falling back to host kubectl: %s", err)
+				binPath = ""
+			} else {
+				binPath = fmt.Sprintf("%s tools ", binPath)
+			}
+
+			kubectlExec := fmt.Sprintf("%skubectl exec -i -n %s %s -c %s ", binPath, data.Target.Namespace, pod, data.Target.Container)
 			tarExec := fmt.Sprintf("tar c%s", tarCompressFlag)
 			untarExec := fmt.Sprintf("tar x%svf - -C %s", tarCompressFlag, data.Target.Path)
 

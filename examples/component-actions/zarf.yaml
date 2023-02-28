@@ -151,3 +151,33 @@ components:
           - cmd: touch $ZARF_VAR_TEST_FILENAME
             env:
               - "ZARF_VAR_TEST_FILENAME=filename-from-env.txt"
+
+  - name: on-create-with-network-wait-action
+    description: This component will wait for 15 seconds for a network resource to be available
+    actions:
+      onCreate:
+        after:
+          - description: Cloudflare 1.1.1.1 site to be available
+            maxTotalSeconds: 15
+            wait:
+              network:
+                protocol: https
+                address: 1.1.1.1
+                code: 200
+
+  - name: on-deploy-with-wait-action
+    description: This component will wait for 5 seconds for the test-configmap to be exist
+    manifests:
+      - name: test-configmap
+        files:
+          - "test-configmap.yaml"
+    actions:
+      onDeploy:
+        after:
+          - description: The simple-configmap to exist
+            maxTotalSeconds: 5
+            wait:
+              cluster:
+                kind: configmap
+                name: simple-configmap
+                namespace: zarf

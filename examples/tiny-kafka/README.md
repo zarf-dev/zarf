@@ -39,6 +39,6 @@ Wait a few seconds for the cluster to deploy the package.
 Testing requires JDK and the Kafka tools: `sudo apt install openjdk-14-jdk-headless` (on Ubuntu). More details can be found at <https://kafka.apache.org/quickstart>. Steps to test:
 
 1. Install JDK and extract the Kafka tools from the package `kafka.tgz`
-2. Get the Nodeport: `NODEPORT=$(kubectl get service demo-kafka-external-bootstrap -n kafka-demo -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')`
+2. Get the Nodeport: `NODEPORT=$(zarf tools kubectl get service demo-kafka-external-bootstrap -n kafka-demo -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')`
 3. For pub: `./bin/kafka-console-producer.sh --broker-list localhost:$NODEPORT --topic cool-topic`
 4. For sub: `./bin/kafka-console-consumer.sh --bootstrap-server localhost:$NODEPORT --topic cool-topic`

@@ -11,9 +11,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -30,17 +32,15 @@ var outputInspectSBOM string
 var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
-	Short:   "Zarf package commands for creating, deploying, and inspecting packages",
+	Short:   lang.CmdPackageShort,
 }
 
 var packageCreateCmd = &cobra.Command{
 	Use:     "create [DIRECTORY]",
 	Aliases: []string{"c"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Use to create a Zarf package from a given directory or the current directory",
-	Long: "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
-		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
-		"'~/.git-credentials' and '~/.netrc'.\n",
+	Short:   lang.CmdPackageCreateShort,
+	Long:    lang.CmdPackageCreateLong,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		var baseDir string
@@ -74,8 +74,8 @@ var packageCreateCmd = &cobra.Command{
 var packageDeployCmd = &cobra.Command{
 	Use:     "deploy [PACKAGE]",
 	Aliases: []string{"d"},
-	Short:   "Use to deploy a Zarf package from a local file or URL (runs offline)",
-	Long:    "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster.",
+	Short:   lang.CmdPackageDeployShort,
+	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
@@ -98,11 +98,9 @@ var packageDeployCmd = &cobra.Command{
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [PACKAGE]",
 	Aliases: []string{"i"},
-	Short:   "Lists the payload of a Zarf package (runs offline)",
-	Long: "Lists the payload of a compiled package file (runs offline)\n" +
-		"Unpacks the package tarball into a temp directory and displays the " +
-		"contents of the archive.",
-	Args: cobra.MaximumNArgs(1),
+	Short:   lang.CmdPackageInspectShort,
+	Long:    lang.CmdPackageInspectLong,
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
@@ -110,9 +108,15 @@ var packageInspectCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
-			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+		if strings.HasPrefix(args[0], "oci://") {
+			if err := pkgClient.InspectOCI(); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
+		} else {
+			// Inspect the local package
+			if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
 		}
 	},
 }
@@ -120,12 +124,12 @@ var packageInspectCmd = &cobra.Command{
 var packageListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"l"},
-	Short:   "List out all of the packages that have been deployed to the cluster",
+	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
 		deployedZarfPackages, err := cluster.NewClusterOrDie().GetDeployedZarfPackages()
 		if err != nil {
-			message.Fatalf(err, "Unable to get the packages deployed to the cluster")
+			message.Fatalf(err, lang.CmdPackageListNoPackageWarn)
 		}
 
 		// Populate a pterm table of all the deployed packages
@@ -155,7 +159,7 @@ var packageRemoveCmd = &cobra.Command{
 	Use:     "remove {PACKAGE_NAME|PACKAGE_FILE}",
 	Aliases: []string{"u"},
 	Args:    cobra.ExactArgs(1),
-	Short:   "Use to remove a Zarf package that has been deployed already",
+	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
 
@@ -163,7 +167,7 @@ var packageRemoveCmd = &cobra.Command{
 		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
 		if isTarball(pkgName) {
 			if utils.InvalidPath(pkgName) {
-				message.Fatalf(nil, "Invalid tarball path provided")
+				message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
 			}
 
 			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -173,13 +177,13 @@ var packageRemoveCmd = &cobra.Command{
 			defer os.RemoveAll(tempPath)
 
 			if err := archiver.Extract(pkgName, config.ZarfYAML, tempPath); err != nil {
-				message.Fatalf(err, "Unable to extract the package contents")
+				message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
 			}
 
 			var pkgConfig types.ZarfPackage
 			configPath := filepath.Join(tempPath, config.ZarfYAML)
 			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
-				message.Fatalf(err, "Unable to read zarf.yaml")
+				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
 			}
 
 			pkgName = pkgConfig.Metadata.Name
@@ -191,6 +195,56 @@ var packageRemoveCmd = &cobra.Command{
 
 		if err := pkgClient.Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
+		}
+	},
+}
+
+var packagePublishCmd = &cobra.Command{
+	Use:     "publish [PACKAGE] [REPOSITORY]",
+	Short:   "Publish a Zarf package to a remote registry",
+	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
+	Args:    cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
+
+		if !strings.HasPrefix(args[1], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
+		pkgConfig.PublishOpts.Reference = registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Publish the package
+		if err := pkgClient.Publish(); err != nil {
+			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+		}
+	},
+}
+
+var packagePullCmd = &cobra.Command{
+	Use:     "pull [REFERENCE]",
+	Short:   "Pull a Zarf package from a remote registry and save to the local file system",
+	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !strings.HasPrefix(args[0], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Pull the package
+		if err := pkgClient.Pull(); err != nil {
+			message.Fatalf(err, "Failed to pull package: %s", err.Error())
 		}
 	},
 }
@@ -229,18 +283,22 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
+	packageCmd.AddCommand(packagePublishCmd)
+	packageCmd.AddCommand(packagePullCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
+	bindPublishFlags()
+	bindPullFlags()
 }
 
 func bindCreateFlags() {
 	createFlags := packageCreateCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package creation without prompting")
+	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
 	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
@@ -249,40 +307,56 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 
-	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), "Specify package variables to set on the command line (KEY=value)")
-	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), "Specify the output directory for the created Zarf package")
-	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), "View SBOM contents after creating the package")
-	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), "Specify an output directory for the SBOMs from the created Zarf package")
-	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), "Skip generating SBOM for this package")
-	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.")
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
+	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
+	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
+	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), lang.CmdPackageCreateFlagMaxPackageSize)
 }
 
 func bindDeployFlags() {
 	deployFlags := packageDeployCmd.Flags()
 
 	// Always require confirm flag (no viper)
-	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "Confirm package deployment without prompting")
+	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 
-	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), "Specify deployment variables to set on the command line (KEY=value)")
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install")
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided")
-	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), "Path to public sget key file for remote packages signed via cosign")
+	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	// naming this flag "concurrency" is a bit confusing, as components do not deploy concurrently, but it's the same as the flag in the publish command
+	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
-	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, "View SBOM contents while inspecting the package")
-	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", "Specify an output directory for the SBOMs from the inspected Zarf package")
+	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
+	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 }
 
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
-	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, "REQUIRED. Confirm the removal action to prevent accidental deletions")
-	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), "Comma-separated list of components to uninstall")
+	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
+	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
+}
+
+func bindPublishFlags() {
+	publishFlags := packagePublishCmd.Flags()
+
+	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
+
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+}
+
+func bindPullFlags() {
+	pullFlags := packagePullCmd.Flags()
+
+	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
