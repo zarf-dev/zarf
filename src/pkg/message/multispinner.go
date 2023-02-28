@@ -7,6 +7,7 @@ package message
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -17,6 +18,7 @@ type MultiSpinner struct {
 	area      *pterm.AreaPrinter
 	startedAt time.Time
 	rows      []MultiSpinnerRow
+	mutex     sync.Mutex
 }
 
 // MultiSpinnerRow is a row in a multispinner.
@@ -39,7 +41,7 @@ func NewMultiSpinner() *MultiSpinner {
 		return activeMultiSpinner
 	}
 	area, _ := pterm.DefaultArea.
-		WithRemoveWhenDone(false).Start()
+		WithRemoveWhenDone(true).Start()
 	m := &MultiSpinner{
 		area:      area,
 		startedAt: time.Now(),
@@ -53,9 +55,13 @@ func NewMultiSpinner() *MultiSpinner {
 	}
 	go func() {
 		for activeMultiSpinner != nil {
+			m.mutex.Lock()
+
 			text := m.renderText()
 			m.area.Update(text)
 			time.Sleep(delay)
+
+			m.mutex.Unlock()
 		}
 	}()
 	return m
@@ -64,25 +70,17 @@ func NewMultiSpinner() *MultiSpinner {
 // renderText renders the rows into a string to be used by pterm.AreaPrinter.
 func (m *MultiSpinner) renderText() string {
 	var outputRows []string
-	for i := len(m.rows) - 1; i >= 0; i-- {
-		if m.rows[i].Status == RowStatusSuccess || m.rows[i].Status == RowStatusError {
-			if m.rows[i].Status == RowStatusSuccess {
-				Successf(m.rows[i].Text)
-			} else {
-				Warnf(m.rows[i].Text)
-			}
-			m.rows = append(m.rows[:i], m.rows[i+1:]...)
-		}
-	}
 	for idx, row := range m.rows {
-		for i, s := range sequence {
-			if s == row.Status {
-				m.rows[idx].Status = sequence[(i+1)%len(sequence)]
-				break
+		if row.Status != RowStatusSuccess && row.Status != RowStatusError {
+			for i, s := range sequence {
+				if s == row.Status {
+					m.rows[idx].Status = sequence[(i+1)%len(sequence)]
+					break
+				}
 			}
+			timer := pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
+			outputRows = append(outputRows, fmt.Sprintf("%s %s%s", row.Status, row.Text, timer))
 		}
-		timer := pterm.ThemeDefault.TimerStyle.Sprint(" (" + time.Since(m.startedAt).Round(time.Second).String() + ")")
-		outputRows = append(outputRows, fmt.Sprintf("%s %s%s", row.Status, row.Text, timer))
 	}
 	return strings.Join(outputRows, "\n")
 }
@@ -90,30 +88,14 @@ func (m *MultiSpinner) renderText() string {
 // Stop stops the multispinner.
 func (m *MultiSpinner) Stop() {
 	if m.area != nil && activeMultiSpinner != nil && !NoProgress {
+		m.mutex.Lock()
+
 		m.area.Update(m.renderText())
 		_ = m.area.Stop()
+
+		m.mutex.Unlock()
 	}
 	activeMultiSpinner = nil
-}
-
-// Update updates the rows of the multispinner, re-renders are handled by the goroutine.
-func (m *MultiSpinner) Update(rows []MultiSpinnerRow) {
-	if NoProgress {
-		for i, row := range m.rows {
-			if row.Status != rows[i].Status {
-				switch rows[i].Status {
-				case RowStatusError:
-					Successf(rows[i].Text)
-				case RowStatusError:
-					Warn(rows[i].Text)
-				}
-			}
-		}
-		for i := len(m.rows); i < len(rows); i++ {
-			Info(rows[i].Text)
-		}
-	}
-	m.rows = rows
 }
 
 // NewMultiSpinnerRow creates a new row for a multispinner but does not add it to current rows, use Update.
@@ -125,25 +107,39 @@ func NewMultiSpinnerRow(text string) MultiSpinnerRow {
 }
 
 func (m *MultiSpinner) AddRow(row MultiSpinnerRow) {
+	m.mutex.Lock()
+
 	m.rows = append(m.rows, row)
+
+	m.mutex.Unlock()
 }
 
 // RowSuccess sets the status of a row to success.
-func (m *MultiSpinner) RowSuccess(index int) {
-	m.rows[index].Status = RowStatusSuccess
-	m.rows[index].Text = pterm.FgLightGreen.Sprint(m.rows[index].Text)
-	if NoProgress {
-		Successf(m.rows[index].Text)
+func (m *MultiSpinner) RowSuccess(message string) {
+	m.mutex.Lock()
+
+	for idx := range m.rows {
+		if m.rows[idx].Text == message {
+			m.rows[idx].Status = RowStatusSuccess
+		}
 	}
+	Successf("%s", message)
+
+	m.mutex.Unlock()
 }
 
 // RowError sets the status of a row to error.
-func (m *MultiSpinner) RowError(index int) {
-	m.rows[index].Status = RowStatusError
-	m.rows[index].Text = pterm.FgLightRed.Sprint(m.rows[index].Text)
-	if NoProgress {
-		Warnf(m.rows[index].Text)
+func (m *MultiSpinner) RowError(message string) {
+	m.mutex.Lock()
+
+	for idx := range m.rows {
+		if m.rows[idx].Text == message {
+			m.rows[idx].Status = RowStatusError
+		}
 	}
+	Warnf("%s", message)
+
+	m.mutex.Unlock()
 }
 
 // GetContent returns the current rows of the multispinner.

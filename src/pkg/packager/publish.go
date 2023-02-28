@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -152,13 +151,14 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		rows := mSpinner.GetContent()
-		for idx, row := range rows {
-			if strings.HasPrefix(row.Text, desc.Digest.Encoded()[:12]) {
-				mSpinner.RowSuccess(idx)
-				break
-			}
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		} else {
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
+		mSpinner.RowSuccess(format)
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
@@ -193,17 +193,18 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	rows := mSpinner.GetContent()
-	for idx, row := range rows {
-		if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
-			if err != nil {
-				mSpinner.RowError(idx)
-			} else {
-				mSpinner.RowSuccess(idx)
-			}
-			break
-		}
-	}
+	// rows := mSpinner.GetContent()
+	// I HATE THIS
+	// for _, row := range rows {
+	// 	if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
+	// 		if err != nil {
+	// 			mSpinner.RowError("")
+	// 		} else {
+	// 			mSpinner.RowSuccess("")
+	// 		}
+	// 		break
+	// 	}
+	// }
 
 	// kill the spinner, otherwise messages will get clobbered
 	mSpinner.Stop()
@@ -269,23 +270,24 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	}
 
 	// attempt to push the image manifest
-	mSpinner = message.NewMultiSpinner()
+	// mSpinner = message.NewMultiSpinner()
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
-	rows = mSpinner.GetContent()
-	for idx, row := range rows {
-		if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
-			if err != nil {
-				mSpinner.RowError(idx)
-			} else {
-				mSpinner.RowSuccess(idx)
-			}
-			break
-		}
-	}
-	mSpinner.Stop()
+	// I HATE THIS 2 - WE ARE ONLY DOING ONE THING THIS SHOULD BE A REGULAR SPINNER
+	// rows = mSpinner.GetContent()
+	// for _, row := range rows {
+	// 	if strings.HasPrefix(row.Text, root.Digest.String()[7:19]) {
+	// 		if err != nil {
+	// 			mSpinner.RowError("")
+	// 		} else {
+	// 			mSpinner.RowSuccess("")
+	// 		}
+	// 		break
+	// 	}
+	// }
+	// mSpinner.Stop()
 	message.Successf("Published: %s [%s]", ref, root.MediaType)
 	message.Successf("Digest: %s", root.Digest)
 	return nil

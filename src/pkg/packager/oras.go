@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -143,13 +142,14 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 		return nil
 	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		rows := mSpinner.GetContent()
-		for idx, row := range rows {
-			if strings.HasPrefix(row.Text, desc.Digest.Encoded()[:12]) {
-				mSpinner.RowSuccess(idx)
-				break
-			}
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		} else {
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 		}
+		mSpinner.RowSuccess(format)
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
@@ -160,7 +160,7 @@ func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error 
 	}
 	defer dst.Close()
 
-	_, err = oras.Copy(ctx, repo,ref.Reference, dst, ref.Reference, copyOpts)
+	_, err = oras.Copy(ctx, repo, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
