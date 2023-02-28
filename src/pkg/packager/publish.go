@@ -23,6 +23,35 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+// ZarfLayerMediaType<Extension> is the media type for Zarf layers.
+const (
+	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
+	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
+	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
+	ZarfLayerMediaTypeJSON    = "application/vnd.zarf.layer.v1.json"
+	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
+	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
+)
+
+// parseZarfLayerMediaType returns the Zarf layer media type for the given filename.
+func parseZarfLayerMediaType(filename string) string {
+	// since we are controlling the filenames, we can just use the extension
+	switch filepath.Ext(filename) {
+	case ".zst":
+		return ZarfLayerMediaTypeTarZstd
+	case ".gz":
+		return ZarfLayerMediaTypeTarGzip
+	case ".yaml":
+		return ZarfLayerMediaTypeYaml
+	case ".json":
+		return ZarfLayerMediaTypeJSON
+	case ".txt":
+		return ZarfLayerMediaTypeTxt
+	default:
+		return ZarfLayerMediaTypeUnknown
+	}
+}
+
 // Publish publishes the package to a registry
 //
 // This is a wrapper around the oras library
@@ -109,7 +138,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	dst, ctx, err := p.orasRemote(ref)
+	dst, ctx, err := orasRemote(ref)
 	if err != nil {
 		return err
 	}
@@ -128,7 +157,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 			return err
 		}
 
-		mediaType := p.parseZarfLayerMediaType(name)
+		mediaType := parseZarfLayerMediaType(name)
 
 		desc, err := store.Add(ctx, name, mediaType, path)
 		if err != nil {

@@ -10,56 +10,19 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
-	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-// ZarfLayerMediaType<Extension> is the media type for Zarf layers.
-const (
-	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
-	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
-	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
-	ZarfLayerMediaTypeJSON    = "application/vnd.zarf.layer.v1.json"
-	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
-	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
-)
-
-// parseZarfLayerMediaType returns the Zarf layer media type for the given filename.
-func (p *Packager) parseZarfLayerMediaType(filename string) string {
-	// since we are controlling the filenames, we can just use the extension
-	switch filepath.Ext(filename) {
-	case ".zst":
-		return ZarfLayerMediaTypeTarZstd
-	case ".gz":
-		return ZarfLayerMediaTypeTarGzip
-	case ".yaml":
-		return ZarfLayerMediaTypeYaml
-	case ".json":
-		return ZarfLayerMediaTypeJSON
-	case ".txt":
-		return ZarfLayerMediaTypeTxt
-	default:
-		return ZarfLayerMediaTypeUnknown
-	}
-}
-
 // orasCtxWithScopes returns a context with the given scopes.
 //
 // This is needed for pushing to Docker Hub.
-func (p *Packager) orasCtxWithScopes(ref registry.Reference) context.Context {
+func orasCtxWithScopes(ref registry.Reference) context.Context {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", ref.Repository),
@@ -70,7 +33,7 @@ func (p *Packager) orasCtxWithScopes(ref registry.Reference) context.Context {
 // orasAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) {
+func orasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err
@@ -116,73 +79,18 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 	}, nil
 }
 
-// Pull pulls a Zarf package and saves it as a compressed tarball.
-func (p *Packager) Pull() error {
-	err := p.loadZarfPkg()
-	if err != nil {
-		return err
-	}
-	name := fmt.Sprintf("zarf-package-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
-	err = archiver.Archive([]string{p.tmp.Base}, name)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// PullOCIZarfPackage downloads a Zarf package w/ the given reference to the specified output directory.
-func (p *Packager) pullOCIZarfPackage(ref registry.Reference, out string) error {
-	message.Infof("Pulling Zarf package from %s", ref)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
-	_ = os.Mkdir(out, 0755)
-	repo, ctx, err := p.orasRemote(ref)
-	if err != nil {
-		return err
-	}
-
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
-	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		title := desc.Annotations[ocispec.AnnotationTitle]
-		var format string
-		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-		}
-		message.Successf(format)
-		return nil
-	}
-	copyOpts.PostCopy = copyOpts.OnCopySkipped
-
-	dst, err := file.New(out)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	_, err = oras.Copy(ctx, repo, ref.Reference, dst, ref.Reference, copyOpts)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Packager) orasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
+func orasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
 	// patch docker.io to registry-1.docker.io
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	ctx := p.orasCtxWithScopes(ref)
+	ctx := orasCtxWithScopes(ref)
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := p.orasAuthClient(ref)
+	authClient, err := orasAuthClient(ref)
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}

@@ -16,6 +16,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
@@ -129,10 +132,42 @@ func (p *Packager) handleOciPackage() error {
 
 	out := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
-	err = p.pullOCIZarfPackage(ref, out)
+	message.Infof("Pulling Zarf package from %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
+
+	repo, ctx, err := orasRemote(ref)
 	if err != nil {
-		return fmt.Errorf("failed to pull package from OCI: %w", err)
+		return err
 	}
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
+	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
+	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		} else {
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+		}
+		message.Successf(format)
+		return nil
+	}
+	copyOpts.PostCopy = copyOpts.OnCopySkipped
+
+	dst, err := file.New(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = oras.Copy(ctx, repo, ref.Reference, dst, ref.Reference, copyOpts)
+	if err != nil {
+		return err
+	}
+
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
 
