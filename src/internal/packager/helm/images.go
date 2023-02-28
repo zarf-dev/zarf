@@ -55,7 +55,10 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 
 	// TODO (@runyontr) expand this to work for regular charts for more generic
 	// capability and pull it out from just being used by Big Bang.
-	tempPath, cleanup := helmCfg.downloadChartFromGitToTemp(spinner)
+	tempPath, cleanup, err := helmCfg.downloadChartFromGitToTemp(spinner)
+	if err != nil {
+		return images, err
+	}
 	defer cleanup()
 
 	// Load a new chart.

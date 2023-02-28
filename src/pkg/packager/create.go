@@ -290,7 +290,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			if isGitURL {
-				_ = helmCfg.PackageChartFromGit(componentPath.Charts)
+				_, _ = helmCfg.PackageChartFromGit(componentPath.Charts)
 			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {

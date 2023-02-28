@@ -34,6 +34,7 @@ var tenMins = metav1.Duration{
 // Run Mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
 func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	var err error
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
 	}
@@ -86,7 +87,10 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Download the chart from Git and save it to a temporary directory.
 	chartPath := path.Join(tmpPaths.Temp, bb)
-	helmCfg.ChartLoadOverride = helmCfg.PackageChartFromGit(chartPath)
+	helmCfg.ChartLoadOverride, err = helmCfg.PackageChartFromGit(chartPath)
+	if err != nil {
+		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
+	}
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.

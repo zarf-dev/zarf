@@ -8,7 +8,7 @@ components:
     required: true
     extensions:
       bigbang:
-        version: 1.52.0
+        version: 1.54.0
         skipFlux: false
         valuesFiles:
           - config/minimal.yaml #turns on just istio
