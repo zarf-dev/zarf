@@ -22,7 +22,7 @@ import (
 // orasCtxWithScopes returns a context with the given scopes.
 //
 // This is needed for pushing to Docker Hub.
-func OrasCtxWithScopes(ref registry.Reference) context.Context {
+func orasCtxWithScopes(ref registry.Reference) context.Context {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", ref.Repository),
@@ -33,7 +33,7 @@ func OrasCtxWithScopes(ref registry.Reference) context.Context {
 // orasAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func OrasAuthClient(ref registry.Reference) (*auth.Client, error) {
+func orasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err
@@ -79,19 +79,20 @@ func OrasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	}, nil
 }
 
+// OrasRemote returns an oras remote repository client and context for the given reference.
 func OrasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	ctx := OrasCtxWithScopes(ref)
+	ctx := orasCtxWithScopes(ref)
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := OrasAuthClient(ref)
+	authClient, err := orasAuthClient(ref)
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}
