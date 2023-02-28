@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
@@ -115,15 +116,17 @@ func (p *Packager) orasAuthClient(ref registry.Reference) (*auth.Client, error) 
 	}, nil
 }
 
-// Pull pulls a Zarf package and stores it in the cache.
+// Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
 	err := p.loadZarfPkg()
 	if err != nil {
 		return err
 	}
 	name := fmt.Sprintf("zarf-package-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
-	message.Info(name)
-	// archiver.Archive([]string{p.tmp.Base}, )
+	err = archiver.Archive([]string{p.tmp.Base}, name)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
