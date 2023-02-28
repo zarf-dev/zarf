@@ -2,9 +2,9 @@
 
 # Docs & examples
 /adr/ @jeff-mccoy @YrrepNoj @Racer159
-/docs/ @Madeline-UX @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159
-/examples/ @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159
-*.md @Madeline-UX @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159
+/docs/ @Madeline-UX @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159 @wirewc
+/examples/ @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159 @wirewc
+*.md @Madeline-UX @JasonvanBrackel @RothAndrew @jeff-mccoy @YrrepNoj @Racer159 @wirewc
 
 # Core code
 /src/ @jeff-mccoy @YrrepNoj @Racer159
