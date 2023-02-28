@@ -60,7 +60,7 @@ func (p *Packager) InspectOCI() error {
 		return err
 	}
 
-	repo, ctx, err := orasRemote(ref)
+	repo, ctx, err := utils.OrasRemote(ref)
 	if err != nil {
 		return err
 	}

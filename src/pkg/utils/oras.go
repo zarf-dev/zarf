@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+// Package utils provides generic helper functions.
+package utils
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 // orasCtxWithScopes returns a context with the given scopes.
 //
 // This is needed for pushing to Docker Hub.
-func orasCtxWithScopes(ref registry.Reference) context.Context {
+func OrasCtxWithScopes(ref registry.Reference) context.Context {
 	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", ref.Repository),
@@ -33,7 +33,7 @@ func orasCtxWithScopes(ref registry.Reference) context.Context {
 // orasAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func orasAuthClient(ref registry.Reference) (*auth.Client, error) {
+func OrasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err
@@ -45,7 +45,7 @@ func orasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	configs := []*configfile.ConfigFile{cfg}
 
 	var key = ref.Registry
-	if key == "registry-1.docker.io" || key == "docker.io" {
+	if key == "registry-1.docker.io" {
 		// Docker stores its credentials under the following key, otherwise credentials use the registry URL
 		key = "https://index.docker.io/v1/"
 	}
@@ -79,18 +79,19 @@ func orasAuthClient(ref registry.Reference) (*auth.Client, error) {
 	}, nil
 }
 
-func orasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
+func OrasRemote(ref registry.Reference) (*remote.Repository, context.Context, error) {
 	// patch docker.io to registry-1.docker.io
+	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	ctx := orasCtxWithScopes(ref)
+	ctx := OrasCtxWithScopes(ref)
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := orasAuthClient(ref)
+	authClient, err := OrasAuthClient(ref)
 	if err != nil {
 		return &remote.Repository{}, ctx, err
 	}

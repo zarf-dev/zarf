@@ -138,7 +138,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	dst, ctx, err := orasRemote(ref)
+	dst, ctx, err := utils.OrasRemote(ref)
 	if err != nil {
 		return err
 	}

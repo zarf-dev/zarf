@@ -136,7 +136,7 @@ func (p *Packager) handleOciPackage() error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	repo, ctx, err := orasRemote(ref)
+	repo, ctx, err := utils.OrasRemote(ref)
 	if err != nil {
 		return err
 	}
