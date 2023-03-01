@@ -144,9 +144,9 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				TarballPath: p.tmp.Images,
-				ImgList:     imgList,
-				Insecure:    config.CommonOptions.Insecure,
+				ImagesPath: p.tmp.Images,
+				ImgList:    imgList,
+				Insecure:   config.CommonOptions.Insecure,
 			}
 
 			return imgConfig.PullAll()
@@ -161,7 +161,9 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		sbom.Catalog(componentSBOMs, imgList, p.tmp.Images, p.tmp.Sboms)
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+		}
 	}
 
 	// Process the component directories into compressed tarballs
