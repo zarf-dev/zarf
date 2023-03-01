@@ -27,7 +27,6 @@ func TestUseCLI(t *testing.T) {
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
 	imageCachePath := filepath.Join(cachePath, "images")
-	gitCachePath := filepath.Join(cachePath, "repos")
 
 	// run `zarf package create` with a specified tmp location
 	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
@@ -99,10 +98,6 @@ func TestUseCLI(t *testing.T) {
 	// Pull once to test git cloning
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath)
 	require.NoError(t, err, stdOut, stdErr)
-
-	files, err = os.ReadDir(gitCachePath)
-	require.NoError(t, err, "Error when reading git cache path")
-	assert.Greater(t, len(files), 1)
 
 	// Pull twice to test git fetching (from cache)
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/git-data", "--confirm", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath)

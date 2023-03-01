@@ -48,7 +48,6 @@ const (
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfImageCacheDir = "images"
-	ZarfGitCacheDir   = "repos"
 
 	ZarfYAML          = "zarf.yaml"
 	ZarfSBOMDir       = "zarf-sbom"
