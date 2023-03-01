@@ -56,12 +56,15 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
 	}
 
+	alreadyProcessed := false
 	onlyFetchRef := matches[idx("atRef")] != ""
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
 	repo, err := g.clone(targetFolder, gitURLNoRef, onlyFetchRef)
 	if err == git.ErrRepositoryAlreadyExists {
-		// Pull the latest changes from the online repo
-		message.Debug("Repo already cloned, pulling any upstream changes...")
+		// If we enter this block, the user has specified the same repo twice in one component and we should respect the prior changes
+		// (see the specific-tag-update component in the git-repo-behavior test-package)
+		message.Debug("Repo already cloned, pulling any specified changes...")
+		alreadyProcessed = true
 	} else if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
@@ -84,12 +87,15 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
-		_, err = g.removeLocalTagRefs()
-		if err != nil {
-			return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
+		// If this repo has already been processed by Zarf don't remove tags, refs and branches
+		if !alreadyProcessed {
+			_, err = g.removeLocalTagRefs()
+			if err != nil {
+				return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
+			}
+			_, _ = g.removeLocalBranchRefs()
+			_, _ = g.removeOnlineRemoteRefs()
 		}
-		_, _ = g.removeLocalBranchRefs()
-		_, _ = g.removeOnlineRemoteRefs()
 
 		err = g.fetchRef(ref)
 		if err != nil {

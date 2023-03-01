@@ -1,24 +1,22 @@
 kind: ZarfPackageConfig
 metadata:
-  name: test-package-git-cache
+  name: git-behavior
   description: "Demo Zarf loading resources into a gitops service"
 
 components:
-  - name: full-repo
-    required: true
-    repos:
-        # Do a full Git Repo Mirror
-      - https://github.com/stefanprodan/podinfo.git
-      - https://github.com/defenseunicorns/zarf.git
-
-
   - name: specific-tag
     required: true
     repos:
         # Do a tag-provided Git Repo mirror
+      - https://github.com/defenseunicorns/zarf.git@v0.15.0
+
+  - name: specific-tag-update
+    required: true
+    repos:
+        # Do a tag-provided Git Repo mirror
       - https://github.com/defenseunicorns/zarf.git@v0.16.0
-
-
+        # Do a tag-provided Git Repo mirror
+      - https://github.com/defenseunicorns/zarf.git@v0.17.0
 
   - name: specific-hash
     required: true
