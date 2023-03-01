@@ -143,6 +143,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
+		Force: true,
 	})
 
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
