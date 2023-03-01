@@ -156,10 +156,10 @@ func createPaths() (paths types.TempPaths, err error) {
 		Base: basePath,
 
 		InjectBinary: filepath.Join(basePath, "zarf-injector"),
-		SeedImage:    filepath.Join(basePath, "seed-image.tar"),
-		Images:       filepath.Join(basePath, "images.tar"),
+		SeedImage:    filepath.Join(basePath, "seed-image"),
+		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
-		Sboms:        filepath.Join(basePath, "sboms"),
+		SbomTar:      filepath.Join(basePath, "sboms.tar.zst"),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
 	}
 
@@ -227,10 +227,14 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If SBOM files exist, temporarily place them in the deploy directory
-	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
-		// Don't stop the deployment, let the user decide if they want to continue the deployment
-		spinner.Errorf(err, "Unable to process the SBOM files for this package")
+	if _, err := os.Stat(filepath.Join(p.tmp.Base, "sboms.tar.zst")); err == nil {
+		_ = archiver.Unarchive(filepath.Join(p.tmp.Base, "sboms.tar.zst"), p.tmp.Base)
+
+		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Base, "sbom-viewer-*"))
+		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			spinner.Errorf(err, "Unable to process the SBOM files for this package")
+		}
 	}
 
 	// Handle component configuration deprecations
