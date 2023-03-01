@@ -192,15 +192,18 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to process partial package: %w", err)
 	}
 
-	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-		return fmt.Errorf("unable to extract the package: %w", err)
+	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
+	if p.cfg.DeployOpts.PackagePath != p.tmp.Base {
+		// Extract the archive
+		spinner.Updatef("Extracting the package, this may take a few moments")
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
+		}
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
+	// spinner.Updatef("Loading the zarf package config")
+	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath, true); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
@@ -235,7 +238,7 @@ func (p *Packager) loadZarfPkg() error {
 		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 	}
 
-	spinner.Success()
+	// spinner.Success()
 	return nil
 }
 
