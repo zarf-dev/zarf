@@ -156,7 +156,7 @@ func httpGetFile(url string, destinationFile *os.File) {
 		progressBar.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
-	progressBar.Success(text)
+	progressBar.Successf("%s", text)
 }
 
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {

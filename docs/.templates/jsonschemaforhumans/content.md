@@ -8,7 +8,6 @@
 #}
 {# context parameters default values #}
 {% set skip_headers = skip_headers or False %}
-{% set depth = depth or 0 %}
 {# end context parameters #}
 
 {% set keys = schema.keywords %}
@@ -27,7 +26,7 @@
 
 {% if schema.should_be_a_link(config) %}
 {% elif schema.refers_to -%}
-    {%- with schema=schema.refers_to_merged, skip_headers=True, depth=depth -%}
+    {%- with schema=schema.refers_to_merged, skip_headers=True -%}
         {% include "content.md" %}
     {% endwith %}
 {% else %}
@@ -62,7 +61,7 @@
 
     {# Conditional subschema, or if-then-else section #}
     {% if schema.has_conditional %}
-        {% with skip_headers=False, depth=depth+1 %}
+        {% with skip_headers=False %}
             {% include "section_conditional_subschema.md" %}
         {% endwith %}
     {% endif %}
