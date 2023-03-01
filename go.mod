@@ -15,6 +15,7 @@ require (
 	github.com/anchore/syft v0.72.0
 	github.com/derailed/k9s v0.27.2
 	github.com/distribution/distribution v2.8.1+incompatible
+	github.com/docker/cli v20.10.22+incompatible
 	github.com/fatih/color v1.14.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.2
@@ -23,6 +24,7 @@ require (
 	github.com/google/go-containerregistry v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v23.0.1+incompatible
+	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
@@ -38,6 +40,7 @@ require (
 	k8s.io/component-base v0.26.1
 	k8s.io/klog/v2 v2.90.0
 	k8s.io/kubectl v0.26.1
+	oras.land/oras-go/v2 v2.0.0
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
@@ -141,7 +144,6 @@ require (
 	github.com/derailed/tcell/v2 v2.3.1-rc.3 // indirect
 	github.com/derailed/tview v0.8.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v20.10.22+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v23.0.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -273,7 +275,6 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect

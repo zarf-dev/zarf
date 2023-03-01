@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -33,6 +39,11 @@ func (p *Packager) handlePackagePath() error {
 	// Handle case where deploying remote package validated via sget
 	if strings.HasPrefix(opts.PackagePath, "sget://") {
 		return p.handleSgetPackage()
+	}
+
+	// Handle case where deploying remote package stored in an OCI registry
+	if strings.HasPrefix(opts.PackagePath, "oci://") {
+		return p.handleOciPackage()
 	}
 
 	if !config.CommonOptions.Insecure && opts.Shasum == "" {
@@ -110,4 +121,79 @@ func (p *Packager) handleSgetPackage() error {
 	p.cfg.DeployOpts.PackagePath = localPath
 
 	return nil
+}
+
+func (p *Packager) handleOciPackage() error {
+	message.Debug("packager.handleOciPackage()")
+	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))
+	if err != nil {
+		return fmt.Errorf("failed to parse OCI reference: %w", err)
+	}
+
+	out := p.tmp.Base
+	message.Debugf("Pulling %s", ref.String())
+	message.Infof("Pulling Zarf package from %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
+
+	repo, ctx, err := utils.OrasRemote(ref)
+	if err != nil {
+		return err
+	}
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
+	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
+	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		} else {
+			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+		}
+		message.Successf(format)
+		return nil
+	}
+	copyOpts.PostCopy = copyOpts.OnCopySkipped
+
+	dst, err := file.New(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = oras.Copy(ctx, repo, ref.Reference, dst, ref.Reference, copyOpts)
+	if err != nil {
+		return err
+	}
+
+	message.Debugf("Pulled %s", ref.String())
+	message.Successf("Pulled %s", ref.String())
+
+	p.cfg.DeployOpts.PackagePath = out
+	return nil
+}
+
+// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
+//
+// This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
+func isManifestUnsupported(err error) bool {
+	var errResp *errcode.ErrorResponse
+	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
+		return false
+	}
+
+	var errCode errcode.Error
+	if !errors.As(errResp, &errCode) {
+		return false
+	}
+
+	// As of November 2022, ECR is known to return UNSUPPORTED error when
+	// putting an OCI artifact manifest.
+	switch errCode.Code {
+	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
+		return true
+	}
+	return false
 }
