@@ -242,7 +242,7 @@ func (p *Packager) loadZarfPkg() error {
 		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 	}
 
-	// spinner.Success()
+	spinner.Success()
 	return nil
 }
 
