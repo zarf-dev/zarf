@@ -196,17 +196,19 @@ const (
 	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
 
-	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
-	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
-	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagConfirm         = "Confirm package deployment without prompting"
+	CmdPackageDeployFlagSet             = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents      = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum          = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget            = "Path to public sget key file for remote packages signed via cosign"
 
 	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
+
+	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

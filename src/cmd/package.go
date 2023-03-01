@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -107,9 +108,15 @@ var packageInspectCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
-			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+		if strings.HasPrefix(args[0], "oci://") {
+			if err := pkgClient.InspectOCI(); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
+		} else {
+			// Inspect the local package
+			if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			}
 		}
 	},
 }
@@ -192,6 +199,56 @@ var packageRemoveCmd = &cobra.Command{
 	},
 }
 
+var packagePublishCmd = &cobra.Command{
+	Use:     "publish [PACKAGE] [REPOSITORY]",
+	Short:   "Publish a Zarf package to a remote registry",
+	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
+	Args:    cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
+
+		if !strings.HasPrefix(args[1], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
+		pkgConfig.PublishOpts.Reference = registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Publish the package
+		if err := pkgClient.Publish(); err != nil {
+			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+		}
+	},
+}
+
+var packagePullCmd = &cobra.Command{
+	Use:     "pull [REFERENCE]",
+	Short:   "Pull a Zarf package from a remote registry and save to the local file system",
+	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !strings.HasPrefix(args[0], "oci://") {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Pull the package
+		if err := pkgClient.Pull(); err != nil {
+			message.Fatalf(err, "Failed to pull package: %s", err.Error())
+		}
+	},
+}
+
 func choosePackage(args []string) string {
 	if len(args) > 0 {
 		return args[0]
@@ -226,11 +283,15 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
+	packageCmd.AddCommand(packagePublishCmd)
+	packageCmd.AddCommand(packagePullCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
+	bindPublishFlags()
+	bindPullFlags()
 }
 
 func bindCreateFlags() {
@@ -269,6 +330,8 @@ func bindDeployFlags() {
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	// naming this flag "concurrency" is a bit confusing, as components do not deploy concurrently, but it's the same as the flag in the publish command
+	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
 
 func bindInspectFlags() {
@@ -282,4 +345,18 @@ func bindRemoveFlags() {
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
+}
+
+func bindPublishFlags() {
+	publishFlags := packagePublishCmd.Flags()
+
+	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
+
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+}
+
+func bindPullFlags() {
+	pullFlags := packagePullCmd.Flags()
+
+	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }

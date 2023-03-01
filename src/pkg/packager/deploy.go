@@ -71,7 +71,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Notify all the things about the successful deployment
-	message.SuccessF("Zarf deployment complete")
+	message.Successf("Zarf deployment complete")
 	p.printTablesForDeployment(deployedComponents)
 
 	// Save deployed package information to k8s
