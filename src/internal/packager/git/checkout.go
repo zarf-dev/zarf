@@ -15,16 +15,14 @@ import (
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
 func (g *Git) CheckoutTag(tag string) error {
-	message.Debugf("git.CheckoutTag(%s)", tag)
-
 	options := &git.CheckoutOptions{
-		Branch: plumbing.ReferenceName("refs/tags/" + tag),
+		Branch: g.parseRef(tag),
 	}
 	return g.checkout(options)
 }
 
 func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) error {
-	if isHash(ref) {
+	if plumbing.IsHash(ref) {
 		return g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	}
 
@@ -56,8 +54,6 @@ func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) err
 // It will delete the branch provided if it exists.
 func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.ReferenceName) error {
 	message.Debugf("git.checkoutHasAsBranch(%s,%s)", hash.String(), branch.String())
-
-	_ = g.deleteBranchIfExists(branch)
 
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
