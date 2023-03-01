@@ -15,7 +15,7 @@ zarf package deploy [PACKAGE] [flags]
 
 ```
       --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --concurrency int      Number of concurrent layer operations to perform when interacting with a remote package.
+      --concurrency int      Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --confirm              Confirm package deployment without prompting
   -h, --help                 help for deploy
       --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
