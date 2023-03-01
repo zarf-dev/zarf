@@ -28,5 +28,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package deploy](zarf_package_deploy.md)	 - Use to deploy a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](zarf_package_inspect.md)	 - Lists the payload of a Zarf package (runs offline)
 * [zarf package list](zarf_package_list.md)	 - List out all of the packages that have been deployed to the cluster
+* [zarf package publish](zarf_package_publish.md)	 - Publish a Zarf package to a remote registry
+* [zarf package pull](zarf_package_pull.md)	 - Pull a Zarf package from a remote registry and save to the local file system
 * [zarf package remove](zarf_package_remove.md)	 - Use to remove a Zarf package that has been deployed already
 
