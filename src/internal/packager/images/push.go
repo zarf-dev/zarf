@@ -56,9 +56,11 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 
 	message.Debugf("crane pushOptions = %#v", pushOptions)
+
 	for _, src := range i.ImgList {
 		spinner.Updatef("Updating image %s", src)
-		img, err := crane.LoadTag(i.TarballPath, src, config.GetCraneOptions(i.Insecure)...)
+
+		img, err := i.LoadImageFromPackage(src)
 		if err != nil {
 			return err
 		}
@@ -70,7 +72,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 				return err
 			}
 
-			message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineNameCRC)
+			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, src, offlineNameCRC)
 
 			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
@@ -84,7 +86,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 			return err
 		}
 
-		message.Debugf("crane.Push() %s:%s -> %s)", i.TarballPath, src, offlineName)
+		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, src, offlineName)
 
 		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err
