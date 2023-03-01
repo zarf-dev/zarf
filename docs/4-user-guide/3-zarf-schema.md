@@ -7,8 +7,8 @@
 | **Defined in**            | #/definitions/ZarfPackage                                                                                |
 
 <details>
-<summary><strong> <a name="kind"></a>kind *</strong>
-
+<summary>
+<strong> <a name="kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -31,12 +31,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="metadata"></a>metadata</strong>
-
+<details open>
+<summary>
+<strong> <a name="metadata"></a>metadata</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## metadata
 
 **Description:** Package metadata
 
@@ -47,8 +49,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfMetadata                                                                               |
 
 <details>
-<summary><strong> <a name="metadata_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="metadata_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -69,8 +71,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_description"></a>description</strong>
-
+<summary>
+<strong> <a name="metadata_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -85,8 +87,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_version"></a>version</strong>
-
+<summary>
+<strong> <a name="metadata_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -101,8 +103,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_url"></a>url</strong>
-
+<summary>
+<strong> <a name="metadata_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -117,13 +119,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_image"></a>image</strong>
-
+<summary>
+<strong> <a name="metadata_image"></a>image</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** An image URL to embed in this package for future Zarf UI listing
+**Description:** An image URL to embed in this package (Reserved for future use in Zarf UI)
 
 |          |          |
 | -------- | -------- |
@@ -133,8 +135,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
-
+<summary>
+<strong> <a name="metadata_uncompressed"></a>uncompressed</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -149,24 +151,29 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="metadata_architecture"></a>architecture</strong>
-
+<summary>
+<strong> <a name="metadata_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The target cluster architecture of this package
+**Description:** The target cluster architecture for this package
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
 
+**Examples:** 
+
+<code>
+"arm64", "amd64"</code>
+
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="metadata_yolo"></a>yolo</strong>
-
+<summary>
+<strong> <a name="metadata_yolo"></a>yolo</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -183,12 +190,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="build"></a>build</strong>
-
+<details open>
+<summary>
+<strong> <a name="build"></a>build</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## build
 
 **Description:** Zarf-generated package build data
 
@@ -199,13 +208,15 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfBuildData                                                                              |
 
 <details>
-<summary><strong> <a name="build_terminal"></a>terminal *</strong>
-
+<summary>
+<strong> <a name="build_terminal"></a>terminal *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The machine name that created this package
 
 |          |          |
 | -------- | -------- |
@@ -215,13 +226,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="build_user"></a>user *</strong>
-
+<summary>
+<strong> <a name="build_user"></a>user *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The username who created this package
 
 |          |          |
 | -------- | -------- |
@@ -231,13 +244,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="build_architecture"></a>architecture *</strong>
-
+<summary>
+<strong> <a name="build_architecture"></a>architecture *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The architecture this package was created on
 
 |          |          |
 | -------- | -------- |
@@ -247,13 +262,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="build_timestamp"></a>timestamp *</strong>
-
+<summary>
+<strong> <a name="build_timestamp"></a>timestamp *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The timestamp when this package was created
 
 |          |          |
 | -------- | -------- |
@@ -263,13 +280,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="build_version"></a>version *</strong>
-
+<summary>
+<strong> <a name="build_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The version of Zarf used to build this package
 
 |          |          |
 | -------- | -------- |
@@ -279,27 +298,26 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="build_migrations"></a>migrations *</strong>
-
+<summary>
+<strong> <a name="build_migrations"></a>migrations *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** Any migrations that have been run on this package
 
 |          |                   |
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_2"></a>migrations items  
+ ### <a name="autogenerated_heading_4"></a>migrations items  
 
 |          |          |
 | -------- | -------- |
@@ -311,13 +329,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components"></a>components *</strong>
-
+<details open>
+<summary>
+<strong> <a name="components"></a>components *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
+  ## components
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** List of components to deploy in this package
@@ -326,15 +345,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_3"></a>ZarfComponent  
+ ### <a name="autogenerated_heading_5"></a>ZarfComponent  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -343,8 +359,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponent                                                                              |
 
 <details>
-<summary><strong> <a name="components_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -365,8 +381,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="components_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -381,8 +397,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_default"></a>default</strong>
-
+<summary>
+<strong> <a name="components_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -397,8 +413,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_required"></a>required</strong>
-
+<summary>
+<strong> <a name="components_items_required"></a>required</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -412,12 +428,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_only"></a>only</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_only"></a>only</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > only
 
 **Description:** Filter when this component is included in package creation or deployment
 
@@ -428,8 +446,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentOnlyTarget                                                                    |
 
 <details>
-<summary><strong> <a name="components_items_only_localOS"></a>localOS</strong>
-
+<summary>
+<strong> <a name="components_items_only_localOS"></a>localOS</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -450,12 +468,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_only_cluster"></a>cluster</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_only_cluster"></a>cluster</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > only > cluster
 
 **Description:** Only deploy component to specified clusters
 
@@ -466,8 +486,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentOnlyCluster                                                                   |
 
 <details>
-<summary><strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
-
+<summary>
+<strong> <a name="components_items_only_cluster_architecture"></a>architecture</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -488,27 +508,24 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
-
+<summary>
+<strong> <a name="components_items_only_cluster_distros"></a>distros</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Future use
+**Description:** A list of kubernetes distros this package works with (Reserved for future use)
 
 |          |                   |
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_4"></a>distros items  
+ ### <a name="autogenerated_heading_6"></a>distros items  
 
 |          |          |
 | -------- | -------- |
@@ -524,8 +541,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_group"></a>group</strong>
-
+<summary>
+<strong> <a name="components_items_group"></a>group</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -540,8 +557,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
-
+<summary>
+<strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -555,12 +572,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_import"></a>import</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_import"></a>import</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > import
 
 **Description:** Import a component from another Zarf package
 
@@ -571,11 +590,13 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentImport                                                                        |
 
 <details>
-<summary><strong> <a name="components_items_import_name"></a>name</strong>
-
+<summary>
+<strong> <a name="components_items_import_name"></a>name</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+**Description:** The name of the component to import from the referenced zarf.yaml
 
 |          |          |
 | -------- | -------- |
@@ -585,13 +606,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_import_path"></a>path *</strong>
-
+<summary>
+<strong> <a name="components_items_import_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The relative path to a directory containing a zarf.yaml to import from
 
 |          |          |
 | -------- | -------- |
@@ -607,14 +630,16 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_scripts"></a>scripts</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_scripts"></a>scripts</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** (Deprecated--use actions instead) Custom commands to run before or after package deployment
+  ## components > scripts
+
+**Description:** [DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -623,8 +648,8 @@ Must be one of:
 | **Defined in**            | #/definitions/DeprecatedZarfComponentScripts                                                             |
 
 <details>
-<summary><strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -639,8 +664,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -655,8 +680,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_scripts_retry"></a>retry</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_retry"></a>retry</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -671,8 +696,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -683,15 +708,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_5"></a>prepare items  
+ ### <a name="autogenerated_heading_7"></a>prepare items  
 
 |          |          |
 | -------- | -------- |
@@ -701,8 +723,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_scripts_before"></a>before</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_before"></a>before</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -713,15 +735,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_6"></a>before items  
+ ### <a name="autogenerated_heading_8"></a>before items  
 
 |          |          |
 | -------- | -------- |
@@ -731,8 +750,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_scripts_after"></a>after</strong>
-
+<summary>
+<strong> <a name="components_items_scripts_after"></a>after</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -743,15 +762,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_7"></a>after items  
+ ### <a name="autogenerated_heading_9"></a>after items  
 
 |          |          |
 | -------- | -------- |
@@ -763,12 +779,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions"></a>actions</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions"></a>actions</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions
 
 **Description:** Custom commands to run at various stages of a package lifecycle
 
@@ -778,12 +796,14 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActions                                                                       |
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate"></a>onCreate</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate"></a>onCreate</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate
 
 **Description:** Actions to run during package creation
 
@@ -793,12 +813,14 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionSet                                                                     |
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults"></a>defaults</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults"></a>defaults</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > defaults
 
 **Description:** Default configuration for all actions in this set
 
@@ -809,8 +831,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionDefaults                                                                |
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -825,8 +847,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -841,8 +863,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -857,8 +879,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -873,8 +895,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -885,15 +907,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_8"></a>env items  
+ ### <a name="autogenerated_heading_10"></a>env items  
 
 |          |          |
 | -------- | -------- |
@@ -905,12 +924,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_before"></a>before</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before"></a>before</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > before
 
 **Description:** Actions to run at the start of an operation
 
@@ -918,15 +939,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_9"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_11"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -935,8 +953,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentAction                                                                        |
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_mute"></a>mute</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -951,8 +969,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_maxTotalSeconds"></a>maxTotalSeconds</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -967,8 +985,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_maxRetries"></a>maxRetries</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -983,8 +1001,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_dir"></a>dir</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -999,8 +1017,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_env"></a>env</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1011,15 +1029,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_10"></a>env items  
+ ### <a name="autogenerated_heading_12"></a>env items  
 
 |          |          |
 | -------- | -------- |
@@ -1029,8 +1044,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1045,8 +1060,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1065,8 +1080,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1080,12 +1095,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait"></a>wait</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > before > wait
 
 **Description:** Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 
@@ -1095,12 +1112,14 @@ Must be one of:
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfComponentActionWait                                                                    |
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster"></a>cluster</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > before > wait > cluster
 
 **Description:** Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.
 
@@ -1111,42 +1130,54 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionWaitCluster                                                             |
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_kind"></a>kind *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The kind of resource to wait for (e.g. Pod; Deployment; etc.)
+**Description:** The kind of resource to wait for
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
 
+**Examples:** 
+
+<code>
+"Pod", "Deployment)"</code>
+
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
+**Description:** The name of the resource or selector to wait for
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"podinfo", "app&#61;podinfo"</code>
 
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1161,30 +1192,37 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_cluster_condition"></a>condition</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist
+**Description:** The condition to wait for; defaults to exist
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
 
-</blockquote>
-</details>
+**Examples:** 
+
+<code>
+"Ready", "Available"</code>
 
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
+</blockquote>
+</details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network"></a>network</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > before > wait > network
 
 **Description:** Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.
 
@@ -1195,15 +1233,15 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfComponentActionWaitNetwork                                                             |
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_protocol"></a>protocol *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The protocol to wait for (e.g. tcp; http; etc.).
+**Description:** The protocol to wait for
 
 |          |                    |
 | -------- | ------------------ |
@@ -1220,38 +1258,45 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_address"></a>address *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)
+**Description:** The address to wait for
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
 
+**Examples:** 
+
+<code>
+"localhost:8080", "1.1.1.1"</code>
+
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
-
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_wait_network_code"></a>code</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)
+**Description:** The HTTP status code to wait for if using http or https
 
 |          |           |
 | -------- | --------- |
 | **Type** | `integer` |
 
-</blockquote>
-</details>
+**Examples:** 
+
+<code>
+200, 404</code>
 
 </blockquote>
 </details>
@@ -1262,12 +1307,17 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_after"></a>after</strong>
+</blockquote>
+</details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_after"></a>after</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > after
 
 **Description:** Actions to run at the end of an operation
 
@@ -1275,15 +1325,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_11"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_13"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1294,12 +1341,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_onSuccess"></a>onSuccess</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_onSuccess"></a>onSuccess</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > onSuccess
 
 **Description:** Actions to run if all operations succeed
 
@@ -1307,15 +1356,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_12"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_14"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1326,12 +1372,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onCreate_onFailure"></a>onFailure</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_onFailure"></a>onFailure</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onCreate > onFailure
 
 **Description:** Actions to run if all operations fail
 
@@ -1339,15 +1387,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_13"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_15"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1361,12 +1406,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onDeploy"></a>onDeploy</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onDeploy"></a>onDeploy</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onDeploy
 
 **Description:** Actions to run during package deployment
 
@@ -1379,12 +1426,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_actions_onRemove"></a>onRemove</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onRemove"></a>onRemove</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > actions > onRemove
 
 **Description:** Actions to run during package removal
 
@@ -1400,12 +1449,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_files"></a>files</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_files"></a>files</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > files
 
 **Description:** Files to place on disk during package deployment
 
@@ -1413,15 +1464,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_14"></a>ZarfFile  
+ ### <a name="autogenerated_heading_16"></a>ZarfFile  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1430,15 +1478,15 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfFile                                                                                   |
 
 <details>
-<summary><strong> <a name="components_items_files_items_source"></a>source *</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** Local file path or remote URL to add to the package
+**Description:** Local file path or remote URL to pull into the package
 
 |          |          |
 | -------- | -------- |
@@ -1448,13 +1496,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_shasum"></a>shasum</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** SHA256 checksum of the file if the source is a URL
+**Description:** Optional SHA256 checksum of the file
 
 |          |          |
 | -------- | -------- |
@@ -1464,8 +1512,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_files_items_target"></a>target *</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_target"></a>target *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1482,8 +1530,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_files_items_executable"></a>executable</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_executable"></a>executable</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1498,8 +1546,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
-
+<summary>
+<strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1510,15 +1558,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_15"></a>symlinks items  
+ ### <a name="autogenerated_heading_17"></a>symlinks items  
 
 |          |          |
 | -------- | -------- |
@@ -1530,12 +1575,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_charts"></a>charts</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_charts"></a>charts</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > charts
 
 **Description:** Helm charts to install during package deploy
 
@@ -1543,15 +1590,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_16"></a>ZarfChart  
+ ### <a name="autogenerated_heading_18"></a>ZarfChart  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1568,7 +1612,7 @@ Must be one of:
 
 <blockquote>
 
-## <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
+### <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
 
 **Title:** url
 
@@ -1577,13 +1621,13 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
-### <a name="autogenerated_heading_17"></a>The following properties are required
+#### <a name="autogenerated_heading_2"></a>The following properties are required
 * url
 
 </blockquote>
 <blockquote>
 
-## <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
+### <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
 
 **Title:** localPath
 
@@ -1592,7 +1636,7 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
-### <a name="autogenerated_heading_18"></a>The following properties are required
+#### <a name="autogenerated_heading_2"></a>The following properties are required
 * localPath
 
 </blockquote>
@@ -1600,8 +1644,8 @@ Must be one of:
 </blockquote>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1618,8 +1662,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1634,8 +1678,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_url"></a>url</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1650,8 +1694,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_version"></a>version *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_version"></a>version *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1668,8 +1712,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1686,8 +1730,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1698,15 +1742,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_19"></a>valuesFiles items  
+ ### <a name="autogenerated_heading_19"></a>valuesFiles items  
 
 |          |          |
 | -------- | -------- |
@@ -1716,8 +1757,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1728,12 +1769,17 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Example:** 
+
+<code>
+"charts/your-chart"</code>
+
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1748,13 +1794,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
-
+<summary>
+<strong> <a name="components_items_charts_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Wait for chart resources to be ready before continuing
+**Description:** Whether to not wait for chart resources to be ready before continuing
 
 |          |           |
 | -------- | --------- |
@@ -1766,26 +1812,27 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_manifests"></a>manifests</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_manifests"></a>manifests</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## components > manifests
+
+**Description:** Kubernetes manifests to be included in a generated Helm chart on package deploy
 
 |          |         |
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_20"></a>ZarfManifest  
+ ### <a name="autogenerated_heading_20"></a>ZarfManifest  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1794,8 +1841,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfManifest                                                                               |
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1812,8 +1859,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_namespace"></a>namespace</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1828,8 +1875,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_files"></a>files</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_files"></a>files</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1840,15 +1887,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_21"></a>files items  
+ ### <a name="autogenerated_heading_21"></a>files items  
 
 |          |          |
 | -------- | -------- |
@@ -1858,8 +1902,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_kustomizeAllowAnyDirectory"></a>kustomizeAllowAnyDirectory</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1874,8 +1918,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_kustomizations"></a>kustomizations</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1886,15 +1930,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_22"></a>kustomizations items  
+ ### <a name="autogenerated_heading_22"></a>kustomizations items  
 
 |          |          |
 | -------- | -------- |
@@ -1904,13 +1945,13 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
-
+<summary>
+<strong> <a name="components_items_manifests_items_noWait"></a>noWait</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Wait for manifest resources to be ready before continuing
+**Description:** Whether to not wait for manifest resources to be ready before continuing
 
 |          |           |
 | -------- | --------- |
@@ -1923,8 +1964,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_images"></a>images</strong>
-
+<summary>
+<strong> <a name="components_items_images"></a>images</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1935,15 +1976,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_23"></a>images items  
+ ### <a name="autogenerated_heading_23"></a>images items  
 
 |          |          |
 | -------- | -------- |
@@ -1953,8 +1991,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_repos"></a>repos</strong>
-
+<summary>
+<strong> <a name="components_items_repos"></a>repos</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -1965,15 +2003,12 @@ Must be one of:
 | -------- | ----------------- |
 | **Type** | `array of string` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_24"></a>repos items  
+ ### <a name="autogenerated_heading_24"></a>repos items  
 
 |          |          |
 | -------- | -------- |
@@ -1982,28 +2017,27 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_dataInjections"></a>dataInjections</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_dataInjections"></a>dataInjections</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** Datasets to inject into a pod in the target cluster
+  ## components > dataInjections
+
+**Description:** Datasets to inject into a container in the target cluster
 
 |          |         |
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_25"></a>ZarfDataInjection  
+ ### <a name="autogenerated_heading_25"></a>ZarfDataInjection  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2012,8 +2046,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfDataInjection                                                                          |
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_source"></a>source *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2029,13 +2063,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="components_items_dataInjections_items_target"></a>target *</strong>
-
+<details open>
+<summary>
+<strong> <a name="components_items_dataInjections_items_target"></a>target *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
+  ## components > dataInjections > target
 ![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The target pod + container to inject the data into
@@ -2047,8 +2082,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfContainerTarget                                                                        |
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_namespace"></a>namespace *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2065,8 +2100,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_selector"></a>selector *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2079,19 +2114,24 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Example:** 
+
+<code>
+"app&#61;data-injection"</code>
+
 </blockquote>
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_container"></a>container *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The container to target for data injection
+**Description:** The container name to target for data injection
 
 |          |          |
 | -------- | -------- |
@@ -2101,15 +2141,15 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_target_path"></a>path *</strong>
 </summary>
 &nbsp;
 <blockquote>
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The path to copy the data to in the container
+**Description:** The path within the container to copy the data into
 
 |          |          |
 | -------- | -------- |
@@ -2122,8 +2162,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
-
+<summary>
+<strong> <a name="components_items_dataInjections_items_compress"></a>compress</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2143,12 +2183,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="variables"></a>variables</strong>
-
+<details open>
+<summary>
+<strong> <a name="variables"></a>variables</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## variables
 
 **Description:** Variable template values applied on deploy for K8s resources
 
@@ -2156,15 +2198,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_26"></a>ZarfPackageVariable  
+ ### <a name="autogenerated_heading_26"></a>ZarfPackageVariable  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2173,8 +2212,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfPackageVariable                                                                        |
 
 <details>
-<summary><strong> <a name="variables_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="variables_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2195,8 +2234,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="variables_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="variables_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2211,8 +2250,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="variables_items_default"></a>default</strong>
-
+<summary>
+<strong> <a name="variables_items_default"></a>default</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2227,8 +2266,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="variables_items_prompt"></a>prompt</strong>
-
+<summary>
+<strong> <a name="variables_items_prompt"></a>prompt</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2245,12 +2284,14 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary><strong> <a name="constants"></a>constants</strong>
-
+<details open>
+<summary>
+<strong> <a name="constants"></a>constants</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+  ## constants
 
 **Description:** Constant template values applied on deploy for K8s resources
 
@@ -2258,15 +2299,12 @@ Must be one of:
 | -------- | ------- |
 | **Type** | `array` |
 
-|                      | Array restrictions |
-| -------------------- | ------------------ |
-| **Min items**        | N/A                |
-| **Max items**        | N/A                |
-| **Items unicity**    | False              |
-| **Additional items** | False              |
-| **Tuple validation** | See below          |
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ## <a name="autogenerated_heading_27"></a>ZarfPackageConstant  
+ ### <a name="autogenerated_heading_27"></a>ZarfPackageConstant  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2275,8 +2313,8 @@ Must be one of:
 | **Defined in**            | #/definitions/ZarfPackageConstant                                                                        |
 
 <details>
-<summary><strong> <a name="constants_items_name"></a>name *</strong>
-
+<summary>
+<strong> <a name="constants_items_name"></a>name *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2297,8 +2335,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="constants_items_value"></a>value *</strong>
-
+<summary>
+<strong> <a name="constants_items_value"></a>value *</strong>
 </summary>
 &nbsp;
 <blockquote>
@@ -2315,8 +2353,8 @@ Must be one of:
 </details>
 
 <details>
-<summary><strong> <a name="constants_items_description"></a>description</strong>
-
+<summary>
+<strong> <a name="constants_items_description"></a>description</strong>
 </summary>
 &nbsp;
 <blockquote>

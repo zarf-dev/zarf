@@ -86,7 +86,7 @@ func (i *ImgConfig) PullAll() error {
 		// Save the image
 		err := crane.SaveOCI(img, i.ImagesPath)
 		if err != nil {
-			fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+			return fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
 		}
 
 		// Get the image digest so we can set an annotation in the image.json later
