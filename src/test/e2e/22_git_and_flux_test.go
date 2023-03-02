@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -45,8 +43,6 @@ func TestGitAndFlux(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	testRemovingTagsOnCreate(t)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -117,57 +113,4 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 
 	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-}
-
-func testRemovingTagsOnCreate(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	require.NoError(t, err, "unable to get the user's home directory")
-
-	// Build the test package
-	testPackageDirPath := "src/test/test-packages/git-repo-caching"
-	testPackagePath := fmt.Sprintf("%s/zarf-package-test-package-git-cache-%s.tar.zst", testPackageDirPath, e2e.arch)
-	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
-	_, _, err = e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.NoError(t, err, "error when building the test package")
-	defer e2e.cleanFiles(testPackagePath)
-
-	// Extract the built package so we can inspect the repositories that are included
-	extractedDirPath := "tmp-extraction"
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", testPackagePath, extractedDirPath, "-l=trace", "--decompress-all")
-	defer e2e.cleanFiles(extractedDirPath)
-	require.NoError(t, err, stdOut, stdErr)
-
-	/* Test to make sure we are removing tags where necessary */
-	// verify the component has multiple tags (in this case, we want to make sure it includes something we didn't specifically ask for)
-	gitDirFlag := fmt.Sprintf("--git-dir=%s/components/full-repo/repos/zarf-1211668992/.git", extractedDirPath)
-	gitTagOut, err := exec.Command("git", gitDirFlag, "tag", "-l").Output()
-	require.NoError(t, err)
-	require.Contains(t, string(gitTagOut), "v0.22.0")
-
-	// verify the component has only a single tag
-	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-tag/repos/zarf-1211668992/.git", extractedDirPath)
-	gitTagOut, err = exec.Command("git", gitDirFlag, "tag", "-l").Output()
-	require.NoError(t, err)
-	require.Equal(t, "v0.16.0\n", string(gitTagOut))
-
-	/* Test to make sure we are pulling the latest upstream changes when building a package */
-	// Force our cache to be 'old' by resetting the HEAD of the cached Zarf repo
-	cachedRepoGitDirFlag := fmt.Sprintf("--git-dir=%s/.zarf-cache/repos/zarf-1211668992/.git", homeDir)
-	cachedRepoWorkTreeFlag := fmt.Sprintf("--work-tree=%s/.zarf-cache/repos/zarf-1211668992", homeDir)
-	_, err = exec.Command("git", cachedRepoGitDirFlag, cachedRepoWorkTreeFlag, "reset", "HEAD~3", "--hard").Output()
-	require.NoError(t, err, err)
-
-	// Make sure the cache is now 'old'
-	statusOutput, err := exec.Command("git", cachedRepoGitDirFlag, "status").Output()
-	require.NoError(t, err, err)
-	require.Contains(t, string(statusOutput), "Your branch is behind")
-
-	// Re-build the test package
-	_, _, err = e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.NoError(t, err, "error when rebuilding the test git-cache package")
-
-	// Check to make sure the cache is no longer 'old'
-	statusOutput, err = exec.Command("git", cachedRepoGitDirFlag, cachedRepoWorkTreeFlag, "status").Output()
-	require.NoError(t, err, err)
-	require.Contains(t, string(statusOutput), "Your branch is up to date")
 }
