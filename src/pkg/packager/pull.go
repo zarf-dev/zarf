@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/mholt/archiver/v3"
 )
@@ -16,8 +17,15 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
+
+	// Get all the layers from within the temp directory
+	allTheLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
+	if err != nil {
+		return err
+	}
+
 	name := fmt.Sprintf("zarf-package-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
-	err = archiver.Archive([]string{p.tmp.Base}, name)
+	err = archiver.Archive(allTheLayers, name)
 	if err != nil {
 		return err
 	}
