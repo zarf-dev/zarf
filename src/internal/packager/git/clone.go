@@ -6,24 +6,32 @@ package git
 
 import (
 	"context"
-	"errors"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/go-git/go-git/v5"
+	goConfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git.Repository, error) {
+func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName) (*git.Repository, error) {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
 		RemoteName: onlineRemoteName,
 	}
 
-	if onlyFetchRef {
+	// If the ref is a tag, don't clone all tags.
+	if ref.IsTag() {
 		cloneOptions.Tags = git.NoTags
+	}
+
+	// Use a single branch if we're cloning a specific ref
+	if ref != "" {
+		cloneOptions.ReferenceName = ref
+		cloneOptions.SingleBranch = true
 	}
 
 	gitCred := utils.FindAuthForHost(gitURL)
@@ -35,16 +43,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 	// Clone the given repo
 	repo, err := git.PlainClone(gitDirectory, false, cloneOptions)
-
-	if errors.Is(err, git.ErrRepositoryAlreadyExists) {
-		repo, err = git.PlainOpen(gitDirectory)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return repo, git.ErrRepositoryAlreadyExists
-	} else if err != nil {
+	if err != nil {
 		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
 		g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
@@ -52,7 +51,7 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 		// Only support "all tags" due to the azure clone url format including a username
 		cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, gitDirectory}
 
-		if onlyFetchRef {
+		if ref.IsTag() {
 			cmdArgs = append(cmdArgs, "--no-tags")
 		}
 
@@ -67,6 +66,18 @@ func (g *Git) clone(gitDirectory string, gitURL string, onlyFetchRef bool) (*git
 
 		return git.PlainOpen(gitDirectory)
 	} else {
+		if ref == "" {
+			err := repo.Fetch(&git.FetchOptions{
+				RemoteName: onlineRemoteName,
+				Progress:   g.Spinner,
+				RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+				Tags:       git.AllTags,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return repo, nil
 	}
 }

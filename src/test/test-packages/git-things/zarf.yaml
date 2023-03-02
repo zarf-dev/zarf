@@ -1,0 +1,24 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-git-things
+
+components:
+  - name: bb-152
+    required: true
+    repos:
+      - "https://repo1.dso.mil/big-bang/bigbang.git@refs/heads/release-1.52.x"
+
+  - name: bb-153
+    required: true
+    repos:
+      - "https://repo1.dso.mil/big-bang/bigbang.git@refs/tags/1.53.0"
+
+  - name: bb-154
+    required: true
+    repos:
+      - "https://repo1.dso.mil/big-bang/bigbang.git@1.54.0"
+
+  - name: bb-all
+    required: true
+    repos:
+      - "https://repo1.dso.mil/big-bang/bigbang.git"

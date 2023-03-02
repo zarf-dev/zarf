@@ -12,8 +12,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// For further explanation: https://regex101.com/r/zq64q4/1.
-var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<ref>[\w\-\.]+))?$`)
+// For further explanation: https://regex101.com/r/xx8NQe/1.
+var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)(?P<git>\.git)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?$`)
 
 // MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
 func (g *Git) MutateGitURLsInText(text string) string {

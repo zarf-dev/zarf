@@ -101,27 +101,18 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		Password: g.Server.PushPassword,
 	}
 
-	// Since we are pushing HEAD:refs/heads/master on deployment, leaving
-	// duplicates of the HEAD ref (ex. refs/heads/master,
-	// refs/remotes/online-upstream/master, will cause the push to fail)
-	removedRefs, err := g.removeHeadCopies()
-	if err != nil {
-		return fmt.Errorf("unable to remove unused git refs from the repo: %w", err)
-	}
-
 	// Fetch remote offline refs in case of old update or if multiple refs are specified in one package
 	fetchOptions := &git.FetchOptions{
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		RefSpecs: []goConfig.RefSpec{
 			"refs/heads/*:refs/heads/*",
-			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
 	}
 
 	// Attempt the fetch, if it fails, log a warning and continue trying to push (might as well try..)
-	err = repo.Fetch(fetchOptions)
+	err := repo.Fetch(fetchOptions)
 	if errors.Is(err, transport.ErrRepositoryNotFound) {
 		message.Debugf("Repo not yet available offline, skipping fetch...")
 	} else if errors.Is(err, git.ErrForceNeeded) {
@@ -140,7 +131,6 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		// If a provided refspec doesn't push anything, it is just ignored
 		RefSpecs: []goConfig.RefSpec{
 			"refs/heads/*:refs/heads/*",
-			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
 	})
@@ -150,10 +140,6 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	} else if err != nil {
 		return fmt.Errorf("unable to push repo to the gitops service: %w", err)
 	}
-
-	// Add back the refs we removed just incase this push isn't the last thing
-	// being run and a later task needs to reference them.
-	g.addRefs(removedRefs)
 
 	return nil
 }
