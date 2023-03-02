@@ -16,7 +16,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName, isPartialClone bool) (*git.Repository, error) {
+func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -28,8 +28,8 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 		cloneOptions.Tags = git.NoTags
 	}
 
-	// Use a single branch if we're cloning a specific ref.
-	if isPartialClone {
+	// Use a single branch if we're cloning a specific branch
+	if ref.IsBranch() || ref.IsTag() {
 		cloneOptions.ReferenceName = ref
 		cloneOptions.SingleBranch = true
 	}
@@ -51,8 +51,15 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 		// Only support "all tags" due to the azure clone url format including a username
 		cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, gitDirectory}
 
+		// If the ref is a tag, don't clone all tags.
 		if ref.IsTag() {
 			cmdArgs = append(cmdArgs, "--no-tags")
+		}
+
+		// Use a single branch if we're cloning a specific branch
+		if ref.IsBranch() || ref.IsTag() {
+			cmdArgs = append(cmdArgs, "-b", ref.String())
+			cmdArgs = append(cmdArgs, "--single-branch")
 		}
 
 		execConfig := exec.Config{
@@ -61,24 +68,24 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 		}
 		_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return git.PlainOpen(gitDirectory)
-	} else {
-		// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
-		if !isPartialClone {
-			fetchOpts := &git.FetchOptions{
-				RemoteName: onlineRemoteName,
-				Progress:   g.Spinner,
-				RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
-				Tags:       git.AllTags,
-			}
-			if err := repo.Fetch(fetchOpts); err != nil {
-				return nil, err
-			}
-		}
-
-		return repo, nil
+		return nil
 	}
+
+	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
+	if ref == emptyRef {
+		fetchOpts := &git.FetchOptions{
+			RemoteName: onlineRemoteName,
+			Progress:   g.Spinner,
+			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+			Tags:       git.AllTags,
+		}
+		if err := repo.Fetch(fetchOpts); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -5,8 +5,12 @@
 package git
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 // Git is the main struct for managing git repositories.
@@ -21,6 +25,7 @@ type Git struct {
 
 const onlineRemoteName = "online-upstream"
 const offlineRemoteName = "offline-downstream"
+const emptyRef = ""
 
 // New creates a new git instance with the provided server config.
 func New(server types.GitServerInfo) *Git {
@@ -35,4 +40,15 @@ func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
 		Server:  server,
 		Spinner: spinner,
 	}
+}
+
+// parseRef parses the provided ref into a ReferenceName if it's not a hash.
+func (g *Git) parseRef(r string) plumbing.ReferenceName {
+	// If not a full ref, assume it's a tag at this point.
+	if !plumbing.IsHash(r) && !strings.HasPrefix(r, "refs/") {
+		r = fmt.Sprintf("refs/tags/%s", r)
+	}
+
+	// Set the reference name to the provided ref.
+	return plumbing.ReferenceName(r)
 }

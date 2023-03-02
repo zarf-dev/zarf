@@ -34,36 +34,38 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	// Parse the git URL into its parts.
-	get, err := g.urlParser(gitURL)
+	// Find the Zarf-specific repo name from the git URL.
+	get, err := utils.MatchRegex(gitURLRegex, gitURL)
 	if err != nil {
 		return fmt.Errorf("unable to parse git url (%s): %w", gitURL, err)
 	}
 
-	// Get the git URL without the ref so we can clone the repo.
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
-
-	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
-	repoName := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
-	g.GitPath = path.Join(targetFolder, repoName)
-
-	// Setup any refs for this pull operation.
-	var ref plumbing.ReferenceName
+	// Setup the reference for this repository
 	refPlain := get("ref")
-	partialClone := refPlain != ""
-	if partialClone {
+
+	var ref plumbing.ReferenceName
+
+	// Parse the ref from the git URL.
+	if refPlain != emptyRef {
 		ref = g.parseRef(refPlain)
 	}
 
-	// Clone the repo.
-	if _, err := g.clone(g.GitPath, gitURLNoRef, ref, partialClone); err != nil {
+	// Construct a path unique to this git repo
+	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
+	g.GitPath = path.Join(targetFolder, repoFolder)
+
+	// Construct the remote URL without the reference
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
+
+	// Clone the git repository.
+	err = g.clone(targetFolder, gitURLNoRef, ref)
+	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
-	// If a non-branch ref was provided, checkout the ref as a branch so gitea doesn't have issues.
-	if partialClone && !ref.IsBranch() {
+	if ref != emptyRef && !ref.IsBranch() {
 		// Remove the "refs/tags/" prefix from the ref.
-		stripped := strings.TrimPrefix(ref.String(), "refs/tags/")
+		stripped := strings.TrimPrefix(refPlain, "refs/tags/")
 
 		// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
 		alias := fmt.Sprintf("zarf-ref-%s", stripped)
@@ -74,15 +76,4 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	}
 
 	return nil
-}
-
-// parseRef parses the provided ref into a ReferenceName.
-func (g *Git) parseRef(r string) plumbing.ReferenceName {
-	// If not a full ref, assume it's a tag at this point.
-	if !plumbing.IsHash(r) && !strings.HasPrefix(r, "refs/") {
-		r = fmt.Sprintf("refs/tags/%s", r)
-	}
-
-	// Set the reference name to the provided ref.
-	return plumbing.ReferenceName(r)
 }

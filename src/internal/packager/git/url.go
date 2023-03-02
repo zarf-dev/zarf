@@ -30,18 +30,17 @@ func (g *Git) MutateGitURLsInText(text string) string {
 
 // TransformURLtoRepoName takes a git url and returns a Zarf-compatible repo name.
 func (g *Git) TransformURLtoRepoName(url string) (string, error) {
-	matches := gitURLRegex.FindStringSubmatch(url)
-	idx := gitURLRegex.SubexpIndex
+	get, err := utils.MatchRegex(gitURLRegex, url)
 
-	if len(matches) == 0 {
+	if err != nil {
 		// Unable to find a substring match for the regex
 		return "", fmt.Errorf("unable to get extract the repoName from the url %s", url)
 	}
 
-	repoName := matches[idx("repo")]
+	repoName := get("repo")
 	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
 	// resolve to the same repp (as they would in real life)
-	sanitizedURL := fmt.Sprintf("%s/%s", matches[idx("hostPath")], repoName)
+	sanitizedURL := fmt.Sprintf("%s/%s", get("hostPath"), repoName)
 
 	// Add crc32 hash of the repoName to the end of the repo
 	checksum := utils.GetCRCHash(sanitizedURL)
@@ -60,20 +59,4 @@ func (g *Git) TransformURL(url string) (string, error) {
 	output := fmt.Sprintf("%s/%s/%s", g.Server.Address, g.Server.PushUsername, repoName)
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
-}
-
-func (g *Git) urlParser(gitURL string) (func(string) string, error) {
-	// Validate the git URL.
-	matches := gitURLRegex.FindStringSubmatch(gitURL)
-
-	// Parse the git URL into its components.
-	get := func(name string) string {
-		return matches[gitURLRegex.SubexpIndex(name)]
-	}
-
-	if len(matches) == 0 {
-		return get, fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
-	}
-
-	return get, nil
 }

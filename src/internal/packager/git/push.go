@@ -23,14 +23,14 @@ func (g *Git) PushRepo(srcUrl, targetFolder string) error {
 	defer spinner.Stop()
 
 	// Parse the git URL.
-	get, err := g.urlParser(srcUrl)
+	get, err := utils.MatchRegex(gitURLRegex, srcUrl)
 	if err != nil {
 		return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
 	}
 
 	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
-	repoName := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
-	g.GitPath = path.Join(targetFolder, repoName)
+	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
+	g.GitPath = path.Join(targetFolder, repoFolder)
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {

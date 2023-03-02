@@ -167,16 +167,16 @@ func ServiceInfoFromServiceURL(serviceURL string) *ServiceInfo {
 
 	// Match hostname against local cluster service format.
 	pattern := regexp.MustCompile(serviceURLPattern)
-	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
+	get, err := utils.MatchRegex(pattern, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
-	if len(matches) != 3 {
+	if err != nil {
 		return nil
 	}
 
 	return &ServiceInfo{
-		Namespace: matches[pattern.SubexpIndex("namespace")],
-		Name:      matches[pattern.SubexpIndex("name")],
+		Namespace: get("namespace"),
+		Name:      get("name"),
 		Port:      remotePort,
 	}
 }
