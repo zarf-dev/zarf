@@ -7,6 +7,7 @@ package git
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -30,7 +31,19 @@ func (g *Git) PushRepo(srcUrl, targetFolder string) error {
 
 	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
 	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
-	g.GitPath = path.Join(targetFolder, repoFolder)
+	repoPath := path.Join(targetFolder, repoFolder)
+
+	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
+	_, err = os.Stat(repoPath)
+	if os.IsNotExist(err) {
+		repoFolder, err = g.TransformURLtoRepoName(srcUrl)
+		if err != nil {
+			return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
+		}
+		repoPath = path.Join(targetFolder, repoFolder)
+	}
+
+	g.GitPath = repoPath
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {
