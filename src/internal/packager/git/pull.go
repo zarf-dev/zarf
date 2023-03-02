@@ -58,7 +58,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
 
 	// Clone the git repository.
-	err = g.clone(targetFolder, gitURLNoRef, ref)
+	err = g.clone(gitURLNoRef, ref)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}

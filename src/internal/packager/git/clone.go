@@ -16,7 +16,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -42,10 +42,10 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 	}
 
 	// Clone the given repo.
-	repo, err := git.PlainClone(gitDirectory, false, cloneOptions)
+	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
 		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
-		g.gitCloneFallback(gitDirectory, gitURL, ref)
+		return g.gitCloneFallback(gitURL, ref)
 	}
 
 	// If we're cloning the whole repo or a commit hash, we need to also fetch the other branches besides the default.
@@ -65,12 +65,12 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 }
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
-func (g *Git) gitCloneFallback(gitDirectory string, gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error {
 	g.Spinner.Updatef("Falling back to host git for %s", gitURL)
 
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
-	cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, gitDirectory}
+	cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
 
 	// Don't clone all tags if we're cloning a specific tag.
 	if ref.IsTag() {
