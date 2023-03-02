@@ -34,3 +34,4 @@ zarf
 zarf-pki
 zarf-sbom/
 *.part*
+test-*.txt
