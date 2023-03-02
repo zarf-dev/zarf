@@ -148,7 +148,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		Progress:   spinner,
-		// @todo: add the parsing for the `+` force prefix
+		// TODO: (@JEFFMCCOY) add the parsing for the `+` force prefix (see https://github.com/defenseunicorns/zarf/issues/1410)
 		//Force: isForce,
 		// If a provided refspec doesn't push anything, it is just ignored
 		RefSpecs: []goConfig.RefSpec{
