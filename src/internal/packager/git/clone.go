@@ -16,7 +16,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName) (*git.Repository, error) {
+func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceName, isPartialClone bool) (*git.Repository, error) {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -28,20 +28,20 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 		cloneOptions.Tags = git.NoTags
 	}
 
-	// Use a single branch if we're cloning a specific ref
-	if ref != "" {
+	// Use a single branch if we're cloning a specific ref.
+	if isPartialClone {
 		cloneOptions.ReferenceName = ref
 		cloneOptions.SingleBranch = true
 	}
 
 	gitCred := utils.FindAuthForHost(gitURL)
 
-	// Gracefully handle no git creds on the system (like our CI/CD)
+	// Gracefully handle no git creds on the system (like our CI/CD).
 	if gitCred.Auth.Username != "" {
 		cloneOptions.Auth = &gitCred.Auth
 	}
 
-	// Clone the given repo
+	// Clone the given repo.
 	repo, err := git.PlainClone(gitDirectory, false, cloneOptions)
 	if err != nil {
 		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
@@ -66,14 +66,15 @@ func (g *Git) clone(gitDirectory string, gitURL string, ref plumbing.ReferenceNa
 
 		return git.PlainOpen(gitDirectory)
 	} else {
-		if ref == "" {
-			err := repo.Fetch(&git.FetchOptions{
+		// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
+		if !isPartialClone {
+			fetchOpts := &git.FetchOptions{
 				RemoteName: onlineRemoteName,
 				Progress:   g.Spinner,
 				RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
 				Tags:       git.AllTags,
-			})
-			if err != nil {
+			}
+			if err := repo.Fetch(fetchOpts); err != nil {
 				return nil, err
 			}
 		}

@@ -18,7 +18,7 @@ func (g *Git) CheckoutTag(tag string) error {
 	options := &git.CheckoutOptions{
 		Branch: g.parseRef(tag),
 	}
-	g.checkout(options)
+	return g.checkout(options)
 }
 
 func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) error {
@@ -26,7 +26,7 @@ func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) err
 		return g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	}
 
-	return err
+	return g.checkoutTagAsBranch(ref, branch)
 }
 
 // checkoutTagAsBranch performs a `git checkout` of the provided tag but rather

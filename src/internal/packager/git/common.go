@@ -11,17 +11,16 @@ import (
 
 // Git is the main struct for managing git repositories.
 type Git struct {
+	// Server is the git server configuration.
 	Server types.GitServerInfo
-
+	// Spinner is an optional spinner to use for long running operations.
 	Spinner *message.Spinner
-
-	// Target working directory for the git repository
+	// Target working directory for the git repository.
 	GitPath string
 }
 
 const onlineRemoteName = "online-upstream"
 const offlineRemoteName = "offline-downstream"
-const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
 
 // New creates a new git instance with the provided server config.
 func New(server types.GitServerInfo) *Git {

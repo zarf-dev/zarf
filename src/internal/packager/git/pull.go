@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5/plumbing"
 )
@@ -23,7 +22,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
-	// later if we need them
+	// later if we need them.
 	if err = g.Pull(gitURL, path); err != nil {
 		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
@@ -35,50 +34,38 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	// Find the repo name from the git URL.
-	repoName, err := g.TransformURLtoRepoName(gitURL)
+	// Parse the git URL into its parts.
+	get, err := g.urlParser(gitURL)
 	if err != nil {
-		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
-		return err
+		return fmt.Errorf("unable to parse git url (%s): %w", gitURL, err)
 	}
 
-	// Setup git paths.
+	// Get the git URL without the ref so we can clone the repo.
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
+
+	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
+	repoName := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
 	g.GitPath = path.Join(targetFolder, repoName)
 
-	// Parse the git URL into its components.
-	matches := gitURLRegex.FindStringSubmatch(gitURL)
-	get := func(name string) string {
-		return matches[gitURLRegex.SubexpIndex(name)]
-	}
-
-	// If unable to find a substring match for the regex, return an error.
-	if len(matches) == 0 {
-		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
-	}
-
+	// Setup any refs for this pull operation.
+	var ref plumbing.ReferenceName
 	refPlain := get("ref")
 	partialClone := refPlain != ""
-
-	var ref plumbing.ReferenceName
-
-	// Parse the ref from the git URL.
 	if partialClone {
 		ref = g.parseRef(refPlain)
 	}
 
-	// Parse the git URL into its components.
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
-
-	// Clone the repo into the cache.
-	if _, err := g.clone(g.GitPath, gitURLNoRef, ref); err != nil {
+	// Clone the repo.
+	if _, err := g.clone(g.GitPath, gitURLNoRef, ref, partialClone); err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
+	// If a non-branch ref was provided, checkout the ref as a branch so gitea doesn't have issues.
 	if partialClone && !ref.IsBranch() {
 		// Remove the "refs/tags/" prefix from the ref.
 		stripped := strings.TrimPrefix(ref.String(), "refs/tags/")
 
-		// Use the stripped ref as the branch name.
+		// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
 		alias := fmt.Sprintf("zarf-ref-%s", stripped)
 		trunkBranchName := plumbing.NewBranchReferenceName(alias)
 
@@ -89,7 +76,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	return nil
 }
 
-// parseRef parses the provided ref into a ReferenceName if it's not a hash.
+// parseRef parses the provided ref into a ReferenceName.
 func (g *Git) parseRef(r string) plumbing.ReferenceName {
 	// If not a full ref, assume it's a tag at this point.
 	if !plumbing.IsHash(r) && !strings.HasPrefix(r, "refs/") {

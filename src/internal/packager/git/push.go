@@ -7,9 +7,10 @@ package git
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
+	"path"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -17,13 +18,19 @@ import (
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
-func (g *Git) PushRepo(localPath string) error {
-	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
+func (g *Git) PushRepo(srcUrl, targetFolder string) error {
+	spinner := message.NewProgressSpinner("Processing git repo %s", srcUrl)
 	defer spinner.Stop()
 
-	g.GitPath = localPath
-	basename := filepath.Base(localPath)
-	spinner.Updatef("Pushing git repo %s", basename)
+	// Parse the git URL.
+	get, err := g.urlParser(srcUrl)
+	if err != nil {
+		return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
+	}
+
+	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
+	repoName := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
+	g.GitPath = path.Join(targetFolder, repoName)
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {
@@ -32,7 +39,7 @@ func (g *Git) PushRepo(localPath string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", basename, err.Error())
+		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", get("repo"), err.Error())
 		return err
 	}
 

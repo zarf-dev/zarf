@@ -6,10 +6,10 @@ package git
 
 import (
 	"fmt"
-	"hash/crc32"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // For further explanation: https://regex101.com/r/xx8NQe/1.
@@ -44,8 +44,8 @@ func (g *Git) TransformURLtoRepoName(url string) (string, error) {
 	sanitizedURL := fmt.Sprintf("%s/%s", matches[idx("hostPath")], repoName)
 
 	// Add crc32 hash of the repoName to the end of the repo
-	table := crc32.MakeTable(crc32.IEEE)
-	checksum := crc32.Checksum([]byte(sanitizedURL), table)
+	checksum := utils.GetCRCHash(sanitizedURL)
+
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
 	return newRepoName, nil
@@ -60,4 +60,20 @@ func (g *Git) TransformURL(url string) (string, error) {
 	output := fmt.Sprintf("%s/%s/%s", g.Server.Address, g.Server.PushUsername, repoName)
 	message.Debugf("Rewrite git URL: %s -> %s", url, output)
 	return output, nil
+}
+
+func (g *Git) urlParser(gitURL string) (func(string) string, error) {
+	// Validate the git URL.
+	matches := gitURLRegex.FindStringSubmatch(gitURL)
+
+	// Parse the git URL into its components.
+	get := func(name string) string {
+		return matches[gitURLRegex.SubexpIndex(name)]
+	}
+
+	if len(matches) == 0 {
+		return get, fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
+	}
+
+	return get, nil
 }
