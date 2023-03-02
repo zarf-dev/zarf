@@ -5,10 +5,7 @@
 package git
 
 import (
-	"errors"
 	"fmt"
-
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -51,11 +48,6 @@ func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
 func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	gitCachePath := targetFolder
-	if repoName != "" {
-		gitCachePath = filepath.Join(config.GetAbsCachePath(), filepath.Join(config.ZarfGitCacheDir, repoName))
-	}
-
 	matches := gitURLRegex.FindStringSubmatch(gitURL)
 	idx := gitURLRegex.SubexpIndex
 
@@ -64,46 +56,17 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
 	}
 
+	alreadyProcessed := false
 	onlyFetchRef := matches[idx("atRef")] != ""
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
-
-	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
-
+	repo, err := g.clone(targetFolder, gitURLNoRef, onlyFetchRef)
 	if err == git.ErrRepositoryAlreadyExists {
-
-		// Pull the latest changes from the online repo
-		message.Debug("Repo already cloned, pulling any upstream changes...")
-		gitCred := utils.FindAuthForHost(gitURL)
-		pullOptions := &git.PullOptions{
-			RemoteName: onlineRemoteName,
-			Auth:       &gitCred.Auth,
-		}
-		worktree, err := repo.Worktree()
-		if err != nil {
-			return fmt.Errorf("unable to get the worktree for the repo (%s): %w", gitURL, err)
-		}
-		err = worktree.Pull(pullOptions)
-		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			message.Debug("Repo already up to date")
-		} else if err != nil {
-			return fmt.Errorf("not a valid git repo or unable to pull (%s): %w", gitURL, err)
-		}
-
-		// NOTE: Since pull doesn't pull any new tags, we need to fetch them
-		fetchOptions := git.FetchOptions{RemoteName: onlineRemoteName, Tags: git.AllTags}
-		if err := g.fetch(gitCachePath, &fetchOptions); err != nil {
-			return err
-		}
-
+		// If we enter this block, the user has specified the same repo twice in one component and we should respect the prior changes
+		// (see the specific-tag-update component in the git-repo-behavior test-package)
+		message.Debug("Repo already cloned, pulling any specified changes...")
+		alreadyProcessed = true
 	} else if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
-	}
-
-	if gitCachePath != targetFolder {
-		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
-		if err != nil {
-			return fmt.Errorf("unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
-		}
 	}
 
 	if onlyFetchRef {
@@ -124,12 +87,15 @@ func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
 			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
 		}
 
-		_, err = g.removeLocalTagRefs()
-		if err != nil {
-			return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
+		// If this repo has already been processed by Zarf don't remove tags, refs and branches
+		if !alreadyProcessed {
+			_, err = g.removeLocalTagRefs()
+			if err != nil {
+				return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
+			}
+			_, _ = g.removeLocalBranchRefs()
+			_, _ = g.removeOnlineRemoteRefs()
 		}
-		_, _ = g.removeLocalBranchRefs()
-		_, _ = g.removeOnlineRemoteRefs()
 
 		err = g.fetchRef(ref)
 		if err != nil {

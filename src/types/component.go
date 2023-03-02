@@ -32,7 +32,7 @@ type ZarfComponent struct {
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
 	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=(Deprecated--use actions instead) Custom commands to run before or after package deployment,deprecated=true"`
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
@@ -44,7 +44,7 @@ type ZarfComponent struct {
 	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
 
 	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
-	Manifests []ZarfManifest `json:"manifests,omitempty"`
+	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
 
 	// Images are the online images needed to be included in the zarf package
 	Images []string `json:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
@@ -53,7 +53,7 @@ type ZarfComponent struct {
 	Repos []string `json:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
 
 	// Data packages to push into a running cluster
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a pod in the target cluster"`
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -65,13 +65,13 @@ type ZarfComponentOnlyTarget struct {
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
 type ZarfComponentOnlyCluster struct {
 	Architecture string   `json:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
-	Distros      []string `json:"distros,omitempty" jsonschema:"description=Future use"`
+	Distros      []string `json:"distros,omitempty" jsonschema:"description=A list of kubernetes distros this package works with (Reserved for future use),example=k3s,example=eks"`
 }
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to add to the package"`
-	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=SHA256 checksum of the file if the source is a URL"`
+	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to pull into the package"`
+	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=Optional SHA256 checksum of the file"`
 	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
 	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
@@ -85,9 +85,9 @@ type ZarfChart struct {
 	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package; these will be merged together"`
-	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo"`
+	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
 	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=localPath,description=The path to the chart folder"`
-	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Wait for chart resources to be ready before continuing"`
+	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
@@ -97,7 +97,7 @@ type ZarfManifest struct {
 	Files                      []string `json:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
 	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
-	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Wait for manifest resources to be ready before continuing"`
+	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for manifest resources to be ready before continuing"`
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed
@@ -156,25 +156,25 @@ type ZarfComponentActionWait struct {
 
 // ZarfComponentActionWaitCluster specifies a condition to wait for before continuing
 type ZarfComponentActionWaitCluster struct {
-	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for (e.g. Pod; Deployment; etc.)"`
-	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for (e.g. podinfo; app=podinfo; etc.)"`
+	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for,example=Pod,example=Deployment)"`
+	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for,example=podinfo,example=app&#61;podinfo"`
 	Namespace  string `json:"namespace,omitempty" jsonschema:"description=The namespace of the resource to wait for"`
-	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist, a special condition that will wait for the resource to exist."`
+	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition to wait for; defaults to exist, a special condition that will wait for the resource to exist,example=Ready,example=Available"`
 }
 
 // ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing
 type ZarfComponentActionWaitNetwork struct {
-	Protocol string `json:"protocol" jsonschema:"description=The protocol to wait for (e.g. tcp; http; etc.).,enum=tcp,enum=http,enum=https"`
-	Address  string `json:"address" jsonschema:"description=The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)"`
-	Code     int    `json:"code,omitempty" jsonschema:"description=The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)"`
+	Protocol string `json:"protocol" jsonschema:"description=The protocol to wait for,enum=tcp,enum=http,enum=https"`
+	Address  string `json:"address" jsonschema:"description=The address to wait for,example=localhost:8080,example=1.1.1.1"`
+	Code     int    `json:"code,omitempty" jsonschema:"description=The HTTP status code to wait for if using http or https,example=200,example=404"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
-	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection"`
-	Container string `json:"container" jsonschema:"description=The container to target for data injection"`
-	Path      string `json:"path" jsonschema:"description=The path to copy the data to in the container"`
+	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection,example=app&#61;data-injection"`
+	Container string `json:"container" jsonschema:"description=The container name to target for data injection"`
+	Path      string `json:"path" jsonschema:"description=The path within the container to copy the data into"`
 }
 
 // ZarfDataInjection is a data-injection definition.
@@ -186,7 +186,7 @@ type ZarfDataInjection struct {
 
 // ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
-	ComponentName string `json:"name,omitempty"`
+	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	Path string `json:"path" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
 }

@@ -52,25 +52,31 @@
       ],
       "properties": {
         "terminal": {
-          "type": "string"
+          "type": "string",
+          "description": "The machine name that created this package"
         },
         "user": {
-          "type": "string"
+          "type": "string",
+          "description": "The username who created this package"
         },
         "architecture": {
-          "type": "string"
+          "type": "string",
+          "description": "The architecture this package was created on"
         },
         "timestamp": {
-          "type": "string"
+          "type": "string",
+          "description": "The timestamp when this package was created"
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "The version of Zarf used to build this package"
         },
         "migrations": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Any migrations that have been run on this package"
         }
       },
       "additionalProperties": false,
@@ -112,7 +118,10 @@
         },
         "gitPath": {
           "type": "string",
-          "description": "The path to the chart in the repo if using a git repo instead of a helm repo"
+          "description": "The path to the chart in the repo if using a git repo instead of a helm repo",
+          "examples": [
+            "charts/your-chart"
+          ]
         },
         "localPath": {
           "type": "string",
@@ -120,7 +129,7 @@
         },
         "noWait": {
           "type": "boolean",
-          "description": "Wait for chart resources to be ready before continuing"
+          "description": "Whether to not wait for chart resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
@@ -183,7 +192,7 @@
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/DeprecatedZarfComponentScripts",
-          "description": "(Deprecated--use actions instead) Custom commands to run before or after package deployment"
+          "description": "[DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment"
         },
         "actions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -211,7 +220,8 @@
             "$schema": "http://json-schema.org/draft-04/schema#",
             "$ref": "#/definitions/ZarfManifest"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
         },
         "images": {
           "items": {
@@ -233,7 +243,7 @@
             "$ref": "#/definitions/ZarfDataInjection"
           },
           "type": "array",
-          "description": "Datasets to inject into a pod in the target cluster"
+          "description": "Datasets to inject into a container in the target cluster"
         }
       },
       "additionalProperties": false,
@@ -379,10 +389,19 @@
       "properties": {
         "kind": {
           "type": "string",
-          "description": "The kind of resource to wait for (e.g. Pod; Deployment; etc.)"
+          "description": "The kind of resource to wait for",
+          "examples": [
+            "Pod",
+            "Deployment)"
+          ]
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name of the resource or selector to wait for",
+          "examples": [
+            "podinfo",
+            "app\u0026#61;podinfo"
+          ]
         },
         "namespace": {
           "type": "string",
@@ -390,7 +409,11 @@
         },
         "condition": {
           "type": "string",
-          "description": "The condition to wait for (e.g. Ready; Available; etc.). Defautls to exist"
+          "description": "The condition to wait for; defaults to exist",
+          "examples": [
+            "Ready",
+            "Available"
+          ]
         }
       },
       "additionalProperties": false,
@@ -409,15 +432,23 @@
             "https"
           ],
           "type": "string",
-          "description": "The protocol to wait for (e.g. tcp; http; etc.)."
+          "description": "The protocol to wait for"
         },
         "address": {
           "type": "string",
-          "description": "The address to wait for (e.g. localhost:8080; 1.1.1.1; etc.)"
+          "description": "The address to wait for",
+          "examples": [
+            "localhost:8080",
+            "1.1.1.1"
+          ]
         },
         "code": {
           "type": "integer",
-          "description": "The HTTP status code to wait for if using http or https (e.g. 200; 404; etc.)"
+          "description": "The HTTP status code to wait for if using http or https",
+          "examples": [
+            200,
+            404
+          ]
         }
       },
       "additionalProperties": false,
@@ -448,11 +479,13 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "The name of the component to import from the referenced zarf.yaml"
         },
         "path": {
           "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
-          "type": "string"
+          "type": "string",
+          "description": "The relative path to a directory containing a zarf.yaml to import from"
         }
       },
       "additionalProperties": false,
@@ -473,7 +506,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "Future use"
+          "description": "A list of kubernetes distros this package works with (Reserved for future use)"
         }
       },
       "additionalProperties": false,
@@ -513,15 +546,18 @@
         },
         "selector": {
           "type": "string",
-          "description": "The K8s selector to target for data injection"
+          "description": "The K8s selector to target for data injection",
+          "examples": [
+            "app\u0026#61;data-injection"
+          ]
         },
         "container": {
           "type": "string",
-          "description": "The container to target for data injection"
+          "description": "The container name to target for data injection"
         },
         "path": {
           "type": "string",
-          "description": "The path to copy the data to in the container"
+          "description": "The path within the container to copy the data into"
         }
       },
       "additionalProperties": false,
@@ -558,11 +594,11 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "Local file path or remote URL to add to the package"
+          "description": "Local file path or remote URL to pull into the package"
         },
         "shasum": {
           "type": "string",
-          "description": "SHA256 checksum of the file if the source is a URL"
+          "description": "Optional SHA256 checksum of the file"
         },
         "target": {
           "type": "string",
@@ -616,7 +652,7 @@
         },
         "noWait": {
           "type": "boolean",
-          "description": "Wait for manifest resources to be ready before continuing"
+          "description": "Whether to not wait for manifest resources to be ready before continuing"
         }
       },
       "additionalProperties": false,
@@ -646,7 +682,7 @@
         },
         "image": {
           "type": "string",
-          "description": "An image URL to embed in this package for future Zarf UI listing"
+          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)"
         },
         "uncompressed": {
           "type": "boolean",
@@ -654,7 +690,11 @@
         },
         "architecture": {
           "type": "string",
-          "description": "The target cluster architecture of this package"
+          "description": "The target cluster architecture for this package",
+          "examples": [
+            "arm64",
+            "amd64"
+          ]
         },
         "yolo": {
           "type": "boolean",

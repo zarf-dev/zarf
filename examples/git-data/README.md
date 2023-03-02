@@ -16,13 +16,13 @@ A tag-provided clone only mirrors the tag defined in the Zarf definition. The ta
 
 :::note
 
-If you would like to use a scheme other than http/https, you can do so with something like the following: `ssh://git@github.com/defenseunicorns/zarf.git@v0.15.0`
+If you would like to use a protocol scheme other than http/https, you can do so with something like the following: `ssh://git@github.com/defenseunicorns/zarf.git@v0.15.0`.  Using this you can also clone from a local repo to help you manage larger git repositories: `file:///home/zarf/workspace/zarf@v0.15.0`.
 
 :::
 
 ## SHA-Provided Git Repository Clone
 
-SHA-provided `git` repository cloning is another supported way of cloning repos in Zarf but is not recommended as it is less readable/understandable than tag cloning.  Commit SHAs are defined using the same `scheme://host/repo@sha` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e`).
+SHA-provided `git` repository cloning is another supported way of cloning repos in Zarf but is not recommended as it is less readable/understandable than tag cloning.  Commit SHAs are defined using the same `scheme://host/repo@shasum` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e`).
 
 A SHA-provided clone only mirrors the SHA hash defined in the Zarf definition. The SHA will be applied on the `git` mirror to the default trunk branch of the repo (i.e. `master`, `main`, or the default when the repo is cloned) as Zarf does with tagging.
 
