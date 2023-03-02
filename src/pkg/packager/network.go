@@ -136,7 +136,7 @@ func (p *Packager) handleOciPackage() error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	repo, ctx, err := utils.OrasRemote(ref)
+	src, err := utils.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (p *Packager) handleOciPackage() error {
 	}
 	defer dst.Close()
 
-	_, err = oras.Copy(ctx, repo, ref.Reference, dst, ref.Reference, copyOpts)
+	_, err = oras.Copy(src.Context, src.Repository, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
