@@ -213,7 +213,7 @@ func actionCmdMutation(cmd string) (string, error) {
 		// https://regex101.com/r/xk1rkw/1
 		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_VAR_([a-zA-Z0-9_-])+)}?)`)
 		get, err := utils.MatchRegex(envVarRegex, cmd)
-		if err != nil {
+		if err == nil {
 			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
 			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)
 			cmd = newCmd
