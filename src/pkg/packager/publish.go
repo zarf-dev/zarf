@@ -134,10 +134,11 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	dst, ctx, err := utils.OrasRemote(ref)
+	dst, err:= utils.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
+	ctx := dst.Context
 
 	store, err := file.New(p.tmp.Base)
 	if err != nil {

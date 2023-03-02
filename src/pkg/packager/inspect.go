@@ -60,14 +60,14 @@ func (p *Packager) InspectOCI() error {
 		return err
 	}
 
-	repo, ctx, err := utils.OrasRemote(ref)
+	dst, err := utils.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
 
 	payload := InspectOCIOutput{}
 	// get the tags
-	err = repo.Tags(ctx, "", func(tags []string) error {
+	err = dst.Tags(dst.Context, "", func(tags []string) error {
 		for _, tag := range tags {
 			// skeleton refs are not used during `zarf package deploy oci://`, but used within `zarf package create` w/ composition
 			if strings.HasSuffix(tag, "-skeleton") {
@@ -82,7 +82,7 @@ func (p *Packager) InspectOCI() error {
 	}
 	payload.Latest.Tag = payload.Tags[len(payload.Tags)-1]
 	// get the manifest descriptor
-	payload.Latest.Descriptor, err = repo.Resolve(ctx, payload.Latest.Tag)
+	payload.Latest.Descriptor, err = dst.Resolve(dst.Context, payload.Latest.Tag)
 	if err != nil {
 		return err
 	}
