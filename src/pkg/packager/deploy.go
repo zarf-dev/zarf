@@ -406,10 +406,10 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
-			svcInfo := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
+			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
-			// If this is a service, create a port-forward tunnel to that resource
-			if svcInfo != nil {
+			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+			if err == nil {
 				tunnel, err := cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port)
 				if err != nil {
 					return err
