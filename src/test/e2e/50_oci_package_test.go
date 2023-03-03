@@ -65,7 +65,7 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	t := suite.T()
 	t.Log("E2E: Package Publish oci://")
 	// Publish package.
-	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-oci-chart-%s.tar.zst", e2e.arch))
+	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch))
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
@@ -83,7 +83,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	out := fmt.Sprintf("zarf-package-helm-oci-chart-0.0.1-%s.tar.zst", e2e.arch)
+	out := fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch)
 	e2e.cleanFiles(out)
 	defer e2e.cleanFiles(out)
 
