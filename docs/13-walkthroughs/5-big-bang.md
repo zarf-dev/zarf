@@ -23,7 +23,7 @@ Before beginning this walkthrough you will need the following:
 - A local copy of the Zarf repository
   - `git clone https://github.com/defenseunicorns/zarf.git`
 - A kubernetes cluster onto which you can deploy Zarf and Big Bang
-  - Follow steps 3 through 5 of the [Big Bang Quick Start](https://repo1.dso.mil/big-bang/bigbang/-/blob/master/docs/guides/deployment-scenarios/quickstart.md#step-3-install-prerequisite-software) to setup `docker` and a `k3d` cluster.
+  - Follow steps 3 through 5 of the [Big Bang Quick Start](https://docs-bigbang.dso.mil/1.54.0/docs/guides/deployment-scenarios/quickstart/) to setup `docker` and a `k3d` cluster.
 - The latest version of the Zarf `cli`
   - Follow instructions on https://zarf.dev/install/
 - An account on `https://registry1.dso.mil` to retrieve Big Bang images
@@ -31,7 +31,23 @@ Before beginning this walkthrough you will need the following:
 
 :::note
 
-Big Bang requires some additional configuration options to be passed to k3d than is required in most other Zarf walkthroughs.
+Big Bang requires some additional [configuration options](https://docs-bigbang.dso.mil/1.54.0/docs/guides/deployment-scenarios/quickstart/#Explanation-of-k3d-Command-Flags-Relevant-to-the-Quick-Start) to be passed to `k3d` than is required in most other Zarf walkthroughs.  Below are some examples:
+
+```bash
+  # Required by the PLG stack
+  --volume /etc/machine-id:/etc/machine-id
+
+  # Required for Istio ingress
+  --k3s-arg "--disable=traefik@server:0"
+  --port 80:80@loadbalancer
+  --port 443:443@loadbalancer
+
+  # Required for TLS to work correctly with kubectl
+  --k3s-arg "--tls-san=$SERVER_IP@server:0"
+  --api-port 6443
+```
+
+If you tweak the packages that are deployed there may be other configuration options you need to specify, please refer to the [Big Bang documentation](https://docs-bigbang.dso.mil/1.54.0/docs/) for more details.
 
 :::
 
