@@ -99,39 +99,39 @@ func (c *Cluster) PrintConnectTable() error {
 
 // ServiceInfoFromNodePortURL takes a nodePortURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
 // Example nodePortURL: 127.0.0.1:{PORT}.
-func ServiceInfoFromNodePortURL(nodePortURL string) *ServiceInfo {
+func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
 	parsedURL, err := url.Parse(nodePortURL)
 	if err != nil {
 		parsedURL, err = url.Parse("scheme://" + nodePortURL)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 	}
 
 	// Match hostname against localhost ip/hostnames
 	hostname := parsedURL.Hostname()
 	if hostname != config.IPV4Localhost && hostname != "localhost" {
-		return nil
+		return nil, fmt.Errorf("node port services should be on localhost")
 	}
 
 	// Get the node port from the nodeportURL.
 	nodePort, err := strconv.Atoi(parsedURL.Port())
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	if nodePort < 30000 || nodePort > 32767 {
-		return nil
+		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
 	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	services, err := kube.GetServices("")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	for _, svc := range services.Items {
@@ -142,43 +142,43 @@ func ServiceInfoFromNodePortURL(nodePortURL string) *ServiceInfo {
 						Namespace: svc.Namespace,
 						Name:      svc.Name,
 						Port:      int(port.Port),
-					}
+					}, nil
 				}
 			}
 		}
 	}
 
-	return nil
+	return nil, fmt.Errorf("no matching node port services found")
 }
 
 // ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
 // Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}.
-func ServiceInfoFromServiceURL(serviceURL string) *ServiceInfo {
+func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 	parsedURL, err := url.Parse(serviceURL)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Get the remote port from the serviceURL.
 	remotePort, err := strconv.Atoi(parsedURL.Port())
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Match hostname against local cluster service format.
 	pattern := regexp.MustCompile(serviceURLPattern)
-	matches := pattern.FindStringSubmatch(parsedURL.Hostname())
+	get, err := utils.MatchRegex(pattern, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
-	if len(matches) != 3 {
-		return nil
+	if err != nil {
+		return nil, err
 	}
 
 	return &ServiceInfo{
-		Namespace: matches[pattern.SubexpIndex("namespace")],
-		Name:      matches[pattern.SubexpIndex("name")],
+		Namespace: get("namespace"),
+		Name:      get("name"),
 		Port:      remotePort,
-	}
+	}, nil
 }
 
 // NewTunnel will create a new Tunnel struct.
