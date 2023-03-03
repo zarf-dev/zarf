@@ -87,7 +87,7 @@ func testHelmEscaping(t *testing.T) {
 func testHelmOCIChart(t *testing.T) {
 	t.Log("E2E: Helm OCI chart")
 
-	path := fmt.Sprintf("build/zarf-package-helm-oci-chart-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch)
 
 	// Deploy the package.
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
