@@ -44,7 +44,7 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	stdOut, _, err := e2e.execZarfCommand("tools", "registry", "login", "--username", suite.ZarfState.RegistryInfo.PushUsername, "--password", suite.ZarfState.RegistryInfo.PushPassword, suite.Reference.Registry)
+	stdOut, _, err := e2e.execZarfCommand("tools", "registry", "login", "--username", suite.ZarfState.RegistryInfo.PushUsername, "-p", suite.ZarfState.RegistryInfo.PushPassword, suite.Reference.Registry)
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "logged in")
 }
