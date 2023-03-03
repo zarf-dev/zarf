@@ -25,6 +25,12 @@ type RegistryClientTestSuite struct {
 	ZarfState types.ZarfState
 }
 
+var badRef = registry.Reference{
+	Registry: "localhost:666",
+	Repository: "zarf-test",
+	Reference: "bad-tag",
+}
+
 func (suite *RegistryClientTestSuite) SetupSuite() {
 	t := suite.T()
 	e2e.setupWithCluster(t)
@@ -41,8 +47,6 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	stdOut, _, err := e2e.execZarfCommand("tools", "registry", "login", "--username", suite.ZarfState.RegistryInfo.PushUsername, "--password", suite.ZarfState.RegistryInfo.PushPassword, suite.Reference.Registry)
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "logged in")
-
-	suite.publishHelmOCIChart()
 }
 
 func (suite *RegistryClientTestSuite) TearDownSuite() {
@@ -60,13 +64,17 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	t := suite.T()
 	t.Log("E2E: Package Publish oci://")
-	example := filepath.Join(suite.PackagesDir, "zarf-package-helm-oci-chart-amd64.tar.zst")
+	// Publish package.
+	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-oci-chart-%s.tar.zst", e2e.arch))
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Published: "+ref)
 
-	// TODO: test publish w/ package missing `metadata.version` field
+	// Publish w/ package missing `metadata.version` field.
+	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-dos-games-%s.tar.zst", e2e.arch))
+	_, stdErr, err = e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
+	require.Error(t, err, stdErr)
 }
 
 func (suite *RegistryClientTestSuite) Test_1_Pull() {
@@ -92,7 +100,10 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	// Verify the package was pulled.
 	require.FileExists(t, out)
 
-	// TODO: test pull w/ bad ref
+	// Test pull w/ bad ref.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "pull", "oci://"+badRef.String(), "--insecure")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Pulled: "+ref)
 }
 
 func (suite *RegistryClientTestSuite) Test_2_Deploy() {
@@ -111,7 +122,9 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Pulled: "+ref)
 
-	// TODO: test deploy w/ bad ref
+	// Test deploy w/ bad ref.
+	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure")
+	require.Error(t, err, stdErr)
 }
 
 func (suite *RegistryClientTestSuite) Test_3_Inspect() {
@@ -126,7 +139,9 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, suite.Reference.Repository)
 
-	// TODO: test inspect w/ bad ref
+	// Test inspect w/ bad ref.
+	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
+	require.Error(t, err, stdErr)
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {
