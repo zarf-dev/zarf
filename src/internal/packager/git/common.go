@@ -5,29 +5,27 @@
 package git
 
 import (
-	"regexp"
+	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 // Git is the main struct for managing git repositories.
 type Git struct {
+	// Server is the git server configuration.
 	Server types.GitServerInfo
-
+	// Spinner is an optional spinner to use for long running operations.
 	Spinner *message.Spinner
-
-	// Target working directory for the git repository
+	// Target working directory for the git repository.
 	GitPath string
 }
 
 const onlineRemoteName = "online-upstream"
 const offlineRemoteName = "offline-downstream"
-const onlineRemoteRefPrefix = "refs/remotes/" + onlineRemoteName + "/"
-
-// isHash checks if a string is a valid git hash.
-// https://regex101.com/r/jm9bdk/1
-var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
+const emptyRef = ""
 
 // New creates a new git instance with the provided server config.
 func New(server types.GitServerInfo) *Git {
@@ -42,4 +40,15 @@ func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
 		Server:  server,
 		Spinner: spinner,
 	}
+}
+
+// parseRef parses the provided ref into a ReferenceName if it's not a hash.
+func (g *Git) parseRef(r string) plumbing.ReferenceName {
+	// If not a full ref, assume it's a tag at this point.
+	if !plumbing.IsHash(r) && !strings.HasPrefix(r, "refs/") {
+		r = fmt.Sprintf("refs/tags/%s", r)
+	}
+
+	// Set the reference name to the provided ref.
+	return plumbing.ReferenceName(r)
 }
