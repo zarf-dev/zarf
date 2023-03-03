@@ -228,3 +228,21 @@ func IsTextFile(path string) (bool, error) {
 
 	return hasText || hasJSON || hasXML, nil
 }
+
+// GetDirSize walks through all files and directories in the provided path and returns the total size in bytes.
+func GetDirSize(path string) (int64, error) {
+	dirSize := int64(0)
+
+	// Walk through all files in the path
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			dirSize += info.Size()
+		}
+		return nil
+	})
+
+	return dirSize, err
+}
