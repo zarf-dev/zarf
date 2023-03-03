@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"path/filepath"
+	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -56,18 +57,21 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func (suite *RegistryClientTestSuite) publishHelmOCIChart() {
+func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	t := suite.T()
+	t.Log("E2E: Package Publish oci://")
 	example := filepath.Join(suite.PackagesDir, "zarf-package-helm-oci-chart-amd64.tar.zst")
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Published: "+ref)
+
+	// TODO: test publish w/ package missing `metadata.version` field
 }
 
-func (suite *RegistryClientTestSuite) TestPull() {
+func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	t := suite.T()
-	t.Log("E2E: Package Pull")
+	t.Log("E2E: Package Pull oci://")
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
@@ -87,11 +91,13 @@ func (suite *RegistryClientTestSuite) TestPull() {
 
 	// Verify the package was pulled.
 	require.FileExists(t, out)
+
+	// TODO: test pull w/ bad ref
 }
 
-func (suite *RegistryClientTestSuite) TestDeploy() {
+func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	t := suite.T()
-	t.Log("E2E: Package Deploy OCI")
+	t.Log("E2E: Package Deploy oci://")
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
@@ -104,4 +110,25 @@ func (suite *RegistryClientTestSuite) TestDeploy() {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Pulled: "+ref)
+
+	// TODO: test deploy w/ bad ref
+}
+
+func (suite *RegistryClientTestSuite) Test_3_Inspect() {
+	t := suite.T()
+	t.Log("E2E: Package Inspect oci://")
+	e2e.setupWithCluster(t)
+	defer e2e.teardown(t)
+
+	suite.Reference.Repository = "helm-oci-chart"
+	ref := suite.Reference.String()
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "inspect", "oci://"+ref, "--insecure")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, suite.Reference.Repository)
+
+	// TODO: test inspect w/ bad ref
+}
+
+func TestRegistryClientTestSuite(t *testing.T) {
+	suite.Run(t, new(RegistryClientTestSuite))
 }
