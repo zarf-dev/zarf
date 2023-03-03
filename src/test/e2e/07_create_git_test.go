@@ -26,7 +26,7 @@ func TestCreateGit(t *testing.T) {
 	require.NoError(t, err, "error when building the test package")
 	// defer e2e.cleanFiles(pkgPath)
 
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", pkgPath, extractDir)
+	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", pkgPath, extractDir, "--decompress-all")
 	require.NoError(t, err, stdOut, stdErr)
 	// defer e2e.cleanFiles(extractDir)
 

@@ -58,7 +58,7 @@ var archiverDecompressCmd = &cobra.Command{
 				message.Fatalf(err, "failed to read the layers of components")
 			}
 			for _, file := range files {
-				if strings.HasSuffix(file.Name(), "tar.zst") {
+				if strings.HasSuffix(file.Name(), ".tar") {
 					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
 						message.Fatalf(err, "failed to decompress the component layer")
 					} else {
