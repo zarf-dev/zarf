@@ -20,16 +20,9 @@ func TestCreateGit(t *testing.T) {
 	extractDir := filepath.Join(os.TempDir(), ".extracted-git-pkg")
 	e2e.cleanFiles(extractDir)
 
-	pkgDir := "src/test/test-packages/git-repo-behavior"
-	pkgPath := fmt.Sprintf("%s/zarf-package-git-behavior-%s.tar.zst", pkgDir, e2e.arch)
-	outputFlag := fmt.Sprintf("-o=%s", pkgDir)
-	e2e.cleanFiles(extractDir, pkgPath)
-
-	_, _, err := e2e.execZarfCommand("package", "create", pkgDir, outputFlag, "--confirm")
-	require.NoError(t, err, "error when building the test package")
-	// defer e2e.cleanFiles(pkgPath)
-
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", pkgPath, extractDir, "--decompress-all")
+	// Extract the test package.
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
+	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", path, extractDir)
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(extractDir)
 
