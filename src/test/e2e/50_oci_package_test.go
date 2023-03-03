@@ -5,6 +5,7 @@
 package test
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -70,13 +71,13 @@ func (suite *RegistryClientTestSuite) TestPull() {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	out := "zarf-package-helm-oci-chart-0.0.1-amd64.tar.zst"
+	out := fmt.Sprintf("zarf-package-helm-oci-chart-0.0.1-%s.tar.zst", e2e.arch)
 	e2e.cleanFiles(out)
 	defer e2e.cleanFiles(out)
 
 	// Build the fully qualified reference.
-	suite.Reference.Repository = "helm-oci-chart" // metadata.name
-	suite.Reference.Reference = "0.0.1" // metadata.version
+	suite.Reference.Repository = "helm-oci-chart"
+	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.arch)
 	ref := suite.Reference.String()
 
 	// Pull the package via OCI.
@@ -95,8 +96,8 @@ func (suite *RegistryClientTestSuite) TestDeploy() {
 	defer e2e.teardown(t)
 
 	// Build the fully qualified reference.
-	suite.Reference.Repository = "helm-oci-chart" // metadata.name
-	suite.Reference.Reference = "0.0.1" // metadata.version
+	suite.Reference.Repository = "helm-oci-chart"
+	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.arch)
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
