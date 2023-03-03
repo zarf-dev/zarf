@@ -10,7 +10,7 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.0.0
     repos:
-      # Do a full Git Repo Mirror
+      # Do a full Git Repo Mirror of a flux repo
       - https://github.com/stefanprodan/podinfo.git
 
   - name: full-repo
