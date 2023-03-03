@@ -171,7 +171,7 @@ func (p *Packager) Create(baseDir string) error {
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar.zst archive
 		componentPaths, _ := p.createComponentPaths(component)
-		componentName := fmt.Sprintf("%s.%s", component.Name, "tar.zst")
+		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
 		componentTarPath := filepath.Join(p.tmp.Components, componentName)
 		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
 			return fmt.Errorf("unable to create package: %w", err)
