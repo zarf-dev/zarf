@@ -19,7 +19,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-type orasRemote struct {
+type OrasRemote struct {
 	*remote.Repository
 	context.Context
 }
@@ -85,8 +85,8 @@ func withAuthClient(ref registry.Reference) (*auth.Client, error) {
 }
 
 // OrasRemote returns an oras remote repository client and context for the given reference.
-func NewOrasRemote(ref registry.Reference) (orasRemote, error) {
-	r := &orasRemote{}
+func NewOrasRemote(ref registry.Reference) (OrasRemote, error) {
+	r := &OrasRemote{}
 	r.Context = withScopes(ref)
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
@@ -95,12 +95,12 @@ func NewOrasRemote(ref registry.Reference) (orasRemote, error) {
 	}
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
-		return orasRemote{}, err
+		return OrasRemote{}, err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	authClient, err := withAuthClient(ref)
 	if err != nil {
-		return orasRemote{}, err
+		return OrasRemote{}, err
 	}
 	repo.Client = authClient
 	r.Repository = repo
