@@ -113,7 +113,7 @@ func (i *ImgConfig) PullAll() error {
 				)
 				currentSize, dirErr = utils.GetDirSize(i.ImagesPath)
 				if dirErr != nil {
-					message.Warnf("unable to get the updated progress of the image pull: %s", err.Error())
+					message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
 					time.Sleep(200 * time.Millisecond)
 					continue
 				}
