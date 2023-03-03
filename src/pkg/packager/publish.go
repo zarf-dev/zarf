@@ -148,7 +148,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	var descs []ocispec.Descriptor
 
-	for _, path := range paths {
+	for idx, path := range paths {
 		name, err := filepath.Rel(p.tmp.Base, path)
 		if err != nil {
 			return err
@@ -157,6 +157,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		mediaType := parseZarfLayerMediaType(name)
 
 		desc, err := store.Add(ctx, name, mediaType, path)
+		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
 		if err != nil {
 			return err
 		}
