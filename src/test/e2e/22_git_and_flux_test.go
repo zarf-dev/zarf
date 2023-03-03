@@ -95,14 +95,10 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 
 	// Get the Zarf repo commit
 	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
-	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/commits", gitURL, config.ZarfGitPushUser, repoName), nil)
+	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
 	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	assert.NoError(t, err)
-
-	// Make sure the pushed commit exists
-	var commitMap []map[string]interface{}
-	json.Unmarshal(getRepoCommitsResponseBody, &commitMap)
-	assert.Equal(t, repoHash, commitMap[0]["sha"])
+	assert.Contains(t, string(getRepoCommitsResponseBody), repoHash)
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {

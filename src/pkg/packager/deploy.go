@@ -406,12 +406,11 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
+			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
-			svcInfo := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
-			// If this is a service, create a port-forward tunnel to that resource
-			if svcInfo != nil {
+			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+			if err == nil {
 				tunnel, err := cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port)
-
 				if err != nil {
 					return err
 				}
@@ -421,13 +420,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
 			}
 
-			// Convert the repo URL to a Zarf-formatted repo name
-			repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-			if err != nil {
-				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-			}
-
-			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
 		// Try repo push up to 3 times

@@ -6,7 +6,6 @@ package utils
 
 import (
 	"fmt"
-	"hash/crc32"
 
 	"github.com/distribution/distribution/reference"
 )
@@ -30,8 +29,7 @@ func SwapHost(src string, targetHost string) (string, error) {
 	}
 
 	// Generate a crc32 hash of the image host + name
-	table := crc32.MakeTable(crc32.IEEE)
-	checksum := crc32.Checksum([]byte(image.Name), table)
+	checksum := GetCRCHash(image.Name)
 
 	return fmt.Sprintf("%s/%s-%d%s", targetHost, image.Path, checksum, image.TagOrDigest), nil
 }
