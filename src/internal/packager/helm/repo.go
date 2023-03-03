@@ -53,20 +53,25 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 
 	client := action.NewPackage()
 
-	tempPath, cleanup, err := h.downloadChartFromGitToTemp(spinner)
+	// Retrieve the repo containing the chart
+	gitPath, err := h.downloadChartFromGitToTemp(spinner)
 	if err != nil {
 		return "", err
 	}
-	defer cleanup()
+	defer os.RemoveAll(gitPath)
+
+	// Set the directory for the chart
+	chartPath := filepath.Join(gitPath, h.Chart.GitPath)
+
 	// Validate the chart
-	if _, err := loader.LoadDir(tempPath); err != nil {
+	if _, err := loader.LoadDir(chartPath); err != nil {
 		spinner.Errorf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
 		return "", err
 	}
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
-	name, err := client.Run(tempPath, nil)
+	name, err := client.Run(chartPath, nil)
 	if err != nil {
 		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", name)
 		return "", err
@@ -141,26 +146,22 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	spinner.Success()
 }
 
-func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) (string, func(), error) {
+func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	tempPath, err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
+	// Download the git repo to a temporary directory
+	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	if err != nil {
 		spinner.Errorf(err, "Unable to download the git repo %s", h.Chart.URL)
-		return "", nil, err
+		return "", err
 	}
-	gitCfg.GitPath = tempPath
 
-	// Switch to the correct tag as specified by the cart version
+	// Switch to the correct tag as specified by the chart version
 	if err = gitCfg.CheckoutTag(h.Chart.Version); err != nil {
-		spinner.Errorf(err, "Unable to download provided git refrence: %v@%v", h.Chart.URL, h.Chart.Version)
-		return "", nil, err
+		spinner.Errorf(err, "Unable to checkout provided git reference: %v@%v", h.Chart.URL, h.Chart.Version)
+		return "", err
 	}
 
-	cleanup := func() {
-		_ = os.RemoveAll(tempPath)
-	}
-
-	return filepath.Join(tempPath, h.Chart.GitPath), cleanup, nil
+	return gitCfg.GitPath, nil
 }

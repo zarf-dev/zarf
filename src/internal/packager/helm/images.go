@@ -2,6 +2,8 @@ package helm
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -55,14 +57,17 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 
 	// TODO (@runyontr) expand this to work for regular charts for more generic
 	// capability and pull it out from just being used by Big Bang.
-	tempPath, cleanup, err := helmCfg.downloadChartFromGitToTemp(spinner)
+	gitPath, err := helmCfg.downloadChartFromGitToTemp(spinner)
 	if err != nil {
 		return images, err
 	}
-	defer cleanup()
+	defer os.RemoveAll(gitPath)
+
+	// Set the directory for the chart
+	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
 
 	// Load a new chart.
-	chart, err := loader.LoadDir(tempPath)
+	chart, err := loader.LoadDir(chartPath)
 	if err != nil {
 		return images, err
 	}
