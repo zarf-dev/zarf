@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -68,18 +69,60 @@ func (i *ImgConfig) PullAll() error {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
+	totalBytes := int64(0)
 	for src, img := range imageMap {
 		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
 			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
 		tagToImage[tag] = img
+
+		// Get the byte size for this image
+		layers, err := img.Layers()
+		if err != nil {
+			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
+		}
+		for _, layer := range layers {
+			size, err := layer.Size()
+			if err != nil {
+				return fmt.Errorf("unable to get size of layer: %w", err)
+			}
+			totalBytes += size
+		}
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
-
 	spinner.Success()
-	title := fmt.Sprintf("Pulling %d images (%s of %d)", imgCount, "0", imgCount)
-	spinner = message.NewProgressSpinner(title)
+
+	doneSaving := make(chan int)
+	title := fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(totalBytes), 2))
+	progressBar := message.NewProgressBar(totalBytes, title)
+
+	// Create a thread to update a progress bar as we save the image files to disk
+	go func() {
+		for {
+			select {
+			case <-doneSaving:
+				title = fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(totalBytes), 2), utils.ByteFormat(float64(totalBytes), 2))
+				progressBar.Update(totalBytes, title)
+				progressBar.Successf("Pulling %d images", imgCount)
+				return
+			default:
+				var (
+					dirErr      error
+					currentSize int64
+				)
+				currentSize, dirErr = utils.GetDirSize(i.ImagesPath)
+				if dirErr != nil {
+					message.Warnf("unable to get the updated progress of the image pull: %s", err.Error())
+					time.Sleep(200 * time.Millisecond)
+					continue
+				}
+				title = fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(currentSize), 2), utils.ByteFormat(float64(totalBytes), 2))
+				progressBar.Update(currentSize, title)
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
+	}()
 
 	for tag, img := range tagToImage {
 
@@ -95,16 +138,16 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 		digestToTag[imgDigest.String()] = tag.String()
-		spinner.Updatef("Pulling image (%d of %d): %s", len(digestToTag), imgCount, tag.Name())
 	}
 
 	if err := addImageNameAnnotation(i.ImagesPath, digestToTag); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
-	spinner.Successf("Finished pulling %d images", imgCount)
+	// Send a signal to the progress bar that we're done
+	doneSaving <- 1
 
-	return nil
+	return err
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or the wider internet.
