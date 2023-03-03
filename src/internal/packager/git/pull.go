@@ -15,19 +15,22 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
-	if path, err = utils.MakeTempDir(config.CommonOptions.TempDirectory); err != nil {
-		return "", fmt.Errorf("unable to create tmpdir: %w", err)
+func (g *Git) DownloadRepoToTemp(gitURL string) error {
+	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
+
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to create tmpdir: %w", err)
 	}
 
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
 	// later if we need them.
 	if err = g.Pull(gitURL, path); err != nil {
-		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
+		return fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
 
-	return path, nil
+	return nil
 }
 
 // Pull clones or updates a git repository into the target folder.

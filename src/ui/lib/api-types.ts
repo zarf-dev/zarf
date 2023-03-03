@@ -234,6 +234,10 @@ export interface ZarfComponent {
      */
     description?: string;
     /**
+     * Extend component functionality with additional features
+     */
+    extensions?: ZarfComponentExtensions;
+    /**
      * Files to place on disk during package deployment
      */
     files?: ZarfFile[];
@@ -537,6 +541,38 @@ export interface ZarfContainerTarget {
      * The K8s selector to target for data injection
      */
     selector: string;
+}
+
+/**
+ * Extend component functionality with additional features
+ */
+export interface ZarfComponentExtensions {
+    /**
+     * Configurations for installing Big Bang and Flux in the cluster
+     */
+    bigbang?: BigBang;
+}
+
+/**
+ * Configurations for installing Big Bang and Flux in the cluster
+ */
+export interface BigBang {
+    /**
+     * Override repo to pull Big Bang from instead of Repo One
+     */
+    repo?: string;
+    /**
+     * Whether to skip deploying flux; Defaults to false
+     */
+    skipFlux?: boolean;
+    /**
+     * The list of values files to pass to Big Bang; these will be merged together
+     */
+    valuesFiles?: string[];
+    /**
+     * The version of Big Bang to use
+     */
+    version: string;
 }
 
 export interface ZarfFile {
@@ -1121,6 +1157,7 @@ const typeMap: any = {
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "extensions", js: "extensions", typ: u(undefined, r("ZarfComponentExtensions")) },
         { json: "files", js: "files", typ: u(undefined, a(r("ZarfFile"))) },
         { json: "group", js: "group", typ: u(undefined, "") },
         { json: "images", js: "images", typ: u(undefined, a("")) },
@@ -1198,6 +1235,15 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
         { json: "path", js: "path", typ: "" },
         { json: "selector", js: "selector", typ: "" },
+    ], false),
+    "ZarfComponentExtensions": o([
+        { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+    ], false),
+    "BigBang": o([
+        { json: "repo", js: "repo", typ: u(undefined, "") },
+        { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
+        { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
