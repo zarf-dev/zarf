@@ -37,7 +37,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 
 	// Setup git credentials if we have them, ignore if we don't.
 	gitCred := utils.FindAuthForHost(gitURL)
-	if gitCred.Auth.Username != "" {
+	if gitCred != nil {
 		cloneOptions.Auth = &gitCred.Auth
 	}
 

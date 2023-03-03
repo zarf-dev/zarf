@@ -21,8 +21,8 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
-// CreateChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) CreateChartFromLocalFiles(destination string) string {
+// PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
+func (h *Helm) PackageChartFromLocalFiles(destination string) string {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
 
@@ -46,42 +46,40 @@ func (h *Helm) CreateChartFromLocalFiles(destination string) string {
 	return path
 }
 
-// DownloadChartFromGit is a special implementation of chart downloads that support the https://p1.dso.mil/#/products/big-bang/ model.
-func (h *Helm) DownloadChartFromGit(destination string) string {
+// PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
+func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
 
 	client := action.NewPackage()
 
-	// Get the git repo
-	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
-
-	tempPath, err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
-	defer os.RemoveAll(tempPath)
+	// Retrieve the repo containing the chart
+	gitPath, err := h.downloadChartFromGitToTemp(spinner)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to download the git repo %s", h.Chart.URL)
+		return "", err
 	}
-	gitCfg.GitPath = tempPath
+	defer os.RemoveAll(gitPath)
 
-	// Switch to the correct tag
-	gitCfg.CheckoutTag(h.Chart.Version)
+	// Set the directory for the chart
+	chartPath := filepath.Join(gitPath, h.Chart.GitPath)
 
 	// Validate the chart
-	chartPath := filepath.Join(tempPath, h.Chart.GitPath)
-	if _, err = loader.LoadDir(chartPath); err != nil {
-		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
+	if _, err := loader.LoadDir(chartPath); err != nil {
+		spinner.Errorf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
+		return "", err
 	}
 
 	// Tell helm where to save the archive and create the package
 	client.Destination = destination
 	name, err := client.Run(chartPath, nil)
 	if err != nil {
-		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", name)
+		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", name)
+		return "", err
 	}
 
 	spinner.Success()
 
-	return name
+	return name, nil
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
@@ -146,4 +144,24 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	}
 
 	spinner.Success()
+}
+
+func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
+	// Create the Git configuration and download the repo
+	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
+
+	// Download the git repo to a temporary directory
+	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
+	if err != nil {
+		spinner.Errorf(err, "Unable to download the git repo %s", h.Chart.URL)
+		return "", err
+	}
+
+	// Switch to the correct tag as specified by the chart version
+	if err = gitCfg.CheckoutTag(h.Chart.Version); err != nil {
+		spinner.Errorf(err, "Unable to checkout provided git reference: %v@%v", h.Chart.URL, h.Chart.Version)
+		return "", err
+	}
+
+	return gitCfg.GitPath, nil
 }
