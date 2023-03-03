@@ -10,8 +10,8 @@ metadata:
 spec:
   ports:
   - name: http
-    port: 80
+    port: 8000
     protocol: TCP
-    targetPort: 8080
+    targetPort: 8000 
   selector:
     app: longhorn-ui
