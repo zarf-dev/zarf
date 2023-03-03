@@ -410,7 +410,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
