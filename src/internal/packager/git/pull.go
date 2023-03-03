@@ -6,11 +6,11 @@ package git
 
 import (
 	"fmt"
+	"path"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
@@ -22,8 +22,8 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
-	// later if we need them
-	if err = g.pull(gitURL, path, ""); err != nil {
+	// later if we need them.
+	if err = g.Pull(gitURL, path); err != nil {
 		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
 
@@ -31,79 +31,48 @@ func (g *Git) DownloadRepoToTemp(gitURL string) (path string, err error) {
 }
 
 // Pull clones or updates a git repository into the target folder.
-func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
-	repoName, err := g.TransformURLtoRepoName(gitURL)
-	if err != nil {
-		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
-		return "", err
-	}
-
-	path = targetFolder + "/" + repoName
-	g.GitPath = path
-	err = g.pull(gitURL, path, repoName)
-	return path, err
-}
-
-// internal pull function that will clone/pull the latest changes from the git repo
-func (g *Git) pull(gitURL, targetFolder string, repoName string) error {
+func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	matches := gitURLRegex.FindStringSubmatch(gitURL)
-	idx := gitURLRegex.SubexpIndex
-
-	if len(matches) == 0 {
-		// Unable to find a substring match for the regex
-		return fmt.Errorf("unable to get extract the repoName from the url %s", gitURL)
+	// Find the Zarf-specific repo name from the git URL.
+	get, err := utils.MatchRegex(gitURLRegex, gitURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse git url (%s): %w", gitURL, err)
 	}
 
-	alreadyProcessed := false
-	onlyFetchRef := matches[idx("atRef")] != ""
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
-	repo, err := g.clone(targetFolder, gitURLNoRef, onlyFetchRef)
-	if err == git.ErrRepositoryAlreadyExists {
-		// If we enter this block, the user has specified the same repo twice in one component and we should respect the prior changes
-		// (see the specific-tag-update component in the git-repo-behavior test-package)
-		message.Debug("Repo already cloned, pulling any specified changes...")
-		alreadyProcessed = true
-	} else if err != nil {
+	// Setup the reference for this repository
+	refPlain := get("ref")
+
+	var ref plumbing.ReferenceName
+
+	// Parse the ref from the git URL.
+	if refPlain != emptyRef {
+		ref = g.parseRef(refPlain)
+	}
+
+	// Construct a path unique to this git repo
+	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
+	g.GitPath = path.Join(targetFolder, repoFolder)
+
+	// Construct the remote URL without the reference
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
+
+	// Clone the git repository.
+	err = g.clone(gitURLNoRef, ref)
+	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
-	if onlyFetchRef {
-		ref := matches[idx("ref")]
+	if ref != emptyRef && !ref.IsBranch() {
+		// Remove the "refs/tags/" prefix from the ref.
+		stripped := strings.TrimPrefix(refPlain, "refs/tags/")
 
-		// Identify the remote trunk branch name
-		trunkBranchName := plumbing.NewBranchReferenceName("master")
-		head, err := repo.Head()
+		// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
+		alias := fmt.Sprintf("zarf-ref-%s", stripped)
+		trunkBranchName := plumbing.NewBranchReferenceName(alias)
 
-		if err != nil {
-			// No repo head available
-			g.Spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
-		} else if head.Name().IsBranch() {
-			// Valid repo head and it is a branch
-			trunkBranchName = head.Name()
-		} else {
-			// Valid repo head but not a branch
-			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
-		}
-
-		// If this repo has already been processed by Zarf don't remove tags, refs and branches
-		if !alreadyProcessed {
-			_, err = g.removeLocalTagRefs()
-			if err != nil {
-				return fmt.Errorf("unable to remove unneeded local tag refs: %w", err)
-			}
-			_, _ = g.removeLocalBranchRefs()
-			_, _ = g.removeOnlineRemoteRefs()
-		}
-
-		err = g.fetchRef(ref)
-		if err != nil {
-			return fmt.Errorf("not a valid reference or unable to fetch (%s): %#v", ref, err)
-		}
-
-		err = g.checkoutRefAsBranch(ref, trunkBranchName)
-		return err
+		// Checkout the ref as a branch.
+		return g.checkoutRefAsBranch(stripped, trunkBranchName)
 	}
 
 	return nil
