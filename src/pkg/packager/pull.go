@@ -24,7 +24,7 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
-	name := fmt.Sprintf("zarf-package-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
+	name := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
 	err = archiver.Archive(allTheLayers, name)
 	if err != nil {
 		return err
