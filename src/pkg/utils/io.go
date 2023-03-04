@@ -29,6 +29,13 @@ const (
 
 // MakeTempDir creates a temp directory with the given prefix.
 func MakeTempDir(tmpDir string) (string, error) {
+	// Create the base tmp directory if it is specified.
+	if tmpDir != "" {
+		if err := CreateDirectory(tmpDir, 0700); err != nil {
+			return "", err
+		}
+	}
+
 	tmp, err := os.MkdirTemp(tmpDir, tmpPathPrefix)
 	message.Debugf("Using temp path: '%s'", tmp)
 	return tmp, err
