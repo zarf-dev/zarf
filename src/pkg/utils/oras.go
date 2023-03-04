@@ -6,12 +6,13 @@ package utils
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"oras.land/oras-go/v2/registry"
@@ -22,6 +23,7 @@ import (
 type OrasRemote struct {
 	*remote.Repository
 	context.Context
+	*message.ProgressBar
 }
 
 // withScopes returns a context with the given scopes.
@@ -38,7 +40,7 @@ func withScopes(ref registry.Reference) context.Context {
 // withAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
-func withAuthClient(ref registry.Reference) (*auth.Client, error) {
+func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error) {
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err
@@ -68,12 +70,10 @@ func withAuthClient(ref registry.Reference) (*auth.Client, error) {
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: zarfconfig.CommonOptions.Insecure,
-	}
+	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
 	// TODO:(@RAZZLE) https://github.com/oras-project/oras/blob/e8bc5acd9b7be47f2f9f387af6a963b14ae49eda/cmd/oras/internal/option/remote.go#L183
 
-	return &auth.Client{
+	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
@@ -81,13 +81,48 @@ func withAuthClient(ref registry.Reference) (*auth.Client, error) {
 		Client: &http.Client{
 			Transport: transport,
 		},
-	}, nil
+	}
+
+	client.Client.Transport = NewTransport(client.Client.Transport, o)
+
+	return client, nil
+}
+
+// Transport is an http.RoundTripper that keeps track of the in-flight
+// request and add hooks to report HTTP tracing events.
+type Transport struct {
+	http.RoundTripper
+	orasRemote *OrasRemote
+}
+
+func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
+	return &Transport{base, o}
+}
+
+type readCloser struct {
+	io.Reader
+	io.Closer
+}
+
+// RoundTrip calls base roundtrip while keeping track of the current request.
+func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	if req.Body != nil && t.orasRemote.ProgressBar != nil {
+		tee := io.TeeReader(req.Body, t.orasRemote.ProgressBar)
+		teeCloser := readCloser{tee, req.Body}
+		req.Body = teeCloser
+	}
+
+	resp, err = t.RoundTripper.RoundTrip(req)
+
+	// do response things here
+
+	return resp, err
 }
 
 // OrasRemote returns an oras remote repository client and context for the given reference.
-func NewOrasRemote(ref registry.Reference) (OrasRemote, error) {
-	r := &OrasRemote{}
-	r.Context = withScopes(ref)
+func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
+	o := &OrasRemote{}
+	o.Context = withScopes(ref)
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
@@ -95,14 +130,14 @@ func NewOrasRemote(ref registry.Reference) (OrasRemote, error) {
 	}
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
-		return OrasRemote{}, err
+		return &OrasRemote{}, err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := withAuthClient(ref)
+	authClient, err := o.withAuthClient(ref)
 	if err != nil {
-		return OrasRemote{}, err
+		return &OrasRemote{}, err
 	}
 	repo.Client = authClient
-	r.Repository = repo
-	return *r, nil
+	o.Repository = repo
+	return o, nil
 }
