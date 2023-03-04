@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -171,7 +172,7 @@ func (h *Helm) TemplateChart() (string, error) {
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
-func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings, string, error) {
+func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 	message.Debugf("helm.GenerateChart(%#v)", manifest)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
@@ -194,10 +195,10 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
-		manifest := fmt.Sprintf("%s/%s", h.BasePath, file)
+		manifest := path.Join(h.BasePath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
+			return fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
 		// Escape all chars and then wrap in {{ }}.
@@ -223,7 +224,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 
 	spinner.Success()
 
-	return h.InstallOrUpgradeChart()
+	return nil
 }
 
 // RemoveChart removes a chart from the cluster.

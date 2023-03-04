@@ -34,7 +34,7 @@ import (
 func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
-	// Change the working directory if this run has an alternate base dir
+	// Change the working directory if this run has an alternate base dir.
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
 		if err := os.Chdir(baseDir); err != nil {
@@ -55,9 +55,23 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
-	// After components are composed, template the active package
+	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
+	}
+
+	// Create component paths and process extensions for each component.
+	for i, c := range p.cfg.Pkg.Components {
+		componentPath, err := p.createOrGetComponentPaths(c)
+		if err != nil {
+			return err
+		}
+
+		// Process any extensions.
+		p.cfg.Pkg.Components[i], err = p.processExtensions(componentPath, c)
+		if err != nil {
+			return fmt.Errorf("unable to process extensions: %w", err)
+		}
 	}
 
 	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
@@ -71,12 +85,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Save the transformed config
-	if err := p.writeYaml(); err != nil {
-		return fmt.Errorf("unable to write zarf.yaml: %w", err)
-	}
-
-	// Perform early package validation
+	// Perform early package validation.
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
@@ -132,13 +141,17 @@ func (p *Packager) Create(baseDir string) error {
 			componentSBOMs[component.Name] = componentSBOM
 		}
 
-		// Combine all component images into a single entry for efficient layer reuse
+		// Combine all component images into a single entry for efficient layer reuse.
 		combinedImageList = append(combinedImageList, component.Images...)
+
+		// Remove the temp directory for this component before archiving.
+		tmpPath := path.Join(p.getComponentBasePath(component), "temp")
+		_ = os.RemoveAll(tmpPath)
 	}
 
 	imgList := utils.Unique(combinedImageList)
 
-	// Images are handled separately from other component assets
+	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
 		message.HeaderInfof("📦 COMPONENT IMAGES")
 
@@ -157,7 +170,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Ignore SBOM creation if there the flag is set
+	// Ignore SBOM creation if there the flag is set.
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
@@ -183,7 +196,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
+	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
 	}
@@ -193,6 +206,11 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Try to remove the package if it already exists.
 	_ = os.RemoveAll(packageName)
+
+	// Save the transformed config.
+	if err := p.writeYaml(); err != nil {
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
 
 	// Make the archive
 	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
@@ -205,10 +223,10 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
 
-	// Convert Megabytes to bytes
+	// Convert Megabytes to bytes.
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
-	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
 		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
 		if err != nil {
@@ -221,7 +239,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
 		_ = os.RemoveAll(packageName)
 
-		// Marshal the data into a json file
+		// Marshal the data into a json file.
 		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
 			Count:     len(chunks),
 			Bytes:     f.Size(),
@@ -231,7 +249,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to marshal the partial package data: %w", err)
 		}
 
-		// Prepend the json data to the first chunk
+		// Prepend the json data to the first chunk.
 		chunks = append([][]byte{jsonData}, chunks...)
 
 		for idx, chunk := range chunks {
@@ -242,14 +260,14 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Output the SBOM files into a directory if specified
+	// Output the SBOM files into a directory if specified.
 	if p.cfg.CreateOpts.SBOMOutputDir != "" {
 		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
 			return err
 		}
 	}
 
-	// Open a browser to view the SBOM if specified
+	// Open a browser to view the SBOM if specified.
 	if p.cfg.CreateOpts.ViewSBOM {
 		sbom.ViewSBOMFiles(p.tmp)
 	}
@@ -260,13 +278,12 @@ func (p *Packager) Create(baseDir string) error {
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	// Create the component directory.
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create component paths: %w", err)
+		return nil, fmt.Errorf("unable to create the component paths: %w", err)
 	}
 
-	// Create an struct to hold the SBOM information for this component
+	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
 		ComponentPath: componentPath,
@@ -292,11 +309,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			if isGitURL {
-				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
+				_, _ = helmCfg.PackageChartFromGit(componentPath.Charts)
 			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
-				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
+				path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 				if !strings.HasSuffix(path, zarfFilename) {
 					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
@@ -327,7 +344,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				}
 			}
 
-			// Abort packaging on invalid shasum (if one is specified)
+			// Abort packaging on invalid shasum (if one is specified).
 			if file.Shasum != "" {
 				if actualShasum, _ := utils.GetCryptoHash(destinationFile, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
@@ -357,7 +374,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 
-			// Unwrap the dataInjection dir into individual files
+			// Unwrap the dataInjection dir into individual files.
 			pattern := regexp.MustCompile(`(?mi).+$`)
 			files, _ := utils.RecursiveFileList(destination, pattern)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
@@ -365,7 +382,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Manifests) > 0 {
-		// Get the proper count of total manifests to add
+		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
 		for _, manifest := range component.Manifests {
@@ -380,19 +397,24 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
 		}
 
-		// Iterate over all manifests
+		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
-			for _, f := range manifest.Files {
-				// Copy manifests without any processing
+			for idx, f := range manifest.Files {
+				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
+				// If using a temp directory, trim the temp directory from the path.
+				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
+				destination := path.Join(componentPath.Manifests, trimmedPath)
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
+
+				// Update the manifest path to the new location.
+				manifest.Files[idx] = trimmedPath
 			}
 
 			for idx, k := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
+				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
@@ -402,13 +424,13 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 	}
 
-	// Load all specified git repos
+	// Load all specified git repos.
 	if len(component.Repos) > 0 {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Success()
 
 		for _, url := range component.Repos {
-			// Pull all the references if there is no `@` in the string
+			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)

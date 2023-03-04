@@ -74,6 +74,16 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 	return err
 }
 
+// Insert returns a new slice with the element inserted at the given index.
+func Insert[T any](slice []T, index int, element T) []T {
+	if len(slice) == index {
+		return append(slice, element)
+	}
+	slice = append(slice[:index+1], slice[index:]...)
+	slice[index] = element
+	return slice
+}
+
 // SliceContains returns true if the given element is in the slice.
 func SliceContains[T comparable](s []T, e T) bool {
 	for _, v := range s {

@@ -1,0 +1,29 @@
+kind: ZarfPackageConfig
+metadata:
+  name: big-bang-example
+  description: "Deploy Big Bang Core"
+  version: 1.54.0
+  url: https://p1.dso.mil/products/big-bang
+  # Big Bang / Iron Bank are only amd64
+  architecture: amd64
+
+variables:
+  - name: DOMAIN
+    default: "bigbang.dev"
+    prompt: false
+
+components:
+  - name: bigbang
+    required: true
+    extensions:
+      bigbang:
+        version: 1.54.0
+        valuesFiles:
+          # Istio configs
+          - config/ingress.yaml
+          # Use Kyverno instead of Gatekeeper
+          - config/kyverno.yaml
+          # Use PLG instead of EFK
+          - config/loki.yaml
+          # Values are merged in order, so this would override the above and disable everything if uncommented
+          # - config/disable-all.yaml
