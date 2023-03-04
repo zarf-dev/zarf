@@ -177,7 +177,13 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	spinner.Updatef("Pushing %d layers concurrently", copyOpts.Concurrency)
+	spinner.Stop()
+	var total int64
+	for _, desc := range descs {
+		total += desc.Size
+	}
+	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
+	defer dst.ProgressBar.Stop()
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -213,6 +219,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	dst.ProgressBar.Stop()
 
 	if err == nil {
 		message.Infof("Published: %s [%s]", ref, root.MediaType)
@@ -273,11 +280,14 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		return nil, nil
 	}
 
+	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
+	defer dst.ProgressBar.Stop()
 	// attempt to push the image manifest
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
+	dst.ProgressBar.Stop()
 	message.Infof("Published: %s [%s]", ref, root.MediaType)
 	message.Infof("Digest: %s", root.Digest)
 	return nil
