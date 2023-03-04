@@ -183,7 +183,7 @@ func (p *Packager) Create(baseDir string) error {
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar.zst archive
-		componentPaths, _ := p.createComponentPaths(component)
+		componentPaths, _ := p.createOrGetComponentPaths(component)
 		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
 		componentTarPath := filepath.Join(p.tmp.Components, componentName)
 		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
