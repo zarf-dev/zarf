@@ -2,11 +2,12 @@ module github.com/defenseunicorns/zarf
 
 go 1.19
 
-// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
-replace sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
-
-// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
-replace oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
+replace (
+	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
+	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
+	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
+	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
+)
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -17,6 +18,8 @@ require (
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/docker/cli v20.10.22+incompatible
 	github.com/fatih/color v1.14.1
+	github.com/fluxcd/helm-controller/api v0.28.1
+	github.com/fluxcd/source-controller/api v0.33.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/go-logr/logr v1.2.3
@@ -160,6 +163,9 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/facebookincubator/nvdtools v0.1.5 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
+	github.com/fluxcd/pkg/apis/acl v0.1.0 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v0.7.0 // indirect
+	github.com/fluxcd/pkg/apis/meta v0.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fullstorydev/grpcurl v1.8.7 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
@@ -396,7 +402,7 @@ require (
 	k8s.io/component-helpers v0.26.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/metrics v0.26.1 // indirect
-	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
+	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2 // indirect
 	lukechampine.com/uint128 v1.1.1 // indirect
 	modernc.org/cc/v3 v3.36.0 // indirect
 	modernc.org/ccgo/v3 v3.16.6 // indirect
@@ -408,7 +414,8 @@ require (
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 	oras.land/oras-go v1.2.2 // indirect
-	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
+	sigs.k8s.io/controller-runtime v0.13.1 // indirect
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7 // indirect
 	sigs.k8s.io/release-utils v0.7.3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect

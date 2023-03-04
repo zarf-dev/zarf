@@ -53,7 +53,7 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-// Success marks the ProgressBar as successful in the CLI.
+// Successf marks the ProgressBar as successful in the CLI.
 func (p *ProgressBar) Successf(format string, a ...any) {
 	p.Stop()
 	pterm.Success.Printfln(format, a...)

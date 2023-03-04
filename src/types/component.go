@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "github.com/defenseunicorns/zarf/src/types/extensions"
+
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
@@ -54,6 +56,9 @@ type ZarfComponent struct {
 
 	// Data packages to push into a running cluster
 	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
+
+	// Extensions provide additional functionality to a component
+	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
