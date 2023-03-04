@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -179,11 +178,11 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
 	spinner.Stop()
 	var total int64
+	var totalLayersSize int64
 	for _, desc := range descs {
 		total += desc.Size
+		totalLayersSize += desc.Size
 	}
-	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
-	defer dst.ProgressBar.Stop()
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -217,15 +216,19 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		return nil
 	}
 
+	total += root.Size
+	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
+	defer dst.ProgressBar.Stop()
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	dst.ProgressBar.Stop()
 
 	if err == nil {
-		message.Infof("Published: %s [%s]", ref, root.MediaType)
+		dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
+		// message.Infof("Published: %s [%s]", ref, root.MediaType)
 		message.Infof("Digest: %s", root.Digest)
 		return nil
 	}
+	dst.ProgressBar.Stop()
 	// log the error, the expected error is a 400 manifest invalid
 	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
@@ -280,6 +283,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		return nil, nil
 	}
 
+	total = totalLayersSize + root.Size + manifestConfigDesc.Size
 	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
 	defer dst.ProgressBar.Stop()
 	// attempt to push the image manifest
@@ -287,8 +291,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	if err != nil {
 		return err
 	}
-	dst.ProgressBar.Stop()
-	message.Infof("Published: %s [%s]", ref, root.MediaType)
+	dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	message.Infof("Digest: %s", root.Digest)
 	return nil
 }
@@ -299,7 +302,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
-		return registry.Reference{}, errors.New("version is required for publishing")
+		ver = "0.0.1"
+		// return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
