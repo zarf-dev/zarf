@@ -44,6 +44,13 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	p.progress.Add(chunk)
 }
 
+// Add updates the ProgressBar with completed progress.
+func (p *ProgressBar) Add(n int) {
+	if p.progress != nil {
+		p.progress.Add(n)
+	}
+}
+
 // Write updates the ProgressBar with the number of bytes in a buffer as the completed progress.
 func (p *ProgressBar) Write(data []byte) (int, error) {
 	n := len(data)

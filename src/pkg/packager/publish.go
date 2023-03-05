@@ -8,9 +8,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
@@ -63,26 +66,64 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
+	/*
+		Structure:
+		.
+		├── components/
+		│   ├── component1.tar.zst
+		│   ├── component2.tar.zst
+		│   └── [...].tar.zst
+		├── images/
+		│   ├── index.json
+		│   ├── oci-layout
+		│   ├── blobs/
+		│   │   ├── sha256/
+		│   │   │   └── [...]
+		├── checksums.txt (optional)
+		├── sboms.tar.zst
+		└── zarf.yaml
+	*/
+
 	paths := []string{
 		p.tmp.ZarfYaml,
-		filepath.Join(p.tmp.Base, "sboms.tar.zst"),
+		p.tmp.SbomTar,
+		filepath.Join(p.tmp.Images, "index.json"),
+		filepath.Join(p.tmp.Images, "oci-layout"),
 	}
-	componentDirs, err := filepath.Glob(filepath.Join(p.tmp.Base, "components", "*"))
+	// if checksums.txt file exists, include it
+	if !utils.InvalidPath(filepath.Join(p.tmp.Base, "checksums.txt")) {
+		paths = append(paths, filepath.Join(p.tmp.Base, "checksums.txt"))
+	}
+
+	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+		seedImagePaths := []string{
+			filepath.Join(p.tmp.SeedImage, "index.json"),
+			filepath.Join(p.tmp.SeedImage, "oci-layout"),
+		}
+		seedImageLayers, err := filepath.Glob(filepath.Join(p.tmp.SeedImage, "blobs", "sha256", "*"))
+		if err != nil {
+			return err
+		}
+		seedImagePaths = append(seedImagePaths, seedImageLayers...)
+		paths = append(paths, seedImagePaths...)
+	}
+	componentDirs, err := filepath.Glob(filepath.Join(p.tmp.Components, "*"))
 	if err != nil {
 		return err
 	}
 	componentTarballs := []string{}
 	// repackage the component directories into tarballs
 	for _, componentDir := range componentDirs {
-		dst := filepath.Join(p.tmp.Base, "components", filepath.Base(componentDir)+".tar.zst")
+		dst := filepath.Join(p.tmp.Components, filepath.Base(componentDir)+".tar.zst")
 		err = archiver.Archive([]string{componentDir}, dst)
 		if err != nil {
 			return err
 		}
 		componentTarballs = append(componentTarballs, dst)
+		_ = os.RemoveAll(componentDir)
 	}
 	paths = append(paths, componentTarballs...)
-	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "images", "*"))
+	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Images, "blobs", "sha256", "*"))
 	if err != nil {
 		return err
 	}
@@ -97,6 +138,203 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to publish package %s: %w", ref, err)
 	}
 	return nil
+}
+
+func (p *Packager) publish(ref registry.Reference, paths []string) error {
+	message.Infof("Publishing package to %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
+
+	dst, err := utils.NewOrasRemote(ref)
+	if err != nil {
+		return err
+	}
+	ctx := dst.Context
+
+	store, err := file.New(p.tmp.Base)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	var descs []ocispec.Descriptor
+
+	for idx, path := range paths {
+		name, err := filepath.Rel(p.tmp.Base, path)
+		if err != nil {
+			return err
+		}
+		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+
+		mediaType := parseZarfLayerMediaType(name)
+
+		desc, err := store.Add(ctx, name, mediaType, path)
+		if err != nil {
+			return err
+		}
+		descs = append(descs, desc)
+	}
+	spinner.Successf("Prepared %d layers", len(descs))
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
+	copyOpts.OnCopySkipped = printLayerExists
+	copyOpts.PostCopy = printLayerExists
+
+	var root ocispec.Descriptor
+
+	root, err = p.publishArtifact(dst, store, descs, copyOpts)
+	if err != nil {
+		// reset the progress bar between attempts
+		dst.ProgressBar.Stop()
+		root, err = p.publishImage(dst, store, descs, copyOpts)
+		if err != nil {
+			return err
+		}
+	}
+	dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
+	fmt.Println()
+	flags := ""
+	if config.CommonOptions.Insecure {
+		flags = "--insecure"
+	}
+	message.Info("To inspect/deploy/pull:")
+	message.Infof("zarf package inspect oci://%s %s", ref, flags)
+	message.Infof("zarf package deploy oci://%s %s", ref, flags)
+	message.Infof("zarf package pull oci://%s %s", ref, flags)
+	return nil
+}
+
+func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
+	var total int64
+	for _, desc := range descs {
+		total += desc.Size
+	}
+	packOpts := p.cfg.PublishOpts.PackOptions
+
+	// first attempt to do a ArtifactManifest push
+	root, err = pack(ocispec.MediaTypeArtifactManifest, dst.Context, descs, store, packOpts)
+	if err != nil {
+		return root, err
+	}
+	total += root.Size
+
+	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
+	defer dst.ProgressBar.Stop()
+
+	copyRootAttempted := false
+	preCopy := copyOpts.PreCopy
+	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		if content.Equal(root, desc) {
+			// copyRootAttempted helps track whether the returned error is
+			// generated from copying root.
+			copyRootAttempted = true
+		}
+		if preCopy != nil {
+			return preCopy(ctx, desc)
+		}
+		return nil
+	}
+
+	// attempt to push the artifact manifest
+	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	if err == nil {
+		return root, err
+	}
+
+	// log the error, the expected error is a 400 manifest invalid
+	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
+
+	// if the error returned from the push is not an expected error, then return the error
+	if !isManifestUnsupported(err) {
+		return root, err
+	}
+
+	// if copyRootAttempted is false here, then there was an error generated before
+	// the root was copied. This is unexpected, so return the error.
+	if !copyRootAttempted {
+		return root, fmt.Errorf("push failed before the artifact manifest was pushed, returning the error: %w", err)
+	}
+
+	return root, nil
+}
+
+func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
+	var total int64
+	for _, desc := range descs {
+		total += desc.Size
+	}
+	// assumes referrers API is not supported since OCI artifact
+	// media type is not supported
+	dst.SetReferrersCapability(false)
+
+	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		if content.Equal(node, root) {
+			// skip non-config
+			content, err := content.FetchAll(ctx, fetcher, root)
+			if err != nil {
+				return nil, err
+			}
+			var manifest ocispec.Manifest
+			if err := json.Unmarshal(content, &manifest); err != nil {
+				return nil, err
+			}
+			return []ocispec.Descriptor{manifest.Config}, nil
+		}
+		// config has no successors
+		return nil, nil
+	}
+
+	// fallback to an ImageManifest push
+	manifestConfigDesc, manifestConfigContent, err := p.generateManifestConfigFile()
+	if err != nil {
+		return root, err
+	}
+	// push the manifest config
+	// since this config is so tiny, and the content is not used again
+	// it is not logged to the progress, but will error if it fails
+	err = dst.Push(dst.Context, manifestConfigDesc, bytes.NewReader(manifestConfigContent))
+	if err != nil {
+		return root, err
+	}
+	packOpts := p.cfg.PublishOpts.PackOptions
+	packOpts.ConfigDescriptor = &manifestConfigDesc
+	packOpts.PackImageManifest = true
+	root, err = pack(ocispec.MediaTypeImageManifest, dst.Context, descs, store, packOpts)
+	if err != nil {
+		return root, err
+	}
+	total += root.Size + manifestConfigDesc.Size
+
+	copyRootAttempted := false
+	preCopy := copyOpts.PreCopy
+	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		if content.Equal(root, desc) {
+			// copyRootAttempted helps track whether the returned error is
+			// generated from copying root.
+			copyRootAttempted = true
+		}
+		if preCopy != nil {
+			return preCopy(ctx, desc)
+		}
+		return nil
+	}
+
+	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
+	defer dst.ProgressBar.Stop()
+	// attempt to push the image manifest
+	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	if err != nil {
+		return root, err
+	}
+
+	// if copyRootAttempted is false here, then there was an error generated before
+	// the root was copied. This is unexpected, so return the error.
+	if !copyRootAttempted {
+		return root, fmt.Errorf("push failed before the image manifest was pushed, returning the error: %w", err)
+	}
+
+	return root, nil
 }
 
 func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, error) {
@@ -128,171 +366,26 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
-func (p *Packager) publish(ref registry.Reference, paths []string) error {
-	message.Infof("Publishing package to %s", ref)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
-
-	dst, err:= utils.NewOrasRemote(ref)
+func pack(artifactType string, ctx context.Context, descs []ocispec.Descriptor, store *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
+	root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 	if err != nil {
-		return err
+		return ocispec.Descriptor{}, err
 	}
-	ctx := dst.Context
-
-	store, err := file.New(p.tmp.Base)
-	if err != nil {
-		return err
+	if err = store.Tag(ctx, root, root.Digest.String()); err != nil {
+		return ocispec.Descriptor{}, err
 	}
-	defer store.Close()
+	return root, nil
+}
 
-	var descs []ocispec.Descriptor
-
-	for idx, path := range paths {
-		name, err := filepath.Rel(p.tmp.Base, path)
-		if err != nil {
-			return err
-		}
-
-		mediaType := parseZarfLayerMediaType(name)
-
-		desc, err := store.Add(ctx, name, mediaType, path)
-		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
-		if err != nil {
-			return err
-		}
-		descs = append(descs, desc)
+func printLayerExists(ctx context.Context, desc ocispec.Descriptor) error {
+	title := desc.Annotations[ocispec.AnnotationTitle]
+	var format string
+	if title != "" {
+		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+	} else {
+		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	packOpts := p.cfg.PublishOpts.PackOptions
-	pack := func(artifactType string) (ocispec.Descriptor, error) {
-		root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
-		if err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		if err = store.Tag(ctx, root, root.Digest.String()); err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		return root, nil
-	}
-
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	spinner.Stop()
-	var total int64
-	var totalLayersSize int64
-	for _, desc := range descs {
-		total += desc.Size
-		totalLayersSize += desc.Size
-	}
-	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		title := desc.Annotations[ocispec.AnnotationTitle]
-		var format string
-		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-		}
-		message.Successf(format)
-		return nil
-	}
-	copyOpts.PostCopy = copyOpts.OnCopySkipped
-
-	// first attempt to do a ArtifactManifest push
-	root, err := pack(ocispec.MediaTypeArtifactManifest)
-	if err != nil {
-		return err
-	}
-
-	copyRootAttempted := false
-	preCopy := copyOpts.PreCopy
-	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if content.Equal(root, desc) {
-			// copyRootAttempted helps track whether the returned error is
-			// generated from copying root.
-			copyRootAttempted = true
-		}
-		if preCopy != nil {
-			return preCopy(ctx, desc)
-		}
-		return nil
-	}
-
-	total += root.Size
-	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
-	defer dst.ProgressBar.Stop()
-	// attempt to push the artifact manifest
-	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-
-	if err == nil {
-		dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
-		// message.Infof("Published: %s [%s]", ref, root.MediaType)
-		message.Infof("Digest: %s", root.Digest)
-		return nil
-	}
-	dst.ProgressBar.Stop()
-	// log the error, the expected error is a 400 manifest invalid
-	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
-
-	// if copyRootAttempted is false here, then there was an error generated before
-	// the root was copied. This is unexpected, so return the error.
-	if !copyRootAttempted {
-		return fmt.Errorf("push failed before the manifest was pushed, returning the error: %w", err)
-	}
-
-	// if the error returned from the push is not an expected error, then return the error
-	if !isManifestUnsupported(err) {
-		return err
-	}
-
-	// assumes referrers API is not supported since OCI artifact
-	// media type is not supported
-	dst.SetReferrersCapability(false)
-
-	// fallback to an ImageManifest push
-	manifestConfigDesc, manifestConfigContent, err := p.generateManifestConfigFile()
-	if err != nil {
-		return err
-	}
-	// push the manifest config
-	// since this config is so tiny, and the content is not used again
-	// it is not logged to the multispinner, but will error if it fails
-	err = dst.Push(ctx, manifestConfigDesc, bytes.NewReader(manifestConfigContent))
-	if err != nil {
-		return err
-	}
-	packOpts.ConfigDescriptor = &manifestConfigDesc
-	packOpts.PackImageManifest = true
-	root, err = pack(ocispec.MediaTypeImageManifest)
-	if err != nil {
-		return err
-	}
-
-	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if content.Equal(node, root) {
-			// skip non-config
-			content, err := content.FetchAll(ctx, fetcher, root)
-			if err != nil {
-				return nil, err
-			}
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(content, &manifest); err != nil {
-				return nil, err
-			}
-			return []ocispec.Descriptor{manifest.Config}, nil
-		}
-		// config has no successors
-		return nil, nil
-	}
-
-	total = totalLayersSize + root.Size + manifestConfigDesc.Size
-	dst.ProgressBar = message.NewProgressBar(total, "Publish layers")
-	defer dst.ProgressBar.Stop()
-	// attempt to push the image manifest
-	_, err = oras.Copy(ctx, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	if err != nil {
-		return err
-	}
-	dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
-	message.Infof("Digest: %s", root.Digest)
+	message.Successf(format)
 	return nil
 }
 
@@ -302,8 +395,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 func (p *Packager) ref(skeleton string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
-		ver = "0.0.1"
-		// return registry.Reference{}, errors.New("version is required for publishing")
+		return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
 	// changes package ref from "name:version-arch" to "name:version-skeleton"
