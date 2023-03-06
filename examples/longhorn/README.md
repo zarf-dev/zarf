@@ -1,6 +1,6 @@
 # Longhorn
 
-This example shows how you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
+This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
 Before deploying Longhorn make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/1.4.0/deploy/install/#installation-requirements).
 
