@@ -184,12 +184,13 @@ func getRequestedComponentList(requestedComponents string) []string {
 }
 
 func (p *Packager) loadZarfPkg() error {
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
-	defer spinner.Stop()
 
 	if err := p.handlePackagePath(); err != nil {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
+
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {

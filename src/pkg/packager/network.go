@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,12 +13,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote/errcode"
@@ -36,15 +39,18 @@ func (p *Packager) handlePackagePath() error {
 		return nil
 	}
 
+	// Handle case where deploying remote package stored in an OCI registry
+	if strings.HasPrefix(opts.PackagePath, "oci://") {
+		return p.handleOciPackage()
+	}
+
 	// Handle case where deploying remote package validated via sget
 	if strings.HasPrefix(opts.PackagePath, "sget://") {
 		return p.handleSgetPackage()
 	}
 
-	// Handle case where deploying remote package stored in an OCI registry
-	if strings.HasPrefix(opts.PackagePath, "oci://") {
-		return p.handleOciPackage()
-	}
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	defer spinner.Stop()
 
 	if !config.CommonOptions.Insecure && opts.Shasum == "" {
 		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore")
@@ -87,6 +93,7 @@ func (p *Packager) handlePackagePath() error {
 
 	opts.PackagePath = localPath
 
+	spinner.Success()
 	return nil
 }
 
@@ -94,6 +101,9 @@ func (p *Packager) handleSgetPackage() error {
 	message.Debug("packager.handleSgetPackage()")
 
 	opts := p.cfg.DeployOpts
+
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	defer spinner.Stop()
 
 	// Create the local file for the package
 	localPath := filepath.Join(p.tmp.Base, "remote.tar.zst")
@@ -120,6 +130,7 @@ func (p *Packager) handleSgetPackage() error {
 
 	p.cfg.DeployOpts.PackagePath = localPath
 
+	spinner.Success()
 	return nil
 }
 
@@ -133,17 +144,55 @@ func (p *Packager) handleOciPackage() error {
 	out := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
 
 	src, err := utils.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
 
+	estimatedBytes, err := getOCIPackageSize(src, ref)
+	if err != nil {
+		return err
+	}
+
+	dst, err := file.New(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	// Create a thread to update a progress bar as we save the package to disk
+	doneSaving := make(chan int)
+	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(estimatedBytes), 2))
+	progressBar := message.NewProgressBar(estimatedBytes, title)
+	src.ProgressBar = nil
+	go func() {
+		for {
+			select {
+			case <-doneSaving:
+				// We have been notified that we are done saving the package, no longer updating progress bar
+				title = fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(estimatedBytes), 2), utils.ByteFormat(float64(estimatedBytes), 2))
+				progressBar.Update(estimatedBytes, title)
+				progressBar.Successf("Pulling Zarf package data")
+				return
+
+			default:
+				currentSize, dirErr := utils.GetDirSize(out)
+				if dirErr != nil {
+					message.Warnf("unable to get the updated progress of the package download: %s", err.Error())
+					time.Sleep(200 * time.Millisecond)
+					continue
+				}
+
+				title = fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(currentSize), 2), utils.ByteFormat(float64(estimatedBytes), 2))
+				progressBar.Update(currentSize, title)
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
+	}()
+
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	spinner.Updatef("Pulling %d layers concurrently", copyOpts.Concurrency)
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -157,16 +206,13 @@ func (p *Packager) handleOciPackage() error {
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
 
-	dst, err := file.New(out)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
 	_, err = oras.Copy(src.Context, src.Repository, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
+
+	// Send a signal to the progress bar that we're done
+	doneSaving <- 1
 
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
@@ -196,4 +242,42 @@ func isManifestUnsupported(err error) bool {
 		return true
 	}
 	return false
+}
+
+func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, error) {
+	var total int64
+	// get the manifest descriptor
+	// ref.Reference can be a tag or a digest
+	descriptor, err := src.Resolve(src.Context, ref.Reference)
+	if err != nil {
+		return 0, err
+	}
+
+	// get the manifest itself
+	pulled, err := content.FetchAll(src.Context, src, descriptor)
+	if err != nil {
+		return 0, err
+	}
+	manifest := ocispec.Manifest{}
+	artifact := ocispec.Artifact{}
+	var layers []ocispec.Descriptor
+	// if the manifest is an artifact, unmarshal it as an artifact
+	// otherwise, unmarshal it as a manifest
+	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
+		if err = json.Unmarshal(pulled, &artifact); err != nil {
+			return 0, err
+		}
+		layers = artifact.Blobs
+	} else {
+		if err = json.Unmarshal(pulled, &manifest); err != nil {
+			return 0, err
+		}
+		layers = manifest.Layers
+	}
+
+	for _, layer := range layers {
+		total += layer.Size
+	}
+
+	return total, nil
 }
