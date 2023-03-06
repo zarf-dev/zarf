@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -105,6 +106,7 @@ type readCloser struct {
 }
 
 // RoundTrip calls base roundtrip while keeping track of the current request.
+// This is currently only used to track the progress of publishes, not pulls.
 func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	if req.Body != nil && t.orasRemote.ProgressBar != nil {
 		tee := io.TeeReader(req.Body, t.orasRemote.ProgressBar)
@@ -142,4 +144,16 @@ func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
 	repo.Client = authClient
 	o.Repository = repo
 	return o, nil
+}
+
+func PrintLayerExists(ctx context.Context, desc ocispec.Descriptor) error {
+	title := desc.Annotations[ocispec.AnnotationTitle]
+	var format string
+	if title != "" {
+		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], First30last30(title))
+	} else {
+		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+	}
+	message.Successf(format)
+	return nil
 }
