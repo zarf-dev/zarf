@@ -10,7 +10,7 @@ Zarf packages are built while 'online' and connected to whatever is hosting the 
 
 The `zarf.yaml` file, which the package builds from, defines declarative instructions on how the capabilities of the package should be deployed. The declarative nature of the package means everything is represented by code and automatically runs as it is configured, instead of having to give manual steps that might not be reproducible on all systems.
 
-Zarf Packages are made up of functionality blocks called components which are described more on the [Zarf](./2-zarf-components.md) Components page](./2-zarf-components.md). These components can be optional, giving more flexibility to how packages can be used.
+Zarf Packages are made up of functionality blocks called components which are described more on the [Zarf Components page](./2-zarf-components.md). These components can be optional, giving more flexibility to how packages can be used.
 
 ## Deploying on to Airgapped Systems
 
