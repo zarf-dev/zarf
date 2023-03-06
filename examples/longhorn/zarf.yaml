@@ -26,13 +26,6 @@ components:
     required: true
     description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
     actions:
-      # Run the Longhorn Environment Check on this cluster's nodes.
-      onDeploy:
-        before:
-          - env:
-            - "PATH=$PATH:./"
-          - cmd: alias kubectl="zarf tools kubectl"
-          - cmd: ./environment_check.sh
       # Set the delete confirmation flag for Longhorn
       onRemove:
         before:
