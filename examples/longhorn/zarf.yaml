@@ -40,10 +40,6 @@ components:
             - "PATH=$PATH:./"
           - cmd: alias kubectl="zarf tools kubectl"
           - cmd: "kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
-    files:
-      - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-        target: jq
-        executable: true
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system
