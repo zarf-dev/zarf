@@ -178,8 +178,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	copyOpts.OnCopySkipped = printLayerExists
-	copyOpts.PostCopy = printLayerExists
+	copyOpts.OnCopySkipped = utils.PrintLayerExists
+	copyOpts.PostCopy = utils.PrintLayerExists
 
 	var root ocispec.Descriptor
 
@@ -199,7 +199,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		flags = "--insecure"
 	}
 	message.Info("To inspect/deploy/pull:")
-	message.Infof("zarf package inspect oci://%s %s", ref, flags)
+	message.Infof("zarf package inspect oci://%s/%s %s", ref.Registry, ref.Repository, flags)
 	message.Infof("zarf package deploy oci://%s %s", ref, flags)
 	message.Infof("zarf package pull oci://%s %s", ref, flags)
 	return nil
@@ -256,7 +256,7 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 		return root, fmt.Errorf("push failed before the artifact manifest was pushed, returning the error: %w", err)
 	}
 
-	return root, nil
+	return root, err
 }
 
 func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
@@ -375,18 +375,6 @@ func pack(artifactType string, ctx context.Context, descs []ocispec.Descriptor, 
 		return ocispec.Descriptor{}, err
 	}
 	return root, nil
-}
-
-func printLayerExists(ctx context.Context, desc ocispec.Descriptor) error {
-	title := desc.Annotations[ocispec.AnnotationTitle]
-	var format string
-	if title != "" {
-		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-	} else {
-		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-	}
-	message.Successf(format)
-	return nil
 }
 
 // ref returns a registry.Reference using metadata from the package's build config and the PublishOpts
