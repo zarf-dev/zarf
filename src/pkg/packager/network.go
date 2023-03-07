@@ -40,7 +40,7 @@ func (p *Packager) handlePackagePath() error {
 	}
 
 	// Handle case where deploying remote package stored in an OCI registry
-	if strings.HasPrefix(opts.PackagePath, "oci://") {
+	if utils.IsOCIURL(opts.PackagePath) {
 		return p.handleOciPackage()
 	}
 
