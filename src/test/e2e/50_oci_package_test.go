@@ -104,7 +104,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "pull", "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Pulled "+ref)
-	defer e2e.cleanFiles("zarf-package-helm-oci-chart-amd64-0.0.1.tar.zst")
+	defer e2e.cleanFiles(out)
 
 	// Verify the package was pulled.
 	require.FileExists(t, out)

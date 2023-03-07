@@ -236,7 +236,7 @@ func isManifestUnsupported(err error) bool {
 	}
 
 	// As of November 2022, ECR is known to return UNSUPPORTED error when
-	// putting an OCI artifact manifest.
+	// pulling an OCI artifact manifest.
 	switch errCode.Code {
 	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
 		return true
