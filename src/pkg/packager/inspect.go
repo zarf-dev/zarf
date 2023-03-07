@@ -74,16 +74,16 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 		}
 		if includeSBOM {
 			sbmomsTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-				return d.Annotations["org.opencontainers.image.title"] == "sboms.tar.zst"
+				return d.Annotations["org.opencontainers.image.title"] == "sboms.tar"
 			})
 			sbmomsTarBytes, err := content.FetchAll(dst.Context, dst, sbmomsTarDesc)
 			if err != nil {
 				return err
 			}
-			if err := utils.WriteFile(filepath.Join(p.tmp.Base, "sboms.tar.zst"), sbmomsTarBytes); err != nil {
+			if err := utils.WriteFile(p.tmp.SbomTar, sbmomsTarBytes); err != nil {
 				return err
 			}
-			if err := archiver.Unarchive(filepath.Join(p.tmp.Base, "sboms.tar.zst"), filepath.Join(p.tmp.Base, "sboms")); err != nil {
+			if err := archiver.Unarchive(p.tmp.SbomTar, filepath.Join(p.tmp.Base, "sboms")); err != nil {
 				return err
 			}
 		}
