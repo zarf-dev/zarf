@@ -108,15 +108,9 @@ var packageInspectCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if strings.HasPrefix(args[0], "oci://") {
-			if err := pkgClient.InspectOCI(); err != nil {
-				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
-			}
-		} else {
-			// Inspect the local package
-			if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
-				message.Fatalf(err, "Failed to inspect package: %s", err.Error())
-			}
+		// Inspect the package
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
 }
