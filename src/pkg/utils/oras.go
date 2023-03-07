@@ -21,6 +21,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
+// OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	*remote.Repository
 	context.Context
@@ -72,13 +73,10 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
-	// TODO:(@RAZZLE) https://github.com/oras-project/oras/blob/e8bc5acd9b7be47f2f9f387af6a963b14ae49eda/cmd/oras/internal/option/remote.go#L183
 
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
-		// Gitlab auth fails if ForceAttemptOAuth2 is set to true
-		// ForceAttemptOAuth2: true,
 		Client: &http.Client{
 			Transport: transport,
 		},
@@ -96,6 +94,7 @@ type Transport struct {
 	orasRemote *OrasRemote
 }
 
+// NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
 func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
 	return &Transport{base, o}
 }
@@ -123,7 +122,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	return resp, err
 }
 
-// OrasRemote returns an oras remote repository client and context for the given reference.
+// NewOrasRemote returns an oras remote repository client and context for the given reference.
 func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
 	o := &OrasRemote{}
 	o.Context = withScopes(ref)
@@ -146,6 +145,7 @@ func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
 	return o, nil
 }
 
+// PrintLayerExists prints a success message to the console when a layer has been successfully published to a registry.
 func PrintLayerExists(ctx context.Context, desc ocispec.Descriptor) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	var format string
