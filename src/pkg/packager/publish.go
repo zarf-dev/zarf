@@ -70,9 +70,9 @@ func (p *Packager) Publish() error {
 		Structure:
 		.
 		├── components/
-		│   ├── component1.tar.zst
-		│   ├── component2.tar.zst
-		│   └── [...].tar.zst
+		│   ├── component1.tar
+		│   ├── component2.tar
+		│   └── [...].tar
 		├── images/
 		│   ├── index.json
 		│   ├── oci-layout
@@ -112,9 +112,12 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	componentTarballs := []string{}
+
+	message.Warnf("@JPERRY: all the contents of the components directory: %#v", componentDirs)
+
 	// repackage the component directories into tarballs
 	for _, componentDir := range componentDirs {
-		dst := filepath.Join(p.tmp.Components, filepath.Base(componentDir)+".tar.zst")
+		dst := filepath.Join(p.tmp.Components, filepath.Base(componentDir)+".tar")
 		err = archiver.Archive([]string{componentDir}, dst)
 		if err != nil {
 			return err
