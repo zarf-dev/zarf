@@ -201,7 +201,7 @@ var packagePublishCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
-		if !strings.HasPrefix(args[1], "oci://") {
+		if !utils.IsOCIURL(args[1]) {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
@@ -227,7 +227,7 @@ var packagePullCmd = &cobra.Command{
 	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if !strings.HasPrefix(args[0], "oci://") {
+		if !utils.IsOCIURL(args[0]) {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
