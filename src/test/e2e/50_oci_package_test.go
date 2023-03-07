@@ -142,10 +142,11 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	t.Log("E2E: Package Inspect oci://")
 
 	suite.Reference.Repository = "helm-oci-chart"
+	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.arch)
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "inspect", "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, suite.Reference.Reference)
+	require.Contains(t, stdErr, "Loaded Zarf Package oci://"+ref)
 
 	// Test inspect w/ bad ref.
 	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
