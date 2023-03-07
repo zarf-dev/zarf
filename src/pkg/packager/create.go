@@ -182,7 +182,7 @@ func (p *Packager) Create(baseDir string) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
-		// Make the component a tar.zst archive
+		// Make the component a tar archive
 		componentPaths, _ := p.createOrGetComponentPaths(component)
 		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
 		componentTarPath := filepath.Join(p.tmp.Components, componentName)

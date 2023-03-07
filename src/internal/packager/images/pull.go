@@ -235,7 +235,7 @@ func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error
 		return err
 	}
 
-	// Read the file contents and turn it into a useable struct that we can manipulate
+	// Read the file contents and turn it into a usable struct that we can manipulate
 	var index IndexJSON
 	byteValue, err := io.ReadAll(indexJSON)
 	if err != nil {
