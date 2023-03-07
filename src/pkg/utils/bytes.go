@@ -6,8 +6,13 @@
 package utils
 
 import (
+	"fmt"
 	"math"
 	"strconv"
+	"sync"
+	"time"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // RoundUp rounds a float64 to the given number of decimal places.
@@ -49,4 +54,36 @@ func ByteFormat(inputNum float64, precision int) string {
 	}
 
 	return strconv.FormatFloat(returnVal, 'f', precision, 64) + unit
+}
+
+// CheckLocalProgress continuously checks the local directory size and updates the progress bar.
+// NOTE: This function runs infinitely until the completeChan is triggered.
+func CheckLocalProgress(progressBar *message.ProgressBar, expectedTotal int64, filepath string, wg *sync.WaitGroup, completeChan chan int, updateText string) {
+	for {
+		select {
+		case <-completeChan:
+			// Fill out the progress bar so that it's a little less choppy
+			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(expectedTotal), 2), ByteFormat(float64(expectedTotal), 2))
+			progressBar.Update(int64(expectedTotal), title)
+
+			// Send success message
+			progressBar.Successf("%s (%s)", updateText, ByteFormat(float64(expectedTotal), 2))
+			wg.Done()
+			return
+
+		default:
+			// Read the directory size
+			currentBytes, dirErr := GetDirSize(filepath)
+			if dirErr != nil {
+				message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
+				time.Sleep(200 * time.Millisecond)
+				continue
+			}
+
+			// Update the progress bar with the current size
+			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(expectedTotal), 2), ByteFormat(float64(currentBytes), 2))
+			progressBar.Update(currentBytes, title)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }
