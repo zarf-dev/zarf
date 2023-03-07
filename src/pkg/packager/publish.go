@@ -113,8 +113,6 @@ func (p *Packager) Publish() error {
 	}
 	componentTarballs := []string{}
 
-	message.Warnf("@JPERRY: all the contents of the components directory: %#v", componentDirs)
-
 	// repackage the component directories into tarballs
 	for _, componentDir := range componentDirs {
 		dst := filepath.Join(p.tmp.Components, filepath.Base(componentDir)+".tar")
