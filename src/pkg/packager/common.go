@@ -168,7 +168,7 @@ func createPaths() (paths types.TempPaths, err error) {
 		SeedImage:    filepath.Join(basePath, "seed-image"),
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
-		SbomTar:      filepath.Join(basePath, "sboms.tar.zst"),
+		SbomTar:      filepath.Join(basePath, "sboms.tar"),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
 	}
 
@@ -237,8 +237,8 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If SBOM files exist, temporarily place them in the deploy directory
-	if _, err := os.Stat(filepath.Join(p.tmp.Base, "sboms.tar.zst")); err == nil {
-		_ = archiver.Unarchive(filepath.Join(p.tmp.Base, "sboms.tar.zst"), p.tmp.Base)
+	if _, err := os.Stat(p.tmp.SbomTar); err == nil {
+		_ = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Base)
 
 		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Base, "sbom-viewer-*"))
 		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {

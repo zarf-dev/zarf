@@ -66,24 +66,6 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	/*
-		Structure:
-		.
-		├── components/
-		│   ├── component1.tar
-		│   ├── component2.tar
-		│   └── [...].tar
-		├── images/
-		│   ├── index.json
-		│   ├── oci-layout
-		│   ├── blobs/
-		│   │   ├── sha256/
-		│   │   │   └── [...]
-		├── checksums.txt (optional)
-		├── sboms.tar.zst
-		└── zarf.yaml
-	*/
-
 	paths := []string{
 		p.tmp.ZarfYaml,
 		p.tmp.SbomTar,
@@ -364,6 +346,7 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 		return ocispec.Descriptor{}, nil, err
 	}
 	manifestConfigDesc := content.NewDescriptorFromBytes("application/vnd.unknown.config.v1+json", manifestConfigBytes)
+
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
@@ -375,6 +358,7 @@ func pack(artifactType string, ctx context.Context, descs []ocispec.Descriptor, 
 	if err = store.Tag(ctx, root, root.Digest.String()); err != nil {
 		return ocispec.Descriptor{}, err
 	}
+
 	return root, nil
 }
 
