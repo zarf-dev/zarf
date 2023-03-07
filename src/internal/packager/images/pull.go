@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -100,32 +99,7 @@ func (i *ImgConfig) PullAll() error {
 	// Create a thread to update a progress bar as we save the image files to disk
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		for {
-			select {
-			case <-doneSaving:
-				title = fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(totalBytes), 2), utils.ByteFormat(float64(totalBytes), 2))
-				progressBar.Update(totalBytes, title)
-				progressBar.Successf("Pulling %d images (%s)", imgCount, utils.ByteFormat(float64(totalBytes), 2))
-				wg.Done()
-				return
-			default:
-				var (
-					dirErr      error
-					currentSize int64
-				)
-				currentSize, dirErr = utils.GetDirSize(i.ImagesPath)
-				if dirErr != nil {
-					message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
-					time.Sleep(200 * time.Millisecond)
-					continue
-				}
-				title = fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(currentSize), 2), utils.ByteFormat(float64(totalBytes), 2))
-				progressBar.Update(currentSize, title)
-				time.Sleep(200 * time.Millisecond)
-			}
-		}
-	}()
+	go utils.CheckLocalProgress(progressBar, totalBytes, i.ImagesPath, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
 
 	for tag, img := range tagToImage {
 
