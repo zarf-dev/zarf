@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -169,31 +168,7 @@ func (p *Packager) handleOciPackage() error {
 	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(estimatedBytes), 2))
 	progressBar := message.NewProgressBar(estimatedBytes, title)
 	src.ProgressBar = nil
-	go func() {
-		for {
-			select {
-			case <-doneSaving:
-				// We have been notified that we are done saving the package, no longer updating progress bar
-				title = fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(estimatedBytes), 2), utils.ByteFormat(float64(estimatedBytes), 2))
-				progressBar.Update(estimatedBytes, title)
-				progressBar.Successf("Pulling Zarf package data")
-				wg.Done()
-				return
-
-			default:
-				currentSize, dirErr := utils.GetDirSize(out)
-				if dirErr != nil {
-					message.Warnf("unable to get the updated progress of the package download: %s", err.Error())
-					time.Sleep(200 * time.Millisecond)
-					continue
-				}
-
-				title = fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(currentSize), 2), utils.ByteFormat(float64(estimatedBytes), 2))
-				progressBar.Update(currentSize, title)
-				time.Sleep(200 * time.Millisecond)
-			}
-		}
-	}()
+	go utils.CheckLocalProgress(progressBar, estimatedBytes, out, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
