@@ -10,7 +10,7 @@ In this walkthrough, we are going to run through how to publish a Zarf package t
 
 For following along locally, please ensure the following prerequisites are met:
 
-1. Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
+1. Zarf binary installed on your `$PATH`: ([Install Instructions](../3-getting-started.md#installing-zarf))
 2. Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this walkthrough will be using Docker Hub
 3. The following operations:
 
