@@ -128,6 +128,10 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Pulled "+ref)
 
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
+	require.NoError(t, err, stdErr)
+	require.Contains(t, string(stdOut), "cool-name-podinfo")
+
 	// Test deploy w/ bad ref.
 	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
 	require.Error(t, err, stdErr)

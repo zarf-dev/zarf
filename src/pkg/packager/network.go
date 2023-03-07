@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -163,6 +164,8 @@ func (p *Packager) handleOciPackage() error {
 
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(estimatedBytes), 2))
 	progressBar := message.NewProgressBar(estimatedBytes, title)
 	src.ProgressBar = nil
@@ -174,6 +177,7 @@ func (p *Packager) handleOciPackage() error {
 				title = fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(estimatedBytes), 2), utils.ByteFormat(float64(estimatedBytes), 2))
 				progressBar.Update(estimatedBytes, title)
 				progressBar.Successf("Pulling Zarf package data")
+				wg.Done()
 				return
 
 			default:
@@ -211,8 +215,9 @@ func (p *Packager) handleOciPackage() error {
 		return err
 	}
 
-	// Send a signal to the progress bar that we're done
+	// Send a signal to the progress bar that we're done and wait for it to finish
 	doneSaving <- 1
+	wg.Wait()
 
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())

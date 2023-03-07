@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -76,7 +77,6 @@ func (i *ImgConfig) PullAll() error {
 			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
 		tagToImage[tag] = img
-
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
@@ -98,13 +98,16 @@ func (i *ImgConfig) PullAll() error {
 	progressBar := message.NewProgressBar(totalBytes, title)
 
 	// Create a thread to update a progress bar as we save the image files to disk
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		for {
 			select {
 			case <-doneSaving:
 				title = fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(totalBytes), 2), utils.ByteFormat(float64(totalBytes), 2))
 				progressBar.Update(totalBytes, title)
-				progressBar.Successf("Pulling %d images", imgCount)
+				progressBar.Successf("Pulling %d images (%s)", imgCount, utils.ByteFormat(float64(totalBytes), 2))
+				wg.Done()
 				return
 			default:
 				var (
@@ -129,7 +132,11 @@ func (i *ImgConfig) PullAll() error {
 		// Save the image
 		err := crane.SaveOCI(img, i.ImagesPath)
 		if err != nil {
-			fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+			// Check if the cache has been invalidated, and warn the user if so
+			if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
+				message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
+			}
+			return fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
 		}
 
 		// Get the image digest so we can set an annotation in the image.json later
@@ -144,8 +151,9 @@ func (i *ImgConfig) PullAll() error {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
-	// Send a signal to the progress bar that we're done
+	// Send a signal to the progress bar that we're done and ait for the thread to finish
 	doneSaving <- 1
+	wg.Wait()
 
 	return err
 }
