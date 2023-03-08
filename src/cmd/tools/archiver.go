@@ -15,8 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var decompressLayers bool
-
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
