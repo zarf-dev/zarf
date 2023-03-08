@@ -10,7 +10,10 @@ For following along locally, please ensure the following prerequisites are met:
 
 1. Zarf binary installed on your `$PATH`: ([Install Instructions](../3-getting-started.md#installing-zarf))
 2. Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this walkthrough will be using Docker Hub
-3. The following operations:
+
+## Setup
+
+This walkthrough will require a registry to be configured (see [prerequisites](#prerequisites) for more information).  The below sets up some variables for us to use when logging into the registry:
 
 ```bash
 # Setup some variables for the registry we will be using
@@ -20,10 +23,21 @@ $ REGISTRY_USERNAME=<username> # <-- replace with your username
 $ REPOSITORY_URL=$REGISTRY/$REGISTRY_USERNAME
 $ REGISTRY_SECRET=<secret> # <-- replace with your password or auth token
 $ set -o history
+```
 
-# Authenticate with your registry using Zarf
+With those set, you can tell Zarf to login to your registry with the following:
+
+```bash
 $ echo $REGISTRY_SECRET | zarf tools registry login $REGISTRY --username $REGISTRY_USERNAME --password-stdin
-# (Optional) Otherwise, create a Docker compliant auth config file if the Docker CLI is not installed
+
+2023/03/07 23:03:16 logged in via /home/zarf/.docker/config.json
+```
+
+:::note
+
+If you do not have the Docker CLI installed, you may need to create a Docker compliant auth config file manually:
+
+```bash
 $ mkdir -p ~/.docker
 $ AUTH=$(echo -n "$REGISTRY_USERNAME:$REGISTRY_SECRET" | base64)
 # Note: If using Docker Hub, the registry URL is `https://index.docker.io/v1/` for the auth config
@@ -37,6 +51,8 @@ $ cat <<EOF > ~/.docker/config.json
 }
 EOF
 ```
+
+:::
 
 ## Publish Package
 
@@ -81,8 +97,13 @@ $ zarf package create .
 
 Then publish the package to the registry:
 
+:::note
+
+Your package tarball may be named differently based on your machine's architecture.  For example, if you are running on an AMD64 machine, the tarball will be named `zarf-package-helm-oci-chart-amd64-0.0.1.tar.zst`.
+
+:::
+
 ```bash
-# Your package tarball may be named differently based on your machine's architecture
 $ zarf package publish zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst oci://$REPOSITORY_URL
 
 ...

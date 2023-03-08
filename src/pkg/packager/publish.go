@@ -190,7 +190,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		flags = "--insecure"
 	}
 	message.Info("To inspect/deploy/pull:")
-	message.Infof("zarf package inspect oci://%s/%s %s", ref.Registry, ref.Repository, flags)
+	message.Infof("zarf package inspect oci://%s %s", ref, flags)
 	message.Infof("zarf package deploy oci://%s %s", ref, flags)
 	message.Infof("zarf package pull oci://%s %s", ref, flags)
 	return nil
