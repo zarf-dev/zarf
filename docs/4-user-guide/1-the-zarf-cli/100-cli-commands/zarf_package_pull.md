@@ -16,8 +16,8 @@ zarf package pull [REFERENCE] [flags]
 ## Options
 
 ```
-      --concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
-  -h, --help              help for pull
+  -h, --help                  help for pull
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 
 ## Options inherited from parent commands
@@ -35,4 +35,3 @@ zarf package pull [REFERENCE] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

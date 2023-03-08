@@ -52,13 +52,13 @@ const (
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
 
 	// Package deploy config keys
-	V_PKG_DEPLOY_SET                = "package.deploy.set"
-	V_PKG_DEPLOY_COMPONENTS         = "package.deploy.components"
-	V_PKG_DEPLOY_SHASUM             = "package.deploy.shasum"
-	V_PKG_DEPLOY_SGET               = "package.deploy.sget"
+	V_PKG_DEPLOY_SET        = "package.deploy.set"
+	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
+	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
+	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_CONCURRENCY        = "package.publish.concurrency"
+	V_PKG_PUBLISH_OCI_CONCURRENCY = "package.publish.oci_concurrency"
 )
 
 func initViper() {
