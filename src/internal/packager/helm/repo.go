@@ -104,6 +104,8 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 			spinner.Fatalf(err, "Unable to create a new registry client")
 		}
 		chartURL = h.Chart.URL
+		// Explicitly set the pull version for OCI
+		pull.Version = h.Chart.Version
 	} else {
 		// Perform simple chart download
 		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
