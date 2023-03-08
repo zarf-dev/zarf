@@ -128,17 +128,19 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
+	// destination remote
 	dst, err := utils.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
 	ctx := dst.Context
 
-	store, err := file.New(p.tmp.Base)
+	// source file store
+	src, err := file.New(p.tmp.Base)
 	if err != nil {
 		return err
 	}
-	defer store.Close()
+	defer src.Close()
 
 	var descs []ocispec.Descriptor
 
@@ -151,7 +153,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 		mediaType := parseZarfLayerMediaType(name)
 
-		desc, err := store.Add(ctx, name, mediaType, path)
+		desc, err := src.Add(ctx, name, mediaType, path)
 		if err != nil {
 			return err
 		}
@@ -166,7 +168,10 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	var root ocispec.Descriptor
 
-	root, err = p.publishArtifact(dst, store, descs, copyOpts)
+	// try to push an ArtifactManifest first
+	// not every registry supports ArtifactManifests, so fallback to an ImageManifest if the push fails
+	// see https://oras.land/implementors/#registries-supporting-oci-artifacts
+	root, err = p.publishArtifact(dst, src, descs, copyOpts)
 	if err != nil {
 		// reset the progress bar between attempts
 		dst.ProgressBar.Stop()
@@ -178,7 +183,8 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		if !isManifestUnsupported(err) {
 			return err
 		}
-		root, err = p.publishImage(dst, store, descs, copyOpts)
+		// fallback to an ImageManifest push
+		root, err = p.publishImage(dst, src, descs, copyOpts)
 		if err != nil {
 			return err
 		}
@@ -196,7 +202,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	return nil
 }
 
-func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
+func (p *Packager) publishArtifact(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
 	var total int64
 	for _, desc := range descs {
 		total += desc.Size
@@ -204,7 +210,7 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 	packOpts := p.cfg.PublishOpts.PackOptions
 
 	// first attempt to do a ArtifactManifest push
-	root, err = pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, store, packOpts)
+	root, err = pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, src, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -214,11 +220,11 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 	defer dst.ProgressBar.Stop()
 
 	// attempt to push the artifact manifest
-	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	return root, err
 }
 
-func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
+func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
 	var total int64
 	for _, desc := range descs {
 		total += desc.Size
@@ -259,7 +265,7 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs 
 	packOpts := p.cfg.PublishOpts.PackOptions
 	packOpts.ConfigDescriptor = &manifestConfigDesc
 	packOpts.PackImageManifest = true
-	root, err = pack(dst.Context, ocispec.MediaTypeImageManifest, descs, store, packOpts)
+	root, err = pack(dst.Context, ocispec.MediaTypeImageManifest, descs, src, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -268,7 +274,7 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs 
 	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
 	defer dst.ProgressBar.Stop()
 	// attempt to push the image manifest
-	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
+	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return root, err
 	}
@@ -307,12 +313,12 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 }
 
 // pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
-func pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, store *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
-	root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
+func pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, src *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
+	root, err := oras.Pack(ctx, src, artifactType, descs, packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	if err = store.Tag(ctx, root, root.Digest.String()); err != nil {
+	if err = src.Tag(ctx, root, root.Digest.String()); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
