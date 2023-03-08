@@ -14,13 +14,13 @@ zarf package deploy [PACKAGE] [flags]
 ## Options
 
 ```
-      --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --concurrency int      Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
-      --confirm              Confirm package deployment without prompting
-  -h, --help                 help for deploy
-      --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-      --sget string          Path to public sget key file for remote packages signed via cosign
-      --shasum string        Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
+      --components string     Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --confirm               Confirm package deployment without prompting
+  -h, --help                  help for deploy
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --set stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
+      --sget string           Path to public sget key file for remote packages signed via cosign
+      --shasum string         Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
 ## Options inherited from parent commands
@@ -38,4 +38,3 @@ zarf package deploy [PACKAGE] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

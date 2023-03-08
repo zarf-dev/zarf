@@ -319,14 +319,13 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_PUBLISH_CONCURRENCY, 3)
+	v.SetDefault(V_PKG_PUBLISH_OCI_CONCURRENCY, 3)
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	// naming this flag "concurrency" is a bit confusing, as components do not deploy concurrently, but it's the same as the flag in the publish command
-	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
 
 func bindInspectFlags() {
@@ -344,10 +343,10 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
 
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
-	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "concurrency", v.GetInt(V_PKG_PUBLISH_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 }
