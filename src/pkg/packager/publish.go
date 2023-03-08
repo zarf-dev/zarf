@@ -205,20 +205,6 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
 	defer dst.ProgressBar.Stop()
 
-	copyRootAttempted := false
-	preCopy := copyOpts.PreCopy
-	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if content.Equal(root, desc) {
-			// copyRootAttempted helps track whether the returned error is
-			// generated from copying root.
-			copyRootAttempted = true
-		}
-		if preCopy != nil {
-			return preCopy(ctx, desc)
-		}
-		return nil
-	}
-
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err == nil {
@@ -231,12 +217,6 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 	// if the error returned from the push is not an expected error, then return the error
 	if !isManifestUnsupported(err) {
 		return root, err
-	}
-
-	// if copyRootAttempted is false here, then there was an error generated before
-	// the root was copied. This is unexpected, so return the error.
-	if !copyRootAttempted {
-		return root, fmt.Errorf("push failed before the artifact manifest was pushed, returning the error: %w", err)
 	}
 
 	return root, err
@@ -289,32 +269,12 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs 
 	}
 	total += root.Size + manifestConfigDesc.Size
 
-	copyRootAttempted := false
-	preCopy := copyOpts.PreCopy
-	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if content.Equal(root, desc) {
-			// copyRootAttempted helps track whether the returned error is
-			// generated from copying root.
-			copyRootAttempted = true
-		}
-		if preCopy != nil {
-			return preCopy(ctx, desc)
-		}
-		return nil
-	}
-
 	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
 	defer dst.ProgressBar.Stop()
 	// attempt to push the image manifest
 	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {
 		return root, err
-	}
-
-	// if copyRootAttempted is false here, then there was an error generated before
-	// the root was copied. This is unexpected, so return the error.
-	if !copyRootAttempted {
-		return root, fmt.Errorf("push failed before the image manifest was pushed, returning the error: %w", err)
 	}
 
 	return root, nil
