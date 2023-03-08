@@ -233,23 +233,6 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 	// media type is not supported
 	dst.SetReferrersCapability(false)
 
-	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, node ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if content.Equal(node, root) {
-			// skip non-config
-			content, err := content.FetchAll(ctx, fetcher, root)
-			if err != nil {
-				return nil, err
-			}
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(content, &manifest); err != nil {
-				return nil, err
-			}
-			return []ocispec.Descriptor{manifest.Config}, nil
-		}
-		// config has no successors
-		return nil, nil
-	}
-
 	// fallback to an ImageManifest push
 	manifestConfigDesc, manifestConfigContent, err := p.generateManifestConfigFile()
 	if err != nil {
