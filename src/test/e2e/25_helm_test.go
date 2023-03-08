@@ -100,6 +100,8 @@ func testHelmOCIChart(t *testing.T) {
 	// Verify that podinfo successfully deploys in the cluster
 	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "rollout", "status", "deployment/podinfo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+	kubectlOut, _, _ = e2e.execZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
+	assert.Contains(t, string(kubectlOut), "6.3.3")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
