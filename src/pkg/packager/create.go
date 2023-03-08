@@ -179,9 +179,6 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-<<<<<<< HEAD
-	// In case the directory was changed, reset to prevent breaking relative target paths.
-=======
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
@@ -199,8 +196,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
->>>>>>> 5086a4b0 (1322 component tarballs (#1331))
+	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
 	}
