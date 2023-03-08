@@ -1,4 +1,4 @@
-# Publishing + Deploying A Zarf Package Via OCI
+# Using OCI to Store & Deploy Zarf Packages
 
 ## Introduction
 
@@ -87,6 +87,8 @@ EOF
 
 Create the package locally:
 
+[CLI Reference](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_create.md)
+
 ```bash
 # Create the package (interactively)
 $ zarf package create .
@@ -102,6 +104,8 @@ Then publish the package to the registry:
 Your package tarball may be named differently based on your machine's architecture.  For example, if you are running on an AMD64 machine, the tarball will be named `zarf-package-helm-oci-chart-amd64-0.0.1.tar.zst`.
 
 :::
+
+[CLI Reference](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_publish.md)
 
 ```bash
 $ zarf package publish zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst oci://$REPOSITORY_URL
@@ -143,6 +147,8 @@ To modify, edit `zarf.yaml` and re-run `zarf package create .`
 
 ## Inspect Package
 
+[CLI Reference](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
+
 Inspecting a Zarf package stored in an OCI registry is the same as inspecting a local package and has the same flags:
 
 ```yaml
@@ -176,6 +182,8 @@ components:
 
 ## Deploy Package
 
+[CLI Reference](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
+
 Deploying a package stored in an OCI registry is nearly the same experience as deploying a local package:
 
 ```bash
@@ -190,4 +198,22 @@ $ zarf packages list
     Package        | Components
     helm-oci-chart | [helm-oci-chart]
     init           | [zarf-injector zarf-seed-registry zarf-registry zarf-agent git-server]
+```
+
+## Pull Package
+
+[CLI Reference](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_pull.md)
+
+Packages can be saved to the local disk in order to deploy a package multiple times without needing to fetch it every time.
+
+```bash
+# go home so we don't clobber our currently local built package
+$ cd ~
+$ mkdir -p zarf-packages && cd zarf-packages
+
+$ zarf package pull oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
+
+# use vim if you want to inspect the tarball's contents without decompressing it
+$ vim zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst
+# don't forget to escape w/ `:q`
 ```
