@@ -124,14 +124,13 @@ $ zarf package publish zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst oci://$RE
   ✔  b95c82728c36 images/blobs/sha256/b95c827...042a9c5d84426c1674044916d4
   ✔  e2b45cdcd8bf images/blobs/sha256/e2b45cd...000f1bc1695014e38821dc675c
   ✔  79be488a834e components/helm-oci-chart.tar
-  ✔  d8399f7b56ca [application/vnd.unknown.config.v1+json]
-  ✔  aed84ba183e7 [application/vnd.oci.image.manifest.v1+json]
-  ✔  Published $REPOSITORY_URL/helm-oci-chart:0.0.1-arm64 [application/vnd.oci.image.manifest.v1+json]
+  ✔  aed84ba183e7 [application/vnd.oci.artifact.manifest.v1+json]
+  ✔  Published $REPOSITORY_URL/helm-oci-chart:0.0.1-arm64 [application/vnd.oci.artifact.manifest.v1+json]
 
   •  To inspect/deploy/pull:
-  •  zarf package inspect oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64 --insecure
-  •  zarf package deploy oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64 --insecure
-  •  zarf package pull oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64 --insecure
+  •  zarf package inspect oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
+  •  zarf package deploy oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
+  •  zarf package pull oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
 ```
 
 :::note
@@ -147,7 +146,7 @@ To modify, edit `zarf.yaml` and re-run `zarf package create .`
 Inspecting a Zarf package stored in an OCI registry is the same as inspecting a local package and has the same flags:
 
 ```yaml
-$ zarf package inspect oci://$REPOSITORY_URLhelm-oci-chart:0.0.1-arm64
+$ zarf package inspect oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
 ---
 kind: ZarfPackageConfig
 metadata:
@@ -180,7 +179,8 @@ components:
 Deploying a package stored in an OCI registry is nearly the same experience as deploying a local package:
 
 ```bash
-# Due to the length of the console output from this command, it has been omitted from this walkthrough
+# Due to the length of the console output from this command,
+# it has been omitted from this walkthrough
 $ zarf package deploy oci://$REPOSITORY_URL/helm-oci-chart:0.0.1-arm64
 # Make these choices at the prompts:
 # Deploy this Zarf package? Yes
