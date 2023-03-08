@@ -1,4 +1,4 @@
-Output docs/.images/walkthrough-6.gif
+Output docs/.images/walkthrough-6.webm
 
 Set FontSize 16
 Set Width 1200
@@ -7,7 +7,7 @@ Set FontFamily "Hack Nerd Font"
 Set Shell bash
 
 Hide
-Type "cd /tmp" 
+Type "cd /tmp"
 Enter
 Type "alias zarf='~/dev/zarf/build/zarf-mac-apple'"
 Enter
@@ -104,21 +104,12 @@ Sleep 1s
 Ctrl+C
 Sleep 3s
 
-# temporarily here while package structure is being updated, this is a manually modified package
-Hide
-Type "rm zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst"
-Enter
-Type "cp ~/dev/zarf/examples/helm-oci-chart/zarf-package-helm-oci-chart-arm64.tar.zst ."
-Enter
-Ctrl+L
-Show
-
 Type "🦄  Publish the Zarf package to Docker Hub"
 Sleep 3s
 Ctrl+C
 Enter
 
-Type "zarf package publish zarf-package-helm-oci-chart-arm64.tar.zst oci://docker.io/noxsios"
+Type "zarf package publish zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst oci://docker.io/noxsios"
 Sleep 1s
 Enter
 Sleep 15s
@@ -128,7 +119,7 @@ Sleep 3s
 Ctrl+C
 Enter
 
-Type "zarf package inspect oci://docker.io/noxsios/helm-oci-chart"
+Type "zarf package inspect oci://docker.io/noxsios/helm-oci-chart:0.0.1-arm64"
 Enter
 Sleep 1s
 Enter
@@ -139,7 +130,6 @@ Sleep 3s
 Ctrl+C
 Enter
 
-# currently broken on final step until some file structure changes are made
 Type "zarf package deploy oci://docker.io/noxsios/helm-oci-chart:0.0.1-arm64"
 Sleep 1s
 Enter
@@ -161,7 +151,7 @@ Sleep 10s
 Hide
 Type "cd /tmp"
 Enter
-Type "rm -rf /tmp/zarf-publish-walkthrough" 
+Type "rm -rf /tmp/zarf-publish-walkthrough"
 Enter
 Type "unalias zarf"
 Enter
