@@ -35,6 +35,8 @@ var archiverCompressCmd = &cobra.Command{
 	},
 }
 
+var decompressLayers bool
+
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress {ARCHIVE} {DESTINATION}",
 	Aliases: []string{"d"},
@@ -75,4 +77,5 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverDecompressCmd.Flags().BoolVar(&decompressLayers, "decompress-all", false, "Decompress all layers in the archive")
 }
