@@ -196,7 +196,7 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 	packOpts := p.cfg.PublishOpts.PackOptions
 
 	// first attempt to do a ArtifactManifest push
-	root, err = pack(ocispec.MediaTypeArtifactManifest, dst.Context, descs, store, packOpts)
+	root, err = pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, store, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -263,7 +263,7 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, store *file.Store, descs 
 	packOpts := p.cfg.PublishOpts.PackOptions
 	packOpts.ConfigDescriptor = &manifestConfigDesc
 	packOpts.PackImageManifest = true
-	root, err = pack(ocispec.MediaTypeImageManifest, dst.Context, descs, store, packOpts)
+	root, err = pack(dst.Context, ocispec.MediaTypeImageManifest, descs, store, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -310,7 +310,8 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
-func pack(artifactType string, ctx context.Context, descs []ocispec.Descriptor, store *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
+// pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
+func pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, store *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
 	root, err := oras.Pack(ctx, store, artifactType, descs, packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
