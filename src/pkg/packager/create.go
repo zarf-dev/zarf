@@ -196,7 +196,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
+	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
 	}
