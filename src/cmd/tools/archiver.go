@@ -37,6 +37,8 @@ var archiverCompressCmd = &cobra.Command{
 	},
 }
 
+var decompressLayers bool
+
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress {ARCHIVE} {DESTINATION}",
 	Aliases: []string{"d"},
