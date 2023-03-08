@@ -170,6 +170,14 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	if err != nil {
 		// reset the progress bar between attempts
 		dst.ProgressBar.Stop()
+
+		// log the error, the expected error is a 400 manifest invalid
+		message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
+
+		// if the error returned from the push is not an expected error, then return the error
+		if !isManifestUnsupported(err) {
+			return err
+		}
 		root, err = p.publishImage(dst, store, descs, copyOpts)
 		if err != nil {
 			return err
@@ -207,18 +215,6 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, store *file.Store, des
 
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(dst.Context, store, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	if err == nil {
-		return root, err
-	}
-
-	// log the error, the expected error is a 400 manifest invalid
-	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
-
-	// if the error returned from the push is not an expected error, then return the error
-	if !isManifestUnsupported(err) {
-		return root, err
-	}
-
 	return root, err
 }
 
