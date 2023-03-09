@@ -261,3 +261,49 @@ func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, er
 
 	return total, nil
 }
+
+// getLayers returns the manifest layers of a Zarf OCI package
+func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
+	// get the manifest descriptor
+	// ref.Reference can be a tag or a digest
+	descriptor, err := dst.Resolve(dst.Context, dst.Reference.Reference)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the manifest itself
+	pulled, err := content.FetchAll(dst.Context, dst, descriptor)
+	if err != nil {
+		return nil, err
+	}
+	manifest := ocispec.Manifest{}
+	artifact := ocispec.Artifact{}
+	var layers []ocispec.Descriptor
+	// if the manifest is an artifact, unmarshal it as an artifact
+	// otherwise, unmarshal it as a manifest
+	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
+		if err = json.Unmarshal(pulled, &artifact); err != nil {
+			return nil, err
+		}
+		layers = artifact.Blobs
+	} else {
+		if err = json.Unmarshal(pulled, &manifest); err != nil {
+			return nil, err
+		}
+		layers = manifest.Layers
+	}
+
+	return layers, nil
+}
+
+// pullLayer fetches a single layer from a Zarf OCI package
+func pullLayer(dst *utils.OrasRemote, desc ocispec.Descriptor, out string) error {
+	bytes, err := content.FetchAll(dst.Context, dst, desc)
+	if err != nil {
+		return err
+	}
+	if err := utils.WriteFile(out, bytes); err != nil {
+		return err
+	}
+	return nil
+}

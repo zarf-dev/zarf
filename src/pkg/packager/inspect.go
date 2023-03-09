@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
-	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -34,53 +32,27 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 			return err
 		}
 
-		desc, err := dst.Resolve(dst.Context, ref.Reference)
-		if err != nil {
-			return err
-		}
-
 		// get the manifest
 		spinner.Updatef("Fetching the manifest for %s", p.cfg.DeployOpts.PackagePath)
-		manifestBytes, err := content.FetchAll(dst.Context, dst, desc)
+		layers, err := getLayers(dst)
 		if err != nil {
 			return err
-		}
-		manifest := ocispec.Manifest{}
-		artifact := ocispec.Artifact{}
-		var layers []ocispec.Descriptor
-		// if the manifest is an artifact, unmarshal it as an artifact
-		// otherwise, unmarshal it as a manifest
-		if desc.MediaType == ocispec.MediaTypeArtifactManifest {
-			if err = json.Unmarshal(manifestBytes, &artifact); err != nil {
-				return err
-			}
-			layers = artifact.Blobs
-		} else {
-			if err = json.Unmarshal(manifestBytes, &manifest); err != nil {
-				return err
-			}
-			layers = manifest.Layers
 		}
 		spinner.Updatef("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 		zarfYamlDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
 			return d.Annotations["org.opencontainers.image.title"] == "zarf.yaml"
 		})
-		zarfYamlBytes, err := content.FetchAll(dst.Context, dst, zarfYamlDesc)
+		err = pullLayer(dst, zarfYamlDesc, p.tmp.ZarfYaml)
 		if err != nil {
 			return err
 		}
-		if err := utils.WriteFile(p.tmp.ZarfYaml, zarfYamlBytes); err != nil {
-			return err
-		}
+
 		if includeSBOM {
 			sbmomsTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
 				return d.Annotations["org.opencontainers.image.title"] == "sboms.tar"
 			})
-			sbmomsTarBytes, err := content.FetchAll(dst.Context, dst, sbmomsTarDesc)
+			err = pullLayer(dst, sbmomsTarDesc, p.tmp.SbomTar)
 			if err != nil {
-				return err
-			}
-			if err := utils.WriteFile(p.tmp.SbomTar, sbmomsTarBytes); err != nil {
 				return err
 			}
 			if err := archiver.Unarchive(p.tmp.SbomTar, filepath.Join(p.tmp.Base, "sboms")); err != nil {
