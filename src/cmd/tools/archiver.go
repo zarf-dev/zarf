@@ -71,12 +71,13 @@ var archiverDecompressCmd = &cobra.Command{
 			}
 
 			// Decompress the SBOMs
-			sboms := filepath.Join(destinationPath, "sboms.tar")
-			_, err = os.Stat(sboms)
+			sbomsTar := filepath.Join(destinationPath, "sboms.tar")
+			_, err = os.Stat(sbomsTar)
 			if err == nil {
-				if err := archiver.Unarchive(sboms, filepath.Join(destinationPath, "sboms")); err != nil {
+				if err := archiver.Unarchive(sbomsTar, filepath.Join(destinationPath, "sboms")); err != nil {
 					message.Fatalf(err, "failed to decompress the sboms layer")
 				}
+				_ = os.Remove(sbomsTar)
 			}
 		}
 	},
