@@ -146,7 +146,7 @@ func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
 }
 
 // PrintLayerExists prints a success message to the console when a layer has been successfully published to a registry.
-func PrintLayerExists(ctx context.Context, desc ocispec.Descriptor) error {
+func PrintLayerExists(_ context.Context, desc ocispec.Descriptor) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	var format string
 	if title != "" {
