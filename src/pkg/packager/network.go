@@ -302,8 +302,6 @@ func pullLayer(dst *utils.OrasRemote, desc ocispec.Descriptor, out string) error
 	if err != nil {
 		return err
 	}
-	if err := utils.WriteFile(out, bytes); err != nil {
-		return err
-	}
-	return nil
+	err = utils.WriteFile(out, bytes)
+	return err
 }
