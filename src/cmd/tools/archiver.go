@@ -51,6 +51,7 @@ var archiverDecompressCmd = &cobra.Command{
 
 		// Decompress component layers in the destination path
 		if decompressLayers {
+			// Decompress the components
 			layersDir := filepath.Join(destinationPath, "components")
 
 			files, err := os.ReadDir(layersDir)
@@ -66,6 +67,15 @@ var archiverDecompressCmd = &cobra.Command{
 						// This will leave the tar.zst if their is a failure for post mortem check
 						_ = os.Remove(filepath.Join(layersDir, file.Name()))
 					}
+				}
+			}
+
+			// Decompress the SBOMs
+			sboms := filepath.Join(destinationPath, "sboms.tar")
+			_, err = os.Stat(sboms)
+			if err == nil {
+				if err := archiver.Unarchive(sboms, filepath.Join(destinationPath, "sboms")); err != nil {
+					message.Fatalf(err, "failed to decompress the sboms layer")
 				}
 			}
 		}
