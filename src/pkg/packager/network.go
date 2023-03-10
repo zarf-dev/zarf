@@ -141,7 +141,7 @@ func (p *Packager) handleOciPackage() error {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 
-	out := p.tmp.Base
+	outDir := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
 
@@ -155,7 +155,7 @@ func (p *Packager) handleOciPackage() error {
 		return err
 	}
 
-	dst, err := file.New(out)
+	dst, err := file.New(outDir)
 	if err != nil {
 		return err
 	}
@@ -165,10 +165,8 @@ func (p *Packager) handleOciPackage() error {
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(estimatedBytes), 2))
-	progressBar := message.NewProgressBar(estimatedBytes, title)
-	src.ProgressBar = nil
-	go utils.CheckLocalProgress(progressBar, estimatedBytes, out, &wg, doneSaving, "Pulling Zarf package data")
+	src.ProgressBar = nil // NOTE: Disable this inbuilt progress bar so we don't double render a spinner
+	go utils.RenderProgressBarForLocalDirWrite(outDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
@@ -197,7 +195,7 @@ func (p *Packager) handleOciPackage() error {
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
 
-	p.cfg.DeployOpts.PackagePath = out
+	p.cfg.DeployOpts.PackagePath = outDir
 	return nil
 }
 

@@ -56,16 +56,17 @@ func ByteFormat(inputNum float64, precision int) string {
 	return strconv.FormatFloat(returnVal, 'f', precision, 64) + unit
 }
 
-// CheckLocalProgress continuously checks the local directory size and updates the progress bar.
-// NOTE: This function runs infinitely until the completeChan is triggered.
-func CheckLocalProgress(progressBar *message.ProgressBar, expectedTotal int64, filepath string, wg *sync.WaitGroup, completeChan chan int, updateText string) {
+// RenderProgressBarForLocalDirWrite creates a progress bar that continuously tracks the progress of writing files to a local directory and all of its subdirectories.
+// NOTE: This function runs infinitely until the completeChan is triggered, this function should be run in a goroutine while a different thread/process is writing to the directory.
+func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg *sync.WaitGroup, completeChan chan int, updateText string) {
+
+	// Create a progress bar
+	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", ByteFormat(float64(0), 2), ByteFormat(float64(expectedTotal), 2))
+	progressBar := message.NewProgressBar(expectedTotal, title)
+
 	for {
 		select {
 		case <-completeChan:
-			// Fill out the progress bar so that it's a little less choppy
-			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(expectedTotal), 2), ByteFormat(float64(expectedTotal), 2))
-			progressBar.Update(int64(expectedTotal), title)
-
 			// Send success message
 			progressBar.Successf("%s (%s)", updateText, ByteFormat(float64(expectedTotal), 2))
 			wg.Done()
@@ -78,6 +79,11 @@ func CheckLocalProgress(progressBar *message.ProgressBar, expectedTotal int64, f
 				message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
 				time.Sleep(200 * time.Millisecond)
 				continue
+			}
+
+			// If the bytes is greater than the expected total, set it to just below the expected total to keep the progress bar from killing itself
+			if currentBytes >= expectedTotal {
+				currentBytes = expectedTotal - 1
 			}
 
 			// Update the progress bar with the current size

@@ -92,14 +92,11 @@ func (i *ImgConfig) PullAll() error {
 	spinner.Updatef("Preparing image sources and cache for image pulling")
 	spinner.Success()
 
-	doneSaving := make(chan int)
-	title := fmt.Sprintf("Pulling %d images (%s of %s)", imgCount, utils.ByteFormat(float64(0), 2), utils.ByteFormat(float64(totalBytes), 2))
-	progressBar := message.NewProgressBar(totalBytes, title)
-
 	// Create a thread to update a progress bar as we save the image files to disk
+	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.CheckLocalProgress(progressBar, totalBytes, i.ImagesPath, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
 
 	for tag, img := range tagToImage {
 
