@@ -52,7 +52,7 @@ When Zarf is deploying the package, it will use the infrastructure that was crea
 
 ## What Makes Up A Package
 
-Zarf packages are split into smaller chunks called 'components'. These components are defined more on the [Zarf](./2-zarf-components.md) Components page](./2-zarf-components.md) but, in short, components are the named capabilities that packages provide. The schema of a `zarf.yaml` package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
+Zarf packages are split into smaller chunks called 'components'. These components are defined more on the [Zarf Components page](./2-zarf-components.md) but, in short, components are the named capabilities that packages provide. The schema of a `zarf.yaml` package is available here: [ZarfPackage Schema Docs](../3-zarf-schema.md)
 
 ## Building A Zarf Package
 
@@ -66,7 +66,7 @@ Zarf packages are split into smaller chunks called 'components'. These component
 
 :::
 
-The process of defining a package is covered on the [Creating](../../13-walkthroughs/0-using-zarf-package-create.md) a Package](../../13-walkthroughs/0-using-zarf-package-create.md) page. Assuming you have a package already defined, building the package itself is fairly simple.
+The process of defining a package is covered on the [Creating a Package](../../13-walkthroughs/0-using-zarf-package-create.md) page. Assuming you have a package already defined, building the package itself is fairly simple.
 
 `zarf package create` will look for a `zarf.yaml` file in the current directory and build the package from that file. Behind the scenes, this is pulling down all the resources it needs from the internet and placing them in a temporary directory, once all the necessary resources of retrieved, Zarf will create the tarball of the temp directory and clean up the temp directory.
 
