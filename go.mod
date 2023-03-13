@@ -13,35 +13,35 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20230216143338-4b5ebf8c7f4b
-	github.com/anchore/syft v0.72.0
-	github.com/derailed/k9s v0.27.2
+	github.com/anchore/syft v0.75.0
+	github.com/derailed/k9s v0.27.3
 	github.com/distribution/distribution v2.8.1+incompatible
-	github.com/fatih/color v1.14.1
-	github.com/fluxcd/helm-controller/api v0.28.1
-	github.com/fluxcd/source-controller/api v0.33.0
+	github.com/fatih/color v1.15.0
+	github.com/fluxcd/helm-controller/api v0.31.1
+	github.com/fluxcd/source-controller/api v0.36.0
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-git/go-git/v5 v5.5.2
+	github.com/go-git/go-git/v5 v5.6.0
 	github.com/go-logr/logr v1.2.3
-	github.com/goccy/go-yaml v1.9.8
+	github.com/goccy/go-yaml v1.10.0
 	github.com/google/go-containerregistry v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v23.0.1+incompatible
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.54
+	github.com/pterm/pterm v0.12.55
 	github.com/sigstore/cosign v1.13.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.1
-	golang.org/x/crypto v0.6.0
-	helm.sh/helm/v3 v3.11.1
-	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.26.1
-	k8s.io/component-base v0.26.1
-	k8s.io/klog/v2 v2.90.0
-	k8s.io/kubectl v0.26.1
-	sigs.k8s.io/kustomize/api v0.12.1
+	github.com/stretchr/testify v1.8.2
+	golang.org/x/crypto v0.7.0
+	helm.sh/helm/v3 v3.11.2
+	k8s.io/api v0.26.2
+	k8s.io/apimachinery v0.26.2
+	k8s.io/client-go v0.26.2
+	k8s.io/component-base v0.26.2
+	k8s.io/klog/v2 v2.90.1
+	k8s.io/kubectl v0.26.2
+	sigs.k8s.io/kustomize/api v0.13.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
