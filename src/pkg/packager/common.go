@@ -238,7 +238,10 @@ func (p *Packager) loadZarfPkg() error {
 
 	// If SBOM files exist, temporarily place them in the deploy directory
 	if _, err := os.Stat(p.tmp.SbomTar); err == nil {
-		_ = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Base)
+		err = archiver.Unarchive(p.tmp.SbomTar, filepath.Join(p.tmp.Base, "sboms"))
+		if err != nil {
+			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
+		}
 
 		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Base, "sbom-viewer-*"))
 		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
