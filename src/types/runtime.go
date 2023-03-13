@@ -99,5 +99,6 @@ type TempPaths struct {
 	Images       string
 	Components   string
 	SbomTar      string
+	Sboms        string
 	ZarfYaml     string
 }

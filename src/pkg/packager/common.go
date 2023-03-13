@@ -169,6 +169,7 @@ func createPaths() (paths types.TempPaths, err error) {
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
 		SbomTar:      filepath.Join(basePath, "sboms.tar"),
+		Sboms:        filepath.Join(basePath, "sboms"),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
 	}
 
@@ -238,12 +239,12 @@ func (p *Packager) loadZarfPkg() error {
 
 	// If SBOM files exist, temporarily place them in the deploy directory
 	if _, err := os.Stat(p.tmp.SbomTar); err == nil {
-		err = archiver.Unarchive(p.tmp.SbomTar, filepath.Join(p.tmp.Base, "sboms"))
+		err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms)
 		if err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
 
-		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Base, "sbom-viewer-*"))
+		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			spinner.Errorf(err, "Unable to process the SBOM files for this package")
