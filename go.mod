@@ -3,6 +3,8 @@ module github.com/defenseunicorns/zarf
 go 1.19
 
 replace (
+	// TODO (@WSTARR) use the OG syft once they merge in https://github.com/anchore/syft/pull/1668
+	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0-DU
 	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
 	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
@@ -34,7 +36,6 @@ require (
 	github.com/sigstore/cosign v1.13.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
-	oras.land/oras-go/v2 v2.0.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
 	helm.sh/helm/v3 v3.11.2
@@ -44,6 +45,7 @@ require (
 	k8s.io/component-base v0.26.2
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/kubectl v0.26.2
+	oras.land/oras-go/v2 v2.0.0
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0

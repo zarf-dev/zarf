@@ -264,8 +264,6 @@ github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501 h1:AV7qjwM
 github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501/go.mod h1:Blo6OgJNiYF41ufcgHKkbCKF2MDOMlrqhXv/ij6ocR4=
 github.com/anchore/stereoscope v0.0.0-20230301191755-abfb374a1122 h1:Oe2PE8zNbJH4nGZoCIC/VZBgpr62BInLnUqIMZICUOk=
 github.com/anchore/stereoscope v0.0.0-20230301191755-abfb374a1122/go.mod h1:IihP/SUVHP94PBwIP2bepOB/c0MVadcII7lxo13Ijzs=
-github.com/anchore/syft v0.75.0 h1:DF6/TDMRC7L2ypWufQHezlE6XCfVHLyQHnjXmSZfNKA=
-github.com/anchore/syft v0.75.0/go.mod h1:TljwLtC66GzBIiJmGhAMctgV9wjVp4g71aTJs4LkEyc=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
@@ -493,6 +491,8 @@ github.com/daviddengcn/go-colortext v1.0.0 h1:ANqDyC0ys6qCSvuEK7l3g5RaehL/Xck9EX
 github.com/daviddengcn/go-colortext v1.0.0/go.mod h1:zDqEI5NVUop5QPpVJUxE9UO10hRnmkD5G4Pmri9+m4c=
 github.com/defenseunicorns/oras-go v1.2.3 h1:PAxO1Ows6gFVRaf7qYReONWbnjYJxfIh7avifw6QruE=
 github.com/defenseunicorns/oras-go v1.2.3/go.mod h1:Tsn7yEnnTlAgyJztm02IalpzdKWXaFbpiLVYF0F5gKU=
+github.com/defenseunicorns/syft v0.75.0-DU h1:8/DCPRQbQxHHydJX7wsrB7W/1rX0Dgyh8O9FHTB54DU=
+github.com/defenseunicorns/syft v0.75.0-DU/go.mod h1:TljwLtC66GzBIiJmGhAMctgV9wjVp4g71aTJs4LkEyc=
 github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
 github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936 h1:foGzavPWwtoyBvjWyKJYDYsyzy+23iBV7NKTwdk+LRY=
 github.com/derailed/k9s v0.27.3 h1:2PMIq3SWpQsnVMXr5HuP//ruarZkXFtrOfe8Ml5WOK0=
