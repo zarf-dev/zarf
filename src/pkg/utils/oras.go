@@ -19,6 +19,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
@@ -78,9 +79,10 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		Client: &http.Client{
-			Transport: transport,
+			Transport: retry.NewTransport(transport),
 		},
 	}
+	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
 
 	client.Client.Transport = NewTransport(client.Client.Transport, o)
 
@@ -107,7 +109,7 @@ type readCloser struct {
 // RoundTrip calls base roundtrip while keeping track of the current request.
 // This is currently only used to track the progress of publishes, not pulls.
 func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-	if req.Body != nil && t.orasRemote.ProgressBar != nil {
+	if req.Method != http.MethodHead && req.Body != nil && t.orasRemote.ProgressBar != nil {
 		tee := io.TeeReader(req.Body, t.orasRemote.ProgressBar)
 		teeCloser := readCloser{tee, req.Body}
 		req.Body = teeCloser
@@ -115,7 +117,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 
 	resp, err = t.RoundTripper.RoundTrip(req)
 
-	if resp != nil && req.Body == nil && t.orasRemote.ProgressBar != nil && req.Method == http.MethodHead && resp.ContentLength > 0 {
+	if req.Method == http.MethodHead && resp != nil && req.Body == nil && t.orasRemote.ProgressBar != nil && resp.ContentLength > 0 {
 		t.orasRemote.ProgressBar.Add(int(resp.ContentLength))
 	}
 
