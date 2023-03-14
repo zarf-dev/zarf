@@ -12,6 +12,6 @@ spec:
   - name: http
     port: 8000
     protocol: TCP
-    targetPort: 8000 
+    targetPort: 8000
   selector:
     app: longhorn-ui
