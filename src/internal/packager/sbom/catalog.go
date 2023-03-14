@@ -141,7 +141,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		return err
 	}
 
-	if err := utils.RetryRemoveAll(builder.tmpSBOMPath, 3); err != nil {
+	if err := utils.RetryRemoveAll(builder.tmpSBOMPath, 6); err != nil {
 		return fmt.Errorf("unable to remove the temporary SBOM directory: %w", err)
 	}
 

@@ -191,7 +191,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		// Remove the deflated component directory
-		if err := utils.RetryRemoveAll(componentPaths.Base, 3); err != nil {
+		if err := utils.RetryRemoveAll(componentPaths.Base, 6); err != nil {
 			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
 		}
 	}
