@@ -14,25 +14,21 @@ import (
 )
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
-func (g *Git) CheckoutTag(tag string) {
+func (g *Git) CheckoutTag(tag string) error {
 	message.Debugf("git.CheckoutTag(%s)", tag)
 
 	options := &git.CheckoutOptions{
-		Branch: plumbing.ReferenceName("refs/tags/" + tag),
+		Branch: g.parseRef(tag),
 	}
-	g.checkout(options)
+	return g.checkout(options)
 }
 
 func (g *Git) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) error {
-	var err error
-
-	if isHash(ref) {
-		err = g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
-	} else {
-		err = g.checkoutTagAsBranch(ref, branch)
+	if plumbing.IsHash(ref) {
+		return g.checkoutHashAsBranch(plumbing.NewHash(ref), branch)
 	}
 
-	return err
+	return g.checkoutTagAsBranch(ref, branch)
 }
 
 // checkoutTagAsBranch performs a `git checkout` of the provided tag but rather
@@ -60,11 +56,9 @@ func (g *Git) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) err
 func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.ReferenceName) error {
 	message.Debugf("git.checkoutHasAsBranch(%s,%s)", hash.String(), branch.String())
 
-	_ = g.deleteBranchIfExists(branch)
-
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
-		message.Fatal(err, "Not a valid git repo or unable to open")
+		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
 
 	objRef, err := repo.Object(plumbing.AnyObject, hash)
@@ -112,7 +106,5 @@ func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) error {
 	}
 
 	// Perform the checkout
-	err = tree.Checkout(checkoutOptions)
-
-	return err
+	return tree.Checkout(checkoutOptions)
 }

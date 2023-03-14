@@ -5,8 +5,6 @@
 package message
 
 import (
-	"fmt"
-
 	"github.com/pterm/pterm"
 )
 
@@ -17,9 +15,8 @@ type ProgressBar struct {
 }
 
 // NewProgressBar creates a new ProgressBar instance from a total value and a format.
-func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
+func NewProgressBar(total int64, text string) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
-	text := fmt.Sprintf("     "+format, a...)
 	if NoProgress {
 		Info(text)
 	} else {
@@ -56,10 +53,10 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-// Success marks the ProgressBar as successful in the CLI.
-func (p *ProgressBar) Success(text string, a ...any) {
+// Successf marks the ProgressBar as successful in the CLI.
+func (p *ProgressBar) Successf(format string, a ...any) {
 	p.Stop()
-	pterm.Success.Printfln(text, a...)
+	pterm.Success.Printfln(format, a...)
 }
 
 // Stop stops the ProgressBar from continuing.

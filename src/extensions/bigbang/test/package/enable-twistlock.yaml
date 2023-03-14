@@ -1,0 +1,6 @@
+twistlock:
+  enabled: true
+  # Disable init so github runners don't suffocate without enough CPU
+  values:
+    init:
+      enabled: false

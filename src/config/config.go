@@ -48,7 +48,6 @@ const (
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfImageCacheDir = "images"
-	ZarfGitCacheDir   = "repos"
 
 	ZarfYAML          = "zarf.yaml"
 	ZarfSBOMDir       = "zarf-sbom"
@@ -78,6 +77,9 @@ var (
 
 	// Dirty Solution to getting the real time deployedComponents components.
 	deployedComponents []types.DeployedComponent
+
+	// SkipLogFile is a flag to skip logging to a file
+	SkipLogFile bool
 
 	SGetPublicKey string
 	UIAssets      embed.FS

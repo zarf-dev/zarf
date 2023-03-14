@@ -1,0 +1,15 @@
+# Use Loki instead of EFK
+logging:
+  enabled: false
+
+eckoperator:
+  enabled: false
+
+fluentbit:
+  enabled: false
+  
+loki:
+  enabled: true
+
+promtail:
+  enabled: true

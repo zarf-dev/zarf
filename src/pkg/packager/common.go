@@ -119,14 +119,23 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-func (p *Packager) createComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+func (p *Packager) getComponentBasePath(component types.ZarfComponent) string {
+	return filepath.Join(p.tmp.Components, component.Name)
+}
+
+func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
 	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
 
-	basePath := filepath.Join(p.tmp.Components, component.Name)
-	err = utils.CreateDirectory(basePath, 0700)
+	basePath := p.getComponentBasePath(component)
+
+	if _, err = os.Stat(basePath); os.IsNotExist(err) {
+		// basePath does not exist
+		err = utils.CreateDirectory(basePath, 0700)
+	}
 
 	paths = types.ComponentPaths{
 		Base:           basePath,
+		Temp:           filepath.Join(basePath, "temp"),
 		Files:          filepath.Join(basePath, "files"),
 		Charts:         filepath.Join(basePath, "charts"),
 		Repos:          filepath.Join(basePath, "repos"),
@@ -206,6 +215,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If SBOM files exist, temporarily place them in the deploy directory
+	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment
 		spinner.Errorf(err, "Unable to process the SBOM files for this package")

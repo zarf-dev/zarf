@@ -12,7 +12,7 @@ Zarf was created to _**support the declarative creation & distribution of softwa
 
 > "Zarf is a tool to help deploy modern stacks into air gapped environments; it's all about moving the bits." &mdash; Jeff
 
-Zarf is a free and open-source tool that simplifies the setup & deployment of applications and resources onto AirGap or disconnected environments. Zarf equips you with the ability to quickly and securely deploy modern software onto these types of systems without relying on internet connectivity.
+Zarf is a free and open-source tool that simplifies the setup and deployment of applications and resources onto AirGap or disconnected environments. Zarf equips you with the ability to quickly and securely deploy modern software onto these types of systems without relying on internet connectivity.
 
 It also simplifies the installation, updating, and maintenance of DevSecOps capabilities like Kubernetes clusters, logging, and SBOM compliance out of the box. Most importantly Zarf keeps applications and systems running even when they are disconnected.
 
@@ -24,42 +24,44 @@ Zarf simplifies and standardizes the delivery of complex deployments. Giving use
 
 ![Zarf CLI + Zarf Init + Zarf Package](.images/Zarf%20Files%20-%20%203%20Bubbles.svg)
 
-A typical Zarf deployment is made up of three parts
+A typical Zarf deployment is made up of three parts:
 
 1. The `zarf` binary:
-   - a statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
-   - creates packages containing numerous software types/updates into a single distributable package (while on an internet-accessible network)
-   - declaratively deploys package contents "into place" for use on production systems (while on an internet-isolated network).
-2. A Zarf init package
-   - compressed tarball package that contains the configuration needed to instantiate an environment without connectivity
-   - Automatically seeds your cluster with a container registry
-   - Provide additional capabilities such as (logging, git server, and K8s cluster)
-3. A Zarf Package
-   - compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
+   - A statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
+   - Creates packages containing numerous software types/updates into a single distributable package (while on an internet-accessible network).
+   - Declaratively deploys package contents "into place" for use on production systems (while on an internet-isolated network).
+2. A Zarf init package:
+   - A compressed tarball package that contains the configuration needed to instantiate an environment without connectivity.
+   - Automatically seeds your cluster with a container registry.
+   - Provide additional capabilities such as (logging, git server, and K8s cluster).
+3. A Zarf Package:
+   - A compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
+
 
 :::note
 
-For more information on how zarf works under the hood visit our [Nerd Notes page](./6-developer-guide/3-nerd-notes.md)
+For more technical information on how Zarf works and to view the Zarf architecture visit our [Nerd Notes page](./6-developer-guide/3-nerd-notes.md)
 
 :::
 
 ## Target Use Cases
 
 - Make the delivery of software "across the air gap" an open-source "solved problem".
-- Make it trivial to deploy & run Kubernetes apps "at the Edge".
-- Make it easy to support GitOps-based k8s cluster updates in isolated environments.
-- Make it possible to support GitOps-based k8s cluster updates in internet-connected-but-independent environments (think: dependency caching per availability zone, etc).
+- Make it trivial to deploy and run Kubernetes apps "at the Edge".
+- Make it easy to support GitOps-based K8s cluster updates in isolated environments.
+- Make it possible to support GitOps-based K8s cluster updates in internet-connected-but-independent environments (think: dependency caching per availability zone, etc).
 
 ## What can be packaged?
 
-Given Zarf's being a "k8s cluster to serve _other_ k8s clusters", the following types of software can be rolled into a Zarf package:
+Given Zarf's being a "K8s cluster to serve _other_ k8s clusters", the following types of software can be rolled into a Zarf package:
 
-- Container images: to serve images for the Zarf & downstream clusters to run containers from.
-- Repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed k8s clusters to watch.
+- Container images: to serve images for the Zarf and downstream clusters to run containers from.
+- Repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed K8s clusters to watch.
 - Pre-compiled binaries: to provide the software necessary to start & support the Zarf cluster.
-- [Component actions](4-user-guide/7-github-action.md): to support scripts and commands that run at various stages of the Zarf [component lifecycle](4-user-guide/4-package-command-lifecycle.md)
-- Helm charts, kustomizations, and other k8s manifests: to apply in a Kubernetes cluster
-- [Data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster
+- [Component actions](4-user-guide/7-github-action.md): to support scripts and commands that run at various stages of the Zarf [component lifecycle](4-user-guide/4-package-command-lifecycle.md).
+- Helm charts, kustomizations, and other k8s manifests: to apply in a Kubernetes cluster.
+- [Data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
+
 
 ## How To Use Zarf
 
@@ -87,9 +89,9 @@ When it comes to remote, constrained, independent, air-gapped systems, everyone'
 
 Once your package has landed you will need to:
 
-- install the binary onto the system,
-- run the zarf init package
-- deploy your package to your cluster.
+1. install the binary onto the system,
+2. run the zarf init package
+3. deploy your package to your cluster.
 
 ## Cluster Configuration Options
 
@@ -122,29 +124,30 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 ### 📦 Out of the Box Features
 
-- Automates Kubernetes deployments in disconnected environments
-- Automates [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
-- Provides an [SBOM dashboard UI](dashboard-ui/sbom-dashboard)
-- Deploys a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [Kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
-- Built-in logging stack with [Loki](https://grafana.com/oss/loki/)
-- Built-in git server with [Gitea](https://gitea.com/)
-- Built-in docker registry
-- Built-in [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
-- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Built-in [command to find images](user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart
-- Tunneling capability to [connect to Kubernetes resources](user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS, or Ingress configuration required
+- Automates Kubernetes deployments in disconnected environments.
+- Automates [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation.
+- Provides an [SBOM dashboard UI](dashboard-ui/sbom-dashboard).
+- Convert SBOM JSON file into government compliant format (.xpdx or .cyclone.dx).
+- Deploys a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [Kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/).
+- Built-in logging stack with [Loki](https://grafana.com/oss/loki/).
+- Built-in git server with [Gitea](https://gitea.com/).
+- Built-in docker registry.
+- Built-in [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal.
+- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references.
+- Built-in [command to find images](user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a helm chart.
+- Tunneling capability to [connect to Kubernetes resources](user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS, or Ingress configuration required.
 
 ### 🛠️ Configurable Features
 
-- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting
-- [Composable packages](user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
-- Filters to select the correct architectures/operating systems for packages
+- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting.
+- [Composable packages](user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components.
+- Filters to select the correct architectures/operating systems for packages.
 
 ## Quick Start
 
-1. 💻 Select your system's OS below
-2. ❗ Ensure you have the pre-requisite applications running
-3. `$` Enter the commands into your terminal
+1. 💻 Select your system's OS below.
+2. ❗ Ensure you have the pre-requisite applications running.
+3. `$` Enter the commands into your terminal.
 
 <Tabs>
 <TabItem value="Linux" label="Linux">

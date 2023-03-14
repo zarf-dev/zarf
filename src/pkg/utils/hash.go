@@ -7,6 +7,7 @@ package utils
 import (
 	"crypto"
 	"encoding/hex"
+	"hash/crc32"
 	"io"
 	"os"
 
@@ -38,4 +39,10 @@ func GetCryptoHash(path string, hashName crypto.Hash) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// GetCRCHash returns the computed CRC32 Sum of a given string
+func GetCRCHash(text string) uint32 {
+	table := crc32.MakeTable(crc32.IEEE)
+	return crc32.Checksum([]byte(text), table)
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -25,15 +26,13 @@ var internalCmd = &cobra.Command{
 	Use:     "internal",
 	Aliases: []string{"dev"},
 	Hidden:  true,
-	Short:   "Internal tools used by zarf",
+	Short:   lang.CmdInternalShort,
 }
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Runs the zarf agent",
-	Long: "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
-		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
-		"with the Zarf container registry and Gitea server URLs.",
+	Short: lang.CmdInternalAgentShort,
+	Long:  lang.CmdInternalAgentLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		agent.StartWebhook()
 	},
@@ -41,7 +40,7 @@ var agentCmd = &cobra.Command{
 
 var generateCLIDocs = &cobra.Command{
 	Use:   "generate-cli-docs",
-	Short: "Creates auto-generated markdown of all the commands for the CLI",
+	Short: lang.CmdInternalGenerateCliDocsShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
@@ -55,7 +54,7 @@ var generateCLIDocs = &cobra.Command{
 		if err := doc.GenMarkdownTree(rootCmd, "./docs/4-user-guide/1-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
 		} else {
-			message.SuccessF("Successfully created the CLI documentation")
+			message.SuccessF(lang.CmdInternalGenerateCliDocsSuccess)
 		}
 	},
 }
@@ -63,12 +62,12 @@ var generateCLIDocs = &cobra.Command{
 var configSchemaCmd = &cobra.Command{
 	Use:     "config-schema",
 	Aliases: []string{"c"},
-	Short:   "Generates a JSON schema for the zarf.yaml configuration",
+	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, "Unable to generate the zarf config schema")
+			message.Fatal(err, lang.CmdInternalConfigSchemaErr)
 		}
 		fmt.Print(string(output) + "\n")
 	},
@@ -76,12 +75,12 @@ var configSchemaCmd = &cobra.Command{
 
 var apiSchemaCmd = &cobra.Command{
 	Use:   "api-schema",
-	Short: "Generates a JSON schema from the API types",
+	Short: lang.CmdInternalAPISchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.RestAPI{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, "Unable to generate the zarf api schema")
+			message.Fatal(err, lang.CmdInternalAPISchemaGenerateErr)
 		}
 		fmt.Print(string(output) + "\n")
 	},
@@ -89,26 +88,25 @@ var apiSchemaCmd = &cobra.Command{
 
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
-	Short: "Creates a read-only user in Gitea",
-	Long: "Creates a read-only user in Gitea by using the Gitea API. " +
-		"This is called internally by the supported Gitea package component.",
+	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
+	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil {
-			message.Error(err, "Unable to load the Zarf state")
+			message.Error(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
 		}
 
 		// Create the non-admin user
 		if err = git.New(state.GitServer).CreateReadOnlyUser(); err != nil {
-			message.Error(err, "Unable to create a read-only user in the Gitea service.")
+			message.Error(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
 		}
 	},
 }
 
 var uiCmd = &cobra.Command{
 	Use:   "ui",
-	Short: "Launch the experimental Zarf UI",
+	Short: lang.CmdInternalUIShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		api.LaunchAPIServer()
 	},
@@ -116,7 +114,7 @@ var uiCmd = &cobra.Command{
 
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
-	Short: "Checks if the current machine's hostname is RFC1123 compliant",
+	Short: lang.CmdInternalIsValidHostnameShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		if valid := utils.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()

@@ -177,7 +177,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return charts, fmt.Errorf("unable to create the component paths: %w", err)
 	}
@@ -406,12 +406,11 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
+			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
-			svcInfo := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
-			// If this is a service, create a port-forward tunnel to that resource
-			if svcInfo != nil {
+			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+			if err == nil {
 				tunnel, err := cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port)
-
 				if err != nil {
 					return err
 				}
@@ -421,13 +420,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
 			}
 
-			// Convert the repo URL to a Zarf-formatted repo name
-			repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-			if err != nil {
-				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-			}
-
-			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
 		// Try repo push up to 3 times
@@ -456,6 +449,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
+
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
@@ -504,10 +498,18 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			Cfg:       p.cfg,
 			Cluster:   p.cluster,
 		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+
+		// Generate the chart.
+		if err := helmCfg.GenerateChart(manifest); err != nil {
+			return installedCharts, err
+		}
+
+		// Install the chart.
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
 			return installedCharts, err
 		}
+
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map

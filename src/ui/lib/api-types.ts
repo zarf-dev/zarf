@@ -182,12 +182,30 @@ export interface ZarfPackage {
  * Zarf-generated package build data
  */
 export interface ZarfBuildData {
+    /**
+     * The architecture this package was created on
+     */
     architecture: string;
-    migrations:   string[];
-    terminal:     string;
-    timestamp:    string;
-    user:         string;
-    version:      string;
+    /**
+     * Any migrations that have been run on this package
+     */
+    migrations: string[];
+    /**
+     * The machine name that created this package
+     */
+    terminal: string;
+    /**
+     * The timestamp when this package was created
+     */
+    timestamp: string;
+    /**
+     * The username who created this package
+     */
+    user: string;
+    /**
+     * The version of Zarf used to build this package
+     */
+    version: string;
 }
 
 export interface ZarfComponent {
@@ -204,7 +222,7 @@ export interface ZarfComponent {
      */
     cosignKeyPath?: string;
     /**
-     * Datasets to inject into a pod in the target cluster
+     * Datasets to inject into a container in the target cluster
      */
     dataInjections?: ZarfDataInjection[];
     /**
@@ -215,6 +233,10 @@ export interface ZarfComponent {
      * Message to include during package deploy describing the purpose of this component
      */
     description?: string;
+    /**
+     * Extend component functionality with additional features
+     */
+    extensions?: ZarfComponentExtensions;
     /**
      * Files to place on disk during package deployment
      */
@@ -230,7 +252,10 @@ export interface ZarfComponent {
     /**
      * Import a component from another Zarf package
      */
-    import?:    ZarfComponentImport;
+    import?: ZarfComponentImport;
+    /**
+     * Kubernetes manifests to be included in a generated Helm chart on package deploy
+     */
     manifests?: ZarfManifest[];
     /**
      * The name of the component
@@ -249,7 +274,7 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * (Deprecated--use actions instead) Custom commands to run before or after package
+     * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
      * deployment
      */
     scripts?: DeprecatedZarfComponentScripts;
@@ -305,7 +330,7 @@ export interface ZarfComponentActionSet {
 
 export interface ZarfComponentAction {
     /**
-     * The command to run
+     * The command to run. Must specify either cmd or wait for the action to do anything.
      */
     cmd?: string;
     /**
@@ -333,10 +358,83 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * The name of a variable to update with the output of the command. This variable will be
-     * available to all remaining actions and components in the package.
+     * (Cmd only) The name of a variable to update with the output of the command. This variable
+     * will be available to all remaining actions and components in the package.
      */
     setVariable?: string;
+    /**
+     * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
+     * action. See the 'zarf tools wait-for' command for more info.
+     */
+    wait?: ZarfComponentActionWait;
+}
+
+/**
+ * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
+ * action. See the 'zarf tools wait-for' command for more info.
+ */
+export interface ZarfComponentActionWait {
+    /**
+     * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
+     * network can be specified.
+     */
+    cluster?: ZarfComponentActionWaitCluster;
+    /**
+     * Wait for a condition to be met on the network before continuing. Only one of cluster or
+     * network can be specified.
+     */
+    network?: ZarfComponentActionWaitNetwork;
+}
+
+/**
+ * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
+ * network can be specified.
+ */
+export interface ZarfComponentActionWaitCluster {
+    /**
+     * The condition to wait for; defaults to exist
+     */
+    condition?: string;
+    /**
+     * The kind of resource to wait for
+     */
+    kind: string;
+    /**
+     * The name of the resource or selector to wait for
+     */
+    name: string;
+    /**
+     * The namespace of the resource to wait for
+     */
+    namespace?: string;
+}
+
+/**
+ * Wait for a condition to be met on the network before continuing. Only one of cluster or
+ * network can be specified.
+ */
+export interface ZarfComponentActionWaitNetwork {
+    /**
+     * The address to wait for
+     */
+    address: string;
+    /**
+     * The HTTP status code to wait for if using http or https
+     */
+    code?: number;
+    /**
+     * The protocol to wait for
+     */
+    protocol: Protocol;
+}
+
+/**
+ * The protocol to wait for
+ */
+export enum Protocol {
+    HTTP = "http",
+    HTTPS = "https",
+    TCP = "tcp",
 }
 
 /**
@@ -384,7 +482,7 @@ export interface ZarfChart {
      */
     namespace: string;
     /**
-     * Wait for chart resources to be ready before continuing
+     * Whether to not wait for chart resources to be ready before continuing
      */
     noWait?: boolean;
     /**
@@ -428,7 +526,7 @@ export interface ZarfDataInjection {
  */
 export interface ZarfContainerTarget {
     /**
-     * The container to target for data injection
+     * The container name to target for data injection
      */
     container: string;
     /**
@@ -436,7 +534,7 @@ export interface ZarfContainerTarget {
      */
     namespace: string;
     /**
-     * The path to copy the data to in the container
+     * The path within the container to copy the data into
      */
     path: string;
     /**
@@ -445,17 +543,49 @@ export interface ZarfContainerTarget {
     selector: string;
 }
 
+/**
+ * Extend component functionality with additional features
+ */
+export interface ZarfComponentExtensions {
+    /**
+     * Configurations for installing Big Bang and Flux in the cluster
+     */
+    bigbang?: BigBang;
+}
+
+/**
+ * Configurations for installing Big Bang and Flux in the cluster
+ */
+export interface BigBang {
+    /**
+     * Override repo to pull Big Bang from instead of Repo One
+     */
+    repo?: string;
+    /**
+     * Whether to skip deploying flux; Defaults to false
+     */
+    skipFlux?: boolean;
+    /**
+     * The list of values files to pass to Big Bang; these will be merged together
+     */
+    valuesFiles?: string[];
+    /**
+     * The version of Big Bang to use
+     */
+    version: string;
+}
+
 export interface ZarfFile {
     /**
      * Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
     /**
-     * SHA256 checksum of the file if the source is a URL
+     * Optional SHA256 checksum of the file
      */
     shasum?: string;
     /**
-     * Local file path or remote URL to add to the package
+     * Local file path or remote URL to pull into the package
      */
     source: string;
     /**
@@ -472,8 +602,14 @@ export interface ZarfFile {
  * Import a component from another Zarf package
  */
 export interface ZarfComponentImport {
+    /**
+     * The name of the component to import from the referenced zarf.yaml
+     */
     name?: string;
-    path:  string;
+    /**
+     * The relative path to a directory containing a zarf.yaml to import from
+     */
+    path: string;
 }
 
 export interface ZarfManifest {
@@ -499,7 +635,7 @@ export interface ZarfManifest {
      */
     namespace?: string;
     /**
-     * Wait for manifest resources to be ready before continuing
+     * Whether to not wait for manifest resources to be ready before continuing
      */
     noWait?: boolean;
 }
@@ -527,7 +663,7 @@ export interface ZarfComponentOnlyCluster {
      */
     architecture?: Architecture;
     /**
-     * Future use
+     * A list of kubernetes distros this package works with (Reserved for future use)
      */
     distros?: string[];
 }
@@ -550,7 +686,7 @@ export enum LocalOS {
 }
 
 /**
- * (Deprecated--use actions instead) Custom commands to run before or after package
+ * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
  * deployment
  */
 export interface DeprecatedZarfComponentScripts {
@@ -609,7 +745,7 @@ export enum Kind {
  */
 export interface ZarfMetadata {
     /**
-     * The target cluster architecture of this package
+     * The target cluster architecture for this package
      */
     architecture?: string;
     /**
@@ -617,7 +753,7 @@ export interface ZarfMetadata {
      */
     description?: string;
     /**
-     * An image URL to embed in this package for future Zarf UI listing
+     * An image URL to embed in this package (Reserved for future use in Zarf UI)
      */
     image?: string;
     /**
@@ -1021,6 +1157,7 @@ const typeMap: any = {
         { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "extensions", js: "extensions", typ: u(undefined, r("ZarfComponentExtensions")) },
         { json: "files", js: "files", typ: u(undefined, a(r("ZarfFile"))) },
         { json: "group", js: "group", typ: u(undefined, "") },
         { json: "images", js: "images", typ: u(undefined, a("")) },
@@ -1053,6 +1190,22 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+        { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+    ], false),
+    "ZarfComponentActionWait": o([
+        { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
+        { json: "network", js: "network", typ: u(undefined, r("ZarfComponentActionWaitNetwork")) },
+    ], false),
+    "ZarfComponentActionWaitCluster": o([
+        { json: "condition", js: "condition", typ: u(undefined, "") },
+        { json: "kind", js: "kind", typ: "" },
+        { json: "name", js: "name", typ: "" },
+        { json: "namespace", js: "namespace", typ: u(undefined, "") },
+    ], false),
+    "ZarfComponentActionWaitNetwork": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "code", js: "code", typ: u(undefined, 0) },
+        { json: "protocol", js: "protocol", typ: r("Protocol") },
     ], false),
     "ZarfComponentActionDefaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },
@@ -1082,6 +1235,15 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: "" },
         { json: "path", js: "path", typ: "" },
         { json: "selector", js: "selector", typ: "" },
+    ], false),
+    "ZarfComponentExtensions": o([
+        { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+    ], false),
+    "BigBang": o([
+        { json: "repo", js: "repo", typ: u(undefined, "") },
+        { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
+        { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
@@ -1192,6 +1354,11 @@ const typeMap: any = {
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
+    "Protocol": [
+        "http",
+        "https",
+        "tcp",
+    ],
     "Architecture": [
         "amd64",
         "arm64",

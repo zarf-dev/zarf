@@ -7,4 +7,4 @@ go run main.go internal config-schema > zarf.schema.json
 go run main.go internal api-schema | npx quicktype -s schema -o src/ui/lib/api-types.ts
 
 # Create docs from the zarf.yaml JSON schema
-docker run -v $(pwd):/app -w /app --rm python:3.8-alpine /bin/sh -c "pip install json-schema-for-humans && generate-schema-doc --config-file hack/jsfh-config.json zarf.schema.json docs/4-user-guide/3-zarf-schema.md"
+docker run -v $(pwd):/app -w /app --rm python:3.8-alpine /bin/sh -c "pip install json-schema-for-humans && generate-schema-doc --config-file docs/.templates/jsfh-config.json zarf.schema.json docs/4-user-guide/3-zarf-schema.md"

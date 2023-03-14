@@ -24,7 +24,6 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		target      string
 	)
 
-	registryURL = i.RegInfo.Address
 	if i.RegInfo.InternalRegistry {
 		// Establish a registry tunnel to send the images to the zarf registry
 		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
@@ -32,9 +31,10 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		}
 		target = cluster.ZarfRegistry
 	} else {
-		svcInfo := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
-		if svcInfo != nil {
-			// If this is a service, create a port-forward tunnel to that resource
+		svcInfo, err := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
+
+		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+		if err == nil {
 			if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
 				return err
 			}

@@ -82,7 +82,7 @@ func (i *ImgConfig) PullAll() error {
 	for update := range progress {
 		switch {
 		case update.Error != nil && errors.Is(update.Error, io.EOF):
-			progressBar.Success("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
+			progressBar.Successf("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
 			return nil
 		case update.Error != nil && strings.HasPrefix(update.Error.Error(), "archive/tar: missed writing "):
 			// Handle potential image cache corruption with a more helpful error. See L#54 in libexec/src/archive/tar/writer.go
