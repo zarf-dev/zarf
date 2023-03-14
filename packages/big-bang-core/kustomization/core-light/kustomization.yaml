@@ -1,9 +1,0 @@
-bases:
-  - ../core-standard
-
-configMapGenerator:
-  - name: environment
-    namespace: bigbang
-    behavior: merge
-    files:
-      - values.yaml

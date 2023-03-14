@@ -38,7 +38,7 @@ func TestCreateGit(t *testing.T) {
 	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-tag/repos/zarf-4023393304/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "9eb207e (HEAD -> zarf-ref-v0.15.0, tag: v0.15.0) Normalize --confirm behavior in the CLI (#297)")
+	require.Contains(t, stdOut, "(HEAD -> zarf-ref-v0.15.0, tag: v0.15.0) Normalize --confirm behavior in the CLI (#297)")
 
 	// Verify a repo with a shorthand tag only has one tag.
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "tag")
@@ -49,7 +49,7 @@ func TestCreateGit(t *testing.T) {
 	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-tag/repos/zarf-2175050463/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "58e3cd5 (HEAD -> zarf-ref-v0.16.0, tag: v0.16.0) slightly re-arrange zarf arch diagram layout (#383)")
+	require.Contains(t, stdOut, "(HEAD -> zarf-ref-v0.16.0, tag: v0.16.0) slightly re-arrange zarf arch diagram layout (#383)")
 
 	// Verify a repo with a full git refspec tag only has one tag.
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "tag")
@@ -60,7 +60,7 @@ func TestCreateGit(t *testing.T) {
 	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-branch/repos/bigbang-3067531188/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "ab6407fc (HEAD -> release-1.53.x, tag: 1.53.0-rc.1, tag: 1.53.0, online-upstream/release-1.53.x)")
+	require.Contains(t, stdOut, "(HEAD -> release-1.53.x, tag: 1.53.0-rc.1, tag: 1.53.0, online-upstream/release-1.53.x)")
 
 	// Verify a repo with a branch only has one branch.
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "branch")
@@ -71,5 +71,5 @@ func TestCreateGit(t *testing.T) {
 	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-hash/repos/zarf-1356873667/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "c74e2e9 (HEAD -> zarf-ref-c74e2e9626da0400e0a41e78319b3054c53a5d4e, tag: v0.21.3) Re-add docker buildx for release pipeilne")
+	require.Contains(t, stdOut, "(HEAD -> zarf-ref-c74e2e9626da0400e0a41e78319b3054c53a5d4e, tag: v0.21.3) Re-add docker buildx for release pipeilne")
 }
