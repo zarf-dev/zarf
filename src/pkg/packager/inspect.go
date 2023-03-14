@@ -47,7 +47,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string) error {
 			return err
 		}
 
-		if includeSBOM {
+		if includeSBOM || outputSBOM != "" {
 			sbmomsTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
 				return d.Annotations["org.opencontainers.image.title"] == "sboms.tar"
 			})

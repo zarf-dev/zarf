@@ -237,18 +237,18 @@ func (p *Packager) loadZarfPkg() error {
 		}
 	}
 
-	// If SBOM files exist, temporarily place them in the deploy directory
-	if _, err := os.Stat(p.tmp.SbomTar); err == nil {
-		err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms)
-		if err != nil {
+	// If a SBOM tar file exist, temporarily place them in the deploy directory
+	_, tarErr := os.Stat(p.tmp.SbomTar)
+	if tarErr == nil {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
+	}
 
-		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
-			// Don't stop the deployment, let the user decide if they want to continue the deployment
-			spinner.Errorf(err, "Unable to process the SBOM files for this package")
-		}
+	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
+	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
+		// Don't stop the deployment, let the user decide if they want to continue the deployment
+		spinner.Errorf(err, "Unable to process the SBOM files for this package")
 	}
 
 	// Handle component configuration deprecations

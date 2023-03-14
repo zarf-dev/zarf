@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 )
 
 // ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
@@ -55,5 +54,5 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 		return err
 	}
 
-	return archiver.Unarchive(tmp.SbomTar, packagePath)
+	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
 }
