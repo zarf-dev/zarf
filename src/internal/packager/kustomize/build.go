@@ -9,7 +9,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"sigs.k8s.io/kustomize/api/krusty"
-	kustypes "sigs.k8s.io/kustomize/api/types"
+	krustytypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -22,7 +22,7 @@ func BuildKustomization(path string, destination string, kustomizeAllowAnyDirect
 	buildOptions := krusty.MakeDefaultOptions()
 
 	if kustomizeAllowAnyDirectory {
-		buildOptions.LoadRestrictions = kustypes.LoadRestrictionsNone
+		buildOptions.LoadRestrictions = krustytypes.LoadRestrictionsNone
 	}
 
 	kustomizer := krusty.MakeKustomizer(buildOptions)
