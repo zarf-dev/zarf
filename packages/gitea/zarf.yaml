@@ -33,7 +33,7 @@ components:
       Deploys Gitea to provide git repositories for Kubernetes configurations.
       Required for GitOps deployments if no other git server is available.
     images:
-      - gitea/gitea:1.18.3
+      - gitea/gitea:1.18.5
     manifests:
       - name: git-connect
         namespace: zarf
