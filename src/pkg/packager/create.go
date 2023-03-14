@@ -191,7 +191,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		// Remove the deflated component directory
-		if err := utils.RetryRemoveAll(componentPaths.Base, 6); err != nil {
+		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
 			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
 		}
 	}
@@ -201,16 +201,16 @@ func (p *Packager) Create(baseDir string) error {
 		_ = os.Chdir(originalDir)
 	}
 
-	// Use the output path if the user specified it.
-	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
-
-	// Try to remove the package if it already exists.
-	_ = os.RemoveAll(packageName)
-
 	// Save the transformed config.
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
+
+	// Use the output path if the user specified it.
+	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
+
+	// Try to remove the package if it already exists.
+	_ = os.Remove(packageName)
 
 	// Make the archive
 	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}

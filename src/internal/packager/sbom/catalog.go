@@ -55,7 +55,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		cachePath:   config.GetAbsCachePath(),
 		imagesPath:  tmpPaths.Images,
 		sbomTarPath: tmpPaths.SbomTar,
-		tmpSBOMPath: filepath.Join(tmpPaths.Base, "sboms"),
+		tmpSBOMPath: tmpPaths.Sboms,
 	}
 	defer builder.spinner.Stop()
 
@@ -118,7 +118,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			return err
 		}
 
-		currImage++
+		currComponent++
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
@@ -135,14 +135,14 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		return err
 	}
 
-	err = archiver.Archive(allSBOMFiles, builder.sbomTarPath)
-	if err != nil {
+	if err = archiver.Archive(allSBOMFiles, builder.sbomTarPath); err != nil {
 		builder.spinner.Errorf(err, "Unable to create the sbom archive")
 		return err
 	}
 
-	if err := utils.RetryRemoveAll(builder.tmpSBOMPath, 6); err != nil {
-		return fmt.Errorf("unable to remove the temporary SBOM directory: %w", err)
+	if err = os.RemoveAll(builder.tmpSBOMPath); err != nil {
+		builder.spinner.Errorf(err, "Unable to remove the temporary SBOM directory")
+		return err
 	}
 
 	builder.spinner.Success()

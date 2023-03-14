@@ -13,11 +13,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/otiai10/copy"
@@ -153,7 +151,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 
 // CreateFilePath creates the parent directory for the given file path.
 func CreateFilePath(destination string) error {
-	parentDest := path.Dir(destination)
+	parentDest := filepath.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
@@ -253,19 +251,4 @@ func GetDirSize(path string) (int64, error) {
 	})
 
 	return dirSize, err
-}
-
-// RetryRemoveAll will attempt to remove an item or directory up to the given number of retries.
-// NOTE: This function is necessary because of a Windows bug with removing files that have been recently used: https://github.com/golang/go/issues/51442
-func RetryRemoveAll(path string, retries int) error {
-	for i := 0; i < retries; i++ {
-		err := os.RemoveAll(path)
-		if err == nil {
-			return nil
-		}
-
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	return os.RemoveAll(path)
 }
