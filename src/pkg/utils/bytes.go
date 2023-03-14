@@ -81,11 +81,6 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg 
 				continue
 			}
 
-			// If the bytes is greater than the expected total, set it to just below the expected total to keep the progress bar from killing itself
-			if currentBytes >= expectedTotal {
-				currentBytes = expectedTotal - 1
-			}
-
 			// Update the progress bar with the current size
 			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(expectedTotal), 2), ByteFormat(float64(currentBytes), 2))
 			progressBar.Update(currentBytes, title)

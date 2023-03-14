@@ -41,12 +41,17 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	}
 	p.progress.UpdateTitle("     " + text)
 	chunk := int(complete) - p.progress.Current
-	p.progress.Add(chunk)
+	p.Add(chunk)
 }
 
 // Add updates the ProgressBar with completed progress.
 func (p *ProgressBar) Add(n int) {
 	if p.progress != nil {
+		if p.progress.Current+n >= p.progress.Total {
+			// @RAZZLE TODO: This is a hack to prevent the progress bar from going over 100% and causing TUI ugliness.
+			overflow := p.progress.Current + n - p.progress.Total
+			p.progress.Total += overflow + 1
+		}
 		p.progress.Add(n)
 	}
 }
@@ -55,7 +60,7 @@ func (p *ProgressBar) Add(n int) {
 func (p *ProgressBar) Write(data []byte) (int, error) {
 	n := len(data)
 	if p.progress != nil {
-		p.progress.Add(n)
+		p.Add(n)
 	}
 	return n, nil
 }
