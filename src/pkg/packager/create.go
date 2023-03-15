@@ -261,15 +261,21 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified.
-	if p.cfg.CreateOpts.SBOMOutputDir != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return err
 		}
-	}
 
-	// Open a browser to view the SBOM if specified.
-	if p.cfg.CreateOpts.ViewSBOM {
-		sbom.ViewSBOMFiles(p.tmp)
+		if p.cfg.CreateOpts.SBOMOutputDir != "" {
+			if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+				return err
+			}
+		}
+
+		// Open a browser to view the SBOM if specified.
+		if p.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(p.tmp)
+		}
 	}
 
 	return nil
