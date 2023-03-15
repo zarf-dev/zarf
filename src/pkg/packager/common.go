@@ -165,9 +165,10 @@ func createPaths() (paths types.TempPaths, err error) {
 		Base: basePath,
 
 		InjectBinary: filepath.Join(basePath, "zarf-injector"),
-		SeedImage:    filepath.Join(basePath, "seed-image.tar"),
-		Images:       filepath.Join(basePath, "images.tar"),
+		SeedImage:    filepath.Join(basePath, "seed-image"),
+		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
+		SbomTar:      filepath.Join(basePath, "sboms.tar"),
 		Sboms:        filepath.Join(basePath, "sboms"),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
 	}
@@ -184,12 +185,13 @@ func getRequestedComponentList(requestedComponents string) []string {
 }
 
 func (p *Packager) loadZarfPkg() error {
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
-	defer spinner.Stop()
 
 	if err := p.handlePackagePath(); err != nil {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
+
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
@@ -201,20 +203,48 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to process partial package: %w", err)
 	}
 
-	// Extract the archive
-	spinner.Updatef("Extracting the package, this may take a few moments")
-	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-		return fmt.Errorf("unable to extract the package: %w", err)
+	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
+	if p.cfg.DeployOpts.PackagePath != p.tmp.Base {
+		// Extract the archive
+		spinner.Updatef("Extracting the package, this may take a few moments")
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
+		}
 	}
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	configPath := filepath.Join(p.tmp.Base, config.ZarfYAML)
+	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath, true); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
-	// If SBOM files exist, temporarily place them in the deploy directory
+	// Get a list of paths for the components of the package
+	components, err := os.ReadDir(p.tmp.Components)
+	if err != nil {
+		return fmt.Errorf("unable to get a list of components... %w", err)
+	}
+	for _, component := range components {
+		// If the components are tarballs, extract them!
+		componentPath := filepath.Join(p.tmp.Components, component.Name())
+		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
+			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
+				return fmt.Errorf("unable to extract the component: %w", err)
+			}
+
+			// After extracting the component, remove the compressed tarball to release disk space
+			_ = os.Remove(filepath.Join(p.tmp.Components, component.Name()))
+		}
+	}
+
+	// If a SBOM tar file exist, temporarily place them in the deploy directory
+	_, tarErr := os.Stat(p.tmp.SbomTar)
+	if tarErr == nil {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
+		}
+	}
+
 	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
 	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
 		// Don't stop the deployment, let the user decide if they want to continue the deployment

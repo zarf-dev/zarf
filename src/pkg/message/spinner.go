@@ -14,6 +14,8 @@ import (
 
 var activeSpinner *Spinner
 
+var sequence = []string{`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `}
+
 // Spinner is a wrapper around pterm.SpinnerPrinter.
 type Spinner struct {
 	spinner        *pterm.SpinnerPrinter
@@ -37,7 +39,7 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 		spinner, _ = pterm.DefaultSpinner.
 			WithRemoveWhenDone(false).
 			// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
-			WithSequence(`  ⠋ `, `  ⠙ `, `  ⠹ `, `  ⠸ `, `  ⠼ `, `  ⠴ `, `  ⠦ `, `  ⠧ `, `  ⠇ `, `  ⠏ `).
+			WithSequence(sequence...).
 			Start(text)
 	}
 

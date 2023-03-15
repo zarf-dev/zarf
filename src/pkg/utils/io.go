@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -152,7 +151,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 
 // CreateFilePath creates the parent directory for the given file path.
 func CreateFilePath(destination string) error {
-	parentDest := path.Dir(destination)
+	parentDest := filepath.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
@@ -234,4 +233,22 @@ func IsTextFile(path string) (bool, error) {
 	hasXML := strings.Contains(mimeType, "xml")
 
 	return hasText || hasJSON || hasXML, nil
+}
+
+// GetDirSize walks through all files and directories in the provided path and returns the total size in bytes.
+func GetDirSize(path string) (int64, error) {
+	dirSize := int64(0)
+
+	// Walk through all files in the path
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			dirSize += info.Size()
+		}
+		return nil
+	})
+
+	return dirSize, err
 }

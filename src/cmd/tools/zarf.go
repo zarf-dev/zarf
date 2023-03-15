@@ -68,7 +68,7 @@ func init() {
 			if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 				message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
 			}
-			message.SuccessF(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
+			message.Successf(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
 		},
 	}
 
@@ -88,7 +88,7 @@ func init() {
 			if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
 				message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
 			}
-			message.SuccessF(lang.CmdToolsGenPkiSuccess, args[0])
+			message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
 		},
 	}
 
