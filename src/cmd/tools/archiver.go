@@ -5,6 +5,10 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/mholt/archiver/v3"
@@ -31,6 +35,8 @@ var archiverCompressCmd = &cobra.Command{
 	},
 }
 
+var decompressLayers bool
+
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress {ARCHIVE} {DESTINATION}",
 	Aliases: []string{"d"},
@@ -42,6 +48,38 @@ var archiverDecompressCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
 		}
+
+		// Decompress component layers in the destination path
+		if decompressLayers {
+			// Decompress the components
+			layersDir := filepath.Join(destinationPath, "components")
+
+			files, err := os.ReadDir(layersDir)
+			if err != nil {
+				message.Fatalf(err, "failed to read the layers of components")
+			}
+			for _, file := range files {
+				if strings.HasSuffix(file.Name(), ".tar") {
+					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
+						message.Fatalf(err, "failed to decompress the component layer")
+					} else {
+						// Without unarchive error, delete original tar.zst in component folder
+						// This will leave the tar.zst if their is a failure for post mortem check
+						_ = os.Remove(filepath.Join(layersDir, file.Name()))
+					}
+				}
+			}
+
+			// Decompress the SBOMs
+			sbomsTar := filepath.Join(destinationPath, "sboms.tar")
+			_, err = os.Stat(sbomsTar)
+			if err == nil {
+				if err := archiver.Unarchive(sbomsTar, filepath.Join(destinationPath, "sboms")); err != nil {
+					message.Fatalf(err, "failed to decompress the sboms layer")
+				}
+				_ = os.Remove(sbomsTar)
+			}
+		}
 	},
 }
 
@@ -50,4 +88,5 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverDecompressCmd.Flags().BoolVar(&decompressLayers, "decompress-all", false, "Decompress all layers in the archive")
 }

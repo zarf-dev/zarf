@@ -6,16 +6,16 @@ package types
 
 // RestAPI is the struct that is used to marshal/unmarshal the top-level API objects.
 type RestAPI struct {
-	ZarfPackage       ZarfPackage       `json:"zarfPackage"`
-	ZarfState         ZarfState         `json:"zarfState"`
-	ZarfCommonOptions ZarfCommonOptions `json:"zarfCommonOptions"`
-	ZarfCreateOptions ZarfCreateOptions `json:"zarfCreateOptions"`
-	ZarfDeployOptions ZarfDeployOptions `json:"zarfDeployOptions"`
-	ZarfInitOptions   ZarfInitOptions   `json:"zarfInitOptions"`
-	ConnectStrings    ConnectStrings    `json:"connectStrings"`
-	ClusterSummary    ClusterSummary    `json:"clusterSummary"`
-	DeployedPackage   DeployedPackage   `json:"deployedPackage"`
-	APIZarfPackage    APIZarfPackage    `json:"apiZarfPackage"`
+	ZarfPackage          ZarfPackage          `json:"zarfPackage"`
+	ZarfState            ZarfState            `json:"zarfState"`
+	ZarfCommonOptions    ZarfCommonOptions    `json:"zarfCommonOptions"`
+	ZarfCreateOptions    ZarfCreateOptions    `json:"zarfCreateOptions"`
+	ZarfDeployOptions    ZarfDeployOptions    `json:"zarfDeployOptions"`
+	ZarfInitOptions      ZarfInitOptions      `json:"zarfInitOptions"`
+	ConnectStrings       ConnectStrings       `json:"connectStrings"`
+	ClusterSummary       ClusterSummary       `json:"clusterSummary"`
+	DeployedPackage      DeployedPackage      `json:"deployedPackage"`
+	APIZarfPackage       APIZarfPackage       `json:"apiZarfPackage"`
 	APIZarfDeployPayload APIZarfDeployPayload `json:"apiZarfDeployPayload"`
 }
 

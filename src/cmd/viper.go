@@ -56,6 +56,9 @@ const (
 	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
 	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
+
+	// Package publish config keys
+	V_PKG_PUBLISH_OCI_CONCURRENCY = "package.publish.oci_concurrency"
 )
 
 func initViper() {

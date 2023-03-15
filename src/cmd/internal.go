@@ -54,7 +54,7 @@ var generateCLIDocs = &cobra.Command{
 		if err := doc.GenMarkdownTree(rootCmd, "./docs/4-user-guide/1-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
 		} else {
-			message.SuccessF(lang.CmdInternalGenerateCliDocsSuccess)
+			message.Successf(lang.CmdInternalGenerateCliDocsSuccess)
 		}
 	},
 }

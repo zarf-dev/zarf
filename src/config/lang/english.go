@@ -208,6 +208,8 @@ const (
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
+	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
+
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 

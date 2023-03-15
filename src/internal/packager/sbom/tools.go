@@ -18,7 +18,8 @@ import (
 
 // ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
 func ViewSBOMFiles(tmp types.TempPaths) {
-	sbomViewFiles, _ := filepath.Glob(filepath.Join(tmp.Sboms, "sbom-viewer-*"))
+	sbomFilePath := filepath.Join(tmp.Base, "sboms")
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(sbomFilePath, "sbom-viewer-*"))
 
 	if len(sbomViewFiles) > 0 {
 		link := sbomViewFiles[0]
@@ -46,6 +47,10 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 	packagePath := filepath.Join(outputDir, packageName)
 
 	if err := os.RemoveAll(packagePath); err != nil {
+		return err
+	}
+
+	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
 		return err
 	}
 
