@@ -157,9 +157,9 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				TarballPath: p.tmp.Images,
-				ImgList:     imgList,
-				Insecure:    config.CommonOptions.Insecure,
+				ImagesPath: p.tmp.Images,
+				ImgList:    imgList,
+				Insecure:   config.CommonOptions.Insecure,
 			}
 
 			return imgConfig.PullAll()
@@ -174,7 +174,26 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		sbom.Catalog(componentSBOMs, imgList, p.tmp.Images, p.tmp.Sboms)
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+		}
+	}
+
+	// Process the component directories into compressed tarballs
+	// NOTE: This is purposefully being done after the SBOM cataloging
+	for _, component := range p.cfg.Pkg.Components {
+		// Make the component a tar archive
+		componentPaths, _ := p.createOrGetComponentPaths(component)
+		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
+		componentTarPath := filepath.Join(p.tmp.Components, componentName)
+		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
+			return fmt.Errorf("unable to create package: %w", err)
+		}
+
+		// Remove the deflated component directory
+		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
+			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
+		}
 	}
 
 	// In case the directory was changed, reset to prevent breaking relative target paths.
@@ -182,16 +201,16 @@ func (p *Packager) Create(baseDir string) error {
 		_ = os.Chdir(originalDir)
 	}
 
-	// Use the output path if the user specified it.
-	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
-
-	// Try to remove the package if it already exists.
-	_ = os.RemoveAll(packageName)
-
 	// Save the transformed config.
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
+
+	// Use the output path if the user specified it.
+	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
+
+	// Try to remove the package if it already exists.
+	_ = os.Remove(packageName)
 
 	// Make the archive
 	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
@@ -242,15 +261,21 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified.
-	if p.cfg.CreateOpts.SBOMOutputDir != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return err
 		}
-	}
 
-	// Open a browser to view the SBOM if specified.
-	if p.cfg.CreateOpts.ViewSBOM {
-		sbom.ViewSBOMFiles(p.tmp)
+		if p.cfg.CreateOpts.SBOMOutputDir != "" {
+			if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+				return err
+			}
+		}
+
+		// Open a browser to view the SBOM if specified.
+		if p.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(p.tmp)
+		}
 	}
 
 	return nil
