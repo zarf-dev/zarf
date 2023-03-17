@@ -68,13 +68,16 @@ func (p *Packager) Publish() error {
 
 	paths := []string{
 		p.tmp.ZarfYaml,
-		p.tmp.SbomTar,
 		filepath.Join(p.tmp.Images, "index.json"),
 		filepath.Join(p.tmp.Images, "oci-layout"),
 	}
 	// if checksums.txt file exists, include it
 	if !utils.InvalidPath(filepath.Join(p.tmp.Base, "checksums.txt")) {
 		paths = append(paths, filepath.Join(p.tmp.Base, "checksums.txt"))
+	}
+	// if p.tmp.SbomTar exists, include it
+	if !utils.InvalidPath(p.tmp.SbomTar) {
+		paths = append(paths, p.tmp.SbomTar)
 	}
 
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
