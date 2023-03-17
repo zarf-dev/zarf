@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -72,6 +73,7 @@ func FindImagesForChartRepo(repo, path string, values chartutil.Values) (images 
 	if err != nil {
 		return images, err
 	}
+	values = utils.MergeMapRecursive(chart.Values, values)
 
 	imageAnnotation := chart.Metadata.Annotations["helm.sh/images"]
 

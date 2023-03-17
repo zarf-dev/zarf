@@ -146,7 +146,7 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Name(), err)
 		}
 
-		valuesMap = utils.MergeMap(valuesMap, values)
+		valuesMap = utils.MergeMapRecursive(valuesMap, values)
 	}
 
 	return valuesMap, nil
