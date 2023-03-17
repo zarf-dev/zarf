@@ -121,10 +121,9 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 				return nil, fmt.Errorf("could not find values %s '%s'", v.Kind, namespacedName)
 			}
 
-			if data, ok := cm.Data[v.GetValuesKey()]; !ok {
+			valuesData, ok = cm.Data[v.GetValuesKey()]
+			if !ok {
 				return nil, fmt.Errorf("missing key '%s' in %s '%s'", v.GetValuesKey(), v.Kind, namespacedName)
-			} else {
-				valuesData = data
 			}
 		case "Secret":
 			sec, ok := secrets[namespacedName]
@@ -132,10 +131,9 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 				return nil, fmt.Errorf("could not find values %s '%s'", v.Kind, namespacedName)
 			}
 
-			if data, ok := sec.StringData[v.GetValuesKey()]; !ok {
+			valuesData, ok = sec.StringData[v.GetValuesKey()]
+			if !ok {
 				return nil, fmt.Errorf("missing key '%s' in %s '%s'", v.GetValuesKey(), v.Kind, namespacedName)
-			} else {
-				valuesData = data
 			}
 		default:
 			return nil, fmt.Errorf("unsupported ValuesReference kind '%s'", v.Kind)
