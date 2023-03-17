@@ -133,7 +133,7 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	require.Contains(t, string(stdOut), "podinfo-")
 
 	// Test deploy w/ bad ref.
-	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
+	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm", "-l=trace")
 	require.Error(t, err, stdErr)
 }
 
@@ -149,7 +149,7 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	require.Contains(t, stdErr, "Loaded Zarf Package oci://"+ref)
 
 	// Test inspect w/ bad ref.
-	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
+	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure", "-l=trace")
 	require.Error(t, err, stdErr)
 }
 
