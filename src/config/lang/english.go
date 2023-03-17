@@ -281,7 +281,7 @@ const (
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
 
 	// zarf version
-	CmdVersionShort = "SBOM tools provided by Anchore Syft"
+	CmdVersionShort = "Version of the Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."
 
 	// cmd viper setup
