@@ -118,7 +118,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	for _, hrDep := range hrDependencies {
 		dependencies = append(dependencies, hrDep)
 	}
-	helmReleaseNames, err := utils.SortDependencies(dependencies)
+	namespacedHelmReleaseNames, err := utils.SortDependencies(dependencies)
 	if err != nil {
 		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
@@ -126,10 +126,10 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	tenMinsInSecs := 10 * 60
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
-	for _, hrName := range helmReleaseNames {
-		hr := hrDependencies[hrName]
+	for _, hrNamespacedName := range namespacedHelmReleaseNames {
+		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrName),
+			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
 			MaxTotalSeconds: &tenMinsInSecs,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
@@ -145,7 +145,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		// The check it, we need to look for the APIService to be exist instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.53.0/chart/templates/metrics-server/helmrelease.yaml
-		if hrName == "metrics-server" {
+		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
