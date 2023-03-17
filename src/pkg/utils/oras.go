@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -123,16 +122,10 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 		message.Debug("rt error:", err)
 	}
 
-	message.Debug(message.JSONValue(resp.Header))
-	if req.Method == http.MethodHead && err == nil && t.orasRemote.ProgressBar != nil {
-		len := resp.Header.Get("Content-Length")
-		if len != "" {
-			size, err := strconv.Atoi(len)
-			if err != nil {
-				message.Debug("error parsing content length:", err)
-			} else {
-				t.orasRemote.ProgressBar.Add(size)
-			}
+	if resp != nil && req.Method == http.MethodHead && err == nil && t.orasRemote.ProgressBar != nil {
+		message.Debug(message.JSONValue(resp.Header))
+		if resp.ContentLength > 0 {
+			t.orasRemote.ProgressBar.Add(int(resp.ContentLength))
 		}
 	}
 
