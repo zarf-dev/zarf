@@ -12,12 +12,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/go-git/go-git/v5"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -276,35 +274,10 @@ func (p *Packager) generateAnnotations() map[string]string {
 	annotations := map[string]string{
 		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		message.Debug("Failed to get current working directory, falling back to default annotations")
-		return annotations
+	url := p.cfg.Pkg.Metadata.URL
+	if url != "" {
+		annotations[ocispec.AnnotationSource] = url
 	}
-	if utils.InvalidPath(filepath.Join(cwd, "zarf.yaml")) {
-		message.Debug("Failed to find zarf.yaml, falling back to default annotations")
-		return annotations
-	}
-
-	// this assumes the git repo of the zarf package is in the current working directory
-	repo, err := git.PlainOpen(".")
-	if err != nil {
-		message.Debug("Failed to open git repo, falling back to default annotations")
-		return annotations
-	}
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		message.Debug("Failed to get remote origin URL, falling back to default annotations")
-		return annotations
-	}
-	url := remote.Config().URLs[0]
-	if strings.HasPrefix(url, "git@") {
-		url = strings.Replace(url, ":", "/", 1)
-		// this assumes an HTTPS URL, but this feature is mainly for GitHub, so it's probably fine
-		url = strings.Replace(url, "git@", "https://", 1)
-	}
-	url = strings.TrimSuffix(url, ".git")
-	annotations[ocispec.AnnotationSource] = url
 
 	return annotations
 }
