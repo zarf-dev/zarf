@@ -153,6 +153,21 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	require.Error(t, err, stdErr)
 }
 
+func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
+	t := suite.T()
+	t.Log("E2E: Package Pull oci:// && Package Deploy tarball")
+
+	local := fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch)
+	suite.Test_1_Pull()
+	// Verify the package was pulled.
+	require.FileExists(t, local)
+	defer e2e.cleanFiles(local)
+
+	// Deploy the local package.
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", local, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
 func TestRegistryClientTestSuite(t *testing.T) {
 	suite.Run(t, new(RegistryClientTestSuite))
 }
