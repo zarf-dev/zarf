@@ -104,7 +104,6 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "pull", "oci://"+ref, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Pulled "+ref)
-	defer e2e.cleanFiles(out)
 
 	// Verify the package was pulled.
 	require.FileExists(t, out)
@@ -158,14 +157,17 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	t.Log("E2E: Package Pull oci:// && Package Deploy tarball")
 
 	local := fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch)
-	suite.Test_1_Pull()
+	defer e2e.cleanFiles(local)
 	// Verify the package was pulled.
 	require.FileExists(t, local)
-	defer e2e.cleanFiles(local)
 
 	// Deploy the local package.
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", local, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
+	require.NoError(t, err, stdErr)
+	require.Contains(t, string(stdOut), "podinfo-")
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {
