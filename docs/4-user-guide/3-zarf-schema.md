@@ -242,7 +242,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Name of the distributing entity
+**Description:** Name of the distributing entity, organization or individual.
 
 |          |          |
 | -------- | -------- |

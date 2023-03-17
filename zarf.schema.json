@@ -758,7 +758,7 @@
         },
         "vendor": {
           "type": "string",
-          "description": "Name of the distributing entity"
+          "description": "Name of the distributing entity, organization or individual."
         }
       },
       "additionalProperties": false,

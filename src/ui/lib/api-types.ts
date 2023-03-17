@@ -781,7 +781,7 @@ export interface ZarfMetadata {
      */
     url?: string;
     /**
-     * Name of the distributing entity
+     * Name of the distributing entity, organization or individual.
      */
     vendor?: string;
     /**

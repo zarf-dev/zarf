@@ -27,7 +27,7 @@ type ZarfMetadata struct {
 	Authors       string `json:"authors,omitempty" jsonschema:"description=List of package authors (including contact info)"`
 	Documentation string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
 	Source        string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
-	Vendor        string `json:"vendor,omitempty" jsonschema:"description=Name of the distributing entity, organization or individual."`
+	Vendor        string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
