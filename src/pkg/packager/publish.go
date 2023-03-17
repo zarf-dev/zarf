@@ -272,7 +272,8 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 
 func (p *Packager) generateAnnotations() map[string]string {
 	annotations := map[string]string{
-		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
+		ocispec.AnnotationTitle:       p.cfg.Pkg.Metadata.Name,
+		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
 	}
 	url := p.cfg.Pkg.Metadata.URL
 	if url != "" {
@@ -294,8 +295,8 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	}
 
 	annotations := map[string]string{
-		"org.opencontainers.image.title":       p.cfg.Pkg.Metadata.Name,
-		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
+		ocispec.AnnotationTitle:       p.cfg.Pkg.Metadata.Name,
+		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
 	}
 
 	manifestConfig := OCIConfigPartial{
