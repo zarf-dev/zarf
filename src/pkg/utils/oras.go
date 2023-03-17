@@ -75,6 +75,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
+	transport.DisableKeepAlives = true
 
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
