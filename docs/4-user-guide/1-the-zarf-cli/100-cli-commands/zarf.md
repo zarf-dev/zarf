@@ -34,5 +34,5 @@ zarf [COMMAND] [flags]
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
+* [zarf version](zarf_version.md)	 - Version of the Zarf binary
 
