@@ -749,9 +749,17 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
+     * List of package authors (including contact info)
+     */
+    authors?: string;
+    /**
      * Additional information about this package
      */
     description?: string;
+    /**
+     * Link to package documentation when online
+     */
+    documentation?: string;
     /**
      * An image URL to embed in this package (Reserved for future use in Zarf UI)
      */
@@ -761,6 +769,10 @@ export interface ZarfMetadata {
      */
     name: string;
     /**
+     * Link to package source code when online
+     */
+    source?: string;
+    /**
      * Disable compression of this package
      */
     uncompressed?: boolean;
@@ -768,6 +780,10 @@ export interface ZarfMetadata {
      * Link to package information when online
      */
     url?: string;
+    /**
+     * Name of the distributing entity
+     */
+    vendor?: string;
     /**
      * Generic string to track the package version by a package author
      */
@@ -1287,11 +1303,15 @@ const typeMap: any = {
     ], false),
     "ZarfMetadata": o([
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
+        { json: "authors", js: "authors", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "documentation", js: "documentation", typ: u(undefined, "") },
         { json: "image", js: "image", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
+        { json: "source", js: "source", typ: u(undefined, "") },
         { json: "uncompressed", js: "uncompressed", typ: u(undefined, true) },
         { json: "url", js: "url", typ: u(undefined, "") },
+        { json: "vendor", js: "vendor", typ: u(undefined, "") },
         { json: "version", js: "version", typ: u(undefined, "") },
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),

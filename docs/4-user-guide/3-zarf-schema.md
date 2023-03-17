@@ -187,6 +187,70 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="metadata_authors"></a>authors</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** List of package authors (including contact info)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_documentation"></a>documentation</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Link to package documentation when online
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_source"></a>source</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Link to package source code when online
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_vendor"></a>vendor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Name of the distributing entity
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

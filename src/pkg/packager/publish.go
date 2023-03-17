@@ -275,9 +275,21 @@ func (p *Packager) generateAnnotations() map[string]string {
 		ocispec.AnnotationTitle:       p.cfg.Pkg.Metadata.Name,
 		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
 	}
-	url := p.cfg.Pkg.Metadata.URL
-	if url != "" {
-		annotations[ocispec.AnnotationSource] = url
+
+	if url := p.cfg.Pkg.Metadata.URL; url != "" {
+		annotations[ocispec.AnnotationURL] = url
+	}
+	if authors := p.cfg.Pkg.Metadata.Authors; authors != "" {
+		annotations[ocispec.AnnotationAuthors] = authors
+	}
+	if documentation := p.cfg.Pkg.Metadata.Documentation; documentation != "" {
+		annotations[ocispec.AnnotationDocumentation] = documentation
+	}
+	if source := p.cfg.Pkg.Metadata.Source; source != "" {
+		annotations[ocispec.AnnotationSource] = source
+	}
+	if vendor := p.cfg.Pkg.Metadata.Vendor; vendor != "" {
+		annotations[ocispec.AnnotationVendor] = vendor
 	}
 
 	return annotations
