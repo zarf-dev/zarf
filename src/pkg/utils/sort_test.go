@@ -14,13 +14,13 @@ import (
 func TestSortDependencies(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     []DependsOn // input data: a map of nodes to their dependencies
-		expected []string    // expected output: a slice of nodes in order of their precedence
-		success  bool        // whether the test should succeed or fail
+		data     []Dependency // input data: a map of nodes to their dependencies
+		expected []string     // expected output: a slice of nodes in order of their precedence
+		success  bool         // whether the test should succeed or fail
 	}{
 		{
 			name: "simple graph",
-			data: []DependsOn{
+			data: []Dependency{
 				{
 					Name:         "A",
 					Dependencies: []string{"B", "C"},
@@ -39,7 +39,7 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "complex graph",
-			data: []DependsOn{
+			data: []Dependency{
 				{
 					Name:         "A",
 					Dependencies: []string{"B", "C", "D"},
@@ -65,7 +65,7 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with multiple roots",
-			data: []DependsOn{
+			data: []Dependency{
 				{
 					Name: "A",
 				},
@@ -93,7 +93,7 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with multiple sinks",
-			data: []DependsOn{
+			data: []Dependency{
 				{
 					Name:         "A",
 					Dependencies: []string{"B"},
@@ -125,7 +125,7 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with circular dependencies",
-			data: []DependsOn{
+			data: []Dependency{
 				{
 					Name:         "A",
 					Dependencies: []string{"B"},

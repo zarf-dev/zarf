@@ -6,10 +6,10 @@ package utils
 
 import "fmt"
 
-// DependsOn is a struct that represents a node in a list of dependencies.
-type DependsOn struct {
-	Name         string
-	Dependencies []string
+// Dependency is an interface that represents a node in a list of dependencies.
+type Dependency interface {
+	Name() string
+	Dependencies() []string
 }
 
 // SortDependencies performs a topological sort on a dependency graph and
@@ -22,18 +22,18 @@ type DependsOn struct {
 //
 // Note sort order is dependent on the slice order of the input data for
 // nodes with the same in-degree (i.e. the same number of dependencies).
-func SortDependencies(data []DependsOn) ([]string, error) {
+func SortDependencies(data []Dependency) ([]string, error) {
 	// Initialize the in-degree and out-degree maps.
 	inDegree := make(map[string]int)
 	outDegree := make(map[string][]string)
 
 	// Populate the in-degree and out-degree maps.
 	for _, d := range data {
-		outDegree[d.Name] = d.Dependencies
-		inDegree[d.Name] = 0
+		outDegree[d.Name()] = d.Dependencies()
+		inDegree[d.Name()] = 0
 	}
 	for _, deps := range data {
-		for _, d := range deps.Dependencies {
+		for _, d := range deps.Dependencies() {
 			inDegree[d]++
 		}
 	}
@@ -44,8 +44,8 @@ func SortDependencies(data []DependsOn) ([]string, error) {
 
 	// Enqueue all nodes with zero in-degree.
 	for _, d := range data {
-		if inDegree[d.Name] == 0 {
-			queue = append(queue, d.Name)
+		if inDegree[d.Name()] == 0 {
+			queue = append(queue, d.Name())
 		}
 	}
 
