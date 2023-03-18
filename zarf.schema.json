@@ -743,6 +743,22 @@
         "yolo": {
           "type": "boolean",
           "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."
+        },
+        "authors": {
+          "type": "string",
+          "description": "List of package authors (including contact info)"
+        },
+        "documentation": {
+          "type": "string",
+          "description": "Link to package documentation when online"
+        },
+        "source": {
+          "type": "string",
+          "description": "Link to package source code when online"
+        },
+        "vendor": {
+          "type": "string",
+          "description": "Name of the distributing entity, organization or individual."
         }
       },
       "additionalProperties": false,
