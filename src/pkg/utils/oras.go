@@ -120,7 +120,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 
 	resp, err = t.RoundTripper.RoundTrip(req)
 	if err != nil {
-		message.Debug("rt error:", err)
+		message.Debugf("rt error: %w", err)
 	}
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.orasRemote.ProgressBar != nil {
