@@ -213,7 +213,7 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, src *file.Store, descs
 	packOpts := p.cfg.PublishOpts.PackOptions
 
 	// first attempt to do a ArtifactManifest push
-	root, err = pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, src, packOpts)
+	root, err = p.pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, src, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -251,7 +251,7 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 	packOpts := p.cfg.PublishOpts.PackOptions
 	packOpts.ConfigDescriptor = &manifestConfigDesc
 	packOpts.PackImageManifest = true
-	root, err = pack(dst.Context, ocispec.MediaTypeImageManifest, descs, src, packOpts)
+	root, err = p.pack(dst.Context, ocispec.MediaTypeImageManifest, descs, src, packOpts)
 	if err != nil {
 		return root, err
 	}
@@ -268,6 +268,34 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 	return root, nil
 }
 
+func (p *Packager) generateAnnotations(artifactType string) map[string]string {
+	annotations := map[string]string{
+		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
+	}
+
+	if artifactType == ocispec.MediaTypeArtifactManifest {
+		annotations[ocispec.AnnotationTitle] = p.cfg.Pkg.Metadata.Name
+	}
+
+	if url := p.cfg.Pkg.Metadata.URL; url != "" {
+		annotations[ocispec.AnnotationURL] = url
+	}
+	if authors := p.cfg.Pkg.Metadata.Authors; authors != "" {
+		annotations[ocispec.AnnotationAuthors] = authors
+	}
+	if documentation := p.cfg.Pkg.Metadata.Documentation; documentation != "" {
+		annotations[ocispec.AnnotationDocumentation] = documentation
+	}
+	if source := p.cfg.Pkg.Metadata.Source; source != "" {
+		annotations[ocispec.AnnotationSource] = source
+	}
+	if vendor := p.cfg.Pkg.Metadata.Vendor; vendor != "" {
+		annotations[ocispec.AnnotationVendor] = vendor
+	}
+
+	return annotations
+}
+
 func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, error) {
 	// Unless specified, an empty manifest config will be used: `{}`
 	// which causes an error on Google Artifact Registry
@@ -280,8 +308,8 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	}
 
 	annotations := map[string]string{
-		"org.opencontainers.image.title":       p.cfg.Pkg.Metadata.Name,
-		"org.opencontainers.image.description": p.cfg.Pkg.Metadata.Description,
+		ocispec.AnnotationTitle:       p.cfg.Pkg.Metadata.Name,
+		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
 	}
 
 	manifestConfig := OCIConfigPartial{
@@ -299,7 +327,8 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 }
 
 // pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
-func pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, src *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
+func (p *Packager) pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, src *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
+	packOpts.ManifestAnnotations = p.generateAnnotations(artifactType)
 	root, err := oras.Pack(ctx, src, artifactType, descs, packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
