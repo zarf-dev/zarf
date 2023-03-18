@@ -115,7 +115,8 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 		teeCloser := readCloser{tee, req.Body}
 		req.Body = teeCloser
 	}
-	message.Debug(req.Method, message.JSONValue(req.Header))
+	message.Debug(req.Method, req.URL)
+	req.Close = true
 
 	resp, err = t.RoundTripper.RoundTrip(req)
 	if err != nil {
