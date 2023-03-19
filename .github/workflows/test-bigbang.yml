@@ -20,7 +20,6 @@ concurrency:
 
 jobs:
   validate:
-    if: github.repository == 'defenseunicorns/zarf'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,13 +39,16 @@ jobs:
 
       - name: "Login to Iron Bank"
         uses: docker/login-action@v2
+        if: ${{ env.IRONBANK_USERNAME != '' }}
+        env:
+          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
         with:
           registry: registry1.dso.mil
           username: ${{ secrets.IRONBANK_USERNAME }}
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Run tests
-        run: "go test ./src/extensions/bigbang/test -failfast -v -timeout 30m"
+        run: "[ -n \"${{ secrets.IRONBANK_USERNAME }}\" ] && go test ./src/extensions/bigbang/test -failfast -v -timeout 30m"
 
       - name: Save logs
         if: always()
