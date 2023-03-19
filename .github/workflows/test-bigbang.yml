@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   validate:
-    if: ${{ github.repository_owner == 'defenseunicorns' || contains(github.event.head_commit.message, 'RUN TEST')}}
+    if: github.repository == 'defenseunicorns/zarf'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
