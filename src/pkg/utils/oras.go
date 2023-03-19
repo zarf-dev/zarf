@@ -95,7 +95,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 type Transport struct {
 	Base       http.RoundTripper
 	OrasRemote *OrasRemote
-	Policy     func() retry.Policy
+	Policy     retry.Policy
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
@@ -106,17 +106,10 @@ func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
 	}
 }
 
-func (t *Transport) policy() retry.Policy {
-	if t.Policy == nil {
-		return retry.DefaultPolicy
-	}
-	return t.Policy()
-}
-
 // Mirror of RoundTrip from retry
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
-	policy := t.policy()
+	policy := retry.DefaultPolicy
 	attempt := 0
 	for {
 		resp, respErr := t.roundTrip(req)
