@@ -158,7 +158,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 // This is currently only used to track the progress of publishes, not pulls.
 func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error) {
 	if req.Method != http.MethodHead && req.Body != nil && t.OrasRemote.ProgressBar != nil {
-		_ = io.TeeReader(req.Body, t.OrasRemote.ProgressBar)
+		req.Body = io.NopCloser(io.TeeReader(req.Body, t.OrasRemote.ProgressBar))
 	}
 
 	resp, err = t.Base.RoundTrip(req)
