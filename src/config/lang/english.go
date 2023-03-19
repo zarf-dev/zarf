@@ -208,6 +208,8 @@ const (
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
+	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
+
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
@@ -279,7 +281,7 @@ const (
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
 
 	// zarf version
-	CmdVersionShort = "SBOM tools provided by Anchore Syft"
+	CmdVersionShort = "Version of the Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."
 
 	// cmd viper setup
