@@ -20,7 +20,7 @@ components:
 The `bigbang` noun sits within the `extensions` specification of Zarf and provides the following configuration:
 
 - `version`     - The version of Big Bang to use
-- `repo`        - Override repo to pull Big Bang from instead of Repo One
+- `repo`        - Override repo to pull Big Bang from instead of https://repo1.dso.mil/big-bang/bigbang.git
 - `skipFlux`    - Whether to skip deploying flux; Defaults to false
 - `valuesFiles` - The list of values files to pass to Big Bang; these will be merged together
 
