@@ -91,7 +91,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 }
 
 // Transport is an http.RoundTripper that keeps track of the in-flight
-// request and add hooks to report HTTP tracing events.
+// request and add hooks to report upload progress.
 type Transport struct {
 	Base       http.RoundTripper
 	OrasRemote *OrasRemote
@@ -106,7 +106,7 @@ func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
 	}
 }
 
-// RoundTrip is mirroed from retry, but instead of calling retry's private t.roundTrip(), this uses
+// RoundTrip is mirrored from retry, but instead of calling retry's private t.roundTrip(), this uses
 // our own which has interactions w/ message.ProgressBar
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
@@ -156,7 +156,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // roundTrip calls base roundtrip while keeping track of the current request.
-// This is currently only used to track the progress of publishes, not pulls.
+// this is currently only used to track the progress of publishes, not pulls.
 func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error) {
 	if req.Method != http.MethodHead && req.Body != nil && t.OrasRemote.ProgressBar != nil {
 		req.Body = io.NopCloser(io.TeeReader(req.Body, t.OrasRemote.ProgressBar))
