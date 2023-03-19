@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -74,13 +75,12 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
-	transport.DisableKeepAlives = true
 
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		Client: &http.Client{
-			Transport: retry.NewTransport(transport),
+			Transport: transport,
 		},
 	}
 	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
@@ -93,13 +93,24 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 // Transport is an http.RoundTripper that keeps track of the in-flight
 // request and add hooks to report HTTP tracing events.
 type Transport struct {
-	http.RoundTripper
-	orasRemote *OrasRemote
+	Base       http.RoundTripper
+	OrasRemote *OrasRemote
+	Policy     func() retry.Policy
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
 func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
-	return &Transport{base, o}
+	return &Transport{
+		Base:       base,
+		OrasRemote: o,
+	}
+}
+
+func (t *Transport) policy() retry.Policy {
+	if t.Policy == nil {
+		return retry.DefaultPolicy
+	}
+	return t.Policy()
 }
 
 type readCloser struct {
@@ -107,29 +118,75 @@ type readCloser struct {
 	io.Closer
 }
 
-// RoundTrip calls base roundtrip while keeping track of the current request.
+// Mirror of RoundTrip from retry
+func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	ctx := req.Context()
+	policy := t.policy()
+	attempt := 0
+	for {
+		resp, respErr := t.roundTrip(req)
+		duration, err := policy.Retry(attempt, resp, respErr)
+		if err != nil {
+			if respErr == nil {
+				resp.Body.Close()
+			}
+			return nil, err
+		}
+		if duration < 0 {
+			return resp, respErr
+		}
+
+		// rewind the body if possible
+		if req.Body != nil {
+			if req.GetBody == nil {
+				// body can't be rewound, so we can't retry
+				return resp, respErr
+			}
+			body, err := req.GetBody()
+			if err != nil {
+				// failed to rewind the body, so we can't retry
+				return resp, respErr
+			}
+			req.Body = body
+		}
+
+		// close the response body if needed
+		if respErr == nil {
+			resp.Body.Close()
+		}
+
+		timer := time.NewTimer(duration)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+		attempt++
+	}
+}
+
+// roundTrip calls base roundtrip while keeping track of the current request.
 // This is currently only used to track the progress of publishes, not pulls.
-func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-	if req.Method != http.MethodHead && req.Body != nil && t.orasRemote.ProgressBar != nil {
-		tee := io.TeeReader(req.Body, t.orasRemote.ProgressBar)
+func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error) {
+	if req.Method != http.MethodHead && req.Body != nil && t.OrasRemote.ProgressBar != nil {
+		tee := io.TeeReader(req.Body, t.OrasRemote.ProgressBar)
 		teeCloser := readCloser{tee, req.Body}
 		req.Body = teeCloser
 	}
-	message.Debug(req.Method, req.URL)
-	req.Close = true
+	message.Debug(req.Method, req.URL, req.Context())
 
-	resp, err = t.RoundTripper.RoundTrip(req)
+	resp, err = t.Base.RoundTrip(req)
 	if err != nil {
 		message.Debug("rt error:", err)
 	}
 
-	if resp != nil && req.Method == http.MethodHead && err == nil && t.orasRemote.ProgressBar != nil {
+	if resp != nil && req.Method == http.MethodHead && err == nil && t.OrasRemote.ProgressBar != nil {
 		message.Debug(message.JSONValue(resp.Header))
 		if resp.ContentLength > 0 {
-			t.orasRemote.ProgressBar.Add(int(resp.ContentLength))
+			t.OrasRemote.ProgressBar.Add(int(resp.ContentLength))
 		}
 	}
-
 	return resp, err
 }
 
