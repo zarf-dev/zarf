@@ -106,7 +106,8 @@ func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
 	}
 }
 
-// Mirror of RoundTrip from retry
+// RoundTrip is mirroed from retry, but instead of calling retry's private t.roundTrip(), this uses
+// our own which has interactions w/ message.ProgressBar
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
 	policy := retry.DefaultPolicy
