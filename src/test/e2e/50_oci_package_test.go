@@ -73,7 +73,7 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	// Publish package.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure", "-l=debug")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Published "+ref)
 
@@ -124,7 +124,7 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	suite.Contains(string(stdOut), "podinfo-")
 
 	// Test deploy w/ bad ref.
-	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm", "-l=debug")
+	_, stdErr, err = e2e.execZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
 }
 
@@ -139,7 +139,7 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	suite.Contains(stdErr, "Loaded Zarf Package oci://"+ref)
 
 	// Test inspect w/ bad ref.
-	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure", "-l=debug")
+	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
 	suite.Error(err, stdErr)
 }
 
