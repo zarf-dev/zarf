@@ -113,11 +113,6 @@ func (t *Transport) policy() retry.Policy {
 	return t.Policy()
 }
 
-type readCloser struct {
-	io.Reader
-	io.Closer
-}
-
 // Mirror of RoundTrip from retry
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
@@ -170,19 +165,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 // This is currently only used to track the progress of publishes, not pulls.
 func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error) {
 	if req.Method != http.MethodHead && req.Body != nil && t.OrasRemote.ProgressBar != nil {
-		tee := io.TeeReader(req.Body, t.OrasRemote.ProgressBar)
-		teeCloser := readCloser{tee, req.Body}
-		req.Body = teeCloser
+		_ = io.TeeReader(req.Body, t.OrasRemote.ProgressBar)
 	}
-	message.Debug(req.Method, req.URL, req.Context())
 
 	resp, err = t.Base.RoundTrip(req)
-	if err != nil {
-		message.Debug("rt error:", err)
-	}
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.OrasRemote.ProgressBar != nil {
-		message.Debug(message.JSONValue(resp.Header))
 		if resp.ContentLength > 0 {
 			t.OrasRemote.ProgressBar.Add(int(resp.ContentLength))
 		}
