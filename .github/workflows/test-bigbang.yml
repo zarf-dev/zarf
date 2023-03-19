@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   validate:
+    if: ${{ github.repository_owner == 'defenseunicorns' || contains(github.event.head_commit.message, 'RUN TEST')}}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -45,7 +46,7 @@ jobs:
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Run tests
-        run: "[ -n \"${{ secrets.IRONBANK_USERNAME }}\" ] && go test ./src/extensions/bigbang/test -failfast -v -timeout 30m"
+        run: "go test ./src/extensions/bigbang/test -failfast -v -timeout 30m"
 
       - name: Save logs
         if: always()
