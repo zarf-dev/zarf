@@ -33,9 +33,6 @@ var badRef = registry.Reference{
 }
 
 func (suite *RegistryClientTestSuite) SetupSuite() {
-	t := suite.T()
-	e2e.setupWithCluster(t)
-
 	// Get reference to the current cluster
 	c, err := cluster.NewClusterWithWait(1 * time.Minute)
 	suite.NoError(err, "unable to connect to the cluster")
@@ -164,5 +161,7 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {
+	e2e.setupWithCluster(t)
+	defer e2e.teardown(t)
 	suite.Run(t, new(RegistryClientTestSuite))
 }
