@@ -82,7 +82,7 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg 
 			}
 
 			// Update the progress bar with the current size
-			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(expectedTotal), 2), ByteFormat(float64(currentBytes), 2))
+			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(currentBytes), 2), ByteFormat(float64(expectedTotal), 2))
 			progressBar.Update(currentBytes, title)
 			time.Sleep(200 * time.Millisecond)
 		}

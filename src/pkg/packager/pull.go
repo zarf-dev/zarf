@@ -8,12 +8,17 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := p.loadZarfPkg()
+	err := p.handleOciPackage()
+	if err != nil {
+		return err
+	}
+	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
