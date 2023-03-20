@@ -1,6 +1,6 @@
 # Longhorn
 
-This example shows how you how to deploy [Longhorn](https://longhorn.io/) using Zarf
+This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
 Before deploying Longhorn make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/1.4.0/deploy/install/#installation-requirements).
 
@@ -22,9 +22,38 @@ To view the example source code, select the `Edit this page` link below the arti
 
 ``` bash
 components:
+  - name: longhorn-environment-check
+    required: true
+    files:
+      - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
+        target: environment_check.sh
+        executable: true
+      - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        target: jq
+        executable: true
+    actions:
+      # Run the Longhorn Environment Check on this cluster's nodes.
+      onDeploy:
+        after:
+          - cmd: |
+              export PATH=$PATH:./
+              awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh > tmp && mv tmp ./environment_check.sh
+              awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh > tmp && mv tmp ./environment_check.sh
+              chmod +x ./environment_check.sh
+              ./environment_check.sh
   - name: longhorn
     required: true
     description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
+    actions:
+      # Set the delete confirmation flag for Longhorn
+      onRemove:
+        before:
+          - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+    manifests:
+      - name: longhorn-connect
+        namespace: longhorn-system
+        files:
+          - connect.yaml
     charts:
       - name: longhorn
         url:  https://charts.longhorn.io
@@ -46,4 +75,6 @@ components:
       - longhornio/longhorn-share-manager:v1.4.0
       - longhornio/longhorn-ui:v1.4.0
       - longhornio/support-bundle-kit:v0.0.17
+
+
 ```
