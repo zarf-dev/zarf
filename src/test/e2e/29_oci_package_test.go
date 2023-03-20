@@ -51,7 +51,7 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	badRef.Registry = suite.RegistryTunnel.Endpoint()
 
 	suite.PackagesDir = "build"
-
+	
 	_, stdErr, err := e2e.execZarfCommand("tools", "registry", "login", "--username", suite.ZarfState.RegistryInfo.PushUsername, "-p", suite.ZarfState.RegistryInfo.PushPassword, suite.Reference.Registry)
 	suite.NoError(err)
 	suite.Contains(stdErr, "logged in", "failed to login to the registry")
