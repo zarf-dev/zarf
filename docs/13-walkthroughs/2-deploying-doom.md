@@ -20,8 +20,7 @@ Prior to this walkthrough you'll want to have a working cluster with Zarf initia
 
 1. Navigate to the folder when you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))`
 ```sh
-doug in ~ 🦄 cd src/github.com/defenseunicorns/zarf/examples/dos-games
-$
+$ cd src/github.com/defenseunicorns/zarf/examples/dos-games
 ```
 
 2. Use the `zarf package deploy` command to deploy the zarf games package.
