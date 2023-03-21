@@ -33,7 +33,6 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<!DOCTYPE html>
 <html>
 <head>
 <style type="text/css">
