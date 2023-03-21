@@ -32,7 +32,7 @@ var badRef = registry.Reference{
 func (suite *RegistryClientTestSuite) SetupSuite() {
 	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 	// spin up a local registry
-	_, _, err := exec.Cmd("docker", "run", "-d", "-p", "--restart=always", "5000:5000", "--name", "registry", image)
+	err := exec.CmdWithPrint("docker", "run", "-d", "-p", "--restart=always", "5000:5000", "--name", "registry", image)
 	suite.NoError(err)
 
 	suite.Reference.Registry = "localhost:5000"
