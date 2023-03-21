@@ -74,7 +74,7 @@ By hitting 'tab', you can use the arrow keys to select which package you want to
 As we have seen a few times now, we are going to be prompted with a confirmation dialog asking us to confirm that we want to deploy this package onto our cluster.
 
 ```sh
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package deploy
+$ zarf package deploy
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-44-16-531270948.log
