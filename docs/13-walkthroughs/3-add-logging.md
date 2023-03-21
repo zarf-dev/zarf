@@ -33,14 +33,7 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<pre style="font-weight: normal;
-	color: #bbb;
-	white-space: -moz-pre-wrap;
-	white-space: -o-pre-wrap;
-	white-space: -pre-wrap;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	overflow-wrap: break-word;">
+<pre style="font-weight: normal; color: #bbb;	white-space: -moz-pre-wrap; 	white-space: -o-pre-wrap;	white-space: -pre-wrap;	white-space: pre-wrap;	word-wrap: break-word; overflow-wrap: break-word;">
 <b style="color:#ffffff">$ zarf init --components=logging --confirm</b>
 <b style="color:#aa5500">Saving log file to</b>
 <b style="color:#aa5500">/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-11-11-27-1795990445.log</b>
@@ -367,14 +360,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 1. Use the `zarf package list` command to get a list of the installed packages and their compoents.  This will give you the name of the init package and the logging component to remove it.
 
-<pre style="font-weight: normal;
-	color: #bbb;
-	white-space: -moz-pre-wrap;
-	white-space: -o-pre-wrap;
-	white-space: -pre-wrap;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	overflow-wrap: break-word;">
+<pre style="font-weight: normal; color: #bbb; white-space: -moz-pre-wrap white-space: -o-pre-wrap; white-space: -pre-wrap; white-space: pre-wrap;	word-wrap: break-word; overflow-wrap: break-word;">
 <b style="color:#ffffff;">$ zarf package list</b>
 <b style="color:#aa5500;">Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</b>
 <b style="color:#aa5500;"></b>
@@ -387,7 +373,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 2. Use the `zarf package remove` command to remove the `logging` component from the init package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
-<pre>
+<pre style="font-weight: normal; color: #bbb; white-space: -moz-pre-wrap white-space: -o-pre-wrap; white-space: -pre-wrap; white-space: pre-wrap;	word-wrap: break-word; overflow-wrap: break-word;">
 <b style="color:#ffffff;">$ zarf package remove init --components="logging" --confirm</b>
 <b style="color:#aa5500;">Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</b>
 <b style="color:#aa5500;"></b>
