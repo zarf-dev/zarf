@@ -177,7 +177,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	root, err = p.publishArtifact(dst, src, descs, copyOpts)
 	if err != nil {
 		// reset the progress bar between attempts
-		dst.ProgressBar.Stop()
+		dst.Transport.ProgressBar.Stop()
 
 		// log the error, the expected error is a 400 manifest invalid
 		message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
@@ -192,7 +192,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 			return err
 		}
 	}
-	dst.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
+	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	fmt.Println()
 	flags := ""
 	if config.CommonOptions.Insecure {
@@ -219,8 +219,8 @@ func (p *Packager) publishArtifact(dst *utils.OrasRemote, src *file.Store, descs
 	}
 	total += root.Size
 
-	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
-	defer dst.ProgressBar.Stop()
+	dst.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
+	defer dst.Transport.ProgressBar.Stop()
 
 	// attempt to push the artifact manifest
 	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
@@ -257,8 +257,8 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 	}
 	total += root.Size + manifestConfigDesc.Size
 
-	dst.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
-	defer dst.ProgressBar.Stop()
+	dst.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
+	defer dst.Transport.ProgressBar.Stop()
 	// attempt to push the image manifest
 	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
 	if err != nil {

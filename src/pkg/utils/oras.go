@@ -24,7 +24,7 @@ import (
 type OrasRemote struct {
 	*remote.Repository
 	context.Context
-	*message.ProgressBar
+	Transport *Transport
 }
 
 // withScopes returns a context with the given scopes.
@@ -73,11 +73,13 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
 
+	o.Transport = NewTransport(transport, nil)
+
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		Client: &http.Client{
-			Transport: NewTransport(transport, o.ProgressBar),
+			Transport: o.Transport,
 		},
 	}
 	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
