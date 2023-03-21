@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
-// forked from https://www.socketloop.com/tutorials/golang-byte-format-example
 
 // Package utils provides generic helper functions.
 package utils
@@ -21,7 +20,7 @@ type Transport struct {
 	ProgressBar *message.ProgressBar
 }
 
-// NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
+// NewTransport returns a custom transport that tracks an http.RoundTripper and a message.ProgressBar.
 func NewTransport(base http.RoundTripper, bar *message.ProgressBar) *Transport {
 	return &Transport{
 		Base:        base,
