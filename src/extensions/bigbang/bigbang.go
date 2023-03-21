@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -104,11 +105,20 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	c.Repos = append(c.Repos, bbRepo)
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
-	urls, hrDependencies := findBBResources(template)
-	c.Repos = append(c.Repos, urls...)
+	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
+	if err != nil {
+		return c, fmt.Errorf("unable to find Big Bang resources: %w", err)
+	}
+	for _, gitRepo := range gitRepos {
+		c.Repos = append(c.Repos, gitRepo)
+	}
 
 	// Generate a list of HelmReleases that need to be deployed in order.
-	helmReleases, err := utils.SortDependencies(hrDependencies)
+	dependencies := []utils.Dependency{}
+	for _, hrDep := range hrDependencies {
+		dependencies = append(dependencies, hrDep)
+	}
+	namespacedHelmReleaseNames, err := utils.SortDependencies(dependencies)
 	if err != nil {
 		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
@@ -116,15 +126,16 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	tenMinsInSecs := 10 * 60
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
-	for _, hr := range helmReleases {
+	for _, hrNamespacedName := range namespacedHelmReleaseNames {
+		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr),
+			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
 			MaxTotalSeconds: &tenMinsInSecs,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:       "HelmRelease",
-					Identifier: hr,
-					Namespace:  bb,
+					Identifier: hr.Metadata.Name,
+					Namespace:  hr.Metadata.Namespace,
 					Condition:  "ready",
 				},
 			},
@@ -134,7 +145,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		// The check it, we need to look for the APIService to be exist instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.53.0/chart/templates/metrics-server/helmrelease.yaml
-		if hr == "metrics-server" {
+		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
@@ -183,8 +194,12 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	})
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
-	for _, r := range c.Repos {
-		images, err := helm.FindImagesForChartRepo(r, "chart")
+	for _, hr := range hrDependencies {
+		namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+		gitRepo := gitRepos[hr.NamespacedSource]
+		values := hrValues[namespacedName]
+
+		images, err := helm.FindImagesForChartRepo(gitRepo, "chart", values)
 		if err != nil {
 			return c, fmt.Errorf("unable to find images for chart repo: %w", err)
 		}
@@ -232,14 +247,22 @@ func isValidVersion(version string) bool {
 // findBBResources takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findBBResources(t string) (urls []string, dependencies []utils.DependsOn) {
+func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[string]HelmReleaseDependency, helmReleaseValues map[string]map[string]interface{}, err error) {
 	// Break the template into separate resources.
 	yamls, _ := utils.SplitYAMLToString([]byte(t))
+
+	gitRepos = map[string]string{}
+	helmReleaseDeps = map[string]HelmReleaseDependency{}
+	helmReleaseValues = map[string]map[string]interface{}{}
+	secrets := map[string]corev1.Secret{}
+	configMaps := map[string]corev1.ConfigMap{}
 
 	for _, y := range yamls {
 		var (
 			h fluxHelmCtrl.HelmRelease
-			s fluxSrcCtrl.GitRepository
+			g fluxSrcCtrl.GitRepository
+			s corev1.Secret
+			c corev1.ConfigMap
 		)
 
 		if err := yaml.Unmarshal([]byte(y), &h); err != nil {
@@ -250,45 +273,83 @@ func findBBResources(t string) (urls []string, dependencies []utils.DependsOn) {
 		if h.Kind == fluxHelmCtrl.HelmReleaseKind {
 			var deps []string
 			for _, d := range h.Spec.DependsOn {
-				deps = append(deps, d.Name)
+				depNamespacedName := getNamespacedNameFromStr(d.Namespace, d.Name)
+				deps = append(deps, depNamespacedName)
 			}
-			dependencies = append(dependencies, utils.DependsOn{
-				Name:         h.ObjectMeta.Name,
-				Dependencies: deps,
-			})
+
+			namespacedName := getNamespacedNameFromMeta(h.ObjectMeta)
+			srcNamespacedName := getNamespacedNameFromStr(h.Spec.Chart.Spec.SourceRef.Namespace,
+				h.Spec.Chart.Spec.SourceRef.Name)
+
+			helmReleaseDeps[namespacedName] = HelmReleaseDependency{
+				Metadata:               h.ObjectMeta,
+				NamespacedDependencies: deps,
+				NamespacedSource:       srcNamespacedName,
+				ValuesFrom:             h.Spec.ValuesFrom,
+			}
 
 			// Skip the rest as this is not a GitRepository.
 			continue
+		}
+
+		if err := yaml.Unmarshal([]byte(y), &g); err != nil {
+			continue
+		}
+
+		// If the resource is a GitRepository, parse it for the URL and tag.
+		if g.Kind == fluxSrcCtrl.GitRepositoryKind && g.Spec.URL != "" {
+			ref := "master"
+
+			switch {
+			case g.Spec.Reference.Commit != "":
+				ref = g.Spec.Reference.Commit
+
+			case g.Spec.Reference.SemVer != "":
+				ref = g.Spec.Reference.SemVer
+
+			case g.Spec.Reference.Tag != "":
+				ref = g.Spec.Reference.Tag
+
+			case g.Spec.Reference.Branch != "":
+				ref = g.Spec.Reference.Branch
+			}
+
+			// Set the URL and tag in the repo map
+			namespacedName := getNamespacedNameFromMeta(g.ObjectMeta)
+			gitRepos[namespacedName] = fmt.Sprintf("%s@%s", g.Spec.URL, ref)
 		}
 
 		if err := yaml.Unmarshal([]byte(y), &s); err != nil {
 			continue
 		}
 
-		// If the resource is a GitRepository, parse it for the URL and tag.
-		if s.Kind == fluxSrcCtrl.GitRepositoryKind && s.Spec.URL != "" {
-			ref := "master"
+		// If the resource is a Secret, parse it so it can be used later for value templating.
+		if s.Kind == "Secret" {
+			namespacedName := getNamespacedNameFromMeta(s.ObjectMeta)
+			secrets[namespacedName] = s
+		}
 
-			switch {
-			case s.Spec.Reference.Commit != "":
-				ref = s.Spec.Reference.Commit
+		if err := yaml.Unmarshal([]byte(y), &c); err != nil {
+			continue
+		}
 
-			case s.Spec.Reference.SemVer != "":
-				ref = s.Spec.Reference.SemVer
-
-			case s.Spec.Reference.Tag != "":
-				ref = s.Spec.Reference.Tag
-
-			case s.Spec.Reference.Branch != "":
-				ref = s.Spec.Reference.Branch
-			}
-
-			// Append the URL and tag to the list.
-			urls = append(urls, fmt.Sprintf("%s@%s", s.Spec.URL, ref))
+		// If the resource is a Secret, parse it so it can be used later for value templating.
+		if c.Kind == "ConfigMap" {
+			namespacedName := getNamespacedNameFromMeta(c.ObjectMeta)
+			configMaps[namespacedName] = c
 		}
 	}
 
-	return urls, dependencies
+	for _, hr := range helmReleaseDeps {
+		namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+		values, err := composeValues(hr, secrets, configMaps)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		helmReleaseValues[namespacedName] = values
+	}
+
+	return gitRepos, helmReleaseDeps, helmReleaseValues, nil
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.

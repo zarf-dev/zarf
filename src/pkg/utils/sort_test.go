@@ -11,26 +11,39 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type TestDependency struct {
+	name         string
+	dependencies []string
+}
+
+func (t TestDependency) Name() string {
+	return t.name
+}
+
+func (t TestDependency) Dependencies() []string {
+	return t.dependencies
+}
+
 func TestSortDependencies(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     []DependsOn // input data: a map of nodes to their dependencies
-		expected []string    // expected output: a slice of nodes in order of their precedence
-		success  bool        // whether the test should succeed or fail
+		data     []TestDependency // input data: a map of nodes to their dependencies
+		expected []string         // expected output: a slice of nodes in order of their precedence
+		success  bool             // whether the test should succeed or fail
 	}{
 		{
 			name: "simple graph",
-			data: []DependsOn{
+			data: []TestDependency{
 				{
-					Name:         "A",
-					Dependencies: []string{"B", "C"},
+					name:         "A",
+					dependencies: []string{"B", "C"},
 				},
 				{
-					Name:         "B",
-					Dependencies: []string{"C"},
+					name:         "B",
+					dependencies: []string{"C"},
 				},
 				{
-					Name: "C",
+					name: "C",
 				},
 			},
 			// C has no dependencies, B depends on C, and A depends on both B and C
@@ -39,25 +52,25 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "complex graph",
-			data: []DependsOn{
+			data: []TestDependency{
 				{
-					Name:         "A",
-					Dependencies: []string{"B", "C", "D"},
+					name:         "A",
+					dependencies: []string{"B", "C", "D"},
 				},
 				{
-					Name:         "B",
-					Dependencies: []string{"C", "D", "E"},
+					name:         "B",
+					dependencies: []string{"C", "D", "E"},
 				},
 				{
-					Name:         "C",
-					Dependencies: []string{"E"},
+					name:         "C",
+					dependencies: []string{"E"},
 				},
 				{
-					Name:         "D",
-					Dependencies: []string{"E"},
+					name:         "D",
+					dependencies: []string{"E"},
 				},
 				{
-					Name: "E",
+					name: "E",
 				},
 			},
 			expected: []string{"E", "D", "C", "B", "A"},
@@ -65,27 +78,27 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with multiple roots",
-			data: []DependsOn{
+			data: []TestDependency{
 				{
-					Name: "A",
+					name: "A",
 				},
 				{
-					Name: "B",
+					name: "B",
 				},
 				{
-					Name:         "C",
-					Dependencies: []string{"A", "B"},
+					name:         "C",
+					dependencies: []string{"A", "B"},
 				},
 				{
-					Name:         "D",
-					Dependencies: []string{"C", "E"},
+					name:         "D",
+					dependencies: []string{"C", "E"},
 				},
 				{
-					Name:         "E",
-					Dependencies: []string{"F"},
+					name:         "E",
+					dependencies: []string{"F"},
 				},
 				{
-					Name: "F",
+					name: "F",
 				},
 			},
 			expected: []string{"F", "B", "A", "E", "C", "D"},
@@ -93,31 +106,31 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with multiple sinks",
-			data: []DependsOn{
+			data: []TestDependency{
 				{
-					Name:         "A",
-					Dependencies: []string{"B"},
+					name:         "A",
+					dependencies: []string{"B"},
 				},
 				{
-					Name:         "B",
-					Dependencies: []string{"C"},
+					name:         "B",
+					dependencies: []string{"C"},
 				},
 				{
-					Name: "C",
+					name: "C",
 				},
 				{
-					Name:         "D",
-					Dependencies: []string{"E"},
+					name:         "D",
+					dependencies: []string{"E"},
 				},
 				{
-					Name:         "E",
-					Dependencies: []string{"F"},
+					name:         "E",
+					dependencies: []string{"F"},
 				},
 				{
-					Name: "F",
+					name: "F",
 				},
 				{
-					Name: "G",
+					name: "G",
 				},
 			},
 			expected: []string{"F", "C", "E", "B", "G", "D", "A"},
@@ -125,18 +138,18 @@ func TestSortDependencies(t *testing.T) {
 		},
 		{
 			name: "graph with circular dependencies",
-			data: []DependsOn{
+			data: []TestDependency{
 				{
-					Name:         "A",
-					Dependencies: []string{"B"},
+					name:         "A",
+					dependencies: []string{"B"},
 				},
 				{
-					Name:         "B",
-					Dependencies: []string{"C"},
+					name:         "B",
+					dependencies: []string{"C"},
 				},
 				{
-					Name:         "C",
-					Dependencies: []string{"A"},
+					name:         "C",
+					dependencies: []string{"A"},
 				},
 			},
 			expected: []string{},
@@ -146,7 +159,11 @@ func TestSortDependencies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := SortDependencies(tt.data)
+			deps := make([]Dependency, len(tt.data))
+			for i := range tt.data {
+				deps[i] = tt.data[i]
+			}
+			result, err := SortDependencies(deps)
 			if tt.success {
 				assert.NoError(t, err)
 			} else {

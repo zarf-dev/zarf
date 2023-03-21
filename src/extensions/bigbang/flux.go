@@ -13,9 +13,31 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
+	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
+	"helm.sh/helm/v3/pkg/chartutil"
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// HelmReleaseDependency is a struct that represents a Flux Helm Release from an HR DependsOn list.
+type HelmReleaseDependency struct {
+	Metadata               metav1.ObjectMeta
+	NamespacedDependencies []string
+	NamespacedSource       string
+	ValuesFrom             []fluxHelmCtrl.ValuesReference
+}
+
+// Name returns a namespaced name for the HelmRelease for dependency sorting.
+func (h HelmReleaseDependency) Name() string {
+	return getNamespacedNameFromMeta(h.Metadata)
+}
+
+// Dependencies returns a list of namespaced dependencies for the HelmRelease for dependency sorting.
+func (h HelmReleaseDependency) Dependencies() []string {
+	return h.NamespacedDependencies
+}
 
 // getFlux Creates a component to deploy Flux.
 func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
@@ -42,6 +64,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 	return manifest, images, nil
 }
 
+// readFluxImages finds the images Flux needs to deploy
 func readFluxImages(localPath string) (images []string, err error) {
 	contents, err := os.ReadFile(localPath)
 	if err != nil {
@@ -80,4 +103,57 @@ func readFluxImages(localPath string) (images []string, err error) {
 	}
 
 	return images, nil
+}
+
+// composeValues composes values from a Flux HelmRelease and Secrets Map
+// (loosely based on upstream https://github.com/fluxcd/helm-controller/blob/main/controllers/helmrelease_controller.go#L551)
+func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, configMaps map[string]corev1.ConfigMap) (valuesMap chartutil.Values, err error) {
+	valuesMap = chartutil.Values{}
+
+	for _, v := range hr.ValuesFrom {
+		var valuesData string
+		namespacedName := getNamespacedNameFromStr(hr.Metadata.Namespace, v.Name)
+
+		switch v.Kind {
+		case "ConfigMap":
+			cm, ok := configMaps[namespacedName]
+			if !ok {
+				return nil, fmt.Errorf("could not find values %s '%s'", v.Kind, namespacedName)
+			}
+
+			valuesData, ok = cm.Data[v.GetValuesKey()]
+			if !ok {
+				return nil, fmt.Errorf("missing key '%s' in %s '%s'", v.GetValuesKey(), v.Kind, namespacedName)
+			}
+		case "Secret":
+			sec, ok := secrets[namespacedName]
+			if !ok {
+				return nil, fmt.Errorf("could not find values %s '%s'", v.Kind, namespacedName)
+			}
+
+			valuesData, ok = sec.StringData[v.GetValuesKey()]
+			if !ok {
+				return nil, fmt.Errorf("missing key '%s' in %s '%s'", v.GetValuesKey(), v.Kind, namespacedName)
+			}
+		default:
+			return nil, fmt.Errorf("unsupported ValuesReference kind '%s'", v.Kind)
+		}
+
+		values, err := chartutil.ReadValues([]byte(valuesData))
+		if err != nil {
+			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Name(), err)
+		}
+
+		valuesMap = utils.MergeMapRecursive(valuesMap, values)
+	}
+
+	return valuesMap, nil
+}
+
+func getNamespacedNameFromMeta(o metav1.ObjectMeta) string {
+	return getNamespacedNameFromStr(o.Namespace, o.Name)
+}
+
+func getNamespacedNameFromStr(namespace, name string) string {
+	return fmt.Sprintf("%s.%s", namespace, name)
 }
