@@ -1748,7 +1748,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
+**Description:** The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
 
 |          |          |
 | -------- | -------- |
