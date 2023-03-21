@@ -142,7 +142,7 @@ When the games package finishes deploying, you should get an output that lists a
 ![Connecting to the Games](../.images/walkthroughs/game_connect_commands.png)
 
 ```sh
-zarf connect games
+$ zarf connect games
 ```
 
 ![Connected to the Games](../.images/walkthroughs/games_connected.png)
