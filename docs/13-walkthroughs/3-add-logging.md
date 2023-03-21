@@ -367,112 +367,34 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 1. Use the `zarf package list` command to get a list of the installed packages and their compoents.  This will give you the name of the init package and the logging component to remove it.
 
-<!DOCTYPE html>
-<html>
-<head>
-<style type="text/css">
-body {background-color: black;}
-pre {
-	font-weight: normal;
+<pre style="font-weight: normal;
 	color: #bbb;
 	white-space: -moz-pre-wrap;
 	white-space: -o-pre-wrap;
 	white-space: -pre-wrap;
 	white-space: pre-wrap;
 	word-wrap: break-word;
-	overflow-wrap: break-word;
-}
-b {font-weight: normal}
-b.BOLD {color: #fff}
-b.ITA {font-style: italic}
-b.UND {text-decoration: underline}
-b.STR {text-decoration: line-through}
-b.UNDSTR {text-decoration: underline line-through}
-b.BLK {color: #000000}
-b.RED {color: #aa0000}
-b.GRN {color: #00aa00}
-b."color:#aa5500" {color: #aa5500}
-b.BLU {color: #0000aa}
-b.MAG {color: #aa00aa}
-b.CYN {color: #00aaaa}
-b.WHI {color: #aaaaaa}
-b.HIK {color: #555555}
-b.HIR {color: #ff5555}
-b.HIG {color: #55ff55}
-b.HIY {color: #ffff55}
-b.HIB {color: #5555ff}
-b.HIM {color: #ff55ff}
-b.HIC {color: #55ffff}
-b.HIW {color: #ffffff}
-b.BBLK {background-color: #000000}
-b.BRED {background-color: #aa0000}
-b.BGRN {background-color: #00aa00}
-b.B"color:#aa5500" {background-color: #aa5500}
-b.BBLU {background-color: #0000aa}
-b.BMAG {background-color: #aa00aa}
-b.BCYN {background-color: #00aaaa}
-b.BWHI {background-color: #aaaaaa}
-</style>
-</head>
-<body>
-<pre></pre>
-</body>
-</html>
-
+	overflow-wrap: break-word;">
+<b style="color:#ffffff;">$ zarf package list</b>
+<b style="color:#aa5500;">Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</b>
+<b style="color:#aa5500;"></b>
+<b style="color:#aa5500;">Saving log file to</b>
+<b style="color:#aa5500;">/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-15-18-33-4231481021.log</b>
+<b style="color:#aa5500;"></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">     Package  </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Components                                                                    </b>
+     dos-games<b style="color:#555555;"></b><b style="color:#555555;"> | </b>[baseline]
+     init     <b style="color:#555555;"></b><b style="color:#555555;"> | </b>[zarf-injector zarf-seed-registry zarf-registry zarf-agent logging git-server]
+</pre>
 
 2. Use the `zarf package remove` command to remove the `logging` component from the init package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
-<!DOCTYPE html>
-<html>
-<head>
-<style type="text/css">
-body {background-color: black;}
-pre {
-	font-weight: normal;
-	color: #bbb;
-	white-space: -moz-pre-wrap;
-	white-space: -o-pre-wrap;
-	white-space: -pre-wrap;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	overflow-wrap: break-word;
-}
-b {font-weight: normal}
-b.BOLD {color: #fff}
-b.ITA {font-style: italic}
-b.UND {text-decoration: underline}
-b.STR {text-decoration: line-through}
-b.UNDSTR {text-decoration: underline line-through}
-b.BLK {color: #000000}
-b.RED {color: #aa0000}
-b.GRN {color: #00aa00}
-b."color:#aa5500" {color: #aa5500}
-b.BLU {color: #0000aa}
-b.MAG {color: #aa00aa}
-b.CYN {color: #00aaaa}
-b.WHI {color: #aaaaaa}
-b.HIK {color: #555555}
-b.HIR {color: #ff5555}
-b.HIG {color: #55ff55}
-b.HIY {color: #ffff55}
-b.HIB {color: #5555ff}
-b.HIM {color: #ff55ff}
-b.HIC {color: #55ffff}
-b.HIW {color: #ffffff}
-b.BBLK {background-color: #000000}
-b.BRED {background-color: #aa0000}
-b.BGRN {background-color: #00aa00}
-b.B"color:#aa5500" {background-color: #aa5500}
-b.BBLU {background-color: #0000aa}
-b.BMAG {background-color: #aa00aa}
-b.BCYN {background-color: #00aaaa}
-b.BWHI {background-color: #aaaaaa}
-</style>
-</head>
-<body>
-<pre></pre>
-</body>
-</html>
+<pre>
+<b style="color:#ffffff;">$ zarf package remove init --components="logging" --confirm</b>
+<b style="color:#aa5500;">Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</b>
+<b style="color:#aa5500;"></b>
+<b style="color:#aa5500;">Saving log file to</b>
+<b style="color:#aa5500;">/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-15-22-13-3643351946.log</b>
+<b style="color:#aa5500;"></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package init</b>
+</pre>
 
 ## Troubleshooting
 
