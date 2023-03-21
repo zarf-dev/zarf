@@ -21,12 +21,12 @@ Prior to this walkthrough you'll want to have a working cluster with Zarf initia
 1. Navigate to the folder when you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))`
 ```sh
 doug in ~ 🦄 cd src/github.com/defenseunicorns/zarf/examples/dos-games
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 2. Use the `zarf package deploy` command to deploy the zarf games package.
 ```sh
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package deploy zarf-package-dos-games-arm64.tar.zst
+$ zarf package deploy zarf-package-dos-games-arm64.tar.zst
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-11-30-1741110763.log
@@ -58,7 +58,7 @@ components:
   - defenseunicorns/zarf-game:multi-tile-dark
 This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now
 in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:
-/Users/jason/src/github.com/defenseunicorns/zarf/examples/dos-games/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html
+/Users/doug/src/github.com/defenseunicorns/zarf/examples/dos-games/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html
 
 * This directory will be removed after package deployment.
 
@@ -107,7 +107,7 @@ components:
   - defenseunicorns/zarf-game:multi-tile-dark
 This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now
 in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:
-/Users/jason/src/github.com/defenseunicorns/zarf/examples/dos-games/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html
+/Users/doug/src/github.com/defenseunicorns/zarf/examples/dos-games/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html
 
 * This directory will be removed after package deployment.
 
@@ -133,7 +133,7 @@ in the zarf-sbom folder in this directory or to go directly to one, open this in
      Connect Command    | Description
      zarf connect doom  | Play doom!!!
      zarf connect games | Play some old dos games 🦄
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 ### Connecting to the Games
@@ -160,7 +160,7 @@ The `zarf connect games` will continue running in the background until you close
 1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the games package to remove it.
 
 ```sh
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package list
+$ zarf package list
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-36-47-4085856631.log
@@ -172,7 +172,7 @@ Saving log file to
 2. Use the `zarf package remove` command to remove the `dos-games` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
 ```sh
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package remove dos-games
+$ zarf package remove dos-games
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-39-27-1596633612.log
@@ -198,23 +198,23 @@ Global Flags:
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 
 Error: required flag(s) "confirm" not set
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package remove dos-games --confirm
+$ zarf package remove dos-games --confirm
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-39-34-125487641.log
   ⠴  purge requested for zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again don't forget the `--confirm` flag.
 
 ```sh
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄 zarf package remove zarf-package-dos-games-arm64.tar.zst --confirm
+$ zarf package remove zarf-package-dos-games-arm64.tar.zst --confirm
 
 Saving log file to
 /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-20-13-41-08-3031835072.log
   ⠴  purge requested for zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 The dos-games package has now been removed from your cluster.
@@ -235,7 +235,7 @@ The dos-games package has now been removed from your cluster.
      ERROR:  Failed to deploy package: unable to deploy all components in this Zarf Package: unable to deploy
              component baseline: unable to connect to the Kubernetes cluster: timed out waiting for cluster to
              report healthy
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 #### Remediation
@@ -266,7 +266,7 @@ After that you can try deploying the package again.
      ERROR:  Failed to deploy package: unable to deploy all components in this Zarf Package: unable to deploy
              component baseline: unable to get the updated value template: unable to load the Zarf State from the
              Kubernetes cluster: secrets "zarf-state" not found
-doug in ~/src/github.com/defenseunicorns/zarf/examples/dos-games on main 🦄
+$
 ```
 
 #### Remediation
