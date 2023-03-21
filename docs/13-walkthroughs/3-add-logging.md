@@ -33,58 +33,18 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<html>
-<head>
-<style type="text/css">
-body {background-color: black;}
-pre {
-	font-weight: normal;
+<pre style="font-weight: normal;
 	color: #bbb;
 	white-space: -moz-pre-wrap;
 	white-space: -o-pre-wrap;
 	white-space: -pre-wrap;
 	white-space: pre-wrap;
 	word-wrap: break-word;
-	overflow-wrap: break-word;
-}
-b {font-weight: normal}
-b.BOLD {color: #fff}
-b.ITA {font-style: italic}
-b.UND {text-decoration: underline}
-b.STR {text-decoration: line-through}
-b.UNDSTR {text-decoration: underline line-through}
-b.BLK {color: #000000}
-b.RED {color: #aa0000}
-b.GRN {color: #00aa00}
-b.YEL {color: #aa5500}
-b.BLU {color: #0000aa}
-b.MAG {color: #aa00aa}
-b.CYN {color: #00aaaa}
-b.WHI {color: #aaaaaa}
-b.HIK {color: #555555}
-b.HIR {color: #ff5555}
-b.HIG {color: #55ff55}
-b.HIY {color: #ffff55}
-b.HIB {color: #5555ff}
-b.HIM {color: #ff55ff}
-b.HIC {color: #55ffff}
-b.HIW {color: #ffffff}
-b.BBLK {background-color: #000000}
-b.BRED {background-color: #aa0000}
-b.BGRN {background-color: #00aa00}
-b.BYEL {background-color: #aa5500}
-b.BBLU {background-color: #0000aa}
-b.BMAG {background-color: #aa00aa}
-b.BCYN {background-color: #00aaaa}
-b.BWHI {background-color: #aaaaaa}
-</style>
-</head>
-<body>
-<pre>
-<b class=WHI>$ zarf init --components=logging --confirm</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-11-11-27-1795990445.log</b>
-<b class=YEL></b>
+	overflow-wrap: break-word;">
+<b style="color:#ffffff">$ zarf init --components=logging --confirm</b>
+<b style="color:#aa5500">Saving log file to</b>
+<b style="color:#aa5500">/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-11-11-27-1795990445.log</b>
+<b style="color:#aa5500"></b>
   •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package /Users/jason/.zarf-cache/zarf-init-arm64-v0.24.3.tar.zst</b>
   •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package /Users/jason/.zarf-cache/zarf-init-arm64-v0.24.3.tar.zst</b>
 
@@ -268,12 +228,12 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">constants</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> AGENT_IMAGE</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> agent:v0.24.3</b>
-<b class=YEL>This package has 9 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
-<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
-<b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs/13-walkthroughs/zarf-sbom/sbom-viewer-docker.io_grafana_promtail_2.7.0.html</b>
-<b class=YEL></b>
-<b class=YEL>* This directory will be removed after package deployment.</b>
-<b class=YEL></b>
+<b style="color:#aa5500">This package has 9 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
+<b style="color:#aa5500">in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
+<b style="color:#aa5500">/Users/jason/src/github.com/jasonvanbrackel/zarf/docs/13-walkthroughs/zarf-sbom/sbom-viewer-docker.io_grafana_promtail_2.7.0.html</b>
+<b style="color:#aa5500"></b>
+<b style="color:#aa5500">* This directory will be removed after package deployment.</b>
+<b style="color:#aa5500"></b>
 <b>? </b>
 <b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Deploy Zarf package confirmed</b>
 
@@ -359,8 +319,6 @@ b.BWHI {background-color: #aaaaaa}
      Registry   <b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf-push <b style="color:#555555;"></b><b style="color:#555555;"> | </b>eFW6VKxvxsAZTVpXFWy~cHYp<b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf connect registry
      Logging    <b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf-admin<b style="color:#555555;"></b><b style="color:#555555;"> | </b>h!-Nqbq76jNZ44ElfvzfM7H5<b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf connect logging 
 </pre>
-</body>
-</html>
 
 ### Connecting to the Logging Component
 
@@ -433,7 +391,7 @@ b.UNDSTR {text-decoration: underline line-through}
 b.BLK {color: #000000}
 b.RED {color: #aa0000}
 b.GRN {color: #00aa00}
-b.YEL {color: #aa5500}
+b."color:#aa5500" {color: #aa5500}
 b.BLU {color: #0000aa}
 b.MAG {color: #aa00aa}
 b.CYN {color: #00aaaa}
@@ -449,7 +407,7 @@ b.HIW {color: #ffffff}
 b.BBLK {background-color: #000000}
 b.BRED {background-color: #aa0000}
 b.BGRN {background-color: #00aa00}
-b.BYEL {background-color: #aa5500}
+b.B"color:#aa5500" {background-color: #aa5500}
 b.BBLU {background-color: #0000aa}
 b.BMAG {background-color: #aa00aa}
 b.BCYN {background-color: #00aaaa}
@@ -488,7 +446,7 @@ b.UNDSTR {text-decoration: underline line-through}
 b.BLK {color: #000000}
 b.RED {color: #aa0000}
 b.GRN {color: #00aa00}
-b.YEL {color: #aa5500}
+b."color:#aa5500" {color: #aa5500}
 b.BLU {color: #0000aa}
 b.MAG {color: #aa00aa}
 b.CYN {color: #00aaaa}
@@ -504,7 +462,7 @@ b.HIW {color: #ffffff}
 b.BBLK {background-color: #000000}
 b.BRED {background-color: #aa0000}
 b.BGRN {background-color: #00aa00}
-b.BYEL {background-color: #aa5500}
+b.B"color:#aa5500" {background-color: #aa5500}
 b.BBLU {background-color: #0000aa}
 b.BMAG {background-color: #aa00aa}
 b.BCYN {background-color: #00aaaa}
