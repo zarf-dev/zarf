@@ -8,7 +8,18 @@ Zarf integrates with Big Bang through the use of an extension that simplifies th
 
 ### Known Issues
 
-The current version of this extension works best with Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.
+The current version of this extension works best with Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.  Zarf also relies on [helm.sh/images annotations](https://github.com/helm/community/blob/main/hips/hip-0015.md) to discover images within charts (e.g. [GitLab](https://repo1.dso.mil/big-bang/product/packages/gitlab/-/blob/main/chart/Chart.yaml#L61)) - this is a new feature for Big Bang so if you see an `ImagePullBackOff` error, check that these annotations are set correctly for the sub charts you are using. To work around this issue, simply add the missing image to the images list on the same component that contains the Big Bang extension like the following:
+
+```
+components:
+  - name: bigbang
+    required: true
+    images:
+      - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-exporter:15.9.2
+    extensions:
+      bigbang:
+        version: 1.54.0
+```
 
 ## System Requirements
 
