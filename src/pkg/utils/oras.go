@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
@@ -19,14 +18,13 @@ import (
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	*remote.Repository
 	context.Context
-	*message.ProgressBar
+	Transport *Transport
 }
 
 // withScopes returns a context with the given scopes.
@@ -75,53 +73,18 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
 
+	o.Transport = NewTransport(transport, nil)
+
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		Client: &http.Client{
-			Transport: retry.NewTransport(transport),
+			Transport: o.Transport,
 		},
 	}
 	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
 
-	client.Client.Transport = NewTransport(client.Client.Transport, o)
-
 	return client, nil
-}
-
-// Transport is an http.RoundTripper that keeps track of the in-flight
-// request and add hooks to report HTTP tracing events.
-type Transport struct {
-	http.RoundTripper
-	orasRemote *OrasRemote
-}
-
-// NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
-func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
-	return &Transport{base, o}
-}
-
-type readCloser struct {
-	io.Reader
-	io.Closer
-}
-
-// RoundTrip calls base roundtrip while keeping track of the current request.
-// This is currently only used to track the progress of publishes, not pulls.
-func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-	if req.Method != http.MethodHead && req.Body != nil && t.orasRemote.ProgressBar != nil {
-		tee := io.TeeReader(req.Body, t.orasRemote.ProgressBar)
-		teeCloser := readCloser{tee, req.Body}
-		req.Body = teeCloser
-	}
-
-	resp, err = t.RoundTripper.RoundTrip(req)
-
-	if req.Method == http.MethodHead && err == nil && t.orasRemote.ProgressBar != nil && resp.ContentLength > 0 {
-		t.orasRemote.ProgressBar.Add(int(resp.ContentLength))
-	}
-
-	return resp, err
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given reference.
