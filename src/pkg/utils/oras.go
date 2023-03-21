@@ -8,9 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"time"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -20,7 +18,6 @@ import (
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
@@ -80,96 +77,12 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 		Credential: auth.StaticCredential(ref.Registry, cred),
 		Cache:      auth.NewCache(),
 		Client: &http.Client{
-			Transport: transport,
+			Transport: NewTransport(transport, o.ProgressBar),
 		},
 	}
 	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
 
-	client.Client.Transport = NewTransport(client.Client.Transport, o)
-
 	return client, nil
-}
-
-// Transport is an http.RoundTripper that keeps track of the in-flight
-// request and add hooks to report upload progress.
-type Transport struct {
-	Base       http.RoundTripper
-	OrasRemote *OrasRemote
-	Policy     retry.Policy
-}
-
-// NewTransport returns a custom transport that tracks an http.RoundTripper and an OrasRemote reference.
-func NewTransport(base http.RoundTripper, o *OrasRemote) *Transport {
-	return &Transport{
-		Base:       base,
-		OrasRemote: o,
-	}
-}
-
-// RoundTrip is mirrored from retry, but instead of calling retry's private t.roundTrip(), this uses
-// our own which has interactions w/ message.ProgressBar
-func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	ctx := req.Context()
-	policy := retry.DefaultPolicy
-	attempt := 0
-	for {
-		resp, respErr := t.roundTrip(req)
-		duration, err := policy.Retry(attempt, resp, respErr)
-		if err != nil {
-			if respErr == nil {
-				resp.Body.Close()
-			}
-			return nil, err
-		}
-		if duration < 0 {
-			return resp, respErr
-		}
-
-		// rewind the body if possible
-		if req.Body != nil {
-			if req.GetBody == nil {
-				// body can't be rewound, so we can't retry
-				return resp, respErr
-			}
-			body, err := req.GetBody()
-			if err != nil {
-				// failed to rewind the body, so we can't retry
-				return resp, respErr
-			}
-			req.Body = body
-		}
-
-		// close the response body if needed
-		if respErr == nil {
-			resp.Body.Close()
-		}
-
-		timer := time.NewTimer(duration)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return nil, ctx.Err()
-		case <-timer.C:
-		}
-		attempt++
-	}
-}
-
-// roundTrip calls base roundtrip while keeping track of the current request.
-// this is currently only used to track the progress of publishes, not pulls.
-func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error) {
-	if req.Method != http.MethodHead && req.Body != nil && t.OrasRemote.ProgressBar != nil {
-		req.Body = io.NopCloser(io.TeeReader(req.Body, t.OrasRemote.ProgressBar))
-	}
-
-	resp, err = t.Base.RoundTrip(req)
-
-	if resp != nil && req.Method == http.MethodHead && err == nil && t.OrasRemote.ProgressBar != nil {
-		if resp.ContentLength > 0 {
-			t.OrasRemote.ProgressBar.Add(int(resp.ContentLength))
-		}
-	}
-	return resp, err
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given reference.
