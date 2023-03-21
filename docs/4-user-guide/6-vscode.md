@@ -6,9 +6,9 @@ Zarf uses its own [schema](https://github.com/defenseunicorns/zarf/blob/main/zar
 
 1. Open VS Code
 2. Install the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) by RedHat.
-3. Open the VS Code`settings.json` file by typing `CTRL/CMD + SHIFT + P`. 
-4. Use the search bacr to search for `Preferences: Open User Settings (JSON)`.
-5. Add the below to your config, or modify the existing `yaml.schemas` object to include the Zarf schema.
+3. Open the VS Code command pallete by typing `CTRL/CMD + SHIFT + P`.
+4. Type `Preferences: Open User Settings (JSON)`into the search bar to open the `settings.json` file. 
+5. Add the below to the settlings.json config, or modify the existing `yaml.schemas` object to include the Zarf schema.
 
 ```json
   "yaml.schemas": {
