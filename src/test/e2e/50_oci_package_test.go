@@ -8,63 +8,47 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
 
 type RegistryClientTestSuite struct {
 	suite.Suite
-	Remote         *utils.OrasRemote
-	Reference      registry.Reference
-	PackagesDir    string
-	ZarfState      types.ZarfState
-	RegistryTunnel *cluster.Tunnel
+	Remote      *utils.OrasRemote
+	Reference   registry.Reference
+	PackagesDir string
 }
 
 var badRef = registry.Reference{
-	Registry:   "",
+	Registry:   "localhost:5000",
 	Repository: "zarf-test",
 	Reference:  "bad-tag",
 }
 
 func (suite *RegistryClientTestSuite) SetupSuite() {
-	// Get reference to the current cluster
-	c, err := cluster.NewClusterWithWait(1 * time.Minute)
-	suite.NoError(err, "unable to connect to the cluster")
+	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+	// spin up a local registry
+	_, _, err := exec.Cmd("docker", "run", "-d", "-p", "--restart=always", "5000:5000", "--name", "registry", image)
+	suite.NoError(err)
 
-	// Get the Zarf state from the cluster
-	state, err := c.LoadZarfState()
-	suite.NoError(err, "unable to load the current Zarf state")
-	suite.ZarfState = state
-
-	// Create a tunnel to the registry running in the cluster
-	suite.RegistryTunnel, err = cluster.NewZarfTunnel()
-	suite.NoError(err, "unable to create a tunnel to the registry")
-	err = suite.RegistryTunnel.Connect("registry", false)
-	suite.NoError(err, "unable to connect to the registry")
-	suite.Reference.Registry = suite.RegistryTunnel.Endpoint()
-	badRef.Registry = suite.RegistryTunnel.Endpoint()
+	suite.Reference.Registry = "localhost:5000"
 
 	suite.PackagesDir = "build"
-
-	_, stdErr, err := e2e.execZarfCommand("tools", "registry", "login", "--username", suite.ZarfState.RegistryInfo.PushUsername, "-p", suite.ZarfState.RegistryInfo.PushPassword, suite.Reference.Registry)
-	suite.NoError(err)
-	suite.Contains(stdErr, "logged in", "failed to login to the registry")
 }
 
 func (suite *RegistryClientTestSuite) TearDownSuite() {
-	suite.RegistryTunnel.Close()
-
 	local := fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.arch)
 	e2e.cleanFiles(local)
 
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+
+	_, _, err = exec.Cmd("docker", "rm", "-f", "registry")
+	suite.NoError(err)
 }
 
 func (suite *RegistryClientTestSuite) Test_0_Publish() {
