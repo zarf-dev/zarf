@@ -95,7 +95,7 @@ func SliceContains[T comparable](s []T, e T) bool {
 }
 
 // MergeMap merges map m2 with m1 overwriting common values with m2's values.
-func MergeMap[T any](m1 map[string]T, m2 map[string]T) (r map[string]T) {
+func MergeMap[T any](m1, m2 map[string]T) (r map[string]T) {
 	r = map[string]T{}
 
 	for key, value := range m1 {
@@ -103,6 +103,29 @@ func MergeMap[T any](m1 map[string]T, m2 map[string]T) (r map[string]T) {
 	}
 
 	for key, value := range m2 {
+		r[key] = value
+	}
+
+	return r
+}
+
+// MergeMapRecursive recursively (nestedly) merges map m2 with m1 overwriting common values with m2's values.
+func MergeMapRecursive(m1, m2 map[string]interface{}) (r map[string]interface{}) {
+	r = map[string]interface{}{}
+
+	for key, value := range m1 {
+		r[key] = value
+	}
+
+	for key, value := range m2 {
+		if value, ok := value.(map[string]interface{}); ok {
+			if nestedValue, ok := r[key]; ok {
+				if nestedValue, ok := nestedValue.(map[string]interface{}); ok {
+					r[key] = MergeMapRecursive(nestedValue, value)
+					continue
+				}
+			}
+		}
 		r[key] = value
 	}
 

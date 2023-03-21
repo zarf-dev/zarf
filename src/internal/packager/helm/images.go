@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
 // ChartImages captures the structure of the helm.sh/images annotation within the Helm chart.
@@ -25,7 +27,7 @@ type ChartImages []struct {
 }
 
 // FindImagesForChartRepo iterates over a Zarf.yaml and attempts to parse any images.
-func FindImagesForChartRepo(repo, path string) (images []string, err error) {
+func FindImagesForChartRepo(repo, path string, values chartutil.Values) (images []string, err error) {
 	matches := strings.Split(repo, "@")
 	if len(matches) < 2 {
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
@@ -71,6 +73,7 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 	if err != nil {
 		return images, err
 	}
+	values = utils.MergeMapRecursive(chart.Values, values)
 
 	imageAnnotation := chart.Metadata.Annotations["helm.sh/images"]
 
@@ -82,7 +85,17 @@ func FindImagesForChartRepo(repo, path string) (images []string, err error) {
 	}
 
 	for _, i := range chartImages {
-		images = append(images, i.Image)
+		// Only include the image if the current values/condition specify it should be included
+		if i.Condition != "" {
+			value, err := values.PathValue(i.Condition)
+			message.Debugf("%#v - %#v - %#v\n", value, i.Condition, err)
+			// We intentionally ignore the error here because the key could be missing from the values.yaml
+			if err == nil && value == true {
+				images = append(images, i.Image)
+			}
+		} else {
+			images = append(images, i.Image)
+		}
 	}
 
 	spinner.Success()
