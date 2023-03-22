@@ -165,7 +165,6 @@ func (p *Packager) handleOciPackage() error {
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	src.ProgressBar = nil // NOTE: Disable this inbuilt progress bar so we don't double render a spinner
 	go utils.RenderProgressBarForLocalDirWrite(outDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
