@@ -1754,6 +1754,11 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+**Examples:** 
+
+<code>
+"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
+
 </blockquote>
 </details>
 
