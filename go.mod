@@ -4,7 +4,7 @@ go 1.19
 
 replace (
 	// TODO (@WSTARR) use the OG syft once they merge in https://github.com/anchore/syft/pull/1668
-	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0
+	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0-DU
 	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
 	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
