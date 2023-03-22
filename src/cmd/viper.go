@@ -50,15 +50,21 @@ const (
 	V_PKG_CREATE_SBOM_OUTPUT      = "package.create.sbom_output"
 	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
 	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
+	V_PKG_CREATE_SIGNING_KEY      = "package.create.signing_key"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
 	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
 	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
+	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
 
 	// Package publish config keys
 	V_PKG_PUBLISH_OCI_CONCURRENCY = "package.publish.oci_concurrency"
+	V_PKG_PUBLISH_SIGNING_KEY     = "package.publish.signing_key"
+
+	// Package pull config keys
+	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
 )
 
 func initViper() {

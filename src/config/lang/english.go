@@ -195,12 +195,14 @@ const (
 	CmdPackageCreateFlagSbomOut         = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagSigningKey      = "Path to private key file for signing packages"
 
 	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
 	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagPublicKey  = "Path to public key file for signed packages"
 
 	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
@@ -209,6 +211,9 @@ const (
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
 	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackagePublishFlagSigningKey  = "Path to private key file for signing packages"
+
+	CmdPackagePullPublicKey = "Path to public key file for signed packages"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

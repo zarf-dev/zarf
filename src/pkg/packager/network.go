@@ -168,7 +168,7 @@ func (p *Packager) handleOciPackage() error {
 	go utils.RenderProgressBarForLocalDirWrite(outDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
+	copyOpts.Concurrency = p.cfg.PullOpts.CopyOptions.Concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string

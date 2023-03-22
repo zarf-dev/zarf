@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"bufio"
 	"crypto"
 	"encoding/json"
 	"fmt"
@@ -170,7 +171,9 @@ func createPaths() (paths types.TempPaths, err error) {
 		Components:   filepath.Join(basePath, "components"),
 		SbomTar:      filepath.Join(basePath, "sboms.tar"),
 		Sboms:        filepath.Join(basePath, "sboms"),
+		Checksums:    filepath.Join(basePath, "checksums.txt"),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
+		ZarfSig:      filepath.Join(basePath, "zarf.yaml.sig"),
 	}
 
 	return paths, err
@@ -217,6 +220,13 @@ func (p *Packager) loadZarfPkg() error {
 	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath, true); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	}
+
+	// Validate the checksums of all the things!!!
+	if p.cfg.Pkg.Metadata.ChecksumSignature != "" {
+		if err := p.validatePackageChecksums(); err != nil {
+			return fmt.Errorf("unable to validate the package checksums: %w", err)
+		}
 	}
 
 	// Get a list of paths for the components of the package
@@ -350,5 +360,89 @@ func (p *Packager) handleIfPartialPkg() error {
 
 	// Success, update the package path
 	p.cfg.DeployOpts.PackagePath = destination
+	return nil
+}
+
+// TODO: Still need to validate that there is no extra files in the package
+// TODO: Still need to validate that the package is not missing any files
+func (p *Packager) validatePackageChecksums() error {
+
+	// Run pre-checks to make sure we have what we need to validate the checksums
+	_, err := os.Stat(p.tmp.Checksums)
+	if err != nil {
+		return fmt.Errorf("unable to validate checksums as we are unable to find checksums.txt file within the package")
+	}
+	if p.cfg.Pkg.Metadata.ChecksumSignature == "" {
+		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
+	}
+
+	// Verify the that checksums.txt file matches the signature provided
+	actualChecksumSig, err := utils.GetSHA256OfFile(p.tmp.Checksums)
+	if err != nil {
+		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
+	}
+	if actualChecksumSig != p.cfg.Pkg.Metadata.ChecksumSignature {
+		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
+	}
+
+	// Load the contents of the checksums file
+	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, "checksums.txt"))
+	if err != nil {
+		return err
+	}
+	defer checksumsFile.Close()
+
+	/* Process every line in the checksums file */
+	scanner := bufio.NewScanner(checksumsFile)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		// Separate the checksum from the file path
+		strs := strings.Split(scanner.Text(), " ")
+		itemPath := strs[1]
+		expectedShasum := strs[0]
+
+		actualShasum, err := utils.GetSHA256OfFile(filepath.Join(p.tmp.Base, itemPath))
+		if err != nil {
+			return err
+		}
+
+		if expectedShasum != actualShasum {
+			return fmt.Errorf("mismatch on the checksum of the %s file (expected: %s, actual: %s)", itemPath, expectedShasum, actualShasum)
+		}
+	}
+
+	message.Successf("All of the checksums matched!")
+	return nil
+}
+
+func (p *Packager) validatePackageSignature(publicKeyPath string) error {
+
+	// If the insecure flag we provided, ignore the signature validation
+	if config.CommonOptions.Insecure {
+		return nil
+	}
+
+	// Handle situations where there is no signature within the package
+	_, sigCheckErr := os.Stat(p.tmp.ZarfSig)
+	if sigCheckErr != nil {
+		// Nobody was expecting a signature, so we can just return
+		if publicKeyPath == "" {
+			return nil
+		}
+
+		// We were expecting a signature, but there wasn't one..
+		return fmt.Errorf("package is not signed but a key was provided")
+	}
+
+	// Validate the signature of the package
+	if publicKeyPath == "" {
+		return fmt.Errorf("package is signed but no key was provided")
+	}
+
+	// Validate the signature with the key we were provided
+	if err := utils.CosignVerifyBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, publicKeyPath); err != nil {
+		return fmt.Errorf("package signature did not match the provided key: %w", err)
+	}
+
 	return nil
 }

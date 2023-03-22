@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -62,68 +61,33 @@ func parseZarfLayerMediaType(filename string) string {
 // Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
+
+	// Extract the first layer of the tarball
+	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		return fmt.Errorf("unable to extract the package: %w", err)
 	}
 
-	paths := []string{
-		p.tmp.ZarfYaml,
-		filepath.Join(p.tmp.Images, "index.json"),
-		filepath.Join(p.tmp.Images, "oci-layout"),
-	}
-	// if checksums.txt file exists, include it
-	if !utils.InvalidPath(filepath.Join(p.tmp.Base, "checksums.txt")) {
-		paths = append(paths, filepath.Join(p.tmp.Base, "checksums.txt"))
-	}
-	// if p.tmp.SbomTar exists, include it
-	if !utils.InvalidPath(p.tmp.SbomTar) {
-		paths = append(paths, p.tmp.SbomTar)
+	if err := p.readYaml(p.tmp.ZarfYaml, true); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
-	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
-		seedImagePaths := []string{
-			filepath.Join(p.tmp.SeedImage, "index.json"),
-			filepath.Join(p.tmp.SeedImage, "oci-layout"),
-		}
-		seedImageLayers, err := filepath.Glob(filepath.Join(p.tmp.SeedImage, "blobs", "sha256", "*"))
-		if err != nil {
-			return err
-		}
-		seedImagePaths = append(seedImagePaths, seedImageLayers...)
-		paths = append(paths, seedImagePaths...)
-	}
-	componentDirs, err := filepath.Glob(filepath.Join(p.tmp.Components, "*"))
+	_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to sign the package: %w", err)
 	}
-	componentTarballs := []string{}
 
-	// repackage the component directories into tarballs
-	for _, componentDir := range componentDirs {
-		dst := filepath.Join(p.tmp.Components, filepath.Base(componentDir)+".tar")
-		err = archiver.Archive([]string{componentDir}, dst)
-		if err != nil {
-			return err
-		}
-		componentTarballs = append(componentTarballs, dst)
-		_ = os.RemoveAll(componentDir)
-	}
-	paths = append(paths, componentTarballs...)
-	imagesLayers, err := filepath.Glob(filepath.Join(p.tmp.Images, "blobs", "sha256", "*"))
+	paths, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to glob the package: %w", err)
 	}
-	paths = append(paths, imagesLayers...)
+
 	ref, err := p.ref("")
 	if err != nil {
 		return err
 	}
+
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	err = p.publish(ref, paths)
-	if err != nil {
-		return fmt.Errorf("unable to publish package %s: %w", ref, err)
-	}
-	return nil
+	return p.publish(ref, paths)
 }
 
 func (p *Packager) publish(ref registry.Reference, paths []string) error {
@@ -202,6 +166,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	message.Infof("zarf package inspect oci://%s %s", ref, flags)
 	message.Infof("zarf package deploy oci://%s %s", ref, flags)
 	message.Infof("zarf package pull oci://%s %s", ref, flags)
+
 	return nil
 }
 
