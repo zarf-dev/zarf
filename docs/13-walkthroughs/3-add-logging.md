@@ -32,7 +32,7 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<iframe src="/docs/logging_init.html" style={{
+<iframe src="/docs/walkthroughs/logging_init.html" style={{
   height: '800px',
   width: '100%',
   border: 'none'}}></iframe>
@@ -84,27 +84,11 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 1. Use the `zarf package list` command to get a list of the installed packages and their compoents.  This will give you the name of the init package and the logging component to remove it.
 
-<pre>
-<b style={{color: '#ffffff;'}}>$ zarf package list</b><br/>
-<b style={{color: '#aa5500;'}}>Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</b><br/>
-<b style={{color: '#aa5500;'}}></b><br/>
-<b style={{color: '#aa5500;'}}>Saving log file to</b><br/>
-<b style={{color: '#aa5500;'}}>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-21-15-18-33-4231481021.log</b><br/>
-<b style={{color: '#aa5500;'}}></b><b style={{color: '#55ffff;'}}></b><b style={{color: '#55ffff;'}}>     Package  </b><b style={{color: '#555555;'}}></b><b style={{color: '#555555;'}}> | </b><b style={{color: '#55ffff;'}}></b><b style={{color: '#55ffff;'}}>Components                                                                    </b><br/>
-     dos-games<b style={{color: '#555555;'}}></b><b style={{color: '#555555;'}}> | </b>[baseline]<br/>
-     init     <b style={{color: '#555555;'}}></b><b style={{color: '#555555;'}}> | </b>[zarf-injector zarf-seed-registry zarf-registry zarf-agent logging git-server]<br/>
-</pre>
+<iframe src="/docs/walkthroughs/logging_list.html" width="100%"></iframe>
 
 2. Use the `zarf package remove` command to remove the `logging` component from the init package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
-<pre style={{color: '#bbb'}}>
-<span style={{color: '#fff'}}>$ zarf package remove init --components="logging" --confirm</span><br/>
-<span style={{color: '#aa0'}}>Using config file /Users/jason/src/github.com/jasonvanbrackel/zarf/zarf-config.toml</span><br/>
-<span style={{color: '#aa0'}}></span><br/>
-<span style={{color: '#aa0'}}>Saving log file to</span><br/>
-<span style={{color: '#aa0'}}>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-22-10-54-20-1953151766.log</span><br/>
-<span style={{color: '#aa0'}}></span>  •  <span style={{color: '#55ffff'}}></span><span style={{color: '#55ffff'}}>Removing zarf package init</span><br/>
-</pre>
+<iframe src="/docs/walkthroughs/logging_remove.html" width="100%" height="120px"></iframe>
 
 
 ## Troubleshooting
@@ -113,18 +97,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 #### Example
 
-```sh
-? Deploy this Zarf package? Yes
-
-
-  📦 BASELINE COMPONENT
-
-
-     ERROR:  Failed to deploy package: unable to deploy all components in this Zarf Package: unable to deploy
-             component baseline: unable to connect to the Kubernetes cluster: timed out waiting for cluster to
-             report healthy
-$
-```
+<iframe src="/docs/walkthroughs/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
 #### Remediation
 

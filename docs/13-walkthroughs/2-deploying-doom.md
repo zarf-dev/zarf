@@ -224,18 +224,7 @@ The dos-games package has now been removed from your cluster.
 
 #### Example
 
-```sh
-? Deploy this Zarf package? Yes
-
-
-  📦 BASELINE COMPONENT
-
-
-     ERROR:  Failed to deploy package: unable to deploy all components in this Zarf Package: unable to deploy
-             component baseline: unable to connect to the Kubernetes cluster: timed out waiting for cluster to
-             report healthy
-$
-```
+<iframe src="/docs/walkthroughs/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
 #### Remediation
 
@@ -254,23 +243,11 @@ After that you can try deploying the package again.
 
 #### Example
 
-```sh
-? Deploy this Zarf package? Yes
-
-
-  📦 BASELINE COMPONENT
-
-
-  ⠋  Loading the Zarf State from the Kubernetes cluster (0s)
-     ERROR:  Failed to deploy package: unable to deploy all components in this Zarf Package: unable to deploy
-             component baseline: unable to get the updated value template: unable to load the Zarf State from the
-             Kubernetes cluster: secrets "zarf-state" not found
-$
-```
+<iframe src="/docs/walkthroughs/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
 
 #### Remediation
 
-If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this walkthrough.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough, then try again.
+If you receive this error when zarf is attempting to deploy the a component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this walkthrough.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough, then try again.
 
 ## Credits
 
