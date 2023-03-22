@@ -354,5 +354,5 @@ func bindPublishFlags() {
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
 	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
-	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePullPublicKey)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
 }
