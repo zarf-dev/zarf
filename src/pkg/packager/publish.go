@@ -71,11 +71,12 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
-	_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath)
-	if err != nil {
-		return fmt.Errorf("unable to sign the package: %w", err)
+	if p.cfg.PublishOpts.SigningKeyPath != "" {
+		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath)
+		if err != nil {
+			return fmt.Errorf("unable to sign the package: %w", err)
+		}
 	}
-
 	paths, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
 	if err != nil {
 		return fmt.Errorf("unable to glob the package: %w", err)
