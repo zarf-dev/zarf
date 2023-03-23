@@ -28,7 +28,7 @@ zarf init
 2. When prompted to deploy the package select `y` for Yes, then hit the `enter` 
 key. <br/> When prompted to deploy the logging component select `y` for Yes, then hit the `enter` key.
 
-![The zarf operator is propted to deploy the zarf package and the logging component, selecting 'y' for yes, for each of them.](../.images/walkthroughs/logging_prompts.png)
+![The zarf user is prompted to deploy the zarf package and the logging component, selecting 'y' for yes, for each of them.](../.images/walkthroughs/logging_prompts.png)
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
