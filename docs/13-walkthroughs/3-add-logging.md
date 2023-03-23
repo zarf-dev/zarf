@@ -70,7 +70,7 @@ Once you've successfully logged in go to:
 
 1. The "Explore" page (Button on the left that looks like a compass)
 
-2. you can select `Loki` in the dropdown, and then
+2. Select `Loki` in the dropdown, and then
 
 3. enter `{app="game"}` into the Log Browser query input field
 
