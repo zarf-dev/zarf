@@ -23,7 +23,7 @@ Prior to this walkthrough you'll want to have a working cluster with Zarf initia
 1. Run the `zarf init` command on your cluster.
 
 ```sh
-zarf init
+$ zarf init
 ```
 
 2. When prompted to deploy the package select `y` for Yes, then hit the `enter` 
@@ -63,17 +63,16 @@ To open Grafana you can use the `zarf connect logging` command.
 
 You'll be redirected the `/login` page where you have to sign in with the Grafana credentials you saved [in a previous step](#note-the-credentials).
 
-![zarf operator logging into Loki](../.images/walkthroughs/logging_login.png)
+![zarf user logging into Loki](../.images/walkthroughs/logging_login.png)
 
 Once you've successfully logged in go to:
 
 1. The "Explore" page (Button on the left that looks like a compass)
 
-2. you can select `Loki` in the dropdown, and then
+2. Select `Loki` in the dropdown, and then
+3. Enter `{app="game"}` into the Log Browser query input field
 
-3. enter `{app="game"}` into the Log Browser query input field
-
-![zarf operator typing {app='game'} into the Loki Log Browser](../.images/walkthroughs/logging_query.png)
+![zarf user typing {app='game'} into the Loki Log Browser](../.images/walkthroughs/logging_query.png)
 
 Submit that query and you'll get back a dump of all the game pod logs that Loki has collected.
 
@@ -81,7 +80,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 ## Removal
 
-1. Use the `zarf package list` command to get a list of the installed packages and their compoents.  This will give you the name of the init package and the logging component to remove it.
+1. Use the `zarf package list` command to get a list of the installed packages and their components.  This will give you the name of the init package and the logging component to remove it.
 
 <iframe src="/docs/walkthroughs/logging_list.html" width="100%"></iframe>
 
