@@ -82,7 +82,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 ## Removal
 
-1. Use the `zarf package list` command to get a list of the installed packages and their compoents.  This will give you the name of the init package and the logging component to remove it.
+1. Use the `zarf package list` command to get a list of the installed packages and their components.  This will give you the name of the init package and the logging component to remove it.
 
 <iframe src="/docs/walkthroughs/logging_list.html" width="100%"></iframe>
 
