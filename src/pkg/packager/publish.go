@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -68,9 +69,13 @@ func (p *Packager) Publish() error {
 			}
 			if len(component.Charts) > 0 {
 				for _, chart := range component.Charts {
-					// TODO: (@RAZZLE) localPath is a directory, not a file, so we will have to
-					// recursively add all files in the directory
-					paths = append(paths, chart.LocalPath)
+					if len(chart.LocalPath) > 0 {
+						localChartPaths, err := utils.RecursiveFileList(chart.LocalPath, regexp.MustCompile(".*"))
+						if err != nil {
+							return fmt.Errorf("unable to get local chart paths from %s: %w", component.Name, err)
+						}
+						paths = append(paths, localChartPaths...)
+					}
 					paths = append(paths, chart.ValuesFiles...)
 				}
 			}
