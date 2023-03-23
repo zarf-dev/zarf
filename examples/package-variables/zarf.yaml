@@ -10,7 +10,7 @@ constants:
   - name: "NGINX_VERSION"
     value: "###ZARF_PKG_VAR_NGINX_VERSION###"
 
-# Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
+# Demonstrates injecting custom variables into a K8s resource
 variables:
   # OPTIONAL_FOOTER injects a configurable footer into the site but has an empty default with no description and will not prompt the user interactively
   - name: OPTIONAL_FOOTER
@@ -30,9 +30,10 @@ variables:
     description: "The organization providing the site"
     default: "Defense Unicorns"
     prompt: true
-  # AWS_REGION sets the region to set in the modified-terraform file
+  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive`` so that it will not be saved in the log
   - name: AWS_REGION
     default: "us-east-1"
+    sensitive: true
 
 components:
   # The following component templates the provided .tf file with the defined AWS_REGION
@@ -48,9 +49,13 @@ components:
         after:
           # This command `cat`s the modified terraform file on deploy for use later on (see examples/component-actions for more)
           - cmd: cat modified-terraform.tf
+            # `mute` is set to exclude the command output from being shown (note this will include AWS_REGION)
+            mute: true
             setVariables:
               - name: MODIFIED_TERRAFORM
                 indent: 10
+                # `sensitive` is set to exclude the built output from the logs (note this will include AWS_REGION)
+                sensitive: true
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx
