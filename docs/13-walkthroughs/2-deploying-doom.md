@@ -29,10 +29,10 @@ $ cd src/github.com/defenseunicorns/zarf/examples/dos-games
 
 3. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. You can use the `tab` key, to be prompted for avaiable packages in the current working directory.
 
-![Package Deploy Selection Tab](../.images/walkthroughs/package_deploy_tab.png)
+<iframe src="/docs/walkthroughs/package_deploy_suggest.html" width="100%" height="150px"></iframe>
 By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the games package in this walkthrough, we will select that package and hit 'enter'.
 
-![Package Deploy Tab Selection](../.images/walkthroughs/package_deploy_tab_selection.png)
+<iframe src="/docs/walkthroughs/package_deploy_suggestions.html" width="100%" height="150px"></iframe>
 As we have seen a few times now, we are going to be prompted with a confirmation dialog asking us to confirm that we want to deploy this package onto our cluster.
 
 <iframe src="/docs/walkthroughs/package_deploy_deploy.html" width="100%" height="595px"></iframe>
