@@ -27,3 +27,10 @@ components:
           - config/loki.yaml
           # Values are merged in order, so this would override the above and disable everything if uncommented
           # - config/disable-all.yaml
+  - name: extra-virtual-services
+    required: true
+    manifests:
+      - name: gitea
+        namespace: zarf
+        files:
+          - virtualservices/gitea.yaml
