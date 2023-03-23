@@ -18,7 +18,8 @@ Prior to this walkthrough you'll want to have a working cluster with Zarf initia
 ## Walkthrough
 [![Deploying Packages with Zarf Video on YouTube](../.images/walkthroughs/package_deploy_thumbnail.jpg)](https://youtu.be/7hDK4ew_bTo "Deploying Packages with Zarf")
 
-1. Navigate to the folder when you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))`
+1. Navigate to the folder when you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))
+
 ```sh
 $ cd src/github.com/defenseunicorns/zarf/examples/dos-games
 ```
