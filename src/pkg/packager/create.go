@@ -206,7 +206,7 @@ func (p *Packager) Create(baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
-	p.cfg.Pkg.Metadata.ChecksumSignature = checksumChecksum
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
 	// Save the transformed config.
 	if err := p.writeYaml(); err != nil {

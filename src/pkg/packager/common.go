@@ -223,7 +223,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Validate the checksums of all the things!!!
-	if p.cfg.Pkg.Metadata.ChecksumSignature != "" {
+	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
 		if err := p.validatePackageChecksums(); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
@@ -372,7 +372,7 @@ func (p *Packager) validatePackageChecksums() error {
 	if err != nil {
 		return fmt.Errorf("unable to validate checksums as we are unable to find checksums.txt file within the package")
 	}
-	if p.cfg.Pkg.Metadata.ChecksumSignature == "" {
+	if p.cfg.Pkg.Metadata.AggregateChecksum == "" {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
 	}
 
@@ -381,7 +381,7 @@ func (p *Packager) validatePackageChecksums() error {
 	if err != nil {
 		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
 	}
-	if actualChecksumSig != p.cfg.Pkg.Metadata.ChecksumSignature {
+	if actualChecksumSig != p.cfg.Pkg.Metadata.AggregateChecksum {
 		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
 	}
 

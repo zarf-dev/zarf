@@ -30,7 +30,7 @@ func (p *Packager) Pull() error {
 		message.Successf("Package signature is valid")
 	}
 
-	if p.cfg.Pkg.Metadata.ChecksumSignature != "" {
+	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
 		if err = p.validatePackageChecksums(); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
