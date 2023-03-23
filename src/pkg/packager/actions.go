@@ -67,7 +67,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariable = ""
+		action.SetVariables = []types.ZarfComponentActionSetVariable{}
 	}
 
 	if action.Description != "" {
@@ -109,8 +109,8 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			out = strings.TrimSpace(out)
 
 			// If an output variable is defined, set it.
-			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, out)
+			for _, v := range action.SetVariables {
+				p.setVariableInConfig(v.Name, out, v.Sensitive)
 			}
 
 			// If the action has a wait, change the spinner message to reflect that on success.

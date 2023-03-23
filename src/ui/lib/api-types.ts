@@ -37,7 +37,7 @@ export interface ZarfDeployOptions {
     packagePath: string;
     /**
      * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
+     * template manifests and files in the Zarf package
      */
     setVariables: { [key: string]: string };
     /**
@@ -274,7 +274,7 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+     * [Deprecated] (replaced by actions) Custom commands to run before or after package
      * deployment
      */
     scripts?: DeprecatedZarfComponentScripts;
@@ -358,15 +358,32 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * (Cmd only) The name of a variable to update with the output of the command. This variable
-     * will be available to all remaining actions and components in the package.
+     * [Deprecated] (replaced by setVariables) (Cmd only) The name of a variable to update with
+     * the output of the command. This variable will be available to all remaining actions and
+     * components in the package.
      */
     setVariable?: string;
+    /**
+     * (Cmd only) An array of variables to update with the output of the command. These
+     * variables will be available to all remaining actions and components in the package.
+     */
+    setVariables?: ZarfComponentActionSetVariable[];
     /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
      * action. See the 'zarf tools wait-for' command for more info.
      */
     wait?: ZarfComponentActionWait;
+}
+
+export interface ZarfComponentActionSetVariable {
+    /**
+     * The name to be used for the variable
+     */
+    name: string;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
 }
 
 /**
@@ -686,7 +703,7 @@ export enum LocalOS {
 }
 
 /**
- * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+ * [Deprecated] (replaced by actions) Custom commands to run before or after package
  * deployment
  */
 export interface DeprecatedZarfComponentScripts {
@@ -813,6 +830,10 @@ export interface ZarfPackageVariable {
      * Whether to prompt the user for input for this variable
      */
     prompt?: boolean;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
 }
 
 export interface ClusterSummary {
@@ -1206,7 +1227,12 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+        { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+    ], false),
+    "ZarfComponentActionSetVariable": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
     "ZarfComponentActionWait": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
@@ -1320,6 +1346,7 @@ const typeMap: any = {
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },

@@ -167,8 +167,10 @@ func validateActionset(actions types.ZarfComponentActionSet) error {
 
 func validateAction(action types.ZarfComponentAction) error {
 	// Validate SetVariable
-	if action.SetVariable != "" && !isUppercaseNumberUnderscore(action.SetVariable) {
-		return fmt.Errorf(lang.PkgValidateMustBeUppercase, action.SetVariable)
+	for _, variable := range action.SetVariables {
+		if !isUppercaseNumberUnderscore(variable.Name) {
+			return fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
+		}
 	}
 
 	if action.Wait != nil {

@@ -120,9 +120,9 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
 	}
 
-	for key, value := range values.config.SetVariableMap {
+	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = variable.Value
 	}
 
 	for _, constant := range values.config.Pkg.Constants {
@@ -130,6 +130,7 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = constant.Value
 	}
 
+	// TODO: (@WSTARR) Don't print sensitive vars
 	message.Debugf("templateMap = %#v", templateMap)
 	message.Debugf("deprecations = %#v", deprecations)
 

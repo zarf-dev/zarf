@@ -52,21 +52,25 @@ func (p *Packager) fillActiveTemplate() error {
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
 
-// setActiveVariables handles setting the active variables used to template component files.
-func (p *Packager) setActiveVariables() error {
+// setVariableMapInConfig handles setting the active variables used to template component files.
+func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
-	p.cfg.SetVariableMap = utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	setVariableValues := utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	for name, value := range setVariableValues {
+		p.setVariableInConfig(name, value, false)
+	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
 		_, present := p.cfg.SetVariableMap[variable.Name]
 
 		// Variable is present, no need to continue checking
 		if present {
+			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
 			continue
 		}
 
 		// First set default (may be overridden by prompt)
-		p.setVariable(variable.Name, variable.Default)
+		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive)
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -77,16 +81,20 @@ func (p *Packager) setActiveVariables() error {
 				return err
 			}
 
-			p.setVariable(variable.Name, val)
+			p.setVariableInConfig(variable.Name, val, variable.Sensitive)
 		}
 	}
 
 	return nil
 }
 
-func (p *Packager) setVariable(name, value string) {
+func (p *Packager) setVariableInConfig(name, value string, sensitive bool) {
 	message.Debugf("Setting variable '%s' to '%s'", name, value)
-	p.cfg.SetVariableMap[name] = value
+	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
+		Name:      name,
+		Value:     value,
+		Sensitive: sensitive,
+	}
 }
 
 // injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.

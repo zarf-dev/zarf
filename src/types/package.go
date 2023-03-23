@@ -46,6 +46,7 @@ type ZarfPackageVariable struct {
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
 	Default     string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
 	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+	Sensitive   bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 }
 
 // ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
