@@ -1,4 +1,4 @@
-# Add Logging to an Existing Zarf Cluster with Zarf Init
+# Add Logging to a Cluster
 
 ## Introduction
 
@@ -15,6 +15,7 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
 1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
 2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
+3. Perform the [Doom Walkthrough](./2-deploying-doom.md).
 
 ## Walkthrough
 [![Walkthrough: Add Logging to an existing Zarf Cluster with Zarf Init](../.images/walkthroughs/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
@@ -28,26 +29,24 @@ zarf init
 2. When prompted to deploy the package select `y` for Yes, then hit the `enter` 
 key. <br/> When prompted to deploy the logging component select `y` for Yes, then hit the `enter` key.
 
-![The zarf operator is propted to deploy the zarf package and the logging component, selecting 'y' for yes, for each of them.](../.images/walkthroughs/logging_prompts.png)
+<iframe src="/docs/walkthroughs/logging_init_manual.html" height="800px" width="100%"></iframe>
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<iframe src="/docs/walkthroughs/logging_init.html" style={{
-  height: '800px',
-  width: '100%',
-  border: 'none'}}></iframe>
+<iframe src="/docs/walkthroughs/logging_init.html" height="800px" width="100%"></iframe>
 
 ### Connecting to the Logging Component
 
 #### Note the Credentials
 
 1. Review the `zarf init` command output for the following:
-![logging-creds](../.images/walkthroughs/logging_credentials.png)
+<iframe src="/docs/walkthroughs/logging_credentials.html" width="100%"></iframe>
+
 You should see a section for `Logging`.  You will need these credentials later on.
 
 ## Deploy the Doom Walkthrough
 
-1. If you haven't already, deploy the [Doom Walkthrough](./2-deploying-doom.md).
+1. If you haven't already in the prerequisites, deploy the [Doom Walkthrough](./2-deploying-doom.md).
 
 ## Check the logs
 
@@ -93,7 +92,7 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 ## Troubleshooting
 
-### Unable to connect to the Kubernetes cluster, or timed out waiting for cluster to report healthy.
+### Unable to connect to the Kubernetes cluster.
 
 #### Example
 
