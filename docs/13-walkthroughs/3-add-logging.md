@@ -52,7 +52,7 @@ You should see a section for `Logging`.  You will need these credentials later o
 
 :::note
 
-Because Doom maybe freshly installed it is recommended to refresh the page a few times to generate more log traffic to view in Grafana
+Because Doom may be freshly installed it is recommended to refresh the page a few times to generate more log traffic to view in Grafana
 
 :::
 
