@@ -22,7 +22,7 @@ Prior to this walkthrough you'll want to have a working cluster with Zarf initia
 1. Run the `zarf init` command on your cluster.
 
 ```sh
-zarf init
+$ zarf init
 ```
 
 2. When prompted to deploy the package select `y` for Yes, then hit the `enter` 
