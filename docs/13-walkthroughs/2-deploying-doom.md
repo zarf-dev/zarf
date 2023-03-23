@@ -48,10 +48,6 @@ When the games package finishes deploying, you should get an output that lists a
 
 <iframe src="/docs/walkthroughs/package_deploy_connect.html" width="100%"></iframe>
 
-```sh
-$ zarf connect games
-```
-
 ![Connected to the Games](../.images/walkthroughs/games_connected.png)
 
 :::note
