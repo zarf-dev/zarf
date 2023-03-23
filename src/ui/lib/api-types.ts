@@ -377,6 +377,10 @@ export interface ZarfComponentAction {
 
 export interface ZarfComponentActionSetVariable {
     /**
+     * The number of spaces to indent each line with when templated
+     */
+    indent?: number;
+    /**
      * The name to be used for the variable
      */
     name: string;
@@ -823,6 +827,10 @@ export interface ZarfPackageVariable {
      */
     description?: string;
     /**
+     * The number of spaces to indent each line with when templated
+     */
+    indent?: number;
+    /**
      * The name to be used for the variable
      */
     name: string;
@@ -1231,6 +1239,7 @@ const typeMap: any = {
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
     ], false),
     "ZarfComponentActionSetVariable": o([
+        { json: "indent", js: "indent", typ: u(undefined, 0) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
@@ -1344,6 +1353,7 @@ const typeMap: any = {
     "ZarfPackageVariable": o([
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
+        { json: "indent", js: "indent", typ: u(undefined, 0) },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },

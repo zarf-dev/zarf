@@ -1040,6 +1040,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_indent"></a>indent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The number of spaces to indent each line with when templated
+
+|          |           |
+| -------- | --------- |
+| **Type** | `integer` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -2374,6 +2390,22 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="variables_items_indent"></a>indent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The number of spaces to indent each line with when templated
+
+|          |           |
+| -------- | --------- |
+| **Type** | `integer` |
 
 </blockquote>
 </details>

@@ -1,40 +1,66 @@
 kind: ZarfPackageConfig
 metadata:
   name: package-variables
-  description: "Test component to demonstrate package variables feature"
+  description: "Example nginx package to demonstrate Zarf variables"
 
-# Demonstrates injecting custom constants into a K8s resource, e.g. ###ZARF_CONST_DINGO###
+# Constants are defined on package create and do not change on deploy
+# This demonstrates setting the nginx version to bake into the package using a package variable (PKG_VAR)
+# NOTE: package variables (PKG_VAR) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
 constants:
-  - name: "DINGO"
-    value: "howl"
+  - name: "NGINX_VERSION"
+    value: "###ZARF_PKG_VAR_NGINX_VERSION###"
 
 # Demonstrates injecting custom variables into a K8s resource, e.g. ###ZARF_VAR_DOG###
 variables:
-  - name: WOLF
-  - name: DOG
-    default: "woof"
-  - name: CAT
-    description: "What sound does a cat make?"
+  # OPTIONAL_FOOTER injects a configurable footer into the site but has an empty default with no description and will not prompt the user interactively
+  - name: OPTIONAL_FOOTER
+    indent: 8
+  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the indent key and that it is multi-line)
+  - name: STYLE
+    default: |
+      body { font-family: sans-serif; color: white; background: #0a0e2e; }
+      pre { color: white; background: black; }
+    indent: 10
+  # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
+  - name: SITE_NAME
+    description: "The name of the site you are deploying (i.e. Lula Website)"
     prompt: true
-  - name: FOX
-    default: "###ZARF_PKG_VAR_CONFIG_MAP###"
+  # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
+  - name: ORGANIZATION
+    description: "The organization providing the site"
+    default: "Defense Unicorns"
     prompt: true
+  # AWS_REGION sets the region to set in the modified-terraform file
   - name: AWS_REGION
     default: "us-east-1"
 
 components:
-  # Note that you must specify the ACTION and CONFIG_MAP i.e. `--set ACTION=template --set CONFIG_MAP=simple-configmap.yaml` during package create
-  - name: variable-example
-    description: "This component will ###ZARF_PKG_VAR_ACTION### variables within ###ZARF_PKG_VAR_CONFIG_MAP### during deploy"
-    required: true
-    manifests:
-      - name: variable-example-configmap
-        files:
-          - "###ZARF_PKG_VAR_CONFIG_MAP###"
-
-  - name: file-template-variable-example
+  # The following component templates the provided .tf file with the defined AWS_REGION
+  # NOTE: this component does not actually execute this file in this example (see examples/terraform)
+  - name: variables-with-terraform
     description: "Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file."
     required: true
     files:
       - source: simple-terraform.tf
         target: modified-terraform.tf
+    actions:
+      onDeploy:
+        after:
+          # This command `cat`s the modified terraform file on deploy for use later on (see examples/component-actions for more)
+          - cmd: cat modified-terraform.tf
+            setVariables:
+              - name: MODIFIED_TERRAFORM
+                indent: 10
+
+  # The following component deploys nginx to the cluster using the defined variables
+  - name: variables-with-nginx
+    description: "This component deploys nginx version ###ZARF_PKG_VAR_NGINX_VERSION### to the cluster"
+    required: true
+    images:
+      - "nginx:###ZARF_PKG_VAR_NGINX_VERSION###"
+    manifests:
+      - name: variables-with-nginx
+        files:
+          - nginx-configmap.yaml
+          - nginx-deployment.yaml
+          - nginx-service.yaml

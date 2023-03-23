@@ -419,6 +419,10 @@
         "sensitive": {
           "type": "boolean",
           "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
+        },
+        "indent": {
+          "type": "integer",
+          "description": "The number of spaces to indent each line with when templated"
         }
       },
       "additionalProperties": false,
@@ -891,6 +895,10 @@
         "sensitive": {
           "type": "boolean",
           "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
+        },
+        "indent": {
+          "type": "integer",
+          "description": "The number of spaces to indent each line with when templated"
         }
       },
       "additionalProperties": false,

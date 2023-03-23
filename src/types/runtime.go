@@ -67,6 +67,7 @@ type ZarfPartialPackageData struct {
 type ZarfSetVariable struct {
 	Name      string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
 	Sensitive bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	Indent    int    `json:"indent,omitempty" jsonschema:"description=The number of spaces to indent each line with when templated"`
 	Value     string `json:"value" jsonschema:"description=The value the variable is currently set with"`
 }
 
