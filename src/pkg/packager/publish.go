@@ -25,34 +25,10 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-// ZarfLayerMediaType<Extension> is the media type for Zarf layers.
+// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 const (
-	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
-	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
-	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
-	ZarfLayerMediaTypeJSON    = "application/vnd.zarf.layer.v1.json"
-	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
-	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
+	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 )
-
-// parseZarfLayerMediaType returns the Zarf layer media type for the given filename.
-func parseZarfLayerMediaType(filename string) string {
-	// since we are controlling the filenames, we can just use the extension
-	switch filepath.Ext(filename) {
-	case ".zst":
-		return ZarfLayerMediaTypeTarZstd
-	case ".gz":
-		return ZarfLayerMediaTypeTarGzip
-	case ".yaml":
-		return ZarfLayerMediaTypeYaml
-	case ".json":
-		return ZarfLayerMediaTypeJSON
-	case ".txt":
-		return ZarfLayerMediaTypeTxt
-	default:
-		return ZarfLayerMediaTypeUnknown
-	}
-}
 
 // Publish publishes the package to a registry
 //
@@ -62,6 +38,65 @@ func parseZarfLayerMediaType(filename string) string {
 // Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
+	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
+		base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
+		if err != nil {
+			return err
+		}
+		if err := os.Chdir(base); err != nil {
+			return err
+		}
+		paths := []string{
+			"zarf.yaml",
+		}
+		err = utils.ReadYaml("zarf.yaml", &p.cfg.Pkg)
+		if err != nil {
+			return err
+		}
+		ref, err := p.ref("skeleton")
+		if err != nil {
+			return err
+		}
+		for _, component := range p.cfg.Pkg.Components {
+			if len(component.Files) > 0 {
+				for _, file := range component.Files {
+					paths = append(paths, file.Source)
+				}
+			}
+			if len(component.Charts) > 0 {
+				for _, chart := range component.Charts {
+					// TODO: (@RAZZLE) localPath is a directory, not a file, so we will have to
+					// recursively add all files in the directory
+					paths = append(paths, chart.LocalPath)
+					paths = append(paths, chart.ValuesFiles...)
+				}
+			}
+			if len(component.Manifests) > 0 {
+				for _, manifest := range component.Manifests {
+					paths = append(paths, manifest.Files...)
+					paths = append(paths, manifest.Kustomizations...)
+				}
+			}
+			if component.Extensions.BigBang != nil && component.Extensions.BigBang.ValuesFiles != nil {
+				paths = append(paths, component.Extensions.BigBang.ValuesFiles...)
+			}
+		}
+		for idx := range paths {
+			paths[idx] = filepath.Join(base, paths[idx])
+		}
+		paths = utils.Filter(paths, func(path string) bool {
+			return !utils.IsURL(path) && utils.DirHasFile(base, path) && path != base
+		})
+		paths = utils.Unique(paths)
+		// TODO: (@RAZZLE) make the checksums.txt here and include it in `paths` + perform signing
+		message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
+		err = p.publish(base, paths, ref)
+		if err != nil {
+			return fmt.Errorf("unable to publish package %s: %w", ref, err)
+		}
+
+		return nil
+	}
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -119,14 +154,14 @@ func (p *Packager) Publish() error {
 		return err
 	}
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	err = p.publish(ref, paths)
+	err = p.publish(p.tmp.Base, paths, ref)
 	if err != nil {
 		return fmt.Errorf("unable to publish package %s: %w", ref, err)
 	}
 	return nil
 }
 
-func (p *Packager) publish(ref registry.Reference, paths []string) error {
+func (p *Packager) publish(base string, paths []string, ref registry.Reference) error {
 	message.Infof("Publishing package to %s", ref)
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
@@ -148,13 +183,13 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	var descs []ocispec.Descriptor
 
 	for idx, path := range paths {
-		name, err := filepath.Rel(p.tmp.Base, path)
+		name, err := filepath.Rel(base, path)
 		if err != nil {
 			return err
 		}
 		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
 
-		mediaType := parseZarfLayerMediaType(name)
+		mediaType := ZarfLayerMediaTypeBlob
 
 		desc, err := src.Add(ctx, name, mediaType, path)
 		if err != nil {

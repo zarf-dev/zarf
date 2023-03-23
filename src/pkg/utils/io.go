@@ -252,3 +252,27 @@ func GetDirSize(path string) (int64, error) {
 
 	return dirSize, err
 }
+
+// IsDir returns true if the given path is a directory.
+func IsDir(path string) bool {
+	info, err := os.Stat(filepath.Clean(path))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}
+
+// DirHasFile returns true if the given path is within the given directory.
+func DirHasFile(dir string, path string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return false
+	}
+
+	return strings.HasPrefix(absPath, absDir)
+}
