@@ -71,8 +71,7 @@ Once you've successfully logged in go to:
 1. The "Explore" page (Button on the left that looks like a compass)
 
 2. Select `Loki` in the dropdown, and then
-
-3. enter `{app="game"}` into the Log Browser query input field
+3. Enter `{app="game"}` into the Log Browser query input field
 
 ![zarf user typing {app='game'} into the Loki Log Browser](../.images/walkthroughs/logging_query.png)
 
