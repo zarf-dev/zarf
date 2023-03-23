@@ -64,7 +64,7 @@ To open Grafana you can use the `zarf connect logging` command.
 
 You'll be redirected the `/login` page where you have to sign in with the Grafana credentials you saved [in a previous step](#note-the-credentials).
 
-![zarf operator logging into Loki](../.images/walkthroughs/logging_login.png)
+![zarf user logging into Loki](../.images/walkthroughs/logging_login.png)
 
 Once you've successfully logged in go to:
 
