@@ -74,7 +74,7 @@ Once you've successfully logged in go to:
 
 3. enter `{app="game"}` into the Log Browser query input field
 
-![zarf operator typing {app='game'} into the Loki Log Browser](../.images/walkthroughs/logging_query.png)
+![zarf user typing {app='game'} into the Loki Log Browser](../.images/walkthroughs/logging_query.png)
 
 Submit that query and you'll get back a dump of all the game pod logs that Loki has collected.
 
