@@ -46,6 +46,12 @@ You can learn more about the testing of Zarf [here](docs/6-developer-guide/2-tes
 
 ## Documentation
 
+### Updating Our Documentation
+
+Our documentation is auto-generated from the [Zarf package schema definition](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json), so when an update is made you will need to run `make docs-and-schema` locally to regenerate the schema and documentation. CI checks if this was ran, and will fail if it wasn't.
+
+We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
+
 ### Architecture Decision Records (ADR)
 
 We've chosen to use ADRs to document architecturally significant decisions. We primarily use the guidance found in [this article by Michael Nygard](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions) with a couple of tweaks:
