@@ -58,6 +58,9 @@ func (p *Packager) Publish() error {
 			return err
 		}
 		for _, component := range p.cfg.Pkg.Components {
+			if len(component.Import.Path) > 0 {
+				message.Warnf("Component '%s' is a locally imported component and will not be included in the skeleton package", component.Name)
+			}
 			if len(component.Files) > 0 {
 				for _, file := range component.Files {
 					paths = append(paths, file.Source)
