@@ -25,15 +25,15 @@ func TestCreateTemplating(t *testing.T) {
 
 	e2e.cleanFiles(cachePath, decompressPath)
 
-	pkgName := fmt.Sprintf("zarf-package-package-variables-%s.tar.zst", e2e.arch)
+	pkgName := fmt.Sprintf("zarf-variables-%s.tar.zst", e2e.arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.execZarfCommand("package", "create", "examples/package-variables", "--confirm", "--zarf-cache", cachePath)
+	_, stdErr, _ := e2e.execZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
 	expectedOutString := "variable 'CONFIG_MAP' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/package-variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--set", "ACTION=template", "--confirm", "--zarf-cache", cachePath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/variables", "--set", "CONFIG_MAP=simple-configmap.yaml", "--set", "ACTION=template", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")

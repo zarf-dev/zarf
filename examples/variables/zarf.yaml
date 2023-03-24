@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: package-variables
+  name: variables
   description: "Example nginx package to demonstrate Zarf variables"
 
 # Constants are defined on package create and do not change on deploy
@@ -30,7 +30,7 @@ variables:
     description: "The organization providing the site"
     default: "Defense Unicorns"
     prompt: true
-  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive`` so that it will not be saved in the log
+  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
   - name: AWS_REGION
     default: "us-east-1"
     sensitive: true
@@ -49,12 +49,12 @@ components:
         after:
           # This command `cat`s the modified terraform file on deploy for use later on (see examples/component-actions for more)
           - cmd: cat modified-terraform.tf
-            # `mute` is set to exclude the command output from being shown (note this will include AWS_REGION)
+            # `mute` is set to exclude the command output from being shown (note this will include AWS_REGION which we marked sensitive above)
             mute: true
             setVariables:
               - name: MODIFIED_TERRAFORM
                 indent: 10
-                # `sensitive` is set to exclude the built output from the logs (note this will include AWS_REGION)
+                # `sensitive` is set to exclude the command output from the logs (note this will include AWS_REGION which we marked sensitive above)
                 sensitive: true
 
   # The following component deploys nginx to the cluster using the defined variables
@@ -62,6 +62,7 @@ components:
     description: "This component deploys nginx version ###ZARF_PKG_VAR_NGINX_VERSION### to the cluster"
     required: true
     images:
+      # This sets the nginx image tag to the same PKG_VAR used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
       - "nginx:###ZARF_PKG_VAR_NGINX_VERSION###"
     manifests:
       - name: variables-with-nginx

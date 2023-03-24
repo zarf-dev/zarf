@@ -14,12 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPackageVariables(t *testing.T) {
+func TestVariables(t *testing.T) {
 	t.Log("E2E: Package variables")
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-package-variables-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-variables-%s.tar.zst", e2e.arch)
 	tfPath := "modified-terraform.tf"
 
 	e2e.cleanFiles(tfPath)
