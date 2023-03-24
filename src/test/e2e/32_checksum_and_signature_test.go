@@ -12,6 +12,10 @@ import (
 )
 
 func TestChecksumAndSignature(t *testing.T) {
+	t.Log("E2E: Checksum and Signature")
+	e2e.setupWithCluster(t)
+	defer e2e.teardown(t)
+
 	testPackageDirPath := "examples/dos-games"
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
 	privateKeyFlag := "--key=src/test/test-packages/zarf-test.prv-key"
