@@ -316,6 +316,7 @@ const (
 const (
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionVariables         = "component %s cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %s cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"

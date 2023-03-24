@@ -94,7 +94,7 @@ constants:
   value: 'users'
 ```
 
-::note
+:::note
 
 `zarf package create` only templates the `zarf.yaml` file, and `zarf package deploy` only templates other manifests, charts and files
 
