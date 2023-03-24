@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body {background-color: black;}
+pre {
+	font-weight: normal;
+	color: #bbb;
+	white-space: -moz-pre-wrap;
+	white-space: -o-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+b {font-weight: normal}
+b.BOLD {color: #fff}
+b.ITA {font-style: italic}
+b.UND {text-decoration: underline}
+b.STR {text-decoration: line-through}
+b.UNDSTR {text-decoration: underline line-through}
+b.BLK {color: #000000}
+b.RED {color: #aa0000}
+b.GRN {color: #00aa00}
+b.YEL {color: #aa5500}
+b.BLU {color: #0000aa}
+b.MAG {color: #aa00aa}
+b.CYN {color: #00aaaa}
+b.WHI {color: #aaaaaa}
+b.HIK {color: #555555}
+b.HIR {color: #ff5555}
+b.HIG {color: #55ff55}
+b.HIY {color: #ffff55}
+b.HIB {color: #5555ff}
+b.HIM {color: #ff55ff}
+b.HIC {color: #55ffff}
+b.HIW {color: #ffffff}
+b.BBLK {background-color: #000000}
+b.BRED {background-color: #aa0000}
+b.BGRN {background-color: #00aa00}
+b.BYEL {background-color: #aa5500}
+b.BBLU {background-color: #0000aa}
+b.BMAG {background-color: #aa00aa}
+b.BCYN {background-color: #00aaaa}
+b.BWHI {background-color: #aaaaaa}
+</style>
+</head>
+<body>
+<pre>
+<b class=WHI>$ zarf package deploy ./zarf-package-dos-games-arm64.tar.zst</b>
+<b class=YEL>Saving log file to</b>
+<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-20-59-1265818177.log</b>
+<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package ../examples/dos-games/zarf-package-dos-games-arm64.tar.zst</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package ../examples/dos-games/zarf-package-dos-games-arm64.tar.zst</b>
+
+<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> dos-games</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Simple example to load classic DOS games into K8s in the airgap</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> JvBUnicornMBP5</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> jason</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Tue, 07 Mar 2023 10:53:12 -0500</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.24.3</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
+  -<b style="color:#ff55ff;"> scripts-to-actions</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> baseline</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">manifests</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> multi-games</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
+    -<b style="color:#ff55ff;"> manifests/deployment.yaml</b>
+<b style="color:#ff55ff;">    </b>-<b style="color:#ff55ff;"> manifests/service.yaml</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
+  -<b style="color:#ff55ff;"> defenseunicorns/zarf-game:multi-tile-dark</b>
+<b class=YEL>This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
+<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
+<b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs-website/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html</b>
+<b class=YEL></b>
+<b class=YEL>* This directory will be removed after package deployment.</b>
+<b class=YEL></b>
+<b style="color:#55ff55;">? </b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#00aaaa">Yes</span>
+</pre>
+</body>
+</html>
