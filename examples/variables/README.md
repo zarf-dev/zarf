@@ -16,11 +16,11 @@ Because files can be deployed without a Kubernetes cluster, some built-in variab
 
 :::info
 
-To view the example source code, select the `Edit this page` link below the article and select the parent folder. Or visit the [parent folder](../variables/)
+To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 
-## How to Use Deploy-Time Variables and Constants
+## Deploy-Time Variables and Constants
 
 To use variables and constants at deploy time you need to have two things:
 
@@ -100,7 +100,7 @@ constants:
 
 :::
 
-## How to Use Create-Time Package Template Variables
+## Create-Time Package Template Variables
 
 You can also specify package template variables at package create time by including `###_ZARF_PKG_VAR_*###` in the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
 
