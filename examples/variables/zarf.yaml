@@ -4,12 +4,12 @@ metadata:
   description: "Example nginx package to demonstrate Zarf variables"
 
 # Constants are defined on package create and do not change on deploy
-# This demonstrates setting the nginx version to bake into the package using a package variable (PKG_VAR)
-# NOTE: package variables (PKG_VAR) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
-# ALSO NOTE: the PKG_VAR is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_VARs will be removed as comments without them
+# This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
+# NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
+# ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
 constants:
   - name: "NGINX_VERSION"
-    value: "###ZARF_PKG_VAR_NGINX_VERSION###"
+    value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
 
 # Demonstrates injecting custom variables into a K8s resource
 variables:
@@ -60,11 +60,11 @@ components:
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx
-    description: "This component deploys nginx version ###ZARF_PKG_VAR_NGINX_VERSION### to the cluster"
+    description: "This component deploys nginx version ###ZARF_PKG_TMPL_NGINX_VERSION### to the cluster"
     required: true
     images:
-      # This sets the nginx image tag to the same PKG_VAR used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
-      - "nginx:###ZARF_PKG_VAR_NGINX_VERSION###"
+      # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
+      - "nginx:###ZARF_PKG_TMPL_NGINX_VERSION###"
     manifests:
       - name: variables-with-nginx
         files:

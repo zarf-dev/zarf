@@ -358,13 +358,13 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * [Deprecated] (replaced by setVariables) (Cmd only) The name of a variable to update with
-     * the output of the command. This variable will be available to all remaining actions and
-     * components in the package.
+     * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
+     * update with the output of the command. This variable will be available to all remaining
+     * actions and components in the package.
      */
     setVariable?: string;
     /**
-     * (Cmd only) An array of variables to update with the output of the command. These
+     * (onDeploy/cmd only) An array of variables to update with the output of the command. These
      * variables will be available to all remaining actions and components in the package.
      */
     setVariables?: ZarfComponentActionSetVariable[];

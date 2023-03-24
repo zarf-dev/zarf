@@ -17,7 +17,7 @@ components:
           - simple-configmap.yaml
 
   - name: zebra
-    description: "This is a zebra and they have ###ZARF_PKG_VAR_ZEBRA###"
+    description: "This is a zebra and they have ###ZARF_PKG_TMPL_ZEBRA###"
 
   - name: leopard
-    description: "This is a leopard and they have ###ZARF_PKG_VAR_LEOPARD###"
+    description: "This is a leopard and they have ###ZARF_PKG_TMPL_LEOPARD###"

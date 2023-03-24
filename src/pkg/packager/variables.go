@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -17,32 +18,61 @@ import (
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
 	// Ensure uppercase keys
-	setVariableMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
-
-	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
+	setTemplateMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+	packageTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_TMPL_", "###")
 	if err != nil {
 		return err
 	}
 
-	for key := range packageVariables {
-		_, present := setVariableMap[key]
+	// [DEPRECATION] Lookup the Package Variable syntax as well for backward compatibility
+	// Ensure uppercase keys
+	deprecatedSetPackageVariablesMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+	deprecatedPackageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
+	if err != nil {
+		return err
+	}
+
+	promptAndSetValue := func(setMap map[string]string, key string) (map[string]string, error) {
+		_, present := setMap[key]
 		if !present && !config.CommonOptions.Confirm {
 			setVal, err := p.promptVariable(types.ZarfPackageVariable{
 				Name: key,
 			})
 
 			if err == nil {
-				setVariableMap[key] = setVal
+				setMap[key] = setVal
 			} else {
-				return err
+				return nil, err
 			}
 		} else if !present {
-			return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
+			return nil, fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
+		}
+
+		return setMap, nil
+	}
+
+	for key := range packageTemplates {
+		setTemplateMap, err = promptAndSetValue(setTemplateMap, key)
+		if err != nil {
+			return err
+		}
+	}
+
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	for key := range deprecatedPackageVariables {
+		message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+		deprecatedSetPackageVariablesMap, err = promptAndSetValue(deprecatedSetPackageVariablesMap, key)
+		if err != nil {
+			return err
 		}
 	}
 
 	templateMap := map[string]string{}
-	for key, value := range setVariableMap {
+	for key, value := range setTemplateMap {
+		templateMap[fmt.Sprintf("###ZARF_PKG_TMPL_%s###", key)] = value
+	}
+	// [DEPRECATION] Include the Package Variable syntax as well for backward compatibility
+	for key, value := range deprecatedSetPackageVariablesMap {
 		templateMap[fmt.Sprintf("###ZARF_PKG_VAR_%s###", key)] = value
 	}
 

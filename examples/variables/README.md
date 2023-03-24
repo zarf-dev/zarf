@@ -1,8 +1,8 @@
 # Variables
 
-This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package-templating variables can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_VAR_*###`.
+This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
 
-With this templating feature, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
+With these variables and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
 
 This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your `zarf.yaml` file.
 
@@ -100,9 +100,9 @@ constants:
 
 :::
 
-## Create-Time Package Template Variables
+## Create-Time Package Configuration Templates
 
-You can also specify package template variables at package create time by including `###_ZARF_PKG_VAR_*###` in the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
+You can also specify package configuration templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
 
 ```yaml
 kind: ZarfPackageConfig
@@ -112,13 +112,13 @@ metadata:
 
 constants:
   - name: PROMPT_IMAGE
-    value: '###ZARF_PKG_VAR_PROMPT_ON_CREATE###'
+    value: '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
 
 components:
   - name: zarf-prompt-image
     required: true
     images:
-      - '###ZARF_PKG_VAR_PROMPT_ON_CREATE###'
+      - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
 ```
 
 :::note
@@ -129,12 +129,12 @@ You can only template string values in this way as non-string values will not ma
 
 :::note
 
-If you use `--confirm` and do not `--set` all of the package template variables you will receive an error
+If you use `--confirm` and do not `--set` all of the package configuration templates you will receive an error
 
 :::
 
 :::note
 
-You cannot template the component import path using package template variables
+You cannot template the component import path using package configuration templates
 
 :::

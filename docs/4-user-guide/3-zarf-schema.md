@@ -163,7 +163,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "arm64", "amd64"</code>
@@ -684,9 +684,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
+| Restrictions                      |                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
 
 </blockquote>
 </details>
@@ -983,7 +983,7 @@ Must be one of:
 
   ## components > actions > onCreate > before > setVariables
 
-**Description:** (Cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
+**Description:** (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 
 |          |         |
 | -------- | ------- |
@@ -1124,7 +1124,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "Pod", "Deployment)"</code>
@@ -1147,7 +1147,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "podinfo", "app&#61;podinfo"</code>
@@ -1184,7 +1184,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "Ready", "Available"</code>
@@ -1252,7 +1252,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "localhost:8080", "1.1.1.1"</code>
@@ -1273,7 +1273,7 @@ Must be one of:
 | -------- | --------- |
 | **Type** | `integer` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 200, 404</code>
@@ -1749,7 +1749,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:**
+**Example:** 
 
 <code>
 "charts/your-chart"</code>
@@ -2094,7 +2094,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:**
+**Example:** 
 
 <code>
 "app&#61;data-injection"</code>

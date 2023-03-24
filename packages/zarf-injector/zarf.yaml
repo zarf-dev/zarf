@@ -11,6 +11,6 @@ components:
     cosignKeyPath: ../../cosign.pub
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:###ZARF_PKG_ARCH###-###ZARF_PKG_VAR_INJECTOR_VERSION###
+      - source: sget://defenseunicorns/zarf-injector:###ZARF_PKG_ARCH###-###ZARF_PKG_TMPL_INJECTOR_VERSION###
         target: "###ZARF_TEMP###/zarf-injector"
         executable: true
