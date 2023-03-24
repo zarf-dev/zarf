@@ -17,6 +17,7 @@ zarf package publish [PACKAGE] [REPOSITORY] [flags]
 
 ```
   -h, --help                  help for publish
+  -k, --key string            Path to private key file for signing packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 
@@ -35,4 +36,3 @@ zarf package publish [PACKAGE] [REPOSITORY] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

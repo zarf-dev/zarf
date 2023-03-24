@@ -759,6 +759,10 @@
         "vendor": {
           "type": "string",
           "description": "Name of the distributing entity, organization or individual."
+        },
+        "aggregateChecksum": {
+          "type": "string",
+          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
         }
       },
       "additionalProperties": false,

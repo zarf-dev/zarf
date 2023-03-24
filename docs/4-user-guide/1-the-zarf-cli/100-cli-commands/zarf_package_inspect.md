@@ -16,8 +16,10 @@ zarf package inspect [PACKAGE] [flags]
 
 ```
   -h, --help              help for inspect
+  -k, --key string        Path to public key file for validating signed packages
   -s, --sbom              View SBOM contents while inspecting the package
       --sbom-out string   Specify an output directory for the SBOMs from the inspected Zarf package
+      --validate          Validate any checksums and signatures while inspecting the package
 ```
 
 ## Options inherited from parent commands
@@ -35,4 +37,3 @@ zarf package inspect [PACKAGE] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

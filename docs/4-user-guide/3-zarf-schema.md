@@ -163,7 +163,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 "arm64", "amd64"</code>
@@ -243,6 +243,22 @@ Must be one of:
 <blockquote>
 
 **Description:** Name of the distributing entity, organization or individual.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_aggregateChecksum"></a>aggregateChecksum</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Checksum of a checksums.txt file that contains checksums all the layers within the package.
 
 |          |          |
 | -------- | -------- |
@@ -1208,7 +1224,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 "Pod", "Deployment)"</code>
@@ -1231,7 +1247,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 "podinfo", "app&#61;podinfo"</code>
@@ -1268,7 +1284,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 "Ready", "Available"</code>
@@ -1336,7 +1352,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 "localhost:8080", "1.1.1.1"</code>
@@ -1357,7 +1373,7 @@ Must be one of:
 | -------- | --------- |
 | **Type** | `integer` |
 
-**Examples:** 
+**Examples:**
 
 <code>
 200, 404</code>
@@ -1833,7 +1849,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:** 
+**Example:**
 
 <code>
 "charts/your-chart"</code>
@@ -2178,7 +2194,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:** 
+**Example:**
 
 <code>
 "app&#61;data-injection"</code>

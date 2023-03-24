@@ -17,6 +17,7 @@ zarf package deploy [PACKAGE] [flags]
       --components string     Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm               Confirm package deployment without prompting
   -h, --help                  help for deploy
+  -k, --key string            Path to public key file for validating signed packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --set stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
       --sget string           Path to public sget key file for remote packages signed via cosign
@@ -38,4 +39,3 @@ zarf package deploy [PACKAGE] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-

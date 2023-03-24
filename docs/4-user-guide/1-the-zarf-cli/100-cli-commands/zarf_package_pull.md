@@ -17,6 +17,7 @@ zarf package pull [REFERENCE] [flags]
 
 ```
   -h, --help                  help for pull
+  -k, --key string            Path to public key file for validating signed packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 
@@ -35,4 +36,3 @@ zarf package pull [REFERENCE] [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
-
