@@ -6,6 +6,7 @@ metadata:
 # Constants are defined on package create and do not change on deploy
 # This demonstrates setting the nginx version to bake into the package using a package variable (PKG_VAR)
 # NOTE: package variables (PKG_VAR) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
+# ALSO NOTE: the PKG_VAR is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_VARs will be removed as comments without them
 constants:
   - name: "NGINX_VERSION"
     value: "###ZARF_PKG_VAR_NGINX_VERSION###"
