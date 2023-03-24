@@ -376,7 +376,7 @@ func (p *Packager) validatePackageChecksums() error {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
 	}
 
-	// Verify the that checksums.txt file matches the signature provided
+	// Verify the that checksums.txt file matches the aggregated checksum provided
 	actualChecksumSig, err := utils.GetSHA256OfFile(p.tmp.Checksums)
 	if err != nil {
 		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
@@ -436,7 +436,7 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
 	// Validate the signature of the package
 	if publicKeyPath == "" {
-		return fmt.Errorf("package is signed but no key was provided")
+		return fmt.Errorf("package is signed but no key was provided, using signed packages requires a --key or --insecure flag to continue")
 	}
 
 	// Validate the signature with the key we were provided

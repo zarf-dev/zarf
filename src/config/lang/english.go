@@ -202,10 +202,11 @@ const (
 	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
-	CmdPackageDeployFlagPublicKey  = "Path to public key file for signed packages"
+	CmdPackageDeployFlagPublicKey  = "Path to public key file for validating signed packages"
 
-	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagSbom     = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut  = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagValidate = "Validate any checksums and signatures while inspecting the package"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
@@ -213,7 +214,7 @@ const (
 	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackagePublishFlagSigningKey  = "Path to private key file for signing packages"
 
-	CmdPackagePullPublicKey = "Path to public key file for signed packages"
+	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

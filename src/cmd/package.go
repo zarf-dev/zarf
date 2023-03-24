@@ -28,6 +28,7 @@ import (
 
 var includeInspectSBOM bool
 var outputInspectSBOM string
+var validatePackageOnInspect bool
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -109,7 +110,7 @@ var packageInspectCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM, validatePackageOnInspect); err != nil {
 			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
@@ -336,6 +337,8 @@ func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
+	inspectFlags.BoolVar(&validatePackageOnInspect, "validate", false, lang.CmdPackageInspectFlagValidate)
 }
 
 func bindRemoveFlags() {
