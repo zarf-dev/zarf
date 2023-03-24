@@ -363,8 +363,6 @@ func (p *Packager) handleIfPartialPkg() error {
 	return nil
 }
 
-// TODO: Still need to validate that there is no extra files in the package
-// TODO: Still need to validate that the package is not missing any files
 func (p *Packager) validatePackageChecksums() error {
 
 	// Run pre-checks to make sure we have what we need to validate the checksums
@@ -376,6 +374,25 @@ func (p *Packager) validatePackageChecksums() error {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
 	}
 
+	// Get a glob of all the files within the package
+	packageGlob, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
+	if err != nil {
+		return fmt.Errorf("unable to get a list of all the files within the package: %w", err)
+	}
+
+	// Create a map so we can track which files we have processed
+	filepathMap := make(map[string]bool)
+	for _, path := range packageGlob {
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("unable to get the file info for a file within the package: %s - %w", path, err)
+		}
+
+		// If the glob item is a file, add it to the map
+		if !fileInfo.IsDir() {
+			filepathMap[path] = false
+		}
+	}
 	// Verify the that checksums.txt file matches the aggregated checksum provided
 	actualChecksumSig, err := utils.GetSHA256OfFile(p.tmp.Checksums)
 	if err != nil {
@@ -384,6 +401,11 @@ func (p *Packager) validatePackageChecksums() error {
 	if actualChecksumSig != p.cfg.Pkg.Metadata.AggregateChecksum {
 		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
 	}
+
+	// Check off all the files that we can trust given the checksum and signing checks
+	filepathMap[p.tmp.Checksums] = true
+	filepathMap[p.tmp.ZarfYaml] = true
+	filepathMap[p.tmp.ZarfSig] = true
 
 	// Load the contents of the checksums file
 	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, "checksums.txt"))
@@ -408,6 +430,14 @@ func (p *Packager) validatePackageChecksums() error {
 
 		if expectedShasum != actualShasum {
 			return fmt.Errorf("mismatch on the checksum of the %s file (expected: %s, actual: %s)", itemPath, expectedShasum, actualShasum)
+		}
+
+		filepathMap[filepath.Join(p.tmp.Base, itemPath)] = true
+	}
+
+	for path, processed := range filepathMap {
+		if !processed {
+			return fmt.Errorf("the file %s was not processed by the checksums.txt file", path)
 		}
 	}
 
