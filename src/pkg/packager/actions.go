@@ -284,8 +284,10 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
-	// Dump final complete output.
-	message.Debug(cmd, out, errOut)
+	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
+	if !cfg.Mute {
+		message.Debug(cmd, out, errOut)
+	}
 
 	return out, err
 }

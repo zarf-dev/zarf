@@ -115,9 +115,11 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 
 	// Iterate over any custom variables and add them to the mappings for templating
 	templateMap := map[string]string{}
+	templateMapLog := map[string]string{}
 	for key, value := range builtinMap {
 		// Builtin keys are always uppercase in the format ###ZARF_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
+		templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
 	}
 
 	for key, variable := range values.config.SetVariableMap {
@@ -128,15 +130,20 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 			value = strings.ReplaceAll(value, "\n", spaces)
 		}
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+		if variable.Sensitive {
+			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = "*****"
+		} else {
+			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+		}
 	}
 
 	for _, constant := range values.config.Pkg.Constants {
 		// Constant keys are always uppercase in the format ###ZARF_CONST_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = constant.Value
+		templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = constant.Value
 	}
 
-	// TODO: (@WSTARR) Don't print sensitive vars
-	message.Debugf("templateMap = %#v", templateMap)
+	message.Debugf("templateMap = %#v", templateMapLog)
 	message.Debugf("deprecations = %#v", deprecations)
 
 	return templateMap, deprecations

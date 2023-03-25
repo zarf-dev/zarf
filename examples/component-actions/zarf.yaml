@@ -34,8 +34,6 @@ components:
             maxTotalSeconds: 30
             # determine if actions output should be printed to the console
             mute: false
-            # the name of the variable to set with the output of the action
-            setVariable: BLEH
         # runs after the component is deployed
         after:
           - cmd: touch test-create-after.txt
@@ -81,6 +79,7 @@ components:
         before:
           # setVariable can be used to set a variable for use in other actions or components
           - cmd: echo "meow"
+            # the name of the variable to set with the output of the action (only useable onDeploy)
             setVariable: CAT_SOUND
           # this action will have access to the variable set in the previous action
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"

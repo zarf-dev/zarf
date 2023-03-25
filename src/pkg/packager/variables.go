@@ -108,7 +108,6 @@ func (p *Packager) setVariableMapInConfig() error {
 }
 
 func (p *Packager) setVariableInConfig(name, value string, sensitive bool, indent int) {
-	message.Debugf("Setting variable '%s' to '%s'", name, value)
 	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
 		Name:      name,
 		Value:     value,

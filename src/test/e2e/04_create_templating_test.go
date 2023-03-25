@@ -25,7 +25,7 @@ func TestCreateTemplating(t *testing.T) {
 
 	e2e.cleanFiles(cachePath, decompressPath)
 
-	pkgName := fmt.Sprintf("zarf-variables-%s.tar.zst", e2e.arch)
+	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.arch)
 
 	// Test that not specifying a package variable results in an error
 	_, stdErr, _ := e2e.execZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)

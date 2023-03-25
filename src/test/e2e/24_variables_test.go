@@ -18,7 +18,7 @@ func TestVariables(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	path := fmt.Sprintf("build/zarf-variables-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-variables-%s.tar.zst", e2e.arch)
 	tfPath := "modified-terraform.tf"
 
 	e2e.cleanFiles(tfPath)
@@ -29,8 +29,10 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
+	// Verify that unicorn-land was not included in the log
+	require.NotContains(t, stdErr, "unicorn-land")
 
 	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)
