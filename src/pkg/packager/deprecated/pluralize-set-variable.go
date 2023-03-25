@@ -48,7 +48,7 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) types.ZarfComponent
 
 	// Leave deprecated setVariable in place, but warn users
 	if hasSetVariable {
-		message.Warnf("Component \"%s\" is using setVariable in actions which will be removed in a future version of Zarf. Please migrate to the list form of setVariables.", c.Name)
+		message.Warnf("Component '%s' is using setVariable in actions which will be removed in a future version of Zarf. Please migrate to the list form of setVariables.", c.Name)
 	}
 
 	return c

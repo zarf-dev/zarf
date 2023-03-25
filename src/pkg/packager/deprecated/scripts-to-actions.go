@@ -63,7 +63,7 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 
 	// Leave deprecated scripts in place, but warn users
 	if hasScripts {
-		message.Warnf("Component \"%s\" is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
+		message.Warnf("Component '%s' is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
 	}
 
 	return c
