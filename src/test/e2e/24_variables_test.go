@@ -7,7 +7,6 @@ package test
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,31 +25,35 @@ func TestVariables(t *testing.T) {
 
 	// Test that not specifying a prompted variable results in an error
 	_, stdErr, _ := e2e.execZarfCommand("package", "deploy", path, "--confirm")
-	expectedOutString := "variable 'CAT' must be '--set' when using the '--confirm' flag"
+	expectedOutString := "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
-	// Deploy the simple configmap
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "CAT=meow", "--set", "AWS_REGION=unicorn-land")
+	// Deploy nginx
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the configmap was properly templated
-	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
-	// wolf should remain unset because it was not set during deploy
-	assert.Contains(t, string(kubectlOut), "wolf=")
-	// dog should take the default value
-	assert.Contains(t, string(kubectlOut), "dog=woof")
-	// cat should take the set value
-	assert.Contains(t, string(kubectlOut), "cat=meow")
-	// fox should take the created value
-	assert.Contains(t, string(kubectlOut), "fox=simple-configmap.yaml")
-	// dingo should take the constant value
-	assert.Contains(t, string(kubectlOut), "dingo=howl")
-	// zebra should remain unset as it is not a component variable
-	assert.Contains(t, string(kubectlOut), "zebra=###ZARF_VAR_ZEBRA###")
-
+	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)
 	require.NoError(t, err)
 	require.Contains(t, string(outputTF), "unicorn-land")
+
+	// Verify the configmap was properly templated
+	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
+	// OPTIONAL_FOOTER should remain unset because it was not set during deploy
+	assert.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
+	// STYLE should take the default value
+	assert.Contains(t, string(kubectlOut), "body { font-family: sans-serif;")
+	// SITE_NAME should take the set value
+	assert.Contains(t, string(kubectlOut), "Lula Web")
+	// ORGANIZATION should take the created value
+	assert.Contains(t, string(kubectlOut), "Defense Unicorns")
+	// AWS_REGION should have been templated and also templated into this config map
+	assert.Contains(t, string(kubectlOut), "unicorn-land")
+
+	// Verify that the nginx deployment was successful (the NGINX_VERSION constant templated the image correctly)
+	kubectlOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (nginx)", "-n", "nginx", "-o", "jsonpath={.items[*].status.phase}")
+	require.NoError(t, err)
+	require.Contains(t, kubectlOut, "Running")
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

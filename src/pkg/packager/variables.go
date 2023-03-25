@@ -17,63 +17,51 @@ import (
 
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
-	// Ensure uppercase keys
-	setTemplateMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
-	packageTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_TMPL_", "###")
-	if err != nil {
-		return err
-	}
-
-	// [DEPRECATION] Lookup the Package Variable syntax as well for backward compatibility
-	// Ensure uppercase keys
-	deprecatedSetPackageVariablesMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
-	deprecatedPackageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
-	if err != nil {
-		return err
-	}
-
-	promptAndSetValue := func(setMap map[string]string, key string) (map[string]string, error) {
-		_, present := setMap[key]
-		if !present && !config.CommonOptions.Confirm {
-			setVal, err := p.promptVariable(types.ZarfPackageVariable{
-				Name: key,
-			})
-
-			if err == nil {
-				setMap[key] = setVal
-			} else {
-				return nil, err
-			}
-		} else if !present {
-			return nil, fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
-		}
-
-		return setMap, nil
-	}
-
-	for key := range packageTemplates {
-		setTemplateMap, err = promptAndSetValue(setTemplateMap, key)
-		if err != nil {
-			return err
-		}
-	}
-
-	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	for key := range deprecatedPackageVariables {
-		message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
-		deprecatedSetPackageVariablesMap, err = promptAndSetValue(deprecatedSetPackageVariablesMap, key)
-		if err != nil {
-			return err
-		}
-	}
-
 	templateMap := map[string]string{}
-	for key, value := range setTemplateMap {
-		templateMap[fmt.Sprintf("###ZARF_PKG_TMPL_%s###", key)] = value
+
+	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
+		// Ensure uppercase keys
+		setFromCLIConfig := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+
+		yamlTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, templatePrefix, "###")
+		if err != nil {
+			return err
+		}
+
+		for key := range yamlTemplates {
+			if deprecated {
+				message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+			}
+
+			_, present := setFromCLIConfig[key]
+			if !present && !config.CommonOptions.Confirm {
+				setVal, err := p.promptVariable(types.ZarfPackageVariable{
+					Name: key,
+				})
+
+				if err == nil {
+					setFromCLIConfig[key] = setVal
+				} else {
+					return err
+				}
+			} else if !present {
+				return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
+			}
+		}
+
+		for key, value := range setFromCLIConfig {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
+		}
+
+		return nil
 	}
-	// [DEPRECATION] Include the Package Variable syntax as well for backward compatibility
-	for key, value := range deprecatedSetPackageVariablesMap {
-		templateMap[fmt.Sprintf("###ZARF_PKG_VAR_%s###", key)] = value
+
+	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
+		return err
+	}
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	if err := promptAndSetTemplate("###ZARF_PKG_VAR_", true); err != nil {
+		return err
 	}
 
 	// Add special variable for the current package architecture
