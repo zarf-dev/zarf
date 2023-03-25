@@ -190,7 +190,7 @@ func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
 			Address:          state.RegistryInfo.Address,
 			NodePort:         state.RegistryInfo.NodePort,
 			InternalRegistry: state.RegistryInfo.InternalRegistry,
-			Secret:           state.RegistryInfo.Secret,
+			Secret:           "**sanitized**",
 		},
 		LoggingSecret: "**sanitized**",
 	}
