@@ -158,9 +158,44 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 
 	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
-	message.Debugf("ZarfState = %s", message.JSONValue(state))
+	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
 
 	return state, nil
+}
+
+func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
+	sanitizedState := types.ZarfState{
+		ZarfAppliance: state.ZarfAppliance,
+		Distro:        state.Distro,
+		Architecture:  state.Architecture,
+		StorageClass:  state.StorageClass,
+		AgentTLS: k8s.GeneratedPKI{
+			CA:   []byte("**sanitized**"),
+			Cert: []byte("**sanitized**"),
+			Key:  []byte("**sanitized**"),
+		},
+		GitServer: types.GitServerInfo{
+			PushUsername:   state.GitServer.PushUsername,
+			PushPassword:   "**sanitized**",
+			PullUsername:   state.GitServer.PullUsername,
+			PullPassword:   "**sanitized**",
+			Address:        state.GitServer.Address,
+			InternalServer: state.GitServer.InternalServer,
+		},
+		RegistryInfo: types.RegistryInfo{
+			PushUsername:     state.RegistryInfo.PushUsername,
+			PushPassword:     "**sanitized**",
+			PullUsername:     state.RegistryInfo.PullUsername,
+			PullPassword:     "**sanitized**",
+			Address:          state.RegistryInfo.Address,
+			NodePort:         state.RegistryInfo.NodePort,
+			InternalRegistry: state.RegistryInfo.InternalRegistry,
+			Secret:           state.RegistryInfo.Secret,
+		},
+		LoggingSecret: "**sanitized**",
+	}
+
+	return sanitizedState
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.

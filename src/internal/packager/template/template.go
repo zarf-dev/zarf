@@ -86,6 +86,7 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 		// Git server info
 		"GIT_PUSH":      gitInfo.PushUsername,
 		"GIT_AUTH_PUSH": gitInfo.PushPassword,
+		"GIT_PULL":      gitInfo.PullUsername,
 		"GIT_AUTH_PULL": gitInfo.PullPassword,
 	}
 
@@ -119,7 +120,15 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 	for key, value := range builtinMap {
 		// Builtin keys are always uppercase in the format ###ZARF_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
-		templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
+
+		if key == "LOGGING_AUTH" || key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
+			key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
+			key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
+			// Sanitize any builtin templates that are sensitive
+			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = "**sanitized**"
+		} else {
+			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
+		}
 	}
 
 	for key, variable := range values.config.SetVariableMap {
@@ -131,7 +140,8 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 		}
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
 		if variable.Sensitive {
-			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = "*****"
+			// Sanitize any provided variables that are sensitive
+			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = "**sanitized**"
 		} else {
 			templateMapLog[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
 		}
