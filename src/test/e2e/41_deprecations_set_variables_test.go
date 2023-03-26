@@ -44,12 +44,12 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
 	require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")
 
-	// 1. Deploy the setVariable script that should pass and output the variable
+	// 1. Deploy the setVariable action that should pass and output the variable
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "Hello from: Hello Kitteh")
 
-	// 2. Deploy the setVariable script that should pass and output the variable
+	// 2. Deploy the setVariable action that should pass and output the variable
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-pkg-var")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "Zarf-The-Axolotl")

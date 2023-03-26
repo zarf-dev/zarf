@@ -53,7 +53,7 @@ components:
     onDeploy:
         # runs before the component is deployed
         before:
-        # setVariable can be used to set a variable for use in other actions or components (only onDeploy)
+        # setVariables can be used to set a variable for use in other actions or components (only onDeploy)
         - cmd: echo "meow"
             setVariables:
               - name: CAT_SOUND
