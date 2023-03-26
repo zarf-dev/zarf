@@ -29,7 +29,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	defer e2e.cleanFiles(allArtifacts...)
 
 	// 2. Try creating the package to test the create scripts
-	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecations-%s.tar.zst", testPackageDirPath, e2e.arch)
+	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-set-variable-%s.tar.zst", testPackageDirPath, e2e.arch)
 	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
 
 	// Check that the command still errors out
