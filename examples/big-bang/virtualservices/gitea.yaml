@@ -7,7 +7,7 @@ spec:
   gateways:
     - istio-system/public
   hosts:
-    - gitea.bigbang.dev
+    - gitea.###ZARF_VAR_DOMAIN###
   http:
     - route:
         - destination:
