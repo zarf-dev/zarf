@@ -69,25 +69,24 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	for {
 		attempt++
 
-		spinner.Updatef("Attempt %d of 3 to install chart", attempt)
+		spinner.Updatef("Attempt %d of 4 to install chart", attempt)
 		histClient := action.NewHistory(h.actionConfig)
 		histClient.Max = 1
+		releases, histErr := histClient.Run(h.ReleaseName)
 
 		if attempt > 4 {
 			// On total failure try to rollback or uninstall.
-			if histClient.Version > 1 {
+			if len(releases) > 0 {
 				spinner.Updatef("Performing chart rollback")
 				_ = h.rollbackChart(h.ReleaseName)
 			} else {
 				spinner.Updatef("Performing chart uninstall")
 				_, _ = h.uninstallChart(h.ReleaseName)
 			}
-			return nil, "", fmt.Errorf("unable to install/upgrade chart after 3 attempts")
+			return nil, "", fmt.Errorf("unable to install/upgrade chart after 4 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
-
-		_, histErr := histClient.Run(h.ReleaseName)
 
 		switch histErr {
 		case driver.ErrReleaseNotFound:
