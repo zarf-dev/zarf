@@ -141,18 +141,16 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 			template := mappings[templateKey]
 
-			// Check if the value is present, replace with empty string if not.
-			var value string
-			if present {
+			// Check if the template is nil (present), use an empty string if not.
+			value := ""
+			if template != nil {
 				value = template.Value
-			} else {
-				value = ""
-			}
 
-			// Check if the value is autoIndented and add the correct spacing
-			if template.AutoIndent {
-				indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
-				value = strings.ReplaceAll(value, "\n", indent)
+				// Check if the value is autoIndented and add the correct spacing
+				if template.AutoIndent {
+					indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
+					value = strings.ReplaceAll(value, "\n", indent)
+				}
 			}
 
 			// Add the processed text and continue processing the line
