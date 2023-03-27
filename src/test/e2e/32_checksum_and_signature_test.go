@@ -30,13 +30,8 @@ func TestChecksumAndSignature(t *testing.T) {
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Test that we get an error when trying to validate during inspect when we forget to provide the public key
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, "--validate")
-	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Failed to inspect package: package is signed but no key was provided")
-
 	// Test that we don't get an error when we remember to provide the public key
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, publicKeyFlag, "--validate")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "inspect", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Verified OK")
 
