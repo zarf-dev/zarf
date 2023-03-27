@@ -12,26 +12,39 @@ This command looks for a zarf-init package in the local directory that the comma
 
 
 
-Example Usage:
-# Initializing without any optional components:
+## Example Usage:
+
+### Initializing without any optional components:
+```shell
 zarf init
+```
 
-# Initializing w/ Zarfs internal git server:
+### Initializing w/ Zarfs internal git server:
+```shell
 zarf init --components=git-server
+```
 
-# Initializing w/ Zarfs internal git server and PLG stack:
+### Initializing w/ Zarfs internal git server and PLG stack:
+```shell
 zarf init --components=git-server,logging
+```
 
-# Initializing w/ an internal registry but with a different nodeport:
+### Initializing w/ an internal registry but with a different nodeport:
+```shell
 zarf init --nodeport=30333
+```
 
-# Initializing w/ an external registry:
+### Initializing w/ an external registry:
+```shell
 zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+```
 
-# Initializing w/ an external git server:
+### Initializing w/ an external git server:
+```shell
 zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+```
 
-
+# General
 
 ```
 zarf init [flags]
