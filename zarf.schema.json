@@ -127,7 +127,12 @@
         },
         "url": {
           "type": "string",
-          "description": "The URL of the chart repository or git url if the chart is using a git repo instead of helm repo"
+          "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored",
+          "examples": [
+            "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
+            "helm chart repo: https://stefanprodan.github.io/podinfo",
+            "git repo: https://github.com/stefanprodan/podinfo"
+          ]
         },
         "version": {
           "type": "string",
