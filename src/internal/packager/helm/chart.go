@@ -87,12 +87,21 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			// On total failure try to rollback or uninstall.
 			if previouslyDeployed {
 				spinner.Updatef("Performing chart rollback")
-				_ = h.rollbackChart(h.ReleaseName)
+				err = h.rollbackChart(h.ReleaseName)
+				if err != nil {
+					return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts and unable to rollback: %s", err.Error())
+				}
+
+				return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts")
 			} else {
 				spinner.Updatef("Performing chart uninstall")
-				_, _ = h.uninstallChart(h.ReleaseName)
+				_, err = h.uninstallChart(h.ReleaseName)
+				if err != nil {
+					return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
+				}
+
+				return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 			}
-			return nil, "", fmt.Errorf("unable to install/upgrade chart after 4 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
