@@ -20,24 +20,19 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string, validatePackage bool) error {
+func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
-		// Download the full package if we are validating the package contents during the inspect
-		if validatePackage || inspectPublicKey != "" {
-			if err := p.handleOciPackage(); err != nil {
-				return err
-			}
-		} else {
-			pullSBOM := includeSBOM || outputSBOM != ""
-			if err := pullLayersForInspect(p.cfg.DeployOpts.PackagePath, p.tmp, pullSBOM); err != nil {
-				return err
-			}
+		// Download all the layers we need
+		pullSBOM := includeSBOM || outputSBOM != ""
+		pullZarfSig := inspectPublicKey != ""
+		if err := pullLayersForInspect(p.cfg.DeployOpts.PackagePath, p.tmp, pullSBOM, pullZarfSig); err != nil {
+			return fmt.Errorf("unable to pull layers for inspect: %w", err)
 		}
 		err := utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to read the zarf yaml for the inspect: %w", err)
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
@@ -56,11 +51,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
 	// Validate the package checksums and signatures if specified
-	if validatePackage || inspectPublicKey != "" {
-		if err := p.validatePackageChecksums(); err != nil {
-			return err
-		}
-
+	if inspectPublicKey != "" {
 		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
 			return err
 		}
@@ -89,7 +80,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	return nil
 }
 
-func pullLayersForInspect(packagePath string, tmpPath types.TempPaths, includeSBOM bool) error {
+func pullLayersForInspect(packagePath string, tmpPath types.TempPaths, includeSBOM bool, includeSig bool) error {
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", packagePath)
 	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, "oci://"))
 	if err != nil {
@@ -125,6 +116,16 @@ func pullLayersForInspect(packagePath string, tmpPath types.TempPaths, includeSB
 			return err
 		}
 		if err := archiver.Unarchive(tmpPath.SbomTar, filepath.Join(tmpPath.Base, "sboms")); err != nil {
+			return err
+		}
+	}
+
+	if includeSig {
+		sigTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
+			return d.Annotations["org.opencontainers.image.title"] == "zarf.yaml.sig"
+		})
+		err = pullLayer(dst, sigTarDesc, tmpPath.ZarfSig)
+		if err != nil {
 			return err
 		}
 	}

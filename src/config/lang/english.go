@@ -204,9 +204,10 @@ const (
 	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
 	CmdPackageDeployFlagPublicKey  = "Path to public key file for validating signed packages"
 
-	CmdPackageInspectFlagSbom     = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut  = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectFlagValidate = "Validate any checksums and signatures while inspecting the package"
+	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
+	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
