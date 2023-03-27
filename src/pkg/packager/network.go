@@ -252,8 +252,13 @@ func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, er
 		layers = manifest.Layers
 	}
 
+	processedLayers := make(map[string]bool)
 	for _, layer := range layers {
-		total += layer.Size
+		// Only include this layer's size if we haven't already processed it
+		if !processedLayers[layer.Digest.String()] {
+			total += layer.Size
+			processedLayers[layer.Digest.String()] = true
+		}
 	}
 
 	return total, nil
