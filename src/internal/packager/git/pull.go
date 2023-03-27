@@ -6,7 +6,9 @@ package git
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -57,8 +59,38 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
 	g.GitPath = path.Join(targetFolder, repoFolder)
 
+	hostPath := get("hostPath")
+
+	if get("proto") == "file://" && !strings.HasPrefix(get("hostPath"), "/") {
+		// If the git URL is a local file path, we need to convert it to an absolute path.
+		// This is because go-git does not support relative paths.
+		//
+		// Example: file://~/dev/podinfo
+		// and
+		// Example: file://../dev/podinfo
+		// Becomes: file:///home/0x1337/dev/podinfo
+		if strings.HasPrefix(get("hostPath"), "~") {
+			// If the path starts with a tilde, we need to expand it to the user's home directory.
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return fmt.Errorf("unable to get user's home directory: %w", err)
+			}
+			withoutTilde := strings.TrimPrefix(get("hostPath"), "~")
+			hostPath, err = filepath.Abs(filepath.Join(home, withoutTilde))
+			if err != nil {
+				return fmt.Errorf("unable to convert relative path to absolute path: %w", err)
+			}
+		} else {
+			// The path is relative to the current working directory.
+			hostPath, err = filepath.Abs(get("hostPath"))
+			if err != nil {
+				return fmt.Errorf("unable to convert relative path to absolute path: %w", err)
+			}
+		}
+	}
+
 	// Construct the remote URL without the reference
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), hostPath, get("repo"), get("git"))
 
 	// Clone the git repository.
 	err = g.clone(gitURLNoRef, ref)
