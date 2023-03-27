@@ -140,15 +140,23 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 			}
 
 			template := mappings[templateKey]
-			value := template.Value
 
+			// Check if the value is present, replace with empty string if not.
+			var value string
+			if present {
+				value = template.Value
+			} else {
+				value = ""
+			}
+
+			// Check if the value is autoIndented and add the correct spacing
 			if template.AutoIndent {
 				indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
 				value = strings.ReplaceAll(value, "\n", indent)
 			}
 
+			// Add the processed text and continue processing the line
 			text += fmt.Sprintf("%s%s", preTemplate, value)
-
 			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 		}
 	}
