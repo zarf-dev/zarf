@@ -1748,11 +1748,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
+**Description:** The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
 
 </blockquote>
 </details>
