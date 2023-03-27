@@ -28,7 +28,7 @@ var initCmd = &cobra.Command{
 	Aliases: []string{"i"},
 	Short:   lang.CmdInitShort,
 	Long:    lang.CmdInitLong,
-
+	Example: lang.CmdInitExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
