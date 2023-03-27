@@ -374,25 +374,18 @@ func (p *Packager) validatePackageChecksums() error {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
 	}
 
-	// Get a glob of all the files within the package
-	packageGlob, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
-	if err != nil {
-		return fmt.Errorf("unable to get a list of all the files within the package: %w", err)
-	}
-
-	// Create a map so we can track which files we have processed
+	// Create a map of all the files in the package so we can track which files we have processed
 	filepathMap := make(map[string]bool)
-	for _, path := range packageGlob {
-		fileInfo, err := os.Stat(path)
-		if err != nil {
-			return fmt.Errorf("unable to get the file info for a file within the package: %s - %w", path, err)
-		}
-
-		// If the glob item is a file, add it to the map
-		if !fileInfo.IsDir() {
+	err = filepath.Walk(p.tmp.Base, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
 			filepathMap[path] = false
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
+
 	// Verify the that checksums.txt file matches the aggregated checksum provided
 	actualChecksumSig, err := utils.GetSHA256OfFile(p.tmp.Checksums)
 	if err != nil {
