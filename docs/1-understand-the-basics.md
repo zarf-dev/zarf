@@ -1,4 +1,4 @@
-# Understand The Basics
+# Understand the Basics
 
 Before you can effectively use Zarf, it is useful to have an understanding of the technology Zarf is built on and around. The sections below provide some helpful links to start building up this foundation as well as a glossary of the terms used in this project.
 
@@ -18,7 +18,7 @@ Before you can effectively use Zarf, it is useful to have an understanding of th
 - [What is AirGap](https://ibm.github.io/kubernetes-networking/vpc/airgap/)
 - AirGap Kubernetes Course - Coming Soon!
 
-## GitOps Basics
+### GitOps Basics
 
 - [CloudBees GitOps Definition](https://www.cloudbees.com/gitops/what-is-gitops)
 - [Understanding Git](https://hackernoon.com/understanding-git-fcffd87c15a3)
@@ -31,9 +31,9 @@ Before you can effectively use Zarf, it is useful to have an understanding of th
 
 ## Terms Used
 
-- **Declarative**:  A user states (via configuration file) which resources are needed and Zarf locates & packages them. A user does not have to know _how_ to download, collect, roll, and unroll dependencies for transport, they only have to know _what_ they need.
-- **Package**:  A well-defined, tool-generated, versioned, and compressed collection of software intended for movement (and later use) across a network / administrative boundary.
-- **Remote systems**:  Systems that are organized such that development & maintenance actions occur _primarily_ in locations physically & logically separate from where operations occur.
-- **Constrained systems**:  Systems with explicit resource / administrative / capability limitations.
+- **Declarative**:  A user states (via configuration file) which resources are needed and Zarf locates and packages them. A user does not have to know _how_ to download, collect, roll, and unroll dependencies for transport, they only have to know _what_ they need.
+- **Package**:  A well-defined, tool-generated, versioned, and compressed collection of software intended for movement (and later use) across a network/administrative boundary.
+- **Remote systems**:  Systems that are organized such that development and maintenance actions occur _primarily_ in locations physically and logically separate from where operations occur.
+- **Constrained systems**:  Systems with explicit resource/administrative/capability limitations.
 - **Independent systems**:  Systems are organized such that continued operation is possible even when disconnected (temporarily or otherwise) from external systems dependencies.
-- **Air-gapped systems**:  Systems are designed to operate while _physically disconnected_ from "unsecured" networks like the internet. More on that [here](<https://en.wikipedia.org/wiki/Air_gap_(networking)>).
+- **Air-gapped systems**:  Systems are designed to operate while _physically disconnected_ from "unsecured" networks like the internet. For more information, see [Air Gap Networking](<https://en.wikipedia.org/wiki/Air_gap_(networking)>).
