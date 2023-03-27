@@ -75,8 +75,17 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		releases, histErr := histClient.Run(h.ReleaseName)
 
 		if attempt > 4 {
+			previouslyDeployed := false
+
+			// Check for previous releases that successfully deployed
+			for _, release := range releases {
+				if release.Info.Status == "deployed" {
+					previouslyDeployed = true
+				}
+			}
+
 			// On total failure try to rollback or uninstall.
-			if len(releases) > 0 {
+			if previouslyDeployed {
 				spinner.Updatef("Performing chart rollback")
 				_ = h.rollbackChart(h.ReleaseName)
 			} else {
