@@ -70,6 +70,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	totalBytes := int64(0)
+	processedLayers := make(map[string]bool)
 	for src, img := range imageMap {
 		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
@@ -82,11 +83,21 @@ func (i *ImgConfig) PullAll() error {
 			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
 		}
 		for _, layer := range layers {
-			size, err := layer.Size()
+			layerDigest, err := layer.Digest()
 			if err != nil {
-				return fmt.Errorf("unable to get size of layer: %w", err)
+				return fmt.Errorf("unable to get digest for image layer: %w", err)
 			}
-			totalBytes += size
+
+			// Only calculate this layer size if we haven't already looked at it
+			if !processedLayers[layerDigest.Hex] {
+				size, err := layer.Size()
+				if err != nil {
+					return fmt.Errorf("unable to get size of layer: %w", err)
+				}
+				totalBytes += size
+				processedLayers[layerDigest.Hex] = true
+			}
+
 		}
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")

@@ -96,14 +96,26 @@ const (
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
-		"that the Zarf binary is located in.\n\n\n\n" +
-		"Example Usage:\n" +
-		"# Initializing without any optional components:\nzarf init\n\n" +
-		"# Initializing w/ Zarfs internal git server:\nzarf init --components=git-server\n\n" +
-		"# Initializing w/ Zarfs internal git server and PLG stack:\nzarf init --components=git-server,logging\n\n" +
-		"# Initializing w/ an internal registry but with a different nodeport:\nzarf init --nodeport=30333\n\n" +
-		"# Initializing w/ an external registry:\nzarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
-		"# Initializing w/ an external git server:\nzarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}\n\n"
+		"that the Zarf binary is located in.\n\n\n\n"
+
+	CmdInitExample = `# Initializing without any optional components:
+zarf init
+
+# Initializing w/ Zarfs internal git server:
+zarf init --components=git-server
+
+# Initializing w/ Zarfs internal git server and PLG stack:
+zarf init --components=git-server,logging
+
+# Initializing w/ an internal registry but with a different nodeport:
+zarf init --nodeport=30333
+
+# Initializing w/ an external registry:
+zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+
+# Initializing w/ an external git server:
+zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+`
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
 	CmdInitErrDownload          = "failed to download the init package: %s"
