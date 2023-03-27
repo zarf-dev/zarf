@@ -155,9 +155,9 @@ type ZarfComponentAction struct {
 }
 
 type ZarfComponentActionSetVariable struct {
-	Name      string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Sensitive bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	Indent    int    `json:"indent,omitempty" jsonschema:"description=The number of spaces to indent each line with when templated"`
+	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing

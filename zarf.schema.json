@@ -425,9 +425,9 @@
           "type": "boolean",
           "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
         },
-        "indent": {
-          "type": "integer",
-          "description": "The number of spaces to indent each line with when templated"
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
         }
       },
       "additionalProperties": false,
@@ -870,6 +870,10 @@
         "description": {
           "type": "string",
           "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."
         }
       },
       "additionalProperties": false,
@@ -901,9 +905,9 @@
           "type": "boolean",
           "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
         },
-        "indent": {
-          "type": "integer",
-          "description": "The number of spaces to indent each line with when templated"
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
         }
       },
       "additionalProperties": false,

@@ -15,13 +15,13 @@ constants:
 variables:
   # OPTIONAL_FOOTER injects a configurable footer into the site but has an empty default with no description and will not prompt the user interactively
   - name: OPTIONAL_FOOTER
-    indent: 8
-  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the indent key and that it is multi-line)
+    autoIndent: true
+  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the autoIndent key and that it is multi-line)
   - name: STYLE
     default: |
       body { font-family: sans-serif; color: white; background: #0a0e2e; }
       pre { color: white; background: black; }
-    indent: 10
+    autoIndent: true
   # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
   - name: SITE_NAME
     description: "The name of the site you are deploying (i.e. Lula Website)"
@@ -54,7 +54,7 @@ components:
             mute: true
             setVariables:
               - name: MODIFIED_TERRAFORM
-                indent: 10
+                autoIndent: true
                 # `sensitive` is set to exclude the command output from the logs (note this will include AWS_REGION which we marked sensitive above)
                 sensitive: true
 

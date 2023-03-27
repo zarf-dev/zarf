@@ -377,9 +377,10 @@ export interface ZarfComponentAction {
 
 export interface ZarfComponentActionSetVariable {
     /**
-     * The number of spaces to indent each line with when templated
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
      */
-    indent?: number;
+    autoIndent?: boolean;
     /**
      * The name to be used for the variable
      */
@@ -738,6 +739,11 @@ export interface DeprecatedZarfComponentScripts {
 
 export interface ZarfPackageConstant {
     /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_CONST_.
+     */
+    autoIndent?: boolean;
+    /**
      * A description of the constant to explain its purpose on package create or deploy
      * confirmation prompts
      */
@@ -818,6 +824,11 @@ export interface ZarfMetadata {
 
 export interface ZarfPackageVariable {
     /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
+     */
+    autoIndent?: boolean;
+    /**
      * The default value to use for the variable
      */
     default?: string;
@@ -825,10 +836,6 @@ export interface ZarfPackageVariable {
      * A description of the variable to be used when prompting the user a value
      */
     description?: string;
-    /**
-     * The number of spaces to indent each line with when templated
-     */
-    indent?: number;
     /**
      * The name to be used for the variable
      */
@@ -1238,7 +1245,7 @@ const typeMap: any = {
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
     ], false),
     "ZarfComponentActionSetVariable": o([
-        { json: "indent", js: "indent", typ: u(undefined, 0) },
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
@@ -1331,6 +1338,7 @@ const typeMap: any = {
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
     "ZarfPackageConstant": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "value", js: "value", typ: "" },
@@ -1350,9 +1358,9 @@ const typeMap: any = {
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),
     "ZarfPackageVariable": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
-        { json: "indent", js: "indent", typ: u(undefined, 0) },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },

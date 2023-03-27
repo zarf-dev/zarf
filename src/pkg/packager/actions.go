@@ -37,7 +37,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]string
+		vars       map[string]*utils.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -110,7 +110,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				p.setVariableInConfig(v.Name, out, v.Sensitive, v.Indent)
+				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent)
 			}
 
 			// If the action has a wait, change the spinner message to reflect that on success.
@@ -224,7 +224,7 @@ func actionCmdMutation(cmd string) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*utils.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -252,8 +252,8 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 		k = strings.ReplaceAll(k, "#", "")
 		// Make terraform variables available to the action as TF_VAR_lowercase_name.
 		k1 := strings.ReplaceAll(strings.ToLower(k), "zarf_var", "TF_VAR")
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v.Value))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v.Value))
 	}
 
 	return cfg

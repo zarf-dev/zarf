@@ -1042,16 +1042,16 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_indent"></a>indent</strong>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_autoIndent"></a>autoIndent</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The number of spaces to indent each line with when templated
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
 
 |          |           |
 | -------- | --------- |
-| **Type** | `integer` |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -2401,16 +2401,16 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="variables_items_indent"></a>indent</strong>
+<strong> <a name="variables_items_autoIndent"></a>autoIndent</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The number of spaces to indent each line with when templated
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
 
 |          |           |
 | -------- | --------- |
-| **Type** | `integer` |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -2498,6 +2498,22 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="constants_items_autoIndent"></a>autoIndent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_.
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
