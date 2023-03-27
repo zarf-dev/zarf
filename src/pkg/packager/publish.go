@@ -71,6 +71,10 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
+	if err := p.validatePackageChecksums(); err != nil {
+		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
+	}
+
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
 		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath)
 		if err != nil {

@@ -387,11 +387,11 @@ func (p *Packager) validatePackageChecksums() error {
 	}
 
 	// Verify the that checksums.txt file matches the aggregated checksum provided
-	actualChecksumSig, err := utils.GetSHA256OfFile(p.tmp.Checksums)
+	actualAggregateChecksum, err := utils.GetSHA256OfFile(p.tmp.Checksums)
 	if err != nil {
 		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
 	}
-	if actualChecksumSig != p.cfg.Pkg.Metadata.AggregateChecksum {
+	if actualAggregateChecksum != p.cfg.Pkg.Metadata.AggregateChecksum {
 		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
 	}
 
@@ -430,7 +430,7 @@ func (p *Packager) validatePackageChecksums() error {
 
 	for path, processed := range filepathMap {
 		if !processed {
-			return fmt.Errorf("the file %s was not processed by the checksums.txt file", path)
+			return fmt.Errorf("the file %s was present in the Zarf package but not specified in the checksums.txt, the package might have been tampered with", path)
 		}
 	}
 
@@ -440,7 +440,7 @@ func (p *Packager) validatePackageChecksums() error {
 
 func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
-	// If the insecure flag we provided, ignore the signature validation
+	// If the insecure flag was provided, ignore the signature validation
 	if config.CommonOptions.Insecure {
 		return nil
 	}

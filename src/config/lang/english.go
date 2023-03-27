@@ -37,7 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."

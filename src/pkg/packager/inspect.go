@@ -20,12 +20,12 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, validatePackage bool) error {
+func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string, validatePackage bool) error {
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
 		// Download the full package if we are validating the package contents during the inspect
-		if validatePackage || p.cfg.DeployOpts.PublicKeyPath != "" {
+		if validatePackage || inspectPublicKey != "" {
 			if err := p.handleOciPackage(); err != nil {
 				return err
 			}
@@ -56,12 +56,12 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, validatePackage 
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
 	// Validate the package checksums and signatures if specified
-	if validatePackage || p.cfg.DeployOpts.PublicKeyPath != "" {
+	if validatePackage || inspectPublicKey != "" {
 		if err := p.validatePackageChecksums(); err != nil {
 			return err
 		}
 
-		if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
 			return err
 		}
 	}
