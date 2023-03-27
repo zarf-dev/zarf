@@ -203,6 +203,10 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	target.Images = append(target.Images, override.Images...)
 	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
+	// Check for nil array
+	if target.Extensions.BigBang.ValuesFiles == nil {
+		target.Extensions.BigBang.ValuesFiles = make([]string, len(override.Extensions.BigBang.ValuesFiles))
+	}
 	target.Extensions.BigBang.ValuesFiles = append(target.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
