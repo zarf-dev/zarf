@@ -490,8 +490,7 @@ export interface ZarfChart {
      */
     releaseName?: string;
     /**
-     * The URL of the chart repository or git url if the chart is using a git repo instead of
-     * helm repo
+     * The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
      */
     url?: string;
     /**
