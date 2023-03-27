@@ -68,8 +68,8 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]*ut
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
-	depMarkerOld := "DATA_INJECTON_MARKER"
-	depMarkerNew := "DATA_INJECTION_MARKER"
+	depMarkerOld := "###ZARF_DATA_INJECTON_MARKER###"
+	depMarkerNew := "###ZARF_DATA_INJECTION_MARKER###"
 	deprecations := map[string]string{
 		depMarkerOld: depMarkerNew,
 	}
@@ -163,9 +163,9 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	}
 
 	templateMap, deprecations := values.GetVariables(component)
-	utils.ReplaceTextTemplate(path, templateMap, deprecations)
+	err := utils.ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
 
-	return nil
+	return err
 }
 
 func debugPrintTemplateMap(templateMap map[string]*utils.TextTemplate) {

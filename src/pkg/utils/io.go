@@ -5,7 +5,7 @@
 package utils
 
 import (
-	"bytes"
+	"bufio"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -105,26 +105,61 @@ func WriteFile(path string, data []byte) error {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
-func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string) {
-	text, err := os.ReadFile(path)
+func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string, templateRegex string) error {
+	textFile, err := os.Open(path)
 	if err != nil {
-		message.Fatalf(err, "Unable to load %s", path)
+		return err
 	}
 
-	// First check for deprecated variables.
-	for old, new := range deprecations {
-		if bytes.Contains(text, []byte(old)) {
-			message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", old, new)
+	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
+	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
+
+	fileScanner := bufio.NewScanner(textFile)
+	fileScanner.Split(bufio.ScanLines)
+
+	text := ""
+
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+
+		for {
+			matches := regexTemplateLine.FindStringSubmatch(line)
+
+			// No template left on this line so move on
+			if len(matches) == 0 {
+				text += fmt.Sprintln(line)
+				break
+			}
+
+			preTemplate := matches[regexTemplateLine.SubexpIndex("preTemplate")]
+			templateKey := matches[regexTemplateLine.SubexpIndex("template")]
+
+			_, present := deprecations[templateKey]
+			if present {
+				message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, deprecations[templateKey])
+			}
+
+			template := mappings[templateKey]
+			value := template.Value
+
+			if template.AutoIndent {
+				indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
+				value = strings.ReplaceAll(value, "\n", indent)
+			}
+
+			text += fmt.Sprintf("%s%s", preTemplate, value)
+
+			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 		}
 	}
 
-	for template, value := range mappings {
-		text = bytes.ReplaceAll(text, []byte(template), []byte(value.Value))
+	textFile.Close()
+
+	if err = os.WriteFile(path, []byte(text), 0600); err != nil {
+		return err
 	}
 
-	if err = os.WriteFile(path, text, 0600); err != nil {
-		message.Fatalf(err, "Unable to update %s", path)
-	}
+	return nil
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
