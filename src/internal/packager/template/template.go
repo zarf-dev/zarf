@@ -68,10 +68,10 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]*ut
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
-	depMarkerOld := "###ZARF_DATA_INJECTON_MARKER###"
-	depMarkerNew := "###ZARF_DATA_INJECTION_MARKER###"
+	depMarkerOld := "DATA_INJECTON_MARKER"
+	depMarkerNew := "DATA_INJECTION_MARKER"
 	deprecations := map[string]string{
-		depMarkerOld: depMarkerNew,
+		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 	}
 
 	builtinMap := map[string]string{
