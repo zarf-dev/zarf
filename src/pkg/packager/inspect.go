@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -50,11 +51,24 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
-	// Validate the package checksums and signatures if specified
+	// Attempt to validate the checksums, or explain why we cannot validate them
+	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		// If the package is not a remote OCI package, we can validate the checksums
+		if err := p.validatePackageChecksums(); err != nil {
+			message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
+		}
+	} else {
+		message.Warnf("Zarf is unable to validate the checksums of remote OCI packages. We are unable to determine the integrity of the package without downloading the entire package.")
+	}
+
+	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
+	_, sigExistErr := os.Stat(p.tmp.ZarfSig)
 	if inspectPublicKey != "" {
 		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
-			return err
+			return fmt.Errorf("unable to validate the package signature: %w", err)
 		}
+	} else if sigExistErr == nil {
+		message.Warnf("The package you are inspecting has been signed but a public key was not provided.")
 	}
 
 	if includeSBOM || outputSBOM != "" {
