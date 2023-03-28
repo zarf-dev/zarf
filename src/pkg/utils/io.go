@@ -141,8 +141,8 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 			template := mappings[templateKey]
 
-			// Check if the template is nil (present), use an empty string if not.
-			value := ""
+			// Check if the template is nil (present), use the original templateKey if not (so that it is not replaced).
+			value := templateKey
 			if template != nil {
 				value = template.Value
 
