@@ -25,6 +25,8 @@ func TestHelm(t *testing.T) {
 	testHelmEscaping(t)
 
 	testHelmOCIChart(t)
+
+	testHelmUninstallRollback(t)
 }
 
 func testHelmReleaseName(t *testing.T) {
@@ -105,5 +107,47 @@ func testHelmOCIChart(t *testing.T) {
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmUninstallRollback(t *testing.T) {
+	t.Log("E2E: Helm Uninstall and Rollback")
+
+	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
+	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.arch)
+
+	// Create the evil package (with the bad configmap).
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "src/test/test-packages/25-evil-dos-games/", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Deploy the evil package.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", evilPath, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+
+	// Ensure that this does not leave behind a dos-games chart
+	helmOut, err := exec.Command("helm", "list", "-n", "zarf").Output()
+	require.NoError(t, err)
+	assert.NotContains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+
+	// Deploy the good package.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", goodPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Ensure that this does create a dos-games chart
+	helmOut, err = exec.Command("helm", "list", "-n", "zarf").Output()
+	require.NoError(t, err)
+	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+
+	// Deploy the evil package.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", evilPath, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+
+	// Ensure that the dos-games chart was not uninstalled
+	helmOut, err = exec.Command("helm", "list", "-n", "zarf").Output()
+	require.NoError(t, err)
+	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+
+	// Remove the package.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
