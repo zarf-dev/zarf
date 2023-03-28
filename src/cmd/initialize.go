@@ -15,6 +15,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -46,6 +47,16 @@ var initCmd = &cobra.Command{
 		if pkgConfig.DeployOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
+
+		// Check that the init package architecture is the same as the cluster architecture
+		var initPackageArch string
+		if strings.Contains(initPackageName, "arm64") {
+			initPackageArch = "arm64"
+		}
+		if strings.Contains(initPackageName, "amd64") {
+			initPackageArch = "amd64"
+		}
+		verifyArchitecture(initPackageArch)
 
 		// Ensure uppercase keys from viper
 		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
@@ -135,6 +146,20 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 	}
 
 	return nil
+}
+
+// verifyArchitecture verifies that the init package architecture matches the cluster architecture.
+func verifyArchitecture(initPackageArch string) {
+	c := cluster.NewClusterOrDie()
+
+	clusterArch, err := c.Kube.GetArchitecture()
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+
+	if initPackageArch != clusterArch {
+		message.Fatalf(err, "this init package architecture is %s, but this cluster has the %s architecture", initPackageArch, clusterArch)
+	}
 }
 
 func validateInitFlags() error {
