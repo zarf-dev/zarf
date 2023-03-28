@@ -18,6 +18,8 @@
 	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
+	import 'xterm/css/xterm.css';
+	import {Terminal} from 'xterm';
 
 	const POLL_TIME = 5000;
 
@@ -84,8 +86,23 @@
 	}
 
 	onMount(() => {
+		const deployStream = Packages.deployStream();
+		const term = new Terminal({disableStdin: true, convertEol: true});
+		const termElement = document.getElementById('terminal');
+		if(termElement) {
+			term.open(termElement)
+		}
+		deployStream.addEventListener('message', (e: MessageEvent<string>) => {
+	
+				term.writeln(e.data);
+				term.writeln('');
+		})
+		deployStream.addEventListener('error', (e) => {
+			console.log(JSON.stringify(e))
+		})
 		Packages.deploy(options).then(
 			(value: boolean) => {
+				deployStream.close();
 				finishedDeploying = true;
 				successful = value;
 			},
@@ -97,6 +114,7 @@
 			updateComponentSteps();
 		}, POLL_TIME);
 		return () => {
+			deployStream.close();
 			clearInterval(pollDeployed);
 		};
 	});
@@ -111,16 +129,16 @@
 				disabled: false
 			}
 		];
-		dialogOpen = true;
-		if (successful) {
-			setTimeout(() => {
-				goto('/packages');
-			}, POLL_TIME);
-		} else {
-			setTimeout(() => {
-				goto('/');
-			}, POLL_TIME);
-		}
+		// dialogOpen = true;
+		// if (successful) {
+		// 	setTimeout(() => {
+		// 		goto('/packages');
+		// 	}, POLL_TIME);
+		// } else {
+		// 	setTimeout(() => {
+		// 		goto('/');
+		// 	}, POLL_TIME);
+		// }
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);
@@ -135,6 +153,7 @@
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" steps={componentSteps} />
+	<div id="terminal"></div>
 </section>
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
