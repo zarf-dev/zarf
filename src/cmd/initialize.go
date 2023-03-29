@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -48,7 +49,7 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		// Check that the init package architecture is the same as the cluster architecture
+		// Check that the init package architecture is the same as the target system architecture
 		var initPackageArch string
 		if strings.Contains(initPackageName, "arm64") {
 			initPackageArch = "arm64"
@@ -148,17 +149,27 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 	return nil
 }
 
-// verifyArchitecture verifies that the init package architecture matches the cluster architecture.
+// verifyArchitecture verifies that the init package architecture matches the target system architecture.
 func verifyArchitecture(initPackageArch string) {
-	c := cluster.NewClusterOrDie()
+	components := pkgConfig.DeployOpts.Components
+	var systemArch string
+	var err error
 
-	clusterArch, err := c.Kube.GetArchitecture()
-	if err != nil {
-		message.Fatal(err, err.Error())
+	// If we're not running in appliance mode (deploying k3s), query the existing cluster for the architecture.
+	// If we are running in appliance mode, get the architecture of the machine we're running on.
+	if !strings.Contains(components, "k3s") {
+		c := cluster.NewClusterOrDie()
+		systemArch, err = c.Kube.GetArchitecture()
+
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
+	} else {
+		systemArch = runtime.GOARCH
 	}
 
-	if initPackageArch != clusterArch {
-		message.Fatalf(err, "this init package architecture is %s, but this cluster has the %s architecture", initPackageArch, clusterArch)
+	if initPackageArch != systemArch {
+		message.Fatalf(err, "this init package architecture is %s, but the target system has the %s architecture", initPackageArch, systemArch)
 	}
 }
 
