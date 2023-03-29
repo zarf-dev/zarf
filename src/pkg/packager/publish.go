@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -81,9 +82,23 @@ func (p *Packager) Publish() error {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
 	}
-	paths, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
+
+	// Get all of the layers in the package
+	paths := []string{}
+	err := filepath.Walk(p.tmp.Base, func(path string, info os.FileInfo, err error) error {
+		// Catch any errors that happened during the walk
+		if err != nil {
+			return err
+		}
+
+		// Add any resource that is not a directory to the paths of objects we will include into the package
+		if !info.IsDir() {
+			paths = append(paths, path)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("unable to glob the package: %w", err)
+		return fmt.Errorf("unable to get the layers in the package to publish: %w", err)
 	}
 
 	ref, err := p.ref("")
