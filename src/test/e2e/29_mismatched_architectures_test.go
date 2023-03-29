@@ -44,7 +44,8 @@ func TestMismatchedArchitectures(t *testing.T) {
 	err := os.Rename(initPackageName, mismatchedInitPackage)
 	require.NoError(t, err)
 
-	// Check that zarf init returned an error because of the mismatched architectures
-	output, stdErr, err := e2e.execZarfCommand("init", "--confirm")
+	// Make sure zarf init returns an error because of the mismatched architectures.
+	// We need to use the --architecture flag here to force zarf to find the renamed package.
+	output, stdErr, err := e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	require.Error(t, err, output, stdErr)
 }
