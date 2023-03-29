@@ -3,7 +3,7 @@
 
 import AccordionGroup from './accordion-group.svelte';
 import Divider from './divider.svelte';
-import Header from './header.svelte';
+import Header from './GlobalNavigationBar.svelte';
 import Hero from './hero.svelte';
 import Icon from './icon.svelte';
 import PackageComponentAccordion from './package-component-accordion.svelte';

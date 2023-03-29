@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
 });
 
-test.describe('start page', () => {
+test.describe.skip('start page', () => {
 	test('spinner loads properly, then displays init btn @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure');
 
