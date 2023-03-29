@@ -15,7 +15,7 @@ import (
 )
 
 // TestMismatchedArchitectures ensures that zarf produces an error
-// when the init package architecture doesn't match the cluster architecture.
+// when the init package architecture doesn't match the target system architecture.
 func TestMismatchedArchitectures(t *testing.T) {
 	t.Log("E2E: Zarf init with mismatched architectures")
 	e2e.setupWithCluster(t)
@@ -37,7 +37,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// This should be the name of the built init package with the incorrect/opposite architecture of the machine we're running on.
 	mismatchedInitPackage := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, strings.TrimSpace(version))
 
-	// Rename the init package with the mismatched architecture
+	// Rename the init package with the mismatched architecture.
 	err := os.Rename(initPackageName, mismatchedInitPackage)
 	require.NoError(t, err)
 
@@ -45,5 +45,6 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// We need to use the --architecture flag here to force zarf to find the renamed package.
 	_, _, err = e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	expectedErrorMessage := fmt.Sprintf(lang.CmdInitErrVerifyArchitecture, mismatchedArch, e2e.arch)
-	require.ErrorAs(t, err, expectedErrorMessage)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), expectedErrorMessage)
 }
