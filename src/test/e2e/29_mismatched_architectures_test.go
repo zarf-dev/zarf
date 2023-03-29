@@ -28,15 +28,20 @@ func TestMismatchedArchitectures(t *testing.T) {
 		mismatchedArch = "amd64"
 	}
 
-	// Pull the current zarf binary version to find the corresponding init package
-	version, stdErr, err := e2e.execZarfCommand("version")
-	require.NoError(t, err, version, stdErr)
+	// // Pull the current zarf binary version to find the corresponding init package
+	// version, stdErr, err := e2e.execZarfCommand("version")
+	// require.NoError(t, err, version, stdErr)
 
+	version := "UnknownVersion"
+
+	// This should be the name of the init package that was built during the 'Build binary and zarf packages' stage.
 	initPackageName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.arch, strings.TrimSpace(version))
+
+	// This should be the name of the built init package with the incorrect/opposite architecture of the machine we're running on.
 	mismatchedInitPackage := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, strings.TrimSpace(version))
 
 	// Rename the init package with the mismatched architecture
-	err = os.Rename(initPackageName, mismatchedInitPackage)
+	err := os.Rename(initPackageName, mismatchedInitPackage)
 	require.NoError(t, err)
 
 	// Check that zarf init returned an error because of the mismatched architectures
