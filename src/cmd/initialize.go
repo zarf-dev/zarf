@@ -169,7 +169,7 @@ func verifyArchitecture(initPackageArch string) {
 	}
 
 	if initPackageArch != systemArch {
-		message.Fatalf(err, "this init package architecture is %s, but the target system has the %s architecture", initPackageArch, systemArch)
+		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, initPackageArch, systemArch)
 	}
 }
 

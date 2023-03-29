@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,6 +44,6 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// Make sure zarf init returns an error because of the mismatched architectures.
 	// We need to use the --architecture flag here to force zarf to find the renamed package.
 	_, _, err = e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
-	expectedErrorString := fmt.Sprintf("this init package architecture is %s, but the target system has the %s architecture", mismatchedArch, e2e.arch)
-	require.EqualError(t, err, expectedErrorString)
+	expectedErrorMessage := fmt.Sprintf(lang.CmdInitErrVerifyArchitecture, mismatchedArch, e2e.arch)
+	require.ErrorAs(t, err, expectedErrorMessage)
 }
