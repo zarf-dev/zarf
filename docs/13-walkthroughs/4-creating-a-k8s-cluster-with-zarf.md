@@ -28,7 +28,8 @@ $ zarf init
 3. Confirm k3s Component Deployment: <br/>
 - When prompted to deploy the k3s component select `y` for Yes, then hit the `enter` key.
 
-![K3s Init Component](../.images/walkthroughs/k3s_init_component.png)
+<iframe src="/docs/walkthroughs/k3s_init.html" height="750px" width="100%"></iframe>
+
 :::tip
 You can automatically accept the k3s component and confirm the package using the `--components` and `--confirm` flags.
 
