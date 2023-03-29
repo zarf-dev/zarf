@@ -7,7 +7,6 @@ package test
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -53,7 +52,8 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _ := exec.Command("kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}' ").Output()
+	kubectlOut, _, err := e2e.execZarfCommand("tools", "kubectl", "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.templateme\\.properties}'")
+	require.NoError(t, err)
 	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
 	require.Contains(t, string(kubectlOut), "camel_spider=matte")
 }
