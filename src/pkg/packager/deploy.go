@@ -387,11 +387,12 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath: p.tmp.Images,
-		ImgList:    componentImages,
-		NoChecksum: noImgChecksum,
-		RegInfo:    p.cfg.State.RegistryInfo,
-		Insecure:   config.CommonOptions.Insecure,
+		ImagesPath:    p.tmp.Images,
+		ImgList:       componentImages,
+		NoChecksum:    noImgChecksum,
+		RegInfo:       p.cfg.State.RegistryInfo,
+		Insecure:      config.CommonOptions.Insecure,
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
 	return utils.Retry(func() error {
