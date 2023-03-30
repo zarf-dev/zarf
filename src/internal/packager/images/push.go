@@ -52,7 +52,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
 
-	pushOptions := config.GetCraneOptions(i.Insecure)
+	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 
 	message.Debugf("crane pushOptions = %#v", pushOptions)
