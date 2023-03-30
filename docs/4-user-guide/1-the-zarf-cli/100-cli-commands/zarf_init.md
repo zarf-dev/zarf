@@ -12,7 +12,15 @@ This command looks for a zarf-init package in the local directory that the comma
 
 
 
-Example Usage:
+
+
+```
+zarf init [flags]
+```
+
+## Examples
+
+```
 # Initializing without any optional components:
 zarf init
 
@@ -31,10 +39,6 @@ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME
 # Initializing w/ an external git server:
 zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-
-
-```
-zarf init [flags]
 ```
 
 ## Options
