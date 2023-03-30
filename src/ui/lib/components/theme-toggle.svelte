@@ -14,6 +14,8 @@
 
 <IconButton
 	on:click={toggle}
+	class="theme-toggle"
+	ssx={{ $self: { '&:hover': { background: 'var(--action-hover-on-dark)' } } }}
 	iconContent="dark_mode"
 	toggledIconContent="light_mode"
 	toggleable

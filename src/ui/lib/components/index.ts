@@ -3,7 +3,7 @@
 
 import AccordionGroup from './accordion-group.svelte';
 import Divider from './divider.svelte';
-import Header from './GlobalNavigationBar.svelte';
+import Header from './global-navigation-bar.svelte';
 import Hero from './hero.svelte';
 import Icon from './icon.svelte';
 import PackageComponentAccordion from './package-component-accordion.svelte';
@@ -13,6 +13,8 @@ import PackageSectionHeader from './package-section-header.svelte';
 import Spinner from './spinner.svelte';
 import ThemeToggle from './theme-toggle.svelte';
 import YamlCode from './yaml-code.svelte';
+import GlobalNavBar from './global-navigation-bar.svelte';
+import NavDrawer from './nav-drawer.svelte';
 
 export {
 	AccordionGroup,
@@ -26,5 +28,7 @@ export {
 	PackageSectionHeader,
 	Spinner,
 	ThemeToggle,
-	YamlCode
+	YamlCode,
+	GlobalNavBar,
+	NavDrawer
 };

@@ -8,13 +8,35 @@ export const ZarfPalettes: Palettes = {
 		navbar: '#0D133D',
 		on: {
 			navbar: '#FFFFFF'
-		}
+		},
+		text: {
+			secondary: {
+				onDark: 'rgba(255, 255, 255, 0.7)'
+			}
+		},
+		action: {
+			hover: {
+				onDark: 'rgba(255, 255, 255, .08)'
+			}
+		},
+		navLinkSelectedBackground: 'rgba(74, 222, 222, 0.16)'
 	},
 	light: {
 		navbar: '#0D133D',
 		on: {
 			navbar: '#FFFFFF'
-		}
+		},
+		text: {
+			secondary: {
+				onDark: 'rgba(255, 255, 255, 0.7)'
+			}
+		},
+		action: {
+			hover: {
+				onDark: 'rgba(255, 255, 255, .08)'
+			}
+		},
+		navLinkSelectedBackground: 'rgba(74, 222, 222, 0.16)'
 	}
 };
 // export const ZarfPalettes: Palettes = {

@@ -10,8 +10,8 @@
 	const headerSSX: SSX = {
 		$dark: {
 			'& $self': {
-				backgroundImage: 'unset'
-			}
+				backgroundImage: 'unset',
+			},
 		},
 		$self: {
 			width: '100vw',
@@ -19,12 +19,20 @@
 			display: 'flex',
 			justifyContent: 'space-between',
 			alignItems: 'center',
-			padding: '4px 24px'
-		}
+			padding: '4px 24px',
+			zIndex: '1',
+		},
 	};
 </script>
 
-<Paper ssx={headerSSX} backgroundColor="navbar" color="on-navbar" elevation={2} square>
+<Paper
+	class="global-nav-bar"
+	ssx={headerSSX}
+	backgroundColor="navbar"
+	color="on-navbar"
+	elevation={2}
+	square
+>
 	<div class="nav-right">
 		<a href="/"><img src={ZarfLogoDark} alt="Zarf logo link to home" /></a>
 	</div>
