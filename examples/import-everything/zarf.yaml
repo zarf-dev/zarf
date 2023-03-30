@@ -93,37 +93,35 @@ components:
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
         target: files/zarf-readme.md
 
-  - name: import-helm-local
+  - name: import-helm
     required: false
     charts:
       - name: local-demo
         # Note the usage of the `localPath` key
+        # highlight-next-line
         localPath: charts/local
         namespace: local-chart
         version: 0.1.0
       - name: local-demo-relative
         # Note the usage of the `localPath` key
+        # highlight-next-line
         localPath: ../everything-external/charts/local
-        namespace: local-chart
+        namespace: local-chart-relative
         version: 0.1.0
       - name: local-demo-absolute
         # Note the usage of the `localPath` key
+        # highlight-next-line
         localPath: /tmp/everything-external/charts/local
-        namespace: local-chart
+        namespace: local-chart-absolute
         version: 0.1.0
-    images:
-      - nginx:1.16.0
-
-  # Same as examples/helm-oci-chart/zarf.yaml
-  - name: import-helm-oci
-    required: false
-    charts:
       - name: podinfo
         version: 6.3.3
         namespace: helm-oci-demo
         # Note the usage of the `url` key
+        # highlight-next-line
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
+      - nginx:1.16.0
       - ghcr.io/stefanprodan/podinfo:6.3.3
 
   - name: import-repos
