@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	test "github.com/defenseunicorns/zarf/src/test/e2e"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,10 +22,10 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	// For the upgrade test, podinfo should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
 	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
-	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
-	assert.Contains(t, string(kubectlOut), "6.3.3")
+	require.Contains(t, kubectlOut, "6.3.3")
 
 	// We also expect a 6.3.4 package to have been previously built
 	previouslyBuiltPackage := "../../../zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst"
@@ -44,10 +43,10 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.4)
 	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
-	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
-	assert.Contains(t, string(kubectlOut), "6.3.4")
+	require.Contains(t, kubectlOut, "6.3.4")
 
 	// We also want to build a new package.
 	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade-test", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
@@ -68,10 +67,10 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.5)
 	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
-	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
-	assert.Contains(t, string(kubectlOut), "6.3.5")
+	require.Contains(t, kubectlOut, "6.3.5")
 
 	// Remove the package.
 	zarfRemoveArgs := []string{"package", "remove", "test-upgrade-package", "--confirm"}
