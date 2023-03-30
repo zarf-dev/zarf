@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -153,10 +152,7 @@ func verifyArchitecture() {
 	// If we're not running in appliance mode (deploying k3s), query the existing cluster for the architecture.
 	// If we are running in appliance mode, get the architecture of the machine we're running on.
 	if !strings.Contains(components, "k3s") {
-		c, err := cluster.NewClusterWithWait(30 * time.Second)
-		if err != nil {
-			message.Fatal(err, err.Error())
-		}
+		c := cluster.NewClusterOrDie()
 
 		systemArch, err = c.Kube.GetArchitecture()
 		if err != nil {
