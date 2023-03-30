@@ -370,10 +370,10 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 	}
 
 	// Only check the architecture if the package has images
-	if len(component.Images) > 0 && state.Architecture != p.arch {
+	if len(component.Images) > 0 && state.Architecture != p.Arch {
 		// If the package has images but the architectures don't match, fail the deployment and warn the user to avoid ugly hidden errors with image push/pull
 		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-			p.arch, state.Architecture)
+			p.Arch, state.Architecture)
 	}
 
 	spinner.Success()

@@ -99,7 +99,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			}
 
 			// Only add this component if it is valid for the target architecture.
-			if filterArch == "" || filterArch == p.arch {
+			if filterArch == "" || filterArch == p.Arch {
 				child = component
 				break
 			}

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -50,17 +51,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Check that the init package architecture is the same as the target system architecture.
-		var initPackageArch string
-
-		if strings.Contains(initPackageName, "arm64") {
-			initPackageArch = "arm64"
-		}
-
-		if strings.Contains(initPackageName, "amd64") {
-			initPackageArch = "amd64"
-		}
-
-		verifyArchitecture(initPackageArch)
+		verifyArchitecture()
 
 		// Ensure uppercase keys from viper
 		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
@@ -153,17 +144,21 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 }
 
 // verifyArchitecture verifies that the init package architecture matches the target system architecture.
-func verifyArchitecture(initPackageArch string) {
+func verifyArchitecture() {
 	components := pkgConfig.DeployOpts.Components
+
 	var systemArch string
 	var err error
 
 	// If we're not running in appliance mode (deploying k3s), query the existing cluster for the architecture.
 	// If we are running in appliance mode, get the architecture of the machine we're running on.
 	if !strings.Contains(components, "k3s") {
-		c := cluster.NewClusterOrDie()
-		systemArch, err = c.Kube.GetArchitecture()
+		c, err := cluster.NewClusterWithWait(30 * time.Second)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 
+		systemArch, err = c.Kube.GetArchitecture()
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}
@@ -171,8 +166,8 @@ func verifyArchitecture(initPackageArch string) {
 		systemArch = runtime.GOARCH
 	}
 
-	if initPackageArch != systemArch {
-		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, initPackageArch, systemArch)
+	if pkg.Arch != systemArch {
+		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, pkg.Arch, systemArch)
 	}
 }
 

@@ -30,7 +30,7 @@ type Packager struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	tmp     types.TempPaths
-	arch    string
+	Arch    string
 }
 
 /*
@@ -96,7 +96,7 @@ func (p *Packager) GetPackageName() string {
 	message.Debugf("packager.GetPackageName(%s)", message.JSONValue(p))
 
 	if p.cfg.IsInitConfig {
-		return GetInitPackageName(p.arch)
+		return GetInitPackageName(p.Arch)
 	}
 
 	packageName := p.cfg.Pkg.Metadata.Name
@@ -106,10 +106,10 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
+		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.Arch, suffix)
 	}
 
-	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.Arch, p.cfg.Pkg.Metadata.Version, suffix)
 }
 
 // ClearTempPaths removes the temp directory and any files within it.
