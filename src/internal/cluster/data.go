@@ -34,13 +34,21 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 
 	tarCompressFlag := ""
 	if data.Compress {
-		tarCompressFlag = "z"
+		tarCompressFlag = " -z"
 	}
 
 	// Pod filter to ensure we only use the current deployment's pods
 	podFilterByInitContainer := func(pod corev1.Pod) bool {
 		// Look everywhere in the pod for a matching data injection marker
 		return strings.Contains(message.JSONValue(pod), config.GetDataInjectionMarker())
+	}
+
+	// Get the OS shell to execute commands in
+	shell, shellArgs := exec.GetOSShell()
+
+	if err := exec.CmdWithPrint(shell, shellArgs, "tar --version"); err != nil {
+		message.Error(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")
+		return
 	}
 
 iterator:
@@ -73,11 +81,10 @@ iterator:
 			}
 
 			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod, data.Target.Container)
-			tarCmd := fmt.Sprintf("tar c%s", tarCompressFlag)
-			untarCmd := fmt.Sprintf("tar x%svf - -C %s", tarCompressFlag, data.Target.Path)
 
-			// Get the OS shell to execute commands in
-			shell, shellArgs := exec.GetOSShell()
+			// Note that each command flag is separated to provide the widest cross platform tar support
+			tarCmd := fmt.Sprintf("tar -c%s", tarCompressFlag)
+			untarCmd := fmt.Sprintf("tar -x%s -v -f - -C %s", tarCompressFlag, data.Target.Path)
 
 			// Must create the target directory before trying to change to it for untar
 			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
