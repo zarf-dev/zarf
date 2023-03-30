@@ -24,7 +24,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	kubeCtlRolloutArgs := []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-	kubeCtlGetArgs := []string{"-n=podinfo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	assert.Contains(t, string(kubectlOut), "6.3.3")
 
@@ -45,7 +45,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	assert.Contains(t, string(kubectlOut), "6.3.4")
 
@@ -69,7 +69,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	assert.Contains(t, string(kubectlOut), "6.3.5")
 
