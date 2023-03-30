@@ -47,5 +47,5 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// We need to use the --architecture flag here to force zarf to find the renamed package.
 	stdOut, stdErr, err := e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Containsf(t, stdErr, lang.CmdInitErrVerifyArchitecture, mismatchedArch, e2e.arch)
+	require.Containsf(t, stdErr, lang.CmdInitErrVerifyArchitecture, "This error message should contain a description for mismatched architectures.")
 }
