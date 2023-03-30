@@ -21,7 +21,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 
 	// For the upgrade test, podinfo should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
-	kubeCtlRolloutArgs := []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
+	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
@@ -42,7 +42,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.4)
-	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
+	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
@@ -66,7 +66,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.5)
-	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
+	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
