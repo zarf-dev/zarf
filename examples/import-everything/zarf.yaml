@@ -1,0 +1,131 @@
+kind: ZarfPackageConfig
+metadata:
+  name: import-everything
+  description: Example showcasing nearly every type of import
+  version: 0.0.1
+
+
+# mkdir -p ../everything-external
+# cp -r . ../everything-external
+# mkdir -p /tmp/everything-external
+# cp -r . /tmp/everything-external
+# - cmd: git clone https://github.com/kelseyhightower/nocode.git
+#   dir: /tmp
+# - cmd: rm -rf nocode
+#   dir: /tmp
+
+# For demo purposes, the `required` key is set to false so we can deploy
+# this package multiple times to showcase different features.
+
+# This package showcases the following types of imports:
+# - files (local and via HTTP)
+# - charts (local and via OCI)
+# - images (via a registry)
+# - repos (via https:// or file://), git@ and ssh:// are also supported but not shown here
+# - components (local and via OCI)
+
+components:
+  # Example of a prep component (this component currently does nothing)
+  # Since this component is first in the list, it will be run first
+  # and is a good area to put any pre-reqs / hooks for the other components
+  - name: prep
+    required: true
+    # For a more comprehensive example of actions, see examples/component-actions/zarf.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: echo "⏲️ Preparing things for `zarf package create`..."
+        after:
+          - cmd: echo "🧹 Cleaning up after `zarf package create`..."
+      onDeploy:
+        before:
+          - cmd: echo "⏲️ Preparing things for `zarf package deploy`..."
+        after:
+          - cmd: echo "🧹 Cleaning up after `zarf package deploy`..."
+      onRemove:
+        before:
+          - cmd: echo "⏲️ Preparing things for `zarf package remove`..."
+        after:
+          - cmd: echo "🧹 Cleaning up after `zarf package remove`..."
+        # onFailure and onSuccess actions are available on all actions, but are not used in this example
+        onFailure:
+          - cmd: echo "❌ Cleaning up after `zarf package remove` failed..."
+
+  - name: import-component-local
+    required: false
+    import:
+      path: sub-package
+      name: jeff
+
+  - name: import-component-local-relative
+    required: false
+    import:
+      path: ../dos-games
+      name: baseline
+
+  # WIP
+  - name: import-component-oci
+    required: false
+    # import:
+    #   # Import a component from an OCI registry
+    #   # Note the usage of the `url` key
+    #   url: oci://ghcr.io/defenseunicorns/zarf-component-example:v0.0.1
+
+  - name: file-imports
+    required: false
+    files:
+        # Import of a file within the current directory
+      - source: files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt
+        # Import of a file from a relative path external to the current directory
+      - source: ../everything-external/files/coffee-ipsum.txt
+        target: files/latte.txt
+        # Import of a file from an absolute path external to the current directory
+      - source: /tmp/nocode/README.md
+        target: files/nocode-readme.md
+        # Import of a file from a URL
+      - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
+        target: files/zarf-readme.md
+
+  - name: import-helm-local
+    required: false
+    charts:
+      - name: local-demo
+        # Note the usage of the `localPath` key
+        localPath: charts/local
+        namespace: local-chart
+        version: 0.1.0
+      - name: local-demo-relative
+        # Note the usage of the `localPath` key
+        localPath: ../everything-external/charts/local
+        namespace: local-chart
+        version: 0.1.0
+      - name: local-demo-absolute
+        # Note the usage of the `localPath` key
+        localPath: /tmp/everything-external/charts/local
+        namespace: local-chart
+        version: 0.1.0
+    images:
+      - nginx:1.16.0
+
+  # Same as examples/helm-oci-chart/zarf.yaml
+  - name: import-helm-oci
+    required: false
+    charts:
+      - name: podinfo
+        version: 6.3.3
+        namespace: helm-oci-demo
+        # Note the usage of the `url` key
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.3
+
+  - name: import-repos
+    required: false
+    repos:
+      # Import a full repo via HTTPS
+      - https://github.com/kelseyhightower/nocode.git
+      # Import a full repo via file:// + absolute path
+      - file:///tmp/nocode
+      # Import this repo via file:// + relative path
+      - file://../../
