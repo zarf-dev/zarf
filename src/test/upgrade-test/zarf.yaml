@@ -25,3 +25,4 @@ components:
             mute: true
             setVariable: PODINFO_COSIGN_PUB
           - cmd: "echo \"Successfully deployed podinfo ###ZARF_PKG_VAR_PODINFO_VERSION### with the following cosign key:\\n\\n${ZARF_VAR_PODINFO_COSIGN_PUB}\""
+          - cmd: "rm podinfo-cosign.pub"

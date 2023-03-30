@@ -171,7 +171,8 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
-# TODO: (@WSTARR) make this actually check for upgrade test pre-conditions
+	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
+	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade-test/ --set PODINFO_VERSION=6.3.4 --confirm
 	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit

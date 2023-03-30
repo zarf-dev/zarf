@@ -19,11 +19,11 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 
-	// For the upgrade test, podinfo should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
-	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
+	// For the upgrade test, podinfo-upgrade should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
+	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
 	kubectlOut, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.3")
 
@@ -40,11 +40,11 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.4")
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
-	// Verify that podinfo successfully deploys in the cluster (version 6.3.4)
-	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
+	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.4)
+	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.4")
 
@@ -64,11 +64,11 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.5")
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
-	// Verify that podinfo successfully deploys in the cluster (version 6.3.5)
-	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo"}
+	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.5)
+	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}}"}
+	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
 	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.5")
 
