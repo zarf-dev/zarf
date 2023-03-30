@@ -25,6 +25,7 @@ type ClusterSummary struct {
 	HasZarf   bool      `json:"hasZarf"`
 	Distro    string    `json:"distro"`
 	ZarfState ZarfState `json:"zarfState"`
+	Host      string    `json:"host"`
 }
 
 // APIZarfPackage represents a ZarfPackage and its path for the API.

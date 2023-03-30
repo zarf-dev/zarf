@@ -22,12 +22,14 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	var reachable bool
 	var distro string
 	var hasZarf bool
+	var host string
 
 	c, err := cluster.NewClusterWithWait(5 * time.Second)
 	reachable = err == nil
 
 	if reachable {
 		distro, _ = c.Kube.DetectDistro()
+		host = c.Kube.RestConfig.Host
 		state, _ = c.LoadZarfState()
 		hasZarf = state.Distro != ""
 	}
@@ -37,6 +39,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 		HasZarf:   hasZarf,
 		Distro:    distro,
 		ZarfState: state,
+		Host:      host,
 	}
 
 	common.WriteJSONResponse(w, data, http.StatusOK)
