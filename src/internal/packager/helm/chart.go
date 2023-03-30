@@ -93,15 +93,15 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 				}
 
 				return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts")
-			} else {
-				spinner.Updatef("Performing chart uninstall")
-				_, err = h.uninstallChart(h.ReleaseName)
-				if err != nil {
-					return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
-				}
-
-				return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 			}
+
+			spinner.Updatef("Performing chart uninstall")
+			_, err = h.uninstallChart(h.ReleaseName)
+			if err != nil {
+				return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
+			}
+
+			return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
@@ -131,7 +131,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			spinner.Success()
 			break
 		}
-
 	}
 
 	// return any collected connect strings for zarf connect.
