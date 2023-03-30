@@ -49,14 +49,17 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		// Check that the init package architecture is the same as the target system architecture
+		// Check that the init package architecture is the same as the target system architecture.
 		var initPackageArch string
+
 		if strings.Contains(initPackageName, "arm64") {
 			initPackageArch = "arm64"
 		}
+
 		if strings.Contains(initPackageName, "amd64") {
 			initPackageArch = "amd64"
 		}
+
 		verifyArchitecture(initPackageArch)
 
 		// Ensure uppercase keys from viper

@@ -22,9 +22,11 @@ func TestMismatchedArchitectures(t *testing.T) {
 	defer e2e.teardown(t)
 
 	var mismatchedArch string
+
 	if e2e.arch == "amd64" {
 		mismatchedArch = "arm64"
 	}
+
 	if e2e.arch == "arm64" {
 		mismatchedArch = "amd64"
 	}
@@ -43,8 +45,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 
 	// Make sure zarf init returns an error because of the mismatched architectures.
 	// We need to use the --architecture flag here to force zarf to find the renamed package.
-	_, _, err = e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
-	expectedErrorMessage := fmt.Sprintf(lang.CmdInitErrVerifyArchitecture, mismatchedArch, e2e.arch)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), expectedErrorMessage)
+	stdOut, stdErr, err := e2e.execZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Containsf(t, stdErr, lang.CmdInitErrVerifyArchitecture, mismatchedArch, e2e.arch)
 }
