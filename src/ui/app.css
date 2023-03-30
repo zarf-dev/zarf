@@ -13,6 +13,9 @@ html,
 body {
 	margin: 0;
 	padding: 0;
+	height: 100vh;
+	width: 100vw;
+	overflow: hidden;
 }
 
 /* https://github.com/sveltejs/kit/discussions/7585 */

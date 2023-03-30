@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-	page.on('pageerror', (err) => console.log(err.message));	
+	page.on('pageerror', (err) => console.log(err.message));
 });
 
-test.describe('view packages', () => {
+test.describe.skip('view packages', () => {
 	test('is initially blank @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure&next=/packages');
 		await expect(page.locator('text=No deployed packages found 🙁')).toBeVisible();

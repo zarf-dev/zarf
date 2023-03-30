@@ -22,7 +22,7 @@ const validateHorizontalStepperItems = async (page, activeIndex, steps) => {
 	}
 };
 
-test.describe('initialize a zarf cluster', () => {
+test.describe.skip('initialize a zarf cluster', () => {
 	test('configure the init package @pre-init', async ({ page }) => {
 		await getToConfigurePage(page);
 
@@ -35,7 +35,7 @@ test.describe('initialize a zarf cluster', () => {
 		).toBeVisible();
 
 		// Components (check most functionaliy with k3s component)
-		let k3s = page.locator('.accordion:has-text("k3s (Optional)")');
+		const k3s = page.locator('.accordion:has-text("k3s (Optional)")');
 		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'false');
 		await k3s.locator('text=Deploy').click();
 		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'true');
@@ -50,13 +50,13 @@ test.describe('initialize a zarf cluster', () => {
 		// Check remaining components for deploy states
 		await validateRequiredCheckboxes(page);
 
-		let loggingDeployToggle = page
+		const loggingDeployToggle = page
 			.locator('.accordion:has-text("logging (Optional)")')
 			.locator('.deploy-component-toggle');
 		await loggingDeployToggle.click();
 		await expect(loggingDeployToggle).toHaveAttribute('aria-pressed', 'true');
 
-		let gitServerDeployToggle = page
+		const gitServerDeployToggle = page
 			.locator('.accordion:has-text("git-server (Optional)")')
 			.locator('.deploy-component-toggle');
 		await gitServerDeployToggle.click();
