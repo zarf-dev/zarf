@@ -2,27 +2,70 @@
 sidebar_position: 2
 ---
 
-# Understanding Zarf Components
+import Properties from '@site/src/components/SchemaItemProperties';
+import FetchExampleYAML from '@site/src/components/FetchExampleYAML';
 
-The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how they should be deployed. Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
+# Package Components
 
-Components can define a wide range of resources that it needs when the package it is a part of gets deployed. The schema for the components is linked below but a high-level look at the things components can define includes:
+## Overview
 
-* Files to move onto the host
-* Helm charts to install into the running k8s cluster
-* Raw Kubernetes manifests to deploy (by getting converted into zarf-generated helm charts and installed)
-* Container images to push into the registry the init-package created in the k8s cluster
+The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how they should be deployed. Each package can have as many components as the package creator wants but a package isn't anything without at least one component. Component actions documentations can be found [here](../5-component-actions.md).
+
+Components can define a wide range of resources that it needs when the package it is a part of gets deployed. The schema for components is located under the `components` section of the [Schema Docs](../3-zarf-schema.md#components). The below documentation showcase some of the different types of resources that can be defined in a component.
+
+## Common Component Fields
+
+There are certain fields that will be common across all component definitions. These fields are:
+
+<Properties item="ZarfComponent" include={["name","description","default","required","group","cosignKeyPath","only"]} />
+
+### Files
+
+<Properties item="ZarfComponent" include={["files"]} />
+
+<FetchExampleYAML example="helm-oci-chart" component="helm-oci-chart" branch="oci-package-compose" />
+
+> explanation + example of local + relative + absolute + remote
+
+### Helm Charts
+
+<Properties item="ZarfComponent" include={["charts"]} />
+
+<FetchExampleYAML example="helm-oci-chart" component="helm-oci-chart" branch="oci-package-compose" />
+
+> explanation + example of local + relative + absolute + remote
+
+### Kubernetes Manifests
+
+<Properties item="ZarfComponent" include={["manifests"]} />
+
+Raw Kubernetes manifests to deploy (by getting converted into zarf-generated helm charts and installed)
+
+> explanation + example of local + relative + absolute + remote
+
+### Container Images
+
+<Properties item="ZarfComponent" include={["images"]} />
+
+> explanation + example
+
+### Git Repositories
+
+<Properties item="ZarfComponent" include={["repos"]} />
+
 * Git repositories to push into the git server the init-package created in the k8s cluster
-* Data to push into a resource (i.e. a pod) in the k8s cluster
-* Scripts to run before/after the component is deployed
 
-### Deploying a component
+> explanation + example
 
-When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml` that the package was created from.** The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction whenever the package is deployed while optional components are printed out in an interactive prompt to the user asking if they wish to the deploy the component.
+### Data Injections
 
- If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command. (ex. `zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2`)
+<Properties item="ZarfComponent" include={["dataInjections"]} />
 
-## Composing Package Components
+Data to push into a resource (i.e. a pod) in the k8s cluster
+
+<FetchExampleYAML example="data-injection" component="with-init-container" />
+
+### Zarf Components
 
 Existing components from other packages can be composed in new packages. This can be achieved by using the import field and providing a path to the `zarf.yaml` you wish to compose.
 
@@ -47,6 +90,8 @@ components:
 
  Checkout the [composable-packages](https://github.com/defenseunicorns/zarf/blob/master/examples/composable-packages/zarf.yaml) example to see this in action.
 
-## What Makes Up A Component
+## Deploying Components
 
-Zarf components can contain different key/value pairs which you can learn more about here under the `components` section: [ZarfComponent Schema Docs](../3-zarf-schema.md#components)
+When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml` that the package was created from.** The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction whenever the package is deployed while optional components are printed out in an interactive prompt to the user asking if they wish to the deploy the component.
+
+ If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command. (ex. `zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2`)
