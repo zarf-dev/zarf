@@ -7,7 +7,6 @@ package test
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -34,10 +33,10 @@ func TestMismatchedArchitectures(t *testing.T) {
 	version := "UnknownVersion"
 
 	// This should be the name of the init package that was built during the 'Build binary and zarf packages' stage.
-	initPackageName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.arch, strings.TrimSpace(version))
+	initPackageName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.arch, version)
 
 	// This should be the name of the built init package with the incorrect/opposite architecture of the machine we're running on.
-	mismatchedInitPackage := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, strings.TrimSpace(version))
+	mismatchedInitPackage := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, version)
 
 	// Rename the init package with the mismatched architecture.
 	err := os.Rename(initPackageName, mismatchedInitPackage)
