@@ -64,48 +64,51 @@ iterator:
 		// Inject into all the pods
 		for _, pod := range pods {
 			// Try to use the embedded kubectl if we can
-			binPath, err := utils.GetFinalExecutablePath()
+			zarfBinPath, err := utils.GetFinalExecutablePath()
+			kubectlBinPath := "kubectl"
 			if err != nil {
-				message.Warnf("Unable to get the final executable path, falling back to host kubectl: %s", err)
-				binPath = ""
+				message.Warnf("Unable to get the zarf executable path, falling back to host kubectl: %s", err)
 			} else {
-				binPath = fmt.Sprintf("%s tools ", binPath)
+				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfBinPath)
 			}
 
-			kubectlExec := fmt.Sprintf("%skubectl exec -i -n %s %s -c %s ", binPath, data.Target.Namespace, pod, data.Target.Container)
-			tarExec := fmt.Sprintf("tar c%s", tarCompressFlag)
-			untarExec := fmt.Sprintf("tar x%svf - -C %s", tarCompressFlag, data.Target.Path)
+			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod, data.Target.Container)
+			tarCmd := fmt.Sprintf("tar c%s", tarCompressFlag)
+			untarCmd := fmt.Sprintf("tar x%svf - -C %s", tarCompressFlag, data.Target.Path)
+
+			// Get the OS shell to execute commands in
+			shell, shellArgs := exec.GetOSShell()
 
 			// Must create the target directory before trying to change to it for untar
-			mkdirExec := fmt.Sprintf("%s -- mkdir -p %s", kubectlExec, data.Target.Path)
-			if err := exec.CmdWithPrint("sh", "-c", mkdirExec); err != nil {
+			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
+			if err := exec.CmdWithPrint(shell, shellArgs, mkdirCmd); err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
 				continue iterator
 			}
 
-			cpPodExec := fmt.Sprintf("%s -C %s . | %s -- %s",
-				tarExec,
+			cpPodCmd := fmt.Sprintf("%s -C %s . | %s -- %s",
+				tarCmd,
 				source,
-				kubectlExec,
-				untarExec,
+				kubectlCmd,
+				untarCmd,
 			)
 
 			// Do the actual data injection
-			if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
+			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
 				continue iterator
 			}
 
 			// Leave a marker in the target container for pods to track the sync action
-			cpPodExec = fmt.Sprintf("%s -C %s %s | %s -- %s",
-				tarExec,
+			cpPodCmd = fmt.Sprintf("%s -C %s %s | %s -- %s",
+				tarCmd,
 				componentPath.DataInjections,
 				config.GetDataInjectionMarker(),
-				kubectlExec,
-				untarExec,
+				kubectlCmd,
+				untarCmd,
 			)
 
-			if err := exec.CmdWithPrint("sh", "-c", cpPodExec); err != nil {
+			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
 				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
 				continue iterator
 			}

@@ -23,6 +23,12 @@ dataInjections:
 
 :::note
 
-The source should be defined relative to the component's package*
+The source should be defined relative to the component's package.
+
+:::
+
+:::caution
+
+On Windows, you will need `tar` (including `gzip` if using `compress`) on your path in order to stream the data into the running pod.
 
 :::
