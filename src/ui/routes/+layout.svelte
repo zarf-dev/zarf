@@ -6,6 +6,21 @@
 	import GlobalNav from '$lib/components/global-navigation-bar.svelte';
 	import { ZarfPalettes } from '$lib/palette';
 	import NavDrawer from '$lib/components/nav-drawer.svelte';
+	import { Cluster } from '$lib/api';
+	import { clusterStore } from '$lib/store';
+
+	function getClusterSummary() {
+		// Try to get the cluster summary
+		Cluster.summary()
+			// If success update the store
+			.then(clusterStore.set)
+			// Otherwise, try again in 250 ms
+			.catch((e) => {
+				setTimeout(getClusterSummary, 250);
+			});
+	}
+
+	getClusterSummary();
 </script>
 
 <svelte:head>
