@@ -29,7 +29,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), "6.3.3")
 
 	// We also expect a 6.3.4 package to have been previously built
-	previouslyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst"
+	previouslyBuiltPackage := "../../../zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst"
 
 	// Deploy the package.
 	zarfDeployArgs := []string{"package", "deploy", previouslyBuiltPackage, "--confirm"}
@@ -50,7 +50,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), "6.3.4")
 
 	// We also want to build a new package.
-	zarfCreateArgs := []string{"package", "create", "src/test/upgrade-test", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
+	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade-test", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
 	stdOut, stdErr, err = exec.Cmd(zarfBinPath, zarfCreateArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 	newlyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.5.tar.zst"

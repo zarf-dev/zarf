@@ -170,6 +170,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
 # TODO: (@WSTARR) make this actually check for upgrade test pre-conditions
 	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
 
