@@ -166,6 +166,13 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
+## NOTE: Requires an existing cluster and
+.PHONY: test-upgrade
+test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+# TODO: (@WSTARR) make this actually check for upgrade test pre-conditions
+	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
+
 .PHONY: test-unit
 test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
