@@ -29,6 +29,8 @@ The source should be defined relative to the component's package.
 
 :::caution
 
-On Windows, you will need `tar` (including `gzip` if using `compress`) on your path in order to stream the data into the running pod.
+This feature depends on the `tar` (and for `compress`, `gzip`) executables and their implementation across operating systems.  Between macOS and Linux there is general agreement on how these utilities should function, however on Windows you may see issues enabling compression.
+
+To resolve this you can either disable compression or use the GNU core-utils version of `tar` and `gzip`.
 
 :::
