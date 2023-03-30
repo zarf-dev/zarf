@@ -1,7 +1,7 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+const darkCodeTheme = require('prism-react-renderer/themes/shadesOfPurple');
 const { SocialsBox } = require('./static-components/SocialsBox/SocialsBox');
 
 /** @type {import('@docusaurus/types').Config} */
