@@ -54,12 +54,14 @@ components:
   - name: import-component-local
     required: false
     import:
+      # highlight-next-line
       path: sub-package
       name: jeff
 
   - name: import-component-local-relative
     required: false
     import:
+      # highlight-next-line
       path: ../dos-games
       name: baseline
 
@@ -75,15 +77,19 @@ components:
     required: false
     files:
         # Import of a file within the current directory
+        # highlight-next-line
       - source: files/coffee-ipsum.txt
         target: files/coffee-ipsum.txt
         # Import of a file from a relative path external to the current directory
+        # highlight-next-line
       - source: ../everything-external/files/coffee-ipsum.txt
         target: files/latte.txt
         # Import of a file from an absolute path external to the current directory
+        # highlight-next-line
       - source: /tmp/nocode/README.md
         target: files/nocode-readme.md
         # Import of a file from a URL
+        # highlight-next-line
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
         target: files/zarf-readme.md
 

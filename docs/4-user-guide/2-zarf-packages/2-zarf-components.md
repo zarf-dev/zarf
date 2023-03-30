@@ -23,7 +23,7 @@ There are certain fields that will be common across all component definitions. T
 
 <Properties item="ZarfComponent" include={["files"]} />
 
-<FetchExampleYAML example="helm-oci-chart" component="helm-oci-chart" branch="oci-package-compose" />
+<FetchExampleYAML example="import-everything" component="file-imports" branch="oci-package-compose" />
 
 > explanation + example of local + relative + absolute + remote
 
