@@ -287,7 +287,10 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.upgradeChart(%#v)", postRender)
+	// Print the postRender object piece by piece to not print the htpasswd
+	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
+		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
+
 	client := action.NewUpgrade(h.actionConfig)
 
 	// Let each chart run for the default timeout.

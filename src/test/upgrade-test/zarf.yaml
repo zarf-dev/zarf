@@ -19,11 +19,11 @@ components:
       - "https://github.com/stefanprodan/podinfo.git@###ZARF_PKG_VAR_PODINFO_VERSION###"
     files:
       - source: https://raw.githubusercontent.com/stefanprodan/podinfo/###ZARF_PKG_VAR_PODINFO_VERSION###/.cosign/cosign.pub
-        target: cosign.pub
+        target: podinfo-cosign.pub
     actions:
       onDeploy:
         after:
-          - cmd: "cat cosign.pub"
+          - cmd: "cat podinfo-cosign.pub"
             mute: true
             setVariable: PODINFO_COSIGN_PUB
           - cmd: "echo \"Successfully deployed podinfo ###ZARF_PKG_VAR_PODINFO_VERSION### with the following cosign key:\\n\\n${ZARF_VAR_PODINFO_COSIGN_PUB}\""

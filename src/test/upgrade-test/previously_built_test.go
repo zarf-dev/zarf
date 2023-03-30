@@ -38,6 +38,8 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// [DEPRECATIONS] We expect the older package to contain the deprecations
 	require.Contains(t, stdErr, "Component 'test-upgrade-package' is using setVariable")
+	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.4")
+	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.4)
 	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
@@ -60,6 +62,8 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// [DEPRECATIONS] We expect the newer package to have been migrated
 	require.NotContains(t, stdErr, "Component 'test-upgrade-package' is using setVariable")
+	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.5")
+	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo successfully deploys in the cluster (version 6.3.5)
 	kubeCtlRolloutArgs = []string{"-n=podinfo", "rollout", "status", "deployment/podinfo"}
