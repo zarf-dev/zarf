@@ -34,7 +34,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 
 	tarCompressFlag := ""
 	if data.Compress {
-		tarCompressFlag = " -z"
+		tarCompressFlag = "-z"
 	}
 
 	// Pod filter to ensure we only use the current deployment's pods
