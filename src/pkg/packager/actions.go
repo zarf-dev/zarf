@@ -260,18 +260,9 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 }
 
 func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, error) {
-	var shell string
-	var shellArgs string
+	shell, shellArgs := exec.GetOSShell()
 
-	if runtime.GOOS == "windows" {
-		shell = "powershell"
-		shellArgs = "-Command"
-		message.Debug("Running command in PowerShell: %s", cmd)
-	} else {
-		shell = "sh"
-		shellArgs = "-c"
-		message.Debug("Running command in shell: %s", cmd)
-	}
+	message.Debug("Running command in %s: %s", shell, cmd)
 
 	execCfg := exec.Config{
 		Env: cfg.Env,
