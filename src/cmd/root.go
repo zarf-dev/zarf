@@ -48,18 +48,17 @@ var rootCmd = &cobra.Command{
 	Long:  lang.RootCmdLong,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		zarfLogo := message.GetLogo()
+		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+		cmd.Help()
+
 		if len(args) > 0 {
-			pterm.Println()
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedDeploy, args[0])
+				pterm.FgYellow.Printfln("\n"+lang.RootCmdDeprecatedDeploy, args[0])
 			}
 			if args[0] == config.ZarfYAML {
-				pterm.FgYellow.Printfln(lang.RootCmdDeprecatedCreate)
+				pterm.FgYellow.Printfln("\n" + lang.RootCmdDeprecatedCreate)
 			}
-		} else {
-			zarfLogo := message.GetLogo()
-			_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
-			cmd.Help()
 		}
 	},
 }
