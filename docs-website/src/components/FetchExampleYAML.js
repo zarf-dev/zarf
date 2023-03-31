@@ -11,10 +11,10 @@ const FetchExampleYAML = ({ example, component, branch="main" }) => {
             .then((res) => res.text())
             .then(async (text) => {
                 if (component) {
-                    const yaml = await import("js-yaml");
-                    let json = yaml.load(text);
-                    const c = json.components.find((c) => c.name === component);
-                    setContent(yaml.dump({components: [c]}).split("\n").slice(1).join("\n"));
+                    const lines = text.split('\n');
+                    const start = lines.indexOf(`  - name: ${component}`);
+                    const end = lines.findIndex((line, index) => index > start && line.startsWith('  - name: '));
+                    setContent(lines.slice(start, end).join('\n'));
                 } else {
                     setContent(text);
                 }
