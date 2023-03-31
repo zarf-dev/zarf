@@ -14,6 +14,7 @@ import (
 )
 
 func init() {
+	// No package information is available so do not pass in a list of architectures
 	cranePlatformOptions := config.GetCraneOptions(false)
 
 	craneLogin := craneCmd.NewCmdAuthLogin()

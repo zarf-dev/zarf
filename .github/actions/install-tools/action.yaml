@@ -6,7 +6,7 @@ runs:
   steps:
     - uses: sigstore/cosign-installer@v2.8.1
 
-    - uses: anchore/sbom-action/download-syft@v0.13.3
+    - uses: anchore/sbom-action/download-syft@v0.13.4
 
     - run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
       shell: bash

@@ -45,6 +45,11 @@ spec:
             - name: zarf-state
               mountPath: /etc/zarf-state
               readOnly: true
+            # Required for OpenShift to mount k9s vendored directories
+            - name: config
+              mountPath: /.config
+            - name: xdg
+              mountPath: /etc/xdg
       volumes:
         - name: tls-certs
           secret:
@@ -52,3 +57,8 @@ spec:
         - name: zarf-state
           secret:
             secretName: zarf-state
+        # Required for OpenShift to mount k9s vendored directories
+        - name: config
+          emptyDir: {}
+        - name: xdg
+          emptyDir: {}
