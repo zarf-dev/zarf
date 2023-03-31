@@ -87,6 +87,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 func GetInitPackageName(arch string) string {
 	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
+		// No package has been loaded yet so lookup GetArch() with no package info
 		arch = config.GetArch()
 	}
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)

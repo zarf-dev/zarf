@@ -101,7 +101,8 @@ func (p *Packager) Create(baseDir string) error {
 
 		ociPath := path.Join(p.tmp.Base, "seed-image")
 		imgConfig := images.ImgConfig{
-			Insecure: config.CommonOptions.Insecure,
+			Insecure:      config.CommonOptions.Insecure,
+			Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 		}
 
 		image, err := imgConfig.PullImage(seedImage, spinner)
@@ -157,9 +158,10 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath: p.tmp.Images,
-				ImgList:    imgList,
-				Insecure:   config.CommonOptions.Insecure,
+				ImagesPath:    p.tmp.Images,
+				ImgList:       imgList,
+				Insecure:      config.CommonOptions.Insecure,
+				Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 			}
 
 			return imgConfig.PullAll()
