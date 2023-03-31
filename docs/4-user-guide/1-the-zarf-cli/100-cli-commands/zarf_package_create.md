@@ -18,6 +18,8 @@ zarf package create [DIRECTORY] [flags]
 ```
       --confirm                   Confirm package creation without prompting
   -h, --help                      help for create
+  -k, --key string                Path to private key file for signing packages
+      --key-pass string           Password to the private key file used for signing packages
   -m, --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
   -o, --output-directory string   Specify the output directory for the created Zarf package
   -s, --sbom                      View SBOM contents after creating the package
@@ -30,7 +32,7 @@ zarf package create [DIRECTORY] [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

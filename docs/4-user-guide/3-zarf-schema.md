@@ -251,6 +251,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="metadata_aggregateChecksum"></a>aggregateChecksum</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Checksum of a checksums.txt file that contains checksums all the layers within the package.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

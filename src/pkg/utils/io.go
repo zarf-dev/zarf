@@ -7,6 +7,7 @@ package utils
 import (
 	"bufio"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -298,4 +299,20 @@ func GetDirSize(path string) (int64, error) {
 	})
 
 	return dirSize, err
+}
+
+// GetSHA256OfFile returns the SHA256 hash of the provided file.
+func GetSHA256OfFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

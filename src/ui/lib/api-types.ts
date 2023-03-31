@@ -36,6 +36,10 @@ export interface ZarfDeployOptions {
      */
     packagePath: string;
     /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    publicKeyPath: string;
+    /**
      * Key-Value map of variable names and their corresponding values that will be used to
      * template manifests and files in the Zarf package
      */
@@ -771,6 +775,11 @@ export enum Kind {
  */
 export interface ZarfMetadata {
     /**
+     * Checksum of a checksums.txt file that contains checksums all the layers within the
+     * package.
+     */
+    aggregateChecksum?: string;
+    /**
      * The target cluster architecture for this package
      */
     architecture?: string;
@@ -963,6 +972,14 @@ export interface ZarfCreateOptions {
      */
     setVariables: { [key: string]: string };
     /**
+     * Password to the private key signature file that will be used to sigh the created package
+     */
+    signingKeyPassword: string;
+    /**
+     * Location where the private key component of a cosign key-pair can be found
+     */
+    signingKeyPath: string;
+    /**
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
@@ -1153,6 +1170,7 @@ const typeMap: any = {
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
         { json: "shasum", js: "shasum", typ: "" },
@@ -1344,6 +1362,7 @@ const typeMap: any = {
         { json: "value", js: "value", typ: "" },
     ], false),
     "ZarfMetadata": o([
+        { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
@@ -1416,6 +1435,8 @@ const typeMap: any = {
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
+        { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "Protocol": [
