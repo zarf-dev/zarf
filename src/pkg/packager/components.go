@@ -104,10 +104,10 @@ func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterBy
 	var validArch, validOS bool
 
 	// Test for valid architecture
-	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.Arch {
+	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.arch {
 		validArch = true
 	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.Arch)
+		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.arch)
 	}
 
 	// Test for a valid OS

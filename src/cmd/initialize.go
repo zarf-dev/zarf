@@ -50,7 +50,14 @@ var initCmd = &cobra.Command{
 		}
 
 		// Check that the init package architecture is the same as the target system architecture.
-		verifyArchitecture()
+		var initPackageArch string
+		if strings.Contains(initPackageName, "amd64") {
+			initPackageArch = "amd64"
+		}
+		if strings.Contains(initPackageName, "arm64") {
+			initPackageArch = "arm64"
+		}
+		verifyArchitecture(initPackageArch)
 
 		// Ensure uppercase keys from viper
 		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
@@ -143,7 +150,7 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 }
 
 // verifyArchitecture verifies that the init package architecture matches the target system architecture.
-func verifyArchitecture() {
+func verifyArchitecture(initPackageArch string) {
 	components := pkgConfig.DeployOpts.Components
 
 	var systemArch string
@@ -162,8 +169,8 @@ func verifyArchitecture() {
 		systemArch = runtime.GOARCH
 	}
 
-	if pkg.Arch != systemArch {
-		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, pkg.Arch, systemArch)
+	if initPackageArch != systemArch {
+		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, initPackageArch, systemArch)
 	}
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -26,8 +25,6 @@ var (
 
 	// Default global config for the CLI
 	pkgConfig = types.PackagerConfig{}
-
-	pkg = packager.Packager{}
 
 	// Viper instance used by the cmd package
 	v *viper.Viper

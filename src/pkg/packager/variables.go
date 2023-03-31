@@ -47,7 +47,7 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// Add special variable for the current package architecture
-	templateMap["###ZARF_PKG_ARCH###"] = p.Arch
+	templateMap["###ZARF_PKG_ARCH###"] = p.arch
 
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }

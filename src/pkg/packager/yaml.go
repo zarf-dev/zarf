@@ -24,7 +24,7 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	}
 
 	// Set the arch from the package config before filtering.
-	p.Arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	// Filter each component to only compatible platforms.
 	filteredComponents := []types.ZarfComponent{}
@@ -55,8 +55,8 @@ func (p *Packager) writeYaml() error {
 	hostname, hostErr := os.Hostname()
 
 	// Normalize these for the package confirmation.
-	p.cfg.Pkg.Metadata.Architecture = p.Arch
-	p.cfg.Pkg.Build.Architecture = p.Arch
+	p.cfg.Pkg.Metadata.Architecture = p.arch
+	p.cfg.Pkg.Build.Architecture = p.arch
 
 	// Record the time of package creation.
 	p.cfg.Pkg.Build.Timestamp = now.Format(time.RFC1123Z)
