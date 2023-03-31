@@ -169,7 +169,12 @@ func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
 	certGithubWorkflowRef := ""
 	enforceSCT := false
 
-	return verify.VerifyBlobCmd(ctx, keyOptions, certRef, certEmail, certIdentity, certOidcIssuer, certChain, sigPath, blobPath, certGithubWorkflowTrigger, certGithubWorkflowSha, certGithubWorkflowName, certGithubWorkflowRepository, certGithubWorkflowRef, enforceSCT)
+	err := verify.VerifyBlobCmd(ctx, keyOptions, certRef, certEmail, certIdentity, certOidcIssuer, certChain, sigPath, blobPath, certGithubWorkflowTrigger, certGithubWorkflowSha, certGithubWorkflowName, certGithubWorkflowRepository, certGithubWorkflowRef, enforceSCT)
+	if err == nil {
+		message.Successf("Package signature validated!")
+	}
+
+	return err
 }
 
 // CosignSignBlob signs the provide binary and returns the signature
