@@ -4,7 +4,7 @@ go 1.19
 
 replace (
 	// TODO (@WSTARR) use the OG syft once they merge in https://github.com/anchore/syft/pull/1668
-	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0-DU
+	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0
 	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
 	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
@@ -15,12 +15,12 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20230317134707-7928713c391e
-	github.com/anchore/syft v0.75.0
+	github.com/anchore/syft v0.76.0
 	github.com/derailed/k9s v0.27.3
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/docker/cli v23.0.2+incompatible
 	github.com/fatih/color v1.15.0
-	github.com/fluxcd/helm-controller/api v0.31.2
+	github.com/fluxcd/helm-controller/api v0.32.0
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.6.1
@@ -46,7 +46,7 @@ require (
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/kubectl v0.26.3
 	oras.land/oras-go/v2 v2.0.2
-	sigs.k8s.io/kustomize/api v0.12.1
+	sigs.k8s.io/kustomize/api v0.13.2
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
