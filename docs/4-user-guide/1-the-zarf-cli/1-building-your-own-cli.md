@@ -27,6 +27,8 @@ The `make build-cli` command builds a binary for each combination of OS and arch
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
+- `make build-cli-windows-amd` 
+- `make build-cli-windows-arm`
 :::
 
 #### The Technical Process
