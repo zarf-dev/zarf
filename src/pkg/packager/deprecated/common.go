@@ -12,6 +12,7 @@ import (
 // List of migrations tracked in the zarf.yaml build data.
 const (
 	ScriptsToActionsMigrated = "scripts-to-actions"
+	PluralizeSetVariable     = "pluralize-set-variable"
 )
 
 // MigrateComponent runs all migrations on a component.
@@ -23,6 +24,14 @@ func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.Za
 	} else {
 		// Otherwise, run the migration.
 		c = migrateScriptsToActions(c)
+	}
+
+	// If the component has already been migrated, clear the setVariable definitions.
+	if utils.SliceContains(build.Migrations, PluralizeSetVariable) {
+		c = clearSetVariables(c)
+	} else {
+		// Otherwise, run the migration.
+		c = migrateSetVariableToSetVariables(c)
 	}
 
 	// Future migrations here.

@@ -143,7 +143,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 ### 🛠️ Configurable Features
 
-- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting.
+- Customizable [variables](examples/variables/README.md) with defaults and user prompting.
 - [Composable packages](user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components.
 - Filters to select the correct architectures/operating systems for packages.
 
@@ -155,7 +155,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 <Tabs>
 <TabItem value="Linux" label="Linux">
-  
+
 <Admonition type="info">
 
 This quick start requires you to already have:
