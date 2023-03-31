@@ -23,6 +23,14 @@ dataInjections:
 
 :::note
 
-The source should be defined relative to the component's package*
+The source should be defined relative to the component's package.
+
+:::
+
+:::caution
+
+This feature depends on the `tar` (and for `compress`, `gzip`) executables and their implementation across operating systems.  Between macOS and Linux there is general agreement on how these utilities should function, however on Windows you may see issues enabling compression.
+
+To resolve this you can either disable compression or use the GNU core-utils version of `tar` and `gzip`.
 
 :::
