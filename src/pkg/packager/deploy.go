@@ -53,7 +53,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setActiveVariables(); err != nil {
+	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -387,11 +387,12 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath: p.tmp.Images,
-		ImgList:    componentImages,
-		NoChecksum: noImgChecksum,
-		RegInfo:    p.cfg.State.RegistryInfo,
-		Insecure:   config.CommonOptions.Insecure,
+		ImagesPath:    p.tmp.Images,
+		ImgList:       componentImages,
+		NoChecksum:    noImgChecksum,
+		RegInfo:       p.cfg.State.RegistryInfo,
+		Insecure:      config.CommonOptions.Insecure,
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
 	return utils.Retry(func() error {

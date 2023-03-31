@@ -93,15 +93,15 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 				}
 
 				return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts")
-			} else {
-				spinner.Updatef("Performing chart uninstall")
-				_, err = h.uninstallChart(h.ReleaseName)
-				if err != nil {
-					return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
-				}
-
-				return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 			}
+
+			spinner.Updatef("Performing chart uninstall")
+			_, err = h.uninstallChart(h.ReleaseName)
+			if err != nil {
+				return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
+			}
+
+			return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
@@ -131,7 +131,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			spinner.Success()
 			break
 		}
-
 	}
 
 	// return any collected connect strings for zarf connect.
@@ -287,7 +286,10 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.upgradeChart(%#v)", postRender)
+	// Print the postRender object piece by piece to not print the htpasswd
+	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
+		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
+
 	client := action.NewUpgrade(h.actionConfig)
 
 	// Let each chart run for the default timeout.

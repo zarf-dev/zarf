@@ -22,5 +22,5 @@ make test-external
 
 ``` bash
 # If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
-go test ./src/test/external-git/...
+go test ./src/test/external-test/...
 ```

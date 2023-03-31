@@ -40,7 +40,7 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 }
 
 func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
-	message.Debugf("hooks.mutateCreate()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
+	message.Debugf("hooks.mutatePod()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
 	var patchOperations []operations.PatchOperation
 	pod, err := parsePod(r.Object.Raw)

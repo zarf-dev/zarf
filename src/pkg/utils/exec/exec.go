@@ -150,3 +150,19 @@ func LaunchURL(url string) error {
 
 	return nil
 }
+
+// GetOSShell returns the shell and shellArgs based on the current OS
+func GetOSShell() (string, string) {
+	var shell string
+	var shellArgs string
+
+	if runtime.GOOS == "windows" {
+		shell = "powershell"
+		shellArgs = "-Command"
+	} else {
+		shell = "sh"
+		shellArgs = "-c"
+	}
+
+	return shell, shellArgs
+}

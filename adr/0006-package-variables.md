@@ -24,6 +24,8 @@ The decision was made to move variable definitions to the package level and to s
 - Constants (specified with the `constants` yaml key) also template component files, but must be specified at package create time.  This allows a package creator to use the same value in multiple places without the need for copying it and without the package deployer being able to override it.
 - Package Variables (specified by using `###ZARF_PKG_VAR_*###` in the package definition) allow package creators to template the same information multiple times within the package definition or dynamically specify values or defaults in constants and variables.
 
+> ⚠️ `###ZARF_PKG_VAR_*###` has been changed to `###ZARF_PKG_TMPL_*###` to semantically dissociate it from normal variables.
+
 ## Consequences
 
 This makes it easier to build a single package that will apply to multiple environments and helps package creators to develop automation around their packages while keeping their package definitions DRY.  Choosing to have constants *and* variables also allows us to reduce potential confusion from package deployers who would otherwise be able to accidentally override values that are meant to be static.

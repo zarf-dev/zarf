@@ -89,9 +89,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
 	}
 
-	// Dump the contents for debugging
-	message.Debug(resources)
-
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
 	// Otherwise, loop over the resources,

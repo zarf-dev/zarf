@@ -46,7 +46,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	if cfg.SetVariableMap == nil {
-		cfg.SetVariableMap = make(map[string]string)
+		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
 	}
 
 	var (
@@ -76,7 +76,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 	)
 
 	if pkgConfig, err = New(config); err != nil {
-		message.Fatal(err, "Unable to create the package")
+		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
 	}
 
 	return pkgConfig
@@ -86,6 +86,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 func GetInitPackageName(arch string) string {
 	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
+		// No package has been loaded yet so lookup GetArch() with no package info
 		arch = config.GetArch()
 	}
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)

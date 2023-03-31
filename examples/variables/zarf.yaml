@@ -1,0 +1,73 @@
+kind: ZarfPackageConfig
+metadata:
+  name: variables
+  description: "Example nginx package to demonstrate Zarf variables"
+
+# Constants are defined on package create and do not change on deploy
+# This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
+# NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
+# ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
+constants:
+  - name: "NGINX_VERSION"
+    value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
+
+# Demonstrates injecting custom variables into a K8s resource
+variables:
+  # OPTIONAL_FOOTER injects a configurable footer into the site but has an empty default with no description and will not prompt the user interactively
+  - name: OPTIONAL_FOOTER
+    autoIndent: true
+  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the autoIndent key and that it is multi-line)
+  - name: STYLE
+    default: |
+      body { font-family: sans-serif; color: white; background: #0a0e2e; }
+      pre { color: white; background: black; }
+    autoIndent: true
+  # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
+  - name: SITE_NAME
+    description: "The name of the site you are deploying (i.e. Lula Website)"
+    prompt: true
+  # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
+  - name: ORGANIZATION
+    description: "The organization providing the site"
+    default: "Defense Unicorns"
+    prompt: true
+  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
+  - name: AWS_REGION
+    default: "us-east-1"
+    sensitive: true
+
+components:
+  # The following component templates the provided .tf file with the defined AWS_REGION
+  # NOTE: this component does not actually execute this file in this example (see examples/terraform)
+  - name: variables-with-terraform
+    description: "Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file."
+    required: true
+    files:
+      - source: simple-terraform.tf
+        target: modified-terraform.tf
+    actions:
+      onDeploy:
+        after:
+          # This command `cat`s the modified terraform file on deploy for use later on (see examples/component-actions for more)
+          - cmd: cat modified-terraform.tf
+            # `mute` is set to exclude the command output from being shown (note this will include AWS_REGION which we marked sensitive above)
+            mute: true
+            setVariables:
+              - name: MODIFIED_TERRAFORM
+                autoIndent: true
+                # `sensitive` is set to exclude the command output from the logs (note this will include AWS_REGION which we marked sensitive above)
+                sensitive: true
+
+  # The following component deploys nginx to the cluster using the defined variables
+  - name: variables-with-nginx
+    description: "This component deploys nginx version ###ZARF_PKG_TMPL_NGINX_VERSION### to the cluster"
+    required: true
+    images:
+      # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
+      - "nginx:###ZARF_PKG_TMPL_NGINX_VERSION###"
+    manifests:
+      - name: variables-with-nginx
+        files:
+          - nginx-configmap.yaml
+          - nginx-deployment.yaml
+          - nginx-service.yaml
