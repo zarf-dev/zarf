@@ -173,7 +173,7 @@ func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
 }
 
 // CosignSignBlob signs the provide binary and returns the signature
-func CosignSignBlob(blobPath string, outputSigPath string, keyPath string) ([]byte, error) {
+func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passwordFunc func(bool) ([]byte, error)) ([]byte, error) {
 	rootOptions := &options.RootOptions{Verbose: false}
 
 	regOptions := options.RegistryOptions{
@@ -183,7 +183,8 @@ func CosignSignBlob(blobPath string, outputSigPath string, keyPath string) ([]by
 		Keychain:           nil,
 	}
 
-	keyOptions := options.KeyOpts{KeyRef: keyPath}
+	keyOptions := options.KeyOpts{KeyRef: keyPath,
+		PassFunc: passwordFunc}
 	b64 := true
 	outputCertificate := ""
 

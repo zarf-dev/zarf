@@ -200,14 +200,15 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
 	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
 
-	CmdPackageCreateFlagConfirm         = "Confirm package creation without prompting"
-	CmdPackageCreateFlagSet             = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory = "Specify the output directory for the created Zarf package"
-	CmdPackageCreateFlagSbom            = "View SBOM contents after creating the package"
-	CmdPackageCreateFlagSbomOut         = "Specify an output directory for the SBOMs from the created Zarf package"
-	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
-	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
-	CmdPackageCreateFlagSigningKey      = "Path to private key file for signing packages"
+	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
+	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
+	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
+	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
+	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
 	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
 	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
@@ -224,8 +225,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
-	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
-	CmdPackagePublishFlagSigningKey  = "Path to private key file for signing packages"
+	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 
 	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
 

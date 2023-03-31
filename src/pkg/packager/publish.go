@@ -76,8 +76,9 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
 	}
 
+	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath)
+		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}

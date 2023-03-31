@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -469,4 +470,40 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 	}
 
 	return nil
+}
+
+func (p *Packager) getSigCreatePassword(_ bool) ([]byte, error) {
+	// CLI flags take priority (also loads from viper configs)
+	if p.cfg.CreateOpts.SigningKeyPassword != "" {
+		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
+	}
+
+	return promptForSigPassword()
+}
+
+func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
+	// CLI flags take priority (also loads from viper configs)
+	if p.cfg.CreateOpts.SigningKeyPassword != "" {
+		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
+	}
+
+	return promptForSigPassword()
+}
+
+func promptForSigPassword() ([]byte, error) {
+	var password string
+
+	// If we're in interactive mode, prompt the user for the password to their private key
+	if !config.CommonOptions.Confirm {
+		prompt := &survey.Password{
+			Message: fmt.Sprintf("Private key password (empty for no password): "),
+		}
+		if err := survey.AskOne(prompt, &password); err != nil {
+			return nil, fmt.Errorf("Unable to get password for private key: %w", err)
+		}
+		return []byte(password), nil
+	}
+
+	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
+	return nil, nil
 }
