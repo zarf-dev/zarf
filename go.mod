@@ -219,7 +219,7 @@ require (
 	github.com/google/trillian v1.5.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.1 // indirect
-	github.com/gookit/color v1.5.2 // indirect
+	github.com/gookit/color v1.5.3 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
