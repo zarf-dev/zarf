@@ -164,36 +164,24 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 }
 
 func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
-	sanitizedState := types.ZarfState{
-		ZarfAppliance: state.ZarfAppliance,
-		Distro:        state.Distro,
-		Architecture:  state.Architecture,
-		StorageClass:  state.StorageClass,
-		AgentTLS: k8s.GeneratedPKI{
-			CA:   []byte("**sanitized**"),
-			Cert: []byte("**sanitized**"),
-			Key:  []byte("**sanitized**"),
-		},
-		GitServer: types.GitServerInfo{
-			PushUsername:   state.GitServer.PushUsername,
-			PushPassword:   "**sanitized**",
-			PullUsername:   state.GitServer.PullUsername,
-			PullPassword:   "**sanitized**",
-			Address:        state.GitServer.Address,
-			InternalServer: state.GitServer.InternalServer,
-		},
-		RegistryInfo: types.RegistryInfo{
-			PushUsername:     state.RegistryInfo.PushUsername,
-			PushPassword:     "**sanitized**",
-			PullUsername:     state.RegistryInfo.PullUsername,
-			PullPassword:     "**sanitized**",
-			Address:          state.RegistryInfo.Address,
-			NodePort:         state.RegistryInfo.NodePort,
-			InternalRegistry: state.RegistryInfo.InternalRegistry,
-			Secret:           "**sanitized**",
-		},
-		LoggingSecret: "**sanitized**",
-	}
+	sanitizedState := state
+
+	// Overwrite the AgentTLS information
+	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+
+	// Overwrite the GitServer passwords
+	sanitizedState.GitServer.PushPassword = "**sanitized**"
+	sanitizedState.GitServer.PullPassword = "**sanitized**"
+
+	// Overwrite the RegistryInfo passwords
+	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+
+	// Overwrite the Logging secret
+	sanitizedState.LoggingSecret = "**sanitized**"
 
 	return sanitizedState
 }
