@@ -5,7 +5,17 @@ To build the Zarf CLI from scratch, you'll need to have the following dependenci
 1. The Zarf repository cloned down:
    - `git clone git@github.com:defenseunicorns/zarf.git`.
 2. Have Go 1.19.x installed on your PATH (instructions to [install Go](https://go.dev/doc/install)).
-3. `make` utility installed on your PATH (instructions to install with [Homebrew](https://formulae.brew.sh/formula/make)).
+3. Have NPM/Node 18.x installed on your PATH (instructions to [install NPM/Node](https://nodejs.org/en)).
+4. `make` utility installed on your PATH.
+   - Instructions to install on macOS with [Homebrew](https://formulae.brew.sh/formula/make).
+   - Instructions to install on Windows with [Chocolatey](https://community.chocolatey.org/packages/make), [Scoop](https://scoop.sh/#/apps?q=make&s=0&d=1&o=true&id=c43ff861c0f1713336e5304d85334a29ffb86317), or [MSYS2](https://packages.msys2.org/package/make).
+
+:::note
+
+If you are running `make` targets other than the `build-cli-*` targets described below, you may need more software installed.  Inspect the `Makefile` at the root of the project to view the commands each target runs.
+
+:::
+
 
 If you don't want to build the CLI yourself, you can download a pre-compiled binary from the 'Assets' tab of our latest [releases](https://github.com/defenseunicorns/zarf/releases) on GitHub. The pre-compiled binary is available for both arm64 and amd64 machines. 
 
