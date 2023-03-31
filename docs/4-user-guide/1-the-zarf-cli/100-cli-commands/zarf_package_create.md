@@ -19,6 +19,7 @@ zarf package create [DIRECTORY] [flags]
       --confirm                   Confirm package creation without prompting
   -h, --help                      help for create
   -k, --key string                Path to private key file for signing packages
+      --key-pass string           Password to the private key file used for signing packages
   -m, --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
   -o, --output-directory string   Specify the output directory for the created Zarf package
   -s, --sbom                      View SBOM contents after creating the package

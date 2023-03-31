@@ -18,6 +18,7 @@ zarf package publish [PACKAGE] [REPOSITORY] [flags]
 ```
   -h, --help                  help for publish
   -k, --key string            Path to private key file for signing packages
+      --key-pass string       Password to the private key file used for publishing packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 

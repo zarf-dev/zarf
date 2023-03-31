@@ -936,6 +936,10 @@ export interface ZarfCreateOptions {
      */
     setVariables: { [key: string]: string };
     /**
+     * Password to the private key signature file that will be used to sigh the created package
+     */
+    signingKeyPassword: string;
+    /**
      * Location where the private key component of a cosign key-pair can be found
      */
     signingKeyPath: string;
@@ -1386,6 +1390,7 @@ const typeMap: any = {
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
         { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
