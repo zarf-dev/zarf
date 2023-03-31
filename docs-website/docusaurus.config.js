@@ -98,7 +98,7 @@ const config = {
 						value: SocialsBox({
 							linkClass: 'menu__link'
 						})
-					},
+					}
 				]
 			},
 			footer: {
