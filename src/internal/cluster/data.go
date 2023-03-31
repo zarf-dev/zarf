@@ -83,8 +83,8 @@ iterator:
 			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod, data.Target.Container)
 
 			// Note that each command flag is separated to provide the widest cross-platform tar support
-			tarCmd := fmt.Sprintf("tar -c%s -f -", tarCompressFlag)
-			untarCmd := fmt.Sprintf("tar -x%s -v -f - -C %s", tarCompressFlag, data.Target.Path)
+			tarCmd := fmt.Sprintf("tar -c %s -f -", tarCompressFlag)
+			untarCmd := fmt.Sprintf("tar -x %s -v -f - -C %s", tarCompressFlag, data.Target.Path)
 
 			// Must create the target directory before trying to change to it for untar
 			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
