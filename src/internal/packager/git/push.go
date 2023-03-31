@@ -19,26 +19,26 @@ import (
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
-func (g *Git) PushRepo(srcUrl, targetFolder string) error {
-	spinner := message.NewProgressSpinner("Processing git repo %s", srcUrl)
+func (g *Git) PushRepo(srcURL, targetFolder string) error {
+	spinner := message.NewProgressSpinner("Processing git repo %s", srcURL)
 	defer spinner.Stop()
 
 	// Parse the git URL.
-	get, err := utils.MatchRegex(gitURLRegex, srcUrl)
+	get, err := utils.MatchRegex(gitURLRegex, srcURL)
 	if err != nil {
-		return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
+		return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
 	}
 
 	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
-	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
+	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcURL))
 	repoPath := path.Join(targetFolder, repoFolder)
 
 	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
 	_, err = os.Stat(repoPath)
 	if os.IsNotExist(err) {
-		repoFolder, err = g.TransformURLtoRepoName(srcUrl)
+		repoFolder, err = g.TransformURLtoRepoName(srcURL)
 		if err != nil {
-			return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
+			return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
 		}
 		repoPath = path.Join(targetFolder, repoFolder)
 	}

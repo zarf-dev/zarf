@@ -158,9 +158,32 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 
 	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
-	message.Debugf("ZarfState = %s", message.JSONValue(state))
+	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
 
 	return state, nil
+}
+
+func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
+	sanitizedState := state
+
+	// Overwrite the AgentTLS information
+	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+
+	// Overwrite the GitServer passwords
+	sanitizedState.GitServer.PushPassword = "**sanitized**"
+	sanitizedState.GitServer.PullPassword = "**sanitized**"
+
+	// Overwrite the RegistryInfo passwords
+	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+
+	// Overwrite the Logging secret
+	sanitizedState.LoggingSecret = "**sanitized**"
+
+	return sanitizedState
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.

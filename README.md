@@ -32,7 +32,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 🛠️ Configurable Features
 
-- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting
+- Customizable [variables](examples/variables/README.md) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Filters to select the correct architectures/operating systems for packages
 

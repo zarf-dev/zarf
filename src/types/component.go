@@ -34,7 +34,7 @@ type ZarfComponent struct {
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
 	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment,deprecated=true"`
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
@@ -142,15 +142,22 @@ type ZarfComponentActionDefaults struct {
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
-	Mute            *bool                    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxTotalSeconds *int                     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
-	MaxRetries      *int                     `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
-	Dir             *string                  `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
-	Env             []string                 `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
-	Cmd             string                   `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
-	SetVariable     string                   `json:"setVariable,omitempty" jsonschema:"description=(Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
-	Description     string                   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
-	Wait            *ZarfComponentActionWait `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
+	Mute                  *bool                            `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxTotalSeconds       *int                             `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
+	MaxRetries            *int                             `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
+	Dir                   *string                          `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Env                   []string                         `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
+	Cmd                   string                           `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
+	DeprecatedSetVariable string                           `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
+	SetVariables          []ZarfComponentActionSetVariable `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
+	Description           string                           `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
+	Wait                  *ZarfComponentActionWait         `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
+}
+
+type ZarfComponentActionSetVariable struct {
+	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
@@ -193,5 +200,5 @@ type ZarfDataInjection struct {
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	Path string `json:"path" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 }

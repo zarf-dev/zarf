@@ -32,7 +32,7 @@ During the `zarf init` operation, the Zarf Agent will patch any existing namespa
 
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
-Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process. This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](4-user-guide/5-component-actions.md) to make the process automatic. Given an example image of `my-giant-image:###ZARF_PKG_VAR_IMG###` you could do something like this:
+Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process. This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](4-user-guide/5-component-actions.md) to make the process automatic. Given an example image of `my-giant-image:###ZARF_PKG_TMPL_IMG###` you could do something like this:
 
 ```sh
 # Create a local registry
@@ -54,11 +54,11 @@ components:
       onCreate:
         # runs before the component is created
         before:
-          - cmd: 'docker tag ###ZARF_PKG_VAR_IMG### localhost:5000/###ZARF_PKG_VAR_IMG###'
-          - cmd: 'docker push localhost:5000/###ZARF_PKG_VAR_IMG###'
+          - cmd: 'docker tag ###ZARF_PKG_TMPL_IMG### localhost:5000/###ZARF_PKG_TMPL_IMG###'
+          - cmd: 'docker push localhost:5000/###ZARF_PKG_TMPL_IMG###'
 
     images:
-      - 'localhost:5000/###ZARF_PKG_VAR_IMG###'
+      - 'localhost:5000/###ZARF_PKG_TMPL_IMG###'
 ```
 
 ## Can I pull in more than http(s) git repos on `zarf package create`?

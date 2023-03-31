@@ -57,7 +57,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setActiveVariables(); err != nil {
+	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 

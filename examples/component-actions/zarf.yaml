@@ -34,8 +34,6 @@ components:
             maxTotalSeconds: 30
             # determine if actions output should be printed to the console
             mute: false
-            # the name of the variable to set with the output of the action
-            setVariable: BLEH
         # runs after the component is deployed
         after:
           - cmd: touch test-create-after.txt
@@ -79,9 +77,11 @@ components:
       onDeploy:
         # runs before the component is deployed
         before:
-          # setVariable can be used to set a variable for use in other actions or components
+          # setVariables can be used to set a variable for use in other actions or components
           - cmd: echo "meow"
-            setVariable: CAT_SOUND
+            # the name of the variable to set with the output of the action (only useable onDeploy)
+            setVariables:
+              - name: CAT_SOUND
           # this action will have access to the variable set in the previous action
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
 
@@ -94,7 +94,10 @@ components:
           # setting this variable will allow it to be used in other actions with additional variables
           # set in other actions or components
           - cmd: echo "hiss"
-            setVariable: SNAKE_SOUND
+            setVariables:
+              - name: SNAKE_SOUND
+                # You can also mark variables as sensitive to prevent them from being output in the Zarf log
+                sensitive: true
         # onSuccess will only run if steps in this component are successful
         onSuccess:
           # this action will have access to the variables set in a previous component
@@ -102,6 +105,8 @@ components:
           # this action will have access to the variables set at the top of the zarf.yaml file
           - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
           # this action will have access to the variables set within this component
+          # NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
+          # - use `mute` if you want to silence the command output for sensitive variables
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
           # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
           - cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
@@ -150,6 +155,7 @@ components:
         before:
           - cmd: touch $ZARF_VAR_TEST_FILENAME
             env:
+              # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
               - "ZARF_VAR_TEST_FILENAME=filename-from-env.txt"
 
   - name: on-create-with-network-wait-action

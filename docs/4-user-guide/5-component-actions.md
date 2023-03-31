@@ -42,8 +42,6 @@ components:
             maxTotalSeconds: 30
             # determine if actions output should be printed to the console
             mute: false
-            # the name of the variable to set with the output of the action
-            setVariable: BLEH
         # runs after the component is deployed
         after:
           - cmd: touch test-create-after.txt
@@ -54,11 +52,16 @@ components:
       onDeploy:
         # runs before the component is deployed
         before:
-          # setVariable can be used to set a variable for use in other actions or components
+          # setVariables can be used to set variables for use in other actions or components (only onDeploy)
           - cmd: echo "meow"
-            setVariable: CAT_SOUND
-          # this action will have access to the variable set in the previous action
+            setVariables:
+              - name: CAT_SOUND
+                # these variables can also (optionally) be marked as sensitive to sanitize them in the Zarf log
+                sensitive: true
+          # NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
+          # - use `mute` to silence the command output for sensitive variables
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+            mute: true
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second
@@ -119,11 +122,11 @@ A command action executes arbitrary commands or scripts in a shell wrapper. Use 
 - `mute` - whether to mute the realtime output of the command, output is always shown at the end on failure (default: `false`)
 - `maxRetries` - the maximum number of times to retry the command if it fails (default: `0` - no retries)
 - `env` - an array of environment variables to set for the command in the form of `name=value`
-- `setVariable` - set the standard output of the command to a variable that can be used in other actions or components
+- `setVariables` - set the standard output of the command to a list of variables that can be used in other actions or components (onDeploy only)
 
 ## Wait Action Configuration
 
-A wait action pauses the component stage it is triggered in until the condition is met, or triggers a failure if maxTotalSeconds is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait paramaters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
+A wait action pauses the component stage it is triggered in until the condition is met, or triggers a failure if maxTotalSeconds is exceeded (defaults to 5 minutes). Use the `wait` key to define the wait parameters, _you cannot use `cmd` and `wait` in the same action_. A wait action is really just _yaml sugar_ for a call to `./zarf tools wait-for`, but in a more exciting yaml-sort-of-way. Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
 
 - `wait` - (required if not a cmd action) the wait parameters
   - `cluster` - perform a wait operation on a Kubernetes resource (kubectl wait)
@@ -140,7 +143,7 @@ A wait action pauses the component stage it is triggered in until the condition 
 
 ## Creating dynamic variables from actions
 
-You can use the `setVariable` action configuration to set a variable that can be used in other actions or components. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `###ZARF_VAR_{NAME}###`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. _Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml` and can be used during `package create`, `package deploy` or `package remove`._
+You can use the `setVariables` action configuration to set a list of variables that can be used in other actions or components during `zarf package deploy`. The variable will be set in the environment variable `ZARF_VAR_{NAME}` and `TF_VAR_{name}` in the remaining actions as well as available for templating in files or manifests in the remaining components as `###ZARF_VAR_{NAME}###`. This feature allows package authors to define dynamic runtime variables for consumption by other components or actions. _Unlike normal variables, these do not need to be defined at the top of the `zarf.yaml`._
 
 ## More examples
 

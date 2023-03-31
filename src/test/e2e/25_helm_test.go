@@ -69,7 +69,7 @@ func testHelmEscaping(t *testing.T) {
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "src/test/test-packages/evil-templates/", "--confirm")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "src/test/test-packages/25-evil-templates/", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("zarf-package-evil-templates-%s.tar.zst", e2e.arch)

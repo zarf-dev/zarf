@@ -23,7 +23,7 @@ type ZarfDeployOptions struct {
 	PackagePath   string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
 	Components    string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
 	SGetKeyPath   string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables  map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	SetVariables  map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
@@ -76,6 +76,13 @@ type ZarfPartialPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
+}
+
+type ZarfSetVariable struct {
+	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Value      string `json:"value" jsonschema:"description=The value the variable is currently set with"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

@@ -46,7 +46,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill variables in template: %w", err)
+		return fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
