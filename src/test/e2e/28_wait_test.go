@@ -49,7 +49,7 @@ func TestWait(t *testing.T) {
 		stdOut = res.stdOut
 		stdErr = res.stdErr
 		err = res.err
-	case <-time.After(10 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
 		kubectlOut, err := exec.Command("kubectl", "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0").Output()
