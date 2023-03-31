@@ -3,8 +3,6 @@ module github.com/defenseunicorns/zarf
 go 1.19
 
 replace (
-	// TODO (@WSTARR) use the OG syft once they merge in https://github.com/anchore/syft/pull/1668
-	github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.0-DU
 	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
 	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
 	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
@@ -14,13 +12,13 @@ replace (
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20230317134707-7928713c391e
-	github.com/anchore/syft v0.75.0
+	github.com/anchore/stereoscope v0.0.0-20230323161519-d7551b7f46f5
+	github.com/anchore/syft v0.76.0
 	github.com/derailed/k9s v0.27.3
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/docker/cli v23.0.2+incompatible
 	github.com/fatih/color v1.15.0
-	github.com/fluxcd/helm-controller/api v0.31.2
+	github.com/fluxcd/helm-controller/api v0.32.0
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.6.1
@@ -150,7 +148,7 @@ require (
 	github.com/derailed/tview v0.8.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v23.0.1+incompatible // indirect
+	github.com/docker/docker v23.0.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -166,8 +164,8 @@ require (
 	github.com/facebookincubator/nvdtools v0.1.5 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.1.0 // indirect
-	github.com/fluxcd/pkg/apis/kustomize v0.8.1 // indirect
-	github.com/fluxcd/pkg/apis/meta v0.19.1 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v1.0.0 // indirect
+	github.com/fluxcd/pkg/apis/meta v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fullstorydev/grpcurl v1.8.7 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
@@ -209,10 +207,11 @@ require (
 	github.com/google/go-github/v45 v45.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/licensecheck v0.3.1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/trillian v1.5.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/gookit/color v1.5.2 // indirect
+	github.com/gookit/color v1.5.3 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
@@ -336,7 +335,7 @@ require (
 	github.com/transparency-dev/merkle v0.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/cli v1.22.7 // indirect
-	github.com/vbatts/go-mtree v0.5.2 // indirect
+	github.com/vbatts/go-mtree v0.5.3 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
 	github.com/vifraa/gopom v0.2.1 // indirect
 	github.com/wagoodman/go-partybus v0.0.0-20210627031916-db1f5573bbc5 // indirect
@@ -399,8 +398,8 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.2 // indirect
-	k8s.io/apiserver v0.26.2 // indirect
+	k8s.io/apiextensions-apiserver v0.26.3 // indirect
+	k8s.io/apiserver v0.26.3 // indirect
 	k8s.io/cli-runtime v0.26.3 // indirect
 	k8s.io/component-helpers v0.26.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20230109183929-3758b55a6596 // indirect
@@ -417,7 +416,7 @@ require (
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 	oras.land/oras-go v1.2.2 // indirect
-	sigs.k8s.io/controller-runtime v0.14.5 // indirect
+	sigs.k8s.io/controller-runtime v0.14.6 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7 // indirect
 	sigs.k8s.io/release-utils v0.7.3 // indirect
