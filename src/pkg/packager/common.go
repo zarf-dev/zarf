@@ -496,10 +496,10 @@ func promptForSigPassword() ([]byte, error) {
 	// If we're in interactive mode, prompt the user for the password to their private key
 	if !config.CommonOptions.Confirm {
 		prompt := &survey.Password{
-			Message: fmt.Sprintf("Private key password (empty for no password): "),
+			Message: "Private key password (empty for no password): ",
 		}
 		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf("Unable to get password for private key: %w", err)
+			return nil, fmt.Errorf("unable to get password for private key: %w", err)
 		}
 		return []byte(password), nil
 	}
