@@ -111,7 +111,7 @@ cd build
 If you installed Zarf through Homebrew, Zarf will already be on your $PATH and you can skip this section.
 :::
 
-To simplify the usage of the Zarf CLI, you may add it to your $PATH. This configuration will allow you to use `zarf` without having to specify the binary’s precise location and your computer will automatically find the binary for you to execute. The directories listed in your $PATH can be viewed be executing the command `echo $PATH` in your terminal. If you move your CLI to any of these directories, you will be able to execute it without the need to specify its full path. A typical $PATH you can use is: `mv ./path/to/cli/file/zarf /usr/local/bin/zarf`
+To simplify the usage of the Zarf CLI, you may add it to your $PATH. This configuration will allow you to use `zarf` without having to specify the binary’s precise location and your computer will automatically find the binary for you to execute. The directories listed in your $PATH can be viewed by executing the command `echo $PATH` in your terminal. If you move your CLI to any of these directories, you will be able to execute it without the need to specify its full path. A typical $PATH you can use is: `mv ./path/to/cli/file/zarf /usr/local/bin/zarf`
 
 :::note
 Throughout the rest of the documentation, we will often be describing commands as `zarf {command}`. This assumes that the CLI is on your $PATH.
