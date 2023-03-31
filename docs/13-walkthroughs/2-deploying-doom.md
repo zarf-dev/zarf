@@ -77,7 +77,7 @@ The dos-games package has now been removed from your cluster.
 
 ## Troubleshooting
 
-### Unable to connect to the Kubernetes cluster.
+### Unable to connect to the Kubernetes cluster
 
 #### Example
 
@@ -96,7 +96,7 @@ If you need to setup a cluster, you can perform the following.
 
 After that you can try deploying the package again.
 
-### Secrets "zarf-state" not found.
+### Secrets "zarf-state" not found
 
 #### Example
 
