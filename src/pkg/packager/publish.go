@@ -322,8 +322,9 @@ func (p *Packager) loadSkeleton() error {
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
 		rando := utils.RandomString(8)
+		tmp := filepath.Join(p.tmp.Components, component.Name)
 
-		err := os.MkdirAll(filepath.Join(p.tmp.Base, "components", component.Name), 0755)
+		err := os.MkdirAll(tmp, 0755)
 		if err != nil {
 			return err
 		}
@@ -342,9 +343,9 @@ func (p *Packager) loadSkeleton() error {
 				if err != nil {
 					return err
 				}
-				dst = filepath.Join(p.tmp.Base, "components", component.Name, path)
+				dst = filepath.Join(p.tmp.Components, component.Name, path)
 			} else {
-				dst = filepath.Join(p.tmp.Base, "components", component.Name, ".tmp"+rando, filepath.Base(path))
+				dst = filepath.Join(tmp, ".tmp"+rando, filepath.Base(path))
 				dstrel := filepath.Join(".tmp"+rando, filepath.Base(path))
 				if strings.HasPrefix(path, "file://") {
 					dstrel = "file://" + dstrel
@@ -362,13 +363,23 @@ func (p *Packager) loadSkeleton() error {
 			}
 		}
 		if len(local) > 0 {
-			tarPath := filepath.Join(p.tmp.Base, "components", component.Name+".tar")
-			err = archiver.Archive([]string{tarPath}, filepath.Join(p.tmp.Base, "components", fmt.Sprintf("%s%s", component.Name, ".tar")))
+			tarPath := fmt.Sprintf("%s.tar", tmp)
+			err = archiver.Archive([]string{tmp}, tarPath)
 			if err != nil {
 				return err
 			}
 		}
+		err = os.RemoveAll(tmp)
+		if err != nil {
+			return err
+		}
 	}
+
+	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
 	return p.writeYaml()
 }
