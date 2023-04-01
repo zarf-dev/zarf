@@ -28,15 +28,13 @@
 	};
 </script>
 
-<Paper {ssx} square backgroundColor="navbar" color="on-navbar">
+<Paper {ssx} square backgroundColor="global-nav" color="on-global-nav">
 	<Box
 		ssx={{ $self: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 1rem' } }}
 	>
 		<Typography variant="h5">Cluster</Typography>
-		{#if $clusterStore?.distro && $clusterStore?.host}
-			<Typography variant="caption" color="text-secondary-on-dark"
-				>{$clusterStore.distro}: {$clusterStore.host}</Typography
-			>
+		{#if $clusterStore?.host}
+			<Typography variant="caption" color="text-secondary-on-dark">{$clusterStore.host}</Typography>
 		{:else}
 			<Typography
 				variant="caption"

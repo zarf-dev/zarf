@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -26,10 +27,9 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 
 	c, err := cluster.NewClusterWithWait(5 * time.Second)
 	reachable = err == nil
-
 	if reachable {
 		distro, _ = c.Kube.DetectDistro()
-		host = c.Kube.RestConfig.Host
+		host = getClusterName(c.Kube)
 		state, _ = c.LoadZarfState()
 		hasZarf = state.Distro != ""
 	}
@@ -43,4 +43,23 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	common.WriteJSONResponse(w, data, http.StatusOK)
+}
+
+func getClusterName(k *k8s.K8s) string {
+
+	// Get all nodes
+	nodes, err := k.GetNodes()
+	// if no nodes are found just return empty string.
+	if err != nil {
+		return ""
+	}
+
+	// Grab first node the kubernetes.io/hostname (control-plane) will be same for all nodes.
+	node := nodes.Items[0]
+
+	labels := node.GetLabels()
+
+	name, _ := labels["kubernetes.io/hostname"]
+
+	return name
 }

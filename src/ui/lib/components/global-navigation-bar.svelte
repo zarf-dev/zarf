@@ -28,8 +28,8 @@
 <Paper
 	class="global-nav-bar"
 	ssx={headerSSX}
-	backgroundColor="navbar"
-	color="on-navbar"
+	backgroundColor="global-nav"
+	color="on-global-nav"
 	elevation={2}
 	square
 >
