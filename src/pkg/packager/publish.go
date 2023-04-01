@@ -42,81 +42,19 @@ func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
 	var ref registry.Reference
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
-		base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
+		err := p.loadSkeleton()
 		if err != nil {
 			return err
 		}
-		if err := os.Chdir(base); err != nil {
-			return err
-		}
-		if err := p.readYaml("zarf.yaml", false); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
-		}
+
 		ref, err = p.ref("skeleton")
 		if err != nil {
 			return err
 		}
-
-		for _, component := range p.cfg.Pkg.Components {
-			local := component.LocalPaths()
-			message.Debugf("mutating local paths for %s: %v", component.Name, local)
-			local = utils.Unique(local)
-			rando := utils.RandomString(8)
-
-			err := os.MkdirAll(filepath.Join(p.tmp.Base, "components", component.Name), 0755)
-			if err != nil {
-				return err
-			}
-
-			for _, path := range local {
-				src := strings.TrimPrefix(path, "file://")
-				if !filepath.IsAbs(src) {
-					src = filepath.Join(base, path)
-				}
-				if utils.InvalidPath(src) {
-					return fmt.Errorf("unable to find path %s referenced in %s", src, component.Name)
-				}
-				var dst string
-				if utils.DirHasFile(base, path) {
-					err = os.MkdirAll(filepath.Dir(path), 0755)
-					if err != nil {
-						return err
-					}
-					dst = filepath.Join(p.tmp.Base, "components", component.Name, path)
-				} else {
-					dst = filepath.Join(p.tmp.Base, "components", component.Name, ".tmp"+rando, filepath.Base(path))
-					dstrel := filepath.Join(".tmp"+rando, filepath.Base(path))
-					if strings.HasPrefix(path, "file://") {
-						dstrel = "file://" + dstrel
-					}
-					if p.cfg.Pkg.Build.SkeletonMutations == nil {
-						p.cfg.Pkg.Build.SkeletonMutations = make(map[string][]types.PathMutation)
-					}
-					p.cfg.Pkg.Build.SkeletonMutations[component.Name] = append(p.cfg.Pkg.Build.SkeletonMutations[component.Name], types.PathMutation{
-						From: path,
-						To:   dstrel,
-					})
-				}
-				if err := utils.CreatePathAndCopy(src, dst); err != nil {
-					return err
-				}
-			}
-			if len(local) > 0 {
-				tarPath := filepath.Join(p.tmp.Base, "components", component.Name+".tar")
-				err = archiver.Archive([]string{tarPath}, filepath.Join(p.tmp.Base, "components", fmt.Sprintf("%s%s", component.Name, ".tar")))
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		// write the new zarf.yaml
-		if err := p.writeYaml(); err != nil {
-			return err
-		}
 	} else {
-		if err := p.loadZarfPkg(); err != nil {
-			return fmt.Errorf("unable to load the package: %w", err)
+		// Extract the first layer of the tarball
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 
 		err := p.readYaml(p.tmp.ZarfYaml, true)
@@ -365,6 +303,74 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	manifestConfigDesc := content.NewDescriptorFromBytes("application/vnd.unknown.config.v1+json", manifestConfigBytes)
 
 	return manifestConfigDesc, manifestConfigBytes, nil
+}
+
+func (p *Packager) loadSkeleton() error {
+	base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
+	if err != nil {
+		return err
+	}
+	if err := os.Chdir(base); err != nil {
+		return err
+	}
+	if err := p.readYaml("zarf.yaml", false); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
+	}
+
+	for _, component := range p.cfg.Pkg.Components {
+		local := component.LocalPaths()
+		message.Debugf("mutating local paths for %s: %v", component.Name, local)
+		local = utils.Unique(local)
+		rando := utils.RandomString(8)
+
+		err := os.MkdirAll(filepath.Join(p.tmp.Base, "components", component.Name), 0755)
+		if err != nil {
+			return err
+		}
+
+		for _, path := range local {
+			src := strings.TrimPrefix(path, "file://")
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(base, path)
+			}
+			if utils.InvalidPath(src) {
+				return fmt.Errorf("unable to find path %s referenced in %s", src, component.Name)
+			}
+			var dst string
+			if utils.DirHasFile(base, path) {
+				err = os.MkdirAll(filepath.Dir(path), 0755)
+				if err != nil {
+					return err
+				}
+				dst = filepath.Join(p.tmp.Base, "components", component.Name, path)
+			} else {
+				dst = filepath.Join(p.tmp.Base, "components", component.Name, ".tmp"+rando, filepath.Base(path))
+				dstrel := filepath.Join(".tmp"+rando, filepath.Base(path))
+				if strings.HasPrefix(path, "file://") {
+					dstrel = "file://" + dstrel
+				}
+				if p.cfg.Pkg.Build.SkeletonMutations == nil {
+					p.cfg.Pkg.Build.SkeletonMutations = make(map[string][]types.PathMutation)
+				}
+				p.cfg.Pkg.Build.SkeletonMutations[component.Name] = append(p.cfg.Pkg.Build.SkeletonMutations[component.Name], types.PathMutation{
+					From: path,
+					To:   dstrel,
+				})
+			}
+			if err := utils.CreatePathAndCopy(src, dst); err != nil {
+				return err
+			}
+		}
+		if len(local) > 0 {
+			tarPath := filepath.Join(p.tmp.Base, "components", component.Name+".tar")
+			err = archiver.Archive([]string{tarPath}, filepath.Join(p.tmp.Base, "components", fmt.Sprintf("%s%s", component.Name, ".tar")))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return p.writeYaml()
 }
 
 // pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
