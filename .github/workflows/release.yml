@@ -59,6 +59,7 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo rm -rf zarf-sbom
+          sudo rm -rf build/zarf-package-*
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
