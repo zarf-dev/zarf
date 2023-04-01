@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -44,21 +45,29 @@ const (
 	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
 
 	// Package create config keys
-	V_PKG_CREATE_SET              = "package.create.set"
-	V_PKG_CREATE_OUTPUT_DIR       = "package.create.output_directory"
-	V_PKG_CREATE_SBOM             = "package.create.sbom"
-	V_PKG_CREATE_SBOM_OUTPUT      = "package.create.sbom_output"
-	V_PKG_CREATE_SKIP_SBOM        = "package.create.skip_sbom"
-	V_PKG_CREATE_MAX_PACKAGE_SIZE = "package.create.max_package_size"
+	V_PKG_CREATE_SET                  = "package.create.set"
+	V_PKG_CREATE_OUTPUT_DIR           = "package.create.output_directory"
+	V_PKG_CREATE_SBOM                 = "package.create.sbom"
+	V_PKG_CREATE_SBOM_OUTPUT          = "package.create.sbom_output"
+	V_PKG_CREATE_SKIP_SBOM            = "package.create.skip_sbom"
+	V_PKG_CREATE_MAX_PACKAGE_SIZE     = "package.create.max_package_size"
+	V_PKG_CREATE_SIGNING_KEY          = "package.create.signing_key"
+	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
 	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
 	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
 	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
+	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_OCI_CONCURRENCY = "package.publish.oci_concurrency"
+	V_PKG_PUBLISH_OCI_CONCURRENCY      = "package.publish.oci_concurrency"
+	V_PKG_PUBLISH_SIGNING_KEY          = "package.publish.signing_key"
+	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
+
+	// Package pull config keys
+	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
 )
 
 func initViper() {
@@ -90,6 +99,7 @@ func initViper() {
 
 	// E.g. ZARF_LOG_LEVEL=debug
 	v.SetEnvPrefix("zarf")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	// Optional, so ignore errors

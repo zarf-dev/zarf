@@ -42,6 +42,10 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
+	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		return err
+	}
+
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
 		p.cfg.IsInitConfig = true

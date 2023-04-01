@@ -18,6 +18,9 @@ type PackagerConfig struct {
 	// PublishOpts tracks user-defined options used to publish the package
 	PublishOpts ZarfPublishOptions
 
+	// PullOpts tracks user-defined options used to pull packages
+	PullOpts ZarfPullOptions
+
 	// Track if CLI prompts should be generated
 	IsInteractive bool
 
