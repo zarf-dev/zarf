@@ -43,7 +43,7 @@
 		"@sveltejs/kit": "1.15.0",
 		"@sveltejs/package": "2.0.2",
 		"@testing-library/svelte": "3.2.2",
-		"@tsconfig/svelte": "3.0.0",
+		"@tsconfig/svelte": "4.0.1",
 		"@types/prismjs": "1.26.0",
 		"@typescript-eslint/eslint-plugin": "5.57.0",
 		"@typescript-eslint/parser": "5.57.0",
