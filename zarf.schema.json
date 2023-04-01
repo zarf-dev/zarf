@@ -69,6 +69,24 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "PathMutation": {
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "The path to mutate"
+        },
+        "to": {
+          "type": "string",
+          "description": "The path to mutate to"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -105,6 +123,19 @@
           },
           "type": "array",
           "description": "Any migrations that have been run on this package"
+        },
+        "pathMutations": {
+          "patternProperties": {
+            ".*": {
+              "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "$ref": "#/definitions/PathMutation"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "description": "Any path mutations that have been run on this package"
         }
       },
       "additionalProperties": false,
@@ -553,18 +584,19 @@
       "type": "object"
     },
     "ZarfComponentImport": {
-      "required": [
-        "path"
-      ],
       "properties": {
         "name": {
           "type": "string",
           "description": "The name of the component to import from the referenced zarf.yaml"
         },
         "path": {
-          "pattern": "^(?!.*###ZARF_PKG_TMPL_).*$",
+          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
           "type": "string",
           "description": "The relative path to a directory containing a zarf.yaml to import from"
+        },
+        "oci": {
+          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
+          "type": "string"
         }
       },
       "additionalProperties": false,

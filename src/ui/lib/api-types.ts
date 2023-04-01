@@ -191,6 +191,10 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
+     * Any path mutations that have been run on this package
+     */
+    pathMutations?: { [key: string]: PathMutation[] };
+    /**
      * The machine name that created this package
      */
     terminal: string;
@@ -206,6 +210,17 @@ export interface ZarfBuildData {
      * The version of Zarf used to build this package
      */
     version: string;
+}
+
+export interface PathMutation {
+    /**
+     * The path to mutate
+     */
+    from: string;
+    /**
+     * The path to mutate to
+     */
+    to: string;
 }
 
 export interface ZarfComponent {
@@ -627,10 +642,11 @@ export interface ZarfComponentImport {
      * The name of the component to import from the referenced zarf.yaml
      */
     name?: string;
+    oci?:  string;
     /**
      * The relative path to a directory containing a zarf.yaml to import from
      */
-    path: string;
+    path?: string;
 }
 
 export interface ZarfManifest {
@@ -1196,10 +1212,15 @@ const typeMap: any = {
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "pathMutations", js: "pathMutations", typ: u(undefined, m(a(r("PathMutation")))) },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
         { json: "version", js: "version", typ: "" },
+    ], false),
+    "PathMutation": o([
+        { json: "from", js: "from", typ: "" },
+        { json: "to", js: "to", typ: "" },
     ], false),
     "ZarfComponent": o([
         { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
@@ -1311,7 +1332,8 @@ const typeMap: any = {
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
-        { json: "path", js: "path", typ: "" },
+        { json: "oci", js: "oci", typ: u(undefined, "") },
+        { json: "path", js: "path", typ: u(undefined, "") },
     ], false),
     "ZarfManifest": o([
         { json: "files", js: "files", typ: u(undefined, a("")) },
