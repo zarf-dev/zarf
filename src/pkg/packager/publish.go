@@ -12,11 +12,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -47,9 +48,6 @@ func (p *Packager) Publish() error {
 		if err := os.Chdir(base); err != nil {
 			return err
 		}
-		paths := []string{
-			"zarf.yaml",
-		}
 		err = utils.ReadYaml("zarf.yaml", &p.cfg.Pkg)
 		if err != nil {
 			return err
@@ -58,47 +56,80 @@ func (p *Packager) Publish() error {
 		if err != nil {
 			return err
 		}
+
+		var paths []string
+
 		for _, component := range p.cfg.Pkg.Components {
-			if len(component.Import.Path) > 0 {
-				message.Warnf("Component '%s' is a locally imported component and will not be included in the skeleton package", component.Name)
+			local := component.LocalPaths()
+			message.Debugf("mutating local paths for %s: %v", component.Name, local)
+			local = utils.Unique(local)
+			rando := utils.RandomString(8)
+
+			err := os.MkdirAll(filepath.Join(p.tmp.Base, "components", component.Name), 0755)
+			if err != nil {
+				return err
 			}
-			if len(component.Files) > 0 {
-				for _, file := range component.Files {
-					paths = append(paths, file.Source)
+
+			for _, path := range local {
+				src := strings.TrimPrefix(path, "file://")
+				if !filepath.IsAbs(src) {
+					src = filepath.Join(base, path)
 				}
-			}
-			if len(component.Charts) > 0 {
-				for _, chart := range component.Charts {
-					if len(chart.LocalPath) > 0 {
-						localChartPaths, err := utils.RecursiveFileList(chart.LocalPath, regexp.MustCompile(".*"))
-						if err != nil {
-							return fmt.Errorf("unable to get local chart paths from %s: %w", component.Name, err)
-						}
-						paths = append(paths, localChartPaths...)
+				if utils.InvalidPath(src) {
+					return fmt.Errorf("unable to find path %s referenced in %s", src, component.Name)
+				}
+				var dst string
+				if utils.DirHasFile(base, path) {
+					err = os.MkdirAll(filepath.Dir(path), 0755)
+					if err != nil {
+						return err
 					}
-					paths = append(paths, chart.ValuesFiles...)
+					dst = filepath.Join(p.tmp.Base, "components", component.Name, path)
+				} else {
+					dst = filepath.Join(p.tmp.Base, "components", component.Name, ".tmp"+rando, filepath.Base(path))
+					dstrel := filepath.Join(".tmp"+rando, filepath.Base(path))
+					if strings.HasPrefix(path, "file://") {
+						dstrel = "file://" + dstrel
+					}
+					if p.cfg.Pkg.Build.SkeletonMutations == nil {
+						p.cfg.Pkg.Build.SkeletonMutations = make(map[string][]types.PathMutation)
+					}
+					p.cfg.Pkg.Build.SkeletonMutations[component.Name] = append(p.cfg.Pkg.Build.SkeletonMutations[component.Name], types.PathMutation{
+						From: path,
+						To:   dstrel,
+					})
+				}
+				err = utils.CreatePathAndCopy(src, dst)
+				if err != nil {
+					return err
 				}
 			}
-			if len(component.Manifests) > 0 {
-				for _, manifest := range component.Manifests {
-					paths = append(paths, manifest.Files...)
-					paths = append(paths, manifest.Kustomizations...)
+			if len(local) > 0 {
+				tarPath := filepath.Join(p.tmp.Base, "components", component.Name+".tar")
+				err = archiver.Archive([]string{tarPath}, filepath.Join(p.tmp.Base, "components", fmt.Sprintf("%s%s", component.Name, ".tar")))
+				if err != nil {
+					return err
+				}
+				paths = append(paths, tarPath)
+			} else {
+				err = os.RemoveAll(filepath.Join(p.tmp.Base, "components", component.Name))
+				if err != nil {
+					return err
 				}
 			}
-			if component.Extensions.BigBang != nil && component.Extensions.BigBang.ValuesFiles != nil {
-				paths = append(paths, component.Extensions.BigBang.ValuesFiles...)
-			}
 		}
-		for idx := range paths {
-			paths[idx] = filepath.Join(base, paths[idx])
+
+		// write the new zarf yaml
+		err = p.writeYaml()
+		if err != nil {
+			return err
 		}
-		paths = utils.Filter(paths, func(path string) bool {
-			return !utils.IsURL(path) && utils.DirHasFile(base, path) && path != base
-		})
-		paths = utils.Unique(paths)
+		paths = append(paths, p.tmp.ZarfYaml)
+
 		// TODO: (@RAZZLE) make the checksums.txt here and include it in `paths` + perform signing
+		// paths = append(paths, p.tmp.ChecksumsTxt)
 		message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-		err = p.publish(base, paths, ref)
+		err = p.publish(p.tmp.Base, paths, ref)
 		if err != nil {
 			return fmt.Errorf("unable to publish package %s: %w", ref, err)
 		}
@@ -224,6 +255,8 @@ func (p *Packager) publish(base string, paths []string, ref registry.Reference) 
 
 		// log the error, the expected error is a 400 manifest invalid
 		message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
+		// also warn the user that the push failed
+		message.Warn("ArtifactManifest push failed, falling back to an ImageManifest push")
 
 		// if the error returned from the push is not an expected error, then return the error
 		if !isManifestUnsupported(err) {

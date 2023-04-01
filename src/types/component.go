@@ -4,7 +4,9 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "github.com/defenseunicorns/zarf/src/types/extensions"
+import (
+	"github.com/defenseunicorns/zarf/src/types/extensions"
+)
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
@@ -61,6 +63,34 @@ type ZarfComponent struct {
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
+func (c ZarfComponent) LocalPaths() []string {
+	local := []string{}
+
+	for _, file := range c.Files {
+		local = append(local, file.LocalPaths()...)
+	}
+
+	for _, chart := range c.Charts {
+		local = append(local, chart.LocalPaths()...)
+	}
+
+	for _, manifest := range c.Manifests {
+		local = append(local, manifest.LocalPaths()...)
+	}
+
+	for _, repo := range c.Repos {
+		if isLocal(repo) {
+			local = append(local, repo)
+		}
+	}
+
+	local = append(local, c.Import.LocalPaths()...)
+
+	local = append(local, c.Extensions.LocalPaths()...)
+
+	return local
+}
+
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
@@ -82,6 +112,13 @@ type ZarfFile struct {
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
+func (zf ZarfFile) LocalPaths() []string {
+	if isLocal(zf.Source) {
+		return []string{zf.Source}
+	}
+	return nil
+}
+
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
@@ -95,6 +132,19 @@ type ZarfChart struct {
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 
+func (zc ZarfChart) LocalPaths() []string {
+	local := []string{}
+	if isLocal(zc.LocalPath) {
+		local = append(local, zc.LocalPath)
+	}
+	for _, file := range zc.ValuesFiles {
+		if isLocal(file) {
+			local = append(local, file)
+		}
+	}
+	return local
+}
+
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
 type ZarfManifest struct {
 	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
@@ -103,6 +153,21 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
 	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for manifest resources to be ready before continuing"`
+}
+
+func (zm ZarfManifest) LocalPaths() []string {
+	local := []string{}
+	for _, file := range zm.Files {
+		if isLocal(file) {
+			local = append(local, file)
+		}
+	}
+	for _, kustomization := range zm.Kustomizations {
+		if isLocal(kustomization) {
+			local = append(local, kustomization)
+		}
+	}
+	return local
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed
@@ -196,9 +261,24 @@ type ZarfDataInjection struct {
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
+func (zdi ZarfDataInjection) LocalPaths() []string {
+	if isLocal(zdi.Source) {
+		return []string{zdi.Source}
+	}
+	return nil
+}
+
 // ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
 	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	OCI  string `json:"oci,omitempty" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+}
+
+func (zci ZarfComponentImport) LocalPaths() []string {
+	if isLocal(zci.Path) {
+		return []string{zci.Path}
+	}
+	return nil
 }

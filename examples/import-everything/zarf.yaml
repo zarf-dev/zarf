@@ -4,16 +4,6 @@ metadata:
   description: Example showcasing nearly every type of import
   version: 0.0.1
 
-
-# mkdir -p ../everything-external
-# cp -r . ../everything-external
-# mkdir -p /tmp/everything-external
-# cp -r . /tmp/everything-external
-# - cmd: git clone https://github.com/kelseyhightower/nocode.git
-#   dir: /tmp
-# - cmd: rm -rf nocode
-#   dir: /tmp
-
 # For demo purposes, the `required` key is set to false so we can deploy
 # this package multiple times to showcase different features.
 
@@ -65,19 +55,26 @@ components:
       path: ../dos-games
       name: baseline
 
-  # WIP
-  - name: import-component-oci
+  - name: import-component-local-absolute
     required: false
-    # import:
-    #   # Import a component from an OCI registry
-    #   # Note the usage of the `url` key
-    #   url: oci://ghcr.io/defenseunicorns/zarf-component-example:v0.0.1
+    import:
+      # highlight-next-line
+      path: /tmp/dos-games
+      name: baseline
+
+  # WIP
+  # - name: import-component-oci
+  #   required: false
+  # import:
+  #   # Import a component from an OCI registry
+  #   # Note the usage of the `url` key
+  #   url: oci://ghcr.io/defenseunicorns/zarf-component-example:v0.0.1
 
   - name: file-imports
     required: false
     files:
-        # Import of a file within the current directory
-        # highlight-next-line
+      # Import of a file within the current directory
+      # highlight-next-line
       - source: files/coffee-ipsum.txt
         target: files/coffee-ipsum.txt
         # Import of a file from a relative path external to the current directory
@@ -97,27 +94,23 @@ components:
     required: false
     charts:
       - name: local-demo
-        # Note the usage of the `localPath` key
         # highlight-next-line
         localPath: charts/local
         namespace: local-chart
         version: 0.1.0
       - name: local-demo-relative
-        # Note the usage of the `localPath` key
         # highlight-next-line
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
         version: 0.1.0
       - name: local-demo-absolute
-        # Note the usage of the `localPath` key
         # highlight-next-line
         localPath: /tmp/everything-external/charts/local
         namespace: local-chart-absolute
         version: 0.1.0
-      - name: podinfo
+      - name: oci-demo
         version: 6.3.3
-        namespace: helm-oci-demo
-        # Note the usage of the `url` key
+        namespace: podinfo
         # highlight-next-line
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
@@ -133,3 +126,19 @@ components:
       - file:///tmp/nocode
       # Import this repo via file:// + relative path
       - file://../../
+
+  - name: import-images
+    required: false
+    images:
+      - nginx:1.16.0
+      - ghcr.io/stefanprodan/podinfo:6.3.3
+
+  - name: import-data-injections
+    required: false
+    dataInjections:
+      - source: files/coffee-ipsum.txt
+        target:
+          namespace: some-namespace
+          selector: some-selector
+          container: some-container
+          path: /coffee-ipsum.txt
