@@ -163,7 +163,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "arm64", "amd64"</code>
@@ -1245,7 +1245,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "Pod", "Deployment)"</code>
@@ -1268,7 +1268,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "podinfo", "app&#61;podinfo"</code>
@@ -1305,7 +1305,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "Ready", "Available"</code>
@@ -1373,7 +1373,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "localhost:8080", "1.1.1.1"</code>
@@ -1394,7 +1394,7 @@ Must be one of:
 | -------- | --------- |
 | **Type** | `integer` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 200, 404</code>
@@ -1791,7 +1791,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Examples:**
+**Examples:** 
 
 <code>
 "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
@@ -1875,7 +1875,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:**
+**Example:** 
 
 <code>
 "charts/your-chart"</code>
@@ -2220,7 +2220,7 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-**Example:**
+**Example:** 
 
 <code>
 "app&#61;data-injection"</code>
