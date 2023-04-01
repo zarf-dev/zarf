@@ -40,6 +40,7 @@ const (
 // Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
+	var ref registry.Reference
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
 		base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
 		if err != nil {
@@ -48,16 +49,13 @@ func (p *Packager) Publish() error {
 		if err := os.Chdir(base); err != nil {
 			return err
 		}
-		err = utils.ReadYaml("zarf.yaml", &p.cfg.Pkg)
+		if err := p.readYaml("zarf.yaml", false); err != nil {
+			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
+		}
+		ref, err = p.ref("skeleton")
 		if err != nil {
 			return err
 		}
-		ref, err := p.ref("skeleton")
-		if err != nil {
-			return err
-		}
-
-		var paths []string
 
 		for _, component := range p.cfg.Pkg.Components {
 			local := component.LocalPaths()
@@ -99,8 +97,7 @@ func (p *Packager) Publish() error {
 						To:   dstrel,
 					})
 				}
-				err = utils.CreatePathAndCopy(src, dst)
-				if err != nil {
+				if err := utils.CreatePathAndCopy(src, dst); err != nil {
 					return err
 				}
 			}
@@ -110,38 +107,27 @@ func (p *Packager) Publish() error {
 				if err != nil {
 					return err
 				}
-				paths = append(paths, tarPath)
-			} else {
-				err = os.RemoveAll(filepath.Join(p.tmp.Base, "components", component.Name))
-				if err != nil {
-					return err
-				}
 			}
 		}
 
-		// write the new zarf yaml
-		err = p.writeYaml()
+		// write the new zarf.yaml
+		if err := p.writeYaml(); err != nil {
+			return err
+		}
+	} else {
+		if err := p.loadZarfPkg(); err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+
+		err := p.readYaml(p.tmp.ZarfYaml, true)
+		if err != nil {
+			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+		}
+
+		ref, err = p.ref("")
 		if err != nil {
 			return err
 		}
-		paths = append(paths, p.tmp.ZarfYaml)
-
-		// TODO: (@RAZZLE) make the checksums.txt here and include it in `paths` + perform signing
-		// paths = append(paths, p.tmp.ChecksumsTxt)
-		message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-		err = p.publish(p.tmp.Base, paths, ref)
-		if err != nil {
-			return fmt.Errorf("unable to publish package %s: %w", ref, err)
-		}
-
-		return nil
-	}
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	if err := p.readYaml(p.tmp.ZarfYaml, true); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
 	if err := p.validatePackageChecksums(); err != nil {
@@ -155,6 +141,15 @@ func (p *Packager) Publish() error {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
 	}
+
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
+	return p.publish(ref)
+}
+
+func (p *Packager) publish(ref registry.Reference) error {
+	message.Infof("Publishing package to %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
 
 	// Get all of the layers in the package
 	paths := []string{}
@@ -174,20 +169,6 @@ func (p *Packager) Publish() error {
 		return fmt.Errorf("unable to get the layers in the package to publish: %w", err)
 	}
 
-	ref, err := p.ref("")
-	if err != nil {
-		return err
-	}
-
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	return p.publish(p.tmp.Base, paths, ref)
-}
-
-func (p *Packager) publish(base string, paths []string, ref registry.Reference) error {
-	message.Infof("Publishing package to %s", ref)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
-
 	// destination remote
 	dst, err := utils.NewOrasRemote(ref)
 	if err != nil {
@@ -205,7 +186,7 @@ func (p *Packager) publish(base string, paths []string, ref registry.Reference) 
 	var descs []ocispec.Descriptor
 
 	for idx, path := range paths {
-		name, err := filepath.Rel(base, path)
+		name, err := filepath.Rel(p.tmp.Base, path)
 		if err != nil {
 			return err
 		}
