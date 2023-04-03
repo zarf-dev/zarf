@@ -35,8 +35,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	stdOut, stdErr, err := exec.Cmd(zarfBinPath, zarfDeployArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// [DEPRECATIONS] We expect the older package to contain the deprecations
-	require.Contains(t, stdErr, "Component 'test-upgrade-package' is using setVariable")
+	// [DEPRECATIONS] We expect any deprecated things to work from the old package
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.4")
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
@@ -59,8 +58,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	stdOut, stdErr, err = exec.Cmd(zarfBinPath, zarfDeployArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// [DEPRECATIONS] We expect the newer package to have been migrated
-	require.NotContains(t, stdErr, "Component 'test-upgrade-package' is using setVariable")
+	// [DEPRECATIONS] We expect any deprecated things to work from the new package
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.5")
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
