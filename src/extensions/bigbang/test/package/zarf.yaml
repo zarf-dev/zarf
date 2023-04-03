@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-test
   description: "Deploy Big Bang Core"
-  version: "###ZARF_PKG_VAR_BB_VERSION###"
+  version: "###ZARF_PKG_TMPL_BB_VERSION###"
   url: https://p1.dso.mil/products/big-bang
   # Big Bang / Iron Bank are only amd64
   architecture: amd64
@@ -17,7 +17,7 @@ components:
     required: true
     extensions:
       bigbang:
-        version: "###ZARF_PKG_VAR_BB_VERSION###"
+        version: "###ZARF_PKG_TMPL_BB_VERSION###"
         valuesFiles:
           - disable-all.yaml
           - enable-twistlock.yaml

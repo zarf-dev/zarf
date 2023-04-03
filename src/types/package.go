@@ -16,18 +16,19 @@ type ZarfPackage struct {
 
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
-	Name          string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]+$"`
-	Description   string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
-	Version       string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
-	URL           string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
-	Image         string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
-	Uncompressed  bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	Architecture  string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
-	YOLO          bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
-	Authors       string `json:"authors,omitempty" jsonschema:"description=List of package authors (including contact info)"`
-	Documentation string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
-	Source        string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
-	Vendor        string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
+	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]+$"`
+	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
+	Version           string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
+	URL               string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
+	Image             string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
+	Uncompressed      bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
+	Architecture      string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
+	YOLO              bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
+	Authors           string `json:"authors,omitempty" jsonschema:"description=List of package authors (including contact info)"`
+	Documentation     string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
+	Source            string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
+	Vendor            string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
+	AggregateChecksum string `json:"aggregateChecksum,omitempty" jsonschema:"description=Checksum of a checksums.txt file that contains checksums all the layers within the package."`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
@@ -46,6 +47,8 @@ type ZarfPackageVariable struct {
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
 	Default     string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
 	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+	Sensitive   bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
 }
 
 // ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
@@ -54,4 +57,5 @@ type ZarfPackageConstant struct {
 	Value string `json:"value" jsonschema:"description=The value to set for the constant during deploy"`
 	// Include a description that will only be displayed during package create/deploy confirm prompts
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the constant to explain its purpose on package create or deploy confirmation prompts"`
+	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."`
 }

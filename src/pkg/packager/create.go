@@ -57,7 +57,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
+		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	// Create component paths and process extensions for each component.
@@ -203,9 +203,24 @@ func (p *Packager) Create(baseDir string) error {
 		_ = os.Chdir(originalDir)
 	}
 
+	// Calculate all the checksums
+	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for the package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
 	// Save the transformed config.
 	if err := p.writeYaml(); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
+
+	// Sign the config file if a key was provided
+	if p.cfg.CreateOpts.SigningKeyPath != "" {
+		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
+		if err != nil {
+			return fmt.Errorf("unable to sign the package: %w", err)
+		}
 	}
 
 	// Use the output path if the user specified it.
@@ -451,4 +466,38 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	return &componentSBOM, nil
+}
+
+// generateChecksum walks through all of the files starting at the base path and generates a checksum file.
+// Each file within the basePath represents a layer within the Zarf package.
+// generateChecksum returns a SHA256 checksum of the checksums.txt file.
+func generatePackageChecksums(basePath string) (string, error) {
+	var checksumsData string
+
+	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
+	basePathWithModifier := basePath + string(filepath.Separator)
+
+	// Walk through all files in the package path and calculate their checksums
+	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			sum, err := utils.GetSHA256OfFile(path)
+			if err != nil {
+				return err
+			}
+			checksumsData += fmt.Sprintf("%s %s\n", sum, strings.TrimPrefix(path, basePathWithModifier))
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Create the checksums file
+	checksumsFilePath := filepath.Join(basePath, "checksums.txt")
+	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
+		return "", err
+	}
+
+	// Calculate the checksum of the checksum file
+	return utils.GetSHA256OfFile(checksumsFilePath)
 }

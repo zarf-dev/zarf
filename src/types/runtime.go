@@ -19,19 +19,31 @@ type ZarfCommonOptions struct {
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.
 type ZarfDeployOptions struct {
-	Shasum       string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
-	PackagePath  string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
-	Components   string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
-	SGetKeyPath  string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	Shasum        string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
+	PackagePath   string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
+	Components    string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
+	SGetKeyPath   string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	SetVariables  map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
+	PublicKeyPath string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
-	Reference   registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
-	PackagePath string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	Reference          registry.Reference `jsonschema:"description=Remote registry reference"`
+	CopyOptions        oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
+	PackOptions        oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
+	PackagePath        string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	SigningKeyPassword string             `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
+	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+}
+
+// ZarfPublishOptions tracks the user-defined preferences during a package publish.
+type ZarfPullOptions struct {
+	Reference     registry.Reference `jsonschema:"description=Remote registry reference"`
+	CopyOptions   oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
+	PackOptions   oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
+	PackagePath   string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	PublicKeyPath string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -49,12 +61,14 @@ type ZarfInitOptions struct {
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
-	SkipSBOM         bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	OutputDirectory  string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
-	ViewSBOM         bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
-	SBOMOutputDir    string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
-	SetVariables     map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	MaxPackageSizeMB int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
+	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
+	OutputDirectory    string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
+	SBOMOutputDir      string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
+	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	MaxPackageSizeMB   int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
+	SigningKeyPath     string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.
@@ -62,6 +76,13 @@ type ZarfPartialPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
+}
+
+type ZarfSetVariable struct {
+	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Value      string `json:"value" jsonschema:"description=The value the variable is currently set with"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
@@ -101,4 +122,6 @@ type TempPaths struct {
 	SbomTar      string
 	Sboms        string
 	ZarfYaml     string
+	ZarfSig      string
+	Checksums    string
 }

@@ -91,6 +91,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 // Updatef updates the spinner text.
 func (p *Spinner) Updatef(format string, a ...any) {
 	if NoProgress {
+		Debugf(format, a...)
 		return
 	}
 

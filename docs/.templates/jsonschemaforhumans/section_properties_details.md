@@ -3,6 +3,10 @@
     {% continue %}
   {% endif %}
 
+  {%- if sub_property is deprecated -%}
+    {% continue %}
+  {% endif %}
+
   {% set html_id = sub_property.html_id %}
 
   {% set description = sub_property | get_description %}
@@ -15,12 +19,10 @@
 <summary>
     {% filter md_heading(1, html_id, True) -%}
       {%- filter replace('\n', '') -%}
-        {%- if sub_property is deprecated  -%}~~{%- endif -%}
         {%- if sub_property.is_pattern_property %} Pattern Property{% endif %} {% with schema=sub_property %}{%- include "breadcrumbs.md" %} {% endwith %}
         {%- if not skip_required and sub_property.property_name -%}
             {{ "*" if sub_property.is_required_property else "" -}}
         {%- endif -%}
-        {%- if sub_property is deprecated -%}~~{%- endif -%}
       {%- endfilter %}
     {%- endfilter %}
 

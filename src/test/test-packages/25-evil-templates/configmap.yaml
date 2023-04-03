@@ -14,7 +14,7 @@ data:
                   - alert: OOMKilled {{ "{{ \"random.Values\" }}" }}
                     expr: sum_over_time(kube_pod_container_status_terminated_reason{reason="OOMKilled"}[5m])>0
                     for: 5m
-                    annotations: 
+                    annotations:
                       backtick1: "content with backticks `some random things`"
                       backtick2: "nested templating with backticks {{` random.Values `}}"
                     labels:

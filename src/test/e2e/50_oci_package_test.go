@@ -131,7 +131,7 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "inspect", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Loaded Zarf Package oci://"+ref)
+	suite.Contains(stdErr, "Loading Zarf Package oci://"+ref)
 
 	// Test inspect w/ bad ref.
 	_, stdErr, err = e2e.execZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
