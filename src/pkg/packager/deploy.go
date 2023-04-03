@@ -28,8 +28,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var valueTemplate template.Values
-var connectStrings = make(types.ConnectStrings)
+var (
+	hpaModified    bool
+	valueTemplate  template.Values
+	connectStrings = make(types.ConnectStrings)
+)
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
@@ -37,6 +40,10 @@ func (p *Packager) Deploy() error {
 
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
+	}
+
+	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		return err
 	}
 
 	// Now that we have read the zarf.yaml, check the package kind
@@ -50,9 +57,16 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setActiveVariables(); err != nil {
+	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
+
+	// Reset registry HPA scale down whether an error occurs or not
+	defer func() {
+		if p.cluster != nil && hpaModified {
+			p.cluster.EnableRegHPAScaleDown()
+		}
+	}()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -61,7 +75,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Notify all the things about the successful deployment
-	message.SuccessF("Zarf deployment complete")
+	message.Successf("Zarf deployment complete")
 	p.printTablesForDeployment(deployedComponents)
 
 	// Save deployed package information to k8s
@@ -134,7 +148,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
-		p.cluster.InitZarfState(p.tmp, p.cfg.InitOpts)
+		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -144,7 +158,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.RunInjectionMadness(p.tmp)
+		p.cluster.StartInjectionMadness(p.tmp)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
@@ -154,23 +168,8 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		err := p.cluster.PostSeedRegistry(p.tmp)
-		if err != nil {
+		if err := p.cluster.StopInjectionMadness(); err != nil {
 			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
-		}
-
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		imgConfig := images.ImgConfig{
-			TarballPath: p.tmp.SeedImage,
-			ImgList:     []string{seedImage},
-			NoChecksum:  true,
-			RegInfo:     p.cfg.State.RegistryInfo,
-			Insecure:    config.CommonOptions.Insecure,
-		}
-
-		// Push the seed images into to Zarf registry
-		if err = imgConfig.PushToZarfRegistry(); err != nil {
-			return charts, fmt.Errorf("unable to push the seed images to the Zarf Registry: %w", err)
 		}
 	}
 
@@ -182,7 +181,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return charts, fmt.Errorf("unable to create the component paths: %w", err)
 	}
@@ -213,6 +212,15 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
+		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
+		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
+			} else {
+				hpaModified = true
 			}
 		}
 
@@ -367,9 +375,9 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 	// Only check the architecture if the package has images
 	if len(component.Images) > 0 && state.Architecture != p.arch {
-		// If the package has images but the architectures don't match warn the user to avoid ugly hidden errors with image push/pull
+		// If the package has images but the architectures don't match, fail the deployment and warn the user to avoid ugly hidden errors with image push/pull
 		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-			state.Architecture, p.arch)
+			p.arch, state.Architecture)
 	}
 
 	spinner.Success()
@@ -383,11 +391,12 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		TarballPath: p.tmp.Images,
-		ImgList:     componentImages,
-		NoChecksum:  noImgChecksum,
-		RegInfo:     p.cfg.State.RegistryInfo,
-		Insecure:    config.CommonOptions.Insecure,
+		ImagesPath:    p.tmp.Images,
+		ImgList:       componentImages,
+		NoChecksum:    noImgChecksum,
+		RegInfo:       p.cfg.State.RegistryInfo,
+		Insecure:      config.CommonOptions.Insecure,
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
 	return utils.Retry(func() error {
@@ -402,12 +411,11 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
+			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
-			svcInfo := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
-			// If this is a service, create a port-forward tunnel to that resource
-			if svcInfo != nil {
+			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+			if err == nil {
 				tunnel, err := cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port)
-
 				if err != nil {
 					return err
 				}
@@ -417,13 +425,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
 			}
 
-			// Convert the repo URL to a Zarf-formatted repo name
-			repoPath, err := gitClient.TransformURLtoRepoName(repoURL)
-			if err != nil {
-				return fmt.Errorf("unable to get the repo name from the URL %s: %w", repoURL, err)
-			}
-
-			return gitClient.PushRepo(filepath.Join(reposPath, repoPath))
+			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
 		// Try repo push up to 3 times
@@ -452,6 +454,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	installedCharts := []types.InstalledChart{}
 
 	for _, chart := range component.Charts {
+
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
@@ -500,10 +503,18 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 			Cfg:       p.cfg,
 			Cluster:   p.cluster,
 		}
-		addedConnectStrings, installedChartName, err := helmCfg.GenerateChart(manifest)
+
+		// Generate the chart.
+		if err := helmCfg.GenerateChart(manifest); err != nil {
+			return installedCharts, err
+		}
+
+		// Install the chart.
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
 			return installedCharts, err
 		}
+
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
 
 		// Iterate over any connectStrings and add to the main map

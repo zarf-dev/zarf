@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: gitea
+  namespace: zarf
+spec:
+  gateways:
+    - istio-system/public
+  hosts:
+    - gitea.###ZARF_VAR_DOMAIN###
+  http:
+    - route:
+        - destination:
+            host: zarf-gitea-http.zarf.svc.cluster.local
+            port:
+              number: 3000

@@ -2,7 +2,7 @@
 
 :::note
 
-Component Actions have replaced Component Scripts. Zarf will still read scripts entries, but will convert them to actions. Component Scripts will be removed in a future release.
+Component Actions have replaced Component Scripts. Zarf will still read scripts entries, but will convert them to actions. Component Scripts will be removed in a future release. Please update your package configurations to use Component Actions instead.
 
 :::
 
@@ -43,8 +43,6 @@ components:
             maxTotalSeconds: 30
             # determine if actions output should be printed to the console
             mute: false
-            # the name of the variable to set with the output of the action
-            setVariable: BLEH
         # runs after the component is deployed
         after:
           - cmd: touch test-create-after.txt
@@ -55,10 +53,16 @@ components:
     onDeploy:
         # runs before the component is deployed
         before:
-        # setVariable can be used to set a variable for use in other actions or components
+        # setVariables can be used to set a variable for use in other actions or components (only onDeploy)
         - cmd: echo "meow"
-            setVariable: CAT_SOUND
-        # this action will have access to the variable set in the previous action
+            setVariables:
+              - name: CAT_SOUND
+                # these variables can also (optionally) be marked as sensitive to sanitize them in the Zarf log
+                sensitive: true
+        # this action will have access to the variable set in the previous action (only onDeploy)
+        # NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
+        # - use `mute` to silence the command output for sensitive variables
         - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+          mute: true
 
 ```

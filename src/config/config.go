@@ -49,7 +49,6 @@ const (
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfImageCacheDir = "images"
-	ZarfGitCacheDir   = "repos"
 
 	ZarfYAML          = "zarf.yaml"
 	ZarfSBOMDir       = "zarf-sbom"
@@ -80,6 +79,9 @@ var (
 
 	// Dirty Solution to getting the real time deployedComponents components.
 	deployedComponents []types.DeployedComponent
+
+	// SkipLogFile is a flag to skip logging to a file
+	SkipLogFile bool
 
 	SGetPublicKey string
 	UIAssets      embed.FS
@@ -117,7 +119,7 @@ func GetDataInjectionMarker() string {
 }
 
 // GetCraneOptions returns a crane option object with the correct options & platform.
-func GetCraneOptions(insecure bool) []crane.Option {
+func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 	var options []crane.Option
 
 	// Handle insecure registry option
@@ -133,7 +135,7 @@ func GetCraneOptions(insecure bool) []crane.Option {
 	options = append(options,
 		crane.WithPlatform(&v1.Platform{
 			OS:           "linux",
-			Architecture: GetArch(),
+			Architecture: GetArch(archs...),
 		}),
 	)
 

@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-oci-chart
+  description: Deploy podinfo using a Helm OCI chart
+  version: 0.0.1
+
+components:
+  - name: helm-oci-chart
+    required: true
+    charts:
+      - name: podinfo
+        version: 6.3.3
+        namespace: helm-oci-demo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - "ghcr.io/stefanprodan/podinfo:6.3.3"

@@ -12,7 +12,15 @@ This command looks for a zarf-init package in the local directory that the comma
 
 
 
-Example Usage:
+
+
+```
+zarf init [flags]
+```
+
+## Examples
+
+```
 # Initializing without any optional components:
 zarf init
 
@@ -31,10 +39,6 @@ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME
 # Initializing w/ an external git server:
 zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-
-
-```
-zarf init [flags]
 ```
 
 ## Options
@@ -66,7 +70,7 @@ zarf init [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

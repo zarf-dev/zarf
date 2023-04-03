@@ -6,15 +6,13 @@ package images
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -25,14 +23,19 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/moby/moby/client"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/pterm/pterm"
 )
 
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
+func (i *ImgConfig) PullAll() error {
 	var (
-		longer   string
-		imgCount = len(i.ImgList)
+		longer      string
+		imgCount    = len(i.ImgList)
+		imageMap    = map[string]v1.Image{}
+		tagToImage  = map[name.Tag]v1.Image{}
+		digestToTag = make(map[string]string)
 	)
 
 	// Give some additional user feedback on larger image sets
@@ -45,8 +48,6 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imgCount, longer)
 	defer spinner.Stop()
 
-	imageMap := map[string]v1.Image{}
-
 	if message.GetLogLevel() >= message.DebugLevel {
 		logs.Warn.SetOutput(spinner)
 		logs.Progress.SetOutput(spinner)
@@ -55,178 +56,209 @@ func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
 
-		img, err := i.pullImage(src)
+		img, err := i.PullImage(src, spinner)
 		if err != nil {
-			return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+			return fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
 		imageMap[src] = img
 	}
 
-	spinner.Updatef("Creating image tarball (this will take a while)")
+	// Create the ImagePath directory
+	err := os.Mkdir(i.ImagesPath, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
+	}
 
-	tagToImage := map[name.Tag]v1.Image{}
-
+	totalBytes := int64(0)
+	processedLayers := make(map[string]bool)
 	for src, img := range imageMap {
-		ref, err := name.ParseReference(src)
+		tag, err := name.NewTag(src, name.WeakValidation)
+		if err != nil {
+			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
+		}
+		tagToImage[tag] = img
+		// Get the byte size for this image
+		layers, err := img.Layers()
+		if err != nil {
+			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
+		}
+		for _, layer := range layers {
+			layerDigest, err := layer.Digest()
+			if err != nil {
+				return fmt.Errorf("unable to get digest for image layer: %w", err)
+			}
+
+			// Only calculate this layer size if we haven't already looked at it
+			if !processedLayers[layerDigest.Hex] {
+				size, err := layer.Size()
+				if err != nil {
+					return fmt.Errorf("unable to get size of layer: %w", err)
+				}
+				totalBytes += size
+				processedLayers[layerDigest.Hex] = true
+			}
+
+		}
+	}
+	spinner.Updatef("Preparing image sources and cache for image pulling")
+	spinner.Success()
+
+	// Create a thread to update a progress bar as we save the image files to disk
+	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
+
+	for tag, img := range tagToImage {
+
+		// Save the image
+		err := crane.SaveOCI(img, i.ImagesPath)
+		if err != nil {
+			// Check if the cache has been invalidated, and warn the user if so
+			if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
+				message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
+			}
+			return fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+		}
+
+		// Get the image digest so we can set an annotation in the image.json later
+		imgDigest, err := img.Digest()
+		if err != nil {
+			return err
+		}
+		digestToTag[imgDigest.String()] = tag.String()
+	}
+
+	if err := addImageNameAnnotation(i.ImagesPath, digestToTag); err != nil {
+		return fmt.Errorf("unable to format OCI layout: %w", err)
+	}
+
+	// Send a signal to the progress bar that we're done and ait for the thread to finish
+	doneSaving <- 1
+	wg.Wait()
+
+	return err
+}
+
+// PullImage returns a v1.Image either by loading a local tarball or the wider internet.
+func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
+	// Load image tarballs from the local filesystem.
+	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+		spinner.Updatef("Reading image tarball: %s", src)
+		return crane.Load(src, config.GetCraneOptions(true, i.Architectures...)...)
+	}
+
+	// If crane is unable to pull the image, try to load it from the local docker daemon.
+	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
+		message.Debugf("crane unable to pull image %s: %s", src, err)
+		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
+
+		// Parse the image reference to get the image name.
+		reference, err := name.ParseReference(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
 		}
 
-		tag, ok := ref.(name.Tag)
-		if !ok {
-			d, ok := ref.(name.Digest)
-			if !ok {
-				return nil, fmt.Errorf("image reference %s wasn't a tag or digest", src)
-			}
-			tag = d.Repository.Tag("digest-only")
-		}
-		tagToImage[tag] = img
-	}
-	spinner.Success()
-
-	progress := make(chan v1.Update, 200)
-
-	go func() {
-		_ = tarball.MultiWriteToFile(i.TarballPath, tagToImage, tarball.WithProgress(progress))
-	}()
-
-	var progressBar *message.ProgressBar
-	var title string
-
-	for update := range progress {
-		switch {
-		case update.Error != nil && errors.Is(update.Error, io.EOF):
-			progressBar.Success("Pulling %d images (%s)", len(imageMap), utils.ByteFormat(float64(update.Total), 2))
-			return tagToImage, nil
-		case update.Error != nil && strings.HasPrefix(update.Error.Error(), "archive/tar: missed writing "):
-			// Handle potential image cache corruption with a more helpful error. See L#54 in libexec/src/archive/tar/writer.go
-			message.Warnf("Potential image cache corruption: %s of %v bytes - try clearing cache with \"zarf tools clear-cache\"", update.Error.Error(), update.Total)
-			return nil, fmt.Errorf("failed to write image tarball: %w", update.Error)
-		case update.Error != nil:
-			return nil, fmt.Errorf("failed to write image tarball: %w", update.Error)
-		default:
-			title = fmt.Sprintf("Pulling %d images (%s of %s)", len(imageMap),
-				utils.ByteFormat(float64(update.Complete), 2),
-				utils.ByteFormat(float64(update.Total), 2),
-			)
-			if progressBar == nil {
-				progressBar = message.NewProgressBar(update.Total, title)
-			}
-			progressBar.Update(update.Complete, title)
-		}
-	}
-
-	return tagToImage, nil
-}
-
-// pullImage returns a v1.Image either by loading a local tarball, the pulling from the local daemon, or the wider internet
-func (i *ImgConfig) pullImage(src string) (v1.Image, error) {
-	// Load image tarballs from the local filesystem
-	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
-		message.Debugf("loading image tarball: %s", src)
-		return crane.Load(src, config.GetCraneOptions(true)...)
-	}
-
-	// Unless disabled, attempt to pull the image from the local daemon
-	if !i.NoLocalImages {
-		reference, err := name.ParseReference(src)
+		// Attempt to connect to the local docker daemon.
+		ctx := context.TODO()
+		cli, err := client.NewClientWithOpts(client.FromEnv)
 		if err != nil {
-			// log this error but don't return the error since we can still try pulling from the wider internet
-			message.Debugf("unable to parse the image reference, this might have impacts on pulling from the local daemon: %s", err.Error())
+			return nil, fmt.Errorf("docker not available: %w", err)
+		}
+		cli.NegotiateAPIVersion(ctx)
+
+		// Inspect the image to get the size.
+		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
 		}
 
-		daemonOpts := daemon.WithContext(context.Background())
-		if img, err := daemon.Image(reference, daemonOpts); err == nil {
-			message.Debugf("loading image from docker daemon: %s", src)
-			return img, err
+		// Warn the user if the image is large.
+		if rawImg.Size > 750*1000*1000 {
+			warn := pterm.DefaultParagraph.WithMaxWidth(80).Sprintf("%s is %s and may take a very long time to load via docker. "+
+				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
+				src, utils.ByteFormat(float64(rawImg.Size), 2))
+			spinner.Warnf(warn)
 		}
+
+		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
+		// This will also take for ever to load large images.
+		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
+			return nil, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
+		}
+
+		// The pull from the docker daemon was successful, return the image.
+		return img, err
 	}
 
-	// We were unable to pull from the local daemon, so attempt to pull from the wider internet
-	img, err := crane.Pull(src, config.GetCraneOptions(i.Insecure)...)
-	if err != nil {
+	// Manifest was found, so use crane to pull the image.
+	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 	}
 
-	message.Debugf("loading image with cache: %s", src)
+	spinner.Updatef("Preparing image %s", src)
 	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil
 }
 
-// FormatCraneOCILayout ensures that all images are in the OCI format.
-func FormatCraneOCILayout(ociPath string) error {
-	type IndexJSON struct {
-		SchemaVersion int `json:"schemaVersion"`
-		Manifests     []struct {
-			MediaType string `json:"mediaType"`
-			Size      int    `json:"size"`
-			Digest    string `json:"digest"`
-		} `json:"manifests"`
-	}
+// IndexJSON represents the index.json file in an OCI layout.
+type IndexJSON struct {
+	SchemaVersion int `json:"schemaVersion"`
+	Manifests     []struct {
+		MediaType   string            `json:"mediaType"`
+		Size        int               `json:"size"`
+		Digest      string            `json:"digest"`
+		Annotations map[string]string `json:"annotations"`
+	} `json:"manifests"`
+}
 
-	indexJSON, err := os.Open(path.Join(ociPath, "index.json"))
+// addImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
+func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error {
+	indexPath := filepath.Join(ociPath, "index.json")
+
+	// Add an 'org.opencontainers.image.base.name' annotation so we can figure out what the image tag/digest shasum will be during deploy time
+	indexJSON, err := os.Open(indexPath)
 	if err != nil {
 		message.Errorf(err, "Unable to open %s/index.json", ociPath)
 		return err
 	}
+
+	// Read the file contents and turn it into a usable struct that we can manipulate
 	var index IndexJSON
-	byteValue, _ := io.ReadAll(indexJSON)
-	json.Unmarshal(byteValue, &index)
-
-	digest := strings.TrimPrefix(index.Manifests[0].Digest, "sha256:")
-	b, err := os.ReadFile(path.Join(ociPath, "blobs", "sha256", digest))
+	byteValue, err := io.ReadAll(indexJSON)
 	if err != nil {
-		message.Errorf(err, "Unable to open %s/blobs/sha256/%s", ociPath, digest)
-		return err
+		return fmt.Errorf("unable to read the contents of the file (%s) so we can add an annotation: %w", indexPath, err)
 	}
-	manifest := string(b)
-	// replace all docker media types w/ oci media types
-	manifest = strings.ReplaceAll(manifest, "application/vnd.docker.distribution.manifest.v2+json", "application/vnd.oci.image.manifest.v1+json")
-	manifest = strings.ReplaceAll(manifest, "application/vnd.docker.image.rootfs.diff.tar.gzip", "application/vnd.oci.image.layer.v1.tar+gzip")
-
-	h := sha256.New()
-	h.Write([]byte(manifest))
-	bs := h.Sum(nil)
-
-	// Write the manifest to the blobs directory w/ the sha256 hash as the filename
-	manifestPath := path.Join(ociPath, "blobs", "sha256", fmt.Sprintf("%x", bs))
-	manifestFile, err := os.Create(manifestPath)
-	if err != nil {
-		message.Errorf(err, "Unable to create %s/blobs/sha256/%x", ociPath, bs)
-		return err
-	}
-	defer manifestFile.Close()
-	_, err = manifestFile.WriteString(manifest)
-	if err != nil {
-		message.Errorf(err, "Unable to write to %s/blobs/sha256/%x", ociPath, bs)
-		return err
-	}
-
-	// Update the index.json to point to the new manifest
-	index.SchemaVersion = 2
-	index.Manifests[0].Digest = fmt.Sprintf("sha256:%x", bs)
-	index.Manifests[0].Size = len(manifest)
-	index.Manifests[0].MediaType = "application/vnd.oci.image.manifest.v1+json"
 	indexJSON.Close()
-	_ = os.Remove(path.Join(ociPath, "index.json"))
-	indexJSON, err = os.Create(path.Join(ociPath, "index.json"))
+	if err = json.Unmarshal(byteValue, &index); err != nil {
+		return fmt.Errorf("unable to process the conents of the file (%s): %w", indexPath, err)
+	}
+	for idx, manifest := range index.Manifests {
+		if manifest.Annotations == nil {
+			manifest.Annotations = make(map[string]string)
+		}
+		manifest.Annotations[ocispec.AnnotationBaseImageName] = digestToTag[manifest.Digest]
+		index.Manifests[idx] = manifest
+	}
+
+	// Remove any file that might already exist
+	_ = os.Remove(indexPath)
+
+	// Create the index.json file and save the data to it
+	indexJSON, err = os.Create(indexPath)
 	if err != nil {
-		message.Errorf(err, "Unable to create %s/index.json", ociPath)
 		return err
 	}
 	indexJSONBytes, err := json.Marshal(index)
 	if err != nil {
-		message.Errorf(err, "Unable to marshal %s/index.json", ociPath)
 		return err
 	}
 	_, err = indexJSON.Write(indexJSONBytes)
 	if err != nil {
-		message.Errorf(err, "Unable to write to %s/index.json", ociPath)
 		return err
 	}
-	indexJSON.Close()
 
-	return nil
+	return indexJSON.Close()
 }

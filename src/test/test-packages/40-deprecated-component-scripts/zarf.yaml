@@ -1,0 +1,27 @@
+kind: ZarfPackageConfig
+metadata:
+  name: deprecated-component-scripts
+  description: "Test to verify the deprecated component scripts functionality gets migrated to the 'actions' while maintaining past functionality (see src/pkg/packager/deprecated)"
+
+components:
+  # Test that prepare scripts become onCreate actions
+  - name: 1-test-deprecated-prepare-scripts
+    scripts:
+      prepare:
+        # on Windows, touch is replaced with New-Item
+        - "touch test-deprecated-prepare-hook.txt"
+
+  # Test that deploy scripts become onCreate actions
+  - name: 2-test-deprecated-deploy-scripts
+    scripts:
+      before:
+        - "touch test-deprecated-deploy-before-hook.txt"
+      after:
+        - "touch test-deprecated-deploy-after-hook.txt"
+
+  # Test that script timeouts still get set
+  - name: 3-test-deprecated-timeout-scripts
+    scripts:
+      timeoutSeconds: 1
+      before:
+        - "sleep 30"

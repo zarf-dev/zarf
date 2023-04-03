@@ -14,19 +14,21 @@ zarf package deploy [PACKAGE] [flags]
 ## Options
 
 ```
-      --components string    Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --confirm              Confirm package deployment without prompting
-  -h, --help                 help for deploy
-      --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-      --sget string          Path to public sget key file for remote packages signed via cosign
-      --shasum string        Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
+      --components string     Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --confirm               Confirm package deployment without prompting
+  -h, --help                  help for deploy
+  -k, --key string            Path to public key file for validating signed packages
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --set stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
+      --sget string           Path to public sget key file for remote packages signed via cosign
+      --shasum string         Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
 ## Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

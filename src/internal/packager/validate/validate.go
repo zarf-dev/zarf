@@ -125,53 +125,85 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 	}
 
-	if err := validateActionsetVariable(component.Actions.OnCreate); err != nil {
+	if containsVariables, err := validateActionset(component.Actions.OnCreate); err != nil {
+		return fmt.Errorf(lang.PkgValidateErrAction, err)
+	} else if containsVariables {
+		return fmt.Errorf(lang.PkgValidateErrActionVariables, component.Name)
+	}
+
+	if _, err := validateActionset(component.Actions.OnDeploy); err != nil {
 		return fmt.Errorf(lang.PkgValidateErrAction, err)
 	}
 
-	if err := validateActionsetVariable(component.Actions.OnDeploy); err != nil {
+	if containsVariables, err := validateActionset(component.Actions.OnRemove); err != nil {
 		return fmt.Errorf(lang.PkgValidateErrAction, err)
-	}
-
-	if err := validateActionsetVariable(component.Actions.OnRemove); err != nil {
-		return fmt.Errorf(lang.PkgValidateErrAction, err)
+	} else if containsVariables {
+		return fmt.Errorf(lang.PkgValidateErrActionVariables, component.Name)
 	}
 
 	return nil
 }
 
-func validateActionsetVariable(actions types.ZarfComponentActionSet) error {
-	// Validate actions.OnDeploy.*.SetVariable
-	for _, action := range actions.Before {
-		if err := validateActionVariable(action); err != nil {
-			return err
+func validateActionset(actions types.ZarfComponentActionSet) (bool, error) {
+	containsVariables := false
+
+	validate := func(actions []types.ZarfComponentAction) error {
+		for _, action := range actions {
+			if cv, err := validateAction(action); err != nil {
+				return err
+			} else if cv {
+				containsVariables = true
+			}
 		}
-	}
-	for _, action := range actions.After {
-		if err := validateActionVariable(action); err != nil {
-			return err
-		}
-	}
-	for _, action := range actions.OnSuccess {
-		if err := validateActionVariable(action); err != nil {
-			return err
-		}
-	}
-	for _, action := range actions.OnFailure {
-		if err := validateActionVariable(action); err != nil {
-			return err
-		}
+
+		return nil
 	}
 
-	return nil
+	if err := validate(actions.Before); err != nil {
+		return containsVariables, err
+	}
+	if err := validate(actions.After); err != nil {
+		return containsVariables, err
+	}
+	if err := validate(actions.OnSuccess); err != nil {
+		return containsVariables, err
+	}
+	if err := validate(actions.OnFailure); err != nil {
+		return containsVariables, err
+	}
+
+	return containsVariables, nil
 }
 
-func validateActionVariable(action types.ZarfComponentAction) error {
-	if action.SetVariable != "" && !isUppercaseNumberUnderscore(action.SetVariable) {
-		return fmt.Errorf(lang.PkgValidateMustBeUppercase, action.SetVariable)
+func validateAction(action types.ZarfComponentAction) (bool, error) {
+	containsVariables := false
+
+	// Validate SetVariable
+	for _, variable := range action.SetVariables {
+		if !isUppercaseNumberUnderscore(variable.Name) {
+			return containsVariables, fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
+		}
+		containsVariables = true
 	}
 
-	return nil
+	if action.Wait != nil {
+		// Validate only cmd or wait, not both
+		if action.Cmd != "" {
+			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd)
+		}
+
+		// Validate only cluster or network, not both
+		if action.Wait.Cluster != nil && action.Wait.Network != nil {
+			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
+		}
+
+		// Validate at least one of cluster or network
+		if action.Wait.Cluster == nil && action.Wait.Network == nil {
+			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
+		}
+	}
+
+	return containsVariables, nil
 }
 
 func validateYOLO(component types.ZarfComponent) error {

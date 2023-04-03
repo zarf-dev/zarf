@@ -20,7 +20,7 @@ zarf tools sbom [flags]
       --file string              file to write the default report output to (default is STDOUT)
   -h, --help                     help for sbom
       --name string              set the name of the target being analyzed
-  -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github github-json spdx-tag-value spdx-json table text template] (default [table])
+  -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github-json spdx-tag-value spdx-json syft-table syft-text template] (default [syft-table])
       --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
   -q, --quiet                    suppress all logging output
   -s, --scope string             selection of layers to catalog, options=[Squashed AllLayers] (default "Squashed")
@@ -32,7 +32,7 @@ zarf tools sbom [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

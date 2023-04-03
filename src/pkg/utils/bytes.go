@@ -6,8 +6,13 @@
 package utils
 
 import (
+	"fmt"
 	"math"
 	"strconv"
+	"sync"
+	"time"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // RoundUp rounds a float64 to the given number of decimal places.
@@ -49,4 +54,37 @@ func ByteFormat(inputNum float64, precision int) string {
 	}
 
 	return strconv.FormatFloat(returnVal, 'f', precision, 64) + unit
+}
+
+// RenderProgressBarForLocalDirWrite creates a progress bar that continuously tracks the progress of writing files to a local directory and all of its subdirectories.
+// NOTE: This function runs infinitely until the completeChan is triggered, this function should be run in a goroutine while a different thread/process is writing to the directory.
+func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg *sync.WaitGroup, completeChan chan int, updateText string) {
+
+	// Create a progress bar
+	title := fmt.Sprintf("Pulling Zarf package data (%s of %s)", ByteFormat(float64(0), 2), ByteFormat(float64(expectedTotal), 2))
+	progressBar := message.NewProgressBar(expectedTotal, title)
+
+	for {
+		select {
+		case <-completeChan:
+			// Send success message
+			progressBar.Successf("%s (%s)", updateText, ByteFormat(float64(expectedTotal), 2))
+			wg.Done()
+			return
+
+		default:
+			// Read the directory size
+			currentBytes, dirErr := GetDirSize(filepath)
+			if dirErr != nil {
+				message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
+				time.Sleep(200 * time.Millisecond)
+				continue
+			}
+
+			// Update the progress bar with the current size
+			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(currentBytes), 2), ByteFormat(float64(expectedTotal), 2))
+			progressBar.Update(currentBytes, title)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }

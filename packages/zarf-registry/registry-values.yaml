@@ -30,3 +30,9 @@ fullnameOverride: "zarf-docker-registry"
 
 podLabels:
   zarf.dev/agent: "ignore"
+
+autoscaling:
+  enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###
+  minReplicas: "###ZARF_VAR_REGISTRY_HPA_MIN###"
+  maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
+  targetCPUUtilizationPercentage: 80

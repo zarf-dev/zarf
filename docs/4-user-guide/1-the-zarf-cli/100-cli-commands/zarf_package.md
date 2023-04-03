@@ -13,7 +13,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -28,5 +28,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package deploy](zarf_package_deploy.md)	 - Use to deploy a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](zarf_package_inspect.md)	 - Lists the payload of a Zarf package (runs offline)
 * [zarf package list](zarf_package_list.md)	 - List out all of the packages that have been deployed to the cluster
+* [zarf package publish](zarf_package_publish.md)	 - Publish a Zarf package to a remote registry
+* [zarf package pull](zarf_package_pull.md)	 - Pull a Zarf package from a remote registry and save to the local file system
 * [zarf package remove](zarf_package_remove.md)	 - Use to remove a Zarf package that has been deployed already
 

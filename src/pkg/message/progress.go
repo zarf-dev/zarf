@@ -5,8 +5,6 @@
 package message
 
 import (
-	"fmt"
-
 	"github.com/pterm/pterm"
 )
 
@@ -17,9 +15,8 @@ type ProgressBar struct {
 }
 
 // NewProgressBar creates a new ProgressBar instance from a total value and a format.
-func NewProgressBar(total int64, format string, a ...any) *ProgressBar {
+func NewProgressBar(total int64, text string) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
-	text := fmt.Sprintf("     "+format, a...)
 	if NoProgress {
 		Info(text)
 	} else {
@@ -44,22 +41,34 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	}
 	p.progress.UpdateTitle("     " + text)
 	chunk := int(complete) - p.progress.Current
-	p.progress.Add(chunk)
+	p.Add(chunk)
+}
+
+// Add updates the ProgressBar with completed progress.
+func (p *ProgressBar) Add(n int) {
+	if p.progress != nil {
+		if p.progress.Current+n >= p.progress.Total {
+			// @RAZZLE TODO: This is a hack to prevent the progress bar from going over 100% and causing TUI ugliness.
+			overflow := p.progress.Current + n - p.progress.Total
+			p.progress.Total += overflow + 1
+		}
+		p.progress.Add(n)
+	}
 }
 
 // Write updates the ProgressBar with the number of bytes in a buffer as the completed progress.
 func (p *ProgressBar) Write(data []byte) (int, error) {
 	n := len(data)
 	if p.progress != nil {
-		p.progress.Add(n)
+		p.Add(n)
 	}
 	return n, nil
 }
 
-// Success marks the ProgressBar as successful in the CLI.
-func (p *ProgressBar) Success(text string, a ...any) {
+// Successf marks the ProgressBar as successful in the CLI.
+func (p *ProgressBar) Successf(format string, a ...any) {
 	p.Stop()
-	pterm.Success.Printfln(text, a...)
+	pterm.Success.Printfln(format, a...)
 }
 
 // Stop stops the ProgressBar from continuing.

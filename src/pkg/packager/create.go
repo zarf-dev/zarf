@@ -27,8 +27,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -36,7 +34,7 @@ import (
 func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
-	// Change the working directory if this run has an alternate base dir
+	// Change the working directory if this run has an alternate base dir.
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
 		if err := os.Chdir(baseDir); err != nil {
@@ -57,17 +55,37 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
-	// After components are composed, template the active package
+	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill variables in template: %s", err.Error())
+		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
-	// Save the transformed config
-	if err := p.writeYaml(); err != nil {
-		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	// Create component paths and process extensions for each component.
+	for i, c := range p.cfg.Pkg.Components {
+		componentPath, err := p.createOrGetComponentPaths(c)
+		if err != nil {
+			return err
+		}
+
+		// Process any extensions.
+		p.cfg.Pkg.Components[i], err = p.processExtensions(componentPath, c)
+		if err != nil {
+			return fmt.Errorf("unable to process extensions: %w", err)
+		}
 	}
 
-	// Perform early package validation
+	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+
+	// Add the seed image to the registry component if this is an init config.
+	if p.cfg.IsInitConfig {
+		for idx, c := range p.cfg.Pkg.Components {
+			if c.Name == "zarf-registry" {
+				p.cfg.Pkg.Components[idx].Images = append(c.Images, seedImage)
+			}
+		}
+	}
+
+	// Perform early package validation.
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
@@ -76,23 +94,27 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
+	// Save the seed image as an OCI image if this is an init config.
 	if p.cfg.IsInitConfig {
-		// Load seed images into their own happy little tarball for ease of import on init
-		seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-		pulledImages, err := p.pullImages([]string{seedImage}, p.tmp.SeedImage)
-		if err != nil {
-			return fmt.Errorf("unable to pull the seed image after 3 attempts: %w", err)
-		}
+		spinner := message.NewProgressSpinner("Loading Zarf Registry Seed Image")
+		defer spinner.Stop()
+
 		ociPath := path.Join(p.tmp.Base, "seed-image")
-		for _, image := range pulledImages {
-			if err := crane.SaveOCI(image, ociPath); err != nil {
-				return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
-			}
+		imgConfig := images.ImgConfig{
+			Insecure:      config.CommonOptions.Insecure,
+			Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 		}
 
-		if err := images.FormatCraneOCILayout(ociPath); err != nil {
-			return fmt.Errorf("unable to format OCI layout: %w", err)
+		image, err := imgConfig.PullImage(seedImage, spinner)
+		if err != nil {
+			return fmt.Errorf("unable to pull seed image: %w", err)
 		}
+
+		if err := crane.SaveOCI(image, ociPath); err != nil {
+			return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
+		}
+
+		spinner.Success()
 	}
 
 	var combinedImageList []string
@@ -120,38 +142,92 @@ func (p *Packager) Create(baseDir string) error {
 			componentSBOMs[component.Name] = componentSBOM
 		}
 
-		// Combine all component images into a single entry for efficient layer reuse
+		// Combine all component images into a single entry for efficient layer reuse.
 		combinedImageList = append(combinedImageList, component.Images...)
+
+		// Remove the temp directory for this component before archiving.
+		tmpPath := path.Join(p.getComponentBasePath(component), "temp")
+		_ = os.RemoveAll(tmpPath)
 	}
 
-	pulledImages := map[name.Tag]v1.Image{}
-	// Images are handled separately from other component assets
-	if len(combinedImageList) > 0 {
-		uniqueList := utils.Unique(combinedImageList)
+	imgList := utils.Unique(combinedImageList)
 
-		var err error
-		if pulledImages, err = p.pullImages(uniqueList, p.tmp.Images); err != nil {
+	// Images are handled separately from other component assets.
+	if len(imgList) > 0 {
+		message.HeaderInfof("📦 COMPONENT IMAGES")
+
+		doPull := func() error {
+			imgConfig := images.ImgConfig{
+				ImagesPath:    p.tmp.Images,
+				ImgList:       imgList,
+				Insecure:      config.CommonOptions.Insecure,
+				Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+			}
+
+			return imgConfig.PullAll()
+		}
+
+		if err := utils.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}
 
-	// Ignore SBOM creation if there the flag is set
+	// Ignore SBOM creation if there the flag is set.
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		sbom.Catalog(componentSBOMs, pulledImages, p.tmp.Images, p.tmp.Sboms)
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+		}
 	}
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
+	// Process the component directories into compressed tarballs
+	// NOTE: This is purposefully being done after the SBOM cataloging
+	for _, component := range p.cfg.Pkg.Components {
+		// Make the component a tar archive
+		componentPaths, _ := p.createOrGetComponentPaths(component)
+		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
+		componentTarPath := filepath.Join(p.tmp.Components, componentName)
+		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
+			return fmt.Errorf("unable to create package: %w", err)
+		}
+
+		// Remove the deflated component directory
+		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
+			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
+		}
+	}
+
+	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
+	}
+
+	// Calculate all the checksums
+	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for the package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	// Save the transformed config.
+	if err := p.writeYaml(); err != nil {
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
+
+	// Sign the config file if a key was provided
+	if p.cfg.CreateOpts.SigningKeyPath != "" {
+		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
+		if err != nil {
+			return fmt.Errorf("unable to sign the package: %w", err)
+		}
 	}
 
 	// Use the output path if the user specified it.
 	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
 
 	// Try to remove the package if it already exists.
-	_ = os.RemoveAll(packageName)
+	_ = os.Remove(packageName)
 
 	// Make the archive
 	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
@@ -164,10 +240,10 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
 
-	// Convert Megabytes to bytes
+	// Convert Megabytes to bytes.
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
-	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
 		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
 		if err != nil {
@@ -180,7 +256,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
 		_ = os.RemoveAll(packageName)
 
-		// Marshal the data into a json file
+		// Marshal the data into a json file.
 		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
 			Count:     len(chunks),
 			Bytes:     f.Size(),
@@ -190,7 +266,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to marshal the partial package data: %w", err)
 		}
 
-		// Prepend the json data to the first chunk
+		// Prepend the json data to the first chunk.
 		chunks = append([][]byte{jsonData}, chunks...)
 
 		for idx, chunk := range chunks {
@@ -201,49 +277,36 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Output the SBOM files into a directory if specified
-	if p.cfg.CreateOpts.SBOMOutputDir != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+	// Output the SBOM files into a directory if specified.
+	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return err
 		}
-	}
 
-	// Open a browser to view the SBOM if specified
-	if p.cfg.CreateOpts.ViewSBOM {
-		sbom.ViewSBOMFiles(p.tmp)
+		if p.cfg.CreateOpts.SBOMOutputDir != "" {
+			if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
+				return err
+			}
+		}
+
+		// Open a browser to view the SBOM if specified.
+		if p.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(p.tmp)
+		}
 	}
 
 	return nil
 }
 
-func (p *Packager) pullImages(imgList []string, path string) (map[name.Tag]v1.Image, error) {
-	var pulledImages map[name.Tag]v1.Image
-	var err error
-
-	return pulledImages, utils.Retry(func() error {
-		imgConfig := images.ImgConfig{
-			TarballPath:   path,
-			ImgList:       imgList,
-			Insecure:      config.CommonOptions.Insecure,
-			NoLocalImages: p.cfg.CreateOpts.NoLocalImages,
-		}
-
-		pulledImages, err = imgConfig.PullAll()
-
-		return err
-	}, 3, 5*time.Second)
-}
-
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	// Create the component directory.
-	componentPath, err := p.createComponentPaths(component)
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create component paths: %w", err)
+		return nil, fmt.Errorf("unable to create the component paths: %w", err)
 	}
 
-	// Create an struct to hold the SBOM information for this component
+	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
 		ComponentPath: componentPath,
@@ -269,11 +332,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			if isGitURL {
-				_ = helmCfg.DownloadChartFromGit(componentPath.Charts)
+				_, _ = helmCfg.PackageChartFromGit(componentPath.Charts)
 			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
-				path := helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
+				path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 				if !strings.HasSuffix(path, zarfFilename) {
 					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
@@ -304,7 +367,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				}
 			}
 
-			// Abort packaging on invalid shasum (if one is specified)
+			// Abort packaging on invalid shasum (if one is specified).
 			if file.Shasum != "" {
 				if actualShasum, _ := utils.GetCryptoHash(destinationFile, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
@@ -334,7 +397,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 
-			// Unwrap the dataInjection dir into individual files
+			// Unwrap the dataInjection dir into individual files.
 			pattern := regexp.MustCompile(`(?mi).+$`)
 			files, _ := utils.RecursiveFileList(destination, pattern)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
@@ -342,7 +405,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Manifests) > 0 {
-		// Get the proper count of total manifests to add
+		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
 		for _, manifest := range component.Manifests {
@@ -357,19 +420,24 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
 		}
 
-		// Iterate over all manifests
+		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
-			for _, f := range manifest.Files {
-				// Copy manifests without any processing
+			for idx, f := range manifest.Files {
+				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				destination := fmt.Sprintf("%s/%s", componentPath.Manifests, f)
+				// If using a temp directory, trim the temp directory from the path.
+				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
+				destination := path.Join(componentPath.Manifests, trimmedPath)
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
+
+				// Update the manifest path to the new location.
+				manifest.Files[idx] = trimmedPath
 			}
 
 			for idx, k := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
+				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
 				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
@@ -379,15 +447,15 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 	}
 
-	// Load all specified git repos
+	// Load all specified git repos.
 	if len(component.Repos) > 0 {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Success()
 
 		for _, url := range component.Repos {
-			// Pull all the references if there is no `@` in the string
+			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if _, err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
@@ -398,4 +466,38 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	return &componentSBOM, nil
+}
+
+// generateChecksum walks through all of the files starting at the base path and generates a checksum file.
+// Each file within the basePath represents a layer within the Zarf package.
+// generateChecksum returns a SHA256 checksum of the checksums.txt file.
+func generatePackageChecksums(basePath string) (string, error) {
+	var checksumsData string
+
+	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
+	basePathWithModifier := basePath + string(filepath.Separator)
+
+	// Walk through all files in the package path and calculate their checksums
+	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			sum, err := utils.GetSHA256OfFile(path)
+			if err != nil {
+				return err
+			}
+			checksumsData += fmt.Sprintf("%s %s\n", sum, strings.TrimPrefix(path, basePathWithModifier))
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Create the checksums file
+	checksumsFilePath := filepath.Join(basePath, "checksums.txt")
+	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
+		return "", err
+	}
+
+	// Calculate the checksum of the checksum file
+	return utils.GetSHA256OfFile(checksumsFilePath)
 }

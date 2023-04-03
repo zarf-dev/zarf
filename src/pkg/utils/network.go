@@ -29,6 +29,12 @@ func IsURL(source string) bool {
 	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
 }
 
+// IsOCIURL returns true if the given URL is an OCI URL.
+func IsOCIURL(source string) bool {
+	parsedURL, err := url.Parse(source)
+	return err == nil && parsedURL.Scheme == "oci"
+}
+
 // DoHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
 func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	parsedURL1, err := url.Parse(url1)
@@ -156,7 +162,7 @@ func httpGetFile(url string, destinationFile *os.File) {
 		progressBar.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
-	progressBar.Success(text)
+	progressBar.Successf("%s", text)
 }
 
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {

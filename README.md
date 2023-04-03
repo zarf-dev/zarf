@@ -4,6 +4,7 @@
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 
 ||Build Status|
@@ -31,7 +32,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 🛠️ Configurable Features
 
-- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting
+- Customizable [variables](examples/variables/README.md) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Filters to select the correct architectures/operating systems for packages
 

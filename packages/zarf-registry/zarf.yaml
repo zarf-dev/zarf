@@ -27,6 +27,18 @@ variables:
     description: "The memory limit for the registry"
     default: "2Gi"
 
+  - name: REGISTRY_HPA_MIN
+    description: "The minimum number of registry replicas"
+    default: "1"
+
+  - name: REGISTRY_HPA_MAX
+    description: "The maximum number of registry replicas"
+    default: "5"
+
+  - name: REGISTRY_HPA_ENABLE
+    description: "Enable the Horizontal Pod Autoscaler for the registry"
+    default: "true"
+
 components:
   - name: zarf-seed-registry
     description: |

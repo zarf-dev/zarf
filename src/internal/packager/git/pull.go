@@ -5,116 +5,78 @@
 package git
 
 import (
-	"errors"
 	"fmt"
-	"path/filepath"
-	"regexp"
+	"path"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string) string {
+func (g *Git) DownloadRepoToTemp(gitURL string) error {
+	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
+
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+		return fmt.Errorf("unable to create tmpdir: %w", err)
 	}
+
 	// If downloading to temp, grab all tags since the repo isn't being
 	// packaged anyway, and it saves us from having to fetch the tags
-	// later if we need them
-	g.pull(gitURL, path, "")
-	return path
+	// later if we need them.
+	if err = g.Pull(gitURL, path); err != nil {
+		return fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
+	}
+
+	return nil
 }
 
 // Pull clones or updates a git repository into the target folder.
-func (g *Git) Pull(gitURL, targetFolder string) (path string, err error) {
-	repoName, err := g.TransformURLtoRepoName(gitURL)
-	if err != nil {
-		message.Errorf(err, "unable to pull the git repo at %s", gitURL)
-		return "", err
-	}
-
-	path = targetFolder + "/" + repoName
-	g.GitPath = path
-	g.pull(gitURL, path, repoName)
-	return path, nil
-}
-
-func (g *Git) pull(gitURL, targetFolder string, repoName string) {
+func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	gitCachePath := targetFolder
-	if repoName != "" {
-		gitCachePath = filepath.Join(config.GetAbsCachePath(), filepath.Join(config.ZarfGitCacheDir, repoName))
+	// Find the Zarf-specific repo name from the git URL.
+	get, err := utils.MatchRegex(gitURLRegex, gitURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse git url (%s): %w", gitURL, err)
 	}
 
-	matches := gitURLRegex.FindStringSubmatch(gitURL)
-	idx := gitURLRegex.SubexpIndex
+	// Setup the reference for this repository
+	refPlain := get("ref")
 
-	if len(matches) == 0 {
-		// Unable to find a substring match for the regex
-		message.Fatalf("unable to get extract the repoName from the url %s", gitURL)
+	var ref plumbing.ReferenceName
+
+	// Parse the ref from the git URL.
+	if refPlain != emptyRef {
+		ref = g.parseRef(refPlain)
 	}
 
-	onlyFetchRef := matches[idx("atRef")] != ""
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", matches[idx("proto")], matches[idx("hostPath")], matches[idx("repo")], matches[idx("git")])
+	// Construct a path unique to this git repo
+	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
+	g.GitPath = path.Join(targetFolder, repoFolder)
 
-	repo, err := g.clone(gitCachePath, gitURLNoRef, onlyFetchRef)
+	// Construct the remote URL without the reference
+	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
 
-	if err == git.ErrRepositoryAlreadyExists {
-		message.Debug("Repo already cloned, fetching upstream changes...")
-
-		err = g.fetch(gitCachePath)
-
-		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			message.Debug("Repo already up to date")
-		} else if err != nil {
-			g.Spinner.Fatalf(err, "Not a valid git repo or unable to fetch")
-		}
-	} else if err != nil {
-		g.Spinner.Fatalf(err, "Not a valid git repo or unable to clone")
+	// Clone the git repository.
+	err = g.clone(gitURLNoRef, ref)
+	if err != nil {
+		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}
 
-	if gitCachePath != targetFolder {
-		err = utils.CreatePathAndCopy(gitCachePath, targetFolder)
-		if err != nil {
-			message.Fatalf(err, "Unable to copy %s into %s: %#v", gitCachePath, targetFolder, err.Error())
-		}
+	if ref != emptyRef && !ref.IsBranch() {
+		// Remove the "refs/tags/" prefix from the ref.
+		stripped := strings.TrimPrefix(refPlain, "refs/tags/")
+
+		// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
+		alias := fmt.Sprintf("zarf-ref-%s", stripped)
+		trunkBranchName := plumbing.NewBranchReferenceName(alias)
+
+		// Checkout the ref as a branch.
+		return g.checkoutRefAsBranch(stripped, trunkBranchName)
 	}
 
-	if onlyFetchRef {
-		ref := matches[idx("ref")]
-
-		// Identify the remote trunk branch name
-		trunkBranchName := plumbing.NewBranchReferenceName("master")
-		head, err := repo.Head()
-
-		if err != nil {
-			// No repo head available
-			g.Spinner.Errorf(err, "Failed to identify repo head. Ref will be pushed to 'master'.")
-		} else if head.Name().IsBranch() {
-			// Valid repo head and it is a branch
-			trunkBranchName = head.Name()
-		} else {
-			// Valid repo head but not a branch
-			g.Spinner.Errorf(nil, "No branch found for this repo head. Ref will be pushed to 'master'.")
-		}
-
-		_, _ = g.removeLocalBranchRefs()
-		_, _ = g.removeOnlineRemoteRefs()
-
-		var isHash = regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString
-
-		if isHash(ref) {
-			g.fetchHash(ref)
-			g.checkoutHashAsBranch(plumbing.NewHash(ref), trunkBranchName)
-		} else {
-			g.fetchTag(ref)
-			g.checkoutTagAsBranch(ref, trunkBranchName)
-		}
-	}
+	return nil
 }

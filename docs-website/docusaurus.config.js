@@ -7,7 +7,7 @@ const { SocialsBox } = require('./static-components/SocialsBox/SocialsBox')
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Zarf Documentation',
-  tagline: 'Airgap is hard. Docs are too.',
+  tagline: 'Airgap is hard. Zarf makes it easy.',
   url: 'https://zarf.dev',
   baseUrl: '/',
   onBrokenLinks: 'warn',
@@ -15,8 +15,12 @@ const config = {
   favicon: 'img/favicon.svg',
   organizationName: 'Defense Unicorns', // Usually your GitHub org/user name.
   projectName: 'Zarf', // Usually your repo name.
+  markdown: {
+    mermaid: true,
+  },
   themes: [
     [require.resolve('@easyops-cn/docusaurus-search-local'), { hashed: true }],
+    [require.resolve('@docusaurus/theme-mermaid'), { hashed: true }],
   ],
   presets: [
     [
@@ -33,7 +37,8 @@ const config = {
             'packages/**/*.{md,mdx}',
           ],
           sidebarPath: require.resolve('./src/sidebars.js'),
-          editUrl: 'https://github.com/defenseunicorns/zarf/tree/',
+          // The '/x/' at the end if the editUrl is patching a defect in the plugin URL rendering. Removing it will break the base path for editing the docs.
+          editUrl: 'https://github.com/defenseunicorns/zarf/tree/main/x/',
           routeBasePath: '/',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
