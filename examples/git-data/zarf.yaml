@@ -31,7 +31,7 @@ components:
     required: true
     repos:
       # Do a branch-provided Git Repo mirror
-      - "https://repo1.dso.mil/big-bang/bigbang.git@refs/heads/release-1.53.x"
+      - "https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.53.x"
 
   - name: specific-hash
     required: true
