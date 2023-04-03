@@ -271,9 +271,10 @@ func (zdi ZarfDataInjection) LocalPaths() []string {
 // ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
-	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
-	OCI  string `json:"oci,omitempty" jsonschema:"pattern=^(?!.*###ZARF_PKG_VAR_).*$"`
+	// For further explanation see https://regex101.com/r/nxX8vx/1
+	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	// For further explanation see https://regex101.com/r/nxX8vx/1
+	URL  string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 }
 
 func (zci ZarfComponentImport) LocalPaths() []string {

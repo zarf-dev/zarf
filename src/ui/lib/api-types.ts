@@ -646,11 +646,14 @@ export interface ZarfComponentImport {
      * The name of the component to import from the referenced zarf.yaml
      */
     name?: string;
-    oci?:  string;
     /**
      * The relative path to a directory containing a zarf.yaml to import from
      */
     path?: string;
+    /**
+     * The URL to a Zarf package
+     */
+    url?: string;
 }
 
 export interface ZarfManifest {
@@ -1350,8 +1353,8 @@ const typeMap: any = {
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
-        { json: "oci", js: "oci", typ: u(undefined, "") },
         { json: "path", js: "path", typ: u(undefined, "") },
+        { json: "url", js: "url", typ: u(undefined, "") },
     ], false),
     "ZarfManifest": o([
         { json: "files", js: "files", typ: u(undefined, a("")) },

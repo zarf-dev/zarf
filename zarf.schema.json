@@ -590,13 +590,14 @@
           "description": "The name of the component to import from the referenced zarf.yaml"
         },
         "path": {
-          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
+          "pattern": "^(?!.*###ZARF_PKG_TMPL_).*$",
           "type": "string",
           "description": "The relative path to a directory containing a zarf.yaml to import from"
         },
-        "oci": {
-          "pattern": "^(?!.*###ZARF_PKG_VAR_).*$",
-          "type": "string"
+        "url": {
+          "pattern": "^(?!.*###ZARF_PKG_TMPL_).*$",
+          "type": "string",
+          "description": "The URL to a Zarf package"
         }
       },
       "additionalProperties": false,

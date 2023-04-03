@@ -787,27 +787,29 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
+| Restrictions                      |                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
 
 </blockquote>
 </details>
 
 <details>
 <summary>
-<strong> <a name="components_items_import_oci"></a>oci</strong>
+<strong> <a name="components_items_import_url"></a>url</strong>
 </summary>
 &nbsp;
 <blockquote>
+
+**Description:** The URL to a Zarf package
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
+| Restrictions                      |                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
 
 </blockquote>
 </details>
