@@ -52,7 +52,7 @@ func TestReleases(t *testing.T) {
 	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
 
 	// Deploy the previous version
-	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", previous)
+	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", latest)
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
 
 	// Remove the previous version package
