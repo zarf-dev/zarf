@@ -48,7 +48,7 @@ func TestReleases(t *testing.T) {
 	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64")
 
 	// Build the previous version
-	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
+	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", latest)
 	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
 
 	// Deploy the previous version
