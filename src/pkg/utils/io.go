@@ -163,7 +163,7 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 	textFile.Close()
 
-	err = os.WriteFile(path, []byte(text), 0600)
+	return os.WriteFile(path, []byte(text), 0600)
 
 	return err
 }
