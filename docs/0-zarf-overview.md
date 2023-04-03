@@ -171,7 +171,7 @@ For more install options please visit our [Getting Started page](3-getting-start
 
 ```bash
 # To install Zarf
-brew tap defenseunicorns/tap brew install zarf
+brew tap defenseunicorns/tap && brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
@@ -209,7 +209,7 @@ For more install options please visit our [Getting Started page](3-getting-start
 
 ```bash
 # To install Zarf
-brew tap defenseunicorns/tap brew install zarf
+brew tap defenseunicorns/tap && brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
