@@ -165,7 +165,6 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 	return os.WriteFile(path, []byte(text), 0600)
 
-	return err
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
