@@ -145,9 +145,11 @@ components:
       # runs during "zarf package remove"
       onRemove:
         before:
-          - cmd: touch test-remove-before.txt
+          # because this runs before remove this should be found
+          - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
         after:
-          - cmd: touch test-remove-after.txt
+          # because this runs after remove this should no longer be found
+          - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
     actions:
