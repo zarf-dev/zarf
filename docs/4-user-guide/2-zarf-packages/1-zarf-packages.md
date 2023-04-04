@@ -44,7 +44,7 @@ To initialize your cluster, you need to run the command `zarf init`. This comman
 
 Init packages can also be run with `zarf package deploy zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`.
 
-You do not need to create init configs by yourself unless you want to customize how your cluster is installed/configured. For example, if you want to use the init process to install a specifically configured K3s cluster onto your host machine. In that case, you can create a specific package to do that before running the init package.
+You do not need to create init configs by yourself unless you want to customize how your cluster is installed/configured. For example, if you want to use the init process to install a specifically configured K3s cluster onto your host machine, you can create a specific package to do that before running the init package.
 
 ### ZarfPackageConfig
 
