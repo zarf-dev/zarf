@@ -57,7 +57,7 @@ func TestCreateGit(t *testing.T) {
 	require.Equal(t, "v0.16.0\n", stdOut)
 
 	// Verify a repo with a branch.
-	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-branch/repos/bigbang-3067531188/.git", extractDir)
+	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-branch/repos/big-bang-2752174810/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "(HEAD -> release-1.53.x, tag: 1.53.0-rc.1, tag: 1.53.0, online-upstream/release-1.53.x)")
