@@ -24,7 +24,7 @@ func (p *Packager) composeComponents() error {
 	components := []types.ZarfComponent{}
 
 	for _, component := range p.cfg.Pkg.Components {
-		if component.Import.Path == "" {
+		if component.Import.Path == "" && component.Import.URL == "" {
 			// Migrate any deprecated component configurations now
 			component = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 			components = append(components, component)

@@ -354,6 +354,7 @@ const (
 	PkgValidateErrComponentYOLO           = "component %s incompatible with the online-only package flag (metadata.yolo): %w"
 	PkgValidateErrConstant                = "invalid package constant: %w"
 	PkgValidateErrImportPathInvalid       = "invalid file path \"%s\" provided directory must contain a valid zarf.yaml file"
+	PkgValidateErrImportURLInvalid        = "invalid url \"%s\" provided"
 	PkgValidateErrImportPathMissing       = "imported package %s must include a path"
 	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
 	PkgValidateErrManifest                = "invalid manifest definition: %w"

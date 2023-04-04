@@ -172,14 +172,20 @@ func (p *Packager) publish(ref registry.Reference) error {
 	}
 	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	fmt.Println()
-	flags := ""
-	if config.CommonOptions.Insecure {
-		flags = "--insecure"
+	if strings.HasSuffix(ref.Reference, "-skeleton") {
+		message.Info("Example importing components from this package:")
+		fmt.Println()
+		message.Infof("  - name: import-%s\n    import:\n      componentName:%s\n      url: oci://%s\n", p.cfg.Pkg.Components[0].Name, p.cfg.Pkg.Components[0].Name, strings.TrimSuffix(ref.String(), "-skeleton"))
+	} else {
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Info("To inspect/deploy/pull:")
+		message.Infof("zarf package inspect oci://%s %s", ref, flags)
+		message.Infof("zarf package deploy oci://%s %s", ref, flags)
+		message.Infof("zarf package pull oci://%s %s", ref, flags)
 	}
-	message.Info("To inspect/deploy/pull:")
-	message.Infof("zarf package inspect oci://%s %s", ref, flags)
-	message.Infof("zarf package deploy oci://%s %s", ref, flags)
-	message.Infof("zarf package pull oci://%s %s", ref, flags)
 
 	return nil
 }

@@ -65,25 +65,32 @@ func Run(pkg types.ZarfPackage) error {
 // ImportPackage validates the package trying to be imported.
 func ImportPackage(composedComponent *types.ZarfComponent) error {
 	path := composedComponent.Import.Path
+	url := composedComponent.Import.URL
 
-	// ensure path exists
-	if !(len(path) > 0) {
-		return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
+	if len(url) == 0 {
+		// ensure path exists
+		if !(len(path) > 0) {
+			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
+		}
+
+		// remove zarf.yaml from path if path has zarf.yaml suffix
+		if strings.HasSuffix(path, config.ZarfYAML) {
+			path = strings.Split(path, config.ZarfYAML)[0]
+		}
+
+		// add a forward slash to end of path if it does not have one
+		if !strings.HasSuffix(path, "/") {
+			path = filepath.Clean(path) + string(os.PathSeparator)
+		}
+
+		// ensure there is a zarf.yaml in provided path
+		if utils.InvalidPath(path + config.ZarfYAML) {
+			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
+		}
 	}
-
-	// remove zarf.yaml from path if path has zarf.yaml suffix
-	if strings.HasSuffix(path, config.ZarfYAML) {
-		path = strings.Split(path, config.ZarfYAML)[0]
-	}
-
-	// add a forward slash to end of path if it does not have one
-	if !strings.HasSuffix(path, "/") {
-		path = filepath.Clean(path) + string(os.PathSeparator)
-	}
-
-	// ensure there is a zarf.yaml in provided path
-	if utils.InvalidPath(path + config.ZarfYAML) {
-		return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
+	ok := utils.IsURL(url)
+	if !ok {
+		return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
 	}
 
 	return nil
