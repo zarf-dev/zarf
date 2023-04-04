@@ -88,8 +88,6 @@ components:
 
 > Note: When importing a component, Zarf will copy all of the values from the original component except for the `required` key. In addition, while Zarf will copy the values, you have the ability to override the value for the `description` key.
 
- Checkout the [composable-packages](https://github.com/defenseunicorns/zarf/blob/master/examples/composable-packages/zarf.yaml) example to see this in action.
-
 ## Deploying Components
 
 When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml` that the package was created from.** The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction whenever the package is deployed while optional components are printed out in an interactive prompt to the user asking if they wish to the deploy the component.
