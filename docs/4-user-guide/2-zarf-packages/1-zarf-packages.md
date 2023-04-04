@@ -16,7 +16,7 @@ Zarf Packages consist of functional blocks, known as components. Components can 
 
 Zarf Packages are built to include all necessary dependencies within the package itself, making it particularly useful for deploying to air-gapped systems. This eliminates the need for outbound internet connectivity, making the packages easily distributable and executable on a variety of systems, including edge, embedded systems, secure cloud, data centers, or local environments.
 
-When deploying a package onto a cluster, the dependencies of the cluster, which were included within the package upon creation, are automatically pushed into a Docker registry and Git server created by Zarf on the air-gapped system. This enables later steps to utilize these dependencies as needed.
+When deploying a package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system. This enables any later steps to utilize these dependencies as needed.
 
 ## Types of Zarf Packages
 
