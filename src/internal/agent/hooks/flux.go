@@ -12,8 +12,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
@@ -80,10 +80,11 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// Mutate the git URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		patchedURL, err = git.New(zarfState.GitServer).TransformURL(patchedURL)
+		transformedURL, err := transform.GitTransformURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", patchedURL)
 		}
+		patchedURL = transformedURL.String()
 		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 

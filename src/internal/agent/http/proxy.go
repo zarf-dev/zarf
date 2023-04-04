@@ -14,10 +14,9 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/proxy"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 )
 
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
@@ -64,31 +63,23 @@ func proxyRequestTransform(r *http.Request) error {
 	}
 
 	// Transform the URL; if we see the NoTransform prefix, strip it; otherwise, transform the URL based on User Agent
-	if strings.HasPrefix(r.URL.Path, proxy.NoTransform) {
+	if strings.HasPrefix(r.URL.Path, transform.NoTransform) {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = proxy.NoTransformTarget(zarfState.GitServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(zarfState.GitServer.Address, r.URL.Path)
 		default:
-			targetURL, err = proxy.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
 		}
 	} else {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			g := git.New(zarfState.GitServer)
-
-			var transformedURL string
-			transformedURL, err = g.TransformURL(getTLSScheme(r.TLS) + r.Host + r.URL.String())
-			if err != nil {
-				return err
-			}
-
-			targetURL, err = url.Parse(transformedURL)
+			targetURL, err = transform.GitTransformURL(zarfState.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.GitServer.PushUsername)
 		case isPipUserAgent(r.UserAgent()):
-			targetURL, err = proxy.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		case isNpmUserAgent(r.UserAgent()):
-			targetURL, err = proxy.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		default:
-			targetURL, err = proxy.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		}
 	}
 
@@ -115,7 +106,7 @@ func proxyResponseTransform(resp *http.Response) error {
 
 		locationURL, err := url.Parse(resp.Header.Get("Location"))
 		message.Debugf("%#v", err)
-		locationURL.Path = proxy.NoTransform + locationURL.Path
+		locationURL.Path = transform.NoTransform + locationURL.Path
 		locationURL.Host = resp.Request.Header.Get("X-Forwarded-Host")
 
 		resp.Header.Set("Location", locationURL.String())
@@ -143,7 +134,7 @@ func replaceBodyLinks(resp *http.Response) error {
 	message.Debugf("Resp Request: %#v", resp.Request)
 
 	// Create the forwarded (online) and target (offline) URL prefixes to replace
-	forwardedPrefix := fmt.Sprintf("%s%s%s", getTLSScheme(resp.Request.TLS), resp.Request.Header.Get("X-Forwarded-Host"), proxy.NoTransform)
+	forwardedPrefix := fmt.Sprintf("%s%s%s", getTLSScheme(resp.Request.TLS), resp.Request.Header.Get("X-Forwarded-Host"), transform.NoTransform)
 	targetPrefix := fmt.Sprintf("%s%s", getTLSScheme(resp.TLS), resp.Request.Host)
 
 	body, err := io.ReadAll(resp.Body)

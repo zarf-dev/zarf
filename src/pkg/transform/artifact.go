@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package proxy provides helper functions for the agent proxy.
-package proxy
+// Package transform provides helper functions to transform URLs to airgap equivalents
+package transform
 
 import (
 	"fmt"
@@ -30,36 +30,36 @@ func NoTransformTarget(address string, path string) (*url.URL, error) {
 }
 
 // NpmTransformURL finds the npm API path on a given URL and transforms that to align with the offline registry.
-func NpmTransformURL(baseURL string, reqURL string) (*url.URL, error) {
+func NpmTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/RRyazc/3
 	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
 	npmURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)` +
 		`(?P<npmPath>(\/(@[\w\.\-\~]+(\/|%2[fF]))?[\w\.\-\~]+(\/-\/([\w\.\-\~]+\/)?[\w\.\-\~]+\.[\w]+)?(\/-rev\/.+)?)|(\/-\/(npm|v1|user|package)\/.+))$`)
 
-	return transformRegistryPath(baseURL, reqURL, npmURLRegex, "npmPath", "npm")
+	return transformRegistryPath(targetBaseURL, sourceURL, npmURLRegex, "npmPath", "npm")
 }
 
 // PipTransformURL finds the pip API path on a given URL and transforms that to align with the offline registry.
-func PipTransformURL(baseURL string, reqURL string) (*url.URL, error) {
+func PipTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/lreZiD/1
 	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
 	pipURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)(?P<pipPath>(\/(simple|files\/)[\/\w\-\.\?\=&%#]*?))?$`)
 
-	return transformRegistryPath(baseURL, reqURL, pipURLRegex, "pipPath", "pypi")
+	return transformRegistryPath(targetBaseURL, sourceURL, pipURLRegex, "pipPath", "pypi")
 }
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
-func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
+func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 	// For further explanation: https://regex101.com/r/qcg6Gr/3
 	// This regex was created with information from https://www.rfc-editor.org/rfc/rfc3986#section-2
 	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.+~%]+?\/[\w\-\.+~%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.+~%]+?)??(?P<package>\/[\w\-\.\?\=,;+~!$'*&%#()\[\]]*?)?$`)
 
-	matches := genURLRegex.FindStringSubmatch(reqURL)
+	matches := genURLRegex.FindStringSubmatch(sourceURL)
 	idx := genURLRegex.SubexpIndex
 
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
-		return nil, fmt.Errorf("unable to extract the genericPath from the url %s", reqURL)
+		return nil, fmt.Errorf("unable to extract the genericPath from the url %s", sourceURL)
 	}
 
 	packageName := matches[idx("startPath")]
@@ -78,7 +78,7 @@ func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
 	}
 
 	// Rebuild the generic URL
-	transformedURL := fmt.Sprintf("%s/generic/%s%s%s", packagesBaseURL, packageName, version, matches[idx("package")])
+	transformedURL := fmt.Sprintf("%s/generic/%s%s%s", targetBaseURL, packageName, version, matches[idx("package")])
 
 	url, err := url.Parse(transformedURL)
 	if err != nil {
@@ -94,17 +94,17 @@ func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
 
 // transformRegistryPath transforms a given request path using a new base URL and regex.
 // - pathGroup specifies the named group for the registry's URL path inside the regex (i.e. pipPath) and registryType specifies the registry type (i.e. pypi).
-func transformRegistryPath(packagesBaseURL string, reqURL string, regex *regexp.Regexp, pathGroup string, registryType string) (*url.URL, error) {
-	matches := regex.FindStringSubmatch(reqURL)
+func transformRegistryPath(targetBaseURL string, sourceURL string, regex *regexp.Regexp, pathGroup string, registryType string) (*url.URL, error) {
+	matches := regex.FindStringSubmatch(sourceURL)
 	idx := regex.SubexpIndex
 
 	if len(matches) == 0 {
 		// Unable to find a substring match for the regex
-		return nil, fmt.Errorf("unable to extract the %s from the url %s", pathGroup, reqURL)
+		return nil, fmt.Errorf("unable to extract the %s from the url %s", pathGroup, sourceURL)
 	}
 
 	// Rebuild the URL based on registry type
-	transformedURL := fmt.Sprintf("%s/%s%s", packagesBaseURL, registryType, matches[idx(pathGroup)])
+	transformedURL := fmt.Sprintf("%s/%s%s", targetBaseURL, registryType, matches[idx(pathGroup)])
 
 	return url.Parse(transformedURL)
 }
