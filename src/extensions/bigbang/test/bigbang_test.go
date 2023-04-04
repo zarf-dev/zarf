@@ -44,19 +44,15 @@ func TestMain(m *testing.M) {
 }
 
 func TestReleases(t *testing.T) {
-
-	// Print the Zarf version
-	zarfExec(t, "version")
-
 	// Initialize the cluster with the Git server and AMD64 architecture
 	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64")
 
 	// Build the previous version
-	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", latest)
+	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
 	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
 
 	// Deploy the previous version
-	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", latest)
+	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", previous)
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
 
 	// Remove the previous version package
