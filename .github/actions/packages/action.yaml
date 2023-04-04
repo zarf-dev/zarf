@@ -5,5 +5,5 @@ runs:
   using: composite
   steps:
     - run: |
-        make build-cli-linux-amd init-package build-examples ARCH=amd64
+        make build-cli-linux-amd init-package build-examples ARCH=amd64 CLI_VERSION=${GITHUB_SHA:0:7}
       shell: bash
