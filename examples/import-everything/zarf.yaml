@@ -62,13 +62,10 @@ components:
       path: /tmp/dos-games
       name: baseline
 
-  # WIP
-  # - name: import-component-oci
-  #   required: false
-  # import:
-  #   # Import a component from an OCI registry
-  #   # Note the usage of the `url` key
-  #   url: oci://ghcr.io/defenseunicorns/zarf-component-example:v0.0.1
+  - name: import-component-oci
+    required: false
+    import:
+      url: oci://localhost:5000/helm-no-wait:0.0.1
 
   - name: file-imports
     required: false
