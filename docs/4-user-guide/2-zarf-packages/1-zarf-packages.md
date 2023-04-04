@@ -67,6 +67,6 @@ The process of defining a package is elaborated in detail on the [Creating a Pac
 The `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet or intranet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.
 
 
-## Inspecting a Built Package
+## Inspecting a Created Package
 
 To inspect the contents of a Zarf Package, you can use the command `zarf package inspect` followed by the path to the package file. This will print out the contents of the `zarf.yaml` file that defines the package. For example, if your package is located at `./path/to/package.tar.zst`, you can run `zarf package inspect ./path/to/package.tar.zst` to view the contents of the `zarf.yaml` file.
