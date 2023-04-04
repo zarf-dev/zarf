@@ -32,7 +32,7 @@ If there is no running cluster, the init package can be used to create one. It h
 
 To clarify, in most cases, the first Zarf Package you deploy onto a cluster should be the init package since other packages often depend on the services it installs onto your cluster. However, if you don't want to use the K3s distribution included in the init package or if you already have a preferred distribution, you can deploy the distribution package first, followed by the init package, and then any other packages you want. This only applies if you don't have a K8s cluster yet. 
 
-During the initialization process, Zarf will seed your cluster with a container registry to store images that other packages may require. Additionally, the init package has the option to deploy other features to your cluster, such as a Git server to manage your repositories or a PLG logging stack that allows you to monitor the activities running on your cluster.
+During the initialization process, Zarf will seed your cluster with a container registry to store images that other packages may require. Additionally, the init package has the option to deploy other features to your cluster, such as a Git server to manage your repositories or a PLG logging stack that allows you to monitor the applications running on your cluster.
 
 #### Using the init-package
 
