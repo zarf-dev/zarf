@@ -80,6 +80,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	if parent.Import.URL != "" {
 		skelURL := strings.TrimSuffix(parent.Import.URL+"-skeleton", "oci://")
 		cachePath := filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
+		err = os.MkdirAll(cachePath, 0755)
+		if err != nil {
+			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
+		}
 
 		err = p.handleOciPackage(skelURL, cachePath)
 		if err != nil {
