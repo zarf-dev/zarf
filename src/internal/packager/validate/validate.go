@@ -87,10 +87,11 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		if utils.InvalidPath(path + config.ZarfYAML) {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
-	}
-	ok := utils.IsURL(url)
-	if !ok {
-		return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
+	} else {
+		ok := utils.IsURL(url)
+		if !ok {
+			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
+		}
 	}
 
 	return nil
