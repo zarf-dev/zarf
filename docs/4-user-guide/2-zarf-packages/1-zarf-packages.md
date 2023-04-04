@@ -10,7 +10,7 @@ Zarf Packages are built while connected to the internet and to whatever is hosti
 
 The `zarf.yaml` file also defines declarative instructions for the deployment of package capabilities, which are automatically executed on package deployment and are represented in code. This ensures reproducibility across different systems without the need for manual configuration.
 
-Zarf Packages consist of functionality blocks, known as components. Components can be optional, providing greater flexibility in package usage. Further details on components can be found on the [Zarf Components](./2-zarf-components.md) page.
+Zarf Packages consist of functional blocks, known as components. Components can be optional, providing greater flexibility in package usage. Further details on components can be found on the [Zarf Components](./2-zarf-components.md) page.
 
 ## Deploying onto Air-gapped Systems
 
