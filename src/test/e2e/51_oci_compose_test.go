@@ -23,11 +23,39 @@ type SkeletonSuite struct {
 	Reference registry.Reference
 }
 
+var (
+	importEverything   = filepath.Join("examples", "import-everything")
+	everythingExternal = filepath.Join("examples", "everything-external")
+	absEverything      = filepath.Join("/", "tmp", "everything-external")
+	absDosGames        = filepath.Join("/", "tmp", "dos-games")
+	absNoCode          = filepath.Join("/", "tmp", "nocode")
+)
+
 func (suite *SkeletonSuite) SetupSuite() {
+	err := exec.CmdWithPrint("mkdir", "-p", everythingExternal)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join(importEverything, "*"), everythingExternal)
+	suite.NoError(err)
+
+	err = exec.CmdWithPrint("mkdir", "-p", absEverything)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join(importEverything, "*"), absEverything)
+	suite.NoError(err)
+
+	err = exec.CmdWithPrint("mkdir", "-p", absDosGames)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games", "*"), everythingExternal)
+	suite.NoError(err)
+
+	err = exec.CmdWithPrint("mkdir", "-p", absNoCode)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
+	suite.NoError(err)
+
 	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 
 	// spin up a local registry
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "registry", image)
+	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "registry", image)
 	suite.NoError(err)
 
 	// docker config folder
@@ -44,6 +72,14 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 func (suite *SkeletonSuite) TearDownSuite() {
 	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", everythingExternal)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", absEverything)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", absDosGames)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", absNoCode)
 	suite.NoError(err)
 }
 
