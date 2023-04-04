@@ -37,7 +37,7 @@ type ZarfPublishOptions struct {
 	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 }
 
-// ZarfPublishOptions tracks the user-defined preferences during a package publish.
+// ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
 	Reference     registry.Reference `jsonschema:"description=Remote registry reference"`
 	CopyOptions   oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
@@ -78,6 +78,7 @@ type ZarfPartialPackageData struct {
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
 }
 
+// ZarfSetVariable tracks internal variables that have been set during this run of Zarf
 type ZarfSetVariable struct {
 	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
 	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
