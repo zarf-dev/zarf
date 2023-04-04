@@ -40,7 +40,7 @@ During the initialization process, Zarf will seed your cluster with a container 
 
 #### Using the init-package
 
-To initialize your cluster, you need to run the command `zarf init`. This command will search for a file in your current working directory with a specific name convention: `zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`. The architecture must match that of the host you are running on. If you are deploying on a machine with a different architecture, you will need to specify the name of the architecture you are deploying on. For example, if you are on an arm64 machine but are deploying on an amd64 machine, you will run `zarf init zarf-init-amd64-v0.24.0.tar.zst`.
+To initialize your cluster, you need to run the command `zarf init`. This command will search for a file with the specific naming convention: `zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`. The architecture must match that of the cluster you are deploying to. If you are deploying to a cluster with a different architecture, you will need to specify the name of the architecture you are deploying on with the `-a` flag. For example, if you are on an arm64 machine but are deploying on an amd64 machine, you will run `zarf init -a amd64`.
 
 Init packages can also be run with `zarf package deploy zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`.
 
