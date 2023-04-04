@@ -6,7 +6,7 @@ In this walkthrough, we will demonstrate how to use Zarf on a fresh Linux machin
 -  `root` access on a Linux machine
 
 :::info REQUIRES ROOT
-The 'k3s' component requires root access when deploying as it will modify your host machine to install the cluster.
+The 'k3s' component requires root access (not just `sudo`!) when deploying as it will modify your host machine to install the cluster.
 :::
 
 ## Prerequisites
@@ -19,7 +19,7 @@ The 'k3s' component requires root access when deploying as it will modify your h
 1. Run the `zarf init` command as `root`.
 
 ```sh
-$ zarf init
+# zarf init
 ```
 
 2. Confirm Package Deployment: <br/> 
@@ -41,11 +41,22 @@ $ zarf init --components="k3s" --confirm
 ### Validating the Deployment
 After the `zarf init` command is done running, you should see a k3s cluster running and a few `zarf` pods in the Kubernetes cluster.
 
-```bash
-zarf tools monitor
-
-# Note you can press `0` if you want to see all namespaces and CTRL-C to exit
+```sh
+# zarf tools monitor
 ```
+:::note
+You can press `0` if you want to see all namespaces and CTRL-C to exit
+:::
+
+### Accessing the Cluster as a Normal User
+By default, the k3s component will only automatically provide cluster access to the root user. To access the cluster as another user, you can run the following to setup the `~/.kube/config` file:
+
+```sh
+# cp /root/.kube/config /home/otheruser/.kube
+# chown otheruser /home/otheruser/.kube/config
+# chgrp otheruser /home/otheruser/.kube/config
+```
+
 ## Cleaning Up
 
 The [`zarf destroy`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.

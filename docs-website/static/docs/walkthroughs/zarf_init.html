@@ -242,81 +242,182 @@ b.BWHI {background-color: #aaaaaa}
 <b class=YEL></b>
 <b class=YEL>* This directory will be removed after package deployment.</b>
 <b class=YEL></b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Deploy Zarf package confirmed</b>
+<b class="GRN">? </b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#55ffff;">Yes</span>
+<b class=YEL></b>
+<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+<b style="color:#55ffff;">name</b>:<b style="color:#ff55ff;"> k3s</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">only</b>:
+<b style="color:#55ffff;">  localOS</b>:<b style="color:#ff55ff;"> linux</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">cluster</b>:
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">actions</b>:
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">onDeploy</b>:
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">defaults</b>:
+<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 5</b>
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">before</b>:
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 0</b>
+<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> ./zarf internal is-valid-hostname</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"</b>
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">after</b>:
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl daemon-reload</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl enable k3s</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl start k3s</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">files</b>:
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/zarf-clean-k3s.sh</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /opt/zarf/zarf-clean-k3s.sh</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>: true
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/k3s.service</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /etc/systemd/system/k3s.service</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /etc/systemd/system/multi-user.target.wants/k3s.service</b>
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> ca398d82fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7b9a91448a</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /usr/sbin/k3s</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>:<b style="color:#ff55ff;"> true</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/kubctl</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/ctr</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/crictl</b>
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> 6736bf9fa4d5754d60b0508bafb2f888a70cb99a203a3a1617a919ca4ee74034</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /var/lib/rancher/k3s/agent/images/k3s.tar.zst</b>
+
+<b class=MAG>*** REQUIRES ROOT *** Install K3s, certified Kubernetes distribution built for IoT &amp; Edge computing</b>
+<b class=MAG>K3s provides the cluster need for Zarf running in Appliance Mode as well as can host a low-resource</b>
+<b class=MAG>Gitops Service if not using an existing Kubernetes platform.</b>
+
+<b class="GRN">? </b><b class="WHI">Deploy the k3s component?</b> (y/N) <span style="color:#55ffff;">No</span>
+<b class=YEL></b>
+<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+
+<b style="color:#55ffff;">name</b>:<b style="color:#ff55ff;"> logging</b>
+<b style="color:#55ffff;">charts</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> loki-stack</b>
+<b style="color:#55ffff;">  releaseName</b>:<b style="color:#ff55ff;"> zarf-loki-stack</b>
+<b style="color:#55ffff;">  url</b>:<b style="color:#ff55ff;"> https://grafana.github.io/helm-charts</b>
+<b style="color:#55ffff;">  version</b>:<b style="color:#ff55ff;"> 2.9.9</b>
+<b style="color:#55ffff;">  namespace</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#55ffff;">  valuesFiles</b>:
+<b style="color:#55ffff;">  -</b><b style="color:#ff55ff;">  packages/logging-pgl/pgl-values.yaml</b>
+<b style="color:#55ffff;">manifests</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> logging-connect</b>
+<b style="color:#55ffff;">  namespace</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#55ffff;">  files</b>:
+<b style="color:#55ffff;">  -</b><b style="color:#ff55ff;">  packages/logging-pgl/connect.yaml</b>
+<b style="color:#55ffff;">images</b>:
+-<b style="color:#ff55ff;"> docker.io/grafana/promtail:2.7.2</b>
+-<b style="color:#ff55ff;"> grafana/grafana:8.3.5</b>
+-<b style="color:#ff55ff;"> grafana/loki:2.6.1</b>
+-<b style="color:#ff55ff;"> quay.io/kiwigrid/k8s-sidecar:1.19.2</b>
+
+<b class=MAG>Deploys the Promtail Grafana & Loki (PGL) stack. Aggregates logs from different containers and</b>
+<b class=MAG>presents them in a web dashboard. Recommended if no other logging stack is deployed in the cluster.</b>
+
+<b class="GRN">? </b><b class="WHI">Deploy the logging component?</b> (y/N) <span style="color:#55ffff;">No</span>
+<b class=YEL></b>
+<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+
+<b style="color:#55ffff;">name</b>:<b style="color:#ff55ff;"> git-server</b>
+<b style="color:#55ffff;">actions</b>:
+<b style="color:#55ffff;">  onDeploy</b>:
+<b style="color:#55ffff;">    after</b>:
+<b>    -</b><b style="color:#55ffff;"> maxTotalSeconds</b>: 60
+<b style="color:#55ffff;">      maxRetries</b>: 3
+<b style="color:#55ffff;">      cmd</b>:<b style="color:#ff55ff;"> ./zarf internal create-read-only-gitea-user</b>
+<b style="color:#55ffff;">charts</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> gitea</b>
+<b style="color:#55ffff;">  releaseName</b>:<b style="color:#ff55ff;"> zarf-gitea</b>
+<b style="color:#55ffff;">  url</b>:<b style="color:#ff55ff;"> https://d1.gitea.io/charts</b>
+<b style="color:#55ffff;">  version</b>:<b style="color:#ff55ff;"> 7.0.4</b>
+<b style="color:#55ffff;">  namespace</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#55ffff;">  valuesFiles</b>:
+<b style="color:#55ffff;">  -</b><b style="color:#ff55ff;">  packages/gitea/gitea-values.yaml</b>
+<b style="color:#55ffff;">manifests</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> git-connect</b>
+<b style="color:#55ffff;">  namespace</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#55ffff;">  files</b>:
+<b style="color:#55ffff;">  -</b><b style="color:#ff55ff;">  packages/gitea/connect.yaml</b>
+<b style="color:#55ffff;">images</b>:
+-<b style="color:#ff55ff;"> gitea/gitea:1.18.5</b>
+
+<b class=MAG>Deploys Gitea to provide git repositories for Kubernetes configurations. Required for GitOps</b>
+<b class=MAG>deployments if no other git server is available.</b>
+<b class="GRN">? </b><b class="WHI">Deploy the git-server component?</b> (y/N) <span style="color:#55ffff;">No</span>
 
 <div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-INJECTOR COMPONENT                                                    </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-SEED-REGISTRY COMPONENT                                               </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-REGISTRY COMPONENT                                                    </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62270 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62270/v2/_catalog</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation registry-connect</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation registry-connect</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-registry-connect:0.1.1680014363 from Zarf-generated</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-registry-connect:0.1.1680014363 from Zarf-generated</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation kep-1755-registry-annotation</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation kep-1755-registry-annotation</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-kep-1755-registry-annotation:0.1.1680014363 from</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-kep-1755-registry-annotation:0.1.1680014363 from</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-AGENT COMPONENT                                                       </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62284 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62284/v2/_catalog</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation zarf-agent</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation zarf-agent</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
-
-
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Application</b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Username </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Password                </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Connect</b>
-<b style="color:#55ffff;"></b>Registry   <b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf-push<b style="color:#555555;"></b><b style="color:#555555;"> | </b>DdarrzTahz6oclGTUAUOfbsY<b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf connect registry
-
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-INJECTOR COMPONENT                                                    </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    </div>
+    
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
+    
+    <div style="background-color:#555555">
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-SEED-REGISTRY COMPONENT                                               </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    </div>
+    
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
+    
+    <div style="background-color:#555555">
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-REGISTRY COMPONENT                                                    </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    </div>
+    
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62270 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62270/v2/_catalog</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation registry-connect</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation registry-connect</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-registry-connect:0.1.1680014363 from Zarf-generated</b>
+           <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-registry-connect:0.1.1680014363 from Zarf-generated</b>
+           <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation kep-1755-registry-annotation</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation kep-1755-registry-annotation</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-kep-1755-registry-annotation:0.1.1680014363 from</b>
+           <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-kep-1755-registry-annotation:0.1.1680014363 from</b>
+           <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
+    
+    <div style="background-color:#555555">
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-AGENT COMPONENT                                                       </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+    <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+    </div>
+    
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62284 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62284/v2/_catalog</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation zarf-agent</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation zarf-agent</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
+      •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
+    <b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
+    
+    
+    <b style="color:#55ffff;"></b><b style="color:#55ffff;">Application</b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Username </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Password                </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Connect</b>
+    <b style="color:#55ffff;"></b>Registry   <b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf-push<b style="color:#555555;"></b><b style="color:#555555;"> | </b>DdarrzTahz6oclGTUAUOfbsY<b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf connect registry
+    
+<b style="color:#555555;"></b>
 </pre>
 </body>
 </html>
