@@ -50,8 +50,9 @@ func PipTransformURL(baseURL string, reqURL string) (*url.URL, error) {
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
 func GenTransformURL(packagesBaseURL string, reqURL string) (*url.URL, error) {
-	// For further explanation: https://regex101.com/r/qcg6Gr/2
-	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.%]+?\/[\w\-\.%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.%]+?)?(?P<package>\/[\w\-\.\?\=&%#]+?)$`)
+	// For further explanation: https://regex101.com/r/qcg6Gr/3
+	// This regex was created with information from https://www.rfc-editor.org/rfc/rfc3986#section-2
+	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.+~%]+?\/[\w\-\.+~%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.+~%]+?)??(?P<package>\/[\w\-\.\?\=,;+~!$'*&%#()\[\]]*?)?$`)
 
 	matches := genURLRegex.FindStringSubmatch(reqURL)
 	idx := genURLRegex.SubexpIndex
