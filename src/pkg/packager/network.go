@@ -41,7 +41,7 @@ func (p *Packager) handlePackagePath() error {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
-		return p.handleOciPackage()
+		return p.handleOciPackage(opts.PackagePath, p.tmp.Base)
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -134,14 +134,13 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func (p *Packager) handleOciPackage() error {
+func (p *Packager) handleOciPackage(url string, out string) error {
 	message.Debug("packager.handleOciPackage()")
 	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 
-	outDir := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
 
@@ -155,7 +154,7 @@ func (p *Packager) handleOciPackage() error {
 		return err
 	}
 
-	dst, err := file.New(outDir)
+	dst, err := file.New(out)
 	if err != nil {
 		return err
 	}
@@ -165,7 +164,7 @@ func (p *Packager) handleOciPackage() error {
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(outDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
+	go utils.RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PullOpts.CopyOptions.Concurrency
@@ -194,7 +193,6 @@ func (p *Packager) handleOciPackage() error {
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
 
-	p.cfg.DeployOpts.PackagePath = outDir
 	return nil
 }
 

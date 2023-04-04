@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -75,6 +76,17 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
+
+	if parent.Import.URL != "" {
+		skelURL := strings.TrimSuffix(parent.Import.URL+"-skeleton", "oci://")
+		cachePath := filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
+
+		err = p.handleOciPackage(skelURL, cachePath)
+		if err != nil {
+			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
+		}
+		parent.Import.Path = cachePath
+	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
 	if err != nil {

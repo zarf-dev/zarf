@@ -16,10 +16,11 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := p.handleOciPackage()
+	err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base)
 	if err != nil {
 		return err
 	}
+	p.cfg.DeployOpts.PackagePath = p.tmp.Base
 	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 	if err != nil {
 		return err
