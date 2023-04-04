@@ -64,7 +64,7 @@ The following list outlines the dependencies for creating a Zarf Package:
 
 The process of defining a package is elaborated in detail on the [Creating a Package](../../13-walkthroughs/0-using-zarf-package-create.md) page. Once a package has been defined, building it is a relatively straightforward task.
 
-The `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.
+The `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet or intranet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.
 
 
 ## Inspecting a Built Package
