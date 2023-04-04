@@ -154,6 +154,7 @@ type ZarfComponentAction struct {
 	Wait                  *ZarfComponentActionWait         `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
 }
 
+// ZarfComponentActionSetVariable represents a variable that is to be set via an action
 type ZarfComponentActionSetVariable struct {
 	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
 	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
