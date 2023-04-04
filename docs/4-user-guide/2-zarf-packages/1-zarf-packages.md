@@ -54,7 +54,7 @@ During the deployment process, Zarf will leverage the infrastructure created dur
 
 Zarf Packages consist of smaller units known as 'components'. These components are further defined on the [Zarf Components page](./2-zarf-components.md), but to summarize, they represent the named capabilities that packages offer. For additional information regarding the `zarf.yaml` package structure, please refer to the [Zarf Package Schema](../3-zarf-schema.md) documentation.
 
-## Building a Zarf Package
+## Creating a Zarf Package
 
 The following list outlines the dependencies for building a Zarf Package:
 
