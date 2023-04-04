@@ -56,7 +56,7 @@ Zarf Packages consist of smaller units known as 'components'. These components a
 
 ## Creating a Zarf Package
 
-The following list outlines the dependencies for building a Zarf Package:
+The following list outlines the dependencies for creating a Zarf Package:
 
 - A local K8s cluster to work with ([K3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[Kind](https://kind.sigs.k8s.io/docs/user/quick-start#installation)).
 - A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md)).
