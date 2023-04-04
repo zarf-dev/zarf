@@ -8,7 +8,7 @@ Zarf offers a comprehensive solution for deploying system software or capabiliti
 
 Zarf Packages are built while connected to the internet and to whatever is hosting the dependencies your package definition defined. This allows for the retrieval and storage of defined dependencies within the archive. As a result, the package can be deployed on disconnected systems without requiring a connection to the outside world.
 
-The `zarf.yaml` file defines declarative instructions for the deployment of package capabilities, which are automatically executed and represented by code. This ensures reproducibility across different systems without the need for manual configuration.
+The `zarf.yaml` file also defines declarative instructions for the deployment of package capabilities, which are automatically executed on package deployment and are represented in code. This ensures reproducibility across different systems without the need for manual configuration.
 
 Zarf Packages consist of functionality blocks, known as components. Components can be optional, providing greater flexibility in package usage. Further details on components can be found on the [Zarf Components](./2-zarf-components.md) page.
 
