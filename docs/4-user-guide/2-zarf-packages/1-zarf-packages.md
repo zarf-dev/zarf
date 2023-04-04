@@ -44,7 +44,7 @@ You do not need to create init configs by yourself unless you want to customize 
 
 ### ZarfPackageConfig
 
-`ZarfPackageConfigs` refers to any package that is not an init package and is used to define specific capabilities that you want to deploy onto your initialized cluster.
+`ZarfPackageConfig` refers to any package that is not an init package and is used to define specific capabilities that you want to deploy onto your initialized cluster.
 
 To deploy a Zarf Package, you can use the command `zarf package deploy`. This will prompt you to select from all of the files in your current directory that match the name `zarf-package-*.tar.zst`. Alternatively, if you already know which package you want to deploy, you can simply use the command `zarf package deploy {PACKAGE_NAME}`.
 
