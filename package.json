@@ -24,7 +24,7 @@
 		]
 	},
 	"dependencies": {
-		"@defense-unicorns/unicorn-ui": "0.0.42",
+		"@defense-unicorns/unicorn-ui": "0.0.43",
 		"@floating-ui/dom": "1.2.5",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
@@ -32,7 +32,7 @@
 		"@material/layout-grid": "14.0.0",
 		"@material/linear-progress": "14.0.0",
 		"@material/theme": "14.0.0",
-		"material-symbols": "0.5.3",
+		"material-symbols": "0.5.4",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
 		"yaml": "2.2.1"
@@ -43,11 +43,11 @@
 		"@sveltejs/kit": "1.15.0",
 		"@sveltejs/package": "2.0.2",
 		"@testing-library/svelte": "3.2.2",
-		"@tsconfig/svelte": "3.0.0",
+		"@tsconfig/svelte": "4.0.1",
 		"@types/prismjs": "1.26.0",
 		"@typescript-eslint/eslint-plugin": "5.57.0",
 		"@typescript-eslint/parser": "5.57.0",
-		"concurrently": "7.6.0",
+		"concurrently": "8.0.1",
 		"eslint": "8.37.0",
 		"eslint-config-prettier": "8.8.0",
 		"eslint-plugin-svelte3": "4.0.0",

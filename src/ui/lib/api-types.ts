@@ -36,8 +36,12 @@ export interface ZarfDeployOptions {
      */
     packagePath: string;
     /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    publicKeyPath: string;
+    /**
      * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
+     * template manifests and files in the Zarf package
      */
     setVariables: { [key: string]: string };
     /**
@@ -274,7 +278,7 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+     * [Deprecated] (replaced by actions) Custom commands to run before or after package
      * deployment
      */
     scripts?: DeprecatedZarfComponentScripts;
@@ -358,15 +362,37 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * (Cmd only) The name of a variable to update with the output of the command. This variable
-     * will be available to all remaining actions and components in the package.
+     * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
+     * update with the output of the command. This variable will be available to all remaining
+     * actions and components in the package.
      */
     setVariable?: string;
+    /**
+     * (onDeploy/cmd only) An array of variables to update with the output of the command. These
+     * variables will be available to all remaining actions and components in the package.
+     */
+    setVariables?: ZarfComponentActionSetVariable[];
     /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
      * action. See the 'zarf tools wait-for' command for more info.
      */
     wait?: ZarfComponentActionWait;
+}
+
+export interface ZarfComponentActionSetVariable {
+    /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
+     */
+    autoIndent?: boolean;
+    /**
+     * The name to be used for the variable
+     */
+    name: string;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
 }
 
 /**
@@ -685,7 +711,7 @@ export enum LocalOS {
 }
 
 /**
- * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+ * [Deprecated] (replaced by actions) Custom commands to run before or after package
  * deployment
  */
 export interface DeprecatedZarfComponentScripts {
@@ -717,6 +743,11 @@ export interface DeprecatedZarfComponentScripts {
 
 export interface ZarfPackageConstant {
     /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_CONST_.
+     */
+    autoIndent?: boolean;
+    /**
      * A description of the constant to explain its purpose on package create or deploy
      * confirmation prompts
      */
@@ -743,6 +774,11 @@ export enum Kind {
  * Package metadata
  */
 export interface ZarfMetadata {
+    /**
+     * Checksum of a checksums.txt file that contains checksums all the layers within the
+     * package.
+     */
+    aggregateChecksum?: string;
     /**
      * The target cluster architecture for this package
      */
@@ -797,6 +833,11 @@ export interface ZarfMetadata {
 
 export interface ZarfPackageVariable {
     /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
+     */
+    autoIndent?: boolean;
+    /**
      * The default value to use for the variable
      */
     default?: string;
@@ -812,6 +853,10 @@ export interface ZarfPackageVariable {
      * Whether to prompt the user for input for this variable
      */
     prompt?: boolean;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
 }
 
 export interface ClusterSummary {
@@ -926,6 +971,14 @@ export interface ZarfCreateOptions {
      * template against the Zarf package being used
      */
     setVariables: { [key: string]: string };
+    /**
+     * Password to the private key signature file that will be used to sigh the created package
+     */
+    signingKeyPassword: string;
+    /**
+     * Location where the private key component of a cosign key-pair can be found
+     */
+    signingKeyPath: string;
     /**
      * Disable the generation of SBOM materials during package creation
      */
@@ -1117,6 +1170,7 @@ const typeMap: any = {
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
         { json: "shasum", js: "shasum", typ: "" },
@@ -1205,7 +1259,13 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+        { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+    ], false),
+    "ZarfComponentActionSetVariable": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
+        { json: "name", js: "name", typ: "" },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
     "ZarfComponentActionWait": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
@@ -1296,11 +1356,13 @@ const typeMap: any = {
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
     "ZarfPackageConstant": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "value", js: "value", typ: "" },
     ], false),
     "ZarfMetadata": o([
+        { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
@@ -1315,10 +1377,12 @@ const typeMap: any = {
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),
     "ZarfPackageVariable": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1371,6 +1435,8 @@ const typeMap: any = {
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
+        { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "Protocol": [

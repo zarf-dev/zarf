@@ -1,0 +1,28 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-upgrade-package
+  description: Deploy podinfo using a Helm OCI chart
+  version: "###ZARF_PKG_VAR_PODINFO_VERSION###"
+
+components:
+  - name: test-upgrade-package
+    description: A semi-contrived example that deploys podinfo and lets us upgrade it a few times.
+    required: true
+    charts:
+      - name: podinfo-upgrade
+        version: "###ZARF_PKG_VAR_PODINFO_VERSION###"
+        namespace: podinfo-upgrade
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - "ghcr.io/stefanprodan/podinfo:###ZARF_PKG_VAR_PODINFO_VERSION###"
+    files:
+      - source: https://raw.githubusercontent.com/stefanprodan/podinfo/###ZARF_PKG_VAR_PODINFO_VERSION###/.cosign/cosign.pub
+        target: podinfo-cosign.pub
+    actions:
+      onDeploy:
+        after:
+          - cmd: "cat podinfo-cosign.pub"
+            mute: true
+            setVariable: PODINFO_COSIGN_PUB
+          - cmd: "echo \"Successfully deployed podinfo ###ZARF_PKG_VAR_PODINFO_VERSION### with the following cosign key:\\n\\n${ZARF_VAR_PODINFO_COSIGN_PUB}\""
+          - cmd: "rm podinfo-cosign.pub"

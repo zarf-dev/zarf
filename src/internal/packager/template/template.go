@@ -64,14 +64,14 @@ func (values Values) GetRegistry() string {
 }
 
 // GetVariables returns the variables to be used in the template.
-func (values Values) GetVariables(component types.ZarfComponent) (map[string]string, map[string]string) {
+func (values Values) GetVariables(component types.ZarfComponent) (map[string]*utils.TextTemplate, map[string]string) {
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
 	depMarkerOld := "DATA_INJECTON_MARKER"
 	depMarkerNew := "DATA_INJECTION_MARKER"
 	deprecations := map[string]string{
-		depMarkerOld: depMarkerNew,
+		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 	}
 
 	builtinMap := map[string]string{
@@ -86,6 +86,7 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 		// Git server info
 		"GIT_PUSH":      gitInfo.PushUsername,
 		"GIT_AUTH_PUSH": gitInfo.PushPassword,
+		"GIT_PULL":      gitInfo.PullUsername,
 		"GIT_AUTH_PULL": gitInfo.PullPassword,
 	}
 
@@ -114,23 +115,39 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]str
 	}
 
 	// Iterate over any custom variables and add them to the mappings for templating
-	templateMap := map[string]string{}
+	templateMap := map[string]*utils.TextTemplate{}
 	for key, value := range builtinMap {
 		// Builtin keys are always uppercase in the format ###ZARF_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &utils.TextTemplate{
+			Value: value,
+		}
+
+		if key == "LOGGING_AUTH" || key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
+			key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
+			key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
+			// Sanitize any builtin templates that are sensitive
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
+		}
 	}
 
-	for key, value := range values.config.SetVariableMap {
+	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
+			Value:      variable.Value,
+			Sensitive:  variable.Sensitive,
+			AutoIndent: variable.AutoIndent,
+		}
 	}
 
 	for _, constant := range values.config.Pkg.Constants {
 		// Constant keys are always uppercase in the format ###ZARF_CONST_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = constant.Value
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = &utils.TextTemplate{
+			Value:      constant.Value,
+			AutoIndent: constant.AutoIndent,
+		}
 	}
 
-	message.Debugf("templateMap = %#v", templateMap)
+	debugPrintTemplateMap(templateMap)
 	message.Debugf("deprecations = %#v", deprecations)
 
 	return templateMap, deprecations
@@ -146,7 +163,23 @@ func (values Values) Apply(component types.ZarfComponent, path string, ignoreRea
 	}
 
 	templateMap, deprecations := values.GetVariables(component)
-	utils.ReplaceTextTemplate(path, templateMap, deprecations)
+	err := utils.ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
 
-	return nil
+	return err
+}
+
+func debugPrintTemplateMap(templateMap map[string]*utils.TextTemplate) {
+	debugText := "templateMap = { "
+
+	for key, template := range templateMap {
+		if template.Sensitive {
+			debugText += fmt.Sprintf("\"%s\": \"**sanitized**\", ", key)
+		} else {
+			debugText += fmt.Sprintf("\"%s\": \"%s\", ", key, template.Value)
+		}
+	}
+
+	debugText += " }"
+
+	message.Debug(debugText)
 }

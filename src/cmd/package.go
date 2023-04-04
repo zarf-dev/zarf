@@ -28,6 +28,7 @@ import (
 
 var includeInspectSBOM bool
 var outputInspectSBOM string
+var inspectPublicKey string
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -81,8 +82,8 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
 		// Ensure uppercase keys from viper
-		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
+		viperConfigSetVariables := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -109,7 +110,7 @@ var packageInspectCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM, inspectPublicKey); err != nil {
 			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
@@ -300,6 +301,7 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
+	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
 
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
 	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
@@ -307,6 +309,8 @@ func bindCreateFlags() {
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
 	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), lang.CmdPackageCreateFlagMaxPackageSize)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
 }
 
 func bindDeployFlags() {
@@ -320,18 +324,21 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 	v.SetDefault(V_PKG_PUBLISH_OCI_CONCURRENCY, 3)
+	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
 	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
 }
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageInspectFlagPublicKey)
 }
 
 func bindRemoveFlags() {
@@ -344,9 +351,12 @@ func bindRemoveFlags() {
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
 	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_PUBLISH_SIGNING_KEY_PASSWORD), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
 	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
 }

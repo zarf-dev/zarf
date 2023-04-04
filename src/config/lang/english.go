@@ -37,7 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
@@ -200,27 +200,36 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
 	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
 
-	CmdPackageCreateFlagConfirm         = "Confirm package creation without prompting"
-	CmdPackageCreateFlagSet             = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory = "Specify the output directory for the created Zarf package"
-	CmdPackageCreateFlagSbom            = "View SBOM contents after creating the package"
-	CmdPackageCreateFlagSbomOut         = "Specify an output directory for the SBOMs from the created Zarf package"
-	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
-	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
+	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
+	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
+	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
+	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
 	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
 	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagPublicKey  = "Path to public key file for validating signed packages"
 
-	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
+	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
-	CmdPackagePublishFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
+
+	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
@@ -326,8 +335,10 @@ const (
 
 // src/internal/packager/validate.
 const (
+	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in a future Zarf version.  Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionVariables         = "component %s cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %s cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"

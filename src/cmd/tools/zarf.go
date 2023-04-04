@@ -5,14 +5,17 @@
 package tools
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/cobra"
 )
 
@@ -92,6 +95,77 @@ func init() {
 		},
 	}
 
+	generateKeyCmd := &cobra.Command{
+		Use:     "gen-key",
+		Aliases: []string{"pki"},
+		Short:   "",
+		Run: func(cmd *cobra.Command, args []string) {
+
+			// Utility function to prompt the user for the password to the private key
+			passwordFunc := func(bool) ([]byte, error) {
+				// perform the first prompt
+				var password string
+				prompt := &survey.Password{
+					Message: "Private key password (empty for no password): ",
+				}
+				if err := survey.AskOne(prompt, &password); err != nil {
+					return nil, fmt.Errorf("unable to get password for private key: %w", err)
+				}
+
+				// perform the second prompt
+				var doubleCheck string
+				rePrompt := &survey.Password{
+					Message: "Private key password again (empty for no password): ",
+				}
+				if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
+					return nil, fmt.Errorf("unable to get password for private key: %w", err)
+				}
+
+				// check if the passwords match
+				if password != doubleCheck {
+					return nil, fmt.Errorf("passwords do not match")
+				}
+
+				return []byte(password), nil
+
+			}
+
+			// Use cosign to generate the keypair
+			keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
+			if err != nil {
+				message.Fatalf(err, "unable to generate key pair: %s", err.Error())
+			}
+
+			// Check if we are about to overwrite existing key files
+			_, prvKeyExistsErr := os.Stat("cosign.key")
+			_, pubKeyExistsErr := os.Stat("cosign.pub")
+			if prvKeyExistsErr == nil || pubKeyExistsErr == nil {
+				var confirm bool
+				confirmOverwritePrompt := &survey.Confirm{
+					Message: fmt.Sprintf("File %s already exists. Overwrite? ", "cosign.key"),
+				}
+				err := survey.AskOne(confirmOverwritePrompt, &confirm)
+				if err != nil {
+					message.Fatalf(err, "unable to get confirmation for overwriting key file(s)")
+				}
+
+				if !confirm {
+					message.Fatal(nil, "not overwriting exisiting key file(s)")
+				}
+			}
+
+			// Write the key file contents to disk
+			if err := os.WriteFile("cosign.key", keyBytes.PrivateBytes, 0600); err != nil {
+				message.Fatalf(err, "unable to write private key to file: %s", err.Error())
+			}
+			if err := os.WriteFile("cosign.pub", keyBytes.PublicBytes, 0644); err != nil {
+				message.Fatalf(err, "unable to write public key to file: %s", err.Error())
+			}
+
+			message.Successf("Generated key pair and wrote to %s and %s", "cosign.key", "cosign.pub")
+		},
+	}
+
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(readAllCredsCmd)
 
@@ -100,4 +174,6 @@ func init() {
 
 	toolsCmd.AddCommand(generatePKICmd)
 	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
+
+	toolsCmd.AddCommand(generateKeyCmd)
 }
