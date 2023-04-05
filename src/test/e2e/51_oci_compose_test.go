@@ -23,6 +23,8 @@ type SkeletonSuite struct {
 	Reference registry.Reference
 }
 
+// go test ./src/test/e2e/... -v -run TestSkeletonSuite -count=1 -failfast
+
 var (
 	importEverything   = filepath.Join("examples", "import-everything")
 	everythingExternal = filepath.Join("examples", "everything-external")
@@ -32,23 +34,15 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := exec.CmdWithPrint("mkdir", "-p", everythingExternal)
-	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
+	err := exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
 
-	err = exec.CmdWithPrint("mkdir", "-p", absEverything)
-	suite.NoError(err)
 	err = exec.CmdWithPrint("cp", "-r", importEverything, absEverything)
 	suite.NoError(err)
 
-	err = exec.CmdWithPrint("mkdir", "-p", absDosGames)
-	suite.NoError(err)
 	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), absDosGames)
 	suite.NoError(err)
 
-	err = exec.CmdWithPrint("mkdir", "-p", absNoCode)
-	suite.NoError(err)
 	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
 	suite.NoError(err)
 
@@ -100,7 +94,7 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	// Compose skeleton package of import-everything.
 	ref := suite.Reference.String()
 	importEverythingExample := filepath.Join("examples", "import-everything")
-	_, stdErr, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build")
+	_, stdErr, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build", "--insecure", "-l=trace")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 }
@@ -125,7 +119,7 @@ func (suite *SkeletonSuite) Test_2_Deploy() {
 // func (suite *SkeletonSuite) Test_3_BadImports() {
 // func (suite *SkeletonSuite) Test_2_Deploy() {
 
-func TestSkeltonSuite(t *testing.T) {
+func TestSkeletonSuite(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 	suite.Run(t, new(SkeletonSuite))

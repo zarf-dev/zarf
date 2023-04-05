@@ -67,7 +67,7 @@ components:
     import:
       # name is optional, if not provided the name of the component will be used to import
       name: demo-helm-local-chart
-      url: oci://localhost:5000/test-helm-local-chart:0.0.1
+      url: oci://localhost:666/test-helm-local-chart:0.0.1
 
   - name: file-imports
     required: false
@@ -97,12 +97,12 @@ components:
         localPath: charts/local
         namespace: local-chart
         version: 0.1.0
-      - name: local-demo-relative
+      - name: local-demo
         # highlight-next-line
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
         version: 0.1.0
-      - name: local-demo-absolute
+      - name: local-demo
         # highlight-next-line
         localPath: /tmp/everything-external/charts/local
         namespace: local-chart-absolute
@@ -123,8 +123,8 @@ components:
       - https://github.com/kelseyhightower/nocode.git
       # Import a full repo via file:// + absolute path
       - file:///tmp/nocode
-      # Import this repo via file:// + relative path
-      - file://../../
+      # # Import this repo via file:// + relative path
+      # - file://../../
 
   - name: import-images
     required: false

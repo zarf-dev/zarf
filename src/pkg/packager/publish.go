@@ -335,7 +335,6 @@ func (p *Packager) loadSkeleton() error {
 		local := component.LocalPaths()
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
-		rando := utils.RandomString(8)
 		tmp := filepath.Join(p.tmp.Components, component.Name)
 
 		err := os.MkdirAll(tmp, 0755)
@@ -359,8 +358,9 @@ func (p *Packager) loadSkeleton() error {
 				}
 				dst = filepath.Join(p.tmp.Components, component.Name, path)
 			} else {
-				dst = filepath.Join(tmp, ".tmp"+rando, filepath.Base(path))
-				dstrel := filepath.Join(".tmp"+rando, filepath.Base(path))
+				pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
+				dst = filepath.Join(tmp, pathSha, filepath.Base(path))
+				dstrel := filepath.Join(pathSha, filepath.Base(path))
 				if strings.HasPrefix(path, "file://") {
 					dstrel = "file://" + dstrel
 				}
@@ -378,7 +378,7 @@ func (p *Packager) loadSkeleton() error {
 		}
 		if len(local) > 0 {
 			tarPath := fmt.Sprintf("%s.tar", tmp)
-			err = archiver.Archive([]string{tmp}, tarPath)
+			err = archiver.Archive([]string{tmp + string(os.PathSeparator)}, tarPath)
 			if err != nil {
 				return err
 			}

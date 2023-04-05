@@ -131,11 +131,14 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If its OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		err := os.MkdirAll(filepath.Join(cachePath, "components", child.Name), 0755)
-		if err != nil {
-			return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
+		dir := filepath.Join(cachePath, "components", child.Name)
+		if !utils.InvalidPath(dir) {
+			err = os.RemoveAll(dir)
+			if err != nil {
+				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+			}
 		}
-		err = archiver.Unarchive(filepath.Join(cachePath, "components", child.Name), filepath.Join(cachePath, "components", child.Name))
+		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), dir)
 		if err != nil {
 			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 		}
@@ -173,19 +176,19 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 
 	// Prefix composed component file paths.
 	for fileIdx, file := range child.Files {
-		child.Files[fileIdx].Source = p.getComposedFilePath(file.Source, parent)
+		child.Files[fileIdx].Source = p.getComposedFilePath(parent, child, file.Source)
 	}
 
 	// Prefix non-url composed component chart values files and localPath.
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(valuesFile, parent)
+			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(parent, child, valuesFile)
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
 			// Check if the localPath is relative to the parent Zarf package
 			if _, err := os.Stat(child.Charts[chartIdx].LocalPath); os.IsNotExist(err) {
 				// Since the chart localPath is not relative to the parent Zarf package, get the relative path from the composed child
-				child.Charts[chartIdx].LocalPath = p.getComposedFilePath(child.Charts[chartIdx].LocalPath, parent)
+				child.Charts[chartIdx].LocalPath = p.getComposedFilePath(parent, child, child.Charts[chartIdx].LocalPath)
 			}
 		}
 	}
@@ -193,15 +196,15 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 	// Prefix non-url composed manifest files and kustomizations.
 	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(file, parent)
+			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(parent, child, file)
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
-			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(kustomization, parent)
+			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(parent, child, kustomization)
 		}
 	}
 
 	if child.CosignKeyPath != "" {
-		child.CosignKeyPath = p.getComposedFilePath(child.CosignKeyPath, parent)
+		child.CosignKeyPath = p.getComposedFilePath(parent, child, child.CosignKeyPath)
 	}
 
 	return child
@@ -305,23 +308,23 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func (p *Packager) getComposedFilePath(originalPath string, parent types.ZarfComponent) string {
-	message.Debugf("packager.getComposedFilePath(%s, %s)", originalPath, parent.Import.Path)
+func (p *Packager) getComposedFilePath(parent types.ZarfComponent, child types.ZarfComponent, path string) string {
+	message.Debugf("packager.getComposedFilePath(%s, %s)", path, parent.Import.Path)
 
 	// Return original if it is a remote file.
-	if utils.IsURL(originalPath) {
-		return originalPath
+	if utils.IsURL(path) {
+		return path
 	}
 
 	prefix := parent.Import.Path
 	if parent.Import.URL != "" {
-		prefix = filepath.Join(parent.Import.Path, "components", parent.Name)
+		prefix = filepath.Join(parent.Import.Path, "components", child.Name)
 
 		// If the path is in the skeleton mutations map, use the mutated path.
 		mutations := p.cfg.Pkg.Build.SkeletonMutations
 		if mutations != nil {
 			for _, mutation := range mutations[parent.Name] {
-				if mutation.From == originalPath {
+				if mutation.From == path {
 					return filepath.Join(prefix, mutation.To)
 				}
 			}
@@ -329,5 +332,5 @@ func (p *Packager) getComposedFilePath(originalPath string, parent types.ZarfCom
 	}
 
 	// Add prefix for local files.
-	return filepath.Join(prefix, originalPath)
+	return filepath.Join(prefix, path)
 }
