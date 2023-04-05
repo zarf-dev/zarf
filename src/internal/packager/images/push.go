@@ -54,8 +54,8 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	defer spinner.Stop()
 
 	if message.GetLogLevel() >= message.DebugLevel {
-		logs.Warn.SetOutput(spinner)
 		spinner.EnablePreserveWrites()
+		logs.Warn.SetOutput(spinner)
 		logs.Progress.SetOutput(spinner)
 	}
 
