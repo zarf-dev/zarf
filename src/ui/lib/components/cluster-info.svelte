@@ -1,9 +1,11 @@
 <script lang="ts">
+	import ConnectClusterDialog from './connect-cluster-dialog.svelte';
 	import ClusterInfoTable from './cluster-info-table.svelte';
-
 	import { Paper, Typography, Box, type SSX } from '@ui';
 	import ButtonDense from './button-dense.svelte';
 	import { clusterStore } from '$lib/store';
+
+	let toggleDialog: () => void;
 
 	const ssx: SSX = {
 		$self: {
@@ -12,6 +14,8 @@
 			'& .cluster-info-body': {
 				minHeight: '86px',
 				maxHeight: '160px',
+				borderTopLeftRadius: '0px',
+				borderTopRightRadius: '0px',
 				'& > .cluster-not-connected': {
 					display: 'flex',
 					height: '100%',
@@ -25,24 +29,29 @@
 				display: 'flex',
 				alignItems: 'center',
 				justifyContent: 'space-between',
+				borderBottomRightRadius: '0px',
+				borderBottomLeftRadius: '0px',
 			},
 		},
 	};
+
 	$: showClusterInfo = $clusterStore?.hasZarf;
 </script>
 
 <Box {ssx} class="cluster-info-container">
-	<Paper class="cluster-info-header" square elevation={1}>
+	<Paper class="cluster-info-header" elevation={1}>
 		<div class="header-right">
 			<Typography variant="th">Cluster</Typography>
 		</div>
 		<div class="header-left">
 			{#if !showClusterInfo}
-				<ButtonDense variant="outlined" backgroundColor="white">Connect Cluster</ButtonDense>
+				<ButtonDense variant="outlined" backgroundColor="white" on:click={toggleDialog}
+					>Connect Cluster</ButtonDense
+				>
 			{/if}
 		</div>
 	</Paper>
-	<Paper class="cluster-info-body" square elevation={1}>
+	<Paper class="cluster-info-body" elevation={1}>
 		{#if !showClusterInfo}
 			<Typography class="cluster-not-connected" variant="body1" element="span">
 				<span class="material-symbols-outlined" style="color:var(--warning);"> warning </span>
@@ -52,4 +61,5 @@
 			<ClusterInfoTable />
 		{/if}
 	</Paper>
+	<ConnectClusterDialog bind:toggleDialog />
 </Box>

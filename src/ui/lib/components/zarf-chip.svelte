@@ -37,7 +37,7 @@
 		align-items: center;
 		justify-content: center;
 		word-break: break-all;
-		padding: 4px;
+		padding: 4px 8px;
 		gap: 1px;
 	}
 

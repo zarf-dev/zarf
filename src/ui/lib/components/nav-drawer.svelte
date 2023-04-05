@@ -2,7 +2,8 @@
 	import { Paper, type SSX, Typography, Box } from '@ui';
 	import NavLink from './nav-link.svelte';
 	import { clusterStore } from '$lib/store';
-
+	import { onMount } from 'svelte';
+	let path = '';
 	const ssx: SSX = {
 		$self: {
 			width: '16rem',
@@ -26,6 +27,10 @@
 			},
 		},
 	};
+
+	onMount(() => {
+		path = window.location.pathname;
+	});
 </script>
 
 <Paper {ssx} square backgroundColor="global-nav" color="on-global-nav">
@@ -33,7 +38,7 @@
 		ssx={{ $self: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 1rem' } }}
 	>
 		<Typography variant="h5">Cluster</Typography>
-		{#if $clusterStore?.host}
+		{#if $clusterStore?.hasZarf && $clusterStore?.host}
 			<Typography variant="caption" color="text-secondary-on-dark">{$clusterStore.host}</Typography>
 		{:else}
 			<Typography
@@ -49,7 +54,9 @@
 		{/if}
 	</Box>
 	<Box class="nav-drawer-section">
-		<NavLink variant="body1">Packages</NavLink>
+		<NavLink variant="body1" href="/" selected={path === '/' || path.includes('/packages')}>
+			Packages
+		</NavLink>
 	</Box>
 	<Box class="nav-drawer-section inset-shadow">
 		<Typography color="text-secondary-on-dark">Tools</Typography>
