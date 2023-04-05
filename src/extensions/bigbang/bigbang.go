@@ -45,7 +45,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Make sure the version is valid.
 	if !isValidVersion(cfg.Version) {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.53.0", cfg.Version)
+		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.54.0", cfg.Version)
 	}
 
 	// Print the banner for Big Bang.
@@ -142,9 +142,9 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		}
 
 		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the APIService to be exist instead of the HelmRelease, which
+		// The check it, we need to look for the APIService to exist instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
-		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.53.0/chart/templates/metrics-server/helmrelease.yaml
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
@@ -226,7 +226,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	return c, nil
 }
 
-// isValidVersion check if the version is 1.53.0 or greater.
+// isValidVersion check if the version is 1.54.0 or greater.
 func isValidVersion(version string) bool {
 	// Split the version string into its major, minor, and patch components
 	parts := strings.Split(version, ".")
