@@ -23,6 +23,7 @@ func MutateGitURLsInText(targetBaseURL string, text string, pushUser string) str
 		output, err := GitTransformURL(targetBaseURL, match, pushUser)
 		if err != nil {
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", match)
+			return match
 		}
 		return output.String()
 	})
