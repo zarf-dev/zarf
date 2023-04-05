@@ -72,7 +72,7 @@
 			<Typography element="div" variant="caption" class="label-values" style="font-weight:500;">
 				<Typography variant="inherit">Ready?</Typography>
 				<Typography variant="inherit">User?</Typography>
-				<Typography variant="inherit">K8s version?</Typography>
+				<Typography variant="inherit">{$clusterStore.k8sRevision}</Typography>
 			</Typography>
 		</Box>
 	</div>

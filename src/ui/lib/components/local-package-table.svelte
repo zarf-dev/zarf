@@ -1,24 +1,39 @@
 <script lang="ts">
 	import { Packages } from '$lib/api';
 	import { Paper, Typography, Box, type SSX } from '@ui';
-	import ButtonDense from './button-dense.svelte';
+	import Tooltip from './tooltip.svelte';
 	import ZarfChip from './zarf-chip.svelte';
+	import { page } from '$app/stores';
+	import type { APIZarfPackage } from '$lib/api-types';
+
+	const initPkg = $page.url.searchParams.get('init');
+
+	async function readPackages(): Promise<APIZarfPackage[]> {
+		const paths = initPkg ? await Packages.findInit() : await Packages.findInHome();
+		const packages = paths.map((p) => Packages.read(p));
+		return Promise.all(packages);
+	}
 
 	const ssx: SSX = {
 		$self: {
 			display: 'flex',
 			flexDirection: 'column',
-			maxHeight: '280px',
-			'& .package-list-header': {
+			maxHeight: '288px',
+			'& .local-package-list-header': {
 				height: '56px',
 				padding: '16px',
 				display: 'flex',
 				alignItems: 'center',
-				justifyContent: 'space-between',
+				gap: '20px',
 				borderBottomLeftRadius: '0px',
 				borderBottomRightRadius: '0px',
+				'& .tooltip-trigger': {
+					display: 'flex',
+					alignItems: 'end',
+					color: 'var(--action-active-56p)',
+				},
 			},
-			'& .package-list-body': {
+			'& .local-package-list-body': {
 				height: '100px',
 				boxShadow: '0px -1px 0px 0px rgba(255, 255, 255, 0.12) inset',
 				overflowX: 'hidden',
@@ -31,7 +46,7 @@
 					alignItems: 'center',
 				},
 			},
-			'& .package-list-footer': {
+			'& .local-package-list-footer': {
 				height: '48px',
 				borderTopLeftRadius: '0px',
 				borderTopRightRadius: '0px',
@@ -67,7 +82,7 @@
 						flexWrap: 'wrap',
 						gap: '4px',
 					},
-					'&.signed-by': {
+					'&.description': {
 						minWidth: '240px',
 						width: '21.5%',
 					},
@@ -76,13 +91,14 @@
 		},
 	};
 
-	const tableLabels = ['name', 'version', 'tags', 'signed by'];
+	const tableLabels = ['name', 'version', 'tags', 'description'];
+	$: initString = (initPkg && 'Init') || '';
 </script>
 
-<Box {ssx} class="package-list-container">
-	<Paper class="package-list-header" elevation={1}>
-		<Typography variant="th">Packages</Typography>
-		<ButtonDense backgroundColor="white" variant="outlined">Deploy Package</ButtonDense>
+<Box {ssx} class="local-package-list-container">
+	<Paper class="local-package-list-header" elevation={1}>
+		<Typography variant="th">Local Directory</Typography>
+		<Tooltip>Something Something Local Directory</Tooltip>
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
@@ -93,15 +109,19 @@
 			>
 		{/each}
 	</Paper>
-	<Paper class="package-list-body" square elevation={1}>
-		{#await Packages.getDeployedPackages()}
+	<Paper class="local-package-list-body" square elevation={1}>
+		{#await readPackages()}
 			<div class="no-packages">
-				<Typography color="primary" variant="body1">Searching for Deployed Packages</Typography>
+				<Typography color="primary" variant="body1"
+					>Searching for local Zarf{initString} Packages</Typography
+				>
 			</div>
 		{:then packages}
 			{#if !packages.length}
 				<div class="no-packages">
-					<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
+					<Typography color="blue-200" variant="body1"
+						>No Zarf{initString} Packages found on local system</Typography
+					>
 				</div>
 			{:else}
 				{#each packages as pkg}
@@ -110,27 +130,34 @@
 							<span class="material-symbols-outlined" style="color:var(--success);">
 								check_circle
 							</span>
-							<span>{pkg.name}</span>
+							<span>{pkg.zarfPackage.metadata?.name}</span>
 						</Typography>
 
 						<Typography variant="body2" class="package-table-td version">
 							<ZarfChip>
-								{pkg.data.metadata?.version}
+								{pkg.zarfPackage.metadata?.version}
 							</ZarfChip>
 						</Typography>
 
 						<Typography variant="body2" class="package-table-td tags">
 							<ZarfChip>
-								{pkg.data?.build?.architecture}
+								{pkg.zarfPackage?.build?.architecture}
 							</ZarfChip>
 							<ZarfChip>
-								{pkg.data?.kind}
+								{pkg.zarfPackage.kind}
 							</ZarfChip>
+						</Typography>
+						<Typography variant="body2" class="package-table-td description">
+							{pkg.zarfPackage.metadata?.description}
 						</Typography>
 					</Paper>
 				{/each}
 			{/if}
+		{:catch err}
+			<div class="no-packages">
+				<Typography color="error" variant="body1">{err.message}</Typography>
+			</div>
 		{/await}
 	</Paper>
-	<Paper class="package-list-footer" elevation={1} />
+	<Paper class="local-package-list-footer" elevation={1} />
 </Box>

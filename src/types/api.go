@@ -21,11 +21,12 @@ type RestAPI struct {
 
 // ClusterSummary contains the summary of a cluster for the API.
 type ClusterSummary struct {
-	Reachable bool      `json:"reachable"`
-	HasZarf   bool      `json:"hasZarf"`
-	Distro    string    `json:"distro"`
-	ZarfState ZarfState `json:"zarfState"`
-	Host      string    `json:"host"`
+	Reachable   bool      `json:"reachable"`
+	HasZarf     bool      `json:"hasZarf"`
+	Distro      string    `json:"distro"`
+	ZarfState   ZarfState `json:"zarfState"`
+	Host        string    `json:"host"`
+	K8sRevision string    `json:"k8sRevision"`
 }
 
 // APIZarfPackage represents a ZarfPackage and its path for the API.

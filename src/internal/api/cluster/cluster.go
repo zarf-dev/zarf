@@ -24,25 +24,34 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	var distro string
 	var hasZarf bool
 	var host string
+	var k8sRevision string
 
 	c, err := cluster.NewClusterWithWait(5 * time.Second)
 	reachable = err == nil
 	if reachable {
 		distro, _ = c.Kube.DetectDistro()
-		host = getClusterName(c.Kube)
+		host = c.Kube.RestConfig.Host
 		state, _ = c.LoadZarfState()
 		hasZarf = state.Distro != ""
+		k8sRevision = getServerVersion(c.Kube)
 	}
 
 	data := types.ClusterSummary{
-		Reachable: reachable,
-		HasZarf:   hasZarf,
-		Distro:    distro,
-		ZarfState: state,
-		Host:      host,
+		Reachable:   reachable,
+		HasZarf:     hasZarf,
+		Distro:      distro,
+		ZarfState:   state,
+		Host:        host,
+		K8sRevision: k8sRevision,
 	}
 
 	common.WriteJSONResponse(w, data, http.StatusOK)
+}
+
+func getServerVersion(k *k8s.K8s) string {
+	info, _ := k.Clientset.DiscoveryClient.ServerVersion()
+
+	return info.String()
 }
 
 func getClusterName(k *k8s.K8s) string {

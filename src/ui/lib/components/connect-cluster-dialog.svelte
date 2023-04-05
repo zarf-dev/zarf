@@ -104,7 +104,7 @@
 					cancel
 				</Button>
 				<Button
-					href="/packages"
+					href="/packages?init=true"
 					variant="raised"
 					backgroundColor="grey-300"
 					textColor="text-primary-on-light"

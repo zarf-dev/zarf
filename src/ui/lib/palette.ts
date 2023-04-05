@@ -28,6 +28,9 @@ export const ZarfPalettes: Palettes = {
 			selected: {
 				onDark: 'rgba(255, 255, 255, 0.16)',
 			},
+			active: {
+				'56p': 'rgba(255, 255, 255, 0.56)',
+			},
 		},
 		chip: {
 			color: 'var(--on-surface)',
@@ -68,6 +71,9 @@ export const ZarfPalettes: Palettes = {
 			},
 			selected: {
 				onDark: 'rgba(255, 255, 255, 0.16)',
+			},
+			active: {
+				'56p': 'rgba(255, 255, 255, 0.56)',
 			},
 		},
 		chip: {

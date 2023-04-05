@@ -815,11 +815,12 @@ export interface ZarfPackageVariable {
 }
 
 export interface ClusterSummary {
-    distro:    string;
-    hasZarf:   boolean;
-    host:      string;
-    reachable: boolean;
-    zarfState: ZarfState;
+    distro:      string;
+    hasZarf:     boolean;
+    host:        string;
+    k8sRevision: string;
+    reachable:   boolean;
+    zarfState:   ZarfState;
 }
 
 export interface ZarfState {
@@ -1325,6 +1326,7 @@ const typeMap: any = {
         { json: "distro", js: "distro", typ: "" },
         { json: "hasZarf", js: "hasZarf", typ: true },
         { json: "host", js: "host", typ: "" },
+        { json: "k8sRevision", js: "k8sRevision", typ: "" },
         { json: "reachable", js: "reachable", typ: true },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
