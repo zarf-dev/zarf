@@ -6,7 +6,7 @@ sidebar_position: 1
 
 Zarf offers a comprehensive solution for deploying system software or capabilities while fully disconnected. This is accomplished through the use of a single tarball archive, which includes all necessary components and is defined by a `zarf.yaml` file.
 
-Zarf Packages are built while connected to the internet and to whatever is hosting the dependencies your package definition defined. This allows for the retrieval and storage of defined dependencies within the archive. As a result, the package can be deployed on disconnected systems without requiring a connection to the outside world.
+Zarf Packages are created while you are connected to internet or intranet resources defined in a Zarf package configuration.  This allows these resources to be pulled and stored within a package archive and be deployed on disconnected systems without requiring a connection to the outside world.
 
 The `zarf.yaml` file also defines declarative instructions for the deployment of package capabilities, which are automatically executed on package deployment and are represented in code. This ensures reproducibility across different systems without the need for manual configuration.
 
