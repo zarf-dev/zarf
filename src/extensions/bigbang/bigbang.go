@@ -7,10 +7,9 @@ package bigbang
 import (
 	"fmt"
 	"path"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -24,8 +23,9 @@ import (
 
 // Default location for pulling Big Bang.
 const (
-	bb     = "bigbang"
-	bbRepo = "https://repo1.dso.mil/big-bang/bigbang.git"
+	bb                   = "bigbang"
+	bbRepo               = "https://repo1.dso.mil/big-bang/bigbang.git"
+	bbMinRequiredVersion = "1.54.0"
 )
 
 var tenMins = metav1.Duration{
@@ -43,8 +43,14 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
+	err, validVersionResponse := isValidVersion(cfg.Version)
+
+	if err != nil {
+		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
+	}
+
 	// Make sure the version is valid.
-	if !isValidVersion(cfg.Version) {
+	if !validVersionResponse {
 		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.54.0", cfg.Version)
 	}
 
@@ -227,20 +233,16 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
-func isValidVersion(version string) bool {
-	// Split the version string into its major, minor, and patch components
-	parts := strings.Split(version, ".")
-	if len(parts) != 3 {
-		return false
+func isValidVersion(version string) (error, bool) {
+	s, err := semver.Make(version)
+	minRequired, _ := semver.Make(bbMinRequiredVersion)
+
+	if err != nil {
+		return err, false
 	}
 
-	// Parse the major and minor components as integers.
-	// Ignore errors because we are checking the values later.
-	major, _ := strconv.Atoi(parts[0])
-	minor, _ := strconv.Atoi(parts[1])
-
 	// This extension requires BB 1.54.0 or greater.
-	return major == 1 && minor >= 54 || major > 2
+	return nil, s.GTE(minRequired)
 }
 
 // findBBResources takes a list of yaml objects (as a string) and
