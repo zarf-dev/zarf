@@ -35,7 +35,7 @@ var gitURLs = []string{
 	"https://github.com/defenseunicorns/zarf.helm.git/git-receive-pack",
 }
 
-var badURLs = []string{
+var badGitURLs = []string{
 	"i am not a url at all",
 	"C:\\Users\\zarf",
 }
@@ -102,7 +102,7 @@ func TestGitTransformURLSplitRef(t *testing.T) {
 		assert.Equal(t, expectedResult[idx][1], refPlain)
 	}
 
-	for _, url := range badURLs {
+	for _, url := range badGitURLs {
 		_, _, err := GitTransformURLSplitRef(url)
 		assert.Error(t, err)
 	}
@@ -140,7 +140,7 @@ func TestGitTransformURLtoFolderName(t *testing.T) {
 		assert.Equal(t, expectedResult[idx], repoFolder)
 	}
 
-	for _, url := range badURLs {
+	for _, url := range badGitURLs {
 		_, err := GitTransformURLtoFolderName(url)
 		assert.Error(t, err)
 	}
@@ -178,7 +178,7 @@ func TestGitTransformURLtoRepoName(t *testing.T) {
 		assert.Equal(t, expectedResult[idx], repoName)
 	}
 
-	for _, url := range badURLs {
+	for _, url := range badGitURLs {
 		_, err := GitTransformURLtoRepoName(url)
 		assert.Error(t, err)
 	}
@@ -216,7 +216,7 @@ func TestGitTransformURL(t *testing.T) {
 		assert.Equal(t, expectedResult[idx], repoURL.String())
 	}
 
-	for _, url := range badURLs {
+	for _, url := range badGitURLs {
 		_, err := GitTransformURL("https://gitlab.com", url, "repo-owner")
 		assert.Error(t, err)
 	}
