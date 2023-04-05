@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: helm-no-wait
   description: "Deploys a pod which never becomes ready"
-  version: 0.0.1
 components:
   - name: zarf-helm-no-wait
     required: true

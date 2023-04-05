@@ -50,7 +50,7 @@ func testHelmReleaseName(t *testing.T) {
 func testHelmLocalChart(t *testing.T) {
 	t.Log("E2E: Local Helm chart")
 
-	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s-0.0.1.tar.zst", e2e.arch)
 
 	// Deploy the package.
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
