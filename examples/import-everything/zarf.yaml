@@ -24,22 +24,22 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: echo "⏲️ Preparing things for `zarf package create`..."
+          - cmd: echo "⏲️ Preparing things for 'zarf package create'..."
         after:
-          - cmd: echo "🧹 Cleaning up after `zarf package create`..."
+          - cmd: echo "🧹 Cleaning up after 'zarf package create'..."
       onDeploy:
         before:
-          - cmd: echo "⏲️ Preparing things for `zarf package deploy`..."
+          - cmd: echo "⏲️ Preparing things for 'zarf package deploy'..."
         after:
-          - cmd: echo "🧹 Cleaning up after `zarf package deploy`..."
+          - cmd: echo "🧹 Cleaning up after 'zarf package deploy'..."
       onRemove:
         before:
           - cmd: echo "⏲️ Preparing things for `zarf package remove`..."
         after:
-          - cmd: echo "🧹 Cleaning up after `zarf package remove`..."
+          - cmd: echo "🧹 Cleaning up after 'zarf package remove'..."
         # onFailure and onSuccess actions are available on all actions, but are not used in this example
         onFailure:
-          - cmd: echo "❌ Cleaning up after `zarf package remove` failed..."
+          - cmd: echo "❌ Cleaning up after 'zarf package remove' failed..."
 
   - name: import-component-local
     required: false

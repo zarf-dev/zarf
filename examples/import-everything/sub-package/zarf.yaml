@@ -9,6 +9,6 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: echo "⏲️ Preparing things for `zarf package create`..."
+          - cmd: echo "⏲️ Preparing things for 'zarf package create'..."
         after:
-          - cmd: echo "🧹 Cleaning up after `zarf package create`..."
+          - cmd: echo "🧹 Cleaning up after 'zarf package create'..."

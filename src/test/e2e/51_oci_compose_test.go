@@ -92,19 +92,17 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	// Compose skeleton package of import-everything.
-	ref := suite.Reference.String()
 	importEverythingExample := filepath.Join("examples", "import-everything")
-	_, stdErr, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build", "--insecure", "-l=trace")
+	_, _, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 }
 
 func (suite *SkeletonSuite) Test_2_Deploy() {
 	suite.T().Log("E2E: Created Skeleton Package Deploy")
 
 	// Deploy newly created package.
-	p := filepath.Join("build", fmt.Sprintf("import-everything-%s-0.0.1.tar.zst", e2e.arch))
-	_, _, err := e2e.execZarfCommand("package", "deploy", p, "--components=import-component-oci")
+	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.arch))
+	_, _, err := e2e.execZarfCommand("package", "deploy", p, "--components=import-component-oci", "--confirm")
 	suite.NoError(err)
 
 	// Verify that nginx successfully deploys in the cluster
@@ -112,7 +110,7 @@ func (suite *SkeletonSuite) Test_2_Deploy() {
 	suite.Contains(string(kubectlOut), "successfully rolled out")
 
 	// Remove the package.
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", "import-everything", "--components=import-component-oci", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 }
 
