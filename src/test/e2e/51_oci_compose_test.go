@@ -44,7 +44,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 	err = exec.CmdWithPrint("mkdir", "-p", absDosGames)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), everythingExternal)
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), absDosGames)
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("mkdir", "-p", absNoCode)
