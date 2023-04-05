@@ -41,8 +41,9 @@ func (p *Packager) handlePackagePath() error {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
+		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		return p.handleOciPackage(opts.PackagePath, p.tmp.Base)
+		return p.handleOciPackage(ociURL, p.tmp.Base)
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -136,8 +137,8 @@ func (p *Packager) handleSgetPackage() error {
 }
 
 func (p *Packager) handleOciPackage(url string, out string) error {
-	message.Debug("packager.handleOciPackage()")
-	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))
+	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
