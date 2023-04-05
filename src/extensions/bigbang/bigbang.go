@@ -142,7 +142,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		}
 
 		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the APIService to exist instead of the HelmRelease, which
+		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
