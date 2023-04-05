@@ -6,10 +6,11 @@ package transform
 
 import (
 	"fmt"
-	"hash/crc32"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 const (
@@ -50,9 +51,9 @@ func PipTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
 func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
-	// For further explanation: https://regex101.com/r/bwMkCm/1
+	// For further explanation: https://regex101.com/r/bwMkCm/5
 	// This regex was created with information from https://www.rfc-editor.org/rfc/rfc3986#section-2
-	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.+~%]+?\/[\w\-\.+~%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.+~%]+?)??(?P<package>\/[\w\-\.\?\=,;+~!$'*&%#()\[\]]*?)?$`)
+	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>[a-zA-Z0-9\-\.]+)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.+~%]+?\/[\w\-\.+~%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.+~%]+?)??(?P<fileName>\/[\w\-\.+~%]*)?(?P<query>[\w\-\.\?\=,;+~!$'*&%#()\[\]]*?)?$`)
 
 	matches := genURLRegex.FindStringSubmatch(sourceURL)
 	idx := genURLRegex.SubexpIndex
@@ -62,23 +63,29 @@ func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 		return nil, fmt.Errorf("unable to extract the genericPath from the url %s", sourceURL)
 	}
 
-	packageName := matches[idx("startPath")]
+	fileName := strings.ReplaceAll(matches[idx("fileName")], "/", "")
+	if fileName == "" {
+		fileName = matches[idx("host")]
+	}
+
 	// NOTE: We remove the protocol, port and file name so that https://zarf.dev:443/package/package1.zip and http://zarf.dev/package/package2.zip
 	// resolve to the same "folder" (as they would in real life)
 	sanitizedURL := fmt.Sprintf("%s%s%s", matches[idx("host")], matches[idx("startPath")], matches[idx("midPath")])
 
+	packageName := strings.ReplaceAll(matches[idx("startPath")], "/", "")
+	if packageName == "" {
+		packageName = fileName
+	}
 	// Add crc32 hash of the url to the end of the package name
-	table := crc32.MakeTable(crc32.IEEE)
-	checksum := crc32.Checksum([]byte(sanitizedURL), table)
-	packageName = fmt.Sprintf("%s-%d", strings.ReplaceAll(packageName, "/", ""), checksum)
+	packageNameGlobal := fmt.Sprintf("%s-%d", packageName, utils.GetCRCHash(sanitizedURL))
 
-	version := matches[idx("version")]
+	version := strings.ReplaceAll(matches[idx("version")], "/", "")
 	if version == "" {
-		version = matches[idx("package")]
+		version = fileName
 	}
 
 	// Rebuild the generic URL
-	transformedURL := fmt.Sprintf("%s/generic/%s%s%s", targetBaseURL, packageName, version, matches[idx("package")])
+	transformedURL := fmt.Sprintf("%s/generic/%s/%s/%s", targetBaseURL, packageNameGlobal, version, fileName)
 
 	url, err := url.Parse(transformedURL)
 	if err != nil {

@@ -131,19 +131,17 @@ func TestGenTransformURL(t *testing.T) {
 		"https://gitlab.com/project/generic/apipackages-2561175711/packageVersion/packageName",
 		"https://gitlab.com/project/generic/apipackages-2265319408/packageVersion/filename",
 		"https://gitlab.com/project/generic/apipackages-4040139506/0.0.1/superGeneric.tar.gz",
-		"https://gitlab.com/project/generic/-2052577494/archive.zip/archive.zip",
-		"https://gitlab.com/project/generic/-2052577494/archive.zip/archive.zip",
+		"https://gitlab.com/project/generic/archive.zip-2052577494/archive.zip/archive.zip",
+		"https://gitlab.com/project/generic/archive.zip-2052577494/archive.zip/archive.zip",
 		"https://gitlab.com/project/generic/apipackages-764706626/some-package-name/file.1.4.4.tar.gz",
 		"https://gitlab.com/project/generic/facebookzstd-1475713874/v1.4.4/zstd-1.4.4.tar.gz",
 		"https://gitlab.com/project/generic/mirrorsome-package-release-1448769245/archive/someshasum9318490392.tar.gz",
 		"https://gitlab.com/project/generic/mirrorsome-package-release-2849990407/tags/file.zip",
 		"https://gitlab.com/project/generic/~and-1138178232/loves/me",
 		"https://gitlab.com/project/generic/didyou-2239567090/this/Foo.aspx",
-
-		// TODO: (@WSTARR) These edge cases are weird
-		"https://gitlab.com/project/generic/accordingto-29577836/spec/",
-		"http://i.end.in.nothing.com",
-		"http://i.end.in.slash.com/",
+		"https://gitlab.com/project/generic/accordingto-29577836/spec/this.is.legal.too",
+		"https://gitlab.com/project/generic/i.end.in.nothing.com-2766891503/i.end.in.nothing.com/i.end.in.nothing.com",
+		"https://gitlab.com/project/generic/i.end.in.slash.com-1566625415/i.end.in.slash.com/i.end.in.slash.com",
 	}
 
 	for idx, url := range urls {
