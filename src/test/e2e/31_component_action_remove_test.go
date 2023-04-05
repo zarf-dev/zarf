@@ -16,13 +16,6 @@ func TestComponentActionRemove(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 
-	removeArtifacts := []string{
-		"test-remove-before.txt",
-		"test-remove-after.txt",
-	}
-	e2e.cleanFiles(removeArtifacts...)
-	defer e2e.cleanFiles(removeArtifacts...)
-
 	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.arch)
 
 	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-remove")
@@ -30,8 +23,8 @@ func TestComponentActionRemove(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", path, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
-
-	for _, artifact := range removeArtifacts {
-		require.FileExists(t, artifact)
-	}
+	require.Contains(t, stdErr, "NAME")
+	require.Contains(t, stdErr, "DATA")
+	require.Contains(t, stdErr, "remove-test-configmap")
+	require.Contains(t, stdErr, "Not Found")
 }

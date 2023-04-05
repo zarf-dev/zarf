@@ -57,12 +57,21 @@ func TestComponentActions(t *testing.T) {
 	/* Deploy */
 	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.arch)
 	// Deploy the simple script that should pass.
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", path, "--confirm", "--components=on-deploy-and-remove")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the deploy artifacts were created.
 	for _, artifact := range deployArtifacts {
 		require.FileExists(t, artifact)
+	}
+
+	// Remove the simple script that should pass.
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", path, "--confirm", "--components=on-deploy-and-remove")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Check that the deploy artifacts were created.
+	for _, artifact := range deployArtifacts {
+		require.NoFileExists(t, artifact)
 	}
 
 	// Deploy the simple action that should fail the timeout.
