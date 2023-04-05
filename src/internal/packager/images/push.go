@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/logs"
 )
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
@@ -51,6 +52,12 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 	spinner := message.NewProgressSpinner("Storing images in the zarf registry")
 	defer spinner.Stop()
+
+	if message.GetLogLevel() >= message.DebugLevel {
+		spinner.EnablePreserveWrites()
+		logs.Warn.SetOutput(spinner)
+		logs.Progress.SetOutput(spinner)
+	}
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
