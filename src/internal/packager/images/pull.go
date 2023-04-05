@@ -49,6 +49,7 @@ func (i *ImgConfig) PullAll() error {
 	defer spinner.Stop()
 
 	if message.GetLogLevel() >= message.DebugLevel {
+		spinner.EnablePreserveWrites()
 		logs.Warn.SetOutput(spinner)
 		logs.Progress.SetOutput(spinner)
 	}

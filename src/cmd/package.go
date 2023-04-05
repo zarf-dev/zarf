@@ -175,13 +175,14 @@ var packageRemoveCmd = &cobra.Command{
 				message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
 			}
 
-			var pkgConfig types.ZarfPackage
+			var pkg types.ZarfPackage
 			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
+			if err := utils.ReadYaml(configPath, &pkg); err != nil {
 				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
 			}
 
-			pkgName = pkgConfig.Metadata.Name
+			pkgName = pkg.Metadata.Name
+			pkgConfig.Pkg = pkg
 		}
 
 		// Configure the packager
