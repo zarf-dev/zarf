@@ -240,7 +240,7 @@ func isValidVersion(version string) bool {
 	minor, _ := strconv.Atoi(parts[1])
 
 	// This extension requires BB 1.54.0 or greater.
-	return major >= 1 && minor >= 54
+	return major == 1 && minor >= 54 || major > 2
 }
 
 // findBBResources takes a list of yaml objects (as a string) and
