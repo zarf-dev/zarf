@@ -50,6 +50,7 @@ func (i *ImgConfig) PullAll() error {
 
 	if message.GetLogLevel() >= message.DebugLevel {
 		logs.Warn.SetOutput(spinner)
+		spinner.EnablePreserveWrites()
 		logs.Progress.SetOutput(spinner)
 	}
 
