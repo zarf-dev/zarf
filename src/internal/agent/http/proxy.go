@@ -195,5 +195,5 @@ func isPipUserAgent(userAgent string) bool {
 }
 
 func isNpmUserAgent(userAgent string) bool {
-	return strings.HasPrefix(userAgent, "npm") || strings.HasPrefix(userAgent, "pnpm") || strings.HasPrefix(userAgent, "yarn")
+	return strings.HasPrefix(userAgent, "npm") || strings.HasPrefix(userAgent, "pnpm") || strings.HasPrefix(userAgent, "yarn") || strings.HasPrefix(userAgent, "bun")
 }

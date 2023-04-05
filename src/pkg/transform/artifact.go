@@ -41,16 +41,16 @@ func NpmTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 
 // PipTransformURL finds the pip API path on a given URL and transforms that to align with the offline registry.
 func PipTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
-	// For further explanation: https://regex101.com/r/lreZiD/1
-	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L210
-	pipURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)(?P<pipPath>(\/(simple|files\/)[\/\w\-\.\?\=&%#]*?))?$`)
+	// For further explanation: https://regex101.com/r/lreZiD/2
+	// This regex was created with information from https://github.com/go-gitea/gitea/blob/0e58201d1a8247561809d832eb8f576e05e5d26d/routers/api/packages/api.go#L267
+	pipURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)(?P<pipPath>\/((simple|files\/)[\/\w\-\.\?\=&%#]*?)?)?$`)
 
 	return transformRegistryPath(targetBaseURL, sourceURL, pipURLRegex, "pipPath", "pypi")
 }
 
 // GenTransformURL finds the generic API path on a given URL and transforms that to align with the offline registry.
 func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
-	// For further explanation: https://regex101.com/r/qcg6Gr/3
+	// For further explanation: https://regex101.com/r/bwMkCm/1
 	// This regex was created with information from https://www.rfc-editor.org/rfc/rfc3986#section-2
 	genURLRegex := regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<host>.+?)(?P<port>:[0-9]+?)?(?P<startPath>\/[\w\-\.+~%]+?\/[\w\-\.+~%]+?)?(?P<midPath>\/.+?)??(?P<version>\/[\w\-\.+~%]+?)??(?P<package>\/[\w\-\.\?\=,;+~!$'*&%#()\[\]]*?)?$`)
 
