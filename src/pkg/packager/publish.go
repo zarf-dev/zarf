@@ -175,7 +175,15 @@ func (p *Packager) publish(ref registry.Reference) error {
 	if strings.HasSuffix(ref.Reference, "-skeleton") {
 		message.Info("Example importing components from this package:")
 		fmt.Println()
-		message.Infof("  - name: import-%s\n    import:\n      componentName:%s\n      url: oci://%s\n", p.cfg.Pkg.Components[0].Name, p.cfg.Pkg.Components[0].Name, strings.TrimSuffix(ref.String(), "-skeleton"))
+		ex := []types.ZarfComponent{}
+		ex = append(ex, types.ZarfComponent{
+			Name: fmt.Sprintf("import-%s", p.cfg.Pkg.Components[0].Name),
+			Import: types.ZarfComponentImport{
+				ComponentName: p.cfg.Pkg.Components[0].Name,
+				URL:           fmt.Sprintf("oci://%s", strings.TrimSuffix(ref.String(), "-skeleton")),
+			},
+		})
+		utils.ColorPrintYAML(ex)
 	} else {
 		flags := ""
 		if config.CommonOptions.Insecure {

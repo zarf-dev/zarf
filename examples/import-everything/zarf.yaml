@@ -65,6 +65,7 @@ components:
   - name: import-component-oci
     required: false
     import:
+      name: zarf-helm-no-wait
       url: oci://localhost:5000/helm-no-wait:0.0.1
 
   - name: file-imports
