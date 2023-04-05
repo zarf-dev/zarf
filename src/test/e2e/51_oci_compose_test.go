@@ -100,7 +100,7 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	// Compose skeleton package of import-everything.
 	ref := suite.Reference.String()
 	importEverythingExample := filepath.Join("examples", "import-everything")
-	_, stdErr, err := e2e.execZarfCommand("package", "create", importEverythingExample, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 }
