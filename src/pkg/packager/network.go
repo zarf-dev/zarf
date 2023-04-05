@@ -41,6 +41,7 @@ func (p *Packager) handlePackagePath() error {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
+		p.cfg.DeployOpts.PackagePath = p.tmp.Base
 		return p.handleOciPackage(opts.PackagePath, p.tmp.Base)
 	}
 
