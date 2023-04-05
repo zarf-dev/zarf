@@ -54,9 +54,11 @@ func GitTransformURLtoFolderName(sourceURL string) (string, error) {
 	}
 
 	repoName := get("repo")
-	// NOTE: For folders we use the full URL so that different refs are kept in different folders on disk to avoid conflicts
+	// NOTE: For folders we use the full URL (without any protocol stuff) so that different refs are kept in different folders on disk to avoid conflicts
 	// Add crc32 hash of the repoName to the end of the repo
-	checksum := utils.GetCRCHash(sourceURL)
+	gitURL := fmt.Sprintf("%s%s/%s%s%s", get("proto"), get("hostPath"), get("repo"), get("git"), get("atRef"))
+
+	checksum := utils.GetCRCHash(gitURL)
 
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
