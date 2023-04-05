@@ -44,7 +44,7 @@ require (
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/kubectl v0.26.3
 	oras.land/oras-go/v2 v2.0.2
-	sigs.k8s.io/kustomize/api v0.13.2
+	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -328,7 +328,7 @@ require (
 	github.com/skeema/knownhosts v1.1.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
-	github.com/spdx/tools-golang v0.5.0-rc1 // indirect
+	github.com/spdx/tools-golang v0.5.0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
