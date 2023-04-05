@@ -9,7 +9,7 @@ components:
       Aggregates logs from different containers and presents them in a web dashboard.
       Recommended if no other logging stack is deployed in the cluster.
     images:
-      - docker.io/grafana/promtail:2.7.2
+      - docker.io/grafana/promtail:2.7.4
       - grafana/grafana:8.3.5
       - grafana/loki:2.6.1
       - quay.io/kiwigrid/k8s-sidecar:1.19.2
