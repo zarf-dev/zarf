@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body {background-color: black;}
+pre {
+	font-weight: normal;
+	color: #bbb;
+	white-space: -moz-pre-wrap;
+	white-space: -o-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+b {font-weight: normal}
+b.BOLD {color: #fff}
+b.ITA {font-style: italic}
+b.UND {text-decoration: underline}
+b.STR {text-decoration: line-through}
+b.UNDSTR {text-decoration: underline line-through}
+b.BLK {color: #000000}
+b.RED {color: #aa0000}
+b.GRN {color: #00aa00}
+b.YEL {color: #aa5500}
+b.BLU {color: #0000aa}
+b.MAG {color: #aa00aa}
+b.CYN {color: #00aaaa}
+b.WHI {color: #aaaaaa}
+b.HIK {color: #555555}
+b.HIR {color: #ff5555}
+b.HIG {color: #55ff55}
+b.HIY {color: #ffff55}
+b.HIB {color: #5555ff}
+b.HIM {color: #ff55ff}
+b.HIC {color: #55ffff}
+b.HIW {color: #ffffff}
+b.BBLK {background-color: #000000}
+b.BRED {background-color: #aa0000}
+b.BGRN {background-color: #00aa00}
+b.BYEL {background-color: #aa5500}
+b.BBLU {background-color: #0000aa}
+b.BMAG {background-color: #aa00aa}
+b.BCYN {background-color: #00aaaa}
+b.BWHI {background-color: #aaaaaa}
+</style>
+</head>
+<body>
+<pre>
+<b class="GRN">? </b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#55ffff;">Yes</span>
+<b class=YEL></b>
+<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+<b style="color:#55ffff;">name</b>:<b style="color:#ff55ff;"> k3s</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">only</b>:
+<b style="color:#55ffff;">  localOS</b>:<b style="color:#ff55ff;"> linux</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">cluster</b>:
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">actions</b>:
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">onDeploy</b>:
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">defaults</b>:
+<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 5</b>
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">before</b>:
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 0</b>
+<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> ./zarf internal is-valid-hostname</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"</b>
+<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">after</b>:
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl daemon-reload</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl enable k3s</b>
+<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl start k3s</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">files</b>:
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/zarf-clean-k3s.sh</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /opt/zarf/zarf-clean-k3s.sh</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>: true
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/k3s.service</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /etc/systemd/system/k3s.service</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /etc/systemd/system/multi-user.target.wants/k3s.service</b>
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> ca398d82fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7b9a91448a</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /usr/sbin/k3s</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>:<b style="color:#ff55ff;"> true</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/kubctl</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/ctr</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/crictl</b>
+<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> 6736bf9fa4d5754d60b0508bafb2f888a70cb99a203a3a1617a919ca4ee74034</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /var/lib/rancher/k3s/agent/images/k3s.tar.zst</b>
+
+<b class=MAG>*** REQUIRES ROOT *** Install K3s, certified Kubernetes distribution built for IoT &amp; Edge computing</b>
+<b class=MAG>K3s provides the cluster need for Zarf running in Appliance Mode as well as can host a low-resource</b>
+<b class=MAG>Gitops Service if not using an existing Kubernetes platform.</b>
+
+<b class="GRN">? </b><b class="WHI">Deploy the k3s component?</b> (y/N) <span style="color:#55ffff;">Yes</span>
+<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+
+<b style="color:#555555;"></b></pre>
+</body>
+</html>
