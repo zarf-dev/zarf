@@ -44,7 +44,7 @@ require (
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/kubectl v0.26.3
 	oras.land/oras-go/v2 v2.0.2
-	sigs.k8s.io/kustomize/api v0.13.2
+	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
 )
