@@ -18,7 +18,7 @@ require (
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/docker/cli v23.0.2+incompatible
 	github.com/fatih/color v1.15.0
-	github.com/fluxcd/helm-controller/api v0.32.0
+	github.com/fluxcd/helm-controller/api v0.32.1
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.6.1
