@@ -34,17 +34,17 @@ var (
 func (suite *SkeletonSuite) SetupSuite() {
 	err := exec.CmdWithPrint("mkdir", "-p", everythingExternal)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join(importEverything, "*"), everythingExternal)
+	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("mkdir", "-p", absEverything)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join(importEverything, "*"), absEverything)
+	err = exec.CmdWithPrint("cp", "-r", importEverything, absEverything)
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("mkdir", "-p", absDosGames)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games", "*"), everythingExternal)
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), everythingExternal)
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("mkdir", "-p", absNoCode)
