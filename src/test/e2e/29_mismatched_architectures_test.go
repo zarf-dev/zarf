@@ -14,7 +14,7 @@ import (
 )
 
 // TestMismatchedArchitectures ensures that zarf produces an error
-// when the init package architecture doesn't match the target system architecture.
+// when the package architecture doesn't match the target cluster architecture.
 func TestMismatchedArchitectures(t *testing.T) {
 	t.Log("E2E: Zarf init with mismatched architectures")
 	e2e.setupWithCluster(t)
@@ -32,8 +32,8 @@ func TestMismatchedArchitectures(t *testing.T) {
 
 	var (
 		testPackagesPath            string = "src/test/test-packages/29-mistmatched-architectures"
-		deployPackagePath           string = filepath.Join(testPackagesPath, "deploy")
-		initPackagePath             string = filepath.Join(testPackagesPath, "init")
+		deployPackagePath           string = filepath.Join(testPackagesPath, "deploy/")
+		initPackagePath             string = filepath.Join(testPackagesPath, "init/")
 		deployPackageName           string = "mismatched-arch"
 		initPackageVersion          string = "UnknownVersion"
 		mismatchedDeployPackageName string = fmt.Sprintf("build/zarf-package-%s-%s.tar.zst", deployPackageName, mismatchedArch)
