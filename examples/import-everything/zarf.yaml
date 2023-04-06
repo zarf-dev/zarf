@@ -67,7 +67,7 @@ components:
     import:
       # name is optional, if not provided the name of the component will be used to import
       name: demo-helm-local-chart
-      url: oci://localhost:666/test-helm-local-chart:0.0.1
+      url: oci://localhost:5000/test-helm-local-chart:0.0.1
 
   - name: file-imports
     required: false
