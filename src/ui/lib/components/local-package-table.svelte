@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { Packages } from '$lib/api';
-	import { Paper, Typography, Box, type SSX } from '@ui';
+	import { Paper, Typography, Box, Button, type SSX } from '@ui';
 	import Tooltip from './tooltip.svelte';
 	import ZarfChip from './zarf-chip.svelte';
 	import { page } from '$app/stores';
 	import type { APIZarfPackage } from '$lib/api-types';
+	import { pkgStore } from '$lib/store';
+	import { goto } from '$app/navigation';
 
 	const initPkg = $page.url.searchParams.get('init');
 
 	async function readPackages(): Promise<APIZarfPackage[]> {
-		const paths = initPkg ? await Packages.findInit() : await Packages.findInHome();
+		const paths = initPkg ? await Packages.findInit() : await Packages.find();
 		const packages = paths.map((p) => Packages.read(p));
 		return Promise.all(packages);
 	}
@@ -134,15 +136,19 @@
 						</Typography>
 
 						<Typography variant="body2" class="package-table-td version">
-							<ZarfChip>
-								{pkg.zarfPackage.metadata?.version}
-							</ZarfChip>
+							{#if pkg.zarfPackage?.metadata?.version}
+								<ZarfChip>
+									{pkg.zarfPackage.metadata.version}
+								</ZarfChip>
+							{/if}
 						</Typography>
 
 						<Typography variant="body2" class="package-table-td tags">
-							<ZarfChip>
-								{pkg.zarfPackage?.build?.architecture}
-							</ZarfChip>
+							{#if pkg.zarfPackage?.build?.architecture}
+								<ZarfChip>
+									{pkg.zarfPackage.build.architecture}
+								</ZarfChip>
+							{/if}
 							<ZarfChip>
 								{pkg.zarfPackage.kind}
 							</ZarfChip>
@@ -150,6 +156,18 @@
 						<Typography variant="body2" class="package-table-td description">
 							{pkg.zarfPackage.metadata?.description}
 						</Typography>
+						<Box class="package-table-td">
+							<Button
+								value={pkg.zarfPackage.metadata?.name}
+								backgroundColor="on-surface"
+								on:click={() => {
+									pkgStore.set(pkg);
+									goto(`/packages/${pkg.zarfPackage.metadata?.name}/configure`);
+								}}
+							>
+								deploy
+							</Button>
+						</Box>
 					</Paper>
 				{/each}
 			{/if}

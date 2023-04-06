@@ -82,7 +82,9 @@
 <Box {ssx} class="package-list-container">
 	<Paper class="package-list-header" elevation={1}>
 		<Typography variant="th">Packages</Typography>
-		<ButtonDense backgroundColor="white" variant="outlined">Deploy Package</ButtonDense>
+		<ButtonDense backgroundColor="white" variant="outlined" href="/packages">
+			Deploy Package
+		</ButtonDense>
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
@@ -130,6 +132,10 @@
 					</Paper>
 				{/each}
 			{/if}
+		{:catch err}
+			<div class="no-packages">
+				<Typography color="primary" variant="body1">{err.message}</Typography>
+			</div>
 		{/await}
 	</Paper>
 	<Paper class="package-list-footer" elevation={1} />

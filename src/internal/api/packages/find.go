@@ -14,12 +14,10 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-var packagePattern = regexp.MustCompile(`zarf-package-.*\.tar`)
-var initPattern = regexp.MustCompile(packager.GetInitPackageName(""))
+var packagePattern = regexp.MustCompile(`zarf-package.+\.tar\.zst$`)
+var initPattern = regexp.MustCompile(`(?i).*init.*\.tar\.zst$`)
 
 // Find returns all packages anywhere down the directory tree of the working directory.
 func Find(w http.ResponseWriter, _ *http.Request) {
@@ -36,7 +34,7 @@ func FindInHome(w http.ResponseWriter, _ *http.Request) {
 // FindInitPackage returns all init packages anywhere down the directory tree of the users home directory.
 func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("packages.FindInitPackage()")
-	findPackage(initPattern, w, os.Getwd)
+	findPackage(initPattern, w, os.UserHomeDir)
 }
 
 func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (string, error)) {
@@ -46,7 +44,7 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 		return
 	}
 
-	files, err := utils.RecursiveFileList(targetDir, pattern)
+	files, err := recursiveFileListSkipPermissionErrors(targetDir, pattern)
 	if err != nil || len(files) == 0 {
 		pkgNotFoundMsg := fmt.Sprintf("Unable to locate the package: %s", pattern.String())
 		message.ErrorWebf(err, w, pkgNotFoundMsg)
@@ -56,13 +54,12 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-// Slow but actually crawls all directories ignoring any file/directory it doesn't have permission to open
-func recursiveFileListThatWorks(dir string, pattern *regexp.Regexp) (files []string, err error) {
+func recursiveFileListSkipPermissionErrors(dir string, pattern *regexp.Regexp) (files []string, err error) {
 	const dotcharater = 46
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		// Return errors
 		if err != nil {
-			// skip permission errors
+			// skip files and dirs we don't have permission to view.
 			if os.IsPermission(err) {
 				return nil
 			}
