@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { Paper, Typography, Box, type SSX } from '@ui';
-	import { clusterStore } from '$lib/store';
+	import { Typography, Box, type SSX } from '@ui';
+	import { deployedPkgStore, clusterStore } from '$lib/store';
+
+	let numPackages = 0;
 
 	const ssx: SSX = {
 		$self: {
@@ -41,8 +43,26 @@
 					},
 				},
 			},
+			'& .metadata-values': {
+				display: 'flex',
+				flexDirection: 'column',
+				justifyContent: 'center',
+				alignItems: 'center',
+			},
 		},
 	};
+
+	$: {
+		if (!$deployedPkgStore?.pkgs) {
+			numPackages = 0;
+		} else {
+			numPackages = $deployedPkgStore.pkgs?.length;
+		}
+	}
+	$: $clusterStore && console.log(JSON.stringify($clusterStore.rawConfig.contexts, null, 2));
+	$: currentClusterName = $clusterStore?.rawConfig['current-context'];
+	$: currentCluster =
+		(currentClusterName && $clusterStore?.rawConfig.contexts[currentClusterName]) || undefined;
 </script>
 
 <Box class="cluster-info-table" {ssx}>
@@ -56,7 +76,7 @@
 				check_circle
 			</span>
 			<Typography class="cluster-name" variant="inherit" element="span">
-				&nbsp;{$clusterStore.host}
+				&nbsp;{currentClusterName}
 			</Typography>
 		</Typography>
 	</div>
@@ -70,9 +90,9 @@
 				<Typography variant="inherit">K8s Rev:</Typography>
 			</Typography>
 			<Typography element="div" variant="caption" class="label-values" style="font-weight:500;">
-				<Typography variant="inherit">Ready?</Typography>
-				<Typography variant="inherit">User?</Typography>
-				<Typography variant="inherit">{$clusterStore.k8sRevision}</Typography>
+				<Typography variant="inherit">Ready</Typography>
+				<Typography variant="inherit">{currentCluster?.user || ''}</Typography>
+				<Typography variant="inherit">{$clusterStore?.k8sRevision}</Typography>
 			</Typography>
 		</Box>
 	</div>
@@ -93,5 +113,9 @@
 	<div class="cluster-info-table-divider" />
 	<div class="cluster-info-table-column">
 		<Typography variant="overline">metadata</Typography>
+		<div class="metadata-values">
+			<Typography variant="h4">{numPackages}</Typography>
+			<Typography variant="caption" color="text-secondary-on-dark">Packages</Typography>
+		</div>
 	</div>
 </Box>

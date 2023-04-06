@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "k8s.io/client-go/tools/clientcmd/api"
+
 // RestAPI is the struct that is used to marshal/unmarshal the top-level API objects.
 type RestAPI struct {
 	ZarfPackage          ZarfPackage          `json:"zarfPackage"`
@@ -21,12 +23,12 @@ type RestAPI struct {
 
 // ClusterSummary contains the summary of a cluster for the API.
 type ClusterSummary struct {
-	Reachable   bool      `json:"reachable"`
-	HasZarf     bool      `json:"hasZarf"`
-	Distro      string    `json:"distro"`
-	ZarfState   ZarfState `json:"zarfState"`
-	Host        string    `json:"host"`
-	K8sRevision string    `json:"k8sRevision"`
+	Reachable   bool        `json:"reachable"`
+	HasZarf     bool        `json:"hasZarf"`
+	Distro      string      `json:"distro"`
+	ZarfState   ZarfState   `json:"zarfState"`
+	K8sRevision string      `json:"k8sRevision"`
+	RawConfig   *api.Config `json:"rawConfig"`
 }
 
 // APIZarfPackage represents a ZarfPackage and its path for the API.

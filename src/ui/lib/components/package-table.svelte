@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Packages } from '$lib/api';
 	import { Paper, Typography, Box, type SSX } from '@ui';
 	import ButtonDense from './button-dense.svelte';
 	import ZarfChip from './zarf-chip.svelte';
+	import { deployedPkgStore } from '$lib/store';
 
 	const ssx: SSX = {
 		$self: {
@@ -96,47 +96,47 @@
 		{/each}
 	</Paper>
 	<Paper class="package-list-body" square elevation={1}>
-		{#await Packages.getDeployedPackages()}
+		{#if !$deployedPkgStore}
 			<div class="no-packages">
 				<Typography color="primary" variant="body1">Searching for Deployed Packages</Typography>
 			</div>
-		{:then packages}
-			{#if !packages.length}
-				<div class="no-packages">
-					<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
-				</div>
-			{:else}
-				{#each packages as pkg}
-					<Paper class="package-table-row" square elevation={1}>
-						<Typography variant="body2" class="package-table-td name" element="span">
-							<span class="material-symbols-outlined" style="color:var(--success);">
-								check_circle
-							</span>
-							<span>{pkg.name}</span>
-						</Typography>
+		{:else if $deployedPkgStore.err}
+			<div class="no-packages">
+				<Typography color="primary" variant="body1">{$deployedPkgStore.err.message}</Typography>
+			</div>
+		{:else if !$deployedPkgStore.pkgs || !$deployedPkgStore.pkgs.length}
+			<div class="no-packages">
+				<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
+			</div>
+		{:else}
+			{#each $deployedPkgStore.pkgs as pkg}
+				<Paper class="package-table-row" square elevation={1}>
+					<Typography variant="body2" class="package-table-td name" element="span">
+						<span class="material-symbols-outlined" style="color:var(--success);">
+							check_circle
+						</span>
+						<span>{pkg.name}</span>
+					</Typography>
 
-						<Typography variant="body2" class="package-table-td version">
+					<Typography variant="body2" class="package-table-td version">
+						{#if pkg.data.metadata?.version}
 							<ZarfChip>
 								{pkg.data.metadata?.version}
 							</ZarfChip>
-						</Typography>
+						{/if}
+					</Typography>
 
-						<Typography variant="body2" class="package-table-td tags">
-							<ZarfChip>
-								{pkg.data?.build?.architecture}
-							</ZarfChip>
-							<ZarfChip>
-								{pkg.data?.kind}
-							</ZarfChip>
-						</Typography>
-					</Paper>
-				{/each}
-			{/if}
-		{:catch err}
-			<div class="no-packages">
-				<Typography color="primary" variant="body1">{err.message}</Typography>
-			</div>
-		{/await}
+					<Typography variant="body2" class="package-table-td tags">
+						<ZarfChip>
+							{pkg.data?.build?.architecture}
+						</ZarfChip>
+						<ZarfChip>
+							{pkg.data?.kind}
+						</ZarfChip>
+					</Typography>
+				</Paper>
+			{/each}
+		{/if}
 	</Paper>
 	<Paper class="package-list-footer" elevation={1} />
 </Box>

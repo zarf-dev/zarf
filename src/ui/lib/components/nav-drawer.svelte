@@ -38,8 +38,10 @@
 		ssx={{ $self: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 1rem' } }}
 	>
 		<Typography variant="h5">Cluster</Typography>
-		{#if $clusterStore?.hasZarf && $clusterStore?.host}
-			<Typography variant="caption" color="text-secondary-on-dark">{$clusterStore.host}</Typography>
+		{#if $clusterStore?.hasZarf && $clusterStore?.rawConfig}
+			<Typography variant="caption" color="text-secondary-on-dark"
+				>{$clusterStore.rawConfig['current-context']}</Typography
+			>
 		{:else}
 			<Typography
 				variant="caption"

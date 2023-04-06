@@ -1,33 +1,47 @@
 <script lang="ts">
-	import { Cluster } from '$lib/api';
-	import type { ClusterSummary } from '$lib/api-types';
+	import { Cluster, Packages } from '$lib/api';
+	import type { ClusterSummary, DeployedPackage } from '$lib/api-types';
 	import ClusterInfo from '$lib/components/cluster-info.svelte';
 	import PackageTable from '$lib/components/package-table.svelte';
-	import { clusterStore } from '$lib/store';
+	import { clusterStore, deployedPkgStore } from '$lib/store';
 	import { onMount } from 'svelte';
-
+	const POLL_TIME = 5000;
 	let clusterPoll: NodeJS.Timer;
+	let deployedPkgPoll: NodeJS.Timer;
 
-	async function getClusterSummary(): Promise<void> {
+	async function storeClusterSummary(): Promise<void> {
 		// Try to get the cluster summary
 		Cluster.summary()
 			// If success update the store
 			.then((val: ClusterSummary) => {
 				if (val.distro) {
 					clusterStore.set(val);
-					clearInterval(clusterPoll);
-				}
-				if (val.hasZarf) {
 				}
 			})
-			.catch();
+			.catch(() => clusterStore.set(undefined));
+	}
+	async function storeDeployedPkgs(): Promise<void> {
+		Packages.getDeployedPackages()
+			.then((pkgs: DeployedPackage[]) => {
+				deployedPkgStore.set({ pkgs });
+			})
+			.catch((err) => {
+				if ($clusterStore) {
+					deployedPkgStore.set({ err });
+				} else {
+					deployedPkgStore.set({ pkgs: [] });
+				}
+			});
 	}
 
 	onMount(() => {
-		getClusterSummary();
-		clusterPoll = setInterval(getClusterSummary, 5000);
+		storeClusterSummary();
+		storeDeployedPkgs();
+		clusterPoll = setInterval(storeClusterSummary, POLL_TIME);
+		deployedPkgPoll = setInterval(storeDeployedPkgs, POLL_TIME);
 		return () => {
 			clearInterval(clusterPoll);
+			clearInterval(deployedPkgPoll);
 		};
 	});
 </script>
