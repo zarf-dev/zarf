@@ -45,8 +45,8 @@ components:
     required: false
     import:
       # highlight-next-line
-      path: sub-package
-      name: jeff
+      path: foo
+      name: baz
 
   - name: import-component-local-relative
     required: false

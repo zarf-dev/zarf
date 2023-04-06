@@ -5,7 +5,12 @@
 package types
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/types/extensions"
+	goyaml "github.com/goccy/go-yaml"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -63,7 +68,7 @@ type ZarfComponent struct {
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
-func (c ZarfComponent) LocalPaths() []string {
+func (c ZarfComponent) LocalPaths(base string) []string {
 	local := []string{}
 
 	for _, file := range c.Files {
@@ -84,9 +89,17 @@ func (c ZarfComponent) LocalPaths() []string {
 		}
 	}
 
-	local = append(local, c.Import.LocalPaths()...)
+	local = append(local, c.Import.LocalPaths(c.Name)...)
 
 	local = append(local, c.Extensions.LocalPaths()...)
+
+	if base != "" {
+		for i, path := range local {
+			if !filepath.IsAbs(strings.TrimPrefix(path, "file://")) {
+				local[i] = filepath.Join(base, path)
+			}
+		}
+	}
 
 	return local
 }
@@ -275,12 +288,30 @@ type ZarfComponentImport struct {
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
-	URL  string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 }
 
-func (zci ZarfComponentImport) LocalPaths() []string {
-	if isLocal(zci.Path) {
-		return []string{zci.Path}
+func (zci ZarfComponentImport) LocalPaths(componentName string) []string {
+	if zci.Path != "" {
+		cname := componentName
+		if zci.ComponentName != "" {
+			cname = zci.ComponentName
+		}
+		zyp := filepath.Join(zci.Path, "zarf.yaml")
+		file, err := os.ReadFile(zyp)
+		if err != nil {
+			return nil
+		}
+		pkg := ZarfPackage{}
+		err = goyaml.Unmarshal(file, &pkg)
+		if err != nil {
+			return nil
+		}
+		for _, c := range pkg.Components {
+			if c.Name == cname {
+				return c.LocalPaths(zci.Path)
+			}
+		}
 	}
 	return nil
 }

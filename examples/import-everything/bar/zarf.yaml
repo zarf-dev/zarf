@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: bar
+  version: 0.0.1
+
+components:
+  - name: baz
+    required: true
+    files:
+      - source: ../files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt

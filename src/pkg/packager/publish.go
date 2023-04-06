@@ -332,7 +332,7 @@ func (p *Packager) loadSkeleton() error {
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-		local := component.LocalPaths()
+		local := component.LocalPaths("")
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
 		tmp := filepath.Join(p.tmp.Components, component.Name)
