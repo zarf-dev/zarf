@@ -11,7 +11,7 @@
 	const initPkg = $page.url.searchParams.get('init');
 
 	async function readPackages(): Promise<APIZarfPackage[]> {
-		const paths = initPkg ? await Packages.findInit() : await Packages.find();
+		const paths = initPkg ? await Packages.findInit() : await Packages.findInHome();
 		const packages = paths.map((p) => Packages.read(p));
 		return Promise.all(packages);
 	}

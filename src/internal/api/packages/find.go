@@ -16,7 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-var packagePattern = regexp.MustCompile(`zarf-package.+\.tar\.zst$`)
+var packagePattern = regexp.MustCompile(`zarf-package.*.tar\.zst$`)
 var initPattern = regexp.MustCompile(`(?i).*init.*\.tar\.zst$`)
 
 // Find returns all packages anywhere down the directory tree of the working directory.
@@ -73,7 +73,7 @@ func recursiveFileListSkipPermissionErrors(dir string, pattern *regexp.Regexp) (
 
 		if !d.IsDir() {
 			if pattern != nil {
-				if len(pattern.FindStringIndex(path)) > 0 {
+				if pattern.MatchString(d.Name()) {
 					files = append(files, path)
 				}
 			} else {

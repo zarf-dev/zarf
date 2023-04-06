@@ -25,6 +25,12 @@
 			'& .inset-shadow': {
 				boxShadow: 'inset 0px -1px 0px rgba(255, 255, 255, 0.12)',
 			},
+			'& .nav-drawer-header': {
+				display: 'flex',
+				flexDirection: 'column',
+				gap: '4px',
+				padding: '0px 1rem',
+			},
 		},
 	};
 
@@ -34,19 +40,18 @@
 </script>
 
 <Paper {ssx} square backgroundColor="global-nav" color="on-global-nav">
-	<Box
-		ssx={{ $self: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 1rem' } }}
-	>
+	<Box class="nav-drawer-header">
 		<Typography variant="h5">Cluster</Typography>
 		{#if $clusterStore?.hasZarf && $clusterStore?.rawConfig}
-			<Typography variant="caption" color="text-secondary-on-dark"
-				>{$clusterStore.rawConfig['current-context']}</Typography
-			>
+			<Typography variant="caption" color="text-secondary-on-dark">
+				{$clusterStore.rawConfig['current-context']}
+			</Typography>
 		{:else}
 			<Typography
 				variant="caption"
 				color="text-secondary-on-dark"
 				style="display: flex;align-items:center;"
+				class="drawer-cluster-not-found"
 			>
 				<span class="material-symbols-outlined" style="color:var(--warning); font-size:20px;">
 					warning
