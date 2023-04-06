@@ -1,7 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: mismatched-arch
-  description: Zarf package with different architecture than target cluster for tests
-
-components:
-  - name: mismatched-arch

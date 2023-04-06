@@ -30,22 +30,19 @@ func TestMismatchedArchitectures(t *testing.T) {
 	}
 
 	var (
-		deployPackagePath           = "src/test/test-packages/29-mismatched-architectures/deploy/"
-		initPackagePath             = "src/test/test-packages/29-mismatched-architectures/init/"
-		deployPackageName           = "mismatched-arch"
 		initPackageVersion          = "UnknownVersion"
-		mismatchedDeployPackageName = fmt.Sprintf("build/zarf-package-%s-%s.tar.zst", deployPackageName, mismatchedArch)
-		mismatchedInitPackageName   = fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
+		mismatchedDeployPackageName = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
+		mismatchedInitPackageName   = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
 		expectedErrorMessage        = fmt.Sprintf(lang.CmdPackageDeployValidateArchitectureErr, mismatchedArch, e2e.arch)
 	)
 
 	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", initPackagePath, "--architecture", mismatchedArch, "--confirm")
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(mismatchedInitPackageName)
 
 	// Build deploy package with different arch than the cluster arch.
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", deployPackagePath, "--architecture", mismatchedArch, "--confirm")
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "examples/dos-games/", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(mismatchedDeployPackageName)
 
