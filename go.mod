@@ -13,26 +13,26 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20230323161519-d7551b7f46f5
-	github.com/anchore/syft v0.76.0
+	github.com/anchore/syft v0.76.1
 	github.com/derailed/k9s v0.27.3
 	github.com/distribution/distribution v2.8.1+incompatible
-	github.com/docker/cli v23.0.2+incompatible
+	github.com/docker/cli v23.0.3+incompatible
 	github.com/fatih/color v1.15.0
 	github.com/fluxcd/helm-controller/api v0.32.1
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-logr/logr v1.2.4
-	github.com/goccy/go-yaml v1.10.1
+	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-containerregistry v0.14.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v23.0.2+incompatible
+	github.com/moby/moby v23.0.3+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/otiai10/copy v1.9.0
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.57
+	github.com/pterm/pterm v0.12.58
 	github.com/sigstore/cosign v1.13.1
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
@@ -152,7 +152,7 @@ require (
 	github.com/derailed/tview v0.8.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v23.0.2+incompatible // indirect
+	github.com/docker/docker v23.0.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -328,7 +328,7 @@ require (
 	github.com/skeema/knownhosts v1.1.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
-	github.com/spdx/tools-golang v0.5.0-rc1 // indirect
+	github.com/spdx/tools-golang v0.5.0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
