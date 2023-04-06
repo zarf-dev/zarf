@@ -445,10 +445,10 @@ func (p *Packager) validatePackageChecksums() error {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	components := p.getValidComponents()
-
 	var clusterArch string
-	var err error
+
+	components := p.getValidComponents()
+	err := fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 
 	// Iterate over the components to determine if we're deploying an init package with k3s,
 	// and set appliance mode to true if we are.
@@ -458,21 +458,27 @@ func (p *Packager) validatePackageArchitecture() error {
 		}
 	}
 
-	// If we're deploying an appliance mode init package, set the cluster arch to the machine we're running on.
-	// If we're not deploying an appliance mode init package, attempt to query existing cluster for the arch.
+	// If we're deploying an appliance mode init package, set the cluster arch to the arch of the machine we're running on.
 	if p.cfg.InitOpts.ApplianceMode {
 		clusterArch = runtime.GOARCH
-	} else {
+
+		if p.arch != clusterArch {
+			return err
+		}
+	}
+
+	// If k8s is being used, query the cluster for the architecture.
+	if p.cluster != nil {
 		c := cluster.NewClusterOrDie()
 
 		clusterArch, err = c.Kube.GetArchitecture()
 		if err != nil {
 			return err
 		}
-	}
 
-	if p.arch != clusterArch {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		if p.arch != clusterArch {
+			return err
+		}
 	}
 
 	return nil
