@@ -9,7 +9,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/blang/semver/v4"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -51,7 +51,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Make sure the version is valid.
 	if !validVersionResponse {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.54.0", cfg.Version)
+		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least %s", cfg.Version, bbMinRequiredVersion)
 	}
 
 	// Print the banner for Big Bang.
@@ -234,15 +234,19 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 // isValidVersion check if the version is 1.54.0 or greater.
 func isValidVersion(version string) (error, bool) {
-	s, err := semver.Make(version)
-	minRequired, _ := semver.Make(bbMinRequiredVersion)
+	specifiedVersion, err := semver.NewVersion(version)
 
 	if err != nil {
 		return err, false
 	}
 
+	minRequiredVersion, _ := semver.NewVersion(bbMinRequiredVersion)
+
+	// Evaluating pre-releases too
+	c, _ := semver.NewConstraint(fmt.Sprintf(">= %s-0", minRequiredVersion))
+
 	// This extension requires BB 1.54.0 or greater.
-	return nil, s.GTE(minRequired)
+	return nil, c.Check(specifiedVersion)
 }
 
 // findBBResources takes a list of yaml objects (as a string) and

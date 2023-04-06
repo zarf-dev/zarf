@@ -21,9 +21,14 @@ func TestRequiredBigBangVersions(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, vv, true)
 
+	// Support for Big Bang 2.0.0
+	err, vv = isValidVersion("2.0.0")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, vv, true)
+
 	// Fail on non-semantic versions
-	err, vv = isValidVersion("1.57")
-	Expected := "No Major.Minor.Patch elements found"
+	err, vv = isValidVersion("1.57b")
+	Expected := "Invalid Semantic Version"
 	if err.Error() != Expected {
 		t.Errorf("Error actual = %v, and Expected = %v.", err, Expected)
 	}
