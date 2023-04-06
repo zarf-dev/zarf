@@ -6,7 +6,6 @@ package test
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -31,14 +30,13 @@ func TestMismatchedArchitectures(t *testing.T) {
 	}
 
 	var (
-		testPackagesPath            string = "src/test/test-packages/29-mistmatched-architectures"
-		deployPackagePath           string = filepath.Join(testPackagesPath, "deploy/")
-		initPackagePath             string = filepath.Join(testPackagesPath, "init/")
-		deployPackageName           string = "mismatched-arch"
-		initPackageVersion          string = "UnknownVersion"
-		mismatchedDeployPackageName string = fmt.Sprintf("build/zarf-package-%s-%s.tar.zst", deployPackageName, mismatchedArch)
-		mismatchedInitPackageName   string = fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage        string = fmt.Sprintf(lang.CmdPackageDeployValidateArchitectureErr, mismatchedArch, e2e.arch)
+		deployPackagePath           = "src/test/test-packages/29-mistmatched-architectures/deploy/"
+		initPackagePath             = "src/test/test-packages/29-mistmatched-architectures/init/"
+		deployPackageName           = "mismatched-arch"
+		initPackageVersion          = "UnknownVersion"
+		mismatchedDeployPackageName = fmt.Sprintf("build/zarf-package-%s-%s.tar.zst", deployPackageName, mismatchedArch)
+		mismatchedInitPackageName   = fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
+		expectedErrorMessage        = fmt.Sprintf(lang.CmdPackageDeployValidateArchitectureErr, mismatchedArch, e2e.arch)
 	)
 
 	// Build init package with different arch than the cluster arch.
