@@ -42,12 +42,12 @@ func TestMismatchedArchitectures(t *testing.T) {
 	)
 
 	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "--architecture", mismatchedArch, "--confirm", initPackagePath)
+	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", initPackagePath, "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(mismatchedInitPackageName)
 
 	// Build deploy package with different arch than the cluster arch.
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", "--architecture", mismatchedArch, "--confirm", deployPackagePath)
+	stdOut, stdErr, err = e2e.execZarfCommand("package", "create", deployPackagePath, "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.cleanFiles(mismatchedDeployPackageName)
 
