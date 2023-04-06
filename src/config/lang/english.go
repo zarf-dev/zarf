@@ -117,12 +117,11 @@ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME
 zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 `
 
-	CmdInitErrFlags              = "Invalid command flags were provided."
-	CmdInitErrDownload           = "failed to download the init package: %s"
-	CmdInitErrValidateGit        = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
-	CmdInitErrValidateRegistry   = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided "
-	CmdInitErrVerifyArchitecture = "this init package architecture is %s, but the target system has the %s architecture"
-	CmdInitErrUnableCreateCache  = "Unable to create the cache directory: %s"
+	CmdInitErrFlags             = "Invalid command flags were provided."
+	CmdInitErrDownload          = "failed to download the init package: %s"
+	CmdInitErrValidateGit       = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
+	CmdInitErrValidateRegistry  = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided "
+	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
@@ -211,12 +210,13 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
-	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
-	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
-	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
-	CmdPackageDeployFlagPublicKey  = "Path to public key file for validating signed packages"
+	CmdPackageDeployFlagConfirm             = "Confirm package deployment without prompting"
+	CmdPackageDeployFlagSet                 = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents          = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum              = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget                = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagPublicKey           = "Path to public key file for validating signed packages"
+	CmdPackageDeployValidateArchitectureErr = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"

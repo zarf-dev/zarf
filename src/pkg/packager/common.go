@@ -12,16 +12,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -437,6 +440,41 @@ func (p *Packager) validatePackageChecksums() error {
 	}
 
 	message.Successf("All of the checksums matched!")
+	return nil
+}
+
+// validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
+func (p *Packager) validatePackageArchitecture() error {
+	components := p.getValidComponents()
+
+	var clusterArch string
+	var err error
+
+	// Iterate over the components to determine if we're deploying an init package with k3s,
+	// and set appliance mode to true if we are.
+	for _, component := range components {
+		if component.Name == k8s.DistroIsK3s && p.cfg.IsInitConfig {
+			p.cfg.InitOpts.ApplianceMode = true
+		}
+	}
+
+	// If we're deploying an appliance mode init package, set the cluster arch to the machine we're running on.
+	// If we're not deploying an appliance mode init package, attempt to query existing cluster for the arch.
+	if p.cfg.InitOpts.ApplianceMode {
+		clusterArch = runtime.GOARCH
+	} else {
+		c := cluster.NewClusterOrDie()
+
+		clusterArch, err = c.Kube.GetArchitecture()
+		if err != nil {
+			return err
+		}
+	}
+
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+	}
+
 	return nil
 }
 

@@ -51,6 +51,10 @@ func (p *Packager) Deploy() error {
 		p.cfg.IsInitConfig = true
 	}
 
+	if err := p.validatePackageArchitecture(); err != nil {
+		return err
+	}
+
 	// Confirm the overall package deployment
 	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")

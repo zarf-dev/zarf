@@ -1,0 +1,7 @@
+kind: ZarfInitConfig
+metadata:
+  name: mismatched-arch
+  description: Zarf init package with different architecture than target cluster for tests
+
+components:
+  - name: mismatched-arch

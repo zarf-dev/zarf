@@ -10,13 +10,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -48,16 +46,6 @@ var initCmd = &cobra.Command{
 		if pkgConfig.DeployOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
-
-		// Check that the init package architecture is the same as the target system architecture.
-		var initPackageArch string
-		if strings.Contains(initPackageName, "amd64") {
-			initPackageArch = "amd64"
-		}
-		if strings.Contains(initPackageName, "arm64") {
-			initPackageArch = "arm64"
-		}
-		verifyArchitecture(initPackageArch)
 
 		// Ensure uppercase keys from viper
 		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
@@ -147,31 +135,6 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 	}
 
 	return nil
-}
-
-// verifyArchitecture verifies that the init package architecture matches the target system architecture.
-func verifyArchitecture(initPackageArch string) {
-	components := pkgConfig.DeployOpts.Components
-
-	var systemArch string
-	var err error
-
-	// If we're not running in appliance mode (deploying k3s), query the existing cluster for the architecture.
-	// If we are running in appliance mode, get the architecture of the machine we're running on.
-	if !strings.Contains(components, "k3s") {
-		c := cluster.NewClusterOrDie()
-
-		systemArch, err = c.Kube.GetArchitecture()
-		if err != nil {
-			message.Fatal(err, err.Error())
-		}
-	} else {
-		systemArch = runtime.GOARCH
-	}
-
-	if initPackageArch != systemArch {
-		message.Fatalf(err, lang.CmdInitErrVerifyArchitecture, initPackageArch, systemArch)
-	}
 }
 
 func validateInitFlags() error {
