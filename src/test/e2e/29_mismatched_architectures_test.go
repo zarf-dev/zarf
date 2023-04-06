@@ -30,8 +30,8 @@ func TestMismatchedArchitectures(t *testing.T) {
 	}
 
 	var (
-		deployPackagePath           = "src/test/test-packages/29-mistmatched-architectures/deploy/"
-		initPackagePath             = "src/test/test-packages/29-mistmatched-architectures/init/"
+		deployPackagePath           = "src/test/test-packages/29-mistmatched-architectures-deploy/"
+		initPackagePath             = "src/test/test-packages/29-mistmatched-architectures-init/"
 		deployPackageName           = "mismatched-arch"
 		initPackageVersion          = "UnknownVersion"
 		mismatchedDeployPackageName = fmt.Sprintf("build/zarf-package-%s-%s.tar.zst", deployPackageName, mismatchedArch)
