@@ -181,6 +181,7 @@ func (p *Packager) handleOciPackage() error {
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
+	copyOpts.MaxMetadataBytes = 12 * 1024 * 1024
 
 	_, err = oras.Copy(src.Context, src.Repository, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
