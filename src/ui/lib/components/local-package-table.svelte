@@ -136,9 +136,13 @@
 						</Typography>
 
 						<Typography variant="body2" class="package-table-td version">
-							{#if pkg.zarfPackage?.metadata?.version}
+							{#if !initPkg && pkg.zarfPackage?.metadata?.version}
 								<ZarfChip>
 									{pkg.zarfPackage.metadata.version}
+								</ZarfChip>
+							{:else if initPkg && pkg.zarfPackage?.build?.version}
+								<ZarfChip>
+									{pkg.zarfPackage.build.version}
 								</ZarfChip>
 							{/if}
 						</Typography>

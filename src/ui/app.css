@@ -27,34 +27,6 @@ body > div {
 	background-color: var(--mdc-theme-surface);
 }
 
-/* Layout | Page */
-.page {
-	padding: 2rem 10rem;
-	display: flex;
-	flex-direction: column;
-	gap: 2rem;
-}
-@media (max-width: 900px) {
-	.page {
-		padding: 2rem 4rem;
-	}
-}
-@media (max-width: 600px) {
-	.page {
-		padding: 2rem 1rem;
-	}
-}
-
-.page .actionButtonsContainer {
-	display: flex;
-	justify-content: space-between;
-}
-.page .page-section {
-	gap: 4px;
-	display: flex;
-	flex-direction: column;
-}
-
 /* Shorthand Classes */
 .invisible {
 	visibility: hidden;

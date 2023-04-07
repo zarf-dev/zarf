@@ -63,6 +63,7 @@ export const ZarfPalettes: Palettes = {
 			},
 			secondary: {
 				onDark: 'rgba(255, 255, 255, 0.7)',
+				onLight: 'rgba(0, 0, 0, 0.87)',
 			},
 		},
 		action: {

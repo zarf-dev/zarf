@@ -42,7 +42,7 @@
 			insecure: false,
 			// "as" will cause the obj to satisfy the type
 			// it is missing "shasum"
-		} as ZarfDeployOptions,
+		} as unknown as ZarfDeployOptions,
 	};
 
 	if (isInitPkg) {

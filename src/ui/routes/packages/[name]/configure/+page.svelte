@@ -4,57 +4,68 @@
  -->
 <script lang="ts">
 	import {
-		AccordionGroup,
-		Icon,
 		PackageDetailsCard as PackageDetails,
 		PackageComponentAccordion as PackageComponent,
 		PackageSectionHeader as SectionHeader,
 		Divider,
 	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
-	import { Button, Typography } from '@ui';
+	import { Button, Paper, Typography, AccordionGroup, currentTheme, type SSX } from '@ui';
 	import { page } from '$app/stores';
+	import BuildProvidence from '$lib/components/build-providence.svelte';
+	import DeploymentActions from '$lib/components/deployment-actions.svelte';
 </script>
 
 <svelte:head>
 	<title>Configure</title>
 </svelte:head>
-<section class="page-header">
-	<Typography variant="h5">Configure Package Deployment</Typography>
-</section>
+<Typography variant="h5">Configure Deployment</Typography>
 
-<section class="page-section">
-	<SectionHeader>
-		<Typography variant="h5" slot="title">Package Details</Typography>
-		<span slot="tooltip">At-a-glance simple metadata about the package</span>
-	</SectionHeader>
-	<PackageDetails pkg={$pkgStore.zarfPackage} />
-</section>
+<SectionHeader>
+	Package Details
+	<span slot="tooltip">At-a-glance simple metadata about the package</span>
+</SectionHeader>
+<PackageDetails pkg={$pkgStore.zarfPackage} />
 
-<section class="page-section">
-	<SectionHeader>
-		<Typography variant="h5" slot="title">Components</Typography>
-	</SectionHeader>
-	<Typography variant="caption" element="p">
-		<span aria-hidden="true">
-			<Icon variant="component" class="invisible" />
-		</span>
-		The following components will be deployed into the cluster. Optional components that are not selected
-		will not be deployed.
-	</Typography>
+<SectionHeader icon="secured_layer">
+	Supply Chain
+	<span slot="tooltip"
+		>Supply chain is used to help determine if a package can be trusted. It includes declarative
+		data regarding how this package was built. Build providence includes metadata about the build
+		and where the package was created. SBOM includes information on all of the code, images, and
+		resources contained in this package.
+	</span>
+</SectionHeader>
+<BuildProvidence build={$pkgStore.zarfPackage.build} />
 
-	<AccordionGroup>
-		{#each $pkgStore.zarfPackage.components as component, idx}
-			<PackageComponent {idx} {component} readOnly={false} />
-		{/each}
-	</AccordionGroup>
-</section>
+<SectionHeader
+	>Components
+	<span slot="tooltip">A set of defined functionality and resources that build up a package.</span>
+</SectionHeader>
+
+<AccordionGroup elevation={1}>
+	{#each $pkgStore.zarfPackage.components as component, idx}
+		<PackageComponent {idx} {component} readOnly={false} />
+	{/each}
+</AccordionGroup>
 
 <Divider />
 
-<section class="actionButtonsContainer" aria-label="action buttons">
-	<Button href="/" variant="outlined" color="secondary">cancel deployment</Button>
-	<Button href={`/packages/${$page.params.name}/review`} variant="raised" color="secondary">
+<DeploymentActions>
+	<Button
+		href="/"
+		variant="outlined"
+		color="secondary"
+		backgroundColor={$currentTheme === 'light' ? 'black' : 'grey-300'}
+	>
+		cancel deployment
+	</Button>
+	<Button
+		href={`/packages/${$page.params.name}/review`}
+		variant="raised"
+		backgroundColor="grey-300"
+		textColor="black"
+	>
 		review deployment
 	</Button>
-</section>
+</DeploymentActions>

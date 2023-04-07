@@ -22,7 +22,7 @@
 	class={computedClass}
 >
 	<slot name="leading-icon" />
-	<Typography element="span" variant="zarf-chip-typogrpahy">
+	<Typography element="span" variant="zarf-chip-typography">
 		<slot />
 	</Typography>
 	<slot name="trailing-icon" />

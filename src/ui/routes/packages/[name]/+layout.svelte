@@ -3,8 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Stepper, Typography } from '@ui';
-	import { page } from '$app/stores';
+	import { Typography } from '@ui';
 	import { pkgComponentDeployStore, pkgStore, clusterStore } from '$lib/store';
 
 	import { goto } from '$app/navigation';
@@ -31,7 +30,7 @@
 	}
 </script>
 
-{#if $clusterStore.hasZarf == false && $pkgStore.zarfPackage.kind != 'ZarfInitConfig'}
+{#if !$clusterStore?.hasZarf && $pkgStore.zarfPackage.kind != 'ZarfInitConfig'}
 	<div class="warning-banner">
 		<Typography variant="body1"
 			>WARNING: You are deploying a package without an initialized Zarf cluster</Typography
@@ -39,44 +38,11 @@
 	</div>
 {/if}
 
-<section class="page">
-	<div class="deploy-stepper-container">
-		<Stepper
-			color={'on-background'}
-			orientation="horizontal"
-			steps={[
-				{
-					title: 'Configure',
-					iconContent: $page.route.id?.endsWith('/configure') ? '1' : undefined,
-					disabled: !$page.route.id?.endsWith('/configure'),
-					variant: 'primary',
-				},
-				{
-					title: 'Review',
-					iconContent: !$page.route.id?.endsWith('/deploy') ? '2' : undefined,
-					disabled: !$page.route.id?.endsWith('/review'),
-					variant: 'primary',
-				},
-				{
-					title: 'Deploy',
-					iconContent: '3',
-					disabled: !$page.route.id?.endsWith('/deploy'),
-					variant: 'primary',
-				},
-			]}
-		/>
-	</div>
-	{#if $pkgStore}
-		<slot />
-	{/if}
-</section>
+{#if $pkgStore}
+	<slot />
+{/if}
 
 <style>
-	.deploy-stepper-container {
-		max-width: 600px;
-		margin: 0 auto;
-		width: 100%;
-	}
 	.warning-banner {
 		width: 100%;
 		display: flex;
