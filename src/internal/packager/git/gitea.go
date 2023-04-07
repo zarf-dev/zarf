@@ -13,9 +13,18 @@ import (
 
 	netHttp "net/http"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
+
+// CreateTokenResponse is the response given from creating a token in Gitea
+type CreateTokenResponse struct {
+	ID             int64  `json:"id"`
+	Name           string `json:"name"`
+	Sha1           string `json:"sha1"`
+	TokenLastEight string `json:"token_last_eight"`
+}
 
 // CreateReadOnlyUser uses the Gitea API to create a non-admin Zarf user.
 func (g *Git) CreateReadOnlyUser() error {
@@ -102,24 +111,72 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
-func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
-	message.Debugf("git.addReadOnlyUserToRepo()")
+// CreatePackageRegistryToken uses the Gitea API to create a package registry token.
+func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
+	message.Debugf("git.CreatePackageRegistryToken()")
 
-	// Add the readonly user to the repo
-	addColabBody := map[string]string{
-		"permission": "read",
-	}
-	addColabData, err := json.Marshal(addColabBody)
+	// Establish a git tunnel to send the repo
+	tunnel, err := cluster.NewZarfTunnel()
 	if err != nil {
-		return err
+		return CreateTokenResponse{}, err
+	}
+	tunnel.Connect(cluster.ZarfGit, false)
+	defer tunnel.Close()
+
+	tunnelURL := tunnel.Endpoint()
+
+	// Determine if the package token already exists
+	getTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
+	getTokensRequest, _ := netHttp.NewRequest("GET", getTokensEndpoint, nil)
+	out, err := g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("GET %s:\n%s", getTokensEndpoint, string(out))
+	if err != nil {
+		return CreateTokenResponse{}, err
 	}
 
-	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
-	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
-	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
-	return err
+	hasPackageToken := false
+	var tokens []map[string]interface{}
+	err = json.Unmarshal(out, &tokens)
+	if err != nil {
+		return CreateTokenResponse{}, err
+	}
+
+	for _, token := range tokens {
+		if token["name"] == config.ZarfArtifactTokenName {
+			hasPackageToken = true
+		}
+	}
+
+	if hasPackageToken {
+		// Delete the existing token to be replaced
+		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfArtifactTokenName)
+		deleteTokensRequest, _ := netHttp.NewRequest("DELETE", deleteTokensEndpoint, nil)
+		out, err := g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		message.Debugf("DELETE %s:\n%s", deleteTokensEndpoint, string(out))
+		if err != nil {
+			return CreateTokenResponse{}, err
+		}
+	}
+
+	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
+	createTokensBody := map[string]interface{}{
+		"name": config.ZarfArtifactTokenName,
+	}
+	createTokensData, _ := json.Marshal(createTokensBody)
+	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
+	out, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("POST %s:\n%s", createTokensEndpoint, string(out))
+	if err != nil {
+		return CreateTokenResponse{}, err
+	}
+
+	createTokenResponse := CreateTokenResponse{}
+	err = json.Unmarshal(out, &createTokenResponse)
+	if err != nil {
+		return CreateTokenResponse{}, err
+	}
+
+	return createTokenResponse, nil
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
@@ -146,4 +203,24 @@ func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([
 	}
 
 	return responseBody, nil
+}
+
+func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
+	message.Debugf("git.addReadOnlyUserToRepo()")
+
+	// Add the readonly user to the repo
+	addColabBody := map[string]string{
+		"permission": "read",
+	}
+	addColabData, err := json.Marshal(addColabBody)
+	if err != nil {
+		return err
+	}
+
+	// Send API request to add a user as a read-only collaborator to a repo
+	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
+	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
+	out, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
+	return err
 }
