@@ -820,7 +820,8 @@ export interface ZarfMetadata {
      */
     vendor?: string;
     /**
-     * Generic string to track the package version by a package author
+     * Generic string set by a package author to track the package version (Note:
+     * ZarfInitConfigs will always be versioned to the CLIVersion they were created with)
      */
     version?: string;
     /**

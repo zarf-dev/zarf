@@ -753,7 +753,7 @@
         },
         "version": {
           "type": "string",
-          "description": "Generic string to track the package version by a package author"
+          "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"
         },
         "url": {
           "type": "string",
