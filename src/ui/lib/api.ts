@@ -41,6 +41,7 @@ const Packages = {
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
+	deployStream: () => http.deployStream<boolean>('/packages/deploy-stream'),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
 };
 
