@@ -24,30 +24,77 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
-	if p.cluster == nil {
-		p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-	}
-
-	// Get the secret for the deployed package
-	secretName := config.ZarfPackagePrefix + packageName
-	packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
-	if err != nil {
-		return fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
-	}
-
-	// Get the list of components the package had deployed
-	deployedPackage := types.DeployedPackage{}
-	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
-	if err != nil {
-		return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
-	}
-
 	// If components were provided; just remove the things we were asked to remove
 	requestedComponents := strings.Split(p.cfg.DeployOpts.Components, ",")
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
+
+	// Determine if we need the cluster
+	requiresCluster := false
+
+	// If we have package components check them for images, charts, manifests, etc
+	for _, component := range p.cfg.Pkg.Components {
+		// Flip requested based on if this is a partial removal
+		requested := !partialRemove
+
+		if utils.SliceContains(requestedComponents, component.Name) {
+			requested = true
+		}
+
+		if requested {
+			hasImages := len(component.Images) > 0
+			hasCharts := len(component.Charts) > 0
+			hasManifests := len(component.Manifests) > 0
+			hasRepos := len(component.Repos) > 0
+			hasDataInjections := len(component.DataInjections) > 0
+
+			if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+				requiresCluster = true
+			}
+		}
+	}
+
+	// If we don't have a package defined we will need to pull it from the cluster
+	if len(p.cfg.Pkg.Components) < 1 {
+		requiresCluster = true
+	}
+
+	// Get the secret for the deployed package
+	deployedPackage := types.DeployedPackage{}
+	secretName := config.ZarfPackagePrefix + packageName
+
+	if requiresCluster {
+		// If we need the cluster, connect to it and pull the package secret
+		if p.cluster == nil {
+			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			if err != nil {
+				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
+		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
+		if err != nil {
+			return fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
+		}
+
+		// Get the list of components the package had deployed
+		err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
+		if err != nil {
+			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
+		}
+	} else {
+		// If we do not need the cluster, create a deployed components object based on the info we have
+		deployedPackage.Name = packageName
+		deployedPackage.Data = p.cfg.Pkg
+		if partialRemove {
+			for _, r := range requestedComponents {
+				deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: r})
+			}
+		} else {
+			for _, c := range p.cfg.Pkg.Components {
+				deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: c.Name})
+			}
+		}
+	}
 
 	for _, c := range utils.Reverse(deployedPackage.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
@@ -64,16 +111,19 @@ func (p *Packager) Remove(packageName string) (err error) {
 }
 
 func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, secretName string) {
-	// Save the new secret with the removed components removed from the secret
-	newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespace, secretName, corev1.SecretTypeOpaque)
-	newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
+	// Only attempt to update the package secret if we are actually connected to a cluster
+	if p.cluster != nil {
+		// Save the new secret with the removed components removed from the secret
+		newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespace, secretName, corev1.SecretTypeOpaque)
+		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
 
-	newPackageSecretData, _ := json.Marshal(deployedPackage)
-	newPackageSecret.Data["data"] = newPackageSecretData
+		newPackageSecretData, _ := json.Marshal(deployedPackage)
+		newPackageSecret.Data["data"] = newPackageSecretData
 
-	err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
-	if err != nil {
-		message.Warnf("Unable to update the %s package secret: %#v", secretName, err)
+		err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
+		if err != nil {
+			message.Warnf("Unable to update the %s package secret: %#v", secretName, err)
+		}
 	}
 }
 
@@ -114,7 +164,6 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 			return t.ChartName == chart.ChartName
 		})
 		p.updatePackageSecret(deployedPackage, secretName)
-
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
@@ -132,7 +181,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		return t.Name == c.Name
 	})
 
-	if len(deployedPackage.DeployedComponents) == 0 {
+	if len(deployedPackage.DeployedComponents) == 0 && p.cluster != nil {
 		// All the installed components were deleted, therefore this package is no longer actually deployed
 		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
 		if err != nil {
