@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the webhook.
+// Package http provides a http server for the webhook and proxy.
 package http
 
 import (
@@ -12,8 +12,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// NewServer creates and return a http.Server.
-func NewServer(port string) *http.Server {
+// NewAdmissionServer creates an http.Server for the mutating webhook admission handler.
+func NewAdmissionServer(port string) *http.Server {
 	message.Debugf("http.NewServer(%s)", port)
 
 	// Instances hooks
@@ -30,5 +30,26 @@ func NewServer(port string) *http.Server {
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: mux,
+	}
+}
+
+// NewProxyServer creates and returns an http proxy server.
+func NewProxyServer(port string) *http.Server {
+	message.Debugf("http.NewHTTPProxy(%s)", port)
+
+	mux := http.NewServeMux()
+	mux.Handle("/healthz", healthz())
+	mux.Handle("/", ProxyHandler())
+
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: mux,
+	}
+}
+
+func healthz() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
 	}
 }

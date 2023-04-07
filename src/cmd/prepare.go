@@ -13,9 +13,9 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -45,8 +45,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		gitCfg := git.New(pkgConfig.InitOpts.GitServer)
-		processedText := gitCfg.MutateGitURLsInText(text)
+		processedText := transform.MutateGitURLsInText(pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Ask the user before this destructive action
 		confirm := false
