@@ -37,6 +37,7 @@
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
 		"xterm": "^5.1.0",
+		"xterm-addon-fit": "^0.7.0",
 		"yaml": "2.2.1"
 	},
 	"devDependencies": {

@@ -5,10 +5,12 @@
 package packages
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	globalConfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
@@ -50,34 +52,33 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 }
 
 func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		message.ErrorWebf(err, w, "Error reading stdout: %v", err)
-		return
-	}
-	pterm.SetDefaultOutput(writer)
+	pr, pw, _ := os.Pipe()
+
+	pterm.SetDefaultOutput(pw)
 	pterm.DisableStyling()
+
+	scanner := bufio.NewScanner(pr)
 	done := r.Context().Done()
 
-	buf := make([]byte, 1024)
 	for {
 		select {
 		case (<-done):
-			pterm.SetDefaultOutput(os.Stdout)
+			pterm.SetDefaultOutput(os.Stderr)
 			pterm.EnableStyling()
 			return
 		default:
-			n, _ := reader.Read(buf)
-			if err != nil {
+			n := scanner.Scan()
+			if err := scanner.Err(); err != nil {
 				message.ErrorWebf(err, w, "Error reading stdout: %v", err)
 				return
 			}
-			if n > 0 {
-				fmt.Fprintf(w, "data: %s\n\n", string(buf[:n]))
+			if n {
+				trimmed := strings.TrimSpace(scanner.Text())
+				fmt.Fprintf(w, "data: %s\n\n", trimmed)
 				w.(http.Flusher).Flush()
 			}
 		}

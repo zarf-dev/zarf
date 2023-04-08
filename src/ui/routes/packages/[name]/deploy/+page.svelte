@@ -13,13 +13,13 @@
 	} from './deploy-utils';
 	import { onMount } from 'svelte';
 	import { Packages } from '$lib/api';
-	import { Dialog, Stepper, Typography } from '@ui';
+	import { Dialog, Stepper, Typography, Paper, type StepProps } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
 	import 'xterm/css/xterm.css';
 	import { Terminal } from 'xterm';
+	import { FitAddon } from 'xterm-addon-fit';
 
 	const POLL_TIME = 5000;
 
@@ -87,14 +87,17 @@
 
 	onMount(() => {
 		const deployStream = Packages.deployStream();
-		const term = new Terminal({ disableStdin: true, convertEol: true });
+		const term = new Terminal({ disableStdin: true, convertEol: true, customGlyphs: true });
+		const fitAddon = new FitAddon();
+		term.loadAddon(fitAddon);
+
 		const termElement = document.getElementById('terminal');
 		if (termElement) {
 			term.open(termElement);
+			fitAddon.fit();
 		}
 		deployStream.addEventListener('message', (e: MessageEvent<string>) => {
 			term.writeln(e.data);
-			term.writeln('');
 		});
 		deployStream.addEventListener('error', (e) => {
 			console.log(JSON.stringify(e));
@@ -163,7 +166,7 @@
 <style>
 	.deployment-steps {
 		display: flex;
-		justify-content: center;
+		justify-content: space-evenly;
 	}
 	.success-dialog {
 		display: flex;
@@ -179,5 +182,10 @@
 	.zarf-logo {
 		width: 64px;
 		height: 62.67px;
+	}
+
+	#terminal {
+		width: 751px;
+		height: 688px;
 	}
 </style>

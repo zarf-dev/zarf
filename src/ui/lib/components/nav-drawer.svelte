@@ -4,6 +4,8 @@
 	import { clusterStore } from '$lib/store';
 	import { onMount } from 'svelte';
 	let path = '';
+	import { page } from '$app/stores';
+
 	const ssx: SSX = {
 		$self: {
 			width: '16rem',
@@ -34,12 +36,11 @@
 		},
 	};
 
-	onMount(() => {
-		path = window.location.pathname;
-	});
+	$: visible = $page.url.href.includes('packages');
+	$: style = (visible && 'visibility:hidden;') || '';
 </script>
 
-<Paper {ssx} square backgroundColor="global-nav" color="on-global-nav">
+<Paper {ssx} square backgroundColor="global-nav" color="on-global-nav" {style}>
 	<Box class="nav-drawer-header">
 		<Typography variant="h5">Cluster</Typography>
 		{#if $clusterStore?.hasZarf && $clusterStore?.rawConfig}
@@ -61,9 +62,7 @@
 		{/if}
 	</Box>
 	<Box class="nav-drawer-section">
-		<NavLink variant="body1" href="/" selected={path === '/' || path.includes('/packages')}>
-			Packages
-		</NavLink>
+		<NavLink variant="body1" href="/" selected={$page.route.id === '/'}>Packages</NavLink>
 	</Box>
 	<Box class="nav-drawer-section inset-shadow">
 		<Typography color="text-secondary-on-dark">Tools</Typography>
