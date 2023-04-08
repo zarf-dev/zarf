@@ -13,7 +13,7 @@
 	} from './deploy-utils';
 	import { onMount } from 'svelte';
 	import { Packages } from '$lib/api';
-	import { Dialog, Stepper, Typography, Paper, type StepProps } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
@@ -87,7 +87,12 @@
 
 	onMount(() => {
 		const deployStream = Packages.deployStream();
-		const term = new Terminal({ disableStdin: true, convertEol: true, customGlyphs: true });
+		const term = new Terminal({
+			disableStdin: true,
+			convertEol: true,
+			customGlyphs: true,
+			theme: { background: '#1E1E1E' },
+		});
 		const fitAddon = new FitAddon();
 		term.loadAddon(fitAddon);
 
@@ -187,5 +192,6 @@
 	#terminal {
 		width: 751px;
 		height: 688px;
+		padding: 8px;
 	}
 </style>

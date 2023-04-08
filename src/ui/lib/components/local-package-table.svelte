@@ -100,7 +100,9 @@
 <Box {ssx} class="local-package-list-container">
 	<Paper class="local-package-list-header" elevation={1}>
 		<Typography variant="th">Local Directory</Typography>
-		<Tooltip>Something Something Local Directory</Tooltip>
+		<Tooltip
+			>This table shows all of the Zarf{initString} packages that exist on your local machine.</Tooltip
+		>
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
