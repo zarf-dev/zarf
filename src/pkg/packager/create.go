@@ -47,6 +47,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
 
