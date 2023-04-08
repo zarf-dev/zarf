@@ -39,6 +39,8 @@ components:
           - cmd: touch test-create-after.txt
           - cmd: sleep 1
           - cmd: echo "I can print!"
+            # prefer to run the above command in "cmd" instead of "powershell" on Windows
+            preferLegacyShell: true
           - cmd: sleep 1
           - cmd: |
               echo "multiline!"
