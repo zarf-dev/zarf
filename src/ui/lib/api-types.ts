@@ -390,6 +390,12 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
+     * (Windows/cmd only) Whether to prefer running the command in the legacy command shell
+     * rather than powershell (see https://github.com/orgs/PowerShell/discussions/16569) (note:
+     * command conversion of commands like touch to New-Item will be disabled as well)
+     */
+    preferLegacyShell?: boolean;
+    /**
      * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
      * update with the output of the command. This variable will be available to all remaining
      * actions and components in the package.
@@ -1298,6 +1304,7 @@ const typeMap: any = {
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "preferLegacyShell", js: "preferLegacyShell", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
         { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },

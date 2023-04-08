@@ -990,6 +990,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_preferLegacyShell"></a>preferLegacyShell</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (Windows/cmd only) Whether to prefer running the command in the legacy command shell rather than powershell (see https://github.com/orgs/PowerShell/discussions/16569) (note: command conversion of commands like touch to New-Item will be disabled as well)
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 <details open>
 <summary>
 <strong> <a name="components_items_actions_onCreate_before_items_setVariables"></a>setVariables</strong>

@@ -316,6 +316,10 @@
           "type": "string",
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
+        "preferLegacyShell": {
+          "type": "boolean",
+          "description": "(Windows/cmd only) Whether to prefer running the command in the legacy command shell rather than powershell (see https://github.com/orgs/PowerShell/discussions/16569) (note: command conversion of commands like touch to New-Item will be disabled as well)"
+        },
         "setVariable": {
           "pattern": "^[A-Z0-9_]+$",
           "type": "string",
