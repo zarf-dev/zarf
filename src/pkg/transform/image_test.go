@@ -60,3 +60,5 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 		assert.Error(t, err)
 	}
 }
+
+// TODO (@WSTARR) test ParseImageURL

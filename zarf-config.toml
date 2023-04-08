@@ -1,5 +1,5 @@
 [package.create.set]
-# The image tag used for the zarf agent, defaults to a dev image tag
+# The image tag used for the zarf agent, defaults to a locally built image
 agent_image = 'agent:local'
 
 # Tag for the zarf injector binary to use
