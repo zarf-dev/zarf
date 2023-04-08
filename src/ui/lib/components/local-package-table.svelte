@@ -29,6 +29,11 @@
 				gap: '20px',
 				borderBottomLeftRadius: '0px',
 				borderBottomRightRadius: '0px',
+
+				'& .tooltip': {
+					wordBreak: 'break-word',
+					width: '500px',
+				},
 				'& .tooltip-trigger': {
 					display: 'flex',
 					alignItems: 'end',
