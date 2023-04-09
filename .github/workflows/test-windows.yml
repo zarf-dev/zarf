@@ -44,7 +44,7 @@ jobs:
       # the tests this workflow runs do not use the agent at all!
       - name: Build init-package
         run: |
-          make release-init-package ARCH=amd64 AGENT_IMAGE=agent:v0.23.6
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=v0.25.2
 
       - name: Build zarf packages
         run: make build-examples ARCH=amd64

@@ -43,5 +43,5 @@ func (i ImgConfig) LoadImageFromPackage(imgTag string) (v1.Image, error) {
 	}
 
 	// Load the image from the OCI formatted images directory
-	return utils.LoadImage(i.ImagesPath, imgTag)
+	return utils.LoadOCIImage(i.ImagesPath, imgTag)
 }

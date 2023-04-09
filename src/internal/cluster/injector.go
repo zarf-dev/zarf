@@ -136,14 +136,14 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 	for _, src := range injectorSeedTags {
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
 
-		img, err := utils.LoadImage(tempPath.Images, src)
+		img, err := utils.LoadOCIImage(tempPath.Images, src)
 		if err != nil {
 			return seedImages, err
 		}
 
 		crane.SaveOCI(img, tempPath.SeedImages)
 
-		imgRef, err := transform.ParseImageURL(src)
+		imgRef, err := transform.ParseImageRef(src)
 		if err != nil {
 			return seedImages, err
 		}

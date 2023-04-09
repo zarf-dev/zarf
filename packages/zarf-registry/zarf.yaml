@@ -39,6 +39,13 @@ variables:
     description: "Enable the Horizontal Pod Autoscaler for the registry"
     default: "true"
 
+constants:
+  - name: REGISTRY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
+
+  - name: REGISTRY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+
 components:
   - name: zarf-injector
     description: |
@@ -65,9 +72,8 @@ components:
           - registry-values.yaml
           - registry-values-seed.yaml
     images:
-      # The seed image (or images) that will be injected
-      # TODO (@WSTARR) This should be a ZARF_PKG_TMPL
-      - registry:2.8.1
+      # The seed image (or images) that will be injected (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
 
   - name: zarf-registry
     description: |
@@ -91,6 +97,5 @@ components:
         valuesFiles:
           - registry-values.yaml
     images:
-      # This image (or images) must match that used for injection
-      # TODO (@WSTARR) This should be a ZARF_PKG_TMPL
-      - registry:2.8.1
+      # This image (or images) must match that used for injection (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
