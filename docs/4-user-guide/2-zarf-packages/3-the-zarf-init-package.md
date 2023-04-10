@@ -21,7 +21,7 @@ Zarf's capabilities require certain components of the init package to be constan
 
 In addition to required components, Zarf also offers optional components that provide additional functionality and can be enabled as needed. 
 
-Below are the optional components available for the init package, along with their respective "magic strings" that can be passed to `zarf init --components` to pull them in:
+Below are the optional components available for the init package, along with their respective component names that can be passed to `zarf init --components` to deploy them:
 
 | Components   | Description                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
