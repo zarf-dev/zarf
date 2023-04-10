@@ -29,7 +29,7 @@ Below are the optional components available for the init package, along with the
 | logging      | Adds a log monitoring stack&mdash;[promtail/loki/graphana (aka PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                              |
 | git-server   | Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
 
-There are two ways to deploy optional components. Firstly, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`. Alternatively, you can choose to exclude the flags and respond with a yes or no for each optional component when prompted
+There are two ways to deploy optional components. Firstly, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`. Alternatively, you can choose to exclude the `--components` and `--confirm` flags and respond with a yes or no for each optional component when prompted.
 
 :::note
 
