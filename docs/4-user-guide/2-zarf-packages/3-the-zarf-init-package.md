@@ -13,7 +13,7 @@ Zarf's capabilities require that the [`zarf-agent`](https://docs.zarf.dev/docs/f
 
 | Component              | Description                                                                                                          |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| zarf-agent           | A Kubernetes mutating webhook installed during `zarf init` that convernts PodSpecs and Flux GitRepository objects to match their air gap equivalents.
+| zarf-agent           | A Kubernetes mutating webhook installed during `zarf init` that converts Pod specs and Flux GitRepository objects to match their air gap equivalents.
 
 ## Core Components
 
