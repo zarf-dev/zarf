@@ -17,7 +17,7 @@ Zarf's capabilities require that the [`zarf-agent`](https://docs.zarf.dev/docs/f
 
 ## Core Components
 
-In addition to the required `zarf-agent` component, Zarf also offers optional components that provide additional functionality and can be enabled as needed based on the state of your registry. 
+In addition to the required `zarf-agent` component, Zarf also offers components that provide additional functionality and can be enabled as needed based on your desired end-state.
 
 In most scenarios, Zarf will also deploy an internal registry using the components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_init) section). This option skips the injector and seed process, and will not deploy a registry to the cluster. Instead, it uploads any images to the externally configured registry.
 
