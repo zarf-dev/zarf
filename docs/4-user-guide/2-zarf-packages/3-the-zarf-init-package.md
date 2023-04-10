@@ -28,9 +28,6 @@ Additionally, below are the fully-optional components available for the init pac
 | k3s          | REQUIRES ROOT. Installs a lightweight Kubernetes Cluster on the local host&mdash;[K3s](https://k3s.io/)&mdash;and configures it to start up on boot.                             |
 | logging      | Adds a log monitoring stack&mdash;[promtail/loki/graphana (aka PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                              |
 | git-server   | Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
-| zarf-injector           | Adds a Rust and Go binary to the working directory to use during the registry bootstrapping.
-| container-registry-seed | Adds a container registry so Zarf can bootstrap itself into the cluster.                                             |
-| container-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
 There are two ways to deploy optional components. Firstly, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`. Alternatively, you can choose to exclude the `--components` and `--confirm` flags and respond with a yes or no for each optional component when prompted.
 
