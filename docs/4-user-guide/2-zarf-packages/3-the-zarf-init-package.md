@@ -33,7 +33,7 @@ There are two ways to deploy optional components. Firstly, you can provide a com
 
 :::note
 
-Deploying the 'k3s' component will require root access, as it modifies your host machine to install the cluster.
+Deploying the 'k3s' component will require root access (not just sudo), as it modifies your host machine to install the cluster.
  
 :::
 
