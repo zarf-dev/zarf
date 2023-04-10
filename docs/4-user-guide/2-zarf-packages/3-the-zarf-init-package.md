@@ -24,8 +24,8 @@ In most scenarios, Zarf will also deploy an internal registry using the componen
 | Components   | Description 
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | zarf-injector     | Adds a Rust and Go binary to the working directory to use during the registry bootstrapping. |
-| container-registry-seed | Adds a container registry so Zarf can bootstrap itself into the cluster.                             |
-| container-registry      | Adds a container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
+| zarf-seed-registry | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                             |
+| zarf-registry      | Adds a long-lived container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
 Additionally, below are the fully-optional components available for the init package, along with their respective component names that can be passed to `zarf init --components` to deploy them in an internal registry:
 
