@@ -1,37 +1,35 @@
-# Getting started - VS Code
+# Getting Started - VS Code
 
-Zarf uses its own [schema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) to define its configuration files. This schema is used to describe package configuration options and can be used to validate the configuration files before they are used to build a Zarf package.
+Zarf uses a [proprietary schema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) for defining its configuration files. This schema is used to describe package configuration options and enable the validation of configuration files prior to their use in building a Zarf Package.
 
-## Adding schema validation
+## Adding Schema Validation
 
-1. Open VS Code
+1. Open VS Code.
 2. Install the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) by RedHat.
 3. Open the VS Code command pallete by typing `CTRL/CMD + SHIFT + P`.
 4. Type `Preferences: Open User Settings (JSON)`into the search bar to open the `settings.json` file. 
-5. Add the below to the settlings.json config, or modify the existing `yaml.schemas` object to include the Zarf schema.
+5. Add the below code to the settlings.json config, or modify the existing `yaml.schemas` object to include the Zarf schema.
 
 ```json
   "yaml.schemas": {
     "https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json": "zarf.yaml"
   }
 ```
-:::tip
+:::note
 
-yaml.schema line turns the same color as other lines in the setting when installed succesfully!!
+When successfully installed, the `yaml.schema` line will match the color of the other lines within the settings.
 
 :::
 
-## Specifying Zarf's schema version
+## Specifying Zarf's Schema Version
 
-In some cases, it may be beneficial to lock a `zarf.yaml`'s validation to a specific version of the Zarf schema.
-
-This can be accomplished by adding the below to the **first** line of any given `zarf.yaml`.
+To ensure consistent validation of the Zarf schema version in a `zarf.yaml` file, it can be beneficial to lock it to a specific version. This can be achieved by appending the following statement to the **first line** of any given `zarf.yaml` file:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/<VERSION>/zarf.schema.json
 ```
 
-Where `<VERSION>` is one of [Zarf's releases](https://github.com/defenseunicorns/zarf/releases).
+In the above example, `<VERSION>` should be replaced with the specific [Zarf release](https://github.com/defenseunicorns/zarf/releases).
 
 ### Code Example 
 
