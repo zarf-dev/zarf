@@ -37,7 +37,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]string
+		vars       map[string]*utils.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -67,7 +67,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariable = ""
+		action.SetVariables = []types.ZarfComponentActionSetVariable{}
 	}
 
 	if action.Description != "" {
@@ -109,8 +109,8 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			out = strings.TrimSpace(out)
 
 			// If an output variable is defined, set it.
-			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, out)
+			for _, v := range action.SetVariables {
+				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent)
 			}
 
 			// If the action has a wait, change the spinner message to reflect that on success.
@@ -224,7 +224,7 @@ func actionCmdMutation(cmd string) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*utils.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -252,26 +252,17 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 		k = strings.ReplaceAll(k, "#", "")
 		// Make terraform variables available to the action as TF_VAR_lowercase_name.
 		k1 := strings.ReplaceAll(strings.ToLower(k), "zarf_var", "TF_VAR")
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v.Value))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v.Value))
 	}
 
 	return cfg
 }
 
 func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, error) {
-	var shell string
-	var shellArgs string
+	shell, shellArgs := exec.GetOSShell()
 
-	if runtime.GOOS == "windows" {
-		shell = "powershell"
-		shellArgs = "-Command"
-		message.Debug("Running command in PowerShell: %s", cmd)
-	} else {
-		shell = "sh"
-		shellArgs = "-c"
-		message.Debug("Running command in shell: %s", cmd)
-	}
+	message.Debug("Running command in %s: %s", shell, cmd)
 
 	execCfg := exec.Config{
 		Env: cfg.Env,
@@ -284,8 +275,10 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
-	// Dump final complete output.
-	message.Debug(cmd, out, errOut)
+	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
+	if !cfg.Mute {
+		message.Debug(cmd, out, errOut)
+	}
 
 	return out, err
 }

@@ -44,6 +44,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 ## Options
 
 ```
+      --artifact-push-token string      API Token for the push-user to access the artifact registry
+      --artifact-push-username string   Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
+      --artifact-url string             External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirm the install without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
@@ -67,7 +70,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

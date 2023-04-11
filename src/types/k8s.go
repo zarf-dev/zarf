@@ -14,9 +14,10 @@ type ZarfState struct {
 	StorageClass  string           `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
 	AgentTLS      k8s.GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
 
-	GitServer     GitServerInfo `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
-	RegistryInfo  RegistryInfo  `json:"registryInfo" jsonschema:"description=Information about the registry Zarf is configured to use"`
-	LoggingSecret string        `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
+	GitServer      GitServerInfo      `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
+	RegistryInfo   RegistryInfo       `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is configured to use"`
+	ArtifactServer ArtifactServerInfo `json:"artifactServer" jsonschema:"description=Information about the artifact registry Zarf is configured to use"`
+	LoggingSecret  string             `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
@@ -50,6 +51,15 @@ type GitServerInfo struct {
 
 	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
+}
+
+// ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
+type ArtifactServerInfo struct {
+	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
+	PushToken    string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
+
+	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
+	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
 }
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.

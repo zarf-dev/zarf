@@ -27,6 +27,8 @@ type ImgConfig struct {
 	NoChecksum bool
 
 	Insecure bool
+
+	Architectures []string
 }
 
 // GetLegacyImgTarballPath returns the ImagesPath as if it were a path to a tarball instead of a directory.
@@ -38,7 +40,7 @@ func (i *ImgConfig) GetLegacyImgTarballPath() string {
 func (i ImgConfig) LoadImageFromPackage(imgTag string) (v1.Image, error) {
 	// If the package still has a images.tar that contains all of the images, use crane to load the specific tag we want
 	if _, statErr := os.Stat(i.GetLegacyImgTarballPath()); statErr == nil {
-		return crane.LoadTag(i.GetLegacyImgTarballPath(), imgTag, config.GetCraneOptions(i.Insecure)...)
+		return crane.LoadTag(i.GetLegacyImgTarballPath(), imgTag, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
 	}
 
 	// Load the image from the OCI formatted images directory

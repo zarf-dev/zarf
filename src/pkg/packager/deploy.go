@@ -42,6 +42,10 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
+	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		return err
+	}
+
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
 		p.cfg.IsInitConfig = true
@@ -53,7 +57,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setActiveVariables(); err != nil {
+	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -201,7 +205,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
+	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections) {
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
@@ -387,11 +391,12 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath: p.tmp.Images,
-		ImgList:    componentImages,
-		NoChecksum: noImgChecksum,
-		RegInfo:    p.cfg.State.RegistryInfo,
-		Insecure:   config.CommonOptions.Insecure,
+		ImagesPath:    p.tmp.Images,
+		ImgList:       componentImages,
+		NoChecksum:    noImgChecksum,
+		RegInfo:       p.cfg.State.RegistryInfo,
+		Insecure:      config.CommonOptions.Insecure,
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
 	return utils.Retry(func() error {

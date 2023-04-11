@@ -18,6 +18,6 @@ components:
 
 :::note
 
-Import paths must be statically defined at create time.  You cannot use [package variables](../package-variables/) in them
+Import paths must be statically defined at create time.  You cannot use [variables](../variables/) in them
 
 :::

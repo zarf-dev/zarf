@@ -81,7 +81,7 @@ Zarf can pull from various places like Docker Hub, Iron Bank, GitHub, and local 
 
 ### (1) Create a Package
 
-This part of the process requires access to the internet. The `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package". 
+This part of the process requires access to the internet. The `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package".
 
 For additional information, see the [Building a package](./13-walkthroughs/0-using-zarf-package-create.md) section.
 
@@ -143,7 +143,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 ### 🛠️ Configurable Features
 
-- Customizable [packages variables](examples/package-variables/README.md) with defaults and user prompting.
+- Customizable [variables](examples/variables/README.md) with defaults and user prompting.
 - [Composable packages](user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components.
 - Filters to select the correct architectures/operating systems for packages.
 
@@ -155,14 +155,14 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 <Tabs>
 <TabItem value="Linux" label="Linux">
-  
+
 <Admonition type="info">
 
 This quick start requires you to already have:
 
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
-  
+
 For more install options please visit our [Getting Started page](3-getting-started.md).
 
 </Admonition>
@@ -171,7 +171,7 @@ For more install options please visit our [Getting Started page](3-getting-start
 
 ```bash
 # To install Zarf
-brew tap defenseunicorns/tap brew install zarf
+brew tap defenseunicorns/tap && brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
@@ -200,7 +200,7 @@ This quick start requires you to already have:
 
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
-  
+
 For more install options please visit our [Getting Started page](3-getting-started.md).
 
 </Admonition>
@@ -209,7 +209,7 @@ For more install options please visit our [Getting Started page](3-getting-start
 
 ```bash
 # To install Zarf
-brew tap defenseunicorns/tap brew install zarf
+brew tap defenseunicorns/tap && brew install zarf
 
 # Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster

@@ -13,7 +13,7 @@ Collection of additional tools to make airgap easier
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -26,6 +26,7 @@ Collection of additional tools to make airgap easier
 * [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zarf packages.
 * [zarf tools clear-cache](zarf_tools_clear-cache.md)	 - Clears the configured git and image cache directory.
+* [zarf tools gen-key](zarf_tools_gen-key.md)	 - 
 * [zarf tools gen-pki](zarf_tools_gen-pki.md)	 - Generates a Certificate Authority and PKI chain of trust for the given host
 * [zarf tools get-creds](zarf_tools_get-creds.md)	 - Display a Table of credentials for deployed components. Pass a component name to get a single credential.
 * [zarf tools kubectl](zarf_tools_kubectl.md)	 - Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
