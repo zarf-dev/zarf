@@ -12,7 +12,7 @@
 	$: stepName = $page.route.id?.split('/').pop() || '';
 	$: stepNumber = (stepName && stepMap[stepName]) || 500;
 	$: getIconContent = (number: number): string | undefined =>
-		stepNumber === number ? stepNumber.toString() : undefined;
+		stepNumber <= number ? number.toString() : undefined;
 	$: stepDisabled = (number: number): boolean => (stepNumber < number ? true : false);
 </script>
 

@@ -169,7 +169,7 @@
 						</Typography>
 						<Box class="package-table-td">
 							<Button
-								value={pkg.zarfPackage.metadata?.name}
+								title={pkg.zarfPackage.metadata?.name}
 								backgroundColor="on-surface"
 								on:click={() => {
 									pkgStore.set(pkg);

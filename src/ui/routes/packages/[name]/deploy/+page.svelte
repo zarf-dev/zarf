@@ -104,9 +104,6 @@
 		deployStream.addEventListener('message', (e: MessageEvent<string>) => {
 			term.writeln(e.data);
 		});
-		deployStream.addEventListener('error', (e) => {
-			console.log(JSON.stringify(e));
-		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
 				deployStream.close();

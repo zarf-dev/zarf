@@ -66,7 +66,6 @@ export async function getDeployedComponents(components: ComponentStepMap): Promi
 		if (deployingComponents[idx]) {
 			return setStepSuccessful(component);
 		} else if (idx === deployingComponents.length) {
-			// console.log(idx, deployingComponents.length);
 			return setStepActive(component);
 		}
 		return component;

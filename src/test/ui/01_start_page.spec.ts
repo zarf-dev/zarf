@@ -34,18 +34,4 @@ test.describe('Landing Page', () => {
 
 		await page.waitForURL('/packages?init=true');
 	});
-
-	// test('page redirects to /packages @post-init', async ({ page }) => {
-	// 	await page.goto('/auth?token=insecure');
-
-	// 	// display loading spinner
-	// 	const spinner = page.locator('.spinner');
-	// 	await expect(spinner).toBeVisible();
-
-	// 	// spinner disappears
-	// 	await expect(spinner).not.toBeVisible();
-
-	// 	// expect to be redirected to /packages
-	// 	await page.waitForURL('/packages', { timeout: 10000 });
-	// });
 });

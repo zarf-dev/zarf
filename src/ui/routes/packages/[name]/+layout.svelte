@@ -30,7 +30,7 @@
 	}
 </script>
 
-{#if !$clusterStore?.hasZarf && $pkgStore.zarfPackage.kind != 'ZarfInitConfig'}
+{#if !$clusterStore?.hasZarf && $pkgStore?.zarfPackage?.kind !== 'ZarfInitConfig'}
 	<div class="warning-banner">
 		<Typography variant="body1"
 			>WARNING: You are deploying a package without an initialized Zarf cluster</Typography

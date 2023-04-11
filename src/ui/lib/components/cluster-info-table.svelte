@@ -59,7 +59,6 @@
 			numPackages = $deployedPkgStore.pkgs?.length;
 		}
 	}
-	$: $clusterStore && console.log(JSON.stringify($clusterStore.rawConfig.contexts, null, 2));
 	$: currentClusterName = $clusterStore?.rawConfig['current-context'];
 	$: currentCluster =
 		(currentClusterName && $clusterStore?.rawConfig.contexts[currentClusterName]) || undefined;
