@@ -88,6 +88,24 @@ test.describe('initialize a zarf cluster', () => {
 		await validateHorizontalStepperItems(page, 2, ['Select', 'Configure', 'Review', '3 Deploy']);
 
 		// expect all steps to have success class
+		const stepperItems = page.locator('.stepper-vertical .step-icon');
+
+		// deploy zarf-injector
+		await expect(stepperItems.nth(0)).toHaveClass(/success/, {
+			timeout: 45000,
+		});
+		// deploy zarf-seed-registry
+		await expect(stepperItems.nth(1)).toHaveClass(/success/, {
+			timeout: 45000,
+		});
+		// deploy zarf-registry
+		await expect(stepperItems.nth(2)).toHaveClass(/success/, {
+			timeout: 45000,
+		});
+		// deploy zarf-agent
+		await expect(stepperItems.nth(3)).toHaveClass(/success/, {
+			timeout: 45000,
+		});
 
 		// verify the final step succeeded
 		await expect(page.locator('text=Deployment Succeeded')).toBeVisible({ timeout: 120000 });

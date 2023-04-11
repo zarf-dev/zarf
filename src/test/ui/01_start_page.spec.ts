@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Landing Page', () => {
-	test('Connect cluster @pre-init', async ({ page }) => {
+	test('Landing Page @pre-init', async ({ page }) => {
 		await page.goto('/auth?token=insecure', { waitUntil: 'networkidle' });
 
 		// Expect cluster table to display not connected state
@@ -33,5 +33,22 @@ test.describe('Landing Page', () => {
 		await connectAnchor.click();
 
 		await page.waitForURL('/packages?init=true');
+	});
+
+	test('Landing page @post-init', async ({ page }) => {
+		await page.goto('/auth?token=insecure', { waitUntil: 'networkidle' });
+
+		// Expect cluster table to have one package.
+		const clusterInfo = page.locator('.metadata-values').first();
+		expect(await clusterInfo.textContent()).not.toContain('0 Packages');
+
+		// Validate that the init package now shows in the package-list-table
+		const packageTableBody = page.locator('.package-list-body');
+		expect(await packageTableBody.textContent()).toContain('ZarfInitConfig');
+
+		// Validate the cluster name shows in the nav-drawer-header
+		expect(await page.locator('.nav-drawer-header').textContent()).not.toContain(
+			'Cluster not connected'
+		);
 	});
 });

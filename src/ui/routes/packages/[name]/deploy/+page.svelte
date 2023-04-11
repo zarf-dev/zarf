@@ -3,23 +3,23 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import {
-		createComponentStepMap,
-		finalizeStepState,
-		getComponentStepMapComponents,
-		getDeployedComponents,
-		getDialogContent,
-	} from './deploy-utils';
-	import { onMount } from 'svelte';
-	import { Packages } from '$lib/api';
-	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
-	import bigZarf from '@images/zarf-bubbles-right.png';
 	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
+	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import 'xterm/css/xterm.css';
-	import { Terminal } from 'xterm';
+	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { FitAddon } from 'xterm-addon-fit';
+	import { goto } from '$app/navigation';
+	import { Packages } from '$lib/api';
+	import { onMount } from 'svelte';
+	import { Terminal } from 'xterm';
+	import 'xterm/css/xterm.css';
+	import {
+		getDialogContent,
+		finalizeStepState,
+		getDeployedComponents,
+		createComponentStepMap,
+		getComponentStepMapComponents,
+	} from './deploy-utils';
 
 	const POLL_TIME = 5000;
 
