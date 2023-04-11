@@ -1,17 +1,18 @@
 <script lang="ts">
-	import '../app.css';
-	import 'sanitize.css';
-	import 'material-symbols/';
-	import { Theme } from '@ui';
 	import GlobalNav from '$lib/components/global-navigation-bar.svelte';
-	import { ZarfPalettes } from '$lib/palette';
 	import NavDrawer from '$lib/components/nav-drawer.svelte';
+	import { ZarfPalettes } from '$lib/palette';
+	import { Theme } from '@ui';
+	import 'material-symbols/';
+	import 'sanitize.css';
+	import '../app.css';
+	import { ZarfTypography } from '$lib/typography';
 </script>
 
 <svelte:head>
 	<title>Zarf UI</title>
 </svelte:head>
-<Theme palettes={ZarfPalettes}>
+<Theme palettes={ZarfPalettes} typography={ZarfTypography}>
 	<GlobalNav />
 	<main>
 		<NavDrawer />
@@ -41,5 +42,6 @@
 		display: flex;
 		flex-direction: column;
 		padding: 2.5rem;
+		gap: 48px;
 	}
 </style>

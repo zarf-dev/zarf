@@ -22,8 +22,8 @@
 		width: 100%;
 		padding: 0.75rem 1rem;
 		@include ripple.surface;
-		@include ripple.radius-unbounded;
 		@include ripple.states;
+		@include ripple.radius-unbounded;
 	}
 	.nav-link::before,
 	.nav-link::after {
@@ -33,6 +33,6 @@
 		background: var(--action-hover-on-dark);
 	}
 	.nav-link-selected {
-		background: var(--nav-link-selected-background);
+		background: var(--shades-primary-16p);
 	}
 </style>

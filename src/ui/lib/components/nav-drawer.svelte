@@ -1,6 +1,10 @@
 <script lang="ts">
-	import { Paper, type SSX, Typography, Box, ListSubHeader } from '@ui';
+	import { Paper, type SSX, Typography, Box } from '@ui';
 	import NavLink from './nav-link.svelte';
+	import { clusterStore } from '$lib/store';
+	import { onMount } from 'svelte';
+	let path = '';
+	import { page } from '$app/stores';
 
 	const ssx: SSX = {
 		$self: {
@@ -23,19 +27,42 @@
 			'& .inset-shadow': {
 				boxShadow: 'inset 0px -1px 0px rgba(255, 255, 255, 0.12)',
 			},
+			'& .nav-drawer-header': {
+				display: 'flex',
+				flexDirection: 'column',
+				gap: '4px',
+				padding: '0px 1rem',
+			},
 		},
 	};
+
+	$: visible = $page.url.href.includes('packages');
+	$: style = (visible && 'visibility:hidden;') || '';
 </script>
 
-<Paper {ssx} square backgroundColor="navbar" color="on-navbar">
-	<Box
-		ssx={{ $self: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 1rem' } }}
-	>
+<Paper {ssx} square backgroundColor="global-nav" color="on-global-nav" {style}>
+	<Box class="nav-drawer-header">
 		<Typography variant="h5">Cluster</Typography>
-		<Typography variant="caption" color="text-secondary-on-dark">cluster name</Typography>
+		{#if $clusterStore?.hasZarf && $clusterStore?.rawConfig}
+			<Typography variant="caption" color="text-secondary-on-dark">
+				{$clusterStore.rawConfig['current-context']}
+			</Typography>
+		{:else}
+			<Typography
+				variant="caption"
+				color="text-secondary-on-dark"
+				style="display: flex;align-items:center;"
+				class="drawer-cluster-not-found"
+			>
+				<span class="material-symbols-outlined" style="color:var(--warning); font-size:20px;">
+					warning
+				</span>
+				<span>&nbsp;Cluster not connected </span>
+			</Typography>
+		{/if}
 	</Box>
 	<Box class="nav-drawer-section">
-		<NavLink variant="body1">Packages</NavLink>
+		<NavLink variant="body1" href="/" selected={$page.route.id === '/'}>Packages</NavLink>
 	</Box>
 	<Box class="nav-drawer-section inset-shadow">
 		<Typography color="text-secondary-on-dark">Tools</Typography>

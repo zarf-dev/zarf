@@ -29,6 +29,10 @@ export class HTTP {
 		headers.set('Authorization', token);
 	}
 
+	deployStream<T>(path: string): EventSource {
+		return this.connect<T>({ path, method: 'GET' });
+	}
+
 	// Perform a GET request to the given path, and return the response as JSON.
 	get<T>(path: string) {
 		return this.request<T>({ path, method: 'GET' });
@@ -70,6 +74,33 @@ export class HTTP {
 		}
 	}
 
+	private connect<T>(req: APIRequest<T>): EventSource {
+		const url = BASE_URL + req.path;
+		// const payload: RequestInit = { method: req.method, headers };
+		// const eventTarget = new EventTarget();
+		// const eventStream = makeWriteableEventStream(eventTarget);
+		if (!headers.get('Authorization')) {
+			throw new Error('Not authenticated yet');
+		}
+		const eventSource = new EventSource(`${url}?auth=${headers.get('Authorization')}`);
+		// Add the body if it exists
+		// if (req.body) {
+		// 	payload.body = JSON.stringify(req.body);
+		// }
+		// fetch(url, payload)
+		// 	.then((response) => {
+		// 		if (!response?.body) {
+		// 			throw new Error('Unable to get reader');
+		// 		}
+		// 		response.body.pipeThrough(new TextDecoderStream()).pipeTo(eventStream);
+		// 	})
+		// 	.catch((error) => {
+		// 		eventTarget.dispatchEvent(new CustomEvent('error', { detail: error }));
+		// 	});
+		// return eventTarget;
+		return eventSource;
+	}
+
 	// Private wrapper for handling the request/response cycle.
 	private async request<T>(req: APIRequest<T>): Promise<T> {
 		const url = BASE_URL + req.path;
@@ -108,4 +139,22 @@ export class HTTP {
 			return Promise.reject(e);
 		}
 	}
+}
+
+function makeWriteableEventStream(eventTarget: EventTarget) {
+	return new WritableStream({
+		start() {
+			eventTarget.dispatchEvent(new Event('start'));
+		},
+		write(message) {
+			console.log(JSON.stringify(message));
+			eventTarget.dispatchEvent(new MessageEvent('message', { data: message.data }));
+		},
+		close() {
+			eventTarget.dispatchEvent(new CloseEvent('close'));
+		},
+		abort(reason) {
+			eventTarget.dispatchEvent(new CloseEvent('abort', { reason }));
+		}
+	});
 }
