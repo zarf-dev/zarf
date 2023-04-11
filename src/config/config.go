@@ -137,6 +137,7 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 			OS:           "linux",
 			Architecture: GetArch(archs...),
 		}),
+		crane.WithUserAgent("zarf"),
 	)
 
 	return options

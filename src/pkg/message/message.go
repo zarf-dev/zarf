@@ -42,6 +42,13 @@ var logFile *os.File
 
 var useLogFile bool
 
+type DebugWriter struct{}
+
+func (d *DebugWriter) Write(raw []byte) (int, error) {
+	Debug(raw)
+	return len(raw), nil
+}
+
 func init() {
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.

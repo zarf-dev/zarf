@@ -25,9 +25,9 @@ var badImageRefs = []string{
 func TestImageTransformHost(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
-		"gitlab.com/project/library/nginx-3793515731:1.23.3",
-		"gitlab.com/project/stefanprodan/podinfo-2985051089:6.3.3",
-		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent-2003217571:v0.25.0",
+		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
+		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
+		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 	}
 
 	for idx, ref := range imageRefs {

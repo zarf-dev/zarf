@@ -32,7 +32,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// Generate a crc32 hash of the image host + name
 	checksum := utils.GetCRCHash(image.Name)
 
-	return fmt.Sprintf("%s/%s-%d%s", targetHost, image.Path, checksum, image.TagOrDigest), nil
+	return fmt.Sprintf("%s/%s%s-zarf-%d", targetHost, image.Path, image.TagOrDigest, checksum), nil
 }
 
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
