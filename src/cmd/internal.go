@@ -38,6 +38,17 @@ var agentCmd = &cobra.Command{
 	},
 }
 
+var httpProxyCmd = &cobra.Command{
+	Use:   "http-proxy",
+	Short: "Runs the zarf agent http proxy",
+	Long: "[EXPERIMENTAL] NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
+		"This command starts up a http proxy that can be used by running pods to transform queries " +
+		"that conform to Gitea server URLs in the airgap",
+	Run: func(cmd *cobra.Command, args []string) {
+		agent.StartHTTPProxy()
+	},
+}
+
 var generateCLIDocs = &cobra.Command{
 	Use:   "generate-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
@@ -104,6 +115,33 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	},
 }
 
+var createPackageRegistryToken = &cobra.Command{
+	Use:   "create-artifact-registry-token",
+	Short: "Creates an artifact registry token for Gitea",
+	Long: "Creates an artifact registry token in Gitea using the Gitea API. " +
+		"This is called internally by the supported Gitea package component.",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Load the state so we can get the credentials for the admin git user
+		cluster := cluster.NewClusterOrDie()
+		state, err := cluster.LoadZarfState()
+		if err != nil {
+			message.Error(err, "Unable to load the Zarf state")
+		}
+
+		// If we are setup to use an internal artifact server, create the artifact registry token
+		if state.ArtifactServer.InternalServer {
+			token, err := git.New(state.GitServer).CreatePackageRegistryToken()
+			if err != nil {
+				message.Error(err, "Unable to create an artifact registry token for the Gitea service.")
+			}
+
+			state.ArtifactServer.PushToken = token.Sha1
+
+			cluster.SaveZarfState(state)
+		}
+	},
+}
+
 var uiCmd = &cobra.Command{
 	Use:   "ui",
 	Short: lang.CmdInternalUIShort,
@@ -127,10 +165,12 @@ func init() {
 	rootCmd.AddCommand(internalCmd)
 
 	internalCmd.AddCommand(agentCmd)
+	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
 	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
+	internalCmd.AddCommand(createPackageRegistryToken)
 	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
 }

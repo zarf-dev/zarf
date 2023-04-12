@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5/plumbing"
 )
@@ -37,14 +38,11 @@ func (g *Git) DownloadRepoToTemp(gitURL string) error {
 func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
-	// Find the Zarf-specific repo name from the git URL.
-	get, err := utils.MatchRegex(gitURLRegex, gitURL)
+	// Split the remote url and the zarf reference
+	gitURLNoRef, refPlain, err := transform.GitTransformURLSplitRef(gitURL)
 	if err != nil {
-		return fmt.Errorf("unable to parse git url (%s): %w", gitURL, err)
+		return err
 	}
-
-	// Setup the reference for this repository
-	refPlain := get("ref")
 
 	var ref plumbing.ReferenceName
 
@@ -54,11 +52,12 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	}
 
 	// Construct a path unique to this git repo
-	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(gitURL))
-	g.GitPath = path.Join(targetFolder, repoFolder)
+	repoFolder, err := transform.GitTransformURLtoFolderName(gitURL)
+	if err != nil {
+		return err
+	}
 
-	// Construct the remote URL without the reference
-	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
+	g.GitPath = path.Join(targetFolder, repoFolder)
 
 	// Clone the git repository.
 	err = g.clone(gitURLNoRef, ref)

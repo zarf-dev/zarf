@@ -176,8 +176,9 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
+test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigbang extension directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
 .PHONY: test-built-ui
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
