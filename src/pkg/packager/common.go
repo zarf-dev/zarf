@@ -461,7 +461,7 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
 	// Validate the signature of the package
 	if publicKeyPath == "" {
-		return fmt.Errorf("package is signed but no key was provided, using signed packages requires a --key or --insecure flag to continue")
+		return fmt.Errorf("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 	}
 
 	// Validate the signature with the key we were provided
