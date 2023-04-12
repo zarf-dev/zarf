@@ -38,7 +38,7 @@ const config = {
 					],
 					sidebarPath: require.resolve('./src/sidebars.js'),
 					editUrl: ({ docPath }) => {
-						// to edit: `https://github.com/defenseunicorns/zarf/edit/main/${docPath}`
+						// TODO: (@RAZZLE) once examples have been fixed, change this url to edit: `https://github.com/defenseunicorns/zarf/edit/main/${docPath}`
 						return `https://github.com/defenseunicorns/zarf/tree/main/${docPath}`; // <-- to view
 					},
 					routeBasePath: '/',
