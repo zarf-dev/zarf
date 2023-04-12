@@ -11,6 +11,7 @@ import (
 )
 
 var imageRefs = []string{
+	"nginx",
 	"nginx:1.23.3",
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
 	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
@@ -25,6 +26,7 @@ var badImageRefs = []string{
 func TestImageTransformHost(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
+		"gitlab.com/project/library/nginx:latest-zarf-3793515731",
 		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
@@ -44,6 +46,7 @@ func TestImageTransformHost(t *testing.T) {
 
 func TestImageTransformHostWithoutChecksum(t *testing.T) {
 	var expectedResult = []string{
+		"gitlab.com/project/library/nginx:latest",
 		"gitlab.com/project/library/nginx:1.23.3",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",

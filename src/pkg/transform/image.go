@@ -72,5 +72,10 @@ func parseImageURL(srcReference string) (out Image, err error) {
 		out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
 	}
 
+	// If no tag or digest was provided use the default tag (latest)
+	if out.TagOrDigest == "" {
+		out.TagOrDigest = ":latest"
+	}
+
 	return out, nil
 }
