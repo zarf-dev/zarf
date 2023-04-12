@@ -69,20 +69,19 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 		// and
 		// Example: file://../dev/podinfo
 		// Becomes: file:///home/0x1337/dev/podinfo
-		if strings.HasPrefix(get("hostPath"), "~") {
+		if strings.HasPrefix(hostPath, "~") {
 			// If the path starts with a tilde, we need to expand it to the user's home directory.
 			home, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("unable to get user's home directory: %w", err)
 			}
-			withoutTilde := strings.TrimPrefix(get("hostPath"), "~")
-			hostPath, err = filepath.Abs(filepath.Join(home, withoutTilde))
+			hostPath, err = filepath.Join(home, strings.TrimPrefix(hostPath, "~"))
 			if err != nil {
 				return fmt.Errorf("unable to convert relative path to absolute path: %w", err)
 			}
 		} else {
 			// The path is relative to the current working directory.
-			hostPath, err = filepath.Abs(get("hostPath"))
+			hostPath, err = filepath.Abs(hostPath)
 			if err != nil {
 				return fmt.Errorf("unable to convert relative path to absolute path: %w", err)
 			}
