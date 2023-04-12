@@ -61,7 +61,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 
 	hostPath := get("hostPath")
 
-	if get("proto") == "file://" && !strings.HasPrefix(get("hostPath"), "/") {
+	if get("proto") == "file://" && !strings.HasPrefix(hostPath, "/") {
 		// If the git URL is a local file path, we need to convert it to an absolute path.
 		// This is because go-git does not support relative paths.
 		//
