@@ -7,6 +7,7 @@
 	import type { APIZarfPackage } from '$lib/api-types';
 	import { pkgStore } from '$lib/store';
 	import { goto } from '$app/navigation';
+	import Spinner from './spinner.svelte';
 
 	const initPkg = $page.url.searchParams.get('init');
 
@@ -49,6 +50,7 @@
 					width: '100%',
 					height: '100%',
 					display: 'flex',
+					gap: '10px',
 					justifyContent: 'center',
 					alignItems: 'center',
 				},
@@ -121,16 +123,17 @@
 	<Paper class="local-package-list-body" square elevation={1}>
 		{#await readPackages()}
 			<div class="no-packages">
-				<Typography color="primary" variant="body1"
-					>Searching for local Zarf{initString} Packages</Typography
-				>
+				<Typography color="blue-200" variant="body1">
+					Searching for Zarf{initString} Packages on your local machine.
+				</Typography>
+				<Spinner color="blue-200" />
 			</div>
 		{:then packages}
 			{#if !packages.length}
 				<div class="no-packages">
-					<Typography color="blue-200" variant="body1"
-						>No Zarf{initString} Packages found on local system</Typography
-					>
+					<Typography color="blue-200" variant="body1">
+						No Zarf{initString} Packages found on local system
+					</Typography>
 				</div>
 			{:else}
 				{#each packages as pkg}
