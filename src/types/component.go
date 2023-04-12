@@ -68,6 +68,11 @@ type ZarfComponent struct {
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
+// LocalPaths returns a list of local paths for this component
+//
+// If base is provided, it will be prepended to the path
+// ex. local paths: ["./foo", "/bar", "../baz"]
+// ex. remote paths: ["https://example.com/foo", "ssh://bar", "oci://baz"]
 func (c ZarfComponent) LocalPaths(base string) []string {
 	local := []string{}
 
@@ -125,6 +130,7 @@ type ZarfFile struct {
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
+// LocalPaths returns a list of local paths for this file
 func (zf ZarfFile) LocalPaths() []string {
 	if isLocal(zf.Source) {
 		return []string{zf.Source}
@@ -145,6 +151,7 @@ type ZarfChart struct {
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 
+// LocalPaths returns a list of local paths for this chart
 func (zc ZarfChart) LocalPaths() []string {
 	local := []string{}
 	if isLocal(zc.LocalPath) {
@@ -168,6 +175,7 @@ type ZarfManifest struct {
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for manifest resources to be ready before continuing"`
 }
 
+// LocalPaths returns a list of local paths for this manifest
 func (zm ZarfManifest) LocalPaths() []string {
 	local := []string{}
 	for _, file := range zm.Files {
@@ -275,6 +283,7 @@ type ZarfDataInjection struct {
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
 
+// LocalPaths returns the local paths for the data injection
 func (zdi ZarfDataInjection) LocalPaths() []string {
 	if isLocal(zdi.Source) {
 		return []string{zdi.Source}
@@ -291,6 +300,7 @@ type ZarfComponentImport struct {
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 }
 
+// LocalPaths returns the local paths for the imported component, called recursively
 func (zci ZarfComponentImport) LocalPaths(componentName string) []string {
 	if zci.Path != "" {
 		cname := componentName

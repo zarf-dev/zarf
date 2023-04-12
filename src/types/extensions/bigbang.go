@@ -12,6 +12,7 @@ type BigBang struct {
 	SkipFlux    bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
 }
 
+// LocalPaths returns the list of local paths in the BigBang extension.
 func (bb BigBang) LocalPaths() []string {
 	local := []string{}
 	for _, file := range bb.ValuesFiles {
