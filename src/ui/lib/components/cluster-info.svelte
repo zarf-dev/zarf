@@ -1,9 +1,11 @@
 <script lang="ts">
 	import ConnectClusterDialog from './connect-cluster-dialog.svelte';
 	import ClusterInfoTable from './cluster-info-table.svelte';
+	import { fade } from 'svelte/transition';
 	import { Paper, Typography, Box, type SSX } from '@ui';
 	import ButtonDense from './button-dense.svelte';
 	import { clusterStore } from '$lib/store';
+	import Spinner from './spinner.svelte';
 
 	let toggleDialog: () => void;
 
@@ -21,6 +23,7 @@
 					height: '100%',
 					alignItems: 'center',
 					justifyContent: 'center',
+					gap: '8px',
 				},
 			},
 			'& .cluster-info-header': {
@@ -52,7 +55,12 @@
 		</div>
 	</Paper>
 	<Paper class="cluster-info-body" elevation={1}>
-		{#if !showClusterInfo}
+		{#if !$clusterStore}
+			<div class="cluster-not-connected" in:fade={{ duration: 1000 }}>
+				<Typography variant="body1" color="blue-200">Searching for cluster.</Typography>
+				<Spinner color="blue-200" />
+			</div>
+		{:else if !showClusterInfo}
 			<Typography class="cluster-not-connected" variant="body1" element="span">
 				<span class="material-symbols-outlined" style="color:var(--warning);"> warning </span>
 				<span>&nbsp;Cluster not connected </span>

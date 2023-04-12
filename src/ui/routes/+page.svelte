@@ -2,7 +2,7 @@
 	import { Cluster, Packages } from '$lib/api';
 	import type { ClusterSummary, DeployedPackage } from '$lib/api-types';
 	import ClusterInfo from '$lib/components/cluster-info.svelte';
-	import PackageTable from '$lib/components/package-table.svelte';
+	import PackageTable from '$lib/components/deployed-package-table.svelte';
 	import { clusterStore, deployedPkgStore } from '$lib/store';
 	import { onMount } from 'svelte';
 	const POLL_TIME = 5000;
@@ -14,9 +14,7 @@
 		Cluster.summary()
 			// If success update the store
 			.then((val: ClusterSummary) => {
-				if (val.distro) {
-					clusterStore.set(val);
-				}
+				clusterStore.set(val);
 			})
 			.catch(() => clusterStore.set(undefined));
 	}

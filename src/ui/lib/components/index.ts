@@ -7,7 +7,6 @@ import Hero from './hero.svelte';
 import Icon from './icon.svelte';
 import PackageComponentAccordion from './package-component-accordion.svelte';
 import PackageDetailsCard from './package-details-card.svelte';
-import PackageErrNotFound from './package-err-not-found.svelte';
 import PackageSectionHeader from './package-section-header.svelte';
 import Spinner from './spinner.svelte';
 import ThemeToggle from './theme-toggle.svelte';
@@ -22,7 +21,6 @@ export {
 	Icon,
 	PackageComponentAccordion,
 	PackageDetailsCard,
-	PackageErrNotFound,
 	PackageSectionHeader,
 	Spinner,
 	ThemeToggle,

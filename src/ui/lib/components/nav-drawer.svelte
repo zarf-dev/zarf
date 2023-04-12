@@ -2,8 +2,6 @@
 	import { Paper, type SSX, Typography, Box } from '@ui';
 	import NavLink from './nav-link.svelte';
 	import { clusterStore } from '$lib/store';
-	import { onMount } from 'svelte';
-	let path = '';
 	import { page } from '$app/stores';
 
 	const ssx: SSX = {

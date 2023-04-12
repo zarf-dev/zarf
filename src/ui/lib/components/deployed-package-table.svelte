@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { Paper, Typography, Box, type SSX } from '@ui';
-	import ButtonDense from './button-dense.svelte';
+	import Spinner from './spinner.svelte';
+	import { fade } from 'svelte/transition';
 	import ZarfChip from './zarf-chip.svelte';
 	import { deployedPkgStore } from '$lib/store';
+	import ButtonDense from './button-dense.svelte';
+	import DeployedPackageMenu from './deployed-package-menu.svelte';
 
 	const ssx: SSX = {
 		$self: {
 			display: 'flex',
 			flexDirection: 'column',
-			maxHeight: '280px',
+			flexGrow: '1',
+			maxHeight: '500px',
 			'& .package-list-header': {
 				height: '56px',
 				padding: '16px',
@@ -23,10 +27,12 @@
 				boxShadow: '0px -1px 0px 0px rgba(255, 255, 255, 0.12) inset',
 				overflowX: 'hidden',
 				overflowY: 'scroll',
+				flexGrow: '1',
 				'& .no-packages': {
 					width: '100%',
 					height: '100%',
 					display: 'flex',
+					gap: '8px',
 					justifyContent: 'center',
 					alignItems: 'center',
 				},
@@ -71,12 +77,17 @@
 						minWidth: '240px',
 						width: '21.5%',
 					},
+					'&.more': {
+						display: 'flex',
+						justifyContent: 'end',
+						flexGrow: '1',
+					},
 				},
 			},
 		},
 	};
 
-	const tableLabels = ['name', 'version', 'tags', 'signed by'];
+	const tableLabels = ['name', 'version', 'tags'];
 </script>
 
 <Box {ssx} class="package-list-container">
@@ -97,8 +108,9 @@
 	</Paper>
 	<Paper class="package-list-body" square elevation={1}>
 		{#if !$deployedPkgStore}
-			<div class="no-packages">
+			<div class="no-packages" in:fade={{ duration: 1000 }}>
 				<Typography color="primary" variant="body1">Searching for Deployed Packages</Typography>
+				<Spinner />
 			</div>
 		{:else if $deployedPkgStore.err}
 			<div class="no-packages">
@@ -133,6 +145,10 @@
 						<ZarfChip>
 							{pkg.data?.kind}
 						</ZarfChip>
+					</Typography>
+					<Typography variant="body2" class="package-table-td signed-by" />
+					<Typography variant="body2" class="package-table-td more">
+						<DeployedPackageMenu {pkg} />
 					</Typography>
 				</Paper>
 			{/each}
