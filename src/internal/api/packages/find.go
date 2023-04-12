@@ -16,8 +16,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-var packagePattern = regexp.MustCompile(`zarf-package.*.tar\.zst$`)
-var initPattern = regexp.MustCompile(`(?i).*init.*\.tar\.zst$`)
+var packagePattern = regexp.MustCompile(`zarf-package.*.tar`)
+var initPattern = regexp.MustCompile(`(?i).*init.*\.tar`)
 
 // Find returns all packages anywhere down the directory tree of the working directory.
 func Find(w http.ResponseWriter, _ *http.Request) {
@@ -55,7 +55,6 @@ func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (s
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
 func recursiveFileListSkipPermissionErrors(dir string, pattern *regexp.Regexp) (files []string, err error) {
-	const dotcharater = 46
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		// Return errors
 		if err != nil {
@@ -64,11 +63,6 @@ func recursiveFileListSkipPermissionErrors(dir string, pattern *regexp.Regexp) (
 				return nil
 			}
 			return err
-		}
-
-		// Skip hidden directories
-		if d.IsDir() && d.Name()[0] == dotcharater {
-			return filepath.SkipDir
 		}
 
 		if !d.IsDir() {
