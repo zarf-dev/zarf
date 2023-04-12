@@ -51,7 +51,7 @@ func (p *Packager) Deploy() error {
 		p.cfg.IsInitConfig = true
 	}
 
-	if err := p.validatePackageArchitecture(); err != nil {
+	if err := p.validatePackageArchitecture(p.cfg.IsInitConfig); err != nil {
 		return err
 	}
 

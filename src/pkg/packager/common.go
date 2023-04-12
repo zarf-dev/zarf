@@ -24,7 +24,6 @@ import (
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -444,17 +443,18 @@ func (p *Packager) validatePackageChecksums() error {
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() error {
+func (p *Packager) validatePackageArchitecture(initPackage bool) error {
 	var clusterArch string
-
-	components := p.getValidComponents()
 	err := fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 
-	// Iterate over the components to determine if we're deploying an init package with k3s,
-	// and set appliance mode to true if we are.
-	for _, component := range components {
-		if component.Name == k8s.DistroIsK3s && p.cfg.IsInitConfig {
-			p.cfg.InitOpts.ApplianceMode = true
+	// If we're deploying an init package, iterate over the components to determine
+	// if we're deploying k3s, and set appliance mode to true if we are.
+	if initPackage {
+		components := p.getValidComponents()
+		for _, component := range components {
+			if component.Name == "k3s" {
+				p.cfg.InitOpts.ApplianceMode = true
+			}
 		}
 	}
 
