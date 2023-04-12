@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions.
-package utils
+// Package transform provides helper functions to transform URLs to airgap equivalents
+package transform
 
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/distribution/distribution/reference"
 )
 
@@ -21,30 +22,30 @@ type Image struct {
 	TagOrDigest string
 }
 
-// SwapHost Perform base url replacement and adds a crc32 of the original url to the end of the src.
-func SwapHost(src string, targetHost string) (string, error) {
-	image, err := parseImageURL(src)
+// ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).
+func ImageTransformHost(targetHost, srcReference string) (string, error) {
+	image, err := parseImageURL(srcReference)
 	if err != nil {
 		return "", err
 	}
 
 	// Generate a crc32 hash of the image host + name
-	checksum := GetCRCHash(image.Name)
+	checksum := utils.GetCRCHash(image.Name)
 
 	return fmt.Sprintf("%s/%s-%d%s", targetHost, image.Path, checksum, image.TagOrDigest), nil
 }
 
-// SwapHostWithoutChecksum Perform base url replacement but avoids adding a checksum of the original url.
-func SwapHostWithoutChecksum(src string, targetHost string) (string, error) {
-	image, err := parseImageURL(src)
+// ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
+func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string, error) {
+	image, err := parseImageURL(srcReference)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
 }
 
-func parseImageURL(src string) (out Image, err error) {
-	ref, err := reference.ParseAnyReference(src)
+func parseImageURL(srcReference string) (out Image, err error) {
+	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
 		return out, err
 	}
@@ -56,7 +57,7 @@ func parseImageURL(src string) (out Image, err error) {
 		out.Host = reference.Domain(named)
 		out.Reference = ref.String()
 	} else {
-		return out, fmt.Errorf("unable to parse image name from %s", src)
+		return out, fmt.Errorf("unable to parse image name from %s", srcReference)
 	}
 
 	// Parse the tag and add it to digestOrReference

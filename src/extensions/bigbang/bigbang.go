@@ -7,10 +7,9 @@ package bigbang
 import (
 	"fmt"
 	"path"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -24,8 +23,9 @@ import (
 
 // Default location for pulling Big Bang.
 const (
-	bb     = "bigbang"
-	bbRepo = "https://repo1.dso.mil/big-bang/bigbang.git"
+	bb                   = "bigbang"
+	bbRepo               = "https://repo1.dso.mil/big-bang/bigbang.git"
+	bbMinRequiredVersion = "1.54.0"
 )
 
 var tenMins = metav1.Duration{
@@ -43,9 +43,15 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
+	err, validVersionResponse := isValidVersion(cfg.Version)
+
+	if err != nil {
+		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
+	}
+
 	// Make sure the version is valid.
-	if !isValidVersion(cfg.Version) {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least 1.53.0", cfg.Version)
+	if !validVersionResponse {
+		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least %s", cfg.Version, bbMinRequiredVersion)
 	}
 
 	// Print the banner for Big Bang.
@@ -142,9 +148,9 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		}
 
 		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the APIService to be exist instead of the HelmRelease, which
+		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
-		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.53.0/chart/templates/metrics-server/helmrelease.yaml
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
@@ -226,22 +232,21 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	return c, nil
 }
 
-// isValidVersion check if the version is 1.53.0 or greater.
-func isValidVersion(version string) bool {
-	// Split the version string into its major, minor, and patch components
-	parts := strings.Split(version, ".")
-	if len(parts) != 3 {
-		return false
+// isValidVersion check if the version is 1.54.0 or greater.
+func isValidVersion(version string) (error, bool) {
+	specifiedVersion, err := semver.NewVersion(version)
+
+	if err != nil {
+		return err, false
 	}
 
-	// Parse the major and minor components as integers.
-	// Ignore errors because we are checking the values later.
-	major, _ := strconv.Atoi(parts[0])
-	minor, _ := strconv.Atoi(parts[1])
+	minRequiredVersion, _ := semver.NewVersion(bbMinRequiredVersion)
 
-	// This extension requires BB 1.53.0 or greater.
-	// @todo: This should be updated to 1.54.0 when 1.55.0 is released.
-	return major >= 1 && minor >= 53
+	// Evaluating pre-releases too
+	c, _ := semver.NewConstraint(fmt.Sprintf(">= %s-0", minRequiredVersion))
+
+	// This extension requires BB 1.54.0 or greater.
+	return nil, c.Check(specifiedVersion)
 }
 
 // findBBResources takes a list of yaml objects (as a string) and

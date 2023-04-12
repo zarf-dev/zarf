@@ -93,7 +93,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Generic string to track the package version by a package author
+**Description:** Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)
 
 |          |          |
 | -------- | -------- |
