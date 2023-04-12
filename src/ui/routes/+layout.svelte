@@ -35,8 +35,8 @@
 		overflow: hidden;
 	}
 	.page-content {
-		width: calc(100% - 16rem);
 		height: 100%;
+		flex-grow: 1;
 		overflow-y: auto;
 		overflow-x: hidden;
 		display: flex;

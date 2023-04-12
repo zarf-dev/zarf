@@ -35,7 +35,7 @@
 	};
 
 	$: visible = $page.url.href.includes('packages');
-	$: style = (visible && 'visibility:hidden;') || '';
+	$: style = (visible && 'display:none;') || '';
 </script>
 
 <Paper {ssx} square backgroundColor="global-nav" color="on-global-nav" {style}>

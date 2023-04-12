@@ -58,7 +58,6 @@
 		width: 100%;
 	}
 	:global(.page-content) > .packages-page {
-		margin-right: 16rem;
 		display: flex;
 		flex-direction: column;
 		gap: 32px;
