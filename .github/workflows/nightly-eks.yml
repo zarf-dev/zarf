@@ -27,7 +27,7 @@ jobs:
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
-      - name: Login To Amazon ECR
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "zarf-nightly-tester"
@@ -40,14 +40,7 @@ jobs:
         run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --SET=CLUSTER_NAME=zarf-eks-test,INSTANCE_TYPE=t3.medium
 
       - name: Run tests
-        run: make test-e2e ARCH=amd64
-
-      - name: Login to the ECR registry
-        run: aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com
-
-      - name: Test publishing and pulling to ECR
-        run: ./build/zarf package publish build/zarf-package-distro-eks-multi-0.0.2.tar.zst oci://${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/zarf-nightly
-      # TODO: Verify the published artifact
+        run: ZARF_INIT_ARGS="--make test-e2e ARCH=amd64
 
       - name: Teardown the cluster
         if: always()
