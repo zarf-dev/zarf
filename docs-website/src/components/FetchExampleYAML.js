@@ -1,10 +1,11 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import CodeBlock from "@theme/CodeBlock"
+import { ZARF_REPO_RAW_URL } from './constants';
 
 const FetchExampleYAML = ({ example, component, branch="main" }) => {
     const [content, setContent] = useState(null);
-    const url = `https://raw.githubusercontent.com/defenseunicorns/zarf/${branch}/examples/${example}/zarf.yaml`
+    const url = `${ZARF_REPO_RAW_URL}/${branch}/examples/${example}/zarf.yaml`
 
     useEffect(() => {
         fetch(url)

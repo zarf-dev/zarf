@@ -1,11 +1,12 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
+import { ZARF_REPO_RAW_URL } from './constants';
 
 const SchemaItemProperties = ({ item, include, invert}) => {
 	const [itemSchema, setItemSchema] = useState(null);
 
 	useEffect(() => {
-		fetch('https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json')
+		fetch(`${ZARF_REPO_RAW_URL}/main/zarf.schema.json`)
 			.then((res) => res.json())
 			.then((json) => {
 				setItemSchema(json.definitions[item]);
