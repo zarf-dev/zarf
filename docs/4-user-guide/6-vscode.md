@@ -1,6 +1,6 @@
 # Getting Started - VS Code
 
-Zarf uses a [proprietary schema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) for defining its configuration files. This schema is used to describe package configuration options and enable the validation of configuration files prior to their use in building a Zarf Package.
+Zarf uses the [Zarf package schema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) to define its configuration files. This schema is used to describe package configuration options and enable the validation of configuration files prior to their use in building a Zarf Package.
 
 ## Adding Schema Validation
 
