@@ -35,18 +35,23 @@ var (
 func (suite *SkeletonSuite) SetupSuite() {
 	err := exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
+	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
 	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
+	suite.DirExists(everythingExternal)
 
 	err = exec.CmdWithPrint("cp", "-r", importEverything, absEverything)
 	suite.NoError(err)
+	suite.DirExists(absEverything)
 
 	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), absDosGames)
 	suite.NoError(err)
+	suite.DirExists(absDosGames)
 
 	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
 	suite.NoError(err)
+	suite.DirExists(absNoCode)
 
 	image := "registry:2.8.1"
 
