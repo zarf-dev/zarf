@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -459,12 +458,8 @@ func (p *Packager) validatePackageArchitecture() error {
 	}
 
 	// If we're working with an init package deploying k3s(appliance mode), set the clusterArch to the machine we're running on.
-	if applianceMode {
+	if applianceMode && p.cluster == nil {
 		clusterArch = runtime.GOARCH
-
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-		}
 	}
 
 	// If we're already connected to a cluster, query the cluster for the architecture.
@@ -473,25 +468,10 @@ func (p *Packager) validatePackageArchitecture() error {
 		if err != nil {
 			return err
 		}
+	}
 
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-		}
-	} else {
-		// If we're not already connected to a cluster, attemp to setup a new client connection.
-		c, err := cluster.NewClusterWithWait(30 * time.Second)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-
-		clusterArch, err = c.Kube.GetArchitecture()
-		if err != nil {
-			return err
-		}
-
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-		}
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
