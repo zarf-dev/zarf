@@ -460,6 +460,10 @@ func (p *Packager) validatePackageArchitecture() error {
 	// If we're working with an init package deploying k3s(appliance mode), set the clusterArch to the machine we're running on.
 	if applianceMode && p.cluster == nil {
 		clusterArch = runtime.GOARCH
+
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
 	}
 
 	// If we're already connected to a cluster, query the cluster for the architecture.
@@ -468,10 +472,10 @@ func (p *Packager) validatePackageArchitecture() error {
 		if err != nil {
 			return err
 		}
-	}
 
-	if p.arch != clusterArch {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
 	}
 
 	return nil
