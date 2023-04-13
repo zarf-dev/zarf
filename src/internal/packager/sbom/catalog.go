@@ -21,7 +21,6 @@ import (
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -77,7 +76,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := images.LoadImage(tmpPaths.Images, tag)
+		img, err := utils.LoadOCIImage(tmpPaths.Images, tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err

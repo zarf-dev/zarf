@@ -122,7 +122,7 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">    onCreate</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">      before</b>:
-      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> make init-package-local-agent AGENT_IMAGE="agent:v0.24.3"</b>
+      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> make init-package-local-agent AGENT_IMAGE_TAG="v0.24.3"</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
   -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> zarf-agent</b>
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
@@ -230,7 +230,13 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> 2Gi</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">constants</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> AGENT_IMAGE</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> agent:v0.24.3</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> defenseunicorns/zarf/agent</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> AGENT_IMAGE_TAG</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> v0.24.3</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> REGISTRY_IMAGE</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> registry</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> REGISTRY_IMAGE_TAG</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> 2.8.1</b>
 <b class=YEL>This package has 9 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
 <b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
 <b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs-website/zarf-sbom/sbom-viewer-docker.io_grafana_promtail_2.7.0.html</b>

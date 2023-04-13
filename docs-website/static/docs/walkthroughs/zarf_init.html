@@ -127,7 +127,7 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">    onCreate</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">      before</b>:
-      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> make init-package-local-agent AGENT_IMAGE="agent:v0.25.0"</b>
+      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> make init-package-local-agent AGENT_IMAGE_TAG="v0.25.0"</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
   -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> zarf-agent</b>
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
@@ -235,7 +235,13 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> 2Gi</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">constants</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> AGENT_IMAGE</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> agent:v0.25.0</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> defenseunicorns/zarf/agent</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> AGENT_IMAGE_TAG</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> v0.25.0</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> REGISTRY_IMAGE</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> registry</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> REGISTRY_IMAGE_TAG</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">value</b>:<b style="color:#ff55ff;"> 2.8.1</b>
 <b class=YEL>This package has 9 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
 <b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
 <b class=YEL>/Users/josimoore/Desktop/projects/zarf/zarf-sbom/sbom-viewer-docker.io_grafana_promtail_2.7.2.html</b>
@@ -350,33 +356,33 @@ b.BWHI {background-color: #aaaaaa}
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     </div>
-    
+
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Copying 1 files</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Gathering cluster information</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Attempting to bootstrap the seed image into the cluster</b>
-    
+
     <div style="background-color:#555555">
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-SEED-REGISTRY COMPONENT                                               </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     </div>
-    
+
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart docker-registry:1.0.0 from Zarf-generated helm chart</b>
-    
+
     <div style="background-color:#555555">
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-REGISTRY COMPONENT                                                    </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     </div>
-    
+
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62270 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62270/v2/_catalog</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
@@ -395,14 +401,14 @@ b.BWHI {background-color: #aaaaaa}
            <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-registry-kep-1755-registry-annotation:0.1.1680014363 from</b>
            <b style="color:#55ffff;"></b><b style="color:#55ffff;">Zarf-generated helm chart</b>
-    
+
     <div style="background-color:#555555">
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 ZARF-AGENT COMPONENT                                                       </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
     <b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
     </div>
-    
+
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 62284 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:62284/v2/_catalog</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
@@ -412,11 +418,11 @@ b.BWHI {background-color: #aaaaaa}
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
       •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-init-zarf-agent-zarf-agent:0.1.1680014363 from Zarf-generated helm chart</b>
     <b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
-    
-    
+
+
     <b style="color:#55ffff;"></b><b style="color:#55ffff;">Application</b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Username </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Password                </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Connect</b>
     <b style="color:#55ffff;"></b>Registry   <b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf-push<b style="color:#555555;"></b><b style="color:#555555;"> | </b>DdarrzTahz6oclGTUAUOfbsY<b style="color:#555555;"></b><b style="color:#555555;"> | </b>zarf connect registry
-    
+
 <b style="color:#555555;"></b>
 </pre>
 </body>

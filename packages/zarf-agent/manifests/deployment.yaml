@@ -22,7 +22,7 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: server
-          image: "###ZARF_REGISTRY###/defenseunicorns/zarf/###ZARF_CONST_AGENT_IMAGE###"
+          image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:

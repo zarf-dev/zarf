@@ -24,7 +24,7 @@ type Image struct {
 
 // ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).
 func ImageTransformHost(targetHost, srcReference string) (string, error) {
-	image, err := parseImageURL(srcReference)
+	image, err := ParseImageRef(srcReference)
 	if err != nil {
 		return "", err
 	}
@@ -37,14 +37,15 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
 func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string, error) {
-	image, err := parseImageURL(srcReference)
+	image, err := ParseImageRef(srcReference)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
 }
 
-func parseImageURL(srcReference string) (out Image, err error) {
+// ParseImageRef parses a source reference into an Image struct
+func ParseImageRef(srcReference string) (out Image, err error) {
 	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
 		return out, err

@@ -107,7 +107,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
 		} else {
-			charts, err = p.deployComponent(component, false /* keep img checksum */)
+			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
 		}
 
 		deployedComponent := types.DeployedComponent{Name: component.Name}
@@ -162,10 +162,10 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.tmp)
+		p.cluster.StartInjectionMadness(p.tmp, component.Images)
 	}
 
-	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
+	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
 		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 	}
@@ -181,7 +181,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 }
 
 // Deploy a Zarf Component.
-func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
@@ -193,7 +193,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	hasImages := len(component.Images) > 0
+	hasImages := len(component.Images) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
