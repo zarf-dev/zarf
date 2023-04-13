@@ -117,7 +117,7 @@ type ComponentPaths struct {
 type TempPaths struct {
 	Base         string
 	InjectBinary string
-	SeedImage    string
+	SeedImages   string
 	Images       string
 	Components   string
 	SbomTar      string

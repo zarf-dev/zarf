@@ -111,7 +111,7 @@ cd build
 If you installed Zarf through Homebrew, Zarf will already be on your $PATH and you can skip this section.
 :::
 
-To simplify the usage of the Zarf CLI, you may add it to your $PATH. This configuration will allow you to use `zarf` without having to specify the binary’s precise location and your computer will automatically find the binary for you to execute. The directories listed in your $PATH can be viewed by executing the command `echo $PATH` in your terminal. If you move your CLI to any of these directories, you will be able to execute it without the need to specify its full path. A typical $PATH you can use is: `mv ./path/to/cli/file/zarf /usr/local/bin/zarf`
+To simplify the usage of the Zarf CLI, you may add it to your $PATH. This configuration will allow you to use `zarf` without having to specify the binary's precise location and your computer will automatically find the binary for you to execute. The directories listed in your $PATH can be viewed by executing the command `echo $PATH` in your terminal. If you move your CLI to any of these directories, you will be able to execute it without the need to specify its full path. A typical $PATH you can use is: `mv ./path/to/cli/file/zarf /usr/local/bin/zarf`
 
 :::note
 Throughout the rest of the documentation, we will often be describing commands as `zarf {command}`. This assumes that the CLI is on your $PATH.
@@ -132,7 +132,7 @@ The `zarf init` command is utilized to configure a K8s cluster in preparation fo
 ### zarf package deploy
 
 <!-- The most common use case (like 99.9% of the time) is deploying onto a k8s cluster.. but that doesn't HAVE to be the case.. How do I write the docs for this then? -->
-<!-- TODO: Write some docs (or reddirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
+<!-- TODO: Write some docs (or redirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
 
 The `zarf package deploy` command is used to deploy an already built tar.zst package onto a machine, typically within a K8s cluster. Generally, it is presumed that the `zarf init` command has already been executed on the target machine. However, there are a few exceptional cases where this assumption does not apply.
 
