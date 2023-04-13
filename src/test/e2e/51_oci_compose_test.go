@@ -33,7 +33,10 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err := exec.CmdWithPrint("mkdir", "-p", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.NoError(err)
+
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart", "*"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
