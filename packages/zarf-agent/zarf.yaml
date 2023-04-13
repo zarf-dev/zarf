@@ -6,6 +6,8 @@ metadata:
 constants:
   - name: AGENT_IMAGE
     value: "###ZARF_PKG_TMPL_AGENT_IMAGE###"
+  - name: AGENT_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
 
 components:
   - name: zarf-agent
@@ -16,7 +18,7 @@ components:
       docker registry and git server.
     required: true
     images:
-      - "ghcr.io/defenseunicorns/zarf/###ZARF_PKG_TMPL_AGENT_IMAGE###"
+      - "###ZARF_PKG_TMPL_AGENT_IMAGE_DOMAIN######ZARF_PKG_TMPL_AGENT_IMAGE###:###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
     manifests:
       - name: zarf-agent
         namespace: zarf
@@ -28,4 +30,4 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: "make init-package-local-agent AGENT_IMAGE=\"###ZARF_PKG_TMPL_AGENT_IMAGE###\""
+          - cmd: "make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\""

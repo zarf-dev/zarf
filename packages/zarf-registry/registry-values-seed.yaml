@@ -1,2 +1,3 @@
 image:
-  repository: "###ZARF_SEED_REGISTRY###/library/registry"
+  repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  tag: "###ZARF_CONST_REGISTRY_IMAGE_TAG###"
