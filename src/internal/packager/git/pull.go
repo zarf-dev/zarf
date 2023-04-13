@@ -75,7 +75,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 			if err != nil {
 				return fmt.Errorf("unable to get user's home directory: %w", err)
 			}
-			hostPath, err = filepath.Join(home, strings.TrimPrefix(hostPath, "~"))
+			hostPath = filepath.Join(home, strings.TrimPrefix(hostPath, "~"))
 			if err != nil {
 				return fmt.Errorf("unable to convert relative path to absolute path: %w", err)
 			}
