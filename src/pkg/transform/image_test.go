@@ -13,6 +13,8 @@ import (
 var imageRefs = []string{
 	"nginx",
 	"nginx:1.23.3",
+	"defenseunicorns/zarf-agent:v0.22.1",
+	"defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
 	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 }
@@ -28,6 +30,9 @@ func TestImageTransformHost(t *testing.T) {
 		// Normal git repos and references for pushing/pulling
 		"gitlab.com/project/library/nginx:latest-zarf-3793515731",
 		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
+		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-4283503412",
+    // TODO: (@WSTARR) Fix the logic here for digests
+		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de-4283503412",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 	}
@@ -48,6 +53,8 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 	var expectedResult = []string{
 		"gitlab.com/project/library/nginx:latest",
 		"gitlab.com/project/library/nginx:1.23.3",
+		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1",
+		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 	}
@@ -60,6 +67,43 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 
 	for _, ref := range badImageRefs {
 		_, err := ImageTransformHostWithoutChecksum("gitlab.com/project", ref)
+		assert.Error(t, err)
+	}
+}
+
+func TestParseImageRef(t *testing.T) {
+	var expectedResult = [][]string{
+		{"docker.io/", "library/nginx", "latest", ""},
+		{"docker.io/", "library/nginx", "1.23.3", ""},
+		{"docker.io/", "defenseunicorns/zarf-agent", "v0.22.1", ""},
+		{"docker.io/", "defenseunicorns/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},
+		{"ghcr.io/", "stefanprodan/podinfo", "6.3.3", ""},
+		{"registry1.dso.mil/", "ironbank/opensource/defenseunicorns/zarf/zarf-agent", "v0.25.0", ""},
+	}
+
+	for idx, ref := range imageRefs {
+		img, err := ParseImageRef(ref)
+		assert.NoError(t, err)
+		tag := expectedResult[idx][2]
+		digest := expectedResult[idx][3]
+		tagOrDigest := ":" + tag
+		if tag == "" {
+			tagOrDigest = "@" + digest
+		}
+		path := expectedResult[idx][1]
+		name := expectedResult[idx][0] + path
+		reference := name + tagOrDigest
+
+		assert.Equal(t, reference, img.Reference)
+		assert.Equal(t, name, img.Name)
+		assert.Equal(t, path, img.Path)
+		assert.Equal(t, tag, img.Tag)
+		assert.Equal(t, digest, img.Digest)
+		assert.Equal(t, tagOrDigest, img.TagOrDigest)
+	}
+
+	for _, ref := range badImageRefs {
+		_, err := ParseImageRef(ref)
 		assert.Error(t, err)
 	}
 }
