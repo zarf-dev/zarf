@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -445,40 +446,25 @@ func (p *Packager) validatePackageChecksums() error {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture(initPackage bool) error {
 	var clusterArch string
-	err := fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 
-	// If we're deploying an init package, iterate over the components to determine
-	// if we're deploying k3s, and set appliance mode to true if we are.
-	if initPackage {
-		components := p.getValidComponents()
-		for _, component := range components {
-			if component.Name == "k3s" {
-				p.cfg.InitOpts.ApplianceMode = true
+	// If k8s resources are defined in the package, query the cluster for the architecture.
+	// If not, set the cluster architecture to the architecture of the machine we're running on.
+	if p.cluster != nil {
+		c, err := cluster.NewClusterWithWait(30 * time.Second)
+
+		if err == nil {
+			clusterArch, err = c.Kube.GetArchitecture()
+
+			if err != nil {
+				return err
 			}
 		}
-	}
-
-	// If we're deploying an appliance mode init package, set the cluster arch to the arch of the machine we're running on.
-	if p.cfg.InitOpts.ApplianceMode {
+	} else {
 		clusterArch = runtime.GOARCH
-
-		if p.arch != clusterArch {
-			return err
-		}
 	}
 
-	// If k8s is being used, query the cluster for the architecture.
-	if p.cluster != nil {
-		c := cluster.NewClusterOrDie()
-
-		clusterArch, err = c.Kube.GetArchitecture()
-		if err != nil {
-			return err
-		}
-
-		if p.arch != clusterArch {
-			return err
-		}
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
