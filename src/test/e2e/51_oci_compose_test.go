@@ -52,7 +52,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
 
 	// spin up a local registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "registry", image)
+	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
 	suite.NoError(err)
 
 	// docker config folder
@@ -64,7 +64,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 		suite.NoError(err)
 	}
 
-	suite.Reference.Registry = "localhost:5000"
+	suite.Reference.Registry = "localhost:666"
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -77,6 +77,10 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("rm", "-rf", absDosGames)
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", absNoCode)
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", "files")
 	suite.NoError(err)
 }
 
@@ -94,9 +98,7 @@ func (suite *SkeletonSuite) Test_0_Publish() {
 func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	// Compose skeleton package of import-everything.
-	importEverythingExample := filepath.Join("examples", "import-everything")
-	_, _, err := e2e.execZarfCommand("package", "create", importEverythingExample, "--confirm", "-o", "build", "--insecure")
+	_, _, err := e2e.execZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
