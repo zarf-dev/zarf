@@ -10,7 +10,7 @@ interface APIRequest<T> {
 
 // Store this outside of the class vs private since private isn't real in JS.
 const headers = new Headers({
-	'Content-Type': 'application/json'
+	'Content-Type': 'application/json',
 });
 
 export class HTTP {
@@ -74,30 +74,13 @@ export class HTTP {
 		}
 	}
 
+	// Private handler for establishing event source connections.
 	private connect<T>(req: APIRequest<T>): EventSource {
 		const url = BASE_URL + req.path;
-		// const payload: RequestInit = { method: req.method, headers };
-		// const eventTarget = new EventTarget();
-		// const eventStream = makeWriteableEventStream(eventTarget);
 		if (!headers.get('Authorization')) {
 			throw new Error('Not authenticated yet');
 		}
 		const eventSource = new EventSource(`${url}?auth=${headers.get('Authorization')}`);
-		// Add the body if it exists
-		// if (req.body) {
-		// 	payload.body = JSON.stringify(req.body);
-		// }
-		// fetch(url, payload)
-		// 	.then((response) => {
-		// 		if (!response?.body) {
-		// 			throw new Error('Unable to get reader');
-		// 		}
-		// 		response.body.pipeThrough(new TextDecoderStream()).pipeTo(eventStream);
-		// 	})
-		// 	.catch((error) => {
-		// 		eventTarget.dispatchEvent(new CustomEvent('error', { detail: error }));
-		// 	});
-		// return eventTarget;
 		return eventSource;
 	}
 
@@ -155,6 +138,6 @@ function makeWriteableEventStream(eventTarget: EventTarget) {
 		},
 		abort(reason) {
 			eventTarget.dispatchEvent(new CloseEvent('abort', { reason }));
-		}
+		},
 	});
 }

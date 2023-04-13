@@ -7,9 +7,7 @@ import type {
 	ClusterSummary,
 	DeployedComponent,
 	DeployedPackage,
-	ZarfDeployOptions,
-	ZarfInitOptions,
-	ZarfState
+	ZarfState,
 } from './api-types';
 import { HTTP } from './http';
 
@@ -23,15 +21,15 @@ const Auth = {
 
 		http.updateToken(token);
 		return await http.head('/');
-	}
+	},
 };
 
 const Cluster = {
 	summary: () => http.get<ClusterSummary>('/cluster'),
 	state: {
 		read: () => http.get<ZarfState>('/state'),
-		update: (body: ZarfState) => http.patch<ZarfState>('/state', body)
-	}
+		update: (body: ZarfState) => http.patch<ZarfState>('/state', body),
+	},
 };
 
 const Packages = {
@@ -42,11 +40,11 @@ const Packages = {
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
 	deployStream: () => http.deployStream<boolean>('/packages/deploy-stream'),
-	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`)
+	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
 };
 
 const DeployingComponents = {
-	list: () => http.get<DeployedComponent[]>('/components/deployed')
+	list: () => http.get<DeployedComponent[]>('/components/deployed'),
 };
 
 export { Auth, Cluster, Packages, DeployingComponents };

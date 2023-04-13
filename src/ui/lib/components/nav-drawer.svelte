@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Paper, type SSX, Typography, Box } from '@ui';
 	import NavLink from './nav-link.svelte';

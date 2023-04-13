@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import GlobalNav from '$lib/components/global-navigation-bar.svelte';
 	import NavDrawer from '$lib/components/nav-drawer.svelte';

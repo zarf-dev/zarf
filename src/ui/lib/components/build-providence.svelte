@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Box, Typography, type SSX, currentTheme } from '@ui';
 	import type { ZarfBuildData } from '$lib/api-types';
@@ -26,8 +30,6 @@
 			},
 		},
 	};
-
-	$: light = $currentTheme === 'light';
 </script>
 
 <Box {ssx}>
@@ -37,7 +39,7 @@
 			{#each labels as label}
 				<Typography
 					variant="caption"
-					color={light ? 'text-secondary-on-light' : 'text-secondary-on-dark'}
+					color="text-secondary-on-${$currentTheme}"
 					style="text-transform: capitalize;">{label}:</Typography
 				>
 			{/each}

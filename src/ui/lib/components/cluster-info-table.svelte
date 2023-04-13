@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Typography, Box, type SSX } from '@ui';
 	import { deployedPkgStore, clusterStore } from '$lib/store';
@@ -104,6 +108,7 @@
 				<Typography variant="inherit">CPU:</Typography>
 			</Typography>
 			<Typography element="div" variant="caption" class="label-values" style="font-weight:500;">
+				<!--TODO: Need to look into obtaining overall cluster resources. This planned for future work  -->
 				<Typography variant="inherit">n/a</Typography>
 				<Typography variant="inherit">n/a</Typography>
 			</Typography>

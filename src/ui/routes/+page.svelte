@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Cluster, Packages } from '$lib/api';
 	import type { ClusterSummary, DeployedPackage } from '$lib/api-types';

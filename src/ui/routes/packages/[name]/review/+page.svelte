@@ -11,7 +11,7 @@
 	} from '$lib/components';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import { Button, Typography, AccordionGroup, currentTheme } from '@ui';
+	import { Button, AccordionGroup, currentTheme } from '@ui';
 	import { page } from '$app/stores';
 	import BuildProvidence from '$lib/components/build-providence.svelte';
 	import DeploymentActions from '$lib/components/deployment-actions.svelte';

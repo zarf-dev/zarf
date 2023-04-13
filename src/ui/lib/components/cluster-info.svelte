@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import ConnectClusterDialog from './connect-cluster-dialog.svelte';
 	import ClusterInfoTable from './cluster-info-table.svelte';
@@ -63,7 +67,7 @@
 		{:else if !showClusterInfo}
 			<Typography class="cluster-not-connected" variant="body1" element="span">
 				<span class="material-symbols-outlined" style="color:var(--warning);"> warning </span>
-				<span>&nbsp;Cluster not connected </span>
+				<span>Cluster not connected </span>
 			</Typography>
 		{:else}
 			<ClusterInfoTable />

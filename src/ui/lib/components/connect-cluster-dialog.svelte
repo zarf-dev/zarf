@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Typography, Box, Button, type SSX, Dialog, List, IconButton, DialogActions } from '@ui';
 	import { clusterStore } from '$lib/store';

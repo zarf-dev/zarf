@@ -10,7 +10,7 @@
 		Divider,
 	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
-	import { Button, Paper, Typography, AccordionGroup, currentTheme, type SSX } from '@ui';
+	import { Button, Paper, Typography, AccordionGroup, currentTheme } from '@ui';
 	import { page } from '$app/stores';
 	import BuildProvidence from '$lib/components/build-providence.svelte';
 	import DeploymentActions from '$lib/components/deployment-actions.svelte';

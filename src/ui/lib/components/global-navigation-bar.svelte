@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import ZarfLogoDark from '../../images/png/global-navigation-zarf-logo.png';
+	import ZarfLogoDark from '@images/png/global-navigation-zarf-logo.png';
 
 	import { Paper, type SSX } from '@ui';
 	import ThemeToggle from './theme-toggle.svelte';
