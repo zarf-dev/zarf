@@ -444,7 +444,7 @@ func (p *Packager) validatePackageChecksums() error {
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture(initPackage bool) error {
+func (p *Packager) validatePackageArchitecture() error {
 	var clusterArch string
 
 	// If k8s resources are defined in the package, query the cluster for the architecture.
