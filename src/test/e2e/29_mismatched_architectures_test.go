@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +32,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 		initPackageVersion          = "UnknownVersion"
 		mismatchedDeployPackageName = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
 		mismatchedInitPackageName   = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage        = fmt.Sprintf(lang.CmdPackageDeployValidateArchitectureErr, mismatchedArch, e2e.arch)
+		expectedErrorMessage        = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 	)
 
 	// Build init package with different arch than the cluster arch.
