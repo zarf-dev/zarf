@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	dconfig "github.com/docker/cli/cli/config"
@@ -49,7 +48,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
 	suite.NoError(err)
 
-	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
+	image := "registry:2.8.1"
 
 	// spin up a local registry
 	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
