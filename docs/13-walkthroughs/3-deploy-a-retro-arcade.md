@@ -1,45 +1,57 @@
-# Deploying Zarf Packages 
+# Deploying a Retro Arcade 
 
 ## Introduction
 
-In this walkthrough, we are going to deploy a fun application onto your cluster. In previous walkthroughs, we learned how to [create a package](./0-using-zarf-package-create.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to deploy packages of functionality into a Kubernetes cluster.
+In previous walkthroughs, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this walkthrough, we will be leveraging all that past work and will deploy a fun application onto your cluster. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to build and deploy packages of functionality into a Kubernetes cluster.
 
 ## System Requirements
 
-- You'll need an internet connection to grab the Zarf source code that includes the games example
+- You'll need an internet connection to grab the Zarf source code that includes the games example.
 
 ## Prerequisites
 
-Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
-1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
-2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
-3. The [game package created](./0-using-zarf-package-create.md).
+1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
+2.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
+3. [An initialized cluster](./1-initializing-a-k8s-cluster.md)
 
-## Walkthrough
+## YouTube Walkthrough
 [![Deploying Packages with Zarf Video on YouTube](../.images/walkthroughs/package_deploy_thumbnail.jpg)](https://youtu.be/7hDK4ew_bTo "Deploying Packages with Zarf")
 
-1. Navigate to the folder when you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))
+1. Navigate to the `dos-games` folder within the Zarf repo.
 
 ```sh
 $ cd src/github.com/defenseunicorns/zarf/examples/dos-games
 ```
 
-2. Use the `zarf package deploy` command to deploy the zarf games package.
+2. Use the `zarf package create .` command to create the Zarf games package. Enter `y` to confirm package creation.
+
+<iframe src="/docs/walkthroughs/dos_games_create.html" width="100%" height="275px"></iframe>
+
+3. Provide a file size for the package, or enter `0` to disable the feature
+
+<iframe src="/docs/walkthroughs/dos_games_size.html" width="100%" height="100px"></iframe>
+
+Once you enter your response for the package size, the output that follows will show the package being created.
+
+<iframe src="/docs/walkthroughs/dos_games_components.html" width="100%" height="300px"></iframe>
+
+4. Use the `zarf package deploy` command to deploy the Zarf games package.
 
 <iframe src="/docs/walkthroughs/package_deploy_deploy.html" width="100%" height="595px"></iframe>
 
-3. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. You can use the `tab` key, to be prompted for avaiable packages in the current working directory.
+5. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you to choose which package you want to deploy.
 
 <iframe src="/docs/walkthroughs/package_deploy_suggest.html" width="100%" height="150px"></iframe>
-By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the games package in this walkthrough, we will select that package and hit 'enter'.
+
+You can list all packages in the current directory by hitting `tab`. Then, use the arrow keys to select which package you want to deploy. If there is only one package available, hitting `tab` will autofill that one option. Since we are deploying the games package in this walkthrough, we will select that package and hit `enter`.
 
 <iframe src="/docs/walkthroughs/package_deploy_suggestions.html" width="100%" height="150px"></iframe>
-As we have seen a few times now, we are going to be prompted with a confirmation dialog asking us to confirm that we want to deploy this package onto our cluster.
+As we have seen a few times now, we are going to be prompted to confirm that we want to deploy this package onto our cluster.
 
 <iframe src="/docs/walkthroughs/package_deploy_deploy.html" width="100%" height="595px"></iframe>
 
 
-4. If you did not use the `--confirm` flag to automatically confirm that you want to install this package, press `y` for yes.  Then hit the `enter` key.
+6. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
 
 <iframe src="/docs/walkthroughs/package_deploy_deploy_bottom.html" width="100%" height="400px"></iframe>
 
@@ -91,7 +103,7 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 
 If you need to setup a cluster, you can perform the following.
 
-1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./4-creating-a-k8s-cluster-with-zarf.md) walkthrough.
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./5-creating-a-k8s-cluster-with-zarf.md) walkthrough.
 2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough.
 
 After that you can try deploying the package again.

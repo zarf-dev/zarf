@@ -28,7 +28,7 @@ This set of commands will create a Zarf package in the current directory. In thi
 
 When you execute the `zarf package create` command, Zarf will prompt you to confirm that you want to create the package by displaying the package definition and asking you to respond with either `y` or `n`.
 
-<iframe src="/docs/walkthroughs/zarf_package_create.html" height="500px" width="100%"></iframe>
+<iframe src="/docs/walkthroughs/package_create.html" height="500px" width="100%"></iframe>
 
 :::info
 You can skip this confirmation by adding the `--confirm` flag when running the command. This will look like: `zarf package create . --confirm`
@@ -36,7 +36,12 @@ You can skip this confirmation by adding the `--confirm` flag when running the c
 
 After you confirm package creation, you have the option to specify a maximum file size for the package. To disable this feature, enter `0`.
 
-<iframe src="/docs/walkthroughs/zarf_package_create_size.html" height="100px" width="100%"></iframe>
+<iframe src="/docs/walkthroughs/package_create_size.html" height="100px" width="100%"></iframe>
+
+Once you enter your response for the package size, the output that follows will show the package being created.
+
+<iframe src="/docs/walkthroughs/package_create_components.html" height="500px" width="100%"></iframe>
+
 
 Congratulations! You've just created your first Zarf package!
 
@@ -58,7 +63,7 @@ Congratulations! You've built the Helm OCI chart package. Now, let's [deploy it]
 
 #### Example
 
-<iframe src="/docs/walkthroughs/zarf_package_create_error.html" width="100%" ></iframe>
+<iframe src="/docs/walkthroughs/package_create_error.html" width="100%" ></iframe>
 
 #### Remediation
 
