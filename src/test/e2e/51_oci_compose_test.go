@@ -26,15 +26,18 @@ type SkeletonSuite struct {
 // go test ./src/test/e2e/... -v -run TestSkeletonSuite -count=1 -failfast
 
 var (
-	importEverything   = filepath.Join("examples", "import-everything")
-	everythingExternal = filepath.Join("examples", "everything-external")
+	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
+	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
 	absEverything      = filepath.Join("/", "tmp", "everything-external")
 	absDosGames        = filepath.Join("/", "tmp", "dos-games")
 	absNoCode          = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
+	err := exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.NoError(err)
+
+	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
 
 	err = exec.CmdWithPrint("cp", "-r", importEverything, absEverything)
@@ -100,22 +103,64 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 func (suite *SkeletonSuite) Test_2_Deploy() {
 	suite.T().Log("E2E: Created Skeleton Package Deploy")
 
-	// Deploy newly created package.
 	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.arch))
-	_, _, err := e2e.execZarfCommand("package", "deploy", p, "--components=import-component-oci", "--confirm")
+	deploy := func(component string) error {
+		_, _, err := e2e.execZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
+		return err
+	}
+	remove := func(component string) error {
+		_, _, err := e2e.execZarfCommand("package", "remove", "import-everything", fmt.Sprintf("--components=%s", component), "--confirm")
+		return err
+	}
+
+	err := deploy("import-component-local")
+	suite.NoError(err)
+
+	err = remove("import-component-local")
+	suite.NoError(err)
+
+	err = deploy("import-component-local-relative")
+	suite.NoError(err)
+
+	err = remove("import-component-local-relative")
+	suite.NoError(err)
+
+	err = deploy("import-component-local-absolute")
+	suite.NoError(err)
+
+	err = deploy("import-component-oci")
 	suite.NoError(err)
 
 	// Verify that nginx successfully deploys in the cluster
 	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
 	suite.Contains(string(kubectlOut), "successfully rolled out")
 
-	// Remove the package.
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "remove", "import-everything", "--components=import-component-oci", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
+	err = deploy("import-helm")
+	suite.NoError(err)
+
+	err = remove("import-helm")
+	suite.NoError(err)
+
+	err = deploy("import-repos")
+	suite.NoError(err)
+
+	err = remove("import-repos")
+	suite.NoError(err)
+
+	err = deploy("import-images")
+	suite.NoError(err)
+
+	err = remove("import-images")
+	suite.NoError(err)
+
+	err = deploy("import-data-injections")
+	suite.NoError(err)
+
+	err = remove("import-data-injections")
+	suite.NoError(err)
 }
 
 // func (suite *SkeletonSuite) Test_3_BadImports() {
-// func (suite *SkeletonSuite) Test_2_Deploy() {
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.setupWithCluster(t)

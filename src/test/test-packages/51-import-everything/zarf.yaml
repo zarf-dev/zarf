@@ -1,11 +1,8 @@
 kind: ZarfPackageConfig
 metadata:
   name: import-everything
-  description: Example showcasing nearly every type of import
+  description: Test nearly every type of import
   version: 0.0.1
-
-# For demo purposes, the `required` key is set to false so we can deploy
-# this package multiple times to showcase different features.
 
 # This package showcases the following types of imports:
 # - files (local and via HTTP)
@@ -15,50 +12,21 @@ metadata:
 # - components (local and via OCI)
 
 components:
-  # Example of a prep component (this component currently does nothing)
-  # Since this component is first in the list, it will be run first
-  # and is a good area to put any pre-reqs / hooks for the other components
-  - name: prep
-    required: true
-    # For a more comprehensive example of actions, see examples/component-actions/zarf.yaml
-    actions:
-      onCreate:
-        before:
-          - cmd: echo "⏲️ Preparing things for 'zarf package create'..."
-        after:
-          - cmd: echo "🧹 Cleaning up after 'zarf package create'..."
-      onDeploy:
-        before:
-          - cmd: echo "⏲️ Preparing things for 'zarf package deploy'..."
-        after:
-          - cmd: echo "🧹 Cleaning up after 'zarf package deploy'..."
-      onRemove:
-        before:
-          - cmd: echo "⏲️ Preparing things for `zarf package remove`..."
-        after:
-          - cmd: echo "🧹 Cleaning up after 'zarf package remove'..."
-        # onFailure and onSuccess actions are available on all actions, but are not used in this example
-        onFailure:
-          - cmd: echo "❌ Cleaning up after 'zarf package remove' failed..."
-
   - name: import-component-local
     required: false
     import:
-      # highlight-next-line
       path: foo
       name: baz
 
   - name: import-component-local-relative
     required: false
     import:
-      # highlight-next-line
-      path: ../dos-games
+      path: ../../../../examples/dos-games
       name: baseline
 
   - name: import-component-local-absolute
     required: false
     import:
-      # highlight-next-line
       path: /tmp/dos-games
       name: baseline
 
@@ -73,48 +41,62 @@ components:
     required: false
     files:
       # Import of a file within the current directory
-      # highlight-next-line
       - source: files/coffee-ipsum.txt
         target: files/coffee-ipsum.txt
         # Import of a file from a relative path external to the current directory
-        # highlight-next-line
       - source: ../everything-external/files/coffee-ipsum.txt
         target: files/latte.txt
         # Import of a file from an absolute path external to the current directory
-        # highlight-next-line
       - source: /tmp/nocode/README.md
         target: files/nocode-readme.md
         # Import of a file from a URL
-        # highlight-next-line
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
         target: files/zarf-readme.md
+    actions:
+      onDeploy:
+        after:
+        - cmd: test -f files/coffee-ipsum.txt
+        - cmd: test -f files/latte.txt
+        - cmd: test -f files/nocode-readme.md
+        - cmd: test -f files/zarf-readme.md
 
   - name: import-helm
     required: false
     charts:
       - name: local-demo
-        # highlight-next-line
         localPath: charts/local
         namespace: local-chart
         version: 0.1.0
       - name: local-demo
-        # highlight-next-line
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
         version: 0.1.0
       - name: local-demo
-        # highlight-next-line
         localPath: /tmp/everything-external/charts/local
         namespace: local-chart-absolute
         version: 0.1.0
       - name: oci-demo
         version: 6.3.3
         namespace: podinfo
-        # highlight-next-line
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
       - nginx:1.16.0
       - ghcr.io/stefanprodan/podinfo:6.3.3
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app=podinfo
+                namespace: podinfo
+                condition: ready
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart
+                condition: available
 
   - name: import-repos
     required: false
