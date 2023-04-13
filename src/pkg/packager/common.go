@@ -168,7 +168,7 @@ func createPaths() (paths types.TempPaths, err error) {
 		Base: basePath,
 
 		InjectBinary: filepath.Join(basePath, "zarf-injector"),
-		SeedImage:    filepath.Join(basePath, "seed-image"),
+		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
 		SbomTar:      filepath.Join(basePath, "sboms.tar"),
@@ -461,7 +461,7 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
 	// Validate the signature of the package
 	if publicKeyPath == "" {
-		return fmt.Errorf("package is signed but no key was provided, using signed packages requires a --key or --insecure flag to continue")
+		return fmt.Errorf("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 	}
 
 	// Validate the signature with the key we were provided

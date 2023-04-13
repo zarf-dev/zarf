@@ -7,14 +7,13 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -60,7 +59,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	zarfState, err := getStateFromAgentPod(zarfStatePath)
+	zarfState, err := state.GetZarfStateFromAgentPod()
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
@@ -69,7 +68,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -80,7 +79,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -91,7 +90,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement, err := utils.SwapHost(container.Image, containerRegistryURL)
+		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -106,18 +105,4 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		Allowed:  true,
 		PatchOps: patchOperations,
 	}, nil
-}
-
-// Reads the state json file that was mounted into the agent pods.
-func getStateFromAgentPod(zarfStatePath string) (types.ZarfState, error) {
-	zarfState := types.ZarfState{}
-
-	// Read the state file
-	stateFile, err := os.ReadFile(zarfStatePath)
-	if err != nil {
-		return zarfState, err
-	}
-
-	// Unmarshal the json file into a Go struct
-	return zarfState, json.Unmarshal(stateFile, &zarfState)
 }

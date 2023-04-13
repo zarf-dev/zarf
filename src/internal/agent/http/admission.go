@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the agent.
+// Package http provides a http server for the webhook and proxy.
 package http
 
 import (
@@ -109,12 +109,5 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
-	}
-}
-
-func healthz() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
 	}
 }

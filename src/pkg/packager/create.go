@@ -26,7 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -48,6 +47,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
 
@@ -74,17 +74,6 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	seedImage := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-
-	// Add the seed image to the registry component if this is an init config.
-	if p.cfg.IsInitConfig {
-		for idx, c := range p.cfg.Pkg.Components {
-			if c.Name == "zarf-registry" {
-				p.cfg.Pkg.Components[idx].Images = append(c.Images, seedImage)
-			}
-		}
-	}
-
 	// Perform early package validation.
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
@@ -92,29 +81,6 @@ func (p *Packager) Create(baseDir string) error {
 
 	if !p.confirmAction("Create", nil) {
 		return fmt.Errorf("package creation canceled")
-	}
-
-	// Save the seed image as an OCI image if this is an init config.
-	if p.cfg.IsInitConfig {
-		spinner := message.NewProgressSpinner("Loading Zarf Registry Seed Image")
-		defer spinner.Stop()
-
-		ociPath := path.Join(p.tmp.Base, "seed-image")
-		imgConfig := images.ImgConfig{
-			Insecure:      config.CommonOptions.Insecure,
-			Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
-		}
-
-		image, err := imgConfig.PullImage(seedImage, spinner)
-		if err != nil {
-			return fmt.Errorf("unable to pull seed image: %w", err)
-		}
-
-		if err := crane.SaveOCI(image, ociPath); err != nil {
-			return fmt.Errorf("unable to save image %s as OCI: %w", image, err)
-		}
-
-		spinner.Success()
 	}
 
 	var combinedImageList []string

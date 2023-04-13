@@ -8,7 +8,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 )
@@ -74,7 +74,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		// If this is not a no checksum image push it for use with the Zarf agent
 		if !i.NoChecksum {
-			offlineNameCRC, err := utils.SwapHost(src, registryURL)
+			offlineNameCRC, err := transform.ImageTransformHost(registryURL, src)
 			if err != nil {
 				return err
 			}
@@ -88,7 +88,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
 		// (this may result in collisions but this is acceptable for this use case)
-		offlineName, err := utils.SwapHostWithoutChecksum(src, registryURL)
+		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, src)
 		if err != nil {
 			return err
 		}

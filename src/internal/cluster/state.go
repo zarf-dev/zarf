@@ -132,6 +132,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
 	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+	state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 
 	spinner.Success()
 
@@ -298,4 +299,20 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 	}
 
 	return gitServer
+}
+
+// Fill in empty ArtifactServerInfo values with the defaults.
+func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
+	// Set default svc url if an external registry was not provided
+	if artifactServer.Address == "" {
+		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
+		artifactServer.InternalServer = true
+	}
+
+	// Set the push username to the git push user if not specified
+	if artifactServer.PushUsername == "" {
+		artifactServer.PushUsername = config.ZarfGitPushUser
+	}
+
+	return artifactServer
 }

@@ -106,7 +106,7 @@ dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
-	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
+	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
 	@ if [ "$(ARCH)" = "amd64" ] && [ ! -s ./build/zarf ]; then $(MAKE) build-cli-linux-amd; fi
@@ -121,7 +121,7 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -174,8 +174,9 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
+test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigbang extension directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
 .PHONY: test-built-ui
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)

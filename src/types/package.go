@@ -18,7 +18,7 @@ type ZarfPackage struct {
 type ZarfMetadata struct {
 	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]+$"`
 	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
-	Version           string `json:"version,omitempty" jsonschema:"description=Generic string to track the package version by a package author"`
+	Version           string `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`
 	URL               string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
 	Image             string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
 	Uncompressed      bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
