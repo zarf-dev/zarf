@@ -30,9 +30,8 @@ func TestImageTransformHost(t *testing.T) {
 		// Normal git repos and references for pushing/pulling
 		"gitlab.com/project/library/nginx:latest-zarf-3793515731",
 		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
-		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-4283503412",
-    // TODO: (@WSTARR) Fix the logic here for digests
-		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de-4283503412",
+		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-zarf-4283503412",
+		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 	}

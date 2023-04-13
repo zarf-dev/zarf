@@ -32,7 +32,12 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// Generate a crc32 hash of the image host + name
 	checksum := utils.GetCRCHash(image.Name)
 
-	return fmt.Sprintf("%s/%s%s-zarf-%d", targetHost, image.Path, image.TagOrDigest, checksum), nil
+	// If this image is specified by digest then don't add a checksum it as it will already be a specific SHA
+	if image.Digest != "" {
+		return fmt.Sprintf("%s/%s@%s", targetHost, image.Path, image.Digest), nil
+	} else {
+		return fmt.Sprintf("%s/%s:%s-zarf-%d", targetHost, image.Path, image.Tag, checksum), nil
+	}
 }
 
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
@@ -75,7 +80,9 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 
 	// If no tag or digest was provided use the default tag (latest)
 	if out.TagOrDigest == "" {
+		out.Tag = "latest"
 		out.TagOrDigest = ":latest"
+		out.Reference += ":latest"
 	}
 
 	return out, nil
