@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In previous walkthroughs, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this walkthrough, we will be leveraging all that past work and will deploy a fun application onto your cluster. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to build and deploy packages of functionality into a Kubernetes cluster.
+In previous walkthroughs, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this walkthrough, we will leverage all that past work and deploy a fun application onto your cluster. While this example game is nothing crazy, this walkthrough hopes to show how simple it is to build packages and deploy them into a Kubernetes cluster.
 
 ## System Requirements
 
@@ -27,7 +27,7 @@ $ cd src/github.com/defenseunicorns/zarf/examples/dos-games
 
 <iframe src="/docs/walkthroughs/dos_games_create.html" width="100%" height="275px"></iframe>
 
-3. Provide a file size for the package, or enter `0` to disable the feature
+3. Provide a file size for the package, or enter `0` to disable the feature.
 
 <iframe src="/docs/walkthroughs/dos_games_size.html" width="100%" height="100px"></iframe>
 

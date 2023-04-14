@@ -55,7 +55,7 @@ zarf package create examples/helm-oci-chart --confirm
 
 This will create a zarf package in the current directory with a package name that looks something like `zarf-package-helm-oci-chart-amd64.tar.zst`, although it might be slightly different depending on your system architecture.
 
-Congratulations! You've built the Helm OCI chart package. Now, let's [deploy it](./2-deploying-doom.md)!
+Congratulations! You've built the Helm OCI chart package. Now, let's [deploy it](./2-deploying-zarf-packages.md)!
 
 ## Troubleshooting
 

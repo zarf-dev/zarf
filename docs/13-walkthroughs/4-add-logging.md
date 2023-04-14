@@ -4,7 +4,7 @@
 
 In this walkthrough, we are going to show how you can use a Zarf component to inject zero-config, centralized logging into your Zarf cluster.
 
-More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://github.com/grafana/loki) stack to the [Doom Walkthrough](./2-deploying-doom.md) by installing Zarf's "logging" component.
+More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://github.com/grafana/loki) stack to the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md) by installing Zarf's "logging" component.
 
 ## System Requirements
 
@@ -44,7 +44,7 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 You should see a section for `Logging`.  You will need these credentials later on.
 
-## Deploy the Arcade Walkthrough
+## Deploy the Retro Arcade Walkthrough
 
 1. If you haven't already in the prerequisites, deploy the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md).
 

@@ -56,7 +56,7 @@ As we have seen a few times now, we are going to be prompted with a confirmation
 
 <iframe src="/docs/walkthroughs/package_deploy_helm_no_confirm.html" width="100%" height="425px"></iframe>
 
-3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again don't forget the `--confirm` flag.
+3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again, don't forget the `--confirm` flag.
 
 <iframe src="/docs/walkthroughs/package_deploy_helm_remove_by_file.html" width="100%"></iframe>
 
