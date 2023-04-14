@@ -852,6 +852,89 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell"></a>shell</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > actions > onCreate > defaults > shell
+
+**Description:** (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionShell                                                                   |
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_windows"></a>windows</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"powershell", "cmd", "pwsh", "sh", "bash", "gsh"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_linux"></a>linux</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'sh') Indicates a preference for the shell to use on Linux systems
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"sh", "bash", "fish", "zsh", "pwsh"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_darwin"></a>darwin</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'sh') Indicates a preference for the shell to use on macOS systems
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"sh", "bash", "fish", "zsh", "pwsh"</code>
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -990,18 +1073,22 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary>
-<strong> <a name="components_items_actions_onCreate_before_items_preferLegacyShell"></a>preferLegacyShell</strong>
+<strong> <a name="components_items_actions_onCreate_before_items_shell"></a>shell</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** (Windows/cmd only) Whether to prefer running the command in the legacy command shell rather than powershell (see https://github.com/orgs/PowerShell/discussions/16569) (note: command conversion of commands like touch to New-Item will be disabled as well)
+  ## components > actions > onCreate > before > shell
 
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
+**Description:** (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Same definition as**    | [shell](#components_items_actions_onCreate_defaults_shell)                                               |
 
 </blockquote>
 </details>

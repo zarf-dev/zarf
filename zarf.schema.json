@@ -316,9 +316,9 @@
           "type": "string",
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
-        "preferLegacyShell": {
-          "type": "boolean",
-          "description": "(Windows/cmd only) Whether to prefer running the command in the legacy command shell rather than powershell (see https://github.com/orgs/PowerShell/discussions/16569) (note: command conversion of commands like touch to New-Item will be disabled as well)"
+        "shell": {
+          "$ref": "#/definitions/ZarfComponentActionShell",
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
           "pattern": "^[A-Z0-9_]+$",
@@ -370,6 +370,11 @@
           },
           "type": "array",
           "description": "Additional environment variables for commands"
+        },
+        "shell": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActionShell",
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
       "additionalProperties": false,
@@ -432,6 +437,46 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfComponentActionShell": {
+      "properties": {
+        "windows": {
+          "type": "string",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ]
+        },
+        "linux": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        },
+        "darwin": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
         }
       },
       "additionalProperties": false,
