@@ -9,8 +9,9 @@
 
 <Dialog open clickAway={false}>
 	<div slot="content" class="dialog-content">
-		<Typography variant="code"><code>Error: {$page.status} {$page.error?.message}</code></Typography
-		>
+		<Typography variant="code">
+			<code>Error: {$page.status} {$page.error?.message}</code>
+		</Typography>
 	</div>
 </Dialog>
 

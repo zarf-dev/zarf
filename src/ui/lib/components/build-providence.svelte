@@ -40,8 +40,10 @@
 				<Typography
 					variant="caption"
 					color="text-secondary-on-${$currentTheme}"
-					style="text-transform: capitalize;">{label}:</Typography
+					style="text-transform: capitalize;"
 				>
+					{label}:
+				</Typography>
 			{/each}
 		</div>
 		<div class="build-list">

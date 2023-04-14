@@ -83,8 +83,8 @@
 	on:blur={hideTooltip}
 	class="tooltip-trigger"
 >
-	<Icon variant="info" /></button
->
+	<Icon variant="info" />
+</button>
 <div role="tooltip" bind:this={tooltip} class="tooltip">
 	<slot />
 	<div bind:this={arrowRef} class="arrow" />

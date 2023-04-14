@@ -52,9 +52,9 @@
 		</div>
 		<div class="header-left">
 			{#if !showClusterInfo}
-				<ButtonDense variant="outlined" backgroundColor="white" on:click={toggleDialog}
-					>Connect Cluster</ButtonDense
-				>
+				<ButtonDense variant="outlined" backgroundColor="white" on:click={toggleDialog}>
+					Connect Cluster
+				</ButtonDense>
 			{/if}
 		</div>
 	</Paper>
@@ -66,8 +66,8 @@
 			</div>
 		{:else if !showClusterInfo}
 			<Typography class="cluster-not-connected" variant="body1" element="span">
-				<span class="material-symbols-outlined" style="color:var(--warning);"> warning </span>
-				<span>Cluster not connected </span>
+				<span class="material-symbols-outlined" style="color:var(--warning);">warning</span>
+				<span>Cluster not connected</span>
 			</Typography>
 		{:else}
 			<ClusterInfoTable />

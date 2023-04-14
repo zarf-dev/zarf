@@ -71,9 +71,9 @@
 />
 <Menu ssx={menuSSX} bind:anchorRef open={toggled} anchorOrigin="bottom-end">
 	<ListItem text="Update Package..." on:click={() => goto(updateLink)}>
-		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined"
-			>cached</ListItemAdornment
-		>
+		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+			cached
+		</ListItemAdornment>
 	</ListItem>
 	<div class="divider" />
 	<ListItem text="Remove..." on:click={removePkg}>
@@ -93,8 +93,10 @@
 			on:click={toggleDialog}
 			variant="raised"
 			backgroundColor="grey-300"
-			textColor="text-primary-on-light">Close</Button
+			textColor="text-primary-on-light"
 		>
+			Close
+		</Button>
 	</section>
 </Dialog>
 

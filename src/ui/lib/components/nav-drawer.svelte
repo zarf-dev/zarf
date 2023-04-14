@@ -59,7 +59,7 @@
 				<span class="material-symbols-outlined" style="color:var(--warning); font-size:20px;">
 					warning
 				</span>
-				<span>&nbsp;Cluster not connected </span>
+				<span>&nbsp;Cluster not connected</span>
 			</Typography>
 		{/if}
 	</Box>

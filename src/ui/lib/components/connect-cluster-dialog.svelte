@@ -127,8 +127,10 @@
 					on:click={toggleDialog}
 					variant="raised"
 					backgroundColor="grey-300"
-					textColor="text-primary-on-light">Close</Button
+					textColor="text-primary-on-light"
 				>
+					Close
+				</Button>
 			</DialogActions>
 		{/if}
 	</svelte:fragment>

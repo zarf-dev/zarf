@@ -117,17 +117,19 @@
 <Box {ssx} class="local-package-list-container">
 	<Paper class="local-package-list-header" elevation={1}>
 		<Typography variant="th">Local Directory</Typography>
-		<Tooltip
-			>This table shows all of the Zarf{initString} packages that exist on your local machine.</Tooltip
-		>
+		<Tooltip>
+			This table shows all of the Zarf{initString} packages that exist on your local machine.
+		</Tooltip>
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
 			<Typography
 				class="package-table-td {l.split(' ').join('-')}"
 				variant="overline"
-				color="text-secondary-on-dark">{l}</Typography
+				color="text-secondary-on-dark"
 			>
+				{l}
+			</Typography>
 		{/each}
 	</Paper>
 	<Paper class="local-package-list-body" square elevation={1}>

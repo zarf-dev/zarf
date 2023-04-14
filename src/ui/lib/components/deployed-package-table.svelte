@@ -106,8 +106,10 @@
 			<Typography
 				class="package-table-td {l.split(' ').join('-')}"
 				variant="overline"
-				color="text-secondary-on-dark">{l}</Typography
+				color="text-secondary-on-dark"
 			>
+				{l}
+			</Typography>
 		{/each}
 	</Paper>
 	<Paper class="package-list-body" square elevation={1}>

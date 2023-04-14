@@ -11,7 +11,8 @@
 		"test:init": "playwright test -x --reporter github,html --grep @init",
 		"test:post-init": "playwright test -x --reporter github,html --grep @post-init",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write \"src/ui/**/*.{ts,js,svelte}\""
 	},
 	"nodemonConfig": {
 		"delay": 5000,
