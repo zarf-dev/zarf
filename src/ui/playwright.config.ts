@@ -75,7 +75,7 @@ const config: PlaywrightTestConfig = {
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: process.env.CI ? 'make test-built-ui' : 'npm run dev',
+		command: process.env.CI ? 'make test-built-ui' : 'npm --prefix src/ui run dev',
 		port: 3333,
 		reuseExistingServer: true,
 		timeout: 120 * 1000
