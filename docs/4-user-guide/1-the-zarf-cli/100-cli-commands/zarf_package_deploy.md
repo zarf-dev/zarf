@@ -15,7 +15,7 @@ zarf package deploy [PACKAGE] [flags]
 
 ```
       --components string     Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --confirm               Confirm package deployment without prompting
+      --confirm               Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                  help for deploy
   -k, --key string            Path to public key file for validating signed packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
