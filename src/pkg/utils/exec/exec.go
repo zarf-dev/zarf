@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"runtime"
 	"sync"
+
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Change terminal colors.
@@ -152,19 +154,36 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell(preferLegacyShell bool) (string, string) {
+func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 	var shell string
 	var shellArgs string
 
-	if runtime.GOOS == "windows" {
-		if preferLegacyShell {
-			shell = "cmd"
+	switch runtime.GOOS {
+	case "windows":
+		shell = shellPref.Windows
+		shellArgs = "-Command"
+
+		// Change shellArgs to /c if cmd is chosen
+		if shellPref.Windows == "cmd" {
 			shellArgs = "/c"
-		} else {
+		} else if shellPref.Windows == "" {
 			shell = "powershell"
-			shellArgs = "-Command"
 		}
-	} else {
+	case "darwin":
+		shell = shellPref.Darwin
+		shellArgs = "-c"
+
+		if shellPref.Darwin == "" {
+			shell = "sh"
+		}
+	case "linux":
+		shell = shellPref.Linux
+		shellArgs = "-c"
+
+		if shellPref.Linux == "" {
+			shell = "sh"
+		}
+	default:
 		shell = "sh"
 		shellArgs = "-c"
 	}

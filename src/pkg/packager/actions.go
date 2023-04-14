@@ -89,7 +89,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	cfg := actionGetCfg(defaultCfg, action, vars)
 
-	if cmd, err = actionCmdMutation(cmd, action.PreferLegacyShell); err != nil {
+	if cmd, err = actionCmdMutation(cmd, cfg.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
@@ -102,7 +102,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd, action.PreferLegacyShell, spinner); err != nil {
+			if out, err = actionRun(ctx, cfg, cmd, cfg.Shell, spinner); err != nil {
 				return err
 			}
 
@@ -193,7 +193,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string, preferLegacyShell bool) (string, error) {
+func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return cmd, err
@@ -203,7 +203,7 @@ func actionCmdMutation(cmd string, preferLegacyShell bool) (string, error) {
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" && !preferLegacyShell {
+	if runtime.GOOS == "windows" && shellPref.Windows == "cmd" {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
@@ -246,6 +246,10 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 		cfg.Env = append(cfg.Env, a.Env...)
 	}
 
+	if a.Shell != nil {
+		cfg.Shell = *a.Shell
+	}
+
 	// Add variables to the environment.
 	for k, v := range vars {
 		// Remove # from env variable name.
@@ -259,8 +263,8 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, preferLegacyShell bool, spinner *message.Spinner) (string, error) {
-	shell, shellArgs := exec.GetOSShell(preferLegacyShell)
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref types.ZarfComponentActionShell, spinner *message.Spinner) (string, error) {
+	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debug("Running command in %s: %s", shell, cmd)
 
