@@ -163,9 +163,12 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 		shell = shellPref.Windows
 		shellArgs = "-Command"
 
-		// Change shellArgs to /c if cmd is chosen
 		if shellPref.Windows == "cmd" {
+			// Change shellArgs to /c if cmd is chosen
 			shellArgs = "/c"
+		} else if shellPref.Windows == "sh" || shellPref.Windows == "bash" || shellPref.Windows == "zsh" || shellPref.Windows == "gsh" {
+			// Change shellArgs to -c if a real shell is chosen
+			shellArgs = "-c"
 		} else if shellPref.Windows == "" {
 			shell = "powershell"
 		}
@@ -173,14 +176,20 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 		shell = shellPref.Darwin
 		shellArgs = "-c"
 
-		if shellPref.Darwin == "" {
+		if shellPref.Darwin == "pwsh" {
+			// Change shellArgs to -Command if pwsh is chosen
+			shellArgs = "-Command"
+		} else if shellPref.Darwin == "" {
 			shell = "sh"
 		}
 	case "linux":
 		shell = shellPref.Linux
 		shellArgs = "-c"
 
-		if shellPref.Linux == "" {
+		if shellPref.Linux == "pwsh" {
+			// Change shellArgs to -Command if pwsh is chosen
+			shellArgs = "-Command"
+		} else if shellPref.Linux == "" {
 			shell = "sh"
 		}
 	default:

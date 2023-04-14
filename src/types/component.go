@@ -143,9 +143,9 @@ type ZarfComponentActionDefaults struct {
 
 // ZarfComponentActionShell represents the desired shell to use for a given command
 type ZarfComponentActionShell struct {
-	Windows string
-	Linux   string
-	Darwin  string
+	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
+	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
 }
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
