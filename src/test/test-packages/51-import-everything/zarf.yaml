@@ -87,17 +87,28 @@ components:
         after:
           - wait:
               cluster:
-                kind: pod
-                name: app.kubernetes.io/name=oci-demo-podinfo
-                namespace: podinfo
-                condition: ready
-          - wait:
-              cluster:
                 kind: deployment
                 name: local-demo
                 namespace: local-chart
                 condition: available
-
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart-relative
+                condition: available
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart-absolute
+                condition: available
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=oci-demo-podinfo
+                namespace: podinfo
+                condition: ready
   - name: import-repos
     required: false
     repos:
@@ -105,8 +116,6 @@ components:
       - https://github.com/kelseyhightower/nocode.git
       # Import a full repo via file:// + absolute path
       - file:///tmp/nocode
-      # # Import this repo via file:// + relative path
-      # - file://../../
 
   - name: import-images
     required: false
