@@ -153,6 +153,11 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		hpaModified = true
+	}
+
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return charts, nil
@@ -217,7 +222,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			}
 		}
 
-		valueTemplate, err = p.getUpdatedValueTemplate(component)
+		// Setup the state in the config and get the valuesTemplate
+		valueTemplate, err = p.setupStateValuesTemplate(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -333,7 +339,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
-func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
