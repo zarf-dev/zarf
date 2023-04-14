@@ -62,8 +62,8 @@ check-ui:
 	fi
 
 build-ui: ## Build the Zarf UI
-	npm ci
-	npm run build
+	npm --prefix src/ui ci
+	npm --prefix src/ui run build
 
 build-cli-linux-amd: check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
@@ -93,8 +93,8 @@ docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Sche
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	go mod download
-	npm ci
-	npm run dev
+	npm --prefix src/ui ci
+	npm --prefix src/ui run dev
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
