@@ -64,7 +64,9 @@ func (p *Packager) Deploy() error {
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
 		if p.cluster != nil && hpaModified {
-			p.cluster.EnableRegHPAScaleDown()
+			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			}
 		}
 	}()
 
@@ -215,18 +217,18 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			}
 		}
 
-		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
-			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
-			} else {
-				hpaModified = true
-			}
-		}
-
 		valueTemplate, err = p.getUpdatedValueTemplate(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+		}
+
+		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
+		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
+			} else {
+				hpaModified = true
+			}
 		}
 	}
 
