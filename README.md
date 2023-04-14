@@ -14,7 +14,7 @@
 
 Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
-📦 Out of the Box Features
+## 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
@@ -31,13 +31,11 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
 - Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
-🛠️ Configurable Features
+## 🛠️ Configurable Features
 
 - Customizable [variables and templating](examples/variables/README.md) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Component level OS/architecture filtering
-
-> Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
 ## Demo
 
@@ -66,6 +64,8 @@ To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/dev
 [Source DrawIO](docs/.images/architecture.drawio.svg)
 
 ## Special Thanks
+
+> Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
 We would also like to thank the following awesome libraries and projects without which Zarf would not be possible!
 
