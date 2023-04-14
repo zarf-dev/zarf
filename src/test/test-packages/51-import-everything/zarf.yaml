@@ -109,6 +109,7 @@ components:
                 name: app.kubernetes.io/name=oci-demo-podinfo
                 namespace: podinfo
                 condition: ready
+
   - name: import-repos
     required: false
     repos:
@@ -125,10 +126,19 @@ components:
 
   - name: import-data-injections
     required: false
+    manifests:
+      - name: import-data-injections
+        namespace: import-data-injections
+        files:
+          - manifests/data-injection.yaml
     dataInjections:
-      - source: files/coffee-ipsum.txt
+      # Injection in the root directory using data-loader init container
+      - source: files
         target:
-          namespace: some-namespace
-          selector: some-selector
-          container: some-container
-          path: /coffee-ipsum.txt
+          namespace: import-data-injections
+          selector: app=data-injection
+          container: data-loader
+          path: /test
+        compress: true
+    images:
+      - alpine:3.15
