@@ -203,7 +203,7 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" && shellPref.Windows == "cmd" {
+	if runtime.GOOS == "windows" && exec.IsPowershell(shellPref.Windows) {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
@@ -266,7 +266,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref types.ZarfComponentActionShell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
-	message.Debug("Running command in %s: %s", shell, cmd)
+	message.Debugf("Running command in %s: %s", shell, cmd)
 
 	execCfg := exec.Config{
 		Env: cfg.Env,

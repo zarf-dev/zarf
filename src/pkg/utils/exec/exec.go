@@ -166,7 +166,7 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 		if shellPref.Windows == "cmd" {
 			// Change shellArgs to /c if cmd is chosen
 			shellArgs = "/c"
-		} else if shellPref.Windows == "sh" || shellPref.Windows == "bash" || shellPref.Windows == "zsh" || shellPref.Windows == "gsh" {
+		} else if !IsPowershell(shellPref.Windows) {
 			// Change shellArgs to -c if a real shell is chosen
 			shellArgs = "-c"
 		} else if shellPref.Windows == "" {
@@ -176,7 +176,7 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 		shell = shellPref.Darwin
 		shellArgs = "-c"
 
-		if shellPref.Darwin == "pwsh" {
+		if IsPowershell(shellPref.Darwin) {
 			// Change shellArgs to -Command if pwsh is chosen
 			shellArgs = "-Command"
 		} else if shellPref.Darwin == "" {
@@ -186,7 +186,7 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 		shell = shellPref.Linux
 		shellArgs = "-c"
 
-		if shellPref.Linux == "pwsh" {
+		if IsPowershell(shellPref.Linux) {
 			// Change shellArgs to -Command if pwsh is chosen
 			shellArgs = "-Command"
 		} else if shellPref.Linux == "" {
@@ -198,4 +198,9 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 	}
 
 	return shell, shellArgs
+}
+
+// IsPowershell returns whether a shell name is powershell
+func IsPowershell(shellName string) bool {
+	return shellName == "powershell" || shellName == "pwsh"
 }
