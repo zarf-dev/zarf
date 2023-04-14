@@ -65,7 +65,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	if requiresCluster {
 		// If we need the cluster, connect to it and pull the package secret
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
 			if err != nil {
 				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}

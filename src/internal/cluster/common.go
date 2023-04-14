@@ -28,7 +28,7 @@ var labels = k8s.Labels{
 
 // NewClusterOrDie creates a new cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error.
 func NewClusterOrDie() *Cluster {
-	c, err := NewClusterWithWait(defaultTimeout)
+	c, err := NewClusterWithWait(defaultTimeout, true)
 	if err != nil {
 		message.Fatalf(err, "Failed to connect to cluster")
 	}
@@ -37,14 +37,31 @@ func NewClusterOrDie() *Cluster {
 }
 
 // NewClusterWithWait creates a new cluster instance and waits for the given timeout for the cluster to be ready.
-func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
+func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, error) {
+	var spinner *message.Spinner
+	if withSpinner {
+		spinner = message.NewProgressSpinner("Waiting for cluster connection (%s timeout)", timeout.String())
+		defer spinner.Stop()
+	}
+
 	c := &Cluster{}
 	var err error
+
 	c.Kube, err = k8s.New(message.Debugf, labels)
 	if err != nil {
 		return c, err
 	}
-	return c, c.Kube.WaitForHealthyCluster(timeout)
+
+	err = c.Kube.WaitForHealthyCluster(timeout)
+	if err != nil {
+		return c, err
+	}
+
+	if spinner != nil {
+		spinner.Success()
+	}
+
+	return c, nil
 }
 
 // NewCluster creates a new cluster instance without waiting for the cluster to be ready.

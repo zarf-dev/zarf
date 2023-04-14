@@ -23,7 +23,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	var distro string
 	var hasZarf bool
 
-	c, err := cluster.NewClusterWithWait(5 * time.Second)
+	c, err := cluster.NewClusterWithWait(5*time.Second, false)
 	reachable = err == nil
 
 	if reachable {

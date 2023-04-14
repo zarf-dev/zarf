@@ -146,10 +146,11 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state on the seed registry component
 	if isSeedRegistry {
-		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
+		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
+
 		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
@@ -216,7 +217,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
