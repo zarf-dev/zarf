@@ -23,7 +23,7 @@ const getToReview = async (page) => {
 
 test('deploy the dos-games package @post-init', async ({ page }) => {
 	await getToReview(page);
-	await page.getByRole('link', { name: 'deploy' }).click();
+	await page.getByRole('link', { name: 'deploy package' }).click();
 	await page.waitForURL('/packages/dos-games/deploy', { waitUntil: 'networkidle' });
 
 	// verify the deployment succeeded

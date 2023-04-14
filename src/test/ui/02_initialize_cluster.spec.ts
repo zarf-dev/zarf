@@ -86,7 +86,7 @@ test.describe('initialize a zarf cluster', () => {
 		await getToConfigurePage(page);
 		await page.getByRole('link', { name: 'review deployment' }).click();
 		await page.waitForURL('/packages/init/review');
-		await page.getByRole('link', { name: 'deploy' }).click();
+		await page.getByRole('link', { name: 'deploy package' }).click();
 		await page.waitForURL('/packages/init/deploy', { waitUntil: 'networkidle' });
 		await validateHorizontalStepperItems(page, 2, ['Select', 'Configure', 'Review', '3 Deploy']);
 
