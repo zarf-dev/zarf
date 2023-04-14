@@ -48,6 +48,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	common.WriteJSONResponse(w, data, http.StatusOK)
 }
 
+// Retrieve and return the k8s revision.
 func getServerVersion(k *k8s.K8s) string {
 	info, _ := k.Clientset.DiscoveryClient.ServerVersion()
 
