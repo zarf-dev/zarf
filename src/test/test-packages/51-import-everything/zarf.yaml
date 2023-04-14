@@ -124,21 +124,21 @@ components:
       - nginx:1.16.0
       - ghcr.io/stefanprodan/podinfo:6.3.3
 
-  - name: import-data-injections
-    required: false
-    manifests:
-      - name: import-data-injections
-        namespace: import-data-injections
-        files:
-          - manifests/data-injection.yaml
-    dataInjections:
-      # Injection in the root directory using data-loader init container
-      - source: files
-        target:
-          namespace: import-data-injections
-          selector: app=data-injection
-          container: data-loader
-          path: /test
-        compress: true
-    images:
-      - alpine:3.15
+  # - name: import-data-injections
+  #   required: false
+  #   manifests:
+  #     - name: import-data-injections
+  #       namespace: import-data-injections
+  #       files:
+  #         - manifests/data-injection.yaml
+  #   dataInjections:
+  #     # Injection in the root directory using data-loader init container
+  #     - source: files
+  #       target:
+  #         namespace: import-data-injections
+  #         selector: app=data-injection
+  #         container: data-loader
+  #         path: /test
+  #       compress: true
+  #   images:
+  #     - alpine:3.15

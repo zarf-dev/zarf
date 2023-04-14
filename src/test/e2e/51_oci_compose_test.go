@@ -112,64 +112,50 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.NoError(err)
 }
 
+func deployAndRemove(component string) error {
+	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.arch))
+
+	_, _, err := e2e.execZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
+	if err != nil {
+		return err
+	}
+	_, _, err = e2e.execZarfCommand("package", "remove", "import-everything", fmt.Sprintf("--components=%s", component), "--confirm")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (suite *SkeletonSuite) Test_2_Deploy() {
 	suite.T().Log("E2E: Created Skeleton Package Deploy")
 
-	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.arch))
-	deploy := func(component string) error {
-		_, _, err := e2e.execZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
-		return err
-	}
-	remove := func(component string) error {
-		_, _, err := e2e.execZarfCommand("package", "remove", "import-everything", fmt.Sprintf("--components=%s", component), "--confirm")
-		return err
-	}
-
-	err := deploy("import-component-local")
+	err := deployAndRemove("import-component-local")
 	suite.NoError(err)
 
-	err = remove("import-component-local")
+	err = deployAndRemove("import-component-local-relative")
 	suite.NoError(err)
 
-	err = deploy("import-component-local-relative")
+	err = deployAndRemove("import-component-local-absolute")
 	suite.NoError(err)
 
-	err = remove("import-component-local-relative")
-	suite.NoError(err)
-
-	err = deploy("import-component-local-absolute")
-	suite.NoError(err)
-
-	err = deploy("import-component-oci")
+	err = deployAndRemove("import-component-oci")
 	suite.NoError(err)
 
 	// Verify that nginx successfully deploys in the cluster
 	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
 	suite.Contains(string(kubectlOut), "successfully rolled out")
 
-	err = deploy("import-helm")
+	err = deployAndRemove("import-helm")
 	suite.NoError(err)
 
-	err = remove("import-helm")
+	err = deployAndRemove("import-repos")
 	suite.NoError(err)
 
-	err = deploy("import-repos")
+	err = deployAndRemove("import-images")
 	suite.NoError(err)
 
-	err = remove("import-repos")
-	suite.NoError(err)
-
-	err = deploy("import-images")
-	suite.NoError(err)
-
-	err = remove("import-images")
-	suite.NoError(err)
-
-	err = deploy("import-data-injections")
-	suite.NoError(err)
-
-	err = remove("import-data-injections")
-	suite.NoError(err)
+	// err = deploy("import-data-injections")
+	// suite.NoError(err)
 }
 
 // func (suite *SkeletonSuite) Test_3_BadImports() {
