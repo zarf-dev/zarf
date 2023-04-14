@@ -1,11 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 const BASE_URL = '/api';
 
 interface APIRequest<T> {
 	path: string;
 	method: string;
 	body?: T;
+}
+
+export interface EventParams {
+	onopen?: (response: Response) => Promise<void>;
+	onmessage?: (ev: EventSourceMessage) => void;
+	onclose?: () => void;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	onerror?: (err: any) => number | null | undefined | void;
+	openWhenHidden?: boolean;
 }
 
 // Store this outside of the class vs private since private isn't real in JS.
@@ -29,8 +39,8 @@ export class HTTP {
 		headers.set('Authorization', token);
 	}
 
-	deployStream<T>(path: string): EventSource {
-		return this.connect<T>({ path, method: 'GET' });
+	eventStream<T>(path: string, eventParams: EventParams): AbortController {
+		return this.connect<T>({ path, method: 'GET' }, eventParams);
 	}
 
 	// Perform a GET request to the given path, and return the response as JSON.
@@ -75,13 +85,23 @@ export class HTTP {
 	}
 
 	// Private handler for establishing event source connections.
-	private connect<T>(req: APIRequest<T>): EventSource {
+	private connect<T>(req: APIRequest<T>, eventParams: EventParams): AbortController {
 		const url = BASE_URL + req.path;
-		if (!headers.get('Authorization')) {
+		const payload: RequestInit = { method: req.method, headers };
+		const token = headers.get('Authorization');
+		if (!token) {
 			throw new Error('Not authenticated yet');
 		}
-		const eventSource = new EventSource(`${url}?auth=${headers.get('Authorization')}`);
-		return eventSource;
+
+		const abortCtlr = new AbortController();
+		fetchEventSource(url, {
+			method: req.method,
+			headers: { Authorization: token },
+			...eventParams,
+			body: payload.body,
+			signal: abortCtlr.signal,
+		});
+		return abortCtlr;
 	}
 
 	// Private wrapper for handling the request/response cycle.
@@ -122,22 +142,4 @@ export class HTTP {
 			return Promise.reject(e);
 		}
 	}
-}
-
-function makeWriteableEventStream(eventTarget: EventTarget) {
-	return new WritableStream({
-		start() {
-			eventTarget.dispatchEvent(new Event('start'));
-		},
-		write(message) {
-			console.log(JSON.stringify(message));
-			eventTarget.dispatchEvent(new MessageEvent('message', { data: message.data }));
-		},
-		close() {
-			eventTarget.dispatchEvent(new CloseEvent('close'));
-		},
-		abort(reason) {
-			eventTarget.dispatchEvent(new CloseEvent('abort', { reason }));
-		},
-	});
 }

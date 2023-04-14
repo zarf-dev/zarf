@@ -9,7 +9,7 @@ import type {
 	DeployedPackage,
 	ZarfState,
 } from './api-types';
-import { HTTP } from './http';
+import { HTTP, type EventParams } from './http';
 
 const http = new HTTP();
 
@@ -39,7 +39,8 @@ const Packages = {
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
-	deployStream: () => http.deployStream<boolean>('/packages/deploy-stream'),
+	deployStream: (eventParams: EventParams) =>
+		http.eventStream('/packages/deploy-stream', eventParams),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
 };
 

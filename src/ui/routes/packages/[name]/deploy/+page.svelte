@@ -85,8 +85,7 @@
 		});
 	}
 
-	onMount(() => {
-		const deployStream = Packages.deployStream();
+	onMount(async () => {
 		const term = new Terminal({
 			disableStdin: true,
 			convertEol: true,
@@ -101,12 +100,19 @@
 			term.open(termElement);
 			fitAddon.fit();
 		}
-		deployStream.addEventListener('message', (e: MessageEvent<string>) => {
-			term.writeln(e.data);
+		const deployStream = Packages.deployStream({
+			onmessage: (e) => {
+				term.writeln(e.data);
+			},
+			onerror: (e) => {
+				term.writeln(e.message);
+				finishedDeploying = true;
+				successful = false;
+			},
 		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
-				deployStream.close();
+				deployStream.abort();
 				finishedDeploying = true;
 				successful = value;
 			},
@@ -118,7 +124,7 @@
 			updateComponentSteps();
 		}, POLL_TIME);
 		return () => {
-			deployStream.close();
+			deployStream.abort();
 			clearInterval(pollDeployed);
 		};
 	});
@@ -134,9 +140,9 @@
 			},
 		];
 		dialogOpen = true;
-		// setTimeout(() => {
-		// 	goto('/');
-		// }, POLL_TIME);
+		setTimeout(() => {
+			goto('/');
+		}, POLL_TIME);
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);
