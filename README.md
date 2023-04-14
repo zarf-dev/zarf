@@ -39,13 +39,9 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## Demo
 
-<div style="display:flex;justify-content:center;align-items:center;flex-direction:column;">
-
 [![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
 
 _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
-
-</div>
 
 ## Getting Started
 
