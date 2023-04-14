@@ -51,7 +51,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }
 
-// Establishes a stream that redirects pterm output to the stream
+// StreamDeployPackage Establishes a stream that redirects pterm output to the stream
 // Resets the output to std.err after the stream connection is closed
 func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
