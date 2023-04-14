@@ -203,7 +203,7 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" && exec.IsPowershell(shellPref.Windows) {
+	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
