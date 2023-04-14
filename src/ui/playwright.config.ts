@@ -11,7 +11,7 @@ import type { PlaywrightTestConfig } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration.
  */
 const config: PlaywrightTestConfig = {
-	testDir: './src/test/ui',
+	testDir: '../test/ui',
 	/* This is 10 minutes jon */
 	timeout: 10 * 60 * 1000,
 	expect: {

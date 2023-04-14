@@ -17,7 +17,7 @@ const config: UserConfig = {
   },
   resolve: {
     alias: {
-      "@images": __dirname + "/src/ui/images",
+      "@images": __dirname + "/images",
       "@ui": __dirname + "/node_modules/@defense-unicorns/unicorn-ui",
     }
   }

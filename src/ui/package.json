@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "hack/ui-dev.sh",
+		"dev": "../../hack/ui-dev.sh",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"test:pre-init": "playwright test -x --reporter github,html --grep @pre-init",

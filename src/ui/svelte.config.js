@@ -7,23 +7,23 @@ const config = {
     // disable css-unused warnings
     if (warning.code.startsWith("css-unused-")) return;
     handler(warning);
-  },  
+  },
+  root: ".",
   // Consult https://github.com/sveltejs/svelte-preprocess
   // for more information about preprocessors
   preprocess: preprocess(),
   kit: {
-
     files: {
-      assets: 'src/ui/static',
-      lib: 'src/ui/lib',
-      params: 'src/ui/params',
-      routes: 'src/ui/routes',
-      serviceWorker: 'src/ui/service-worker',
-      appTemplate: 'src/ui/app.html'
+      assets: 'static',
+      lib: 'lib',
+      params: 'params',
+      routes: 'routes',
+      serviceWorker: 'service-worker',
+      appTemplate: 'app.html'
     },
     adapter: adapter({
-      pages: 'build/ui',
-      assets: 'build/ui',
+      pages: '../../build/ui',
+      assets: '../../build/ui',
       fallback: "index.html",
     }),
   },
