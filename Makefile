@@ -35,14 +35,6 @@ help: ## Display this help information
 	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
 	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-vm-init: ## Make a vagrant VM (usage -> make vm-init OS=ubuntu)
-	vagrant destroy -f
-	vagrant up --no-color ${OS}
-	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
-
-vm-destroy: ## Destroy the vagrant VM
-	vagrant destroy -f
-
 clean: ## Clean the build directory
 	rm -rf build
 
