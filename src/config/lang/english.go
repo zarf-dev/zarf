@@ -132,7 +132,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
-	CmdInitFlagConfirm      = "Confirm the install without prompting"
+	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
 
@@ -215,7 +215,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
-	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
+	CmdPackageDeployFlagConfirm    = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
