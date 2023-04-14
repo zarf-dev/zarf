@@ -72,7 +72,7 @@
 		} else {
 			titleText = 'Kubeconfig Not Found';
 			titleImage = ZarfKubeConfigNotFound;
-			titleAlt = 'Zarf, A sat axolotl was unable to find a kubeconfig';
+			titleAlt = 'Zarf, A sad axolotl was unable to find a kubeconfig';
 		}
 	}
 </script>
