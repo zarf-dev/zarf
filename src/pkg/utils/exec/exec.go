@@ -161,36 +161,39 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 	switch runtime.GOOS {
 	case "windows":
 		shell = shellPref.Windows
-		shellArgs = "-Command"
+		if shellPref.Windows == "" {
+			shell = "powershell"
+		}
 
-		if shellPref.Windows == "cmd" {
+		shellArgs = "-Command"
+		if shell == "cmd" {
 			// Change shellArgs to /c if cmd is chosen
 			shellArgs = "/c"
-		} else if !IsPowershell(shellPref.Windows) {
+		} else if !IsPowershell(shell) {
 			// Change shellArgs to -c if a real shell is chosen
 			shellArgs = "-c"
-		} else if shellPref.Windows == "" {
-			shell = "powershell"
 		}
 	case "darwin":
 		shell = shellPref.Darwin
-		shellArgs = "-c"
+		if shellPref.Darwin == "" {
+			shell = "sh"
+		}
 
-		if IsPowershell(shellPref.Darwin) {
+		shellArgs = "-c"
+		if IsPowershell(shell) {
 			// Change shellArgs to -Command if pwsh is chosen
 			shellArgs = "-Command"
-		} else if shellPref.Darwin == "" {
-			shell = "sh"
 		}
 	case "linux":
 		shell = shellPref.Linux
-		shellArgs = "-c"
+		if shellPref.Linux == "" {
+			shell = "sh"
+		}
 
-		if IsPowershell(shellPref.Linux) {
+		shellArgs = "-c"
+		if IsPowershell(shell) {
 			// Change shellArgs to -Command if pwsh is chosen
 			shellArgs = "-Command"
-		} else if shellPref.Linux == "" {
-			shell = "sh"
 		}
 	default:
 		shell = "sh"
