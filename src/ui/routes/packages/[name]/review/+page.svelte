@@ -11,15 +11,16 @@
 	} from '$lib/components';
 
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import { Button, AccordionGroup, currentTheme } from '@ui';
+	import { Button, AccordionGroup, currentTheme, Typography } from '@ui';
 	import { page } from '$app/stores';
 	import BuildProvidence from '$lib/components/build-providence.svelte';
 	import DeploymentActions from '$lib/components/deployment-actions.svelte';
 </script>
 
 <svelte:head>
-	<title>Review</title>
+	<title>Review Deployment</title>
 </svelte:head>
+<Typography variant="h5">Review Deployment</Typography>
 
 <SectionHeader>
 	Package Details
@@ -38,12 +39,11 @@
 </SectionHeader>
 <BuildProvidence build={$pkgStore.zarfPackage.build} />
 
-<SectionHeader
+<SectionHeader icon="cubes"
 	>Components
 	<span slot="tooltip">A set of defined functionality and resources that build up a package.</span>
 </SectionHeader>
 
-<SectionHeader>Selected Package Components</SectionHeader>
 <AccordionGroup elevation={1}>
 	{#each $pkgComponentDeployStore as idx}
 		<PackageComponent {idx} component={$pkgStore.zarfPackage.components[idx]} />
@@ -54,16 +54,24 @@
 
 <DeploymentActions>
 	<Button
-		href={`/packages/${$page.params.name}/configure`}
+		href={`/`}
 		backgroundColor={$currentTheme === 'light' ? 'black' : 'grey-300'}
-		variant="outlined">configure</Button
+		variant="outlined">cancel deployment</Button
 	>
-	<Button
-		href={`/packages/${$page.params.name}/deploy`}
-		backgroundColor="grey-300"
-		textColor="black"
-		variant="raised"
-	>
-		deploy
-	</Button>
+
+	<div style="display: flex; gap: 24px;">
+		<Button
+			href={`/packages/${$page.params.name}/configure`}
+			backgroundColor={$currentTheme === 'light' ? 'black' : 'grey-300'}
+			variant="outlined">edit deployment</Button
+		>
+		<Button
+			href={`/packages/${$page.params.name}/deploy`}
+			backgroundColor="grey-300"
+			textColor="black"
+			variant="raised"
+		>
+			deploy package
+		</Button>
+	</div>
 </DeploymentActions>

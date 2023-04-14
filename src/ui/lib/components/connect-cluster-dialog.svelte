@@ -16,6 +16,7 @@
 
 	const ssx: SSX = {
 		$self: {
+			width: '444px',
 			'& .dialog-surface': {
 				padding: '24px 16px',
 				width: '444px',
@@ -84,7 +85,7 @@
 		</Box>
 		{#if hasDistro}
 			<Typography variant="body2" color="text-secondary-on-dark">
-				Which cluster would you like to connect to Zarf?
+				Which cluster would you like Zarf to connect to?
 			</Typography>
 			<List>
 				<Typography variant="body1" element="li" value={$clusterStore?.distro}>
@@ -97,7 +98,7 @@
 						toggledIconClass="material-symbols-outlined"
 						toggledIconContent="radio_button_checked"
 					/>
-					{$clusterStore?.distro}
+					{$clusterStore?.rawConfig['current-context']}
 				</Typography>
 			</List>
 			<Typography variant="caption" color="text-secondary-on-dark">
@@ -118,8 +119,8 @@
 			</DialogActions>
 		{:else}
 			<Typography variant="caption" color="text-secondary-on-dark">
-				Zarf requires access to a cluster. Please install a cluster or login to your cluster
-				provider then try connecting to cluster again.
+				Zarf requires access to a cluster. Please spin up a cluster or log in to your cluster
+				provider, then try connecting to the cluster again.
 			</Typography>
 			<DialogActions>
 				<Button

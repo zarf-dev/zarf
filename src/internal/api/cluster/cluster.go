@@ -53,22 +53,3 @@ func getServerVersion(k *k8s.K8s) string {
 
 	return info.String()
 }
-
-func getClusterName(k *k8s.K8s) string {
-
-	// Get all nodes
-	nodes, err := k.GetNodes()
-	// if no nodes are found just return empty string.
-	if err != nil {
-		return ""
-	}
-
-	// Grab first node the kubernetes.io/hostname (control-plane) will be same for all nodes.
-	node := nodes.Items[0]
-
-	labels := node.GetLabels()
-
-	name, _ := labels["kubernetes.io/hostname"]
-
-	return name
-}

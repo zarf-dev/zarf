@@ -99,6 +99,12 @@
 						minWidth: '240px',
 						width: '21.5%',
 					},
+					'&.deploy': {
+						display: 'flex',
+						flexGrow: '1',
+						justifyContent: 'end',
+						alignItems: 'center',
+					},
 				},
 			},
 		},
@@ -127,10 +133,10 @@
 	<Paper class="local-package-list-body" square elevation={1}>
 		{#await readPackages()}
 			<div class="no-packages">
-				<Typography color="blue-200" variant="body1">
-					Searching for Zarf{initString} Packages on your local machine.
-				</Typography>
 				<Spinner color="blue-200" />
+				<Typography color="blue-200" variant="body1">
+					Searching your local machine for Zarf{initString} Packages. This may take a minute.
+				</Typography>
 			</div>
 		{:then packages}
 			{#if !packages.length}
@@ -174,7 +180,7 @@
 						<Typography variant="body2" class="package-table-td description">
 							{pkg.zarfPackage.metadata?.description}
 						</Typography>
-						<Box class="package-table-td">
+						<Box class="package-table-td deploy">
 							<Button
 								title={pkg.zarfPackage.metadata?.name}
 								backgroundColor="on-surface"

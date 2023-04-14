@@ -30,7 +30,7 @@
 
 <Accordion id={`component-accordion-${idx}`} class="package-component-accordion">
 	<div slot="headerContent" class="component-accordion-header">
-		<div style="flex: 1">
+		<div style="flex: 1; gap: 8px;">
 			<Typography variant="subtitle2" element="div" class="component-title" title={componentTitle}>
 				{component.name}
 			</Typography>

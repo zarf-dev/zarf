@@ -53,7 +53,7 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern)
+			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, false, true)
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script

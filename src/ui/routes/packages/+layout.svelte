@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Stepper } from '@ui';
+	import { Box, Stepper, type SSX } from '@ui';
 
 	const stepMap: Record<string, number> = {
 		packages: 1,
@@ -18,12 +18,36 @@
 	$: getIconContent = (number: number): string | undefined =>
 		stepNumber <= number ? number.toString() : undefined;
 	$: stepDisabled = (number: number): boolean => (stepNumber < number ? true : false);
+
+	const ssx: SSX = {
+		$self: {
+			display: 'flex',
+			flexDirection: 'column',
+			gap: '32px',
+		},
+
+		$xs: {
+			$self: {
+				padding: '0px 0px',
+			},
+		},
+		$lg: {
+			$self: {
+				padding: '0px 2rem',
+			},
+		},
+		$xl: {
+			$self: {
+				padding: '0px 16rem',
+			},
+		},
+	};
 </script>
 
-<div class="packages-page">
+<Box {ssx} class="packages-page">
 	<div class="deploy-stepper-container">
 		<Stepper
-			color={'on-background'}
+			color={'text-secondary-on-background'}
 			orientation="horizontal"
 			steps={[
 				{
@@ -31,6 +55,7 @@
 					iconContent: getIconContent(stepMap.packages),
 					variant: 'primary',
 				},
+
 				{
 					title: 'Configure',
 					iconContent: getIconContent(stepMap.configure),
@@ -53,17 +78,12 @@
 		/>
 	</div>
 	<slot />
-</div>
+</Box>
 
 <style>
 	.deploy-stepper-container {
 		max-width: 600px;
 		margin: 0 auto;
 		width: 100%;
-	}
-	:global(.page-content) > .packages-page {
-		display: flex;
-		flex-direction: column;
-		gap: 32px;
 	}
 </style>

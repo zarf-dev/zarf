@@ -134,9 +134,9 @@
 			},
 		];
 		dialogOpen = true;
-		setTimeout(() => {
-			goto('/');
-		}, POLL_TIME);
+		// setTimeout(() => {
+		// 	goto('/');
+		// }, POLL_TIME);
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);

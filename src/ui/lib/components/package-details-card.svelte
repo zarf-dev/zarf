@@ -10,7 +10,7 @@
 
 	const ssx: SSX = {
 		$self: {
-			padding: '0px 52px',
+			padding: '0px 32px',
 			display: 'flex',
 			flexDirection: 'column',
 			gap: '18px',

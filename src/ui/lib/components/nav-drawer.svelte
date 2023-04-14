@@ -66,8 +66,4 @@
 	<Box class="nav-drawer-section">
 		<NavLink variant="body1" href="/" selected={$page.route.id === '/'}>Packages</NavLink>
 	</Box>
-	<Box class="nav-drawer-section inset-shadow">
-		<Typography color="text-secondary-on-dark">Tools</Typography>
-		<NavLink variant="body1">SBOM Comparison</NavLink>
-	</Box>
 </Paper>

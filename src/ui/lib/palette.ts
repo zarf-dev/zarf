@@ -8,6 +8,7 @@ export const ZarfPalettes: Palettes = {
 		primary: '#4ADEDE',
 		globalNav: '#0D133D',
 		surface: '#0D133D',
+		warning: '#FFB74D',
 		on: {
 			globalNav: '#FFFFFF',
 			surface: '#FFFFFF',
@@ -18,6 +19,7 @@ export const ZarfPalettes: Palettes = {
 				onLight: 'rgba(0, 0, 0, 0.87)',
 			},
 			secondary: {
+				onBackground: 'rgba(255, 255, 255, .7)',
 				onDark: 'rgba(255, 255, 255, 0.7)',
 			},
 		},
@@ -49,6 +51,7 @@ export const ZarfPalettes: Palettes = {
 		},
 	},
 	light: {
+		warning: '#FFB74D',
 		primary: '#4ADEDE',
 		globalNav: '#0D133D',
 		surface: '#0D133D',

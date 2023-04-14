@@ -116,11 +116,7 @@
 				<Typography color="primary" variant="body1">Searching for Deployed Packages</Typography>
 				<Spinner />
 			</div>
-		{:else if $deployedPkgStore.err}
-			<div class="no-packages">
-				<Typography color="primary" variant="body1">{$deployedPkgStore.err.message}</Typography>
-			</div>
-		{:else if !$deployedPkgStore.pkgs || !$deployedPkgStore.pkgs.length}
+		{:else if $deployedPkgStore.err || !$deployedPkgStore.pkgs || !$deployedPkgStore.pkgs.length}
 			<div class="no-packages">
 				<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
 			</div>

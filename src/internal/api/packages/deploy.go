@@ -51,6 +51,8 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	common.WriteJSONResponse(w, true, http.StatusCreated)
 }
 
+// Establishes a stream that redirects pterm output to the stream
+// Resets the output to std.err after the stream connection is closed
 func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -77,6 +79,9 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if n {
+				// TODO: dig in to alternatives to trim
+				// Some output is not sent unless trimmed
+				// Specifically the output from the loading spinner.
 				trimmed := strings.TrimSpace(scanner.Text())
 				fmt.Fprintf(w, "data: %s\n\n", trimmed)
 				w.(http.Flusher).Flush()

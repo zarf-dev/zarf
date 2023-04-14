@@ -61,8 +61,8 @@
 	<Paper class="cluster-info-body" elevation={1}>
 		{#if !$clusterStore}
 			<div class="cluster-not-connected" in:fade={{ duration: 1000 }}>
-				<Typography variant="body1" color="blue-200">Searching for cluster.</Typography>
 				<Spinner color="blue-200" />
+				<Typography variant="body1" color="blue-200">Searching for cluster.</Typography>
 			</div>
 		{:else if !showClusterInfo}
 			<Typography class="cluster-not-connected" variant="body1" element="span">

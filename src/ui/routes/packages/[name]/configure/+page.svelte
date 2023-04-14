@@ -10,14 +10,14 @@
 		Divider,
 	} from '$lib/components';
 	import { pkgStore } from '$lib/store';
-	import { Button, Paper, Typography, AccordionGroup, currentTheme } from '@ui';
+	import { Button, Typography, AccordionGroup, currentTheme } from '@ui';
 	import { page } from '$app/stores';
 	import BuildProvidence from '$lib/components/build-providence.svelte';
 	import DeploymentActions from '$lib/components/deployment-actions.svelte';
 </script>
 
 <svelte:head>
-	<title>Configure</title>
+	<title>Configure Deployment</title>
 </svelte:head>
 <Typography variant="h5">Configure Deployment</Typography>
 
@@ -38,7 +38,7 @@
 </SectionHeader>
 <BuildProvidence build={$pkgStore.zarfPackage.build} />
 
-<SectionHeader
+<SectionHeader icon="cubes"
 	>Components
 	<span slot="tooltip">A set of defined functionality and resources that build up a package.</span>
 </SectionHeader>
