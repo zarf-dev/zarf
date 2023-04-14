@@ -33,6 +33,7 @@
 		"@material/linear-progress": "14.0.0",
 		"@material/ripple": "^14.0.0",
 		"@material/theme": "14.0.0",
+		"@microsoft/fetch-event-source": "^2.0.1",
 		"material-symbols": "0.5.5",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
