@@ -10,6 +10,7 @@
 	export let toggleDialog: () => void;
 
 	let titleText: string;
+	let zarfAlt: string;
 	let happyZarf: boolean;
 
 	const ssx: SSX = {
@@ -38,14 +39,16 @@
 		if (hasDistro) {
 			titleText = 'Kubeconfig Found';
 			happyZarf = true;
+			zarfAlt = 'Found a cluster.';
 		} else {
 			titleText = 'Kubeconfig Not Found';
 			happyZarf = false;
+			zarfAlt = 'Failed to find a cluster.';
 		}
 	}
 </script>
 
-<ZarfDialog bind:toggleDialog {titleText} {happyZarf}>
+<ZarfDialog bind:toggleDialog {titleText} {happyZarf} {zarfAlt}>
 	{#if hasDistro}
 		<Box
 			ssx={{

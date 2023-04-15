@@ -4,24 +4,25 @@
  -->
 <script lang="ts">
 	import { Typography, Box, type SSX, Dialog, DialogActions } from '@ui';
-	import ZarfKubeConfigFound from '../../images/png/zarf-kube-config-found.png';
-	import ZarfKubeConfigNotFound from '../../images/png/zarf-kube-not-found.png';
+	import ZarfHappy from '../../images/png/zarf-kube-config-found.png';
+	import ZarfSad from '../../images/png/zarf-kube-not-found.png';
 
 	export let toggleDialog: () => void;
 	export let happyZarf = true;
 	export let titleText = 'Zarf Dialog';
 	export let ssx: SSX = {};
 	export let clickAway = true;
-	let titleAlt: string;
+	export let zarfAlt = '';
+	let titleAltPrefix: string;
 	let titleImage: string;
 
 	$: {
 		if (happyZarf) {
-			titleImage = ZarfKubeConfigFound;
-			titleAlt = 'Zarf, A happy axolotl has found a kubeconfig';
+			titleImage = ZarfHappy;
+			titleAltPrefix = 'Zarf, A happy axolotl.';
 		} else {
-			titleImage = ZarfKubeConfigNotFound;
-			titleAlt = 'Zarf, A sad axolotl was unable to find a kubeconfig';
+			titleImage = ZarfSad;
+			titleAltPrefix = 'Zarf, A sad axolotl.';
 		}
 	}
 </script>
@@ -29,7 +30,7 @@
 <Dialog {clickAway} class="zarf-dialog" {ssx} bind:toggleDialog elevation={12}>
 	<svelte:fragment slot="content">
 		<Box class="dialog-header">
-			<img src={titleImage} alt={titleAlt} width="64px" height="64px" />
+			<img src={titleImage} alt="{titleAltPrefix} {zarfAlt}" width="64px" height="64px" />
 			<Typography variant="h6">{titleText}</Typography>
 		</Box>
 		<slot />

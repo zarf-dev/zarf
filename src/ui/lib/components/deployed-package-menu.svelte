@@ -28,6 +28,7 @@
 	let errorMessage: string;
 	let happyZarf: boolean;
 	let titleText: string;
+	let zarfAlt: string;
 
 	let updateLink = '';
 	let toggled = false;
@@ -76,9 +77,11 @@
 		if (!errorMessage) {
 			happyZarf = true;
 			titleText = 'Remove Package from Cluster';
+			zarfAlt = 'Succeeded in removing a package from the cluster.';
 		} else {
 			happyZarf = false;
 			titleText = `Failed to remove package ${pkg.name}`;
+			zarfAlt = 'Failed to remove a package from the cluster.';
 		}
 	}
 </script>
@@ -106,7 +109,7 @@
 		</ListItemAdornment>
 	</ListItem>
 </Menu>
-<ZarfDialog clickAway={!removing} bind:toggleDialog {happyZarf} {titleText}>
+<ZarfDialog clickAway={!removing} bind:toggleDialog {happyZarf} {titleText} {zarfAlt}>
 	{#if !errorMessage}
 		{#if removing}
 			<div style="display: flex; justify-content: center; align-items: center: width: 100%">
