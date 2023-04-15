@@ -10,23 +10,28 @@
 		ListItem,
 		ListItemAdornment,
 		Menu,
-		Dialog,
 		Typography,
-		Button,
+		TextField,
 		type SSX,
 	} from '@ui';
 	import { current_component } from 'svelte/internal';
-	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { Packages } from '$lib/api';
+	import ZarfDialog from './zarf-dialog.svelte';
+	import ButtonDense from './button-dense.svelte';
+	import Spinner from './spinner.svelte';
 
 	export let pkg: DeployedPackage;
+
 	let anchorRef: HTMLButtonElement;
-	let updateLink: string = '';
-	let toggled: boolean = false;
-	let dialogOpen: boolean = false;
-	let dialogTop: string = '';
-	let dialogBottom: string = '';
 	let toggleDialog: () => void;
+	let inputValue: string;
+	let errorMessage: string;
+	let happyZarf: boolean;
+	let titleText: string;
+
+	let updateLink = '';
+	let toggled = false;
+	let removing = false;
 
 	const menuSSX: SSX = {
 		$self: {
@@ -34,6 +39,13 @@
 			'& .divider': { height: '1px', boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)' },
 		},
 	};
+
+	function closeDialog() {
+		inputValue = '';
+		errorMessage = '';
+		removing = false;
+		toggleDialog();
+	}
 
 	function handleClick(event: any) {
 		if (anchorRef && !anchorRef.contains(event.target) && !event.defaultPrevented) {
@@ -44,10 +56,13 @@
 	}
 
 	async function removePkg(): Promise<void> {
-		Packages.remove(pkg.name).catch((err) => {
-			dialogTop = `Failed to remove package ${pkg.name}`;
-			dialogBottom = err.message;
-		});
+		removing = true;
+		Packages.remove(pkg.name)
+			.then(closeDialog)
+			.catch((e) => {
+				errorMessage = e.message;
+				removing = false;
+			});
 	}
 
 	$: {
@@ -55,6 +70,15 @@
 			updateLink = '/packages?init=true';
 		} else {
 			updateLink = '/packages';
+		}
+	}
+	$: {
+		if (!errorMessage) {
+			happyZarf = true;
+			titleText = 'Remove Package from Cluster';
+		} else {
+			happyZarf = false;
+			titleText = `Failed to remove package ${pkg.name}`;
 		}
 	}
 </script>
@@ -76,44 +100,55 @@
 		</ListItemAdornment>
 	</ListItem>
 	<div class="divider" />
-	<ListItem text="Remove..." on:click={removePkg}>
+	<ListItem text="Remove..." on:click={toggleDialog}>
 		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
 			delete
 		</ListItemAdornment>
 	</ListItem>
 </Menu>
-<Dialog bind:open={dialogOpen} bind:toggleDialog>
-	<section class="success-dialog" slot="content">
-		<img class="zarf-logo" src={bigZarf} alt="zarf-logo" />
-		<Typography variant="h6" color="on-background">{dialogTop}</Typography>
-		<Typography variant="body2">{dialogBottom}</Typography>
-	</section>
-	<section slot="actions">
-		<Button
-			on:click={toggleDialog}
-			variant="raised"
-			backgroundColor="grey-300"
-			textColor="text-primary-on-light"
-		>
-			Close
-		</Button>
-	</section>
-</Dialog>
-
-<style>
-	.success-dialog {
-		display: flex;
-		padding: 24px 16px;
-		width: 444px;
-		height: 220.67px;
-		text-align: center;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 1rem;
-	}
-	.zarf-logo {
-		width: 64px;
-		height: 62.67px;
-	}
-</style>
+<ZarfDialog clickAway={!removing} bind:toggleDialog {happyZarf} {titleText}>
+	{#if !errorMessage}
+		{#if removing}
+			<div style="display: flex; justify-content: center; align-items: center: width: 100%">
+				<Spinner color="blue-200" diameter="50px" />
+			</div>
+		{:else}
+			<Typography variant="body2" color="text-secondary-on-dark">
+				Type the name of the package and click remove to delete the package and all of it’s
+				resources from the cluster. This action step cannot be undone.
+			</Typography>
+			<Typography variant="subtitle1">{pkg.name}</Typography>
+			<TextField
+				variant="outlined"
+				label="Package to Delete"
+				color="primary"
+				bind:value={inputValue}
+				helperText="Type the name of the package."
+			/>
+		{/if}
+	{:else}
+		<Typography variant="body2" color="text-secondary-on-dark">
+			{errorMessage}
+		</Typography>
+	{/if}
+	<svelte:fragment slot="actions">
+		{#if !errorMessage}
+			<ButtonDense backgroundColor="white" variant="outlined" on:click={closeDialog}>
+				Cancel
+			</ButtonDense>
+			<ButtonDense
+				disabled={pkg.name !== inputValue}
+				variant="flat"
+				textColor="text-primary-on-light"
+				backgroundColor="grey-300"
+				on:click={removePkg}
+			>
+				Remove Package
+			</ButtonDense>
+		{:else}
+			<ButtonDense backgroundColor="white" variant="outlined" on:click={closeDialog}>
+				Close
+			</ButtonDense>
+		{/if}
+	</svelte:fragment>
+</ZarfDialog>

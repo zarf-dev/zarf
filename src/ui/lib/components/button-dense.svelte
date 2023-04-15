@@ -25,4 +25,13 @@
 		padding: 4px 10px !important;
 		font-size: small !important;
 	}
+
+	/* 
+	 * Fix bug in UUI (mdc-button) with transparent disabled colors in button 
+	 * button-label background color for label should always be transparent
+	 * https://github.com/defenseunicorns/UnicornUI/issues/204
+	*/
+	.button.mdc-button.dense:disabled > .button-label {
+		background-color: transparent !important;
+	}
 </style>

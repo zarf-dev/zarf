@@ -63,7 +63,7 @@ export async function getDeployedComponents(components: ComponentStepMap): Promi
 	const oldComponents = getComponentStepMapComponents(components);
 	const deployingComponents = await DeployingComponents.list();
 	return oldComponents.map((component: StepProps, idx: number) => {
-		if (deployingComponents[idx]) {
+		if (deployingComponents && deployingComponents[idx]) {
 			return setStepSuccessful(component);
 		} else if (idx === deployingComponents.length) {
 			return setStepActive(component);

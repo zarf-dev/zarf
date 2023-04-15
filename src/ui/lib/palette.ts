@@ -9,7 +9,9 @@ export const ZarfPalettes: Palettes = {
 		globalNav: '#0D133D',
 		surface: '#0D133D',
 		warning: '#FFB74D',
+		disabled: 'rgba(255, 255, 255, 0.12)',
 		on: {
+			disabled: 'rgba(255, 255, 255, 0.3)',
 			globalNav: '#FFFFFF',
 			surface: '#FFFFFF',
 		},
