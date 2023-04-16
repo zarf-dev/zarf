@@ -35,6 +35,9 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
+// Separator is a string of 100 spaces to provide visual separation between elements.
+var Separator = strings.Repeat(" ", 100)
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logFile generation.
@@ -107,18 +110,18 @@ func Debug(payload ...any) {
 // Debugf prints a debug message.
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
-	debugPrinter(3, message)
+	Debug(message)
 }
 
 // Error prints an error message.
 func Error(err any, message string) {
-	debugPrinter(2, err)
+	Debug(err)
 	Warnf(message)
 }
 
 // ErrorWebf prints an error message and returns a web response.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
-	debugPrinter(2, err)
+	Debug(err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
@@ -126,74 +129,75 @@ func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 
 // Errorf prints an error message.
 func Errorf(err any, format string, a ...any) {
-	debugPrinter(2, err)
+	Debug(err)
 	Warnf(format, a...)
 }
 
 // Warn prints a warning message.
 func Warn(message string) {
-	Warnf(message)
+	Warnf("%s", message)
 }
 
 // Warnf prints a warning message.
 func Warnf(format string, a ...any) {
-	message := paragraph(format, a...)
+	message := Paragraph(format, a...)
 	pterm.Warning.Println(message)
 }
 
 // Fatal prints a fatal error message and exits with a 1.
 func Fatal(err any, message string) {
-	debugPrinter(2, err)
+	Debug(err)
 	errorPrinter(2).Println(message)
-	debugPrinter(2, string(debug.Stack()))
+	Debug(string(debug.Stack()))
 	os.Exit(1)
 }
 
 // Fatalf prints a fatal error message and exits with a 1.
 func Fatalf(err any, format string, a ...any) {
-	debugPrinter(2, err)
-	message := paragraph(format, a...)
-	errorPrinter(2).Println(message)
-	debugPrinter(2, string(debug.Stack()))
-	os.Exit(1)
+	message := Paragraph(format, a...)
+	Fatal(err, message)
 }
 
 // Info prints an info message.
 func Info(message string) {
-	Infof(message)
+	Infof("%s", message)
 }
 
 // Infof prints an info message.
 func Infof(format string, a ...any) {
 	if logLevel > 0 {
-		message := paragraph(format, a...)
+		message := Paragraph(format, a...)
 		pterm.Info.Println(message)
 	}
 }
 
 // Successf prints a success message.
 func Successf(format string, a ...any) {
-	message := paragraph(format, a...)
+	message := Paragraph(format, a...)
 	pterm.Success.Println(message)
 }
 
 // Question prints a formatted message used in conjunction with a user prompt.
 func Question(text string) {
-	pterm.Println()
-	message := paragraph(text)
-	pterm.FgMagenta.Println(message)
+	Questionf("%s", text)
 }
 
-// Notef prints a formatted yellow message.
-func Notef(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
-	Note(message)
+// Questionf prints a formatted message used in conjunction with a user prompt.
+func Questionf(format string, a ...any) {
+	pterm.Println()
+	message := Paragraph(format, a...)
+	pterm.FgLightGreen.Println(message)
 }
 
 // Note prints a formatted yellow message.
 func Note(text string) {
+	Notef("%s", text)
+}
+
+// Notef prints a formatted yellow message.
+func Notef(format string, a ...any) {
 	pterm.Println()
-	message := paragraph(text)
+	message := Paragraph(format, a...)
 	pterm.FgYellow.Println(message)
 }
 
@@ -210,6 +214,18 @@ func HeaderInfof(format string, a ...any) {
 		Printfln(message + strings.Repeat(" ", padding))
 }
 
+// HorizontalRule prints a white horizontal rule to separate the terminal
+func HorizontalRule() {
+	pterm.Println()
+	pterm.Println(strings.Repeat("━", 100))
+}
+
+// HorizontalRule prints a yellow horizontal rule to separate the terminal
+func HorizontalNoteRule() {
+	pterm.Println()
+	pterm.FgYellow.Println(strings.Repeat("━", 100))
+}
+
 // JSONValue prints any value as JSON.
 func JSONValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")
@@ -219,8 +235,14 @@ func JSONValue(value any) string {
 	return string(bytes)
 }
 
-func paragraph(format string, a ...any) string {
-	return pterm.DefaultParagraph.WithMaxWidth(100).Sprintf(format, a...)
+// Paragraph formats text into a 100 column paragraph
+func Paragraph(format string, a ...any) string {
+	return Paragraphn(100, format, a...)
+}
+
+// Paragraphn formats text into an n column paragraph
+func Paragraphn(n int, format string, a ...any) string {
+	return pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(format, a...)
 }
 
 func debugPrinter(offset int, a ...any) {

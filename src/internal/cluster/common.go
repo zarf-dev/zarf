@@ -66,7 +66,8 @@ func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, erro
 
 // NewCluster creates a new cluster instance without waiting for the cluster to be ready.
 func NewCluster() (*Cluster, error) {
+	var err error
 	c := &Cluster{}
-	c.Kube, _ = k8s.New(message.Debugf, labels)
-	return c, nil
+	c.Kube, err = k8s.New(message.Debugf, labels)
+	return c, err
 }
