@@ -47,6 +47,7 @@ jobs:
 
       - name: Run UI tests
         run: >
+          NODE_PATH=$(pwd)/src/ui/node_modules
           npm --prefix src/ui run test:pre-init &&
           npm --prefix src/ui run test:init &&
           npm --prefix src/ui run test:post-init
