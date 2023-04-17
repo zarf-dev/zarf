@@ -49,7 +49,9 @@ jobs:
         run: >
           NODE_PATH=$(pwd)/src/ui/node_modules
           npm --prefix src/ui run test:pre-init &&
+          NODE_PATH=$(pwd)/src/ui/node_modules
           npm --prefix src/ui run test:init &&
+          NODE_PATH=$(pwd)/src/ui/node_modules
           npm --prefix src/ui run test:post-init
 
       - name: Save logs
