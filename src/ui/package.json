@@ -2,6 +2,7 @@
 	"name": "zarf-ui",
 	"private": true,
 	"type": "module",
+	"version": "0.0.1",
 	"scripts": {
 		"dev": "../../hack/ui-dev.sh",
 		"build": "vite build",
@@ -15,7 +16,7 @@
 	"nodemonConfig": {
 		"delay": 5000,
 		"watch": [
-			"src"
+			"../../src"
 		],
 		"signal": "SIGKILL",
 		"extensions": [
