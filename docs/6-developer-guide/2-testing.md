@@ -111,17 +111,17 @@ Here are a few different ways to run the tests, based on your specific situation
 
 ```shell
 # dont forget to install dependencies
-npm ci
+npm --prefix src/ui ci
 
-# get help with playwright
-npx playwright --help
+# allow playwright to find the node modules
+export NODE_PATH=$(pwd)/src/ui/node_modules
 
 # run tests with @pre-init tag
-npm run test:pre-init
+npm --prefix src/ui run test:pre-init
 
 # run tests with @init tag
-npm run test:init
+npm --prefix run test:init
 
 # run tests with @post-init tag
-npm run test:post-init
+npm --prefix run test:post-init
 ```
