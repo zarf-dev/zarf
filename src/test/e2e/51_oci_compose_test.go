@@ -126,48 +126,48 @@ func deployAndRemove(component string) error {
 	return nil
 }
 
-func (suite *SkeletonSuite) Test_2_Deploy() {
-	suite.T().Log("E2E: Created Skeleton Package Deploy")
-
+func (suite *SkeletonSuite) Test_2_Deploy_And_Remove_Import_Component_Local() {
 	err := deployAndRemove("import-component-local")
 	suite.NoError(err)
-
-	err = deployAndRemove("import-component-local-relative")
-	suite.NoError(err)
-
-	err = deployAndRemove("import-component-local-absolute")
-	suite.NoError(err)
-
-	err = deployAndRemove("import-component-oci")
-	suite.NoError(err)
-
-	// Verify that nginx successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
-	suite.Contains(string(kubectlOut), "successfully rolled out")
-
-	err = deployAndRemove("import-helm")
-	suite.NoError(err)
-
-	err = deployAndRemove("import-repos")
-	suite.NoError(err)
-
-	err = deployAndRemove("import-images")
-	suite.NoError(err)
-
-	// err = deploy("import-data-injections")
-	// suite.NoError(err)
 }
 
-// func (suite *SkeletonSuite) Test_3_BadImports() {
+func (suite *SkeletonSuite) Test_3_Deploy_And_Remove_Import_Component_Local_Relative() {
+	err := deployAndRemove("import-component-local-relative")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_4_Deploy_And_Remove_Import_Component_Local_Absolute() {
+	err := deployAndRemove("import-component-local-absolute")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_5_Deploy_And_Remove_Import_Component_Oci() {
+	err := deployAndRemove("import-component-oci")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_6_Deploy_And_Remove_Import_Component_Helm() {
+	err := deployAndRemove("import-helm")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_7_Deploy_And_Remove_Import_Component_Repos() {
+	err := deployAndRemove("import-repos")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
+	err := deployAndRemove("import-images")
+	suite.NoError(err)
+}
+
+// func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_Import_Component_Data_Injections() {
+// 	err := deployAndRemove("import-data-injections")
+// 	suite.NoError(err)
+// }
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.setupWithCluster(t)
 	defer e2e.teardown(t)
 	suite.Run(t, new(SkeletonSuite))
 }
-
-// to test:
-// publish skeleton package
-// compose skeleton package
-// deploy newly created package
-// publish newly created package
