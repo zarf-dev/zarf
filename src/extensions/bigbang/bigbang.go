@@ -43,7 +43,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
-	err, validVersionResponse := isValidVersion(cfg.Version)
+	validVersionResponse, err := isValidVersion(cfg.Version)
 
 	if err != nil {
 		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
@@ -233,11 +233,11 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
-func isValidVersion(version string) (error, bool) {
+func isValidVersion(version string) (bool, error) {
 	specifiedVersion, err := semver.NewVersion(version)
 
 	if err != nil {
-		return err, false
+		return false, err
 	}
 
 	minRequiredVersion, _ := semver.NewVersion(bbMinRequiredVersion)
@@ -246,7 +246,7 @@ func isValidVersion(version string) (error, bool) {
 	c, _ := semver.NewConstraint(fmt.Sprintf(">= %s-0", minRequiredVersion))
 
 	// This extension requires BB 1.54.0 or greater.
-	return nil, c.Check(specifiedVersion)
+	return c.Check(specifiedVersion), nil
 }
 
 // findBBResources takes a list of yaml objects (as a string) and

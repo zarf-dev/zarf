@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"runtime"
 	"sync"
+
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Change terminal colors.
@@ -152,17 +154,56 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell() (string, string) {
+func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 	var shell string
 	var shellArgs string
 
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		shell = "powershell"
+		if shellPref.Windows != "" {
+			shell = shellPref.Windows
+		}
+
 		shellArgs = "-Command"
-	} else {
+		if shell == "cmd" {
+			// Change shellArgs to /c if cmd is chosen
+			shellArgs = "/c"
+		} else if !IsPowershell(shell) {
+			// Change shellArgs to -c if a real shell is chosen
+			shellArgs = "-c"
+		}
+	case "darwin":
+		shell = "sh"
+		if shellPref.Darwin != "" {
+			shell = shellPref.Darwin
+		}
+
+		shellArgs = "-c"
+		if IsPowershell(shell) {
+			// Change shellArgs to -Command if pwsh is chosen
+			shellArgs = "-Command"
+		}
+	case "linux":
+		shell = "sh"
+		if shellPref.Linux != "" {
+			shell = shellPref.Linux
+		}
+
+		shellArgs = "-c"
+		if IsPowershell(shell) {
+			// Change shellArgs to -Command if pwsh is chosen
+			shellArgs = "-Command"
+		}
+	default:
 		shell = "sh"
 		shellArgs = "-c"
 	}
 
 	return shell, shellArgs
+}
+
+// IsPowershell returns whether a shell name is powershell
+func IsPowershell(shellName string) bool {
+	return shellName == "powershell" || shellName == "pwsh"
 }
