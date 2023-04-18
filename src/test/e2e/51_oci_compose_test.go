@@ -100,11 +100,11 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 
 	noWaitExample := filepath.Join("examples", "helm-local-chart")
 	ref := suite.Reference.String()
-	_, stdErr, err := e2e.execZarfCommand("package", "publish", noWaitExample, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.ExecZarfCommand("package", "publish", noWaitExample, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.execZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 }
@@ -112,23 +112,23 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.execZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
+	_, _, err := e2e.ExecZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.execZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	_, _, err = e2e.ExecZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
 func deployAndRemove(component string) error {
-	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.arch))
+	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
 
-	_, _, err := e2e.execZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
+	_, _, err := e2e.ExecZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
 	if err != nil {
 		return err
 	}
 
 	// must specify by package path as we will be removing some non k8s components
-	_, _, err = e2e.execZarfCommand("package", "remove", p, fmt.Sprintf("--components=%s", component), "--confirm")
+	_, _, err = e2e.ExecZarfCommand("package", "remove", p, fmt.Sprintf("--components=%s", component), "--confirm")
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
 // }
 
 func TestSkeletonSuite(t *testing.T) {
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 	suite.Run(t, new(SkeletonSuite))
 }

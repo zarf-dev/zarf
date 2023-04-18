@@ -62,6 +62,6 @@ func TestWait(t *testing.T) {
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "helm-no-wait", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-no-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
