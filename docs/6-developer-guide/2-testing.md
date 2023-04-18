@@ -120,8 +120,8 @@ export NODE_PATH=$(pwd)/src/ui/node_modules
 npm --prefix src/ui run test:pre-init
 
 # run tests with @init tag
-npm --prefix run test:init
+npm --prefix src/ui run test:init
 
 # run tests with @post-init tag
-npm --prefix run test:post-init
+npm --prefix src/ui run test:post-init
 ```
