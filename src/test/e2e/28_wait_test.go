@@ -34,7 +34,7 @@ func TestWait(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {

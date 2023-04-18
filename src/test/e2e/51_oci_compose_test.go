@@ -69,7 +69,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	if !cfg.ContainsAuth() {
 		// make a docker config file w/ some blank creds
-		_, _, err := e2e.execZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
 		suite.NoError(err)
 	}
 
