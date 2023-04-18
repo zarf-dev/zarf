@@ -54,7 +54,7 @@ func TestZarfInit(t *testing.T) {
 	require.Contains(t, stdOut, "31337")
 
 	// Check that the registry is running with the correct scale down policy
-	stdOut, _, err = e2e.execZarfCommand("tools", "kubectl", "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
+	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Min")
 
