@@ -133,11 +133,19 @@ type ZarfComponentActionSet struct {
 
 // ZarfComponentActionDefaults sets the default configs for child actions
 type ZarfComponentActionDefaults struct {
-	Mute            bool     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
-	MaxTotalSeconds int      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
-	MaxRetries      int      `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
-	Dir             string   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
-	Env             []string `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+	Mute            bool                     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
+	MaxTotalSeconds int                      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
+	MaxRetries      int                      `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
+	Dir             string                   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
+	Env             []string                 `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+	Shell           ZarfComponentActionShell `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
+}
+
+// ZarfComponentActionShell represents the desired shell to use for a given command
+type ZarfComponentActionShell struct {
+	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
+	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
 }
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
@@ -148,6 +156,7 @@ type ZarfComponentAction struct {
 	Dir                   *string                          `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env                   []string                         `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd                   string                           `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
+	Shell                 *ZarfComponentActionShell        `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
 	DeprecatedSetVariable string                           `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.,pattern=^[A-Z0-9_]+$"`
 	SetVariables          []ZarfComponentActionSetVariable `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
 	Description           string                           `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
