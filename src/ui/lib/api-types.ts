@@ -919,10 +919,90 @@ export interface ZarfPackageVariable {
 }
 
 export interface ClusterSummary {
-    distro:    string;
-    hasZarf:   boolean;
-    reachable: boolean;
-    zarfState: ZarfState;
+    distro:      string;
+    hasZarf:     boolean;
+    k8sRevision: string;
+    rawConfig:   RawConfigClass;
+    reachable:   boolean;
+    zarfState:   ZarfState;
+}
+
+export interface RawConfigClass {
+    apiVersion?:       string;
+    clusters:          { [key: string]: Cluster };
+    contexts:          { [key: string]: Context };
+    "current-context": string;
+    extensions?:       { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    kind?:             string;
+    preferences:       Preferences;
+    users:             { [key: string]: AuthInfo };
+}
+
+export interface Cluster {
+    "certificate-authority"?:      string;
+    "certificate-authority-data"?: string;
+    "disable-compression"?:        boolean;
+    extensions?:                   { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    "insecure-skip-tls-verify"?:   boolean;
+    LocationOfOrigin:              string;
+    "proxy-url"?:                  string;
+    server:                        string;
+    "tls-server-name"?:            string;
+}
+
+export interface Context {
+    cluster:          string;
+    extensions?:      { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    LocationOfOrigin: string;
+    namespace?:       string;
+    user:             string;
+}
+
+export interface Preferences {
+    colors?:     boolean;
+    extensions?: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+}
+
+export interface AuthInfo {
+    "act-as"?:                  string;
+    "act-as-groups"?:           string[];
+    "act-as-uid"?:              string;
+    "act-as-user-extra"?:       { [key: string]: string[] };
+    "auth-provider"?:           AuthProviderConfig;
+    "client-certificate"?:      string;
+    "client-certificate-data"?: string;
+    "client-key"?:              string;
+    "client-key-data"?:         string;
+    exec?:                      ExecConfig;
+    extensions?:                { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    LocationOfOrigin:           string;
+    password?:                  string;
+    token?:                     string;
+    tokenFile?:                 string;
+    username?:                  string;
+}
+
+export interface AuthProviderConfig {
+    config?: { [key: string]: string };
+    name:    string;
+}
+
+export interface ExecConfig {
+    apiVersion?:             string;
+    args:                    string[];
+    command:                 string;
+    Config:                  any[] | boolean | number | number | { [key: string]: any } | null | string;
+    env:                     ExecEnvVar[];
+    installHint?:            string;
+    InteractiveMode:         string;
+    provideClusterInfo:      boolean;
+    StdinUnavailable:        boolean;
+    StdinUnavailableMessage: string;
+}
+
+export interface ExecEnvVar {
+    name:  string;
+    value: string;
 }
 
 export interface ZarfState {
@@ -1464,8 +1544,80 @@ const typeMap: any = {
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
         { json: "hasZarf", js: "hasZarf", typ: true },
+        { json: "k8sRevision", js: "k8sRevision", typ: "" },
+        { json: "rawConfig", js: "rawConfig", typ: r("RawConfigClass") },
         { json: "reachable", js: "reachable", typ: true },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "RawConfigClass": o([
+        { json: "apiVersion", js: "apiVersion", typ: u(undefined, "") },
+        { json: "clusters", js: "clusters", typ: m(r("Cluster")) },
+        { json: "contexts", js: "contexts", typ: m(r("Context")) },
+        { json: "current-context", js: "current-context", typ: "" },
+        { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "kind", js: "kind", typ: u(undefined, "") },
+        { json: "preferences", js: "preferences", typ: r("Preferences") },
+        { json: "users", js: "users", typ: m(r("AuthInfo")) },
+    ], false),
+    "Cluster": o([
+        { json: "certificate-authority", js: "certificate-authority", typ: u(undefined, "") },
+        { json: "certificate-authority-data", js: "certificate-authority-data", typ: u(undefined, "") },
+        { json: "disable-compression", js: "disable-compression", typ: u(undefined, true) },
+        { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "insecure-skip-tls-verify", js: "insecure-skip-tls-verify", typ: u(undefined, true) },
+        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
+        { json: "proxy-url", js: "proxy-url", typ: u(undefined, "") },
+        { json: "server", js: "server", typ: "" },
+        { json: "tls-server-name", js: "tls-server-name", typ: u(undefined, "") },
+    ], false),
+    "Context": o([
+        { json: "cluster", js: "cluster", typ: "" },
+        { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
+        { json: "namespace", js: "namespace", typ: u(undefined, "") },
+        { json: "user", js: "user", typ: "" },
+    ], false),
+    "Preferences": o([
+        { json: "colors", js: "colors", typ: u(undefined, true) },
+        { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+    ], false),
+    "AuthInfo": o([
+        { json: "act-as", js: "act-as", typ: u(undefined, "") },
+        { json: "act-as-groups", js: "act-as-groups", typ: u(undefined, a("")) },
+        { json: "act-as-uid", js: "act-as-uid", typ: u(undefined, "") },
+        { json: "act-as-user-extra", js: "act-as-user-extra", typ: u(undefined, m(a(""))) },
+        { json: "auth-provider", js: "auth-provider", typ: u(undefined, r("AuthProviderConfig")) },
+        { json: "client-certificate", js: "client-certificate", typ: u(undefined, "") },
+        { json: "client-certificate-data", js: "client-certificate-data", typ: u(undefined, "") },
+        { json: "client-key", js: "client-key", typ: u(undefined, "") },
+        { json: "client-key-data", js: "client-key-data", typ: u(undefined, "") },
+        { json: "exec", js: "exec", typ: u(undefined, r("ExecConfig")) },
+        { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
+        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
+        { json: "password", js: "password", typ: u(undefined, "") },
+        { json: "token", js: "token", typ: u(undefined, "") },
+        { json: "tokenFile", js: "tokenFile", typ: u(undefined, "") },
+        { json: "username", js: "username", typ: u(undefined, "") },
+    ], false),
+    "AuthProviderConfig": o([
+        { json: "config", js: "config", typ: u(undefined, m("")) },
+        { json: "name", js: "name", typ: "" },
+    ], false),
+    "ExecConfig": o([
+        { json: "apiVersion", js: "apiVersion", typ: u(undefined, "") },
+        { json: "args", js: "args", typ: a("") },
+        { json: "command", js: "command", typ: "" },
+        { json: "Config", js: "Config", typ: u(a("any"), true, 3.14, 0, m("any"), null, "") },
+        { json: "env", js: "env", typ: a(r("ExecEnvVar")) },
+        { json: "installHint", js: "installHint", typ: u(undefined, "") },
+        { json: "InteractiveMode", js: "InteractiveMode", typ: "" },
+        { json: "provideClusterInfo", js: "provideClusterInfo", typ: true },
+        { json: "StdinUnavailable", js: "StdinUnavailable", typ: true },
+        { json: "StdinUnavailableMessage", js: "StdinUnavailableMessage", typ: "" },
+    ], false),
+    "ExecEnvVar": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "value", js: "value", typ: "" },
     ], false),
     "ZarfState": o([
         { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
