@@ -6,13 +6,44 @@
 	import Icon from './icon.svelte';
 	import Tooltip from './tooltip.svelte';
 	import type { IconVariant } from './icon.svelte';
+	import { Paper, type SSX, Typography } from '@ui';
 	export let icon: IconVariant = 'package';
+
+	const ssx: SSX = {
+		$self: {
+			padding: '0px 32px',
+			display: 'flex',
+			height: '56px',
+			justifyContent: 'space-between',
+			alignItems: 'center',
+			stroke: 'var(--on-surface)',
+			color: 'var(--on-surface)',
+			'& .pkg-section-header-title': {
+				display: 'flex',
+				gap: '13.5px',
+				height: '43px',
+				alignItems: 'center',
+				'& .tooltip-container': {
+					display: 'flex',
+					'& .tooltip-trigger': {
+						color: 'var(--text-secondary-on-dark)',
+					},
+					'& .tooltip': {
+						wordBreak: 'break-word',
+						width: '500px',
+					},
+				},
+			},
+		},
+	};
 </script>
 
-<div class="pkg-section-header">
+<Paper {ssx} class="pkg-section-header" elevation={1}>
 	<div class="pkg-section-header-title">
 		<Icon variant={icon} />
-		<slot name="title" />
+		<Typography variant="h5">
+			<slot />
+		</Typography>
 		{#if $$slots.tooltip}
 			<div class="tooltip-container"><Tooltip><slot name="tooltip" /></Tooltip></div>
 		{/if}
@@ -22,40 +53,4 @@
 			<slot name="actions" />
 		</div>
 	{/if}
-</div>
-
-<style>
-	.pkg-section-header-title {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-	.pkg-section-header {
-		display: flex;
-		justify-content: space-between;
-		background-color: var(--mdc-theme-paper);
-		color: var(--mdc-theme-on-secondary);
-		stroke: var(--mdc-theme-on-secondary);
-		padding: 0.75rem 2rem;
-	}
-	:global(:root[data-theme='dark']) .pkg-section-header {
-		background-color: var(--mdc-theme-surface);
-	}
-	.pkg-section-header-actions {
-		display: flex;
-		align-items: center;
-	}
-	.tooltip-container {
-		display: inline-flex;
-		align-items: center;
-	}
-	:global(.tooltip-container .tooltip-trigger) {
-		color: rgba(255, 255, 255, 0.56);
-	}
-	:global(.tooltip-container .tooltip) {
-		color: var(--mdc-theme-on-primary);
-	}
-	:global(:root[data-theme='dark'] .tooltip-container .tooltip) {
-		color: var(--mdc-theme-on-secondary);
-	}
-</style>
+</Paper>

@@ -21,6 +21,7 @@
 		"**/*.ts",
 		"**/*.js",
 		"**/*.svelte",
-		"jest.config.js"
+		"jest.config.js",
+		".svelte-kit/ambient.d.ts",
 	]
 }

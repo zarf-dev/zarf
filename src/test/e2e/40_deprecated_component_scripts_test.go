@@ -15,8 +15,8 @@ import (
 // migrated into zarf actions).
 func TestDeprecatedComponentScripts(t *testing.T) {
 	t.Log("E2E: Testing deprecated component scripts")
-	e2e.setup(t)
-	defer e2e.teardown(t)
+	e2e.Setup(t)
+	defer e2e.Teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
 	testPackageDirPath := "src/test/test-packages/40-deprecated-component-scripts"
@@ -26,14 +26,14 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 		"test-deprecated-deploy-after-hook.txt",
 	}
 	allArtifacts := append(deployArtifacts, prepareArtifact)
-	e2e.cleanFiles(allArtifacts...)
-	defer e2e.cleanFiles(allArtifacts...)
+	e2e.CleanFiles(allArtifacts...)
+	defer e2e.CleanFiles(allArtifacts...)
 
 	// 1. Try creating the package to test the create scripts
-	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-component-scripts-%s.tar.zst", testPackageDirPath, e2e.arch)
+	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-component-scripts-%s.tar.zst", testPackageDirPath, e2e.Arch)
 	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	defer e2e.cleanFiles(testPackagePath)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
+	defer e2e.CleanFiles(testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Component '1-test-deprecated-prepare-scripts' is using scripts")
 	require.Contains(t, stdErr, "Component '2-test-deprecated-deploy-scripts' is using scripts")
@@ -48,7 +48,7 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	}
 
 	// 2. Deploy the simple script that should pass
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-deploy-scripts")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-deploy-scripts")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the deploy artifacts were created
@@ -57,6 +57,6 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	}
 
 	// 3. Deploy the simple script that should fail the timeout
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=3-test-deprecated-timeout-scripts")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=3-test-deprecated-timeout-scripts")
 	require.Error(t, err, stdOut, stdErr)
 }

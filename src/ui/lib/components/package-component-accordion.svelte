@@ -8,6 +8,7 @@
 	import type { ZarfComponent } from '$lib/api-types';
 	import { pkgComponentDeployStore } from '$lib/store';
 	import { Accordion, IconButton, Typography } from '@ui';
+	import ZarfChip from './zarf-chip.svelte';
 
 	export let idx: number;
 	export let readOnly: boolean = true;
@@ -21,26 +22,24 @@
 			list = [...list, idx];
 		}
 		list.sort();
-		console.log(JSON.stringify(list, null, 2));
 		pkgComponentDeployStore.set(list);
 	};
-	$: requiredText = `(${component.required ? 'Required' : 'Optional'})`;
+	$: requiredText = (component.required && 'required') || 'optional';
 	$: componentTitle = `${component.name} ${requiredText}`;
 </script>
 
 <Accordion id={`component-accordion-${idx}`} class="package-component-accordion">
 	<div slot="headerContent" class="component-accordion-header">
-		<div style="flex: 1">
+		<div style="flex: 1; gap: 8px;">
 			<Typography variant="subtitle2" element="div" class="component-title" title={componentTitle}>
 				{component.name}
-				<Typography element="span" variant="body2" class={component.required ? '' : 'optional'}>
-					{requiredText}
-				</Typography>
 			</Typography>
+			<ZarfChip>{requiredText}</ZarfChip>
 		</div>
 		<div style="flex: 3">
 			<Typography
 				variant="body2"
+				color="text-secondary-on-dark"
 				class="component-description"
 				title={component.description || ''}
 				element="div"

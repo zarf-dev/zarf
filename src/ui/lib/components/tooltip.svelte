@@ -27,11 +27,11 @@
 	function update() {
 		computePosition(icon, tooltip, {
 			placement,
-			middleware: [offset(6), flip(), shift(), arrow({ element: arrowRef })]
+			middleware: [offset(6), flip(), shift(), arrow({ element: arrowRef })],
 		}).then(({ x, y, placement, middlewareData }) => {
 			Object.assign(tooltip.style, {
 				left: `${x}px`,
-				top: `${y}px`
+				top: `${y}px`,
 			});
 
 			const arrowX = middlewareData.arrow?.x;
@@ -41,7 +41,7 @@
 				top: 'bottom',
 				right: 'left',
 				bottom: 'top',
-				left: 'right'
+				left: 'right',
 			}[placement.split('-')[0]];
 
 			Object.assign(arrowRef.style, {
@@ -49,7 +49,7 @@
 				top: arrowY != undefined ? `${arrowY}px` : '',
 				right: '',
 				bottom: '',
-				[staticSide]: '-4px'
+				[staticSide]: '-4px',
 			});
 		});
 	}
@@ -81,10 +81,10 @@
 	on:mouseleave={hideTooltip}
 	on:focus={showTooltip}
 	on:blur={hideTooltip}
-    class="tooltip-trigger"
+	class="tooltip-trigger"
 >
-	<Icon variant="info" /></button
->
+	<Icon variant="info" />
+</button>
 <div role="tooltip" bind:this={tooltip} class="tooltip">
 	<slot />
 	<div bind:this={arrowRef} class="arrow" />
@@ -93,12 +93,13 @@
 <style>
 	.tooltip {
 		display: none;
-		width: max-content;
+		width: min-content;
+		word-break: break;
 		position: absolute;
 		top: 0;
 		left: 0;
 		background: var(--mdc-theme-surface);
-        border: 1px solid var(--mdc-theme-on-surface);
+		border: 1px solid var(--mdc-theme-on-surface);
 		font-weight: bold;
 		padding: 5px;
 		border-radius: 4px;
@@ -107,15 +108,15 @@
 	.arrow {
 		position: absolute;
 		background: var(--mdc-theme-surface);
-        border-bottom: 1px solid var(--mdc-theme-on-surface);
-        border-right: 1px solid var(--mdc-theme-on-surface);
+		border-bottom: 1px solid var(--mdc-theme-on-surface);
+		border-right: 1px solid var(--mdc-theme-on-surface);
 		width: 8px;
 		height: 8px;
 		transform: rotate(45deg);
 	}
-    .tooltip-trigger {
-        background: inherit;
-        border: none;
-        padding: 0;
-    }
+	.tooltip-trigger {
+		background: inherit;
+		border: none;
+		padding: 0;
+	}
 </style>
