@@ -329,6 +329,10 @@ func (p *Packager) getComposedFilePath(parent types.ZarfComponent, child types.Z
 		}
 	}
 
+	if filepath.IsAbs(path) {
+		return path
+	}
+
 	// Add prefix for local files.
 	return filepath.Join(prefix, path)
 }

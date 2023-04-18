@@ -9,6 +9,8 @@ components:
     files:
       - source: ../files/coffee-ipsum.txt
         target: files/coffee-ipsum.txt
+      - source: /tmp/nocode/README.md
+        target: files/nocode-readme-abs.md
     actions:
       onRemove:
         after:

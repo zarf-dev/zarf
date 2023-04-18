@@ -115,7 +115,7 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	_, _, err := e2e.execZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.execZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure", "-l=trace")
+	_, _, err = e2e.execZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
