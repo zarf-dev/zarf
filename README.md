@@ -19,8 +19,8 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
 - Provide a [web dashboard](https://docs.zarf.dev/docs/dashboard-ui/sbom-dashboard) for viewing SBOM output
-- Sign packages and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_pull), and directly [deploy](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_deploy) packages via an [OCI registry](https://opencontainers.org/)
+- Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
+- [Publish](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
 - Powerful component lifecycle [actions](https://docs.zarf.dev/docs/user-guide/component-actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
@@ -33,9 +33,9 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and templating](examples/variables/README.md) with defaults and user prompting
+- Customizable [variables and package templates](examples/variables/README.md) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
-- Component level OS/architecture filtering
+- Component-level OS/architecture filtering
 
 ## Demo
 
