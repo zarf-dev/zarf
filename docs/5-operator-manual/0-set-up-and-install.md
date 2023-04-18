@@ -7,7 +7,7 @@
 
 <!-- TODO: @JPERRY Look at how other tools/apps do their instillation instructions -->
 
-In order to install the Zarf CLI, which is not yet available in common package managers, you may follow the steps below:
+In order to install the Zarf CLI, which is not yet available in common Linux package managers, you may follow the steps below:
 
 1. Download the latest release version for your machine from our [GitHub release page](https://github.com/defenseunicorns/zarf/releases).
 2. Transfer the downloaded file onto your path. This can be executed in your terminal with the command `mv ~/Downloads/{DOWNLOADED_RELEASE_FILE} /usr/local/bin/zarf`.
