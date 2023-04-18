@@ -73,10 +73,12 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	if includeSBOM || outputSBOM != "" {
 		// Extract the SBOM files from the sboms.tar file
-		if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
-			return fmt.Errorf("unable to extract the SBOM files: %w", err)
+		_, tarErr := os.Stat(p.tmp.SbomTar)
+		if tarErr == nil {
+			if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+				return fmt.Errorf("unable to extract the SBOM files: %w", err)
+			}
 		}
-
 	}
 
 	// Open a browser to view the SBOM if specified
