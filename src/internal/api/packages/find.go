@@ -15,8 +15,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-var packagePattern = regexp.MustCompile(`zarf-package.*.tar`)
-var initPattern = regexp.MustCompile(`zarf-init.*\.tar`)
+// Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
+var packagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
+// Find zarf-init packages on the local system (https://regex101.com/r/6aTl3O/2)
+var initPattern = regexp.MustCompile(`zarf-init[^\s\\\/]*\.tar(\.zst)?$`)
 
 // Find returns all packages anywhere down the directory tree of the working directory.
 func Find(w http.ResponseWriter, _ *http.Request) {
