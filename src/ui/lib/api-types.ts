@@ -416,6 +416,11 @@ export interface ZarfComponentAction {
      */
     setVariables?: ZarfComponentActionSetVariable[];
     /**
+     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+     * supported operating systems
+     */
+    shell?: ZarfComponentActionShell;
+    /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
      * action. See the 'zarf tools wait-for' command for more info.
      */
@@ -436,6 +441,26 @@ export interface ZarfComponentActionSetVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+}
+
+/**
+ * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+ * supported operating systems
+ */
+export interface ZarfComponentActionShell {
+    /**
+     * (default 'sh') Indicates a preference for the shell to use on macOS systems
+     */
+    darwin?: string;
+    /**
+     * (default 'sh') Indicates a preference for the shell to use on Linux systems
+     */
+    linux?: string;
+    /**
+     * (default 'powershell') Indicates a preference for the shell to use on Windows systems
+     * (note that choosing 'cmd' will turn off migrations like touch -> New-Item)
+     */
+    windows?: string;
 }
 
 /**
@@ -530,6 +555,11 @@ export interface ZarfComponentActionDefaults {
      * Hide the output of commands during execution (default false)
      */
     mute?: boolean;
+    /**
+     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+     * supported operating systems
+     */
+    shell?: ZarfComponentActionShell;
 }
 
 export interface ZarfChart {
@@ -1324,12 +1354,18 @@ const typeMap: any = {
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
         { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
+        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
     ], false),
     "ZarfComponentActionSetVariable": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+    ], false),
+    "ZarfComponentActionShell": o([
+        { json: "darwin", js: "darwin", typ: u(undefined, "") },
+        { json: "linux", js: "linux", typ: u(undefined, "") },
+        { json: "windows", js: "windows", typ: u(undefined, "") },
     ], false),
     "ZarfComponentActionWait": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
@@ -1352,6 +1388,7 @@ const typeMap: any = {
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
     ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
