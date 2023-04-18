@@ -115,7 +115,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
 - 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
-- 💻 **OS Agnostic.** Zarf supports numerous operating systems. For a full list, visit the [Supported OSes](./5-operator-manual/90-supported-oses.md) page.
+- 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures and featuresets is coming soon.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
 - 🚀 **Develop Connected Deploy Disconnected.** Teams can build and configure individual applications or entire DevSecOps environments while connected to the internet. Once created, they can be packaged and shipped to a disconnected environment to be deployed.
 - 💿 **Single File Deployments.** Zarf allows you to package the parts of the internet your app needs into a single compressed file to be installed without connectivity.
