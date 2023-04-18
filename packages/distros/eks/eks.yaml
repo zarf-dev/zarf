@@ -2,11 +2,22 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: ###ZARF_VAR_CLUSTER_NAME###  
-  region: us-west-1
-  version: "1.21"
+  name: ###ZARF_VAR_CLUSTER_NAME###
+  region: ###ZARF_VAR_CLUSTER_REGION###
+  version: "###ZARF_VAR_CLUSTER_VERSION###"
+
+iam:
+  withOIDC: true
+
+addons:
+  - name: aws-ebs-csi-driver
+    version: v1.5.2-eksbuild.1
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+
+
 managedNodeGroups:
-- instanceType: t3.small
+- instanceType: ###ZARF_VAR_INSTANCE_TYPE###
   name: ###ZARF_VAR_CLUSTER_NAME###-ng
   minSize: 3
   maxSize: 6

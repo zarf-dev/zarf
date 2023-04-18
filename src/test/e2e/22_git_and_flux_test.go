@@ -19,13 +19,13 @@ import (
 
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
 
 	// Deploy the gitops example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -38,10 +38,10 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "flux-test", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -103,10 +103,10 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 
 func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
-	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.arch)
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 }
