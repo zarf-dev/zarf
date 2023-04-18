@@ -1,0 +1,50 @@
+name: Test EKS Cluster
+on:
+  # schedule:
+  #  - cron: '0 7 * * * ' ## Every day at 0700 UTC
+
+  workflow_dispatch: ## Give us the ability to run this manually
+
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-eks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: "zarf-nightly-tester"
+          aws-region: us-east-1
+
+      - name: Build the eks package
+        run: ./build/zarf package create packages/distros/eks -o build -a $(ARCH) --confirm
+
+      - name: Deploy the eks package
+        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --SET=CLUSTER_NAME=zarf-eks-test,INSTANCE_TYPE=t3.medium
+
+      - name: Run tests
+        run: ZARF_INIT_ARGS="--make test-e2e ARCH=amd64
+
+      - name: Teardown the cluster
+        if: always()
+        run: ./build/zarf package remove build/zarf-package-distro-eks-multi-0.0.2.tar.zst --confirm
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs
