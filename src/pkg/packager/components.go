@@ -18,8 +18,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-const horizontalRule = "───────────────────────────────────────────────────────────────────────────────────────"
-
 func (p *Packager) getValidComponents() []types.ZarfComponent {
 	message.Debugf("packager.getValidComponents()")
 
@@ -182,13 +180,12 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 		return component.Default
 	}
 
-	pterm.Println(horizontalRule)
+	message.HorizontalRule()
 
 	displayComponent := component
 	displayComponent.Description = ""
 	utils.ColorPrintYAML(displayComponent)
 	if component.Description != "" {
-		pterm.Println()
 		message.Question(component.Description)
 	}
 
@@ -221,7 +218,7 @@ func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) type
 		message.Fatalf(nil, "You must specify at least one component from the group %#v when using the --confirm flag.", componentNames)
 	}
 
-	pterm.Println(horizontalRule)
+	message.HorizontalRule()
 
 	var chosen int
 	var options []string
@@ -235,6 +232,8 @@ func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) type
 		Message: "Select a component to deploy:",
 		Options: options,
 	}
+
+	pterm.Println()
 
 	if err := survey.AskOne(prompt, &chosen); err != nil {
 		message.Fatalf(nil, "Component selection canceled: %s", err.Error())

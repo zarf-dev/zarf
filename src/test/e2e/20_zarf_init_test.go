@@ -53,6 +53,11 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
+	// Check that the registry is running with the correct scale down policy
+	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
+	require.NoError(t, err)
+	require.Contains(t, stdOut, "Min")
+
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = e2e.ExecZarfCommand("tools", "kubectl", "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = e2e.ExecZarfCommand("tools", "kubectl", "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
