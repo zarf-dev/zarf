@@ -178,7 +178,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 	if len(deployedPackage.DeployedComponents) == 0 && p.cluster != nil {
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, deployedPackage.Name)
+		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, config.ZarfPackagePrefix+deployedPackage.Name)
 		if err != nil {
 			return deployedPackage, fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
 		}

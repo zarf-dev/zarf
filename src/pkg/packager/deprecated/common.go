@@ -64,7 +64,8 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 	deployedSemver, err := semver.NewVersion(deployedZarfVersion)
 	if err != nil {
 		message.HorizontalNoteRule()
-		message.Warnf("Unable to determine init-package version from %s.  There is a potential for breaking changes.", deployedZarfVersion)
+		pterm.Println()
+		message.Warnf("Unable to determine init-package version from %s.  There is potential for breaking changes.", deployedZarfVersion)
 		return
 	}
 
@@ -80,7 +81,6 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 	if len(applicableBreakingChanges) > 0 {
 		// Print header information
 		message.HorizontalNoteRule()
-		pterm.Println()
 		message.Warn(pterm.Bold.Sprint("Potential Breaking Changes Detected Between Versions"))
 
 		// Print information about the versions
