@@ -33,7 +33,7 @@ Depending on the permissions of your user, if you are installing K3s through the
 
 1. Become a privileged user by running the command `sudo su` and then executing all the Zarf commands as usual.
 2. Manually run each Zarf command as a privileged user via the command `sudo {ZARF_COMMAND_HERE}`.
-3. Run the init command as a privileged user with the command `sudo zarf init`. Then, adjust the permissions of the `~/.kube/config` file to be readable by the current user.
+2. Run the init command as a privileged user with the command `sudo zarf init`. Then, when Zarf is waiting for the cluster connection, copy `/root/.kube/config` to `~/.kube/config` and adjust the permissions of the `~/.kube/config` file to be readable by the current user.
 :::
 
 ### Deploy to Your Preferred Cluster
