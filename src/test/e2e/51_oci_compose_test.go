@@ -26,6 +26,7 @@ type SkeletonSuite struct {
 
 var (
 	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
+	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")
 	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
 	absEverything      = filepath.Join("/", "tmp", "everything-external")
 	absDosGames        = filepath.Join("/", "tmp", "dos-games")
@@ -57,11 +58,11 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.DirExists(absNoCode)
 
-	image := "registry:2.8.1"
+	// image := "registry:2.8.1"
 
 	// spin up a local registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
-	suite.NoError(err)
+	// err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
+	// suite.NoError(err)
 
 	// docker config folder
 	cfg, err := dconfig.Load(dconfig.Dir())
@@ -76,9 +77,9 @@ func (suite *SkeletonSuite) SetupSuite() {
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", everythingExternal)
+	// _, _, err := exec.Cmd("docker", "rm", "-f", "registry")
+	// suite.NoError(err)
+	err := exec.CmdWithPrint("rm", "-rf", everythingExternal)
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", absEverything)
 	suite.NoError(err)
@@ -94,13 +95,16 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_0_Publish() {
+func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 
-	// Publish skeleton package.
 	noWaitExample := filepath.Join("examples", "helm-local-chart")
 	ref := suite.Reference.String()
 	_, stdErr, err := e2e.execZarfCommand("package", "publish", noWaitExample, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
+	_, stdErr, err = e2e.execZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 }
@@ -109,6 +113,9 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	_, _, err := e2e.execZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
+	suite.NoError(err)
+
+	_, _, err = e2e.execZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure", "-l=trace")
 	suite.NoError(err)
 }
 

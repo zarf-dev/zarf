@@ -331,7 +331,7 @@ func (p *Packager) loadSkeleton() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
 	}
 
-	for _, component := range p.cfg.Pkg.Components {
+	for idx, component := range p.cfg.Pkg.Components {
 		local := component.LocalPaths("")
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
@@ -343,34 +343,31 @@ func (p *Packager) loadSkeleton() error {
 		}
 
 		for _, path := range local {
+			pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
 			src := strings.TrimPrefix(path, "file://")
 			if !filepath.IsAbs(src) {
 				src = filepath.Join(base, path)
 			}
 			if utils.InvalidPath(src) {
-				return fmt.Errorf("unable to find path %s referenced in %s", src, component.Name)
+				return fmt.Errorf("unable to find path %s referenced in %s", path, component.Name)
 			}
 			var dst string
-			if utils.DirHasFile(base, path) {
-				err = os.MkdirAll(filepath.Dir(path), 0755)
-				if err != nil {
-					return err
-				}
-				dst = filepath.Join(p.tmp.Components, component.Name, path)
+			if utils.DirHasFile(base, src) {
+				dst = filepath.Join(tmp, path)
 			} else {
-				pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
-				dst = filepath.Join(tmp, pathSha, filepath.Base(path))
-				dstrel := filepath.Join(pathSha, filepath.Base(path))
+				dst = filepath.Join(tmp, pathSha, filepath.Base(src))
+				dstrel := filepath.Join(pathSha, filepath.Base(src))
 				if strings.HasPrefix(path, "file://") {
 					dstrel = "file://" + dstrel
 				}
-				if p.cfg.Pkg.Build.SkeletonMutations == nil {
-					p.cfg.Pkg.Build.SkeletonMutations = make(map[string][]types.PathMutation)
+				if p.cfg.Pkg.Components[idx].PathMutations == nil {
+					p.cfg.Pkg.Components[idx].PathMutations = make(map[string]string)
 				}
-				p.cfg.Pkg.Build.SkeletonMutations[component.Name] = append(p.cfg.Pkg.Build.SkeletonMutations[component.Name], types.PathMutation{
-					From: path,
-					To:   dstrel,
-				})
+				p.cfg.Pkg.Components[idx].PathMutations[path] = dstrel
+			}
+			err = os.MkdirAll(filepath.Dir(dst), 0755)
+			if err != nil {
+				return err
 			}
 			if err := utils.CreatePathAndCopy(src, dst); err != nil {
 				return err

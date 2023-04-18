@@ -132,12 +132,17 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	// If its OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
 		dir := filepath.Join(cachePath, "components", child.Name)
+		parent.Import.Path = dir
 		if !utils.InvalidPath(dir) {
 			err = os.RemoveAll(dir)
 			if err != nil {
 				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 			}
 		}
+		if utils.InvalidPath(fmt.Sprintf("%s.tar", dir)) {
+			return child, fmt.Errorf("component %s does not exist in the published skeleton package", child.Name)
+		}
+
 		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), dir)
 		if err != nil {
 			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
@@ -146,6 +151,11 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// Check if we need to get more of children.
 	if child.Import.Path != "" {
+		for k, v := range child.PathMutations {
+			if k == child.Import.Path {
+				child.Import.Path = v
+			}
+		}
 		// Set a temporary composePath so we can get future children/grandchildren from our current location.
 		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
 
@@ -317,17 +327,10 @@ func (p *Packager) getComposedFilePath(parent types.ZarfComponent, child types.Z
 	}
 
 	prefix := parent.Import.Path
-	if parent.Import.URL != "" {
-		prefix = filepath.Join(parent.Import.Path, "components", child.Name)
-
-		// If the path is in the skeleton mutations map, use the mutated path.
-		mutations := p.cfg.Pkg.Build.SkeletonMutations
-		if mutations != nil {
-			for _, mutation := range mutations[parent.Name] {
-				if mutation.From == path {
-					return filepath.Join(prefix, mutation.To)
-				}
-			}
+	// If the path is in the skeleton mutations map, use the mutated path.
+	for k, v := range child.PathMutations {
+		if k == path {
+			path = v
 		}
 	}
 

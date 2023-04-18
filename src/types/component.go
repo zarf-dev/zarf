@@ -66,6 +66,9 @@ type ZarfComponent struct {
 
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
+
+	// Mutations are a list of path mutations to apply to the component
+	PathMutations map[string]string `json:"pathMutations,omitempty" jsonschema:"description=List of path mutations to apply to the component"`
 }
 
 // LocalPaths returns a list of local paths for this component
@@ -311,7 +314,9 @@ type ZarfComponentImport struct {
 
 // LocalPaths returns the local paths for the imported component, called recursively
 func (zci ZarfComponentImport) LocalPaths(componentName string) []string {
+	paths := []string{}
 	if zci.Path != "" {
+		paths = append(paths, zci.Path)
 		cname := componentName
 		if zci.ComponentName != "" {
 			cname = zci.ComponentName
@@ -328,9 +333,9 @@ func (zci ZarfComponentImport) LocalPaths(componentName string) []string {
 		}
 		for _, c := range pkg.Components {
 			if c.Name == cname {
-				return c.LocalPaths(zci.Path)
+				paths = append(paths, c.LocalPaths(zci.Path)...)
 			}
 		}
 	}
-	return nil
+	return paths
 }
