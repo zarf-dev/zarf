@@ -17,8 +17,16 @@
 
 	async function readPackages(): Promise<APIZarfPackage[]> {
 		const paths = initPkg ? await Packages.findInit() : await Packages.findInHome();
-		const packages = paths.map((p) => Packages.read(p));
-		return Promise.all(packages);
+		// resolve all reads regardless of success or failure.
+		const result = await Promise.allSettled(paths.map((p) => Packages.read(p)));
+		// Filter out failed reads
+		// TODO: Handle and present packages that could not be read.
+		const settledFulfilled = result.filter(
+			(p) => p.status === 'fulfilled'
+		) as PromiseFulfilledResult<APIZarfPackage>[];
+
+		// Return the values from the fulfilled results.
+		return settledFulfilled.map((p) => p.value);
 	}
 
 	const ssx: SSX = {
