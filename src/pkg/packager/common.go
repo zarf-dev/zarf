@@ -458,7 +458,7 @@ func (p *Packager) validatePackageArchitecture() error {
 	}
 
 	// If we're working with an init package deploying k3s(appliance mode), set the clusterArch to the machine we're running on.
-	if applianceMode && p.cluster == nil {
+	if applianceMode {
 		clusterArch = runtime.GOARCH
 
 		if p.arch != clusterArch {
