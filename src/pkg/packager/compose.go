@@ -151,11 +151,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// Check if we need to get more of children.
 	if child.Import.Path != "" {
-		for k, v := range child.PathMutations {
-			if k == child.Import.Path {
-				child.Import.Path = v
-			}
-		}
 		// Set a temporary composePath so we can get future children/grandchildren from our current location.
 		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
 

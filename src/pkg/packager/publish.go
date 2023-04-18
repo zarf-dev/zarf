@@ -327,12 +327,17 @@ func (p *Packager) loadSkeleton() error {
 	if err := os.Chdir(base); err != nil {
 		return err
 	}
-	if err := p.readYaml("zarf.yaml", false); err != nil {
+	if err := p.readYaml(config.ZarfYAML, false); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
 	}
 
+	err = p.composeComponents()
+	if err != nil {
+		return err
+	}
+
 	for idx, component := range p.cfg.Pkg.Components {
-		local := component.LocalPaths("")
+		local := component.LocalPaths()
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
 		tmp := filepath.Join(p.tmp.Components, component.Name)

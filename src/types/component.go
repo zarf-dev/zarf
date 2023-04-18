@@ -5,12 +5,7 @@
 package types
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/defenseunicorns/zarf/src/types/extensions"
-	goyaml "github.com/goccy/go-yaml"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -73,10 +68,9 @@ type ZarfComponent struct {
 
 // LocalPaths returns a list of local paths for this component
 //
-// If base is provided, it will be prepended to the path
 // ex. local paths: ["./foo", "/bar", "../baz"]
 // ex. remote paths: ["https://example.com/foo", "ssh://bar", "oci://baz"]
-func (c ZarfComponent) LocalPaths(base string) []string {
+func (c ZarfComponent) LocalPaths() []string {
 	local := []string{}
 
 	for _, file := range c.Files {
@@ -97,17 +91,7 @@ func (c ZarfComponent) LocalPaths(base string) []string {
 		}
 	}
 
-	local = append(local, c.Import.LocalPaths(c.Name)...)
-
 	local = append(local, c.Extensions.LocalPaths()...)
-
-	if base != "" {
-		for i, path := range local {
-			if !filepath.IsAbs(strings.TrimPrefix(path, "file://")) {
-				local[i] = filepath.Join(base, path)
-			}
-		}
-	}
 
 	return local
 }
@@ -310,32 +294,4 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
-}
-
-// LocalPaths returns the local paths for the imported component, called recursively
-func (zci ZarfComponentImport) LocalPaths(componentName string) []string {
-	paths := []string{}
-	if zci.Path != "" {
-		paths = append(paths, zci.Path)
-		cname := componentName
-		if zci.ComponentName != "" {
-			cname = zci.ComponentName
-		}
-		zyp := filepath.Join(zci.Path, "zarf.yaml")
-		file, err := os.ReadFile(zyp)
-		if err != nil {
-			return nil
-		}
-		pkg := ZarfPackage{}
-		err = goyaml.Unmarshal(file, &pkg)
-		if err != nil {
-			return nil
-		}
-		for _, c := range pkg.Components {
-			if c.Name == cname {
-				paths = append(paths, c.LocalPaths(zci.Path)...)
-			}
-		}
-	}
-	return paths
 }
