@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	dconfig "github.com/docker/cli/cli/config"
@@ -31,10 +30,8 @@ var badRef = registry.Reference{
 }
 
 func (suite *RegistryClientTestSuite) SetupSuite() {
-	image := fmt.Sprintf("%s:%s", config.ZarfSeedImage, config.ZarfSeedTag)
-
 	// spin up a local registry
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "registry", image)
+	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "registry", "registry:2.8.1")
 	suite.NoError(err)
 
 	// docker config folder
