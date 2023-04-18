@@ -101,7 +101,7 @@ When adding new unit tests, please ensure that the following requirements are me
 
 If all these requirements are met, then a unit test would be appropriate. If not, please consider writing an end-to-end test instead or modify your approach to meet these requirements.
 
-To generate a unit test, search for or include a file that ends with `_test.go` to the package for the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. In case you need to mock something out, determine the most suitable approach and if the mock can be utilized in multiple tests, consider placing it in  `./src/test/mocks/`. This will help enhance the efficiency and organization of your unit tests.
+To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. In case you need to mock something out, determine the most suitable approach and if the mock can be used in multiple tests, consider placing it in  `./src/test/mocks/`. This will help enhance the efficiency and organization of the unit tests.
 
 ## UI End-to-End Tests
 
