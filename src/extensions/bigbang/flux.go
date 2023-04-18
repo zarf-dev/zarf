@@ -42,7 +42,12 @@ func (h HelmReleaseDependency) Dependencies() []string {
 // getFlux Creates a component to deploy Flux.
 func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
 	localPath := path.Join(baseDir, "bb-ext-flux.yaml")
-	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", bbRepo, cfg.Version)
+
+	if cfg.Repo == "" {
+		cfg.Repo = bbRepo
+	}
+
+	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", cfg.Repo, cfg.Version)
 
 	// Perform Kustomzation now to get the flux.yaml file.
 	if err := kustomize.BuildKustomization(remotePath, localPath, true); err != nil {

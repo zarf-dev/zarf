@@ -3,21 +3,23 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import {
-		createComponentStepMap,
-		finalizeStepState,
-		getComponentStepMapComponents,
-		getDeployedComponents,
-		getDialogContent
-	} from './deploy-utils';
-	import { onMount } from 'svelte';
-	import { Packages } from '$lib/api';
-	import { Dialog, Stepper, Typography } from '@ui';
-	import bigZarf from '@images/zarf-bubbles-right.png';
 	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
+	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
-	import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/Step.svelte';
+	import bigZarf from '@images/zarf-bubbles-right.png';
+	import { FitAddon } from 'xterm-addon-fit';
+	import { goto } from '$app/navigation';
+	import { Packages } from '$lib/api';
+	import { onMount } from 'svelte';
+	import { Terminal } from 'xterm';
+	import 'xterm/css/xterm.css';
+	import {
+		getDialogContent,
+		finalizeStepState,
+		getDeployedComponents,
+		createComponentStepMap,
+		getComponentStepMapComponents,
+	} from './deploy-utils';
 
 	const POLL_TIME = 5000;
 
@@ -40,9 +42,9 @@
 			packagePath: $pkgStore.path,
 			setVariables: {},
 			insecure: false,
-		  // "as" will cause the obj to satisfy the type
-		  // it is missing "shasum"
-		} as ZarfDeployOptions
+			// "as" will cause the obj to satisfy the type
+			// it is missing "shasum"
+		} as unknown as ZarfDeployOptions,
 	};
 
 	if (isInitPkg) {
@@ -54,7 +56,7 @@
 				pushPassword: '',
 				pullUsername: 'zarf-git-read-user',
 				pullPassword: '',
-				internalServer: true
+				internalServer: true,
 			},
 			storageClass: '',
 			registryInfo: {
@@ -65,8 +67,8 @@
 				pullUsername: 'zarf-pull',
 				pushPassword: '',
 				pushUsername: 'zarf-push',
-				secret: ''
-			}
+				secret: '',
+			},
 		};
 	}
 
@@ -83,9 +85,34 @@
 		});
 	}
 
-	onMount(() => {
+	onMount(async () => {
+		const term = new Terminal({
+			disableStdin: true,
+			convertEol: true,
+			customGlyphs: true,
+			theme: { background: '#1E1E1E' },
+		});
+		const fitAddon = new FitAddon();
+		term.loadAddon(fitAddon);
+
+		const termElement = document.getElementById('terminal');
+		if (termElement) {
+			term.open(termElement);
+			fitAddon.fit();
+		}
+		const deployStream = Packages.deployStream({
+			onmessage: (e) => {
+				term.writeln(e.data);
+			},
+			onerror: (e) => {
+				term.writeln(e.message);
+				finishedDeploying = true;
+				successful = false;
+			},
+		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
+				deployStream.abort();
 				finishedDeploying = true;
 				successful = value;
 			},
@@ -97,6 +124,7 @@
 			updateComponentSteps();
 		}, POLL_TIME);
 		return () => {
+			deployStream.abort();
 			clearInterval(pollDeployed);
 		};
 	});
@@ -108,19 +136,13 @@
 			{
 				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
 				variant: successful ? 'success' : 'error',
-				disabled: false
-			}
+				disabled: false,
+			},
 		];
 		dialogOpen = true;
-		if (successful) {
-			setTimeout(() => {
-				goto('/packages');
-			}, POLL_TIME);
-		} else {
-			setTimeout(() => {
-				goto('/');
-			}, POLL_TIME);
-		}
+		setTimeout(() => {
+			goto('/');
+		}, POLL_TIME);
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);
@@ -134,12 +156,13 @@
 	<Typography variant="h5">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
 </section>
 <section class="deployment-steps">
-	<Stepper orientation="vertical" steps={componentSteps} />
+	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
+	<div id="terminal" />
 </section>
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
 		<img class="zarf-logo" src={bigZarf} alt="zarf-logo" />
-		<Typography variant="h6" style="color: var(--mdc-theme-on-primary)">
+		<Typography variant="h6" color="on-background">
 			{dialogState.topLine}
 		</Typography>
 		<Typography variant="body2">
@@ -151,7 +174,7 @@
 <style>
 	.deployment-steps {
 		display: flex;
-		justify-content: center;
+		justify-content: space-evenly;
 	}
 	.success-dialog {
 		display: flex;
@@ -167,5 +190,11 @@
 	.zarf-logo {
 		width: 64px;
 		height: 62.67px;
+	}
+
+	#terminal {
+		width: 751px;
+		height: 688px;
+		padding: 8px;
 	}
 </style>

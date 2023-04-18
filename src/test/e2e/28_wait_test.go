@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	// "github.com/stretchr/testify/assert"
+	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,15 +24,15 @@ type zarfCommandResult struct {
 	err    error
 }
 
-func zarfCommandWStruct(e2e ZarfE2ETest, path string) (result zarfCommandResult) {
-	result.stdOut, result.stdErr, result.err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
+	result.stdOut, result.stdErr, result.err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	return result
 }
 
 func TestWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.arch)
 

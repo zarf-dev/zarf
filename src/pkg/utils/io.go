@@ -168,11 +168,19 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
+// the skipPermission flag can be provided to ignore unauthorized files/dirs when true
+// the skipHidden flag can be provided to ignore dot prefixed files/dirs when true
+func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, skipHidden bool) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		// ignore files/dirs that it does not have permission to read
+		if err != nil && os.IsPermission(err) && skipPermission {
+			return nil
+		}
 		// Skip hidden directories
-		if d.IsDir() && d.Name()[0] == dotCharacter {
-			return filepath.SkipDir
+		if skipHidden {
+			if d.IsDir() && d.Name()[0] == dotCharacter {
+				return filepath.SkipDir
+			}
 		}
 
 		// Return errors
