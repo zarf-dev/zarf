@@ -12,7 +12,11 @@ In order to install the Zarf CLI, which is not yet available in common package m
 1. Download the latest release version for your machine from our [GitHub release page](https://github.com/defenseunicorns/zarf/releases).
 2. Transfer the downloaded file onto your path. This can be executed in your terminal with the command `mv ~/Downloads/{DOWNLOADED_RELEASE_FILE} /usr/local/bin/zarf`.
 3. Verify the installation by testing the CLI within your terminal with the command `zarf -version`. If the installation is successful, the version of Zarf CLI that you have downloaded from GitHub should be displayed in your terminal.
-4. For macOS or Linux, you may also install the Zarf CLI by using [brew](https://zarf.dev/install/).  
+:::note
+
+For macOS or Linux, you may also install the Zarf CLI by using [brew](https://zarf.dev/install/).  
+
+:::
 
 ## Starting up a Cluster
 
