@@ -38,7 +38,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if userMessage == "Deploy" {
 		if cluster, err := cluster.NewCluster(); err == nil {
-			if initPackage, err := cluster.GetDeployedZarfInitPackage(); err == nil {
+			if initPackage, err := cluster.GetDeployedPackage("init"); err == nil {
 				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
 				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}

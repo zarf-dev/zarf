@@ -43,19 +43,19 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
 	return deployedPackages, nil
 }
 
-// GetDeployedZarfInitPackage gets the metadata information about the currently deployed init package in the cluster.
+// GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedZarfInitPackage() (types.DeployedPackage, error) {
-	var deployedInitPackage = types.DeployedPackage{}
+func (c *Cluster) GetDeployedPackage(packageName string) (types.DeployedPackage, error) {
+	var deployedPackage = types.DeployedPackage{}
 
 	// Get the secret that describes the deployed init package
-	secret, err := c.Kube.GetSecret(ZarfNamespace, ZarfInitPackageInfoName)
+	secret, err := c.Kube.GetSecret(ZarfNamespace, config.ZarfPackagePrefix+packageName)
 	if err != nil {
-		return deployedInitPackage, err
+		return deployedPackage, err
 	}
 
-	err = json.Unmarshal(secret.Data["data"], &deployedInitPackage)
-	return deployedInitPackage, err
+	err = json.Unmarshal(secret.Data["data"], &deployedPackage)
+	return deployedPackage, err
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.

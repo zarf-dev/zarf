@@ -62,42 +62,45 @@ func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.Za
 // PrintBreakingChanges prints the breaking changes between the provided version and the current CLIVersion
 func PrintBreakingChanges(deployedZarfVersion string) {
 	deployedSemver, err := semver.NewVersion(deployedZarfVersion)
+	if err != nil {
+		message.HorizontalNoteRule()
+		message.Warnf("Unable to determine init-package version from %s.  There is a potential for breaking changes.", deployedZarfVersion)
+		return
+	}
 
-	if err == nil {
-		applicableBreakingChanges := []BreakingChange{}
+	applicableBreakingChanges := []BreakingChange{}
 
-		// Calculate the applicable breaking changes
-		for _, breakingChange := range breakingChanges {
-			if deployedSemver.LessThan(breakingChange.version) {
-				applicableBreakingChanges = append(applicableBreakingChanges, breakingChange)
-			}
+	// Calculate the applicable breaking changes
+	for _, breakingChange := range breakingChanges {
+		if deployedSemver.LessThan(breakingChange.version) {
+			applicableBreakingChanges = append(applicableBreakingChanges, breakingChange)
 		}
+	}
 
-		if len(applicableBreakingChanges) > 0 {
-			// Print header information
-			message.HorizontalNoteRule()
-			pterm.Println()
-			message.Warn(pterm.Bold.Sprint("Potential Breaking Changes Detected Between Versions"))
+	if len(applicableBreakingChanges) > 0 {
+		// Print header information
+		message.HorizontalNoteRule()
+		pterm.Println()
+		message.Warn(pterm.Bold.Sprint("Potential Breaking Changes Detected Between Versions"))
 
-			// Print information about the versions
-			format := pterm.FgYellow.Sprint("CLI version ") + "%s" + pterm.FgYellow.Sprint(" is being used to deploy to a cluster that was initialized with ") +
-				"%s" + pterm.FgYellow.Sprint(". Between these versions there are the following breaking changes to consider:")
-			cliVersion := pterm.Bold.Sprintf(config.CLIVersion)
-			deployedVersion := pterm.Bold.Sprintf(deployedZarfVersion)
-			pterm.Printfln("\n%s", message.Paragraphn(120, format, cliVersion, deployedVersion))
+		// Print information about the versions
+		format := pterm.FgYellow.Sprint("CLI version ") + "%s" + pterm.FgYellow.Sprint(" is being used to deploy to a cluster that was initialized with ") +
+			"%s" + pterm.FgYellow.Sprint(". Between these versions there are the following breaking changes to consider:")
+		cliVersion := pterm.Bold.Sprintf(config.CLIVersion)
+		deployedVersion := pterm.Bold.Sprintf(deployedZarfVersion)
+		pterm.Printfln("\n%s", message.Paragraphn(120, format, cliVersion, deployedVersion))
 
-			// Print each applicable breaking change
-			for idx, applicableBreakingChange := range applicableBreakingChanges {
-				titleFormat := pterm.Bold.Sprintf("\n %d. ", idx+1) + "%s"
-				title := pterm.FgYellow.Sprint(applicableBreakingChange.title)
+		// Print each applicable breaking change
+		for idx, applicableBreakingChange := range applicableBreakingChanges {
+			titleFormat := pterm.Bold.Sprintf("\n %d. ", idx+1) + "%s"
+			title := pterm.FgYellow.Sprint(applicableBreakingChange.title)
 
-				pterm.Printfln(titleFormat, title)
+			pterm.Printfln(titleFormat, title)
 
-				mitigationText := message.Paragraphn(96, "%s", pterm.FgLightCyan.Sprint(applicableBreakingChange.mitigation))
+			mitigationText := message.Paragraphn(96, "%s", pterm.FgLightCyan.Sprint(applicableBreakingChange.mitigation))
 
-				pterm.Printfln("\n  - %s", pterm.Bold.Sprint("Mitigation:"))
-				pterm.Printfln("    %s", strings.ReplaceAll(mitigationText, "\n", "\n    "))
-			}
+			pterm.Printfln("\n  - %s", pterm.Bold.Sprint("Mitigation:"))
+			pterm.Printfln("    %s", strings.ReplaceAll(mitigationText, "\n", "\n    "))
 		}
 	}
 }
