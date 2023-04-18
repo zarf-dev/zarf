@@ -15,10 +15,10 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
 type ZarfE2ETest struct {
-	zarfBinPath     string
-	arch            string
-	applianceMode   bool
-	runClusterTests bool
+	ZarfBinPath     string
+	Arch            string
+	ApplianceMode   bool
+	RunClusterTests bool
 }
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
@@ -41,7 +41,7 @@ func GetCLIName() string {
 }
 
 // setup actions for each test.
-func (e2e *ZarfE2ETest) setup(t *testing.T) {
+func (e2e *ZarfE2ETest) Setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
 	if runtime.GOOS != "windows" {
@@ -52,24 +52,24 @@ func (e2e *ZarfE2ETest) setup(t *testing.T) {
 }
 
 // setup actions for each test that requires a K8s cluster.
-func (e2e *ZarfE2ETest) setupWithCluster(t *testing.T) {
-	if !e2e.runClusterTests {
+func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
+	if !e2e.RunClusterTests {
 		t.Skip("")
 	}
-	e2e.setup(t)
+	e2e.Setup(t)
 }
 
 // teardown actions for each test.
-func (e2e *ZarfE2ETest) teardown(t *testing.T) {
+func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
 	t.Log("Test teardown")
 }
 
 // execZarfCommand executes a Zarf command.
-func (e2e *ZarfE2ETest) execZarfCommand(commandString ...string) (string, string, error) {
-	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.zarfBinPath, commandString...)
+func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, error) {
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, commandString...)
 }
 
-func (e2e *ZarfE2ETest) cleanFiles(files ...string) {
+func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 	for _, file := range files {
 		_ = os.RemoveAll(file)
 	}

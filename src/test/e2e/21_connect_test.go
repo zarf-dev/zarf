@@ -20,11 +20,11 @@ type RegistryResponse struct {
 
 func TestConnect(t *testing.T) {
 	t.Log("E2E: Connect")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
 	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "registry", "catalog")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("tools", "registry", "catalog")
 	assert.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
@@ -56,6 +56,6 @@ func TestConnect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, respLog.StatusCode)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

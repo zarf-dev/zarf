@@ -16,27 +16,27 @@ import (
 func TestCreateTemplating(t *testing.T) {
 	t.Log("E2E: Create Templating")
 
-	e2e.setup(t)
-	defer e2e.teardown(t)
+	e2e.Setup(t)
+	defer e2e.Teardown(t)
 
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
 	decompressPath := filepath.Join(os.TempDir(), ".package-decompressed")
 
-	e2e.cleanFiles(cachePath, decompressPath)
+	e2e.CleanFiles(cachePath, decompressPath)
 
-	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.arch)
+	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.execZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
+	_, stdErr, _ := e2e.ExecZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
 	expectedOutString := "variable 'NGINX_VERSION' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example with `--set` (will fail to pull an image if this is not set correctly)
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the constant in the zarf.yaml is replaced correctly
@@ -44,5 +44,5 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
 
-	e2e.cleanFiles(cachePath, decompressPath, pkgName)
+	e2e.CleanFiles(cachePath, decompressPath, pkgName)
 }
