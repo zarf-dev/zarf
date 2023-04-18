@@ -11,14 +11,14 @@ zarf tools clear-cache [flags]
 
 ```
   -h, --help                help for clear-cache
-      --zarf-cache string   Specify the location of the Zarf  artifact cache (images and git repositories) (default "~/.zarf-cache")
+      --zarf-cache string   Specify the location of the Zarf artifact cache (images and git repositories) (default "~/.zarf-cache")
 ```
 
 ## Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

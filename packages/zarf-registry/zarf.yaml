@@ -39,7 +39,26 @@ variables:
     description: "Enable the Horizontal Pod Autoscaler for the registry"
     default: "true"
 
+constants:
+  - name: REGISTRY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
+
+  - name: REGISTRY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+
 components:
+  - name: zarf-injector
+    description: |
+      Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+      Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+    required: true
+    cosignKeyPath: ../../cosign.pub
+    files:
+      # Rust Injector Binary
+      - source: sget://defenseunicorns/zarf-injector:###ZARF_PKG_ARCH###-###ZARF_PKG_TMPL_INJECTOR_VERSION###
+        target: "###ZARF_TEMP###/zarf-injector"
+        executable: true
+
   - name: zarf-seed-registry
     description: |
       Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
@@ -52,10 +71,13 @@ components:
         valuesFiles:
           - registry-values.yaml
           - registry-values-seed.yaml
+    images:
+      # The seed image (or images) that will be injected (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
 
   - name: zarf-registry
     description: |
-      Updates the Zarf Registry to use the self-hosted registry image. 
+      Updates the Zarf Registry to use the self-hosted registry image.
       Serves as the primary docker registry for the cluster.
     manifests:
       - name: registry-connect
@@ -74,3 +96,6 @@ components:
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
+    images:
+      # This image (or images) must match that used for injection (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"

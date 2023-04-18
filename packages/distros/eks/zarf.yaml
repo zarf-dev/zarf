@@ -3,10 +3,21 @@ metadata:
   name: "distro-eks"
   description: "Deploy a EKS K8s cluster"
   architecture: multi
+  version: 0.0.2
 
 variables:
   - name: CLUSTER_NAME
     prompt: true
+
+  - name: INSTANCE_TYPE
+    description: "The instance type for the worker nodes"
+    default: "t3.small"
+
+  - name: CLUSTER_REGION
+    default: us-east-1
+
+  - name: CLUSTER_VERSION
+    default: "1.23"
 
 components:
   - name: load-eksctl
@@ -23,17 +34,18 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_amd64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.136.0/eksctl_Darwin_amd64.tar.gz
         target: archives/eksctl_Darwin_x86_64.tar.gz
-        shasum: 4ab4c9199ef4fcb26e3b536484773c0c4c648290e2341585c6bd5bfd79d44fb1
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Darwin_arm64.tar.gz
+        shasum: 866e63726d5476784c57c45c273c2e53df74f950933c134f8f16319858e6688e
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.136.0/eksctl_Darwin_arm64.tar.gz
         target: archives/eksctl_Darwin_arm64.tar.gz
-        shasum: 89adbf6085d37b70ae82d126c912ac82b9283e0fe5507a2b19343d0d566c6164
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.93.0/eksctl_Linux_amd64.tar.gz
+        shasum: 3bb8033b48735bba3710c034fafba4ad95dc219f0ec591b41bcd918298265398
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.136.0/eksctl_Linux_amd64.tar.gz
         target: archives/eksctl_Linux_x86_64.tar.gz
-        shasum: 7f27988d6aa4fb8041d95d6de270b9657f605a79edd317cc044dc80c49a512e8
+        shasum: d40997485a13cfdfa08083bcba96a7e08b545ffb199633bde9a281830d9edfbe
 
   - name: deploy-eks-cluster
+    default: true
     actions:
       onDeploy:
         before:
@@ -42,3 +54,13 @@ components:
           - cmd: ./eksctl create cluster -f eks.yaml
         after:
           - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
+      onRemove:
+        before:
+          # Remove existing eksctl
+          - cmd: rm -f eksctl
+          # Extract the correct linux or mac binary from the tarball
+          - cmd: ./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz .
+          # Cleanup temp files
+          - cmd: rm -fr archives
+          # Cleanup the cluster
+          - cmd: ./eksctl delete cluster -f eks.yaml --wait

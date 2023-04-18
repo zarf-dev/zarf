@@ -16,13 +16,13 @@ import (
 
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Deploy the game
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -35,6 +35,6 @@ func TestDosGames(t *testing.T) {
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

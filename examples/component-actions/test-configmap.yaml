@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: simple-configmap
+  name: remove-test-configmap
   namespace: zarf
 data:
   templateme.properties: |

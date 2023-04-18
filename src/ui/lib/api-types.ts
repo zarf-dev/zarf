@@ -36,8 +36,12 @@ export interface ZarfDeployOptions {
      */
     packagePath: string;
     /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    publicKeyPath: string;
+    /**
      * Key-Value map of variable names and their corresponding values that will be used to
-     * template against the Zarf package being used
+     * template manifests and files in the Zarf package
      */
     setVariables: { [key: string]: string };
     /**
@@ -56,17 +60,45 @@ export interface ZarfInitOptions {
      */
     applianceMode: boolean;
     /**
+     * Information about the artifact registry Zarf is going to be using
+     */
+    artifactServer: ArtifactServerInfo;
+    /**
      * Information about the repository Zarf is going to be using
      */
     gitServer: GitServerInfo;
     /**
-     * Information about the registry Zarf is going to be using
+     * Information about the container registry Zarf is going to be using
      */
     registryInfo: RegistryInfo;
     /**
      * StorageClass of the k8s cluster Zarf is initializing
      */
     storageClass: string;
+}
+
+/**
+ * Information about the artifact registry Zarf is going to be using
+ *
+ * Information about the artifact registry Zarf is configured to use
+ */
+export interface ArtifactServerInfo {
+    /**
+     * URL address of the artifact registry
+     */
+    address: string;
+    /**
+     * Indicates if we are using a artifact registry that Zarf is directly managing
+     */
+    internalServer: boolean;
+    /**
+     * Password of a user with push access to the artifact registry
+     */
+    pushPassword: string;
+    /**
+     * Username of a user with push access to the artifact registry
+     */
+    pushUsername: string;
 }
 
 /**
@@ -104,9 +136,9 @@ export interface GitServerInfo {
 }
 
 /**
- * Information about the registry Zarf is going to be using
+ * Information about the container registry Zarf is going to be using
  *
- * Information about the registry Zarf is configured to use
+ * Information about the container registry Zarf is configured to use
  */
 export interface RegistryInfo {
     /**
@@ -274,7 +306,7 @@ export interface ZarfComponent {
      */
     required?: boolean;
     /**
-     * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+     * [Deprecated] (replaced by actions) Custom commands to run before or after package
      * deployment
      */
     scripts?: DeprecatedZarfComponentScripts;
@@ -358,15 +390,62 @@ export interface ZarfComponentAction {
      */
     mute?: boolean;
     /**
-     * (Cmd only) The name of a variable to update with the output of the command. This variable
-     * will be available to all remaining actions and components in the package.
+     * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
+     * update with the output of the command. This variable will be available to all remaining
+     * actions and components in the package.
      */
     setVariable?: string;
+    /**
+     * (onDeploy/cmd only) An array of variables to update with the output of the command. These
+     * variables will be available to all remaining actions and components in the package.
+     */
+    setVariables?: ZarfComponentActionSetVariable[];
+    /**
+     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+     * supported operating systems
+     */
+    shell?: ZarfComponentActionShell;
     /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
      * action. See the 'zarf tools wait-for' command for more info.
      */
     wait?: ZarfComponentActionWait;
+}
+
+export interface ZarfComponentActionSetVariable {
+    /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
+     */
+    autoIndent?: boolean;
+    /**
+     * The name to be used for the variable
+     */
+    name: string;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
+}
+
+/**
+ * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+ * supported operating systems
+ */
+export interface ZarfComponentActionShell {
+    /**
+     * (default 'sh') Indicates a preference for the shell to use on macOS systems
+     */
+    darwin?: string;
+    /**
+     * (default 'sh') Indicates a preference for the shell to use on Linux systems
+     */
+    linux?: string;
+    /**
+     * (default 'powershell') Indicates a preference for the shell to use on Windows systems
+     * (note that choosing 'cmd' will turn off migrations like touch -> New-Item)
+     */
+    windows?: string;
 }
 
 /**
@@ -461,6 +540,11 @@ export interface ZarfComponentActionDefaults {
      * Hide the output of commands during execution (default false)
      */
     mute?: boolean;
+    /**
+     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
+     * supported operating systems
+     */
+    shell?: ZarfComponentActionShell;
 }
 
 export interface ZarfChart {
@@ -685,7 +769,7 @@ export enum LocalOS {
 }
 
 /**
- * [DEPRECATED] (replaced by actions) Custom commands to run before or after package
+ * [Deprecated] (replaced by actions) Custom commands to run before or after package
  * deployment
  */
 export interface DeprecatedZarfComponentScripts {
@@ -717,6 +801,11 @@ export interface DeprecatedZarfComponentScripts {
 
 export interface ZarfPackageConstant {
     /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_CONST_.
+     */
+    autoIndent?: boolean;
+    /**
      * A description of the constant to explain its purpose on package create or deploy
      * confirmation prompts
      */
@@ -743,6 +832,11 @@ export enum Kind {
  * Package metadata
  */
 export interface ZarfMetadata {
+    /**
+     * Checksum of a checksums.txt file that contains checksums all the layers within the
+     * package.
+     */
+    aggregateChecksum?: string;
     /**
      * The target cluster architecture for this package
      */
@@ -784,7 +878,8 @@ export interface ZarfMetadata {
      */
     vendor?: string;
     /**
-     * Generic string to track the package version by a package author
+     * Generic string set by a package author to track the package version (Note:
+     * ZarfInitConfigs will always be versioned to the CLIVersion they were created with)
      */
     version?: string;
     /**
@@ -796,6 +891,11 @@ export interface ZarfMetadata {
 }
 
 export interface ZarfPackageVariable {
+    /**
+     * Whether to automatically indent the variable's value (if multiline) when templating.
+     * Based on the number of chars before the start of ###ZARF_VAR_.
+     */
+    autoIndent?: boolean;
     /**
      * The default value to use for the variable
      */
@@ -812,6 +912,10 @@ export interface ZarfPackageVariable {
      * Whether to prompt the user for input for this variable
      */
     prompt?: boolean;
+    /**
+     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     */
+    sensitive?: boolean;
 }
 
 export interface ClusterSummary {
@@ -828,6 +932,10 @@ export interface ZarfState {
      */
     architecture: string;
     /**
+     * Information about the artifact registry Zarf is configured to use
+     */
+    artifactServer: ArtifactServerInfo;
+    /**
      * K8s distribution of the cluster Zarf was deployed to
      */
     distro: string;
@@ -840,7 +948,7 @@ export interface ZarfState {
      */
     loggingSecret: string;
     /**
-     * Information about the registry Zarf is configured to use
+     * Information about the container registry Zarf is configured to use
      */
     registryInfo: RegistryInfo;
     storageClass: string;
@@ -926,6 +1034,14 @@ export interface ZarfCreateOptions {
      * template against the Zarf package being used
      */
     setVariables: { [key: string]: string };
+    /**
+     * Password to the private key signature file that will be used to sigh the created package
+     */
+    signingKeyPassword: string;
+    /**
+     * Location where the private key component of a cosign key-pair can be found
+     */
+    signingKeyPath: string;
     /**
      * Disable the generation of SBOM materials during package creation
      */
@@ -1117,15 +1233,23 @@ const typeMap: any = {
     "ZarfDeployOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
         { json: "shasum", js: "shasum", typ: "" },
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
+    ], false),
+    "ArtifactServerInfo": o([
+        { json: "address", js: "address", typ: "" },
+        { json: "internalServer", js: "internalServer", typ: true },
+        { json: "pushPassword", js: "pushPassword", typ: "" },
+        { json: "pushUsername", js: "pushUsername", typ: "" },
     ], false),
     "GitServerInfo": o([
         { json: "address", js: "address", typ: "" },
@@ -1205,7 +1329,19 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
+        { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
+        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
         { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+    ], false),
+    "ZarfComponentActionSetVariable": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
+        { json: "name", js: "name", typ: "" },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+    ], false),
+    "ZarfComponentActionShell": o([
+        { json: "darwin", js: "darwin", typ: u(undefined, "") },
+        { json: "linux", js: "linux", typ: u(undefined, "") },
+        { json: "windows", js: "windows", typ: u(undefined, "") },
     ], false),
     "ZarfComponentActionWait": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
@@ -1228,6 +1364,7 @@ const typeMap: any = {
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
+        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
     ], false),
     "ZarfChart": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
@@ -1296,11 +1433,13 @@ const typeMap: any = {
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
     "ZarfPackageConstant": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "value", js: "value", typ: "" },
     ], false),
     "ZarfMetadata": o([
+        { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
@@ -1315,10 +1454,12 @@ const typeMap: any = {
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
     ], false),
     "ZarfPackageVariable": o([
+        { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
+        { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1329,6 +1470,7 @@ const typeMap: any = {
     "ZarfState": o([
         { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
         { json: "distro", js: "distro", typ: "" },
         { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
         { json: "loggingSecret", js: "loggingSecret", typ: "" },
@@ -1371,6 +1513,8 @@ const typeMap: any = {
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
+        { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "Protocol": [

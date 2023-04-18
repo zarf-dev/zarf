@@ -106,7 +106,7 @@ dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
-	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
+	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
 	@ if [ "$(ARCH)" = "amd64" ] && [ ! -s ./build/zarf ]; then $(MAKE) build-cli-linux-amd; fi
@@ -121,7 +121,7 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -132,7 +132,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-choice -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/package-variables --set CONFIG_MAP=simple-configmap.yaml --set ACTION=template -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
@@ -166,9 +166,19 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
+## NOTE: Requires an existing cluster and
+.PHONY: test-upgrade
+test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
+	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
+	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade-test/ --set PODINFO_VERSION=6.3.4 --confirm
+	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
+
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
+test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigbang extension directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
 .PHONY: test-built-ui
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)

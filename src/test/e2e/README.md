@@ -35,6 +35,6 @@ There are a few requirements for all of our tests, that will need to be followed
 2. The following lines must be at the start of each test:
    ```go
     t.Log("E2E: Test description")
-	e2e.setup(t)
-	defer e2e.teardown(t)
+	e2e.Setup(t)
+	defer e2e.Teardown(t)
     ```

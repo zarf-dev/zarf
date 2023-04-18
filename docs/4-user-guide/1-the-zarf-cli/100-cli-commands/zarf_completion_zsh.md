@@ -14,7 +14,7 @@ to enable it.  You can execute the following once:
 
 To load completions in your current shell session:
 
-	source <(zarf completion zsh); compdef _zarf zarf
+	source <(zarf completion zsh)
 
 To load completions for every new session, execute once:
 
@@ -44,7 +44,7 @@ zarf completion zsh [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc

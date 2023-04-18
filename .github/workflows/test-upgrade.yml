@@ -39,9 +39,19 @@ jobs:
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
-        # chown the logs since they were orignally created as root
+        # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
+          sudo chown $USER /tmp/zarf-*.log
+
+      - name: Create the upgrade test packages
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
+        #       in a previous step. This test run will the current release to create a K3s cluster.
+        # chown the logs since they were originally created as root
+        run: |
+          zarf package create src/test/upgrade-test --set PODINFO_VERSION=6.3.3 --confirm
+          zarf package create src/test/upgrade-test --set PODINFO_VERSION=6.3.4 --confirm
+          sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Build PR binary and zarf packages
@@ -50,9 +60,19 @@ jobs:
       - name: "Run the PR's tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
-        # chown the logs since they were orignally created as root
+        # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo chown $USER /tmp/zarf-*.log
+
+
+      - name: Run the upgrade tests
+        # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
+        #       in a previous step. This test run will the current release to create a K3s cluster.
+        # chown the logs since they were originally created as root
+        run: |
+          sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
+          sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()

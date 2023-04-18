@@ -132,6 +132,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
 	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+	state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 
 	spinner.Success()
 
@@ -158,9 +159,32 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 
 	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
-	message.Debugf("ZarfState = %s", message.JSONValue(state))
+	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
 
 	return state, nil
+}
+
+func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
+	sanitizedState := state
+
+	// Overwrite the AgentTLS information
+	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+
+	// Overwrite the GitServer passwords
+	sanitizedState.GitServer.PushPassword = "**sanitized**"
+	sanitizedState.GitServer.PullPassword = "**sanitized**"
+
+	// Overwrite the RegistryInfo passwords
+	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+
+	// Overwrite the Logging secret
+	sanitizedState.LoggingSecret = "**sanitized**"
+
+	return sanitizedState
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
@@ -275,4 +299,20 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 	}
 
 	return gitServer
+}
+
+// Fill in empty ArtifactServerInfo values with the defaults.
+func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
+	// Set default svc url if an external registry was not provided
+	if artifactServer.Address == "" {
+		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
+		artifactServer.InternalServer = true
+	}
+
+	// Set the push username to the git push user if not specified
+	if artifactServer.PushUsername == "" {
+		artifactServer.PushUsername = config.ZarfGitPushUser
+	}
+
+	return artifactServer
 }

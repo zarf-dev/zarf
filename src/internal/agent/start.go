@@ -30,7 +30,17 @@ const (
 func StartWebhook() {
 	message.Debug("agent.StartWebhook()")
 
-	server := agentHttp.NewServer(httpPort)
+	startServer(agentHttp.NewAdmissionServer(httpPort))
+}
+
+// StartHTTPProxy launches the zarf agent proxy in the cluster.
+func StartHTTPProxy() {
+	message.Debug("agent.StartHttpProxy()")
+
+	startServer(agentHttp.NewProxyServer(httpPort))
+}
+
+func startServer(server *http.Server) {
 	go func() {
 		if err := server.ListenAndServeTLS(tlsCert, tlsKey); err != nil && err != http.ErrServerClosed {
 			message.Fatal(err, lang.AgentErrStart)

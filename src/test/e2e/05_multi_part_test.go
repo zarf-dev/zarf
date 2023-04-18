@@ -17,17 +17,17 @@ func TestMultiPartPackage(t *testing.T) {
 
 	var (
 		createPath = "examples/multi-part/"
-		deployPath = fmt.Sprintf("zarf-package-multi-part-%s.tar.zst.part000", e2e.arch)
+		deployPath = fmt.Sprintf("zarf-package-multi-part-%s.tar.zst.part000", e2e.Arch)
 		outputFile = "multi-part-demo.dat"
 	)
 
-	e2e.setup(t)
-	defer e2e.teardown(t)
+	e2e.Setup(t)
+	defer e2e.Teardown(t)
 
-	e2e.cleanFiles(deployPath, outputFile)
+	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 1MB
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "create", createPath, "--confirm", "--max-package-size=1")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", createPath, "--confirm", "--max-package-size=1")
 	require.NoError(t, err, stdOut, stdErr)
 
 	list, err := filepath.Glob("zarf-package-multi-part-*")
@@ -35,11 +35,11 @@ func TestMultiPartPackage(t *testing.T) {
 	// Length is 7 because there are 6 parts and 1 manifest
 	require.Len(t, list, 7)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "deploy", deployPath, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the package was deployed
 	require.FileExists(t, outputFile)
 
-	e2e.cleanFiles(deployPath, outputFile)
+	e2e.CleanFiles(deployPath, outputFile)
 }
