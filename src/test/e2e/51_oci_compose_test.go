@@ -119,7 +119,9 @@ func deployAndRemove(component string) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = e2e.execZarfCommand("package", "remove", "import-everything", fmt.Sprintf("--components=%s", component), "--confirm")
+
+	// must specify by package path as we will be removing some non k8s components
+	_, _, err = e2e.execZarfCommand("package", "remove", p, fmt.Sprintf("--components=%s", component), "--confirm")
 	if err != nil {
 		return err
 	}

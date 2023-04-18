@@ -9,3 +9,7 @@ components:
     files:
       - source: ../files/coffee-ipsum.txt
         target: files/coffee-ipsum.txt
+    actions:
+      onRemove:
+        after:
+          - cmd: rm files/coffee-ipsum.txt
