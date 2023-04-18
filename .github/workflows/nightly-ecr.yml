@@ -25,14 +25,15 @@ jobs:
         uses: ./.github/actions/node
 
       - name: Build the Zarf binary
-        run: make zarf-cli-linux-amd
+        run: make build-cli-linux-amd
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: "zarf-nightly-tester"
+          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
           aws-region: us-east-1
 
+      # NOTE: The aws cli will need to be explicitly installed on self-hosted runners
       - name: Login to the ECR Registry
         run: aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/t8y5r5z5                                                                                                          ─╯
 
