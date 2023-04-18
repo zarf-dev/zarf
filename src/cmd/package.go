@@ -89,6 +89,8 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
+		pterm.Println()
+
 		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
 			message.Fatalf(err, "Failed to deploy package: %s", err.Error())
