@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 import { DeployingComponents } from '$lib/api';
-import type { DeployedComponent, ZarfComponent } from '$lib/api-types';
+import type { ZarfComponent } from '$lib/api-types';
 import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/stepper.types';
 
 export type ComponentStepMap = Map<string, StepProps>;
@@ -20,7 +20,7 @@ export function createComponentStepMap(
 		deployingComponentMap.set(component.name, {
 			title: `Deploy ${component.name}`,
 			iconContent: `${index + 1}`,
-			disabled: true
+			disabled: index > 0,
 		});
 	});
 	return deployingComponentMap;
@@ -28,6 +28,10 @@ export function createComponentStepMap(
 
 export function getComponentStepMapComponents(componentSteps: ComponentStepMap): StepProps[] {
 	return Array.from(componentSteps.values());
+}
+
+export function setStepActive(step: StepProps): StepProps {
+	return { ...step, disabled: false };
 }
 
 export function setStepSuccessful(step: StepProps): StepProps {
@@ -56,23 +60,26 @@ export function finalizeStepState(steps: StepProps[], success: boolean): StepPro
 
 // Retrieves the components that (as far as we know) have successfully deployed.
 export async function getDeployedComponents(components: ComponentStepMap): Promise<StepProps[]> {
-	(await DeployingComponents.list()).forEach((component: DeployedComponent) => {
-		const componentStep = components.get(component.name);
-		if (componentStep) {
-			components.set(component.name, setStepSuccessful(componentStep));
+	const oldComponents = getComponentStepMapComponents(components);
+	const deployingComponents = await DeployingComponents.list();
+	return oldComponents.map((component: StepProps, idx: number) => {
+		if (deployingComponents && deployingComponents[idx]) {
+			return setStepSuccessful(component);
+		} else if (idx === deployingComponents.length) {
+			return setStepActive(component);
 		}
+		return component;
 	});
-	return getComponentStepMapComponents(components);
 }
 
 export function getDialogContent(success: boolean): { topLine: string; bottomLine: string } {
 	return success
 		? {
 				topLine: 'Package successfully deployed',
-				bottomLine: 'You will be automatically redirected to the deployment details page.'
+				bottomLine: 'You will be automatically redirected to the home page.',
 		  }
 		: {
 				topLine: 'Package failed to deploy',
-				bottomLine: 'You will be automatically redirected to the home page.'
+				bottomLine: 'You will be automatically redirected to the home page.',
 		  };
 }
