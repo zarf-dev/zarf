@@ -78,6 +78,13 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
 
+	// Figure out which component we are actually importing.
+	// NOTE: Default to the component name if a custom one was not provided.
+	childComponentName := parent.Import.ComponentName
+	if childComponentName == "" {
+		childComponentName = parent.Name
+	}
+
 	var cachePath string
 	if parent.Import.URL != "" {
 		skelURL := strings.TrimPrefix(parent.Import.URL+"-skeleton", "oci://")
@@ -87,7 +94,8 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		err = p.handleOciPackage(skelURL, cachePath)
+		componentLayerPath := fmt.Sprintf("components/%s.tar", childComponentName)
+		err = p.handleOciPackage(skelURL, cachePath, componentLayerPath)
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -97,13 +105,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
 	if err != nil {
 		return child, fmt.Errorf("unable to get sub package: %w", err)
-	}
-
-	// Figure out which component we are actually importing.
-	// NOTE: Default to the component name if a custom one was not provided.
-	childComponentName := parent.Import.ComponentName
-	if childComponentName == "" {
-		childComponentName = parent.Name
 	}
 
 	// Find the child component from the imported package that matches our arch.
