@@ -11,7 +11,8 @@
 		"test:init": "playwright test -x --reporter github,html --grep @init",
 		"test:post-init": "playwright test -x --reporter github,html --grep @post-init",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write \"src/ui/**/*.{ts,js,svelte}\""
 	},
 	"nodemonConfig": {
 		"delay": 5000,
@@ -24,17 +25,21 @@
 		]
 	},
 	"dependencies": {
-		"@defense-unicorns/unicorn-ui": "0.0.46",
+		"@defense-unicorns/unicorn-ui": "^0.0.47",
 		"@floating-ui/dom": "1.2.5",
 		"@fontsource/roboto": "4.5.8",
 		"@material/card": "14.0.0",
 		"@material/data-table": "14.0.0",
 		"@material/layout-grid": "14.0.0",
 		"@material/linear-progress": "14.0.0",
+		"@material/ripple": "^14.0.0",
 		"@material/theme": "14.0.0",
+		"@microsoft/fetch-event-source": "^2.0.1",
 		"material-symbols": "0.5.5",
 		"prismjs": "1.29.0",
 		"sanitize.css": "13.0.0",
+		"xterm": "^5.1.0",
+		"xterm-addon-fit": "^0.7.0",
 		"yaml": "2.2.1"
 	},
 	"devDependencies": {

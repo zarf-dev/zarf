@@ -3,10 +3,11 @@
 
 import { getPreferredTheme } from '@defense-unicorns/unicorn-ui';
 import { writable } from 'svelte/store';
-import type { APIZarfPackage, ClusterSummary } from './api-types';
+import type { APIZarfPackage, ClusterSummary, DeployedPackage } from './api-types';
 
-const clusterStore = writable<ClusterSummary>();
+const clusterStore = writable<ClusterSummary | undefined>();
 const pkgStore = writable<APIZarfPackage>();
+const deployedPkgStore = writable<{ pkgs?: DeployedPackage[]; err?: Error } | undefined>();
 const pkgComponentDeployStore = writable<number[]>([]);
 // check localstorage for theme, if not found, use the preferred theme, otherwise default to light
 const storedTheme = localStorage.theme ?? getPreferredTheme(window) ?? 'light';
@@ -17,4 +18,4 @@ themeStore.subscribe((theme) => {
 	localStorage.theme = theme;
 });
 
-export { clusterStore, pkgStore, pkgComponentDeployStore, themeStore };
+export { clusterStore, pkgStore, pkgComponentDeployStore, themeStore, deployedPkgStore };
