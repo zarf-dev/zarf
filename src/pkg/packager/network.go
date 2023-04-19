@@ -181,7 +181,7 @@ func (p *Packager) handleOciPackage(url string, out string, components ...string
 		}
 		if len(components) > 0 {
 			if !utils.SliceContains(components, desc.Annotations[ocispec.AnnotationTitle]) {
-				return errors.New("skip descriptor")
+				return oras.ErrSkipDesc
 			}
 		}
 		return nil

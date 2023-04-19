@@ -5,6 +5,8 @@ go 1.19
 replace (
 	// TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
 	oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.3
+
+	oras.land/oras-go/v2 v2.0.2 => github.com/Noxsios/oras-go/v2 v2.0.2-razzle
 	// TODO (@JMCCOY) not updating due to bug in kyaml, https://github.com/kubernetes-sigs/kustomize/issues/4896
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
 )

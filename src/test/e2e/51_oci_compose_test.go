@@ -36,7 +36,7 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	cmd := osexec.Command(fmt.Sprintf("cp -r %s %s", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local")))
+	cmd := osexec.Command("/bin/sh", "-c", fmt.Sprintf("cp -vr %s %s", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local")))
 	err := cmd.Run()
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
