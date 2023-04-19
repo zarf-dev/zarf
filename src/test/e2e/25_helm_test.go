@@ -27,6 +27,8 @@ func TestHelm(t *testing.T) {
 	testHelmOCIChart(t)
 
 	testHelmUninstallRollback(t)
+
+	testHelmAdoption(t)
 }
 
 func testHelmReleaseName(t *testing.T) {
@@ -161,4 +163,17 @@ func testHelmAdoption(t *testing.T) {
 	// Deploy dos-games manually into the cluster without Zarf
 	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "apply", "-f", deploymentManifest)
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+
+	// Deploy dos-games into the cluster with Zarf
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Ensure that this does create a dos-games chart
+	helmOut, err := exec.Command("helm", "list", "-n", "zarf").Output()
+	require.NoError(t, err)
+	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+
+	// Remove the package.
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
