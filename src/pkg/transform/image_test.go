@@ -11,6 +11,7 @@ import (
 )
 
 var imageRefs = []string{
+	"nginx",
 	"nginx:1.23.3",
 	"defenseunicorns/zarf-agent:v0.22.1",
 	"defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
@@ -27,11 +28,12 @@ var badImageRefs = []string{
 func TestImageTransformHost(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
-		"gitlab.com/project/library/nginx-3793515731:1.23.3",
-		"gitlab.com/project/defenseunicorns/zarf-agent-4283503412:v0.22.1",
-		"gitlab.com/project/defenseunicorns/zarf-agent-4283503412@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
-		"gitlab.com/project/stefanprodan/podinfo-2985051089:6.3.3",
-		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent-2003217571:v0.25.0",
+		"gitlab.com/project/library/nginx:latest-zarf-3793515731",
+		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
+		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-zarf-4283503412",
+		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
+		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 	}
 
 	for idx, ref := range imageRefs {
@@ -48,6 +50,7 @@ func TestImageTransformHost(t *testing.T) {
 
 func TestImageTransformHostWithoutChecksum(t *testing.T) {
 	var expectedResult = []string{
+		"gitlab.com/project/library/nginx:latest",
 		"gitlab.com/project/library/nginx:1.23.3",
 		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1",
 		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
@@ -69,6 +72,7 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 
 func TestParseImageRef(t *testing.T) {
 	var expectedResult = [][]string{
+		{"docker.io/", "library/nginx", "latest", ""},
 		{"docker.io/", "library/nginx", "1.23.3", ""},
 		{"docker.io/", "defenseunicorns/zarf-agent", "v0.22.1", ""},
 		{"docker.io/", "defenseunicorns/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},

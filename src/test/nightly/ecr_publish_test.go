@@ -24,6 +24,7 @@ var (
 /*
 This test assumes the following:
   1. The user running the test has a current valid credential to the public.ecr.aws/t8y5r5z5/zarf-nightly repository in their docker config.json
+  2. The zarf CLI has been built and is available in the build directory
 */
 func TestECRPublishing(t *testing.T) {
 	t.Log("E2E: Testing component actions")

@@ -8,3 +8,4 @@ runs:
       with:
         node-version: 18
         cache: "npm"
+        cache-dependency-path: "src/ui/package-lock.json"
