@@ -365,7 +365,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 			// Unwrap the dataInjection dir into individual files.
 			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(destination, pattern)
+			files, _ := utils.RecursiveFileList(destination, pattern, false, true)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
 	}

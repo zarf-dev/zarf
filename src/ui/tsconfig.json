@@ -1,0 +1,27 @@
+{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"paths": {
+			"$lib": ["./lib"],
+			"$lib/*": ["./lib/*"],
+			"@assets/*": ["./static/*"],
+			"@images/*": ["./images/*"],
+			"@ui": ["./node_modules/@defense-unicorns/unicorn-ui"],
+			"@ui/*": ["./node_modules/@defense-unicorns/unicorn-ui/*"]
+		}
+	},
+	"include": [
+		"**/*.d.ts",
+		"**/*.ts",
+		"**/*.js",
+		"**/*.svelte",
+		"jest.config.js",
+		".svelte-kit/ambient.d.ts",
+	]
+}

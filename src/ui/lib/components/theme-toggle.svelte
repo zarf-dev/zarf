@@ -3,11 +3,10 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { themeStore } from '$lib/store';
-	import { IconButton } from '@ui';
+	import { IconButton, currentTheme } from '@ui';
 
 	const toggle = () => {
-		themeStore.update((theme) => {
+		currentTheme.update((theme) => {
 			return theme === 'dark' ? 'light' : 'dark';
 		});
 	};
@@ -15,10 +14,12 @@
 
 <IconButton
 	on:click={toggle}
+	class="theme-toggle"
+	ssx={{ $self: { '&:hover': { background: 'var(--action-hover-on-dark)' } } }}
 	iconContent="dark_mode"
 	toggledIconContent="light_mode"
 	toggleable
-	toggled={$themeStore === 'dark'}
+	toggled={$currentTheme === 'dark'}
 	iconClass="material-symbols-outlined"
-    toggledIconClass="material-symbols-outlined"
+	toggledIconClass="material-symbols-outlined"
 />

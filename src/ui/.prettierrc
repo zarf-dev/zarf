@@ -1,0 +1,8 @@
+{
+	"useTabs": true,
+	"singleQuote": true,
+	"printWidth": 100,
+	"pluginSearchDirs": ["."],
+	"htmlWhitespaceSensitivity": "ignore",
+	"overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
+}

@@ -23,18 +23,18 @@ func TestTempDirectoryDeploy(t *testing.T) {
 		secondFile   = "second-choice-file.txt"
 	)
 
-	e2e.setup(t)
-	defer e2e.teardown(t)
+	e2e.Setup(t)
+	defer e2e.Teardown(t)
 
-	e2e.cleanFiles(otherTmpPath, firstFile, secondFile)
+	e2e.CleanFiles(otherTmpPath, firstFile, secondFile)
 
-	path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 
 	_ = os.Mkdir(otherTmpPath, 0750)
 
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm", "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm", "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.cleanFiles(otherTmpPath, firstFile, secondFile)
+	e2e.CleanFiles(otherTmpPath, firstFile, secondFile)
 }

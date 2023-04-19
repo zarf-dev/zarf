@@ -1,46 +1,57 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
 });
 
-test.describe('start page', () => {
-	test('spinner loads properly, then displays init btn @pre-init', async ({ page }) => {
-		await page.goto('/auth?token=insecure');
+test.describe('Landing Page', () => {
+	test('Landing Page @pre-init', async ({ page }) => {
+		await page.goto('/auth?token=insecure', { waitUntil: 'networkidle' });
 
-		const clusterSelector = page.locator('#cluster-selector');
-		await expect(clusterSelector).toBeEmpty();
+		// Expect cluster table to display not connected state
+		const clusterInfo = page.locator('.cluster-not-connected');
+		expect(await clusterInfo.textContent()).toContain('Cluster not connected');
 
-		// display loading spinner
-		const spinner = page.locator('.spinner');
-		await expect(spinner).toBeVisible();
+		// Expect navdrawer cluster state to display not connected
+		const navDrawerHeader = page.locator('.nav-drawer-header');
+		expect(await navDrawerHeader.textContent()).toContain('Cluster not connected');
 
-		// spinner disappears, init btn appears
-		await expect(spinner).not.toBeVisible();
+		// Expect the Packages Table to contain no packages
+		const packageTableBody = page.locator('.package-list-body');
+		expect(await packageTableBody.textContent()).toContain('No Packages have been Deployed');
 
-		// Make sure the home page contents are there
-		await expect(page.locator('text=No Active Zarf Clusters')).toBeVisible();
-		await expect(
-			page.locator(
-				'.hero-subtitle:has-text("cluster was found, click initialize cluster to initialize it now with Zarf")'
-			)
-		).toBeVisible();
+		// Open Connect Cluster Dialog
+		const connectClusterButton = page.locator('button:has-text("Connect Cluster")');
+		await connectClusterButton.click();
 
-		await page.locator('span:has-text("Initialize Cluster")').click();
+		// Ensure Kubeconfig is found
+		const kubeconfigDialog = page.locator('.dialog-content');
+		expect(await kubeconfigDialog.textContent()).toContain('Kubeconfig Found');
 
-		await page.waitForURL('/package/init/configure');
+		// Click Connect Cluster Anchor in the dialog to goto /packages?init=true
+		const connectAnchor = kubeconfigDialog.locator('a:has-text("Connect Cluster")');
+		await connectAnchor.click();
+
+		await page.waitForURL('/packages?init=true');
 	});
-	test('page redirects to /packages @post-init', async ({ page }) => {
-		await page.goto('/auth?token=insecure');
 
-		// display loading spinner
-		const spinner = page.locator('.spinner');
-		await expect(spinner).toBeVisible();
+	test('Landing page @post-init', async ({ page }) => {
+		await page.goto('/auth?token=insecure', { waitUntil: 'networkidle' });
 
-		// spinner disappears
-		await expect(spinner).not.toBeVisible();
+		// Expect cluster table to have one package.
+		const clusterInfo = page.locator('.metadata-values').first();
+		expect(await clusterInfo.textContent()).not.toContain('0 Packages');
 
-		// expect to be redirected to /packages
-		await page.waitForURL('/packages', { timeout: 10000 });
+		// Validate that the init package now shows in the package-list-table
+		const packageTableBody = page.locator('.package-list-body');
+		expect(await packageTableBody.textContent()).toContain('ZarfInitConfig');
+
+		// Validate the cluster name shows in the nav-drawer-header
+		expect(await page.locator('.nav-drawer-header').textContent()).not.toContain(
+			'Cluster not connected'
+		);
 	});
 });
