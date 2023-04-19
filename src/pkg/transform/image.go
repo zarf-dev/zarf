@@ -35,9 +35,9 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// If this image is specified by digest then don't add a checksum it as it will already be a specific SHA
 	if image.Digest != "" {
 		return fmt.Sprintf("%s/%s@%s", targetHost, image.Path, image.Digest), nil
-	} else {
-		return fmt.Sprintf("%s/%s:%s-zarf-%d", targetHost, image.Path, image.Tag, checksum), nil
 	}
+
+	return fmt.Sprintf("%s/%s:%s-zarf-%d", targetHost, image.Path, image.Tag, checksum), nil
 }
 
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
