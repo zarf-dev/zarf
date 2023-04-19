@@ -1,12 +1,12 @@
 # Zarf - DevSecOps for Air Gap
 
-<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
-
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
 [![Zarf Documentation Status](https://api.netlify.com/api/v1/badges/fe846ae4-25fb-4274-9968-90782640ee9f/deploy-status)](https://app.netlify.com/sites/zarf-docs/deploys)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf)
+
+<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
