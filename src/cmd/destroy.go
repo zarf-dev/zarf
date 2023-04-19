@@ -30,7 +30,7 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := cluster.NewClusterWithWait(30 * time.Second)
+		c, err := cluster.NewClusterWithWait(30*time.Second, true)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)
 		}

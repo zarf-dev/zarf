@@ -40,7 +40,7 @@ func GetCLIName() string {
 	return binaryName
 }
 
-// setup actions for each test.
+// Setup performs actions prior to each test.
 func (e2e *ZarfE2ETest) Setup(t *testing.T) {
 	t.Log("Test setup")
 	// Output list of allocated cluster resources
@@ -51,7 +51,7 @@ func (e2e *ZarfE2ETest) Setup(t *testing.T) {
 	}
 }
 
-// setup actions for each test that requires a K8s cluster.
+// SetupWithCluster performs actions for each test that requires a K8s cluster.
 func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	if !e2e.RunClusterTests {
 		t.Skip("")
@@ -59,16 +59,17 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	e2e.Setup(t)
 }
 
-// teardown actions for each test.
+// Teardown performs actions prior to tearing down each test.
 func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
 	t.Log("Test teardown")
 }
 
-// execZarfCommand executes a Zarf command.
+// ExecZarfCommand executes a Zarf command.
 func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, error) {
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, commandString...)
 }
 
+// CleanFiles removes files and directories that have been created during the test.
 func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 	for _, file := range files {
 		_ = os.RemoveAll(file)
