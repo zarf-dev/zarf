@@ -68,7 +68,9 @@ func (p *Packager) Deploy() error {
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
 		if p.cluster != nil && hpaModified {
-			p.cluster.EnableRegHPAScaleDown()
+			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			}
 		}
 	}()
 
@@ -148,11 +150,17 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state on the seed registry component
 	if isSeedRegistry {
-		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
+		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
+
 		p.cluster.InitZarfState(p.cfg.InitOpts)
+	}
+
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		hpaModified = true
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -213,24 +221,25 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
 
+		// Setup the state in the config and get the valuesTemplate
+		valueTemplate, err = p.setupStateValuesTemplate(component)
+		if err != nil {
+			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+		}
+
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
+				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
 				hpaModified = true
 			}
-		}
-
-		valueTemplate, err = p.getUpdatedValueTemplate(component)
-		if err != nil {
-			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
 	}
 
@@ -335,7 +344,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
-func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
