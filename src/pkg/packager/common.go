@@ -445,19 +445,29 @@ func (p *Packager) validatePackageChecksums() error {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	var applianceMode bool
-	var clusterArch string
-	var err error
+	var (
+		applianceMode bool
+		clusterArch   string
+		err           error
+		k8sTarget     bool
+	)
 
-	// Iterate over the package components to determine whether we are working with an appliance mode init package.
+	// Iterate over the package components.
 	components := p.getValidComponents()
 	for _, component := range components {
+		// Determine whether we are working with an appliance mode init package.
 		if component.Name == k8s.DistroIsK3s && p.cfg.Pkg.Kind == "ZarfInitConfig" {
 			applianceMode = true
 		}
+
+		// Determine whether we are deploying k8s resources.
+		if component.Images != nil {
+			k8sTarget = true
+		}
 	}
 
-	// If we're working with an init package deploying k3s(appliance mode), set the clusterArch to the machine we're running on.
+	// If we're working with an init package deploying k3s(appliance mode),
+	// set the clusterArch to the machine we're running on.
 	if applianceMode {
 		clusterArch = runtime.GOARCH
 
@@ -466,9 +476,28 @@ func (p *Packager) validatePackageArchitecture() error {
 		}
 	}
 
-	// If we're already connected to a cluster, query the cluster for the architecture.
+	/*
+		If we're already connected to a cluster, query the cluster for the architecture.
+
+		If we're not already connected to a cluster and we're deploying k8s resources,
+		attempt to establish a new k8s client connection and query the cluster for the architecture.
+	*/
 	if p.cluster != nil {
 		clusterArch, err = p.cluster.Kube.GetArchitecture()
+		if err != nil {
+			return err
+		}
+
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
+	} else if k8sTarget {
+		client, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+		if err != nil {
+			return err
+		}
+
+		clusterArch, err = client.Kube.GetArchitecture()
 		if err != nil {
 			return err
 		}

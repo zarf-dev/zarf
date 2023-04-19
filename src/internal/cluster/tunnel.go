@@ -124,7 +124,7 @@ func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) (*Tunnel, error) {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return &Tunnel{}, err
 	}
@@ -406,7 +406,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		defer spinner.Stop()
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}

@@ -18,7 +18,7 @@ type Cluster struct {
 }
 
 const (
-	defaultTimeout = 30 * time.Second
+	DefaultTimeout = 30 * time.Second
 	agentLabel     = "zarf.dev/agent"
 )
 
@@ -28,7 +28,7 @@ var labels = k8s.Labels{
 
 // NewClusterOrDie creates a new cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error.
 func NewClusterOrDie() *Cluster {
-	c, err := NewClusterWithWait(defaultTimeout)
+	c, err := NewClusterWithWait(DefaultTimeout)
 	if err != nil {
 		message.Fatalf(err, "Failed to connect to cluster")
 	}
