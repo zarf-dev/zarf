@@ -48,11 +48,8 @@ func (i *ImgConfig) PullAll() error {
 	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imgCount, longer)
 	defer spinner.Stop()
 
-	if message.GetLogLevel() >= message.DebugLevel {
-		spinner.EnablePreserveWrites()
-		logs.Warn.SetOutput(spinner)
-		logs.Progress.SetOutput(spinner)
-	}
+	logs.Warn.SetOutput(&message.DebugWriter{})
+	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)

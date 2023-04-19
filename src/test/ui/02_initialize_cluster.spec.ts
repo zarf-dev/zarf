@@ -52,7 +52,7 @@ test.describe('initialize a zarf cluster', () => {
 		await k3s.locator('text=Deploy').click();
 		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'true');
 		await expect(
-			page.locator('.component-accordion-header:has-text("*** REQUIRES ROOT *** Install K3s")')
+			page.locator('.component-accordion-header:has-text("*** REQUIRES ROOT (not sudo) *** Install K3s")')
 		).toBeVisible();
 		await expect(k3s.locator('code')).toBeHidden();
 		await k3s.locator('.accordion-toggle').click();
