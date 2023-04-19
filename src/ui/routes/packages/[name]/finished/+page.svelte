@@ -15,8 +15,6 @@
 	<div slot="content" style="text-align:center;margin: 0.5rem 2rem 1rem 2rem;">
 		<img src={zarfLogo} alt="zarf" width="60px" />
 		<Typography style="margin: 1rem 0;" variant="h6">Package Successfully Deployed</Typography>
-		<Typography variant="body2">
-			You will be redirected to the deployment details page
-		</Typography>
+		<Typography variant="body2">You will be redirected to the deployment details page</Typography>
 	</div>
 </Dialog>

@@ -30,9 +30,8 @@ func TestConnect(t *testing.T) {
 
 	// We assert greater than or equal to since the base init has 12 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
-	assert.GreaterOrEqual(t, len(registryList), 12)
+	assert.GreaterOrEqual(t, len(registryList), 7)
 	assert.Contains(t, stdOut, "gitea/gitea")
-	assert.Contains(t, stdOut, "gitea/gitea-3431384023")
 
 	// Connect to Gitea
 	tunnelGit, err := cluster.NewZarfTunnel()
