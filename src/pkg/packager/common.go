@@ -492,7 +492,7 @@ func (p *Packager) validatePackageArchitecture() error {
 			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 		}
 	} else if k8sTarget {
-		client, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+		client, err := cluster.NewClusterWithWait(cluster.DefaultTimeout, false)
 		if err != nil {
 			return err
 		}
