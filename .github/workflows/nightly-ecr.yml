@@ -39,7 +39,7 @@ jobs:
 
       # NOTE: The aws cli will need to be explicitly installed on self-hosted runners
       - name: Login to the ECR Registry
-        run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws/t8y5r5z5
+        run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
 
       - name: Test publishing and pulling to ECR
         run: go test ./src/test/nightly/ecr_publish_test.go
