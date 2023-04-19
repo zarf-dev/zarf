@@ -1,5 +1,7 @@
 # Zarf - DevSecOps for Air Gap
 
+<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
+
 [![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
@@ -9,8 +11,6 @@
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
-
-<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
 
 Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
