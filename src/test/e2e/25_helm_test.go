@@ -151,3 +151,14 @@ func testHelmUninstallRollback(t *testing.T) {
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func testHelmAdoption(t *testing.T) {
+	t.Log("E2E: Helm Adopt a Deployment")
+
+	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	deploymentManifest := "src/test/test-packages/25-manifest-adoption/deployment.yaml"
+
+	// Deploy dos-games manually into the cluster without Zarf
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "apply", "-f", deploymentManifest)
+	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+}
