@@ -26,8 +26,9 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	var hasZarf bool
 	var k8sRevision string
 
-	c, err := cluster.NewClusterWithWait(5 * time.Second)
+	c, err := cluster.NewClusterWithWait(5*time.Second, false)
 	rawConfig, _ := clientcmd.NewDefaultClientConfigLoadingRules().GetStartingConfig()
+
 	reachable = err == nil
 	if reachable {
 		distro, _ = c.Kube.DetectDistro()

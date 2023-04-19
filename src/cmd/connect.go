@@ -29,6 +29,7 @@ var (
 			if len(args) > 0 {
 				target = args[0]
 			}
+			spinner := message.NewProgressSpinner("Preparing a tunnel to connect to %s", target)
 
 			tunnel, err := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
 			if err != nil {
@@ -38,7 +39,10 @@ var (
 			if !cliOnly {
 				tunnel.EnableAutoOpen()
 			}
+
+			tunnel.AddSpinner(spinner)
 			tunnel.Connect(target, true)
+			spinner.Success()
 		},
 	}
 

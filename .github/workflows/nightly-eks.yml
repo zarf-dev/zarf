@@ -30,7 +30,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: "zarf-nightly-tester"
+          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}}
           aws-region: us-east-1
 
       - name: Build the eks package
