@@ -41,14 +41,5 @@ jobs:
       - name: Login to the ECR Registry
         run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
 
-      - name: Pull a dummy image
-        run: docker pull registry
-
-      - name: tag the dummy image
-        run: docker tag registry public.ecr.aws/t8y5r5z5/zarf-nightly/helm-oci-chart:latest
-
-      - name: push the dummy image
-        run: docker push public.ecr.aws/t8y5r5z5/zarf-nightly/helm-oci-chart:latest
-
       - name: Test publishing and pulling to ECR
         run: go test ./src/test/nightly/ecr_publish_test.go

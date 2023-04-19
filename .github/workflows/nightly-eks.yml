@@ -40,10 +40,10 @@ jobs:
         run: ./build/zarf package create packages/distros/eks -o build --confirm
 
       - name: Deploy the eks package
-        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --SET=CLUSTER_NAME=zarf-eks-test,INSTANCE_TYPE=t3.medium
+        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME=zarf-eks-test,INSTANCE_TYPE=t3.medium --confirm
 
       - name: Run tests
-        run: ZARF_INIT_ARGS="--make test-e2e ARCH=amd64
+        run: make test-e2e ARCH=amd64
 
       - name: Teardown the cluster
         if: always()
