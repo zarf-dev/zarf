@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	osexec "os/exec"
+
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	dconfig "github.com/docker/cli/cli/config"
@@ -34,7 +36,8 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	cmd := osexec.Command(fmt.Sprintf("cp -r %s %s", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local")))
+	err := cmd.Run()
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
@@ -58,11 +61,11 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.DirExists(absNoCode)
 
-	// image := "registry:2.8.1"
+	image := "registry:2.8.1"
 
 	// spin up a local registry
-	// err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
-	// suite.NoError(err)
+	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
+	suite.NoError(err)
 
 	// docker config folder
 	cfg, err := dconfig.Load(dconfig.Dir())
@@ -77,9 +80,9 @@ func (suite *SkeletonSuite) SetupSuite() {
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
-	// _, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	// suite.NoError(err)
-	err := exec.CmdWithPrint("rm", "-rf", everythingExternal)
+	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
+	suite.NoError(err)
+	err = exec.CmdWithPrint("rm", "-rf", everythingExternal)
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", absEverything)
 	suite.NoError(err)
