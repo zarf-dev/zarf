@@ -37,7 +37,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Build the eks package
-        run: ./build/zarf package create packages/distros/eks -o build -a $(ARCH) --confirm
+        run: ./build/zarf package create packages/distros/eks -o build --confirm
 
       - name: Deploy the eks package
         run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --SET=CLUSTER_NAME=zarf-eks-test,INSTANCE_TYPE=t3.medium
@@ -48,6 +48,3 @@ jobs:
       - name: Teardown the cluster
         if: always()
         run: ./build/zarf package remove build/zarf-package-distro-eks-multi-0.0.2.tar.zst --confirm
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
