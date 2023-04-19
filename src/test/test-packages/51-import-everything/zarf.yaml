@@ -76,6 +76,8 @@ components:
         localPath: charts/local
         namespace: local-chart
         version: 0.1.0
+        valuesFiles:
+          - https://raw.githubusercontent.com/defenseunicorns/zarf/main/examples/helm-local-chart/chart/values.yaml
       - name: local-demo
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
