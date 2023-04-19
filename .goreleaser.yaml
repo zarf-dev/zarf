@@ -15,7 +15,7 @@ builds:
       - darwin
       - windows
     ldflags:
-      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}} -X k8s.io/component-base/version.gitVersion=v0.0.0+zarf{{.Tag}} -X k8s.io/component-base/version.gitCommit={{.FullCommit}} -X k8s.io/component-base/version.buildDate={{.Date}}
     goarch:
       - amd64
       - arm64
