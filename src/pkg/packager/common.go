@@ -474,6 +474,8 @@ func (p *Packager) validatePackageArchitecture() error {
 		if p.arch != clusterArch {
 			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 		}
+
+		return nil
 	}
 
 	/*
