@@ -11,7 +11,7 @@ import type { PlaywrightTestConfig } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration.
  */
 const config: PlaywrightTestConfig = {
-	testDir: './src/test/ui',
+	testDir: '../test/ui',
 	/* This is 10 minutes jon */
 	timeout: 10 * 60 * 1000,
 	expect: {
@@ -75,7 +75,7 @@ const config: PlaywrightTestConfig = {
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: process.env.CI ? 'make test-built-ui' : 'npm run dev',
+		command: process.env.CI ? 'cd ../.. && make test-built-ui' : 'npm run dev',
 		port: 3333,
 		reuseExistingServer: true,
 		timeout: 120 * 1000

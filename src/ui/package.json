@@ -1,10 +1,10 @@
 {
 	"name": "zarf-ui",
 	"private": true,
-	"version": "0.0.1",
 	"type": "module",
+	"version": "0.0.1",
 	"scripts": {
-		"dev": "hack/ui-dev.sh",
+		"dev": "../../hack/ui-dev.sh",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"test:pre-init": "playwright test -x --reporter github,html --grep @pre-init",
@@ -17,7 +17,7 @@
 	"nodemonConfig": {
 		"delay": 5000,
 		"watch": [
-			"src"
+			"../../src"
 		],
 		"signal": "SIGKILL",
 		"extensions": [
