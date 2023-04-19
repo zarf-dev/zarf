@@ -11,6 +11,10 @@ concurrency:
   group: ecr-publish-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest

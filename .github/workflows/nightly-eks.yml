@@ -5,6 +5,9 @@ on:
 
   workflow_dispatch: ## Give us the ability to run this manually
 
+permissions:
+  id-token: write
+  contents: read
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
