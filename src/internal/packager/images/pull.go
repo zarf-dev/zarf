@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -63,7 +64,7 @@ func (i *ImgConfig) PullAll() error {
 
 	// Create the ImagePath directory
 	err := os.Mkdir(i.ImagesPath, 0755)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
