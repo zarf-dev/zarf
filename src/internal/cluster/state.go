@@ -22,10 +22,11 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespace        = "zarf"
-	ZarfStateSecretName  = "zarf-state"
-	ZarfStateDataKey     = "state"
-	ZarfPackageInfoLabel = "package-deploy-info"
+	ZarfNamespace           = "zarf"
+	ZarfStateSecretName     = "zarf-state"
+	ZarfStateDataKey        = "state"
+	ZarfPackageInfoLabel    = "package-deploy-info"
+	ZarfInitPackageInfoName = "zarf-package-init"
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.

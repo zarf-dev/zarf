@@ -91,6 +91,7 @@ func LaunchAPIServer() {
 			r.Get("/read/{path}", packages.Read)
 			r.Get("/list", packages.ListDeployedPackages)
 			r.Put("/deploy", packages.DeployPackage)
+			r.Get("/deploy-stream", packages.StreamDeployPackage)
 			r.Delete("/remove/{name}", packages.RemovePackage)
 		})
 
