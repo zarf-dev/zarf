@@ -2,12 +2,6 @@
 
 Zarf has a UI built into the go binary to supports a nubmer of deployment features. The Zarf Deployment UI offers a differnt experience to deploy and manage Zarf clusters and packages. The UI can be used to connect to connect to existing clusters (via a Kubeconfig), initalize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster. The UI makes Zarfs deployment capabilities more accesible to users who are less familuar with CLI and Kubernetes. 
 
-:::info
-
-All other zarf [CLI commands](../4-user-guide/1-the-zarf-cli/100-cli-commands/) will require interfacing with the CLI directly.
-
-::: 
-
 ## Open the Zarf Deployment Web UI
 
 The Zarf Deployment UI can be easily spun up with a single command from the CLI terminal. Since this tool is embedded in the Zarf binary, you don't have to worry about additional dependencies or trying to install it yourself!
@@ -39,4 +33,10 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands.
 - [Zarf Pacakge List](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_list.md)
 - [Zarf Package Inspect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
 - [Zarf Tools Sbom](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md) (Coming soon)
-- [Zarf Connect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon)
+- [Zarf Connect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon) 
+
+:::info
+
+All other zarf [CLI commands](../4-user-guide/1-the-zarf-cli/100-cli-commands/) will require interfacing with the CLI directly.
+
+::: 
