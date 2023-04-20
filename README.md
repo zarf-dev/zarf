@@ -53,7 +53,7 @@ Using Zarf in Github workflows? Check out the [setup-zarf](https://github.com/de
 
 ## Developing
 
-To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/developer-guide/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/developer-guide/nerd-notes).
+To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes).
 
 ![Architecture Diagram](./docs/.images/architecture.drawio.svg)
 
