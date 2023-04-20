@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -312,16 +311,12 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			for idx, path := range chart.ValuesFiles {
-				dstPath := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if utils.IsURL(path) {
-					message.Debugf("Downloading %s", dstPath)
-					dst, err := os.Create(dstPath)
-					if err != nil {
-						return nil, fmt.Errorf(lang.ErrUnableToCreateFile, dstPath, err)
-					}
+					message.Debugf("Downloading %s", dst)
 					utils.DownloadToFile(path, dst, component.CosignKeyPath)
 				} else {
-					if err := utils.CreatePathAndCopy(path, dstPath); err != nil {
+					if err := utils.CreatePathAndCopy(path, dst); err != nil {
 						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 					}
 				}
@@ -336,36 +331,32 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
-			dstPath := filepath.Join(componentPath.Files, strconv.Itoa(index))
+			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
 			if utils.IsURL(file.Source) {
-				dst, err := os.Create(dstPath)
-				if err != nil {
-					return nil, fmt.Errorf(lang.ErrUnableToCreateFile, dstPath, err)
-				}
 				utils.DownloadToFile(file.Source, dst, component.CosignKeyPath)
 			} else {
-				if err := utils.CreatePathAndCopy(file.Source, dstPath); err != nil {
+				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 				}
 			}
 
 			// Abort packaging on invalid shasum (if one is specified).
 			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetCryptoHash(dstPath, crypto.SHA256); actualShasum != file.Shasum {
+				if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 				}
 			}
 
-			info, _ := os.Stat(dstPath)
+			info, _ := os.Stat(dst)
 
 			if file.Executable || info.IsDir() {
-				_ = os.Chmod(dstPath, 0700)
+				_ = os.Chmod(dst, 0700)
 			} else {
-				_ = os.Chmod(dstPath, 0600)
+				_ = os.Chmod(dst, 0600)
 			}
 
-			componentSBOM.Files = append(componentSBOM.Files, dstPath)
+			componentSBOM.Files = append(componentSBOM.Files, dst)
 		}
 	}
 
@@ -375,22 +366,18 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dstPath := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 			if utils.IsURL(data.Source) {
-				dst, err := os.Create(dstPath)
-				if err != nil {
-					return nil, fmt.Errorf(lang.ErrUnableToCreateFile, dstPath, err)
-				}
 				utils.DownloadToFile(data.Source, dst, component.CosignKeyPath)
 			} else {
-				if err := utils.CreatePathAndCopy(data.Source, dstPath); err != nil {
+				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 				}
 			}
 
 			// Unwrap the dataInjection dir into individual files.
 			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(dstPath, pattern, false, true)
+			files, _ := utils.RecursiveFileList(dst, pattern, false, true)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
 	}
@@ -421,13 +408,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 						return nil, fmt.Errorf("unable to parse manifest URL %s: %w", f, err)
 					}
 					name := filepath.Base(parsed.Path)
-					tmp := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d-%s", idx, name))
-					dst, err := os.Create(tmp)
-					if err != nil {
-						return nil, fmt.Errorf(lang.ErrUnableToCreateFile, tmp, err)
-					}
+					dst := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d-%s", idx, name))
 					utils.DownloadToFile(f, dst, component.CosignKeyPath)
-					f = tmp
+					f = dst
 				}
 				// If using a temp directory, trim the temp directory from the path.
 				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
@@ -446,13 +429,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				destination := filepath.Join(componentPath.Manifests, kname)
 				if utils.IsURL(k) {
-					tmp := filepath.Join(componentPath.Temp, kname)
-					dst, err := os.Create(tmp)
-					if err != nil {
-						return nil, fmt.Errorf(lang.ErrUnableToCreateFile, tmp, err)
-					}
+					dst := filepath.Join(componentPath.Temp, kname)
 					utils.DownloadToFile(k, dst, component.CosignKeyPath)
-					k = tmp
+					k = dst
 				}
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)

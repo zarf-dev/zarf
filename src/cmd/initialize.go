@@ -128,17 +128,11 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		dst, err := os.Create(downloadCacheTarget)
-		if err != nil {
-			return fmt.Errorf(lang.ErrUnableToCreateFile, downloadCacheTarget, err)
-		}
-		utils.DownloadToFile(url, dst, "")
+		return utils.DownloadToFile(url, downloadCacheTarget, "")
 	} else {
 		// Otherwise, exit and tell the user to manually download the init-package
 		return errors.New(lang.CmdInitDownloadErrManual)
 	}
-
-	return nil
 }
 
 func validateInitFlags() error {
