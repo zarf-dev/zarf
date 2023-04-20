@@ -35,9 +35,6 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
-// Separator is a string of 100 spaces to provide visual separation between elements.
-var Separator = strings.Repeat(" ", 100)
-
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logFile generation.
@@ -45,6 +42,7 @@ var logFile *os.File
 
 var useLogFile bool
 
+// DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
 
 func (d *DebugWriter) Write(raw []byte) (int, error) {
@@ -220,7 +218,7 @@ func HorizontalRule() {
 	pterm.Println(strings.Repeat("━", 100))
 }
 
-// HorizontalRule prints a yellow horizontal rule to separate the terminal
+// HorizontalNoteRule prints a yellow horizontal rule to separate the terminal
 func HorizontalNoteRule() {
 	pterm.Println()
 	pterm.FgYellow.Println(strings.Repeat("━", 100))
