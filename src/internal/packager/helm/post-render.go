@@ -160,7 +160,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			if err := r.options.Cluster.Kube.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
-				message.Warnf("%#v", err)
+				// Print a debug message since this could just be because the resource doesn't exist
+				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
 		}
 
