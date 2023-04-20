@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -324,7 +325,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Files) > 0 {
-		_ = utils.CreateDirectory(componentPath.Files, 0700)
+		if err = utils.CreateDirectory(componentPath.Files, 0700); err != nil {
+			return nil, fmt.Errorf("unable to create the component files directory: %w", err)
+		}
 
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
@@ -364,8 +367,12 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			destination := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
-			if err := utils.CreatePathAndCopy(data.Source, destination); err != nil {
-				return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
+			if utils.IsURL(data.Source) {
+				utils.DownloadToFile(data.Source, destination, component.CosignKeyPath)
+			} else {
+				if err := utils.CreatePathAndCopy(data.Source, destination); err != nil {
+					return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
+				}
 			}
 
 			// Unwrap the dataInjection dir into individual files.
@@ -376,6 +383,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Manifests) > 0 {
+		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
+			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
+		}
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
@@ -387,15 +397,21 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
 		defer spinner.Success()
 
-		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
-		}
-
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
 			for idx, f := range manifest.Files {
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
+				if utils.IsURL(f) {
+					parsed, err := url.Parse(f)
+					if err != nil {
+						return nil, fmt.Errorf("unable to parse manifest URL %s: %w", f, err)
+					}
+					name := filepath.Base(parsed.Path)
+					tmp := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d-%s", idx, name))
+					utils.DownloadToFile(f, tmp, component.CosignKeyPath)
+					f = tmp
+				}
 				// If using a temp directory, trim the temp directory from the path.
 				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
 				destination := path.Join(componentPath.Manifests, trimmedPath)
@@ -410,7 +426,13 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
-				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				destination := filepath.Join(componentPath.Manifests, kname)
+				if utils.IsURL(k) {
+					tmp := filepath.Join(componentPath.Temp, kname)
+					utils.DownloadToFile(k, tmp, component.CosignKeyPath)
+					k = tmp
+				}
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
