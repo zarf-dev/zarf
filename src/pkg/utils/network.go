@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"io"
 	"net"
@@ -70,7 +71,20 @@ func Fetch(url string) io.ReadCloser {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(url string, target string, cosignKeyPath string) {
+func DownloadToFile(src string, target string, cosignKeyPath string) {
+	parsed, err := url.Parse(src)
+	if err != nil {
+		message.Fatalf(err, "Unable to parse the URL: %s", src)
+	}
+	// check if the parsed URL has a checksum
+	// if so, remove it and use the checksum to validate the file
+	hasChecksum := strings.Contains(parsed.Path, "@")
+	var checksum string
+	if hasChecksum {
+		index := strings.LastIndex(parsed.Path, "@")
+		checksum = parsed.Path[index+1:]
+		parsed.Path = parsed.Path[:index]
+	}
 
 	// Always ensure the target directory exists
 	if err := CreateFilePath(target); err != nil {
@@ -78,17 +92,25 @@ func DownloadToFile(url string, target string, cosignKeyPath string) {
 	}
 
 	// Create the file
-	destinationFile, err := os.Create(target)
+	dst, err := os.Create(target)
 	if err != nil {
 		message.Fatal(err, "Unable to create the destination file")
 	}
-	defer destinationFile.Close()
+	defer dst.Close()
 
-	// If the url start with the sget protocol use that, otherwise do a typical GET call
-	if strings.HasPrefix(url, SGETProtocol) {
-		sgetFile(url, destinationFile, cosignKeyPath)
+	// If the source url start with the sget protocol use that, otherwise do a typical GET call
+	if strings.HasPrefix(src, SGETProtocol) {
+		sgetFile(src, dst, cosignKeyPath)
 	} else {
-		httpGetFile(url, destinationFile)
+		httpGetFile(src, dst)
+	}
+
+	// If the file has a checksum, validate it
+	if hasChecksum {
+		_ = dst.Close()
+		if actual, _ := GetCryptoHash(target, crypto.SHA256); actual != checksum {
+			message.Fatalf(err, "shasum mismatch for %s: expexted %s, got %s", target, checksum, actual)
+		}
 	}
 }
 
