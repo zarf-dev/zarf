@@ -28,8 +28,7 @@ export interface APIZarfDeployPayload {
 
 export interface ZarfDeployOptions {
     /**
-     * Whether to adopt any pre-existing K8s resources into the Helm charts generated from Zarf
-     * manifests
+     * Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
      */
     adoptExistingResources: boolean;
     /**

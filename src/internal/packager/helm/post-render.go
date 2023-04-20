@@ -101,6 +101,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		switch rawData.GetKind() {
+		// TODO: (@WSTARR) How to deal with namespaces
 		case "Namespace":
 			var namespace corev1.Namespace
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
@@ -119,7 +120,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				// Add it to the stack
 				r.namespaces[namespace.Name] = &namespace
 			}
-			// skip so we can strip namespaces from helms brain
+			// skip so we can strip namespaces from helm's brain
 			continue
 
 		case "Service":
@@ -143,6 +144,24 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
 			r.namespaces[namespace] = nil
+		}
+
+		// If we have been asked to adopt existing resources, process those now as well
+		if r.options.Cfg.DeployOpts.AdoptExistingResources {
+			deployedNamespace := namespace
+			if deployedNamespace == "" {
+				deployedNamespace = r.options.Chart.Namespace
+			}
+
+			helmLabels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
+			helmAnnotations := map[string]string{
+				"meta.helm.sh/release-name":      r.options.ReleaseName,
+				"meta.helm.sh/release-namespace": r.options.Chart.Namespace,
+			}
+
+			if err := r.options.Cluster.Kube.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
+				message.Warnf("%#v", err)
+			}
 		}
 
 		// Finally place this back onto the output buffer

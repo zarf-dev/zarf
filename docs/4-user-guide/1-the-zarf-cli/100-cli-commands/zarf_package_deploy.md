@@ -14,7 +14,7 @@ zarf package deploy [PACKAGE] [flags]
 ## Options
 
 ```
-      --adopt-existing-resources   Adopts any pre-existing K8s resources into the Helm charts generated from Zarf manifests. ONLY use when you have an existing deployment you want Zarf to takeover.
+      --adopt-existing-resources   Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string          Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                       help for deploy

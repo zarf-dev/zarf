@@ -25,7 +25,7 @@ type ZarfDeployOptions struct {
 	SGetKeyPath            string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	SetVariables           map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath          string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	AdoptExistingResources bool              `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts generated from Zarf manifests"`
+	AdoptExistingResources bool              `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
