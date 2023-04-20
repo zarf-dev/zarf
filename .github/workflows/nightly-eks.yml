@@ -47,4 +47,4 @@ jobs:
 
       - name: Teardown the cluster
         if: always()
-        run: ./build/zarf package remove build/zarf-package-distro-eks-multi-0.0.2.tar.zst --confirm
+        run: ./build/zarf package package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=teardown-eks-cluster --confirm
