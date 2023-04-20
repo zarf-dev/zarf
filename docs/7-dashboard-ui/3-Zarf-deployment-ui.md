@@ -35,20 +35,44 @@ If Zarf finds a cluster in the Kubeconfig that has Zarf resources on it it will 
 
 ![Web UI shows cluster metat data in on the cluster card when a connected cluster is found](../.images/dashboard/Web%20UI%20-%20Status%20Cluster%20connected.png)
 
-3. Shown when there is a Kubeconfig found on the machine with a default cluster that has Zarf resources in it.
+1. Shown when there is a Kubeconfig found on the machine with a default cluster that has Zarf resources in it.
 
 
 ### Connect to Existing Cluster 
 
-The Zarf Web UI makes connecting to existing clusters easy. From the packages users will be able to tell if a cluster is connected by the st
+The Zarf Web UI makes connecting to existing clusters easy. When on the packages page, if there is no Zarf cluster currently connected, select the connect cluster button. If Zarf finds a Kubeconfig it will ask the user if they want to connect to the the default cluster context. 
 
-To connect to an existing cluster:
+:::Tip 
 
-1. Have a cluster running on your machine
-2. Click connect cluster
-3. 
+Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the kubeconfig you will need to change it to the default cluster in the terminal.
+
+::: 
+
+Follow these steps to connect to an existing cluster:
+
+1. Be sure to have a Kubeconfig on your machine with the cluster you wish to connect to set as the default cluster.
+2. Click connect cluster button on cluster card
+3. Select cluster name in the dialog and click connect
+4. Select a ZarfInitConfig package to deploy into cluster
+5. Follow Package deployment prompts to deploy package and initialize cluster as a Zarf cluster.
 
 ### Deploy K8 and Cluster with init package with Cluster
+
+If you do not have access to an existing cluster, or would simply like to spin up a new cluster. You can do that by deploying a ZarfInitConfig package and selecting the optional K3s component. 
+
+:::info
+
+This option is currently only available for linux machines or machines using a linux box. 
+
+:::
+
+Follow these steps to deploy and initialze a new cluster:
+
+1. Click deploy package button - on Deployed packages table
+2. Select an ZarfInitPackage from the list
+3. Toggle the switch for the K3s component to deploy 
+4. Complete package deployment steps to spin up and initialze your new Zarf cluster.
+
 ### Deploy additional packages
 ### Remove Package
 ### Update Package
