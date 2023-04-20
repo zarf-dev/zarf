@@ -16,7 +16,7 @@ Follow these steps to get started using the Web UI
 
 ![GIF showing the Web UI lauch from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
 
-## USing Zarf Deployment Web UI
+## Using Zarf Deployment Web UI
 
 ### Cluster Connection Status
 
@@ -44,7 +44,7 @@ The Zarf Web UI makes connecting to existing clusters easy. When on the packages
 
 :::Tip 
 
-Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the kubeconfig you will need to change it to the default cluster in the terminal.
+Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the kubeconfig you will need to change it to the default cluster in the terminal. See the Kubernetes documentation on [how to configure access to multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/).
 
 ::: 
 
@@ -74,8 +74,24 @@ Follow these steps to deploy and initialze a new cluster:
 4. Complete package deployment steps to spin up and initialze your new Zarf cluster.
 
 ### Deploy additional packages
-### Remove Package
-### Update Package
+
+Once you have a cluster connected to Zarf, you can deploy additional packages into the cluster. 
+
+Steps to deploy additional packages into cluster:
+
+1. Click deploy package button on the Deployed packages table
+2. Select the package you wish to deploy from the list
+3. Complete the package deployment steps 
+
+### Additional Package Commands
+
+Once a package is deployed into the cluster, the Web UI offers additional commands that can be executed on a package. To view these commands click on the verticle elipse at the end of the table row for the package you wish to execute the command on. The Web UI currently supports these package commands.
+
+- Update: Use when you wish to update a package with a new version of the same package.
+- Remove: Use when you wish to remove a package and all of it's resources from the cluster. This cannot be undone.
+
+![Web UI deployed packages table with a context menu showing additional package commands](../.images/dashboard/Web%20UI%20-%20package%20commands.png
+
 
 ## Technical Details
 
