@@ -109,7 +109,7 @@ func DownloadToFile(src string, target string, cosignKeyPath string) {
 	if hasChecksum {
 		_ = dst.Close()
 		if actual, _ := GetCryptoHash(target, crypto.SHA256); actual != checksum {
-			message.Fatalf(err, "shasum mismatch for %s: expexted %s, got %s", target, checksum, actual)
+			message.Fatalf(err, "shasum mismatch for file %s: expected %s, got %s", target, checksum, actual)
 		}
 	}
 }
