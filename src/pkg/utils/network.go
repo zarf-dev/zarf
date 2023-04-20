@@ -6,7 +6,7 @@ package utils
 
 import (
 	"context"
-	"crypto"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net"
@@ -71,7 +71,8 @@ func Fetch(url string) io.ReadCloser {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(src string, target string, cosignKeyPath string) {
+func DownloadToFile(src string, dst *os.File, cosignKeyPath string) {
+	defer dst.Close()
 	parsed, err := url.Parse(src)
 	if err != nil {
 		message.Fatalf(err, "Unable to parse the URL: %s", src)
@@ -84,19 +85,8 @@ func DownloadToFile(src string, target string, cosignKeyPath string) {
 		index := strings.LastIndex(parsed.Path, "@")
 		checksum = parsed.Path[index+1:]
 		parsed.Path = parsed.Path[:index]
+		src = parsed.String()
 	}
-
-	// Always ensure the target directory exists
-	if err := CreateFilePath(target); err != nil {
-		message.Fatalf(err, "Unable to create file path: %s", target)
-	}
-
-	// Create the file
-	dst, err := os.Create(target)
-	if err != nil {
-		message.Fatal(err, "Unable to create the destination file")
-	}
-	defer dst.Close()
 
 	// If the source url start with the sget protocol use that, otherwise do a typical GET call
 	if strings.HasPrefix(src, SGETProtocol) {
@@ -107,9 +97,13 @@ func DownloadToFile(src string, target string, cosignKeyPath string) {
 
 	// If the file has a checksum, validate it
 	if hasChecksum {
-		_ = dst.Close()
-		if actual, _ := GetCryptoHash(target, crypto.SHA256); actual != checksum {
-			message.Fatalf(err, "shasum mismatch for file %s: expected %s, got %s", target, checksum, actual)
+		hasher := sha256.New()
+		if _, err := io.Copy(hasher, dst); err != nil {
+			message.Fatalf(err, "unable to copy file to hasher: %s", dst.Name())
+		}
+		actual := fmt.Sprintf("%x", hasher.Sum(nil))
+		if actual != checksum {
+			message.Fatalf(err, "shasum mismatch for file %s: expected %s, got %s", dst.Name(), checksum, actual)
 		}
 	}
 }
