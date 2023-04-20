@@ -11,7 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	test "github.com/defenseunicorns/zarf/src/test/e2e"
+	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
 )
 

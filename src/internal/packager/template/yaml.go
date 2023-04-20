@@ -15,7 +15,7 @@ import (
 func ProcessYamlFilesInPath(path string, component types.ZarfComponent, values Values) ([]string, error) {
 	// Only pull in yml and yaml files
 	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
-	manifests, _ := utils.RecursiveFileList(path, pattern)
+	manifests, _ := utils.RecursiveFileList(path, pattern, false, true)
 
 	for _, manifest := range manifests {
 		if err := values.Apply(component, manifest, false); err != nil {

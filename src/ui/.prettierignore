@@ -1,0 +1,12 @@
+.DS_Store
+node_modules
+.svelte-kit
+.env
+.env.*
+!.env.example
+/src/ui/lib/api-types.ts
+
+# Ignore files for PNPM, NPM and YARN
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

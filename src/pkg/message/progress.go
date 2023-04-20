@@ -37,11 +37,21 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {
+		Debug(text)
 		return
 	}
 	p.progress.UpdateTitle("     " + text)
 	chunk := int(complete) - p.progress.Current
 	p.Add(chunk)
+}
+
+// UpdateTitle updates the ProgressBar with new text.
+func (p *ProgressBar) UpdateTitle(text string) {
+	if NoProgress {
+		Debug(text)
+		return
+	}
+	p.progress.UpdateTitle("     " + text)
 }
 
 // Add updates the ProgressBar with completed progress.

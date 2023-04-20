@@ -47,9 +47,10 @@ jobs:
 
       - name: Run UI tests
         run: >
-          npm run test:pre-init &&
-          npm run test:init &&
-          npm run test:post-init
+          export NODE_PATH=$(pwd)/src/ui/node_modules &&
+          npm --prefix src/ui run test:pre-init &&
+          npm --prefix src/ui run test:init &&
+          npm --prefix src/ui run test:post-init
 
       - name: Save logs
         if: always()

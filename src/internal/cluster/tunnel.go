@@ -368,7 +368,6 @@ func (tunnel *Tunnel) establish() (string, error) {
 	message.Debug("tunnel.Establish()")
 
 	var err error
-	var spinner *message.Spinner
 
 	// Track this locally as we may need to retry if the tunnel fails.
 	localPort := tunnel.localPort
@@ -390,6 +389,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		defer globalMutex.Unlock()
 	}
 
+	var spinner *message.Spinner
 	spinnerMessage := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
 		localPort,
 		tunnel.remotePort,
@@ -402,8 +402,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		spinner = tunnel.spinner
 		spinner.Updatef(spinnerMessage)
 	} else {
-		spinner = message.NewProgressSpinner(spinnerMessage)
-		defer spinner.Stop()
+		message.Debug(spinnerMessage)
 	}
 
 	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
@@ -455,19 +454,16 @@ func (tunnel *Tunnel) establish() (string, error) {
 	// Wait for an error or the tunnel to be ready.
 	select {
 	case err = <-errChan:
-		if tunnel.spinner == nil {
-			spinner.Stop()
-		}
 		return "", fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
 		// Store for endpoint output
 		tunnel.localPort = localPort
 		url := fmt.Sprintf("http://%s:%d%s", config.IPV4Localhost, localPort, tunnel.urlSuffix)
 		msg := fmt.Sprintf("Creating port forwarding tunnel at %s", url)
-		if tunnel.spinner == nil {
-			spinner.Successf(msg)
+		if tunnel.spinner != nil {
+			spinner.Updatef("%s", msg)
 		} else {
-			spinner.Updatef(msg)
+			message.Debug(msg)
 		}
 		return url, nil
 	}

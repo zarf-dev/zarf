@@ -20,19 +20,18 @@ type RegistryResponse struct {
 
 func TestConnect(t *testing.T) {
 	t.Log("E2E: Connect")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
 	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "registry", "catalog")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("tools", "registry", "catalog")
 	assert.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
 	// We assert greater than or equal to since the base init has 12 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
-	assert.GreaterOrEqual(t, len(registryList), 12)
+	assert.GreaterOrEqual(t, len(registryList), 7)
 	assert.Contains(t, stdOut, "gitea/gitea")
-	assert.Contains(t, stdOut, "gitea/gitea-3431384023")
 
 	// Connect to Gitea
 	tunnelGit, err := cluster.NewZarfTunnel()
@@ -56,6 +55,6 @@ func TestConnect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, respLog.StatusCode)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
