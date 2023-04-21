@@ -106,10 +106,6 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 
 	// If the file has a checksum, validate it
 	if hasChecksum {
-		err = file.Close()
-		if err != nil {
-			return err
-		}
 		received, err := GetCryptoHash(dst, crypto.SHA256)
 		if err != nil {
 			return err
