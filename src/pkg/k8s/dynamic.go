@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
+// AddLabelsAndAnnotations adds the provided labels and annotations to the specified K8s resource
 func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
 	dynamicClient := dynamic.NewForConfigOrDie(k.RestConfig)
 
