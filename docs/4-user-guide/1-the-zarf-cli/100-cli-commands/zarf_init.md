@@ -5,7 +5,7 @@ Prepares a k8s cluster for the deployment of Zarf packages
 
 ## Synopsis
 
-Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments. 
+Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments.
 If you do not have a k8s cluster already configured, this command will give you the ability to install a cluster locally.
 
 This command looks for a zarf-init package in the local directory that the command was executed from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of the current directory, Zarf will failover and attempt to find a zarf-init package in the directory that the Zarf binary is located in.
@@ -81,4 +81,3 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 ## SEE ALSO
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
-
