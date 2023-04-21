@@ -22,9 +22,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// SGETProtocol is the protocol URI scheme for SGET.
-const SGETProtocol = "sget://"
-
 // IsURL is a helper function to check if a URL is valid.
 func IsURL(source string) bool {
 	parsedURL, err := url.Parse(source)
@@ -109,6 +106,10 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 
 	// If the file has a checksum, validate it
 	if hasChecksum {
+		err = file.Close()
+		if err != nil {
+			return err
+		}
 		received, err := GetCryptoHash(dst, crypto.SHA256)
 		if err != nil {
 			return err
@@ -117,7 +118,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
 		}
 	}
-	return nil
+	return file.Close()
 }
 
 // GetAvailablePort retrieves an available port on the host machine. This delegates the port selection to the golang net
