@@ -9,18 +9,34 @@ import "github.com/defenseunicorns/zarf/src/types/extensions"
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// The name of the component, must be unique to the package
+	//
+	// example:
+	//
+	//	name: "local-registry"
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9\\-]+$"`
 
 	// Description to include during package deploy describing the purpose of this component
+	//
+	// example:
+	//
+	//	description: "This component is used to deploy a local registry"
 	Description string `json:"description,omitempty"`
 
 	// Default changes the default option when deploying this component
 	// and determines the default Y/N state for installing this component
 	// on package deploy
+	//
+	// example:
+	//
+	//	default: true
 	Default bool `json:"default,omitempty"`
 
 	// Required makes this component mandatory for package deployment
-	// Do not prompt user to install this component, always install on package deploy"`
+	// and does not prompt the user to install during package deploy
+	//
+	// example:
+	//
+	//	required: true
 	Required bool `json:"required,omitempty"`
 
 	// Only include compatible components during package deployment
