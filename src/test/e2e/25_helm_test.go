@@ -127,7 +127,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that this does not leave behind a dos-games chart
-	helmOut, err := exec.Command("helm", "list", "-n", "zarf").Output()
+	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	assert.NotContains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
@@ -136,7 +136,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
-	helmOut, err = exec.Command("helm", "list", "-n", "zarf").Output()
+	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
@@ -145,7 +145,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that the dos-games chart was not uninstalled
-	helmOut, err = exec.Command("helm", "list", "-n", "zarf").Output()
+	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
@@ -169,7 +169,7 @@ func testHelmAdoption(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
-	helmOut, err := exec.Command("helm", "list", "-n", "zarf").Output()
+	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 

@@ -101,7 +101,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		switch rawData.GetKind() {
-		// TODO: (@WSTARR) How to deal with namespaces
 		case "Namespace":
 			var namespace corev1.Namespace
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
