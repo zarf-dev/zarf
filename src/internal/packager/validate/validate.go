@@ -92,6 +92,10 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		if !ok {
 			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
 		}
+		// ensure path is empty
+		if len(path) > 0 {
+			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
+		}
 	}
 
 	return nil

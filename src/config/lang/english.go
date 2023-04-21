@@ -361,6 +361,7 @@ const (
 	PkgValidateErrConstant                = "invalid package constant: %w"
 	PkgValidateErrImportPathInvalid       = "invalid file path \"%s\" provided directory must contain a valid zarf.yaml file"
 	PkgValidateErrImportURLInvalid        = "invalid url \"%s\" provided"
+	PkgValidateErrImportOptions           = "imported package %s must have either a url or a path"
 	PkgValidateErrImportPathMissing       = "imported package %s must include a path"
 	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
 	PkgValidateErrManifest                = "invalid manifest definition: %w"
