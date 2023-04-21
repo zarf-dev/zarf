@@ -453,6 +453,10 @@ Must be one of:
 
 **Description:** The name of the component, must be unique to the package
 
+example:
+
+	name: "local-registry"
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -473,6 +477,10 @@ Must be one of:
 
 **Description:** Description to include during package deploy describing the purpose of this component
 
+example:
+
+	description: "This component is used to deploy a local registry"
+
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
@@ -491,6 +499,10 @@ Must be one of:
 and determines the default Y/N state for installing this component
 on package deploy
 
+example:
+
+	default: true
+
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
@@ -506,7 +518,11 @@ on package deploy
 <blockquote>
 
 **Description:** Required makes this component mandatory for package deployment
-Do not prompt user to install this component, always install on package deploy"`
+and does not prompt the user to install during package deploy
+
+example:
+
+	required: true
 
 |          |           |
 | -------- | --------- |
