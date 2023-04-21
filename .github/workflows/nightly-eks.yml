@@ -54,7 +54,6 @@ jobs:
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
       - name: Re-create zarf namespace with eks.yaml secret
         run: |
-          ./build/zarf tools kubectl create namespace zarf
           ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yamls
 
       - name: Teardown the cluster
