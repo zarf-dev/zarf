@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	osexec "os/exec"
-
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	dconfig "github.com/docker/cli/cli/config"
@@ -36,8 +34,9 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	cmd := osexec.Command("/bin/sh", "-c", fmt.Sprintf("cp -vr %s %s", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local")))
-	err := cmd.Run()
+	err := exec.CmdWithPrint("mkdir", "-p", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"))
+	suite.NoError(err)
+	err = exec.CmdWithPrint("cp", "-vr", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
