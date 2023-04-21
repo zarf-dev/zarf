@@ -11,7 +11,7 @@ The Zarf Deployment Web UI can be easily spun up with a single command from the 
 Follow these steps to get started using the Web UI
 
 1. Step one: Install Zarf binary
-2. Step two: Open CLI terminal
+2. Step two: Open a terminal shell
 3. Step three: Type in the following command: ```zarf dev UI```
 
 ![GIF showing the Web UI lauch from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
