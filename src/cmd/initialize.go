@@ -122,7 +122,7 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 			Message: lang.CmdInitDownloadConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return fmt.Errorf(lang.CmdInitDownloadCancel, err)
+			return fmt.Errorf(lang.CmdInitDownloadCancel, err.Error())
 		}
 	}
 
