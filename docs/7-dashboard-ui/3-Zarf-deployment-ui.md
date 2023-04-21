@@ -95,7 +95,7 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 
 ## Technical Details
 
-The web UI is packaged into the Zarf binay, so you don't have to worry about additional dependencies or trying to install it yourself! The Web UI is served through your machines local browser, running as a local host, and utlizes as the backend. 
+The web UI is packaged into the Zarf binary, so you don't have to worry about additional dependencies or trying to install it yourself! The Web UI is served through your machine's local browser, running on `localhost`, and utilizes the Zarf go binary as the backend. 
 
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands. 
 - [Zarf tools Kubectl](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
