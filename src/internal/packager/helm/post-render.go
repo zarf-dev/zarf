@@ -46,7 +46,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		options:        h,
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
-			h.Chart.Namespace: nil,
+			h.Chart.Namespace: h.Cluster.Kube.NewZarfManagedNamespace(h.Chart.Namespace),
 		},
 		values:       valueTemplate,
 		actionConfig: h.actionConfig,
@@ -143,7 +143,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = nil
+			r.namespaces[namespace] = r.options.Cluster.Kube.NewZarfManagedNamespace(namespace)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
@@ -184,8 +184,18 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := c.Kube.CreateNamespace(name, namespace); err != nil {
+			if _, err := c.Kube.CreateNamespace(namespace); err != nil {
 				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
+			}
+		} else if r.options.Cfg.DeployOpts.AdoptExistingResources {
+			if r.options.Cluster.Kube.IsInitialNamespace(name) {
+				// If this is a K8s initial namespace, refuse to adopt it
+				message.Warnf("Refusing to adopt the initial namespace: %s", name)
+			} else {
+				// This is an existing namespace to adopt
+				if _, err := c.Kube.UpdateNamespace(namespace); err != nil {
+					return nil, fmt.Errorf("unable to adopt the existing namespace %s", name)
+				}
 			}
 		}
 

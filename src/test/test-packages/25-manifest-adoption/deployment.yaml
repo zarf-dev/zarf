@@ -1,9 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dos-games
+---
 # This is a normal deployment manifest for dos-games that should be "adopted" by Helm/Zarf
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: game
-  namespace: zarf
+  namespace: dos-games
 spec:
   selector:
     matchLabels:
