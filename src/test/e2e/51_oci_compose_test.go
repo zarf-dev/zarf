@@ -36,7 +36,7 @@ var (
 func (suite *SkeletonSuite) SetupSuite() {
 	err := exec.CmdWithPrint("mkdir", "-p", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"))
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-vr", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
@@ -63,7 +63,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 	image := "registry:2.8.1"
 
 	// spin up a local registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "666:5000", "--name", "registry", image)
+	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "555:5000", "--name", "registry", image)
 	suite.NoError(err)
 
 	// docker config folder
@@ -75,7 +75,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 		suite.NoError(err)
 	}
 
-	suite.Reference.Registry = "localhost:666"
+	suite.Reference.Registry = "localhost:555"
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -109,6 +109,9 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	_, stdErr, err = e2e.ExecZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
+
+	_, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
+	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose() {
