@@ -62,7 +62,7 @@ If you do not have access to an existing cluster, or would simply like to spin u
 
 :::info
 
-This option is currently only available for linux machines or machines using a linux box. 
+This option is currently only available for Linux machines with access to the `root` user.
 
 :::
 
